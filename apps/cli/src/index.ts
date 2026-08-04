@@ -421,6 +421,7 @@ const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.6";
 const DEFAULT_MISTRAL_MODEL = "mistral-medium-latest";
+const DEFAULT_AGNES_MODEL = "agnes-2.5-flash";
 
 async function configureProvidersInteractive(env: EnvMap): Promise<"recommended" | "custom"> {
 	p.note(
@@ -487,6 +488,7 @@ async function configureProvidersRecommended(env: EnvMap): Promise<void> {
 			{ value: "anthropic" as const, label: "Anthropic — direct Claude" },
 			{ value: "openai" as const, label: "OpenAI — direct GPT-* models" },
 			{ value: "mistral" as const, label: "Mistral — direct Mistral models" },
+			{ value: "agnes" as const, label: "Agnes — direct Agnes models" },
 		],
 		initialValue: "openrouter" as const,
 	});
@@ -507,6 +509,7 @@ async function configureProvidersCustom(env: EnvMap): Promise<void> {
 		await collectAnthropic(env, targets);
 		await collectOpenAI(env, targets);
 		await collectMistral(env, targets);
+		await collectAgnes(env, targets);
 		if (!hasDirectApiConfigured(env)) {
 			p.log.warn(
 				"Onboarding analysis and other low-latency LLM tasks require a direct API. Configure at least one before continuing.",
@@ -524,7 +527,13 @@ async function configureProvidersCustom(env: EnvMap): Promise<void> {
 }
 
 function hasDirectApiConfigured(env: EnvMap): boolean {
-	return Boolean(env.ANTHROPIC_API_KEY || env.OPENAI_API_KEY || env.MISTRAL_API_KEY || env.OPENROUTER_API_KEY);
+	return Boolean(
+		env.ANTHROPIC_API_KEY ||
+			env.OPENAI_API_KEY ||
+			env.MISTRAL_API_KEY ||
+			env.OPENROUTER_API_KEY ||
+			env.AGNES_API_KEY,
+	);
 }
 
 async function collectScraperKey(scraper: "brightdata" | "olostep" | "oxylabs", env: EnvMap): Promise<void> {
@@ -562,7 +571,7 @@ async function collectScraperKey(scraper: "brightdata" | "olostep" | "oxylabs", 
 }
 
 async function collectDirectApiQuick(
-	kind: "openrouter" | "anthropic" | "openai" | "mistral",
+	kind: "openrouter" | "anthropic" | "openai" | "mistral" | "agnes",
 	env: EnvMap,
 ): Promise<void> {
 	if (kind === "openrouter") {
@@ -586,13 +595,20 @@ async function collectDirectApiQuick(
 		});
 		assertNotCancelled(key);
 		env.OPENAI_API_KEY = key;
-	} else {
+	} else if (kind === "mistral") {
 		const key = await p.password({
 			message: "Mistral API key",
 			validate: (v) => (!v ? "Required" : undefined),
 		});
 		assertNotCancelled(key);
 		env.MISTRAL_API_KEY = key;
+	} else {
+		const key = await p.password({
+			message: "Agnes API key",
+			validate: (v) => (!v ? "Required" : undefined),
+		});
+		assertNotCancelled(key);
+		env.AGNES_API_KEY = key;
 	}
 }
 
@@ -788,6 +804,32 @@ async function collectMistral(env: EnvMap, targets: string[]): Promise<void> {
 	assertNotCancelled(webSearch);
 
 	targets.push(formatScrapeTarget({ model: "mistral", provider: "mistral-api", version: slug, webSearch }));
+}
+
+async function collectAgnes(env: EnvMap, targets: string[]): Promise<void> {
+	const enable = await p.confirm({
+		message: `Configure ${pc.bold("Agnes API")}? (direct Agnes models; no native web search)`,
+		initialValue: false,
+	});
+	assertNotCancelled(enable);
+	if (!enable) return;
+
+	const key = await p.password({
+		message: "Agnes API key",
+		validate: (v) => (!v ? "Required" : undefined),
+	});
+	assertNotCancelled(key);
+	env.AGNES_API_KEY = key;
+
+	const model = await p.text({
+		message: "Agnes model",
+		placeholder: DEFAULT_AGNES_MODEL,
+		defaultValue: DEFAULT_AGNES_MODEL,
+	});
+	assertNotCancelled(model);
+	const slug = model || DEFAULT_AGNES_MODEL;
+
+	targets.push(formatScrapeTarget({ model: "agnes", provider: "agnes-api", version: slug, webSearch: false }));
 }
 
 async function collectOpenRouter(env: EnvMap, targets: string[]): Promise<void> {

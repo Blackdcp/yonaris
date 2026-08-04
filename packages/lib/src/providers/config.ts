@@ -18,6 +18,7 @@ export { parseScrapeTargets } from "@workspace/config/scrape-targets";
 export const API_PROVIDER_MAX_OUTPUT_TOKENS: Record<string, number> = {
 	"anthropic-api": 4000,
 	"openai-api": 8000,
+	"agnes-api": 8000,
 	openrouter: 8000,
 	"mistral-api": 8000,
 };
@@ -64,6 +65,7 @@ export function validateScrapeTargets(
 			throw new Error(`SCRAPE_TARGETS: provider "${config.provider}" requires API key(s) to be configured (see docs)`);
 		if (
 			(config.provider === "openai-api" ||
+				config.provider === "agnes-api" ||
 				config.provider === "anthropic-api" ||
 				config.provider === "mistral-api" ||
 				config.provider === "openrouter") &&

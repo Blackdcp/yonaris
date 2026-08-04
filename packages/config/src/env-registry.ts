@@ -140,6 +140,13 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "OpenAI API key.",
 	},
 	{
+		name: "AGNES_API_KEY",
+		scope: "server",
+		requiredBy: "dynamic-scrape-targets",
+		provider: "agnes-api",
+		description: "Agnes AI API key.",
+	},
+	{
 		name: "ANTHROPIC_API_KEY",
 		scope: "server",
 		requiredBy: "dynamic-scrape-targets",

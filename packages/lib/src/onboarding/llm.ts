@@ -2,16 +2,18 @@
  * Provider-agnostic onboarding research.
  *
  * Onboarding always runs against a direct API provider (Anthropic / OpenAI /
- * OpenRouter / Mistral) — the deployment guarantees one is configured, and
- * the CLI's setup wizard enforces it. Each provider implements
+ * OpenRouter / Mistral / Agnes). The deployment guarantees one is configured,
+ * and the CLI's setup wizard enforces it. Each provider implements
  * `runStructuredResearch<T>(prompt, schema)` itself, picking the most
  * idiomatic combo for its API:
  *   • Anthropic / OpenAI — `generateText` + native web-search tool +
  *     `output: Output.object(schema)`.
  *   • OpenRouter — `generateObject` against a `:online`-suffixed slug
  *     (web search baked into the route).
- *   • Mistral — OpenAI-compat `generateObject` (no web search; users who
- *     want it should target a different provider via ONBOARDING_LLM_TARGET).
+ *   • Mistral — OpenAI-compat structured output plus its search connector.
+ *   • Agnes — OpenAI-compatible chat completions plus JSON Schema validation;
+ *     it relies on the website excerpt because it has no documented native
+ *     web-search tool.
  *
  * This module's job is just to pick the right provider and forward the call.
  * No prompt wrappers, no JSON parsing, no two-pass anything.
@@ -31,13 +33,19 @@ import { getProvider, parseScrapeTargets, type Provider, type StructuredResearch
  * Exported so the compare-onboarding script reads from the same source as
  * production — keeps the two from drifting.
  */
-export const RESEARCH_PROVIDER_PREFERENCE = ["openai-api", "openrouter", "anthropic-api", "mistral-api"] as const;
+export const RESEARCH_PROVIDER_PREFERENCE = [
+	"openai-api",
+	"openrouter",
+	"anthropic-api",
+	"mistral-api",
+	"agnes-api",
+] as const;
 
 export type ResearchProviderId = (typeof RESEARCH_PROVIDER_PREFERENCE)[number];
 
 const ONBOARDING_LLM_TARGET_HELP =
 	"Set ONBOARDING_LLM_TARGET (e.g. claude:anthropic-api) " +
-	"or configure ANTHROPIC_API_KEY / OPENAI_API_KEY / OPENROUTER_API_KEY / MISTRAL_API_KEY.";
+	"or configure ANTHROPIC_API_KEY / OPENAI_API_KEY / OPENROUTER_API_KEY / MISTRAL_API_KEY / AGNES_API_KEY.";
 
 /**
  * Pick which direct-API provider the onboarding flow should use.

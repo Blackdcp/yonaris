@@ -5,6 +5,7 @@ const ENV_KEYS = [
 	"ONBOARDING_LLM_TARGET",
 	"ANTHROPIC_API_KEY",
 	"OPENAI_API_KEY",
+	"AGNES_API_KEY",
 	"OPENROUTER_API_KEY",
 	"OLOSTEP_API_KEY",
 	"BRIGHTDATA_API_TOKEN",
@@ -89,6 +90,12 @@ describe("resolveResearchProvider", () => {
 		process.env.MISTRAL_API_KEY = "x";
 		const provider = resolveResearchProvider();
 		expect(provider.id).toBe("mistral-api");
+	});
+
+	it("falls back to Agnes when only Agnes is set", () => {
+		process.env.AGNES_API_KEY = "x";
+		const provider = resolveResearchProvider();
+		expect(provider.id).toBe("agnes-api");
 	});
 
 	it("ignores scraper providers entirely", () => {
