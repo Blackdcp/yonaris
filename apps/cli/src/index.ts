@@ -421,6 +421,7 @@ const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-6";
 const DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.6";
 const DEFAULT_MISTRAL_MODEL = "mistral-medium-latest";
+const DEFAULT_DEEPSEEK_MODEL = "deepseek-v4-pro";
 const DEFAULT_AGNES_MODEL = "agnes-2.5-flash";
 
 async function configureProvidersInteractive(env: EnvMap): Promise<"recommended" | "custom"> {
@@ -436,7 +437,7 @@ async function configureProvidersInteractive(env: EnvMap): Promise<"recommended"
 			pc.bold("2. A direct LLM API") + " — for low-latency tasks (onboarding analysis, sentiment scoring,",
 			"   ad-hoc LLM calls). Required:",
 			`     • ${pc.cyan("OpenRouter")} — one key, all major models (recommended)`,
-			`     • ${pc.cyan("Anthropic / OpenAI / Mistral")} — direct provider keys`,
+			`     • ${pc.cyan("Anthropic / OpenAI / Mistral / DeepSeek / Agnes")} — direct provider keys`,
 			"",
 			"Pricing assumes Elmo's default cadence (5 runs/day × 2 surfaces).",
 		].join("\n"),
@@ -488,6 +489,7 @@ async function configureProvidersRecommended(env: EnvMap): Promise<void> {
 			{ value: "anthropic" as const, label: "Anthropic — direct Claude" },
 			{ value: "openai" as const, label: "OpenAI — direct GPT-* models" },
 			{ value: "mistral" as const, label: "Mistral — direct Mistral models" },
+			{ value: "deepseek" as const, label: "DeepSeek — direct DeepSeek models" },
 			{ value: "agnes" as const, label: "Agnes — direct Agnes models" },
 		],
 		initialValue: "openrouter" as const,
@@ -509,6 +511,7 @@ async function configureProvidersCustom(env: EnvMap): Promise<void> {
 		await collectAnthropic(env, targets);
 		await collectOpenAI(env, targets);
 		await collectMistral(env, targets);
+		await collectDeepSeek(env, targets);
 		await collectAgnes(env, targets);
 		if (!hasDirectApiConfigured(env)) {
 			p.log.warn(
@@ -531,6 +534,7 @@ function hasDirectApiConfigured(env: EnvMap): boolean {
 		env.ANTHROPIC_API_KEY ||
 			env.OPENAI_API_KEY ||
 			env.MISTRAL_API_KEY ||
+			env.DEEPSEEK_API_KEY ||
 			env.OPENROUTER_API_KEY ||
 			env.AGNES_API_KEY,
 	);
@@ -571,7 +575,7 @@ async function collectScraperKey(scraper: "brightdata" | "olostep" | "oxylabs", 
 }
 
 async function collectDirectApiQuick(
-	kind: "openrouter" | "anthropic" | "openai" | "mistral" | "agnes",
+	kind: "openrouter" | "anthropic" | "openai" | "mistral" | "deepseek" | "agnes",
 	env: EnvMap,
 ): Promise<void> {
 	if (kind === "openrouter") {
@@ -602,6 +606,13 @@ async function collectDirectApiQuick(
 		});
 		assertNotCancelled(key);
 		env.MISTRAL_API_KEY = key;
+	} else if (kind === "deepseek") {
+		const key = await p.password({
+			message: "DeepSeek API key",
+			validate: (v) => (!v ? "Required" : undefined),
+		});
+		assertNotCancelled(key);
+		env.DEEPSEEK_API_KEY = key;
 	} else {
 		const key = await p.password({
 			message: "Agnes API key",
@@ -804,6 +815,38 @@ async function collectMistral(env: EnvMap, targets: string[]): Promise<void> {
 	assertNotCancelled(webSearch);
 
 	targets.push(formatScrapeTarget({ model: "mistral", provider: "mistral-api", version: slug, webSearch }));
+}
+
+async function collectDeepSeek(env: EnvMap, targets: string[]): Promise<void> {
+	const enable = await p.confirm({
+		message: `Configure ${pc.bold("DeepSeek API")}? (direct DeepSeek models)`,
+		initialValue: false,
+	});
+	assertNotCancelled(enable);
+	if (!enable) return;
+
+	const key = await p.password({
+		message: "DeepSeek API key",
+		validate: (v) => (!v ? "Required" : undefined),
+	});
+	assertNotCancelled(key);
+	env.DEEPSEEK_API_KEY = key;
+
+	const model = await p.text({
+		message: "DeepSeek model",
+		placeholder: DEFAULT_DEEPSEEK_MODEL,
+		defaultValue: DEFAULT_DEEPSEEK_MODEL,
+	});
+	assertNotCancelled(model);
+	const slug = model || DEFAULT_DEEPSEEK_MODEL;
+
+	const webSearch = await p.confirm({
+		message: "Enable web search? (recommended, but more expensive)",
+		initialValue: true,
+	});
+	assertNotCancelled(webSearch);
+
+	targets.push(formatScrapeTarget({ model: "deepseek", provider: "deepseek-api", version: slug, webSearch }));
 }
 
 async function collectAgnes(env: EnvMap, targets: string[]): Promise<void> {

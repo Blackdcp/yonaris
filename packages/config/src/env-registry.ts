@@ -147,6 +147,13 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "Agnes AI API key.",
 	},
 	{
+		name: "DEEPSEEK_API_KEY",
+		scope: "server",
+		requiredBy: "dynamic-scrape-targets",
+		provider: "deepseek-api",
+		description: "DeepSeek API key.",
+	},
+	{
 		name: "ANTHROPIC_API_KEY",
 		scope: "server",
 		requiredBy: "dynamic-scrape-targets",

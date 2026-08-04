@@ -4,6 +4,7 @@ import { brightdata } from "./registry/brightdata";
 import { oxylabs } from "./registry/oxylabs";
 import { openaiApi } from "./registry/openai-api";
 import { agnesApi } from "./registry/agnes-api";
+import { deepseekApi } from "./registry/deepseek-api";
 import { anthropicApi } from "./registry/anthropic-api";
 import { mistralApi } from "./registry/mistral-api";
 import { dataforseo } from "./registry/dataforseo";
@@ -31,6 +32,7 @@ const providerMap: Record<string, Provider> = {
 	oxylabs,
 	"openai-api": openaiApi,
 	"agnes-api": agnesApi,
+	"deepseek-api": deepseekApi,
 	"anthropic-api": anthropicApi,
 	"mistral-api": mistralApi,
 	dataforseo,

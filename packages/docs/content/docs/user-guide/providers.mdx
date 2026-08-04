@@ -3,7 +3,7 @@ title: Providers
 description: Choose how Elmo tracks each AI answer engine — scrapers, direct APIs, or both.
 ---
 
-Elmo tracks which AI answer engines mention your brand. Most AI search traffic comes from **ChatGPT** and **Google AI Mode**, and neither exposes a public API. You can approximate their responses by calling the underlying model APIs (OpenAI, Anthropic, Mistral, OpenRouter) with web search enabled, but that's not the real consumer UI — scraping the actual surface is usually closer to what your customers see.
+Elmo tracks which AI answer engines mention your brand. Most AI search traffic comes from **ChatGPT** and **Google AI Mode**, and neither exposes a public API. You can approximate AI search responses by calling model APIs (OpenAI, Anthropic, DeepSeek, Mistral, OpenRouter) with web search enabled, but a direct API is not the corresponding consumer website — scraping the actual surface is usually closer to what your customers see.
 
 ## Recommended scrapers
 
@@ -86,6 +86,7 @@ These hit the provider API directly — cheaper per token than scrapers, but the
 |---|---|---|
 | **Anthropic API** (`ANTHROPIC_API_KEY`) | Claude Sonnet / Opus / Haiku | ~$4–5 per tracked model |
 | **OpenAI API** (`OPENAI_API_KEY`) | `gpt-5-mini` with web search (ChatGPT-like, but not the real UI) | ~$2–3 per tracked model |
+| **DeepSeek API** (`DEEPSEEK_API_KEY`) | `deepseek-v4-pro`, with optional native web search | pass-through |
 | **Mistral API** (`MISTRAL_API_KEY`) | Mistral Small / Medium / Large, optional web search via the beta Conversations API | pass-through |
 | **OpenRouter** (`OPENROUTER_API_KEY`) | Any OpenRouter-hosted model (Claude, Llama, Mistral, etc.) | pass-through |
 
@@ -96,13 +97,22 @@ Example scrape targets:
 ```
 claude:anthropic-api:claude-sonnet-4-6
 chatgpt:openai-api:gpt-5-mini:online
+deepseek:deepseek-api:deepseek-v4-pro:online
 mistral:mistral-api:mistral-medium-latest:online
 claude:openrouter:anthropic/claude-sonnet-4.6
 grok:openrouter:x-ai/grok-4.5:online
 kimi:openrouter:moonshotai/kimi-k3
 ```
 
-OpenAI/Anthropic/Mistral/OpenRouter entries all require a version slug as the third segment. For Mistral, append `:online` to route through the beta Conversations API with the `web_search` tool; without it the request goes to the standard chat completions endpoint and no citations are returned.
+OpenAI/Anthropic/DeepSeek/Mistral/OpenRouter entries all require a version slug as the third segment. For DeepSeek, `:online` enables native web search through DeepSeek's Anthropic-compatible API. A successful searched response can include the generated search queries and source URLs/titles, which Elmo records for Query Fan-Out and Citations. Without `:online`, Elmo calls the model without the web-search tool.
+
+<Callout type="warn">
+	`deepseek:deepseek-api:deepseek-v4-pro:online` measures the DeepSeek direct API. It does **not** reproduce or measure the consumer DeepSeek website, whose prompts, orchestration, personalization, and search behavior may differ.
+</Callout>
+
+DeepSeek may issue several searches during one online request even when Elmo sends a low search-use hint. Treat the recorded fan-out count as the observed behavior, and monitor DeepSeek token and search spend accordingly.
+
+For Mistral, append `:online` to route through the beta Conversations API with the `web_search` tool; without it the request goes to the standard chat completions endpoint and no citations are returned.
 
 ## DataForSEO (optional)
 
@@ -156,15 +166,22 @@ ANTHROPIC_API_KEY=...
 SCRAPE_TARGETS=chatgpt:openai-api:gpt-5-mini:online,claude:anthropic-api:claude-sonnet-4-6
 ```
 
+To track DeepSeek's direct API with native web search:
+
+```bash
+DEEPSEEK_API_KEY=...
+SCRAPE_TARGETS=deepseek:deepseek-api:deepseek-v4-pro:online
+```
+
 ## SCRAPE_TARGETS format
 
 ```
 model:provider[:version][:online]
 ```
 
-- `model` — the AI surface being tracked (`chatgpt`, `claude`, `google-ai-mode`, `google-ai-overview`, `gemini`, `perplexity`, `copilot`, `grok`, `kimi`).
-- `provider` — how to reach it (`brightdata`, `oxylabs`, `olostep`, `openai-api`, `anthropic-api`, `mistral-api`, `openrouter`, `dataforseo`).
-- `version` — required for `openai-api`, `anthropic-api`, `mistral-api`, `openrouter`. Optional for scrapers (pass a BrightData dataset id here).
+- `model` — the AI surface being tracked (`chatgpt`, `claude`, `deepseek`, `google-ai-mode`, `google-ai-overview`, `gemini`, `perplexity`, `copilot`, `grok`, `kimi`).
+- `provider` — how to reach it (`brightdata`, `oxylabs`, `olostep`, `openai-api`, `anthropic-api`, `deepseek-api`, `mistral-api`, `openrouter`, `dataforseo`).
+- `version` — required for `openai-api`, `anthropic-api`, `deepseek-api`, `mistral-api`, `openrouter`. Optional for scrapers (pass a BrightData dataset id here).
 - `:online` — append to enable web search. Required for most scraped models since the live UIs always search.
 
 Entries are comma-separated.

@@ -19,6 +19,7 @@ export const API_PROVIDER_MAX_OUTPUT_TOKENS: Record<string, number> = {
 	"anthropic-api": 4000,
 	"openai-api": 8000,
 	"agnes-api": 8000,
+	"deepseek-api": 8000,
 	openrouter: 8000,
 	"mistral-api": 8000,
 };
@@ -66,6 +67,7 @@ export function validateScrapeTargets(
 		if (
 			(config.provider === "openai-api" ||
 				config.provider === "agnes-api" ||
+				config.provider === "deepseek-api" ||
 				config.provider === "anthropic-api" ||
 				config.provider === "mistral-api" ||
 				config.provider === "openrouter") &&

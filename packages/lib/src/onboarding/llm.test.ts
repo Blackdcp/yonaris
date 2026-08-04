@@ -6,6 +6,7 @@ const ENV_KEYS = [
 	"ANTHROPIC_API_KEY",
 	"OPENAI_API_KEY",
 	"AGNES_API_KEY",
+	"DEEPSEEK_API_KEY",
 	"OPENROUTER_API_KEY",
 	"OLOSTEP_API_KEY",
 	"BRIGHTDATA_API_TOKEN",
@@ -96,6 +97,12 @@ describe("resolveResearchProvider", () => {
 		process.env.AGNES_API_KEY = "x";
 		const provider = resolveResearchProvider();
 		expect(provider.id).toBe("agnes-api");
+	});
+
+	it("falls back to DeepSeek when only DeepSeek is set", () => {
+		process.env.DEEPSEEK_API_KEY = "x";
+		const provider = resolveResearchProvider();
+		expect(provider.id).toBe("deepseek-api");
 	});
 
 	it("ignores scraper providers entirely", () => {

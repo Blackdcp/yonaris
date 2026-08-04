@@ -278,6 +278,7 @@ export function extractTextContent(rawOutput: any, providerOrEngine: string): st
 		case "chatgpt":
 			return extractTextFromOpenAI(rawOutput);
 		case "anthropic-api":
+		case "deepseek-api":
 		case "anthropic":
 		case "claude":
 			return extractTextFromAnthropic(rawOutput);
@@ -677,6 +678,7 @@ export function extractCitations(rawOutput: any, providerOrEngine: string): Cita
 		case "oxylabs":
 			return extractCitationsFromOxylabs(rawOutput);
 		case "anthropic-api":
+		case "deepseek-api":
 		case "anthropic":
 		case "claude":
 			return extractCitationsFromAnthropic(rawOutput);

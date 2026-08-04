@@ -49,15 +49,19 @@ export function formatProvider(provider: string) {
 		dataforseo: "DataForSEO",
 		"openai-api": "OpenAI API",
 		"anthropic-api": "Anthropic API",
+		"deepseek-api": "DeepSeek API",
 		"mistral-api": "Mistral API",
 		openrouter: "OpenRouter",
 	};
 	return names[provider] || provider;
 }
 
-// The three first-party API providers collapse into one "Direct API" filter.
+// Direct model APIs collapse into one "Direct API" filter.
 export function providerCategory(provider: string) {
-	return provider === "openai-api" || provider === "anthropic-api" || provider === "mistral-api"
+	return provider === "openai-api" ||
+		provider === "anthropic-api" ||
+		provider === "deepseek-api" ||
+		provider === "mistral-api"
 		? "direct-api"
 		: provider;
 }

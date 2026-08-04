@@ -47,6 +47,7 @@ declare global {
 			readonly SCRAPE_TARGETS?: string;
 			readonly OPENAI_API_KEY: string;
 			readonly AGNES_API_KEY?: string;
+			readonly DEEPSEEK_API_KEY?: string;
 			readonly ANTHROPIC_API_KEY: string;
 			readonly MISTRAL_API_KEY?: string;
 			readonly OPENROUTER_API_KEY?: string;

@@ -123,6 +123,13 @@ describe("validateScrapeTargets", () => {
 		);
 	});
 
+	it("throws when deepseek-api provider has no version", () => {
+		const configs = [{ model: "deepseek", provider: "deepseek-api", webSearch: true }];
+		expect(() => validateScrapeTargets(configs, makeGetProvider({ "deepseek-api": configuredProvider }))).toThrow(
+			"requires a version slug",
+		);
+	});
+
 	it("throws when openrouter provider has no version", () => {
 		const configs = [{ model: "chatgpt", provider: "openrouter", webSearch: true }];
 		expect(() => validateScrapeTargets(configs, makeGetProvider({ openrouter: configuredProvider }))).toThrow(
@@ -151,6 +158,13 @@ describe("validateScrapeTargets", () => {
 		const configs = [{ model: "claude", provider: "anthropic-api", version: "claude-sonnet-4", webSearch: true }];
 		expect(() =>
 			validateScrapeTargets(configs, makeGetProvider({ "anthropic-api": configuredProvider })),
+		).not.toThrow();
+	});
+
+	it("passes when deepseek-api provider has a version", () => {
+		const configs = [{ model: "deepseek", provider: "deepseek-api", version: "deepseek-v4-pro", webSearch: true }];
+		expect(() =>
+			validateScrapeTargets(configs, makeGetProvider({ "deepseek-api": configuredProvider })),
 		).not.toThrow();
 	});
 
