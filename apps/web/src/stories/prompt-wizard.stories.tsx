@@ -11,18 +11,22 @@
  * .storybook/main.ts swaps `@/server/onboarding` and `@/server/brands` for
  * the mocks at bundle time.
  */
-import { useEffect } from "react";
+
 import type { Meta, StoryObj } from "@storybook/react";
-import { within, userEvent, expect, waitFor } from "storybook/test";
+import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
+import { useEffect } from "react";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import BrandOnboarding from "@/components/brand-onboarding";
 import PromptWizard from "@/components/prompt-wizard";
-import { setMockBrand } from "./_mocks/use-brands";
 import {
+	getMockAnalyzeRequests,
+	getMockOnboardingSaveCallCount,
+	resetMockOnboardingCalls,
 	setMockOnboardingDelay,
 	setMockOnboardingError,
 	setMockOnboardingSuggestion,
 } from "./_mocks/server-onboarding";
-import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
+import { setMockBrand } from "./_mocks/use-brands";
 
 const RICH_SUGGESTION: OnboardingSuggestion = {
 	brandName: "Acme",
@@ -48,6 +52,11 @@ const RICH_SUGGESTION: OnboardingSuggestion = {
 	],
 };
 
+const EMPTY_PROMPTS_SUGGESTION: OnboardingSuggestion = {
+	...RICH_SUGGESTION,
+	suggestedPrompts: [],
+};
+
 const MOCK_BRAND = {
 	id: "mock-brand-id",
 	name: "Acme",
@@ -68,6 +77,7 @@ function useWizardSetup({
 	error?: string | null;
 }) {
 	useEffect(() => {
+		resetMockOnboardingCalls();
 		setMockBrand(brand);
 		setMockOnboardingSuggestion(suggestion);
 		setMockOnboardingDelay(delayMs);
@@ -135,6 +145,81 @@ export const Review = () => {
 			<AutoAnalyze />
 		</>
 	);
+};
+
+/** Changing either analyzed identity field invalidates dependent suggestions. */
+export const IdentityChangesRequireReanalysis: StoryObj = {
+	render: () => {
+		useWizardSetup({ brand: MOCK_BRAND, suggestion: RICH_SUGGESTION });
+		return (
+			<>
+				<PromptWizard onComplete={() => {}} />
+				<AutoAnalyze />
+			</>
+		);
+	},
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+
+		await canvas.findByText("Globex");
+		expect(canvas.queryAllByDisplayValue("best widgets")).not.toHaveLength(0);
+
+		const brandNameInput = canvas.getByPlaceholderText("Brand name");
+		await userEvent.clear(brandNameInput);
+		await userEvent.type(brandNameInput, "Acme Next");
+
+		await waitFor(() => {
+			expect(canvas.getByRole("alert")).toHaveTextContent("previous competitor and prompt suggestions were cleared");
+		});
+		expect(canvas.queryByText("Globex")).toBeNull();
+		expect(canvas.queryAllByDisplayValue("best widgets")).toHaveLength(0);
+		expect(canvas.queryByRole("button", { name: /start tracking/i })).toBeNull();
+
+		await userEvent.click(canvas.getByRole("button", { name: /re-analyze brand/i }));
+		await canvas.findByText("Globex");
+		await waitFor(() => {
+			expect(getMockAnalyzeRequests()).toHaveLength(2);
+		});
+		expect(getMockAnalyzeRequests()[1]).toEqual({
+			brandId: MOCK_BRAND.id,
+			brandName: "Acme Next",
+			website: MOCK_BRAND.website,
+		});
+
+		const websiteInput = canvas.getByPlaceholderText("https://example.com");
+		await userEvent.clear(websiteInput);
+		await userEvent.type(websiteInput, "https://next.acme.com");
+
+		await waitFor(() => {
+			expect(canvas.getByRole("alert")).toHaveTextContent("previous competitor and prompt suggestions were cleared");
+		});
+		expect(canvas.queryByText("Globex")).toBeNull();
+		expect(canvas.queryAllByDisplayValue("best widgets")).toHaveLength(0);
+	},
+};
+
+/** An analysis with no usable prompts cannot be saved. */
+export const EmptyPromptsCannotBeSaved: StoryObj = {
+	render: () => {
+		useWizardSetup({ brand: MOCK_BRAND, suggestion: EMPTY_PROMPTS_SUGGESTION });
+		return (
+			<>
+				<PromptWizard onComplete={() => {}} />
+				<AutoAnalyze />
+			</>
+		);
+	},
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const saveButton = await canvas.findByRole("button", { name: /start tracking \(0 new prompts\)/i });
+
+		await userEvent.click(saveButton);
+
+		expect(await canvas.findByRole("alert")).toHaveTextContent(
+			"Choose or add at least one enabled prompt before starting tracking.",
+		);
+		expect(getMockOnboardingSaveCallCount()).toBe(0);
+	},
 };
 
 /**

@@ -11,6 +11,21 @@ import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
 let _suggestion: OnboardingSuggestion | null = null;
 let _delayMs = 0;
 let _shouldThrow: string | null = null;
+let _analyzeRequests: unknown[] = [];
+let _saveCallCount = 0;
+
+export function resetMockOnboardingCalls() {
+	_analyzeRequests = [];
+	_saveCallCount = 0;
+}
+
+export function getMockAnalyzeRequests() {
+	return _analyzeRequests;
+}
+
+export function getMockOnboardingSaveCallCount() {
+	return _saveCallCount;
+}
 
 export function setMockOnboardingSuggestion(suggestion: OnboardingSuggestion | null) {
 	_suggestion = suggestion;
@@ -27,9 +42,10 @@ export function setMockOnboardingError(message: string | null) {
 let _readyAt = 0;
 let _cancelled = false;
 
-export const startAnalyzeBrandFn = async (_args: { data: unknown }) => {
+export const startAnalyzeBrandFn = async (args: { data: unknown }) => {
 	// Mirror the real async flow: enqueue returns immediately; the result
 	// becomes available after the configured delay and is read by polling.
+	_analyzeRequests.push(args.data);
 	_readyAt = Date.now() + _delayMs;
 	_cancelled = false;
 	return { ok: true as const };
@@ -51,6 +67,7 @@ export const cancelAnalyzeBrandFn = async (_args: { data: unknown }) => {
 };
 
 export const updateOnboardedBrandFn = async (_args: { data: unknown }) => {
+	_saveCallCount += 1;
 	if (_delayMs > 0) await new Promise((r) => setTimeout(r, Math.min(_delayMs, 800)));
 	return {
 		id: "mock-brand-id",

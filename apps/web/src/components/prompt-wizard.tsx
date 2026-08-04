@@ -5,27 +5,28 @@
  * and edits before saving. Replaces the prior 4-step wizard that required
  * DataForSEO + Anthropic in tandem.
  */
-import { useState, useCallback, useEffect, memo, useMemo } from "react";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
-import { Loader2, AlertCircle, Play, Rocket } from "lucide-react";
-import { TagsInput } from "@workspace/ui/components/tags-input";
 import { Separator } from "@workspace/ui/components/separator";
-import { useBrand, brandKeys } from "@/hooks/use-brands";
+import { TagsInput } from "@workspace/ui/components/tags-input";
+import { AlertCircle, Loader2, Play, Rocket } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type CompetitorEntry, CompetitorsEditor, newCompetitorEntry } from "@/components/competitors-editor";
+import { type EditablePrompt, newPromptEntry, PromptsListEditor } from "@/components/prompts-list-editor";
+import { brandKeys, useBrand } from "@/hooks/use-brands";
 import { citationKeys } from "@/hooks/use-citations";
 import { dashboardKeys } from "@/hooks/use-dashboard-summary";
 import { promptsSummaryKeys } from "@/hooks/use-prompts-summary";
+import { trackEvent } from "@/lib/posthog";
 import {
-	startAnalyzeBrandFn,
-	getAnalyzeBrandStatusFn,
 	cancelAnalyzeBrandFn,
+	getAnalyzeBrandStatusFn,
+	startAnalyzeBrandFn,
 	updateOnboardedBrandFn,
 } from "@/server/onboarding";
-import { trackEvent } from "@/lib/posthog";
-import { CompetitorsEditor, newCompetitorEntry, type CompetitorEntry } from "@/components/competitors-editor";
-import { PromptsListEditor, newPromptEntry, type EditablePrompt } from "@/components/prompts-list-editor";
 
 interface PromptWizardProps {
 	onComplete: () => void;
@@ -82,9 +83,11 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 	const queryClient = useQueryClient();
 	const router = useRouter();
 	const [phase, setPhase] = useState<"idle" | "analyzing" | "review">("idle");
+	const [needsReanalysis, setNeedsReanalysis] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
+	const activeAnalysisIdentity = useRef<{ brandName: string; website: string } | null>(null);
 	const [data, setData] = useState<WizardData>({
 		brandName: "",
 		website: "",
@@ -124,7 +127,10 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 	// the moment we leave the analyzing phase.
 	const statusQuery = useQuery({
 		queryKey: analyzeStatusKey(brandId ?? "none"),
-		queryFn: () => getAnalyzeBrandStatusFn({ data: { brandId: brandId! } }),
+		queryFn: () => {
+			if (!brandId) throw new Error("Cannot check analysis status without a brand.");
+			return getAnalyzeBrandStatusFn({ data: { brandId } });
+		},
 		// Only poll once the job is actually enqueued.
 		enabled: phase === "analyzing" && analysisEnqueued && !!brandId,
 		staleTime: 0,
@@ -134,13 +140,21 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 	});
 
 	const handleAnalyze = useCallback(() => {
-		if (!brand?.website || !brand?.id) return;
+		if (!brand?.id) return;
+		const brandName = data.brandName.trim() || (!needsReanalysis ? brand.name.trim() : "");
+		const website = data.website.trim() || (!needsReanalysis ? brand.website.trim() : "");
+		if (!brandName || !website) {
+			setError("Enter both a brand name and website before analyzing.");
+			return;
+		}
 		setError(null);
+		setSubmitError(null);
 		// Clear any stale status from a previous run before we start polling.
 		queryClient.removeQueries({ queryKey: analyzeStatusKey(brand.id) });
+		activeAnalysisIdentity.current = { brandName, website };
 		setPhase("analyzing");
-		enqueueAnalysis({ brandId: brand.id, website: brand.website, brandName: brand.name });
-	}, [brand?.website, brand?.id, brand?.name, queryClient, enqueueAnalysis]);
+		enqueueAnalysis({ brandId: brand.id, website, brandName });
+	}, [brand, data.brandName, data.website, needsReanalysis, queryClient, enqueueAnalysis]);
 
 	// React to status transitions while analyzing.
 	const statusData = statusQuery.data;
@@ -154,9 +168,10 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 		}
 		if (statusData.status === "done") {
 			const suggestion = statusData.suggestion;
+			const analyzedIdentity = activeAnalysisIdentity.current;
 			setData({
-				brandName: suggestion.brandName || brand?.name || "",
-				website: brand?.website || suggestion.website || "",
+				brandName: analyzedIdentity?.brandName || suggestion.brandName || brand?.name || "",
+				website: analyzedIdentity?.website || suggestion.website || brand?.website || "",
 				additionalDomains: suggestion.additionalDomains,
 				aliases: suggestion.aliases,
 				competitors: suggestion.competitors.map((c) =>
@@ -171,6 +186,8 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 					newPromptEntry({ value: p.prompt, tags: p.tags, enabled: true }),
 				),
 			});
+			setNeedsReanalysis(false);
+			setSubmitError(null);
 			setPhase("review");
 			trackEvent("onboarding_analyzed", {
 				competitor_count: suggestion.competitors.length,
@@ -190,8 +207,24 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 		return () => window.clearTimeout(timer);
 	}, [phase, stopAnalyzing]);
 
-	const updateBrandName = useCallback((brandName: string) => setData((p) => ({ ...p, brandName })), []);
-	const updateWebsite = useCallback((website: string) => setData((p) => ({ ...p, website })), []);
+	const invalidateSuggestionsForIdentityChange = useCallback((identity: Pick<WizardData, "brandName" | "website">) => {
+		setData((previous) => ({
+			...previous,
+			...identity,
+			competitors: [],
+			prompts: [],
+		}));
+		setNeedsReanalysis(true);
+		setSubmitError(null);
+	}, []);
+	const updateBrandName = useCallback(
+		(brandName: string) => invalidateSuggestionsForIdentityChange({ brandName, website: data.website }),
+		[data.website, invalidateSuggestionsForIdentityChange],
+	);
+	const updateWebsite = useCallback(
+		(website: string) => invalidateSuggestionsForIdentityChange({ brandName: data.brandName, website }),
+		[data.brandName, invalidateSuggestionsForIdentityChange],
+	);
 	const updateAliases = useCallback((aliases: string[]) => setData((p) => ({ ...p, aliases })), []);
 	const updateAdditionalDomains = useCallback(
 		(additionalDomains: string[]) => setData((p) => ({ ...p, additionalDomains })),
@@ -211,7 +244,10 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 	const handleSubmit = useCallback(async () => {
 		if (!brand?.id) return;
 		setSubmitError(null);
-		setIsSaving(true);
+		if (needsReanalysis) {
+			setSubmitError("Re-analyze the brand after changing its name or website before saving.");
+			return;
+		}
 		try {
 			const competitorsPayload = data.competitors
 				.filter((c) => c.name.trim() && c.domains.some((d) => d.trim()))
@@ -224,7 +260,12 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 			const promptsPayload = data.prompts
 				.filter((p) => p.enabled && p.value.trim())
 				.map((p) => ({ value: p.value.trim(), tags: p.tags, enabled: true }));
+			if (promptsPayload.length === 0) {
+				setSubmitError("Choose or add at least one enabled prompt before starting tracking.");
+				return;
+			}
 
+			setIsSaving(true);
 			await updateOnboardedBrandFn({
 				data: {
 					brandId: brand.id,
@@ -257,13 +298,15 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 		} finally {
 			setIsSaving(false);
 		}
-	}, [brand, data, queryClient, router, onComplete]);
+	}, [brand, data, needsReanalysis, queryClient, router, onComplete]);
+
+	const websiteBeingAnalyzed = data.website.trim() || brand?.website;
 
 	if (phase === "idle" || phase === "analyzing") {
 		return (
 			<div className="max-w-2xl mx-auto space-y-3">
 				<p className="text-sm text-muted-foreground">
-					We'll analyze <strong>{brand?.website}</strong> using web search to suggest competitors, additional
+					We'll analyze <strong>{websiteBeingAnalyzed}</strong> using web search to suggest competitors, additional
 					domains/aliases, and a starter set of AI prompts to track.
 				</p>
 				{error && (
@@ -284,7 +327,7 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 							</>
 						) : (
 							<>
-								<Play className="h-4 w-4" /> Analyze brand
+								<Play className="h-4 w-4" /> {needsReanalysis ? "Re-analyze brand" : "Analyze brand"}
 							</>
 						)}
 					</Button>
@@ -340,51 +383,78 @@ export default function PromptWizard({ onComplete }: PromptWizardProps) {
 				</div>
 			</div>
 
-			<Separator />
-
-			<div className="space-y-3">
-				<div>
-					<h2 className="text-2xl font-bold">Competitors</h2>
-					<p className="text-muted-foreground">Companies you want tracked alongside your brand.</p>
+			{needsReanalysis ? (
+				<div
+					role="alert"
+					className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100"
+				>
+					<div className="flex items-start gap-3">
+						<AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+						<div className="space-y-1 text-sm">
+							<p className="font-medium">Brand details changed</p>
+							<p>The previous competitor and prompt suggestions were cleared. Re-analyze this brand before saving.</p>
+							{(!data.brandName.trim() || !data.website.trim()) && (
+								<p>Enter both a brand name and website to continue.</p>
+							)}
+						</div>
+					</div>
+					<Button
+						type="button"
+						onClick={handleAnalyze}
+						disabled={!data.brandName.trim() || !data.website.trim()}
+						className="flex items-center gap-2 cursor-pointer"
+					>
+						<Play className="h-4 w-4" /> Re-analyze brand
+					</Button>
 				</div>
-				<CompetitorsEditor competitors={data.competitors} onChange={updateCompetitors} disabled={isSaving} />
-			</div>
+			) : (
+				<>
+					<Separator />
 
-			<Separator />
+					<div className="space-y-3">
+						<div>
+							<h2 className="text-2xl font-bold">Competitors</h2>
+							<p className="text-muted-foreground">Companies you want tracked alongside your brand.</p>
+						</div>
+						<CompetitorsEditor competitors={data.competitors} onChange={updateCompetitors} disabled={isSaving} />
+					</div>
 
-			<div className="space-y-3">
-				<div>
-					<h2 className="text-2xl font-bold">Prompts</h2>
-					<p className="text-muted-foreground">
-						Pick which AI tracking prompts to start with. Untick any you don't want, edit tags, or add your own at the
-						bottom.
-					</p>
-				</div>
-				<PromptsListEditor prompts={data.prompts} onChange={updatePrompts} showSystemTags={false} />
-			</div>
+					<Separator />
 
-			{submitError && (
-				<div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">
-					<AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-					<div className="text-sm">{submitError}</div>
-				</div>
+					<div className="space-y-3">
+						<div>
+							<h2 className="text-2xl font-bold">Prompts</h2>
+							<p className="text-muted-foreground">
+								Pick which AI tracking prompts to start with. Untick any you don't want, edit tags, or add your own at
+								the bottom.
+							</p>
+						</div>
+						<PromptsListEditor prompts={data.prompts} onChange={updatePrompts} showSystemTags={false} />
+					</div>
+
+					{submitError && (
+						<div
+							role="alert"
+							className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+						>
+							<AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+							<div className="text-sm">{submitError}</div>
+						</div>
+					)}
+
+					<Button onClick={handleSubmit} disabled={isSaving} className="flex items-center gap-2 cursor-pointer">
+						{isSaving ? (
+							<>
+								<Loader2 className="h-4 w-4 animate-spin" /> Saving…
+							</>
+						) : (
+							<>
+								<Rocket className="h-4 w-4" /> Start tracking ({previewCounts.totalNew} new prompts)
+							</>
+						)}
+					</Button>
+				</>
 			)}
-
-			<Button
-				onClick={handleSubmit}
-				disabled={isSaving || previewCounts.totalNew === 0}
-				className="flex items-center gap-2 cursor-pointer"
-			>
-				{isSaving ? (
-					<>
-						<Loader2 className="h-4 w-4 animate-spin" /> Saving…
-					</>
-				) : (
-					<>
-						<Rocket className="h-4 w-4" /> Start tracking ({previewCounts.totalNew} new prompts)
-					</>
-				)}
-			</Button>
 		</div>
 	);
 }
