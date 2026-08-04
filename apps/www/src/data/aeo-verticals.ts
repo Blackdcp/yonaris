@@ -7,7 +7,7 @@ export interface AeoVertical {
 	/** Illustrative prompts buyers in this vertical ask AI engines. */
 	examplePrompts: string[];
 	plays: { name: string; text: string }[];
-	elmoFit: string;
+	yonarisFit: string;
 	faqs: { question: string; answer: string }[];
 }
 
@@ -16,10 +16,10 @@ export const aeoVerticals: AeoVertical[] = [
 		slug: "agencies",
 		audience: "agencies",
 		short:
-			"Track AI visibility for every client and report it under your own brand, on an open-source platform you can run at agency scale.",
+			"Establish a repeatable GEO baseline for every client, with prompt sets and AI models configured for each engagement.",
 		intro: [
 			"Agencies tend to feel the shift to AI search first, because clients start asking why a competitor shows up in ChatGPT and they do not. AEO turns into a service line: measure each client's presence across the answer engines, find the gaps, and show the work.",
-			"The hard part is doing that across many clients without paying per seat for each one. An open-source, self-hostable tool changes the math, especially one with white-label support, so the dashboards carry your brand instead of a vendor's.",
+			"The hard part is producing comparable results across many clients. A consistent baseline, configurable model coverage, and clear separation between client datasets make the work easier to operate and explain.",
 		],
 		examplePrompts: ["best [client category] companies", "[client] vs [competitor]", "is [client] worth it"],
 		plays: [
@@ -36,22 +36,22 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "Every prompt where a client is missing is a concrete content brief. That is the bridge from reporting to billable work.",
 			},
 			{
-				name: "White-label the dashboards",
-				text: "Put the reporting under your own brand and domain so the visibility data looks like part of your service, not a third-party tool.",
+				name: "Keep client baselines separate",
+				text: "Use distinct prompt sets, model selections, and reporting periods for each client so results remain comparable and auditable.",
 			},
 		],
-		elmoFit:
-			"Elmo is open source with white-label support, so you can run one instance for an entire book of clients, brand the dashboards as your own, and skip the per-seat pricing that does not scale across an agency.",
+		yonarisFit:
+			"Yonaris organizes prompt sets, configured AI models, and baseline results by client while leaving deployment and data control with the operator.",
 		faqs: [
 			{
-				question: "Can agencies white-label AI visibility reports?",
+				question: "Can agencies manage separate GEO baselines for clients?",
 				answer:
-					"Yes. Elmo offers white-label deployments, so agencies can run multi-client dashboards under their own brand and domain. You self-host the platform and present the data as part of your own service.",
+					"Yonaris supports a structured baseline workflow in which prompt sets and model coverage can be configured for each engagement. The deployment operator controls how client data is stored and presented.",
 			},
 			{
 				question: "How do agencies price AEO services?",
 				answer:
-					"Most agencies bill AEO as a monitoring retainer plus content work, since each prompt where a client is missing becomes a brief. Running an open-source tool keeps your tooling cost flat as you add clients.",
+					"Many agencies combine recurring monitoring with content or technical optimization work. A stable prompt set and reporting cadence make the baseline, changes, and resulting work clear to the client.",
 			},
 		],
 	},
@@ -87,8 +87,8 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "Models go stale. Monitor for outdated descriptions of your features or pricing and correct the underlying sources.",
 			},
 		],
-		elmoFit:
-			"Elmo tracks exactly these prompts across every major engine, shows which competitors get named with or instead of you, and flags when a model gets your features or pricing wrong.",
+		yonarisFit:
+			"Yonaris establishes a repeatable baseline across the AI models configured for the project, showing brand and competitor mentions and surfacing changes in product descriptions over time.",
 		faqs: [
 			{
 				question: "How do I show up when buyers ask AI for software recommendations?",
@@ -98,7 +98,7 @@ export const aeoVerticals: AeoVertical[] = [
 			{
 				question: "Can I see which competitors AI tools recommend?",
 				answer:
-					"Yes. Elmo records which competitors get mentioned and cited alongside you on each prompt, so you can measure share of voice against your named rivals.",
+					"Yes. Yonaris records competitor mentions and citations for the configured prompt set, so you can compare share of voice against named rivals within the baseline.",
 			},
 		],
 	},
@@ -129,8 +129,8 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "Stale prices and stock invite wrong answers. Keep product data current so engines describe you correctly.",
 			},
 		],
-		elmoFit:
-			"Elmo tracks how AI answers describe and recommend your products against competitors, so you can see which categories you win and which you are missing.",
+		yonarisFit:
+			"Yonaris measures how configured AI models describe and recommend your products against competitors, giving each category a repeatable GEO baseline.",
 		faqs: [
 			{
 				question: "Do AI engines recommend products?",
@@ -175,8 +175,8 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "An out-of-date claim about your product can sit in answers for months. Monitor and fix the sources behind it.",
 			},
 		],
-		elmoFit:
-			"Elmo measures your presence across category, competitor, and branded prompts, so you can see where you enter the buyer's research and where you are absent.",
+		yonarisFit:
+			"Yonaris measures your presence across category, competitor, and branded prompts on the configured AI models, so you can see where you enter the buyer's research and where you are absent.",
 		faqs: [
 			{
 				question: "Why does AEO matter for B2B?",
@@ -193,10 +193,10 @@ export const aeoVerticals: AeoVertical[] = [
 	{
 		slug: "startups",
 		audience: "startups",
-		short: "Build AI visibility from zero without enterprise pricing, on a tool you can self-host for free.",
+		short: "Build AI visibility from zero with a focused prompt set and a repeatable GEO baseline.",
 		intro: [
 			"A new brand starts out invisible to AI engines, because there is little for the models to have learned. The job is to build a credible footprint quickly: clear content, early reviews, and mentions on sources the models trust.",
-			"Budgets are tight, which is the catch with most tools in this space. An open-source platform you self-host for free lets you start measuring on day one and only pay for the API calls you actually make.",
+			"Early teams can keep the measurement scope focused: choose the buyer questions that matter, configure the relevant AI models, and repeat the same baseline as the brand earns new coverage.",
 		],
 		examplePrompts: ["best [new category] tools", "alternatives to [incumbent]", "what is [your brand]"],
 		plays: [
@@ -217,13 +217,13 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "Visibility moves as you publish and get covered. A weekly read shows whether it is working.",
 			},
 		],
-		elmoFit:
-			"Elmo is free to self-host, so an early-stage team can track AI visibility without an enterprise contract and only pay for the provider API keys it uses.",
+		yonarisFit:
+			"Yonaris gives an early-stage team a repeatable GEO baseline using a focused prompt set and configurable AI models, with data controlled by the deployment operator.",
 		faqs: [
 			{
-				question: "Is there a free AI visibility tool for startups?",
+				question: "How can a startup establish an AI visibility baseline?",
 				answer:
-					"Yes. Elmo is free and open source to self-host. There is no license fee or per-seat pricing, so you only pay for your own infrastructure and the AI provider keys you use.",
+					"Start with a small set of high-intent prompts, choose the AI models relevant to your buyers, and repeat the same test on a consistent cadence. Yonaris keeps that baseline structured as the scope grows.",
 			},
 			{
 				question: "When should a startup start doing AEO?",
@@ -235,16 +235,16 @@ export const aeoVerticals: AeoVertical[] = [
 	{
 		slug: "enterprise",
 		audience: "enterprises",
-		short: "Track AI visibility at scale while keeping your prompts and history on your own infrastructure.",
+		short: "Track AI visibility at scale with configurable model coverage and deployment-controlled data.",
 		intro: [
 			"Large brands have the most to lose when an AI engine describes them wrongly, and the most scrutiny over where their data goes. Many AI visibility tools are closed and hosted, which means handing your prompt strategy and history to a third party.",
-			"Self-hosting changes that. An open-source platform runs on your own infrastructure, keeps your data in house, and lets your team verify exactly how each metric is computed, which matters when the number ends up in a board report.",
+			"A deployment-controlled workflow keeps decisions about prompt history, access, and retention with the operator. A documented baseline also makes the methodology behind board-level reporting easier to review.",
 		],
 		examplePrompts: ["is [brand] trustworthy", "[brand] vs [competitor]", "best [category] for enterprise"],
 		plays: [
 			{
-				name: "Self-host for data control",
-				text: "Run the platform on your own infrastructure so prompts and visibility history never leave your environment.",
+				name: "Define deployment data controls",
+				text: "Let the deployment operator define how prompts, results, access, and retention are handled for the organization.",
 			},
 			{
 				name: "Standardize a prompt set",
@@ -255,22 +255,22 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "Track share of voice against the specific rivals leadership cares about, on the prompts that matter.",
 			},
 			{
-				name: "Audit the methodology",
-				text: "Open code means your team can verify how every metric is built, rather than trusting a black-box score.",
+				name: "Document the methodology",
+				text: "Record the prompt set, selected models, cadence, and scoring rules so each reported metric can be reviewed.",
 			},
 		],
-		elmoFit:
-			"Elmo is open source and self-hosted, so enterprise teams keep full ownership of their data, avoid vendor lock-in, and can audit the methodology behind every metric.",
+		yonarisFit:
+			"Yonaris standardizes prompt sets and configurable model coverage while the deployment operator controls data handling and access.",
 		faqs: [
 			{
-				question: "Can we self-host AI visibility tracking?",
+				question: "Can we control AI visibility data handling?",
 				answer:
-					"Yes. Elmo is built to be self-hosted. You deploy it on your own infrastructure, keep prompts and history in house, and read the code to verify exactly how each metric is calculated.",
+					"Yonaris is designed so the deployment operator controls how prompts, results, access, and retention are handled. Teams can also document the prompt set and model configuration behind each baseline.",
 			},
 			{
-				question: "How does Elmo handle data ownership?",
+				question: "How does Yonaris handle data control?",
 				answer:
-					"You own everything. Because Elmo is open source and runs on your infrastructure, your data stays with you, you can export it at any time, and there is no vendor lock-in.",
+					"Data handling is controlled by the party operating the deployment. That operator defines storage, access, and retention according to the organization's requirements.",
 			},
 		],
 	},
@@ -280,7 +280,7 @@ export const aeoVerticals: AeoVertical[] = [
 		short: "Monitor and correct how AI engines describe your healthcare brand, where accuracy is not optional.",
 		intro: [
 			"Health topics are exactly where AI engines are most cautious, and where errors do the most damage. An inaccurate description of a provider, product, or service is a real risk, not a cosmetic one.",
-			"Accuracy and data control both matter here. Authoritative, well-sourced content shapes what the models say, and self-hosting keeps sensitive prompt data on your own infrastructure rather than a vendor's.",
+			"Accuracy and data control both matter here. Authoritative, well-sourced content shapes what the models say, while the deployment operator controls how prompt and result data is handled.",
 		],
 		examplePrompts: ["is [treatment] safe", "best [specialty] near me", "what does [brand] treat"],
 		plays: [
@@ -297,12 +297,12 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "References from respected health sources carry extra weight in how engines ground their answers.",
 			},
 			{
-				name: "Self-host sensitive data",
-				text: "Keep prompts and history on your own infrastructure rather than a third-party dashboard.",
+				name: "Control sensitive data",
+				text: "Define prompt storage, result access, and retention through the party operating the deployment.",
 			},
 		],
-		elmoFit:
-			"Elmo lets healthcare teams track how engines describe their brand and catch inaccuracies, while self-hosting keeps sensitive data in house and the methodology fully auditable.",
+		yonarisFit:
+			"Yonaris gives healthcare teams a repeatable baseline for how configured AI models describe their brand, while the deployment operator controls data handling.",
 		faqs: [
 			{
 				question: "Why does AEO matter in healthcare?",
@@ -312,7 +312,7 @@ export const aeoVerticals: AeoVertical[] = [
 			{
 				question: "How do I catch AI errors about my health brand?",
 				answer:
-					"Track a consistent set of prompts about your brand and services across engines, and watch for inaccurate or stale claims. Elmo records how each engine describes you so errors surface quickly.",
+					"Track a consistent set of prompts about your brand and services across the configured AI models, and watch for inaccurate or stale claims. Yonaris records each baseline so changes surface quickly.",
 			},
 		],
 	},
@@ -322,7 +322,7 @@ export const aeoVerticals: AeoVertical[] = [
 		short: "Track how AI engines describe your financial brand, with the accuracy and data control the sector demands.",
 		intro: [
 			"Finance is another area where engines tread carefully, and where a wrong answer about rates, products, or eligibility carries compliance weight. Buyers ask AI engines for recommendations and comparisons all the same.",
-			"Authoritative content earns the citation, and self-hosting keeps your prompt data and visibility history on infrastructure you control, which fits a regulated environment better than a closed third-party dashboard.",
+			"Authoritative content earns the citation, while deployment-controlled handling of prompt data and visibility history helps the workflow fit a regulated environment.",
 		],
 		examplePrompts: ["best [product] for [need]", "is [brand] legit", "[brand] vs [competitor] fees"],
 		plays: [
@@ -339,12 +339,12 @@ export const aeoVerticals: AeoVertical[] = [
 				text: "References from respected financial sources weigh heavily in what engines repeat about you.",
 			},
 			{
-				name: "Self-host for control",
-				text: "Keep prompts and visibility history on your own infrastructure to fit your data and compliance requirements.",
+				name: "Define data controls",
+				text: "Let the deployment operator set storage, access, and retention rules to fit data and compliance requirements.",
 			},
 		],
-		elmoFit:
-			"Elmo tracks your AI visibility across engines and flags inaccurate descriptions, while open-source self-hosting keeps data in house and every metric auditable for compliance.",
+		yonarisFit:
+			"Yonaris establishes a repeatable baseline across configured AI models and records description changes, while the deployment operator controls data handling.",
 		faqs: [
 			{
 				question: "Why does AEO matter for financial services?",
@@ -354,7 +354,7 @@ export const aeoVerticals: AeoVertical[] = [
 			{
 				question: "Can I keep AI visibility data on our own infrastructure?",
 				answer:
-					"Yes. Elmo is open source and self-hosted, so your prompts and visibility history stay on infrastructure you control, which suits regulated financial environments.",
+					"Yes. With Yonaris, the party operating the deployment controls how prompts and visibility history are stored, accessed, and retained for the regulated environment.",
 			},
 		],
 	},

@@ -17,6 +17,8 @@ export interface FeaturesConfig {
 export interface BrandingConfig {
 	name: string;
 	icon?: string;
+	wordmark?: string;
+	wordmarkOnDark?: string;
 	url?: string;
 	parentName?: string;
 	parentUrl?: string;
@@ -28,6 +30,8 @@ export interface BrandingConfig {
 export interface AnalyticsConfig {
 	plausibleDomain?: string;
 	clarityProjectId?: string;
+	posthogKey?: string;
+	posthogHost?: string;
 }
 
 export interface ClientConfig {
@@ -55,7 +59,10 @@ let _config: ClientConfig = {
 		canCreateBrands: false,
 	},
 	branding: {
-		name: "Elmo",
+		name: "Yonaris",
+		icon: "/icons/yonaris-icon.svg",
+		wordmark: "/brand/yonaris-wordmark-navy.png",
+		wordmarkOnDark: "/brand/yonaris-wordmark-white.png",
 		chartColors: DEFAULT_CHART_COLORS,
 	},
 	analytics: {},

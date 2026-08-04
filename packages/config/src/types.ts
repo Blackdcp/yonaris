@@ -64,6 +64,8 @@ export interface AnalyticsConfig {
 	clarityProjectId?: string;
 	/** PostHog project API key (optional) */
 	posthogKey?: string;
+	/** PostHog ingestion host (optional) */
+	posthogHost?: string;
 }
 
 /**
@@ -74,6 +76,10 @@ export interface BrandingConfig {
 	name: string;
 	/** Path to the application icon */
 	icon: string;
+	/** Horizontal wordmark for light backgrounds (optional; falls back to icon + name) */
+	wordmark?: string;
+	/** Horizontal wordmark for dark backgrounds (optional; falls back to wordmark) */
+	wordmarkOnDark?: string;
 	/** Application URL */
 	url: string;
 	/** Parent company name (optional) */

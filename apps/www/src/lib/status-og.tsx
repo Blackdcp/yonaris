@@ -1,16 +1,17 @@
-import { ELMO_BRAND_COLOR } from "@workspace/config/constants";
 import { ACCENT_COLORS } from "@workspace/og/render";
 import {
 	overallStatus,
-	parseTarget,
-	passRate,
 	PROVIDER_FILTER_LABELS,
 	PROVIDER_FILTER_ORDER,
+	parseTarget,
+	passRate,
 	providerCategory,
-	rateTier,
 	type RateTier,
+	rateTier,
 	type TargetStatus,
 } from "./status-helpers";
+
+const YONARIS_NAVY = "#0A1A2A";
 
 const TIER_TEXT: Record<RateTier, string> = {
 	up: "#15803d",
@@ -28,7 +29,7 @@ const TIER_CHIP: Record<RateTier, { bg: string; border: string }> = {
 
 // Rendered by Satori: every element with multiple children needs display:flex,
 // styles are inline, and the only usable font faces are the ones the route
-// loads (Titan One 400, Geist Sans 400/500) — so avoid heavier weights.
+// loads (Geist Sans 400/500) — so avoid heavier weights.
 export function renderStatusOgImage(data: TargetStatus[]) {
 	const overall = overallStatus(data);
 	const providers = PROVIDER_FILTER_ORDER.filter((c) =>
@@ -85,13 +86,14 @@ export function renderStatusOgImage(data: TargetStatus[]) {
 			>
 				<div
 					style={{
-						fontFamily: "Titan One",
+						fontFamily: "Geist Sans",
+						fontWeight: 500,
 						fontSize: 46,
-						color: ELMO_BRAND_COLOR,
+						color: YONARIS_NAVY,
 						lineHeight: 1,
 					}}
 				>
-					elmo
+					Yonaris
 				</div>
 				<div
 					style={{

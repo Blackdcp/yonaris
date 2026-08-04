@@ -26,6 +26,8 @@ export function useChartExport(fileName: string) {
 				branding: {
 					name: branding?.name,
 					icon: branding?.icon,
+					wordmark: branding?.wordmark,
+					url: branding?.url,
 					parentUrl: branding?.parentUrl,
 					isWhitelabel: mode === "whitelabel",
 					chartColors: branding?.chartColors ?? [],

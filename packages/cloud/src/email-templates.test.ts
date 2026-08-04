@@ -15,7 +15,7 @@ describe("verificationEmail", () => {
 describe("passwordResetEmail", () => {
 	it("includes the url in html and text with a non-empty subject", () => {
 		const email = passwordResetEmail({ url: URL });
-		expect(email.subject.length).toBeGreaterThan(0);
+		expect(email.subject).toContain("Yonaris");
 		expect(email.html).toContain(URL);
 		expect(email.text).toContain(URL);
 	});
@@ -24,7 +24,7 @@ describe("passwordResetEmail", () => {
 describe("invitationEmail", () => {
 	it("includes the url in html and text with a non-empty subject", () => {
 		const email = invitationEmail({ inviterName: "Ana", orgName: "Acme", url: URL });
-		expect(email.subject.length).toBeGreaterThan(0);
+		expect(email.subject).toContain("Yonaris");
 		expect(email.html).toContain(URL);
 		expect(email.text).toContain(URL);
 	});

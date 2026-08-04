@@ -1,11 +1,11 @@
 ---
 title: Versioning & Releases
-description: How Elmo handles versioning, changesets, and the release process.
+description: How Yonaris handles versioning, changesets, and the release process.
 ---
 
 ## Changesets
 
-Elmo uses [Changesets](https://github.com/changesets/changesets) for version management. All packages in the monorepo use fixed versioning — they stay on the same version number.
+Yonaris uses [Changesets](https://github.com/changesets/changesets) for version management. All packages in the monorepo use fixed versioning — they stay on the same version number.
 
 ### Adding a Changeset
 
@@ -55,9 +55,9 @@ When ready to release a new version:
 
 | Artifact | Registry | Description |
 |----------|----------|-------------|
-| `@elmohq/cli` | npm | The Elmo CLI package |
-| `elmohq/elmo-web` | Docker Hub | Web app Docker image |
-| `elmohq/elmo-worker` | Docker Hub | Worker Docker image |
+| `@elmohq/cli` | npm | Upstream-compatible Yonaris CLI package |
+| `elmohq/elmo-web` | Docker Hub | Upstream-compatible web app image |
+| `elmohq/elmo-worker` | Docker Hub | Upstream-compatible worker image |
 | `elmohq/elmo-db-migrate` | Docker Hub | One-shot drizzle migrations image |
 
 ## Versioning Strategy

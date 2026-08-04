@@ -1,4 +1,10 @@
-import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_URL } from "@workspace/config/constants";
+import {
+	DEFAULT_APP_ICON,
+	DEFAULT_APP_NAME,
+	DEFAULT_APP_URL,
+	DEFAULT_APP_WORDMARK,
+	DEFAULT_APP_WORDMARK_ON_DARK,
+} from "@workspace/config/constants";
 import { describe, expect, it } from "vitest";
 import { createCloudDeployment } from "./deployment";
 
@@ -23,13 +29,15 @@ describe("createCloudDeployment", () => {
 		expect(features.reportGeneration).toBe(false);
 	});
 
-	it("uses Elmo branding defaults without VITE_APP_* overrides", () => {
+	it("uses Yonaris branding defaults without VITE_APP_* overrides", () => {
 		const { branding } = createCloudDeployment({
 			VITE_APP_NAME: "Should Be Ignored",
 			VITE_APP_ICON: "https://cdn.example.com/ignored.png",
 		});
 		expect(branding.name).toBe(DEFAULT_APP_NAME);
 		expect(branding.icon).toBe(DEFAULT_APP_ICON);
+		expect(branding.wordmark).toBe(DEFAULT_APP_WORDMARK);
+		expect(branding.wordmarkOnDark).toBe(DEFAULT_APP_WORDMARK_ON_DARK);
 	});
 
 	it("reads the public app URL from APP_URL", () => {

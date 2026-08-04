@@ -1,11 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight } from "lucide-react";
 import { Button } from "@workspace/ui/components/button";
-import { Navbar } from "@/components/navbar";
+import { ArrowRight } from "lucide-react";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
+import { Navbar } from "@/components/navbar";
+import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
 
-const title = "Our Vision · Elmo";
+const title = "Our Vision · Yonaris";
 const description =
 	"AI visibility should be affordable, transparent, and built to last. Here's why we're building Elmo differently.";
 

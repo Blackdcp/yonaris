@@ -49,6 +49,8 @@ export function createWhitelabelDeployment(options: CreateWhitelabelDeploymentOp
 		branding: {
 			name: requiredEnv.VITE_APP_NAME,
 			icon: requiredEnv.VITE_APP_ICON,
+			wordmark: env.VITE_APP_WORDMARK,
+			wordmarkOnDark: env.VITE_APP_WORDMARK_ON_DARK,
 			url: requiredEnv.VITE_APP_URL,
 			parentName: env.VITE_APP_PARENT_NAME,
 			parentUrl: env.VITE_APP_PARENT_URL,

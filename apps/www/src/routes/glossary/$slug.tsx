@@ -1,15 +1,15 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
-import { getGlossaryTerm, glossaryTerms, type GlossaryTerm } from "@/data/glossary";
+import { Navbar } from "@/components/navbar";
+import { type GlossaryTerm, getGlossaryTerm, glossaryTerms } from "@/data/glossary";
+import { breadcrumbJsonLd, canonicalUrl, faqJsonLd, ogMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/glossary/$slug")({
 	head: ({ params }) => {
 		const t = getGlossaryTerm(params.slug);
 		if (!t) return {};
-		const title = `What is ${t.term}? · Elmo`;
+		const title = `What is ${t.term}? · Yonaris`;
 		const description = t.short;
 		const path = `/glossary/${t.slug}`;
 		return {
@@ -115,8 +115,8 @@ function GlossaryTermPage() {
 					<div className="mx-auto max-w-3xl px-4 text-center md:px-6">
 						<h2 className="font-heading text-2xl text-zinc-950">See it in your own data</h2>
 						<p className="mx-auto mt-3 max-w-xl text-zinc-600">
-							Elmo is an open-source AI visibility platform. Self-host it for free and track how AI answer engines
-							mention and cite your brand.
+							Yonaris helps teams establish a repeatable GEO baseline across configured AI models while keeping
+							deployment and data control with the operator.
 						</p>
 						<div className="mt-6 flex flex-wrap justify-center gap-3">
 							<Link

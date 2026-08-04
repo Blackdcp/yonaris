@@ -1,13 +1,15 @@
-import { Badge } from "@workspace/ui/components/badge";
-import { BaseChart } from "./base-chart";
-import { DEFAULT_APP_ICON, DEFAULT_APP_NAME } from "@workspace/config/constants";
+import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK } from "@workspace/config/constants";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { Badge } from "@workspace/ui/components/badge";
 import type { ChartDataPoint, LookbackPeriod } from "@/lib/chart-utils";
-import { getBadgeVariant, getBadgeClassName } from "@/lib/chart-utils";
+import { getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
+import { BaseChart } from "./base-chart";
 
 export interface ChartExportBranding {
 	name?: string;
 	icon?: string;
+	wordmark?: string;
+	url?: string;
 	parentUrl?: string;
 	isWhitelabel: boolean;
 	chartColors: string[];
@@ -33,6 +35,22 @@ const CARD_PADDING_Y = 24;
 const FOOTER_REGION = 80;
 const CHART_H = EXPORT_H - HEADER_TOP - HEADER_H - GAP_HEADER_CARD - CARD_PADDING_Y - FOOTER_REGION;
 
+function formatBrandDomain(url?: string): string {
+	const value = url?.trim();
+	if (!value) return "";
+
+	try {
+		const parsed = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+		const hostname = parsed.hostname.replace(/^\[|\]$/g, "").toLowerCase();
+		if (hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1") return "";
+		return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/$/, "")}`;
+	} catch {
+		const normalized = value.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+		if (/^(?:localhost|127\.0\.0\.1|\[?::1\]?)(?::\d+)?(?:\/|$)/i.test(normalized)) return "";
+		return normalized;
+	}
+}
+
 export function ChartExportPreview({
 	promptName,
 	visibility,
@@ -43,8 +61,9 @@ export function ChartExportPreview({
 	branding,
 }: ChartExportPreviewProps) {
 	const name = branding.name || DEFAULT_APP_NAME;
-	const isWhitelabel = branding.isWhitelabel && branding.name !== DEFAULT_APP_NAME;
-	const domain = isWhitelabel ? branding.parentUrl?.replace(/^https?:\/\//, "").replace(/\/$/, "") || "" : "elmohq.com";
+	const domain = formatBrandDomain(branding.parentUrl || branding.url);
+	const usesDefaultBrand = name === DEFAULT_APP_NAME && (!branding.icon || branding.icon === DEFAULT_APP_ICON);
+	const wordmark = branding.wordmark || (usesDefaultBrand ? DEFAULT_APP_WORDMARK : undefined);
 	const hasCustomIcon = branding.icon && branding.icon !== DEFAULT_APP_ICON;
 
 	return (
@@ -93,28 +112,36 @@ export function ChartExportPreview({
 			{/* Branding footer — fills remaining space, content vertically centered */}
 			<div className="flex-1 flex items-center justify-between px-10 min-h-0">
 				<div className="flex items-center gap-3">
-					{isWhitelabel && hasCustomIcon && (
+					{wordmark ? (
 						<img
-							src={branding.icon}
+							src={wordmark}
 							alt={`${name} logo`}
-							style={{ width: 28, height: 28 }}
+							style={{ width: 148, height: 36 }}
 							className="object-contain"
 							crossOrigin="anonymous"
 						/>
-					)}
-					{isWhitelabel ? (
-						<span style={{ fontSize: 18 }} className="text-gray-500 font-semibold">
-							{name}
-						</span>
 					) : (
-						<span className="font-titan-one font-normal lowercase text-blue-600" style={{ fontSize: 24 }}>
-							elmo
-						</span>
+						<>
+							{hasCustomIcon && (
+								<img
+									src={branding.icon}
+									alt={`${name} logo`}
+									style={{ width: 28, height: 28 }}
+									className="object-contain"
+									crossOrigin="anonymous"
+								/>
+							)}
+							<span style={{ fontSize: 18 }} className="text-gray-500 font-semibold">
+								{name}
+							</span>
+						</>
 					)}
 				</div>
-				<span style={{ fontSize: 18 }} className="text-gray-400 font-medium">
-					{domain}
-				</span>
+				{domain && (
+					<span style={{ fontSize: 18 }} className="text-gray-400 font-medium">
+						{domain}
+					</span>
+				)}
 			</div>
 		</div>
 	);

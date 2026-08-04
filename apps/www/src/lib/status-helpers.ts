@@ -78,7 +78,7 @@ const SCRAPE_ONLY_MODELS = new Set(["google-ai-mode", "google-ai-overview", "cop
 
 // Which models each scraper has a collector for. A model missing from a
 // scraper's set can't be reached through it — a hard capability gap, not merely
-// something Elmo hasn't wired up yet. Mirrors the provider registries in
+// something Yonaris hasn't wired up yet. Mirrors the provider registries in
 // @workspace/lib.
 const SCRAPER_MODELS: Record<string, Set<string>> = {
 	olostep: new Set(["chatgpt", "google-ai-mode", "google-ai-overview", "gemini", "copilot", "perplexity"]),
@@ -90,8 +90,8 @@ const SCRAPER_MODELS: Record<string, Set<string>> = {
 export type CellAvailability = "tracked" | "untracked" | "unavailable";
 
 // Classify a model × provider-category combination independent of run data:
-// "tracked" when Elmo runs it, "unavailable" when the combination can't exist,
-// "untracked" when it could exist but Elmo doesn't currently run it.
+// "tracked" when Yonaris runs it, "unavailable" when the combination can't exist,
+// "untracked" when it could exist but Yonaris doesn't currently run it.
 export function cellAvailability(model: string, provider: string, hasTarget: boolean): CellAvailability {
 	if (hasTarget) return "tracked";
 	// Model APIs reach only models with an inference endpoint — never the

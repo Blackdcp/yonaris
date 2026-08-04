@@ -8,6 +8,9 @@ export const Route = createFileRoute("/api/plausible/js/script/")({
 	server: {
 		handlers: {
 			GET: async ({ request }) => {
+				if (!process.env.VITE_PLAUSIBLE_DOMAIN?.trim()) {
+					return new Response("Analytics is not configured", { status: 404 });
+				}
 				const upstreamHeaders: Record<string, string> = {};
 
 				const userAgent = request.headers.get("user-agent");

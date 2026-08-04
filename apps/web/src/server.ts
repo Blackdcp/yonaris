@@ -15,14 +15,26 @@ void startCredentialRefresh();
 const strictTransportSecurity =
 	process.env.DEPLOYMENT_MODE === "whitelabel" ? "max-age=63072000" : "max-age=63072000; includeSubDomains";
 
+function configuredPosthogOrigin(): string | undefined {
+	if (!process.env.VITE_POSTHOG_KEY?.trim()) return undefined;
+	const host = process.env.VITE_POSTHOG_HOST?.trim() || "https://us.i.posthog.com";
+	try {
+		return new URL(host).origin;
+	} catch {
+		return undefined;
+	}
+}
+
+const posthogOrigin = configuredPosthogOrigin();
+
 const SECURITY_HEADERS: Record<string, string> = {
 	"Content-Security-Policy": [
 		"default-src 'self'",
-		"script-src 'self' 'unsafe-inline' https://*.clarity.ms https://var.elmohq.com",
+		`script-src 'self' 'unsafe-inline' https://*.clarity.ms${posthogOrigin ? ` ${posthogOrigin}` : ""}`,
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data: https: https://c.bing.com",
 		"font-src 'self' data:",
-		"connect-src 'self' https://var.elmohq.com https://*.sentry.io https://*.clarity.ms https://c.bing.com",
+		`connect-src 'self'${posthogOrigin ? ` ${posthogOrigin}` : ""} https://*.sentry.io https://*.clarity.ms https://c.bing.com`,
 		"object-src 'none'",
 		"frame-ancestors 'none'",
 		"base-uri 'self'",

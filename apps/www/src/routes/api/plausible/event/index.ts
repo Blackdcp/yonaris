@@ -28,6 +28,9 @@ export const Route = createFileRoute("/api/plausible/event/")({
 	server: {
 		handlers: {
 			POST: async ({ request }) => {
+				if (!process.env.VITE_PLAUSIBLE_DOMAIN?.trim()) {
+					return new Response("Analytics is not configured", { status: 404 });
+				}
 				const body = await request.text();
 
 				const upstreamResponse = await fetch(PLAUSIBLE_EVENT_URL, {

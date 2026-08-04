@@ -1,37 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@workspace/ui/components/chart";
+import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
-import { externalRel } from "@/lib/external-link";
+import { Navbar } from "@/components/navbar";
+import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
 import { getStatusData } from "@/lib/status";
 import {
 	buildStatusMatrix,
+	type CellAvailability,
 	dedupeEntries,
 	formatLatency,
 	formatModel,
 	formatProvider,
 	getLatest,
-	parseTarget,
-	passRate,
+	type MatrixCell,
 	MODEL_API_CATEGORIES,
 	PROVIDER_FILTER_LABELS,
 	PROVIDER_FILTER_ORDER,
+	parseTarget,
+	passRate,
 	providerCategory,
-	rateTier,
-	type CellAvailability,
-	type MatrixCell,
 	type RateTier,
+	rateTier,
 	type StatusEntry,
 	type TargetStatus,
 } from "@/lib/status-helpers";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@workspace/ui/components/chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
-import { Fragment, useState, useRef, useEffect, type ReactNode } from "react";
-import { createPortal } from "react-dom";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
 
-const title = "Provider Status · Elmo";
+const title = "Provider Status · Yonaris";
 const description = "Real-time status and performance monitoring for AI search provider integrations.";
 
 export const Route = createFileRoute("/status")({
@@ -603,7 +602,7 @@ function MatrixCellView({ cell, availability }: { cell: MatrixCell | null; avail
 		return (
 			<div
 				className="flex h-9 items-center justify-center rounded-sm bg-zinc-50 text-zinc-300"
-				title="Not currently tracked by Elmo"
+				title="Not currently tracked by Yonaris"
 			>
 				·
 			</div>
@@ -798,23 +797,10 @@ function StatusPage() {
 					<p className="mb-3 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ STATUS</p>
 					<h1 className="font-heading text-3xl text-zinc-950 md:text-4xl">Provider Status</h1>
 					<p className="mt-2 text-zinc-600">
-						Status of the third-party AI providers and scraping services Elmo uses to track your brand's visibility and
-						citations. Tests run automatically 4 times per day. Latencies shown are for individual prompt evaluations;
-						batches can vary significantly.
+						Status of the third-party AI providers and scraping services Yonaris uses to track your brand's visibility
+						and citations. Tests run automatically 4 times per day. Latencies shown are for individual prompt
+						evaluations; batches can vary significantly.
 					</p>
-				</div>
-
-				{/* Elmo Cloud status pointer */}
-				<div className="mb-8 flex flex-wrap items-center gap-x-1.5 gap-y-1 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-					<span>Looking for Elmo Cloud's status?</span>
-					<a
-						href="https://status.elmohq.com/"
-						target="_blank"
-						rel={externalRel("https://status.elmohq.com/")}
-						className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-700"
-					>
-						status.elmohq.com
-					</a>
 				</div>
 
 				{/* At-a-glance matrix — all providers, independent of the filters below */}

@@ -26,7 +26,7 @@ const defaultClientConfig: ClientConfig = {
 		canCreateBrands: true,
 	},
 	branding: {
-		name: "Elmo",
+		name: "Yonaris",
 		parentName: "",
 		optimizationUrlTemplate: "",
 		chartColors: CHART_COLORS,

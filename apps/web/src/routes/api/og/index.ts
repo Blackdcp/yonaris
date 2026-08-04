@@ -1,17 +1,16 @@
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
 import { createFileRoute } from "@tanstack/react-router";
-import titanOne400Data from "virtual:font/titan-one-400";
 import geistSans400Data from "virtual:font/geist-sans-400";
 import geistSans500Data from "virtual:font/geist-sans-500";
-import { DEFAULT_APP_NAME } from "@workspace/config/constants";
+import { DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK } from "@workspace/config/constants";
 import { renderOgPng } from "@workspace/og/rasterize";
 import { renderOgImage } from "@workspace/og/render";
 import { getDeployment } from "@/lib/config/server";
 
 const publicDir = new URL("../../../../public/", import.meta.url);
 
-async function fetchIconAsDataUri(iconPath: string, appUrl: string, requestUrl: string): Promise<string | undefined> {
+async function fetchAssetAsDataUri(assetPath: string, appUrl: string, requestUrl: string): Promise<string | undefined> {
 	const readPublicIcon = (pathname: string): string | undefined => {
 		try {
 			const iconFile = new URL(`.${pathname}`, publicDir);
@@ -31,11 +30,11 @@ async function fetchIconAsDataUri(iconPath: string, appUrl: string, requestUrl: 
 		}
 	};
 
-	if (iconPath.startsWith("/")) {
-		return readPublicIcon(iconPath);
+	if (assetPath.startsWith("/")) {
+		return readPublicIcon(assetPath);
 	}
 
-	const url = iconPath.startsWith("http") ? iconPath : `${appUrl.replace(/\/$/, "")}${iconPath}`;
+	const url = assetPath.startsWith("http") ? assetPath : `${appUrl.replace(/\/$/, "")}${assetPath}`;
 
 	try {
 		const iconUrl = new URL(url);
@@ -71,10 +70,14 @@ export const Route = createFileRoute("/api/og/")({
 				const { branding } = deployment;
 
 				const appName = forceDefault ? DEFAULT_APP_NAME : branding.name;
+				const wordmark = forceDefault ? DEFAULT_APP_WORDMARK : branding.wordmark;
 
+				const wordmarkDataUri = wordmark
+					? await fetchAssetAsDataUri(wordmark, branding.url, request.url)
+					: undefined;
 				let iconDataUri: string | undefined;
-				if (!forceDefault && appName !== DEFAULT_APP_NAME && branding.icon) {
-					iconDataUri = await fetchIconAsDataUri(branding.icon, branding.url, request.url);
+				if (!wordmarkDataUri && !forceDefault && appName !== DEFAULT_APP_NAME && branding.icon) {
+					iconDataUri = await fetchAssetAsDataUri(branding.icon, branding.url, request.url);
 				}
 
 				const png = await renderOgPng(
@@ -84,17 +87,12 @@ export const Route = createFileRoute("/api/og/")({
 						description,
 						accentColors: forceDefault ? undefined : branding.chartColors.slice(0, 4),
 						iconDataUri,
+						wordmarkDataUri,
 					}),
 					{
 						width: 1200,
 						height: 630,
 						fonts: [
-							{
-								name: "Titan One",
-								data: titanOne400Data,
-								style: "normal" as const,
-								weight: 400 as const,
-							},
 							{
 								name: "Geist Sans",
 								data: geistSans400Data,

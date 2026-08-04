@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, Home } from "lucide-react";
-import { Navbar } from "./navbar";
 import { Footer } from "./footer";
+import { Navbar } from "./navbar";
 
 const suggestedLinks = [
 	{ label: "Documentation", href: "/docs", description: "Get started and learn the API" },
-	{ label: "Features", href: "/features", description: "What Elmo can do for your brand" },
-	{ label: "Pricing", href: "/pricing", description: "Plans for every team size" },
-	{ label: "Roadmap", href: "/roadmap", description: "What we're building next" },
+	{ label: "Features", href: "/features", description: "What Yonaris can measure for your brand" },
+	{ label: "Deployment", href: "/pricing", description: "Deployment options and commercial scope" },
+	{ label: "Provider Status", href: "/status", description: "Current AI provider availability" },
 ];
 
 export function NotFound() {
@@ -54,7 +54,7 @@ export function NotFound() {
 				<section className="border-b border-zinc-200 bg-zinc-50 py-12 lg:py-16">
 					<div className="mx-auto max-w-6xl px-4 md:px-6">
 						<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ POPULAR DESTINATIONS</p>
-						<ul role="list" className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+						<ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
 							{suggestedLinks.map((link) => (
 								<li key={link.href}>
 									<a

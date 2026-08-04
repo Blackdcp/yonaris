@@ -8,58 +8,53 @@ export interface FaqItem {
 // crawler) sees on the page.
 export const HOME_FAQS: FaqItem[] = [
 	{
-		question: "What is Elmo?",
+		question: "What is Yonaris?",
 		answer:
-			"Elmo is an open-source AI visibility platform for Answer Engine Optimization (AEO) — a self-hosted alternative to tools like Profound, Peec, and Otterly. It tracks how AI answer engines — including ChatGPT, Google AI Overviews, Perplexity, Gemini, Copilot, and Grok — mention your brand, which competitors appear alongside you, and which sources each model cites.",
+			"Yonaris is an AI visibility platform for Generative Engine Optimization (GEO) and Answer Engine Optimization (AEO). It tracks brand mentions, citations, competitors, and the queries AI systems use to build their answers.",
 	},
 	{
-		question: "What is Answer Engine Optimization (AEO)?",
+		question: "What is Generative Engine Optimization (GEO)?",
 		answer:
-			"Answer Engine Optimization (AEO) — also called Generative Engine Optimization (GEO) or LLM Optimization (LLMO) — is the practice of measuring and improving how often AI answer engines mention and cite your brand. Instead of ranking in a list of blue links, the goal is to be the source an AI quotes in its answer. (LLMO is also where Elmo gets its name.)",
+			"GEO is the practice of measuring and improving how AI answer engines discover, describe, mention, and cite a brand. It uses repeatable prompts and evidence from model responses to identify opportunities for improvement.",
 	},
 	{
-		question: "Which AI models does Elmo track?",
+		question: "Which AI models can Yonaris track?",
 		answer:
-			"Elmo runs your prompts across every major AI answer engine, including ChatGPT, Google AI Overviews, Perplexity, Gemini, Copilot, and Grok. It records how often your brand appears, which competitors show up alongside it, and which sources the models cite.",
+			"Yonaris tracks the AI providers configured for a deployment. Each run records the response, brand and competitor mentions, citations, and available query fan-out data so results can be compared over time.",
 	},
 	{
-		question: "Is Elmo really open source?",
+		question: "Can Yonaris establish a GEO baseline?",
 		answer:
-			"Yes. Every line of Elmo is open source and available on GitHub. You can read the code, self-host the platform on your own infrastructure for free, and verify exactly how each visibility metric is collected and calculated.",
+			"Yes. A controlled prompt set, fixed execution rules, and scheduled reruns create a baseline for visibility, share of voice, citations, and competitor presence across the selected models.",
 	},
 	{
-		question: "Is Elmo free?",
+		question: "Who owns the data collected by Yonaris?",
 		answer:
-			"Elmo is free and open source to self-host — there is no license fee and no per-seat pricing. You only pay for your own infrastructure and any AI provider API keys you choose to use. Managed cloud hosting and white-label plans are also available.",
+			"Data is stored in the Yonaris deployment used by your team. Provider credentials and deployment choices remain under the control of the deployment operator.",
 	},
 ];
 
 // Pricing page FAQ.
 export const PRICING_FAQS: FaqItem[] = [
 	{
-		question: "Is Elmo free?",
+		question: "Which Yonaris deployment option should I choose?",
 		answer:
-			"Yes. Elmo is free and open source to self-host, forever. There is no license fee and no per-seat pricing — you only pay for your own infrastructure and the AI provider API keys you choose to use.",
+			"Choose the deployment model that matches your data-control, maintenance, and customer-delivery requirements. Contact the Yonaris team before relying on availability or commercial terms shown on this site.",
 	},
 	{
-		question: "Is there a hosted or cloud version of Elmo?",
+		question: "Can Yonaris support multiple customer brands?",
 		answer:
-			"Managed cloud hosting is coming soon for teams that would rather not run their own infrastructure. Until then, you can self-host Elmo for free or get in touch about early access and managed deployments.",
+			"Yonaris supports multiple tracked brands and can be adapted for agency delivery workflows. Organization, access-control, and white-label requirements should be confirmed for each deployment.",
 	},
 	{
-		question: "Can agencies white-label Elmo?",
+		question: "Which costs are separate from Yonaris?",
 		answer:
-			"White-label deployments are available for agencies that want to offer AI visibility tracking under their own brand, with multi-client dashboards and custom branding. Get in touch about setting up a white-label instance for your agency.",
+			"AI provider, search-data, scraping, infrastructure, and storage costs depend on the integrations and execution volume selected for the deployment.",
 	},
 	{
-		question: "What do I need to run Elmo myself?",
+		question: "Can pricing be confirmed online?",
 		answer:
-			"Elmo runs as a Docker Compose stack, all managed with a simple CLI — install it, run the interactive init, and bring everything up in a couple of commands. You can use the bundled database or connect Elmo to your own PostgreSQL database.",
-	},
-	{
-		question: "Do I need a credit card to get started?",
-		answer:
-			"No. Self-hosting Elmo does not require an account or a credit card. Clone the open-source repository, deploy with the CLI, and start tracking your AI visibility.",
+			"No. Published deployment options are informational until the Yonaris team confirms scope, availability, and commercial terms for your use case.",
 	},
 ];
 

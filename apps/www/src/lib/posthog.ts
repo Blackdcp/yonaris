@@ -1,15 +1,17 @@
 import posthog from "posthog-js";
 
-const POSTHOG_KEY = "phc_Jhx9LnI9cTDFHpQmpOzJSDTW127qD9pFU65KRnYym6z";
-const POSTHOG_HOST = "https://var.elmohq.com";
+const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 let initialized = false;
 
 export function initPostHog(): void {
 	if (initialized || typeof window === "undefined") return;
+	const key = import.meta.env.VITE_POSTHOG_KEY?.trim();
+	if (!key) return;
+	const host = import.meta.env.VITE_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
 
-	posthog.init(POSTHOG_KEY, {
-		api_host: POSTHOG_HOST,
+	posthog.init(key, {
+		api_host: host,
 		capture_pageview: true,
 		capture_pageleave: true,
 		autocapture: false,

@@ -1,17 +1,17 @@
 #!/usr/bin/env tsx
 /**
- * Generates the Elmo brand kit as a zip of PNGs using Satori + resvg (JSX → PNG).
+ * Generates the Yonaris brand kit as a zip of PNGs using Satori + resvg (JSX → PNG).
  *
- * Output: apps/web/elmo-brand-kit.zip
+ * Output: apps/web/yonaris-brand-kit.zip
  *
- *   Icons (square, "e" glyph):
- *     elmo-icon-{size}.png              Transparent background
- *     elmo-icon-white-{size}.png        White background
- *     elmo-icon-dark-{size}.png         Dark background
- *     elmo-icon-maskable-{size}.png     Maskable/PWA (white bg, safe-zone padding)
+ *   Icons (square Y monogram):
+ *     yonaris-icon-{size}.png              Transparent background
+ *     yonaris-icon-white-{size}.png        Warm-white background
+ *     yonaris-icon-dark-{size}.png         Dark background
+ *     yonaris-icon-maskable-{size}.png     Maskable/PWA
  *
- *   Logos ("elmo" wordmark, sm/md/lg × 3 backgrounds):
- *     elmo-logo[-white|-dark]-{sm|md|lg}.png
+ *   Logos (official Yonaris wordmark, sm/md/lg × 3 backgrounds):
+ *     yonaris-logo[-white|-dark]-{sm|md|lg}.png
  *
  *   OG images (1200×630):
  *     og-default.png                    Default Open Graph image
@@ -23,7 +23,7 @@
  * Usage:
  *   pnpm --filter @workspace/web generate-brand-kit
  */
-import { readFileSync, createWriteStream } from "node:fs";
+import { createWriteStream, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -33,11 +33,21 @@ import { ZipArchive } from "archiver";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-const BRAND_COLOR = "#2563eb";
-const ACCENT_COLORS = ["#2563eb", "#f4d35e", "#ee964b", "#f95738"];
+const BRAND_COLOR = "#0A1A2A";
+const BACKGROUND_COLOR = "#F8F6F3";
+const ACCENT_COLORS = [BRAND_COLOR, "#34495e", "#b89b72", BACKGROUND_COLOR];
 const TAGLINE = "AI Search Optimization";
 const DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
-const OUTPUT_ZIP = resolve(__dirname, "../elmo-brand-kit.zip");
+const OUTPUT_ZIP = resolve(__dirname, "../yonaris-brand-kit.zip");
+const STANDARD_PATH = "M1 1h13l15 26L44 1h13L35 38v25H23V38L1 1Z";
+const MASKABLE_PATH = "M25 28h16l23 39 23-39h16L72 80v26H56V80L25 28Z";
+
+function loadPngDataUri(path: string): string {
+	return `data:image/png;base64,${readFileSync(path).toString("base64")}`;
+}
+
+const NAVY_WORDMARK = loadPngDataUri(resolve(__dirname, "../public/brand/yonaris-wordmark-navy.png"));
+const WHITE_WORDMARK = loadPngDataUri(resolve(__dirname, "../public/brand/yonaris-wordmark-white.png"));
 
 // ---------------------------------------------------------------------------
 // Fonts
@@ -49,12 +59,6 @@ function loadFont(path: string): ArrayBuffer {
 }
 
 const fonts = [
-	{
-		name: "Titan One",
-		data: loadFont("@fontsource/titan-one/files/titan-one-latin-400-normal.woff"),
-		style: "normal" as const,
-		weight: 400 as const,
-	},
 	{
 		name: "Geist Sans",
 		data: loadFont("@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff"),
@@ -78,69 +82,53 @@ async function render(element: React.ReactElement, width: number, height: number
 }
 
 // ---------------------------------------------------------------------------
-// Icon — "e" glyph scaled to fill the canvas
+// Icon — Y monogram scaled to fill the canvas
 // ---------------------------------------------------------------------------
 
 function Icon({ fill, bg, size }: { fill: string; bg?: string; size: number }) {
 	return (
 		<div tw="flex items-center justify-center w-full h-full" style={{ backgroundColor: bg || "transparent" }}>
-			<div
-				style={{
-					fontFamily: "Titan One",
-					fontSize: size,
-					color: fill,
-					lineHeight: 1,
-					transform: "scale(1.4)",
-					marginTop: -Math.round(size * 0.28),
-				}}
-			>
-				e
-			</div>
+			<svg viewBox="0 0 64 64" width={size} height={size}>
+				<title>Yonaris Y icon</title>
+				<path fill={fill} d={STANDARD_PATH} />
+			</svg>
 		</div>
 	);
 }
 
 function MaskableIcon({ size }: { size: number }) {
 	return (
-		<div tw="flex items-center justify-center w-full h-full bg-white">
-			<div
-				style={{
-					fontFamily: "Titan One",
-					fontSize: Math.round(size * 0.94),
-					color: BRAND_COLOR,
-					lineHeight: 1,
-					marginTop: -Math.round(size * 0.18),
-				}}
-			>
-				e
-			</div>
-		</div>
+		<svg viewBox="0 0 128 128" width={size} height={size}>
+			<title>Yonaris maskable icon</title>
+			<rect width="128" height="128" rx="24" fill={BACKGROUND_COLOR} />
+			<path fill={BRAND_COLOR} d={MASKABLE_PATH} />
+		</svg>
 	);
 }
 
 // ---------------------------------------------------------------------------
-// Logo — "elmo" wordmark with equal padding on all sides
+// Logo — official wordmark with equal padding on all sides
 // ---------------------------------------------------------------------------
 
 function Logo({ bg, fontSize }: { bg?: string; fontSize: number }) {
+	const src = bg === "#111827" ? WHITE_WORDMARK : NAVY_WORDMARK;
 	return (
 		<div tw="flex items-center justify-center w-full h-full" style={{ backgroundColor: bg || "transparent" }}>
-			<div
+			<img
+				src={src}
+				alt="Yonaris"
 				style={{
-					fontFamily: "Titan One",
-					fontSize,
-					color: BRAND_COLOR,
-					lineHeight: 1,
+					width: Math.round(fontSize * 2.6),
+					height: fontSize,
+					objectFit: "contain",
 				}}
-			>
-				elmo
-			</div>
+			/>
 		</div>
 	);
 }
 
 // ---------------------------------------------------------------------------
-// PatternBanner — repeating "elmo" wordmark at an angle, wrapping-paper style.
+// PatternBanner — repeating Yonaris wordmark at an angle.
 // ---------------------------------------------------------------------------
 
 function PatternBanner({
@@ -159,7 +147,7 @@ function PatternBanner({
 	fontScale: number;
 }) {
 	const fontSize = Math.round(height * fontScale);
-	const wordWidth = Math.round(fontSize * 3.2);
+	const wordWidth = Math.round(fontSize * 3.8);
 	const gap = Math.round(fontSize * 0.5);
 	const cellWidth = wordWidth + gap;
 	const rowHeight = Math.round(fontSize * 1.5);
@@ -182,14 +170,15 @@ function PatternBanner({
 			cells.push(
 				<div
 					style={{
-						fontFamily: "Titan One",
+						fontFamily: "Geist Sans",
+						fontWeight: 500,
 						fontSize,
 						color: colors[colorIdx],
 						lineHeight: 1,
 						marginRight: gap,
 					}}
 				>
-					elmo
+					Yonaris
 				</div>,
 			);
 		}
@@ -237,29 +226,26 @@ function OgImage({ title }: { title: string }) {
 			<div
 				style={{
 					position: "absolute",
-					fontFamily: "Titan One",
+					fontFamily: "Geist Sans",
+					fontWeight: 500,
 					fontSize: 700,
-					color: "rgba(37,99,235,0.04)",
+					color: "rgba(10,26,42,0.04)",
 					lineHeight: 1,
 					right: -60,
 					top: -60,
 				}}
 			>
-				e
+				Y
 			</div>
 
 			<div tw="flex flex-col justify-center h-full" style={{ paddingLeft: 80, paddingRight: 80 }}>
-				<div
-					style={{
-						fontFamily: "Titan One",
-						fontSize: 80,
-						color: BRAND_COLOR,
-						lineHeight: 1,
-						marginBottom: 28,
-					}}
-				>
-					elmo
-				</div>
+				<img
+					src={NAVY_WORDMARK}
+					alt="Yonaris"
+					width={310}
+					height={75}
+					style={{ objectFit: "contain", marginBottom: 28 }}
+				/>
 				<div
 					style={{
 						fontFamily: "Geist Sans",
@@ -301,12 +287,12 @@ async function addFile(name: string, data: Buffer | Promise<Buffer>) {
 	console.log(`  ✓ ${name}`);
 }
 
-console.log("Generating brand kit…\n");
+console.log("Generating Yonaris brand kit…\n");
 
 // Icons — always brand blue, bg varies
 const iconVariants = [
 	{ suffix: "", bg: undefined },
-	{ suffix: "-white", bg: "#ffffff" },
+	{ suffix: "-white", bg: BACKGROUND_COLOR },
 	{ suffix: "-dark", bg: "#111827" },
 ];
 const iconSizes = [16, 32, 64, 128, 256, 512];
@@ -315,7 +301,7 @@ console.log("Icons:");
 for (const v of iconVariants) {
 	for (const size of iconSizes) {
 		await addFile(
-			`icons/elmo-icon${v.suffix}-${size}.png`,
+			`icons/yonaris-icon${v.suffix}-${size}.png`,
 			render(<Icon fill={BRAND_COLOR} bg={v.bg} size={size} />, size, size),
 		);
 	}
@@ -323,14 +309,14 @@ for (const v of iconVariants) {
 
 console.log("\nIcons — Maskable (PWA):");
 for (const size of [64, 128, 256, 512]) {
-	await addFile(`icons/elmo-icon-maskable-${size}.png`, render(<MaskableIcon size={size} />, size, size));
+	await addFile(`icons/yonaris-icon-maskable-${size}.png`, render(<MaskableIcon size={size} />, size, size));
 }
 
 // Logos — always brand blue text
 console.log("\nLogos:");
 const logoBgs = [
 	{ suffix: "", bg: undefined },
-	{ suffix: "-white", bg: "#ffffff" },
+	{ suffix: "-white", bg: BACKGROUND_COLOR },
 	{ suffix: "-dark", bg: "#111827" },
 ];
 const logoSizes = [
@@ -343,7 +329,7 @@ const logoSizes = [
 for (const bg of logoBgs) {
 	for (const sz of logoSizes) {
 		await addFile(
-			`logos/elmo-logo${bg.suffix}-${sz.label}.png`,
+			`logos/yonaris-logo${bg.suffix}-${sz.label}.png`,
 			render(<Logo bg={bg.bg} fontSize={sz.fontSize} />, sz.w, sz.h),
 		);
 	}
@@ -359,8 +345,8 @@ console.log("  ✓ og/og-default.png  (1200×630)");
 console.log("\nSocial Banners:");
 
 const sharedBannerStyle = {
-	bg: "#ffffff",
-	colors: ["#2563eb", "#f4d35e", "#ee964b", "#f95738", "#93c5fd", "#fbbf24"],
+	bg: BACKGROUND_COLOR,
+	colors: [BRAND_COLOR, "#34495e", "#6b7c8f", "#b89b72", "#d5c4aa", "#ffffff"],
 	angle: 15,
 } as const;
 
@@ -396,4 +382,4 @@ await done;
 
 const zipSize = readFileSync(OUTPUT_ZIP).length;
 const kb = (zipSize / 1024).toFixed(1);
-console.log(`\n✅ elmo-brand-kit.zip (${kb} KB, ${files.length} files) → ${OUTPUT_ZIP}`);
+console.log(`\n✅ yonaris-brand-kit.zip (${kb} KB, ${files.length} files) → ${OUTPUT_ZIP}`);

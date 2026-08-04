@@ -1,4 +1,4 @@
-# Elmo 
+# Yonaris (Elmo-compatible runtime)
 # Supports: web app (Nitro server) and worker
 
 # Base stage with Node.js

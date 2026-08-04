@@ -55,7 +55,13 @@ const localConfig: ClientConfig = {
 		supportsMultiOrg: true,
 		canCreateBrands: true,
 	},
-	branding: { name: "Elmo", chartColors: CHART_COLORS },
+	branding: {
+		name: "Yonaris",
+		icon: "/icons/yonaris-icon.svg",
+		wordmark: "/brand/yonaris-wordmark-navy.png",
+		wordmarkOnDark: "/brand/yonaris-wordmark-white.png",
+		chartColors: CHART_COLORS,
+	},
 	analytics: {},
 };
 
@@ -67,7 +73,13 @@ const demoConfig: ClientConfig = {
 		supportsMultiOrg: true,
 		canCreateBrands: false,
 	},
-	branding: { name: "Elmo", chartColors: CHART_COLORS },
+	branding: {
+		name: "Yonaris",
+		icon: "/icons/yonaris-icon.svg",
+		wordmark: "/brand/yonaris-wordmark-navy.png",
+		wordmarkOnDark: "/brand/yonaris-wordmark-white.png",
+		chartColors: CHART_COLORS,
+	},
 	analytics: {},
 };
 
@@ -179,7 +191,7 @@ export const Local = () => {
 
 /** Demo — read-only preview, seeded user, no admin */
 export const Demo = () => {
-	const demoUser = authedUser("Demo User", "demo@elmohq.com", "demo");
+	const demoUser = authedUser("Demo User", "demo@example.com", "demo");
 	demoUser.user.picture = "https://api.dicebear.com/9.x/bottts-neutral/svg?seed=Adrian";
 	configureMocks(demoConfig, onboardedBrand, demoUser);
 

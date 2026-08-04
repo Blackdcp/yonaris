@@ -99,7 +99,7 @@ export function EmailPasswordLogin({
 	canRegister?: boolean;
 }) {
 	const navigate = useNavigate();
-	const [email, setEmail] = useState(isDemo ? "demo@elmohq.com" : "");
+	const [email, setEmail] = useState(isDemo ? "demo@example.com" : "");
 	const [password, setPassword] = useState(isDemo ? "demo" : "");
 	const [error, setError] = useState<string | null>(null);
 	const [loading, setLoading] = useState(false);
@@ -224,7 +224,7 @@ function DemoCredentialsCallout() {
 				<dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-amber-900/90 dark:text-amber-100/80">
 					<div className="flex items-center gap-1.5">
 						<dt className="opacity-70">Email</dt>
-						<dd className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px]">demo@elmohq.com</dd>
+						<dd className="rounded bg-amber-500/15 px-1.5 py-0.5 font-mono text-[11px]">demo@example.com</dd>
 					</div>
 					<div className="flex items-center gap-1.5">
 						<dt className="opacity-70">Password</dt>

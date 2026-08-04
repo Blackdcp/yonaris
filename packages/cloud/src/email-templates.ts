@@ -5,6 +5,7 @@
  * mocking Resend. All interpolated user-controlled strings (inviter name,
  * organization name) are HTML-escaped before landing in markup.
  */
+import { DEFAULT_APP_NAME } from "@workspace/config/constants";
 
 export interface EmailContent {
 	subject: string;
@@ -54,9 +55,9 @@ export function verificationEmail(input: { url: string }): EmailContent {
 export function passwordResetEmail(input: { url: string }): EmailContent {
 	const { url } = input;
 	return {
-		subject: "Reset your Elmo password",
+		subject: `Reset your ${DEFAULT_APP_NAME} password`,
 		html: wrapHtml("Reset your password", "Click the button below to choose a new password.", url),
-		text: `Reset your Elmo password by visiting this link: ${url}`,
+		text: `Reset your ${DEFAULT_APP_NAME} password by visiting this link: ${url}`,
 	};
 }
 
@@ -65,12 +66,12 @@ export function invitationEmail(input: { inviterName: string; orgName: string; u
 	const safeInviterName = escapeHtml(inviterName);
 	const safeOrgName = escapeHtml(orgName);
 	return {
-		subject: `${inviterName} invited you to ${orgName} on Elmo`,
+		subject: `${inviterName} invited you to ${orgName} on ${DEFAULT_APP_NAME}`,
 		html: wrapHtml(
 			`You've been invited to join ${safeOrgName}`,
-			`${safeInviterName} invited you to join ${safeOrgName} on Elmo. Click the button below to accept.`,
+			`${safeInviterName} invited you to join ${safeOrgName} on ${DEFAULT_APP_NAME}. Click the button below to accept.`,
 			url,
 		),
-		text: `${inviterName} invited you to join ${orgName} on Elmo. Accept the invitation here: ${url}`,
+		text: `${inviterName} invited you to join ${orgName} on ${DEFAULT_APP_NAME}. Accept the invitation here: ${url}`,
 	};
 }

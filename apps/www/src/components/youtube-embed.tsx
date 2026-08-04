@@ -8,7 +8,7 @@ interface YouTubeEmbedProps {
 // Responsive 16:9 YouTube player, registered as the `YouTube` MDX component in
 // @/components/mdx so posts can embed a video with <YouTube id="..." />. Mirrors
 // the bordered media frame used by the homepage feature graphics (Frame in
-// feature-graphics.tsx). Uses the privacy-enhanced youtube-nocookie host and
+// other product visuals). Uses the privacy-enhanced youtube-nocookie host and
 // lazy-loads the iframe so it doesn't block initial render; `not-prose` opts the
 // frame out of the typography plugin's spacing so its own margin applies.
 export function YouTubeEmbed({ id, title = "YouTube video player" }: YouTubeEmbedProps) {

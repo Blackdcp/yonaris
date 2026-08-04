@@ -1,15 +1,15 @@
 import { z } from "zod";
+import { WEB_QUERIES_UNAVAILABLE } from "../../constants";
+import { getCredential } from "../../secrets";
+import type { Citation } from "../../text-extraction";
+import { API_PROVIDER_MAX_OUTPUT_TOKENS, warnIfOutputCapped } from "../config";
 import type {
 	Provider,
-	ScrapeResult,
 	ProviderOptions,
+	ScrapeResult,
 	StructuredResearchOptions,
 	StructuredResearchResult,
 } from "../types";
-import type { Citation } from "../../text-extraction";
-import { WEB_QUERIES_UNAVAILABLE } from "../../constants";
-import { getCredential } from "../../secrets";
-import { API_PROVIDER_MAX_OUTPUT_TOKENS, warnIfOutputCapped } from "../config";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const OPENROUTER_API_URL = `${OPENROUTER_BASE_URL}/chat/completions`;
@@ -23,8 +23,8 @@ function openrouterHeaders(): Record<string, string> {
 	return {
 		Authorization: `Bearer ${getCredential("OPENROUTER_API_KEY")}`,
 		"Content-Type": "application/json",
-		"HTTP-Referer": process.env.APP_URL ?? "https://github.com/elmohq/elmo",
-		"X-Title": "Elmo AEO",
+		...(process.env.APP_URL ? { "HTTP-Referer": process.env.APP_URL } : {}),
+		"X-Title": "Yonaris GEO",
 	};
 }
 
@@ -132,7 +132,7 @@ export const openrouter: Provider = {
 
 		// ":online" is exactly equivalent to plugins: [{ id: "web" }], and with the
 		// engine unset OpenRouter routes to the model provider's native web search
-		// (Exa only as a fallback) — which is the consumer surface Elmo tracks.
+		// (Exa only as a fallback) — which is the consumer surface the product tracks.
 		if (options?.webSearch && !modelSlug.includes(":online")) {
 			modelSlug = `${modelSlug}:online`;
 		}
@@ -150,12 +150,7 @@ export const openrouter: Provider = {
 		// the Responses API + SDK when it's stable.
 		const res = await fetch(OPENROUTER_API_URL, {
 			method: "POST",
-			headers: {
-				Authorization: `Bearer ${getCredential("OPENROUTER_API_KEY")}`,
-				"Content-Type": "application/json",
-				"HTTP-Referer": process.env.APP_URL ?? "https://github.com/elmohq/elmo",
-				"X-Title": "Elmo AEO",
-			},
+			headers: openrouterHeaders(),
 			body: JSON.stringify(body),
 		});
 

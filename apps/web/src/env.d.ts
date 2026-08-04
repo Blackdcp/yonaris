@@ -10,6 +10,8 @@ interface ImportMetaEnv {
 	// Branding (whitelabel only - local/demo use server-side defaults)
 	readonly VITE_APP_NAME?: string;
 	readonly VITE_APP_ICON?: string;
+	readonly VITE_APP_WORDMARK?: string;
+	readonly VITE_APP_WORDMARK_ON_DARK?: string;
 	readonly VITE_APP_URL?: string;
 	readonly VITE_APP_PARENT_NAME?: string;
 	readonly VITE_APP_PARENT_URL?: string;
@@ -25,6 +27,7 @@ interface ImportMetaEnv {
 	readonly VITE_PLAUSIBLE_DOMAIN?: string;
 	readonly VITE_CLARITY_PROJECT_ID?: string;
 	readonly VITE_POSTHOG_KEY?: string;
+	readonly VITE_POSTHOG_HOST?: string;
 
 	// Sentry
 	readonly VITE_SENTRY_DSN?: string;
@@ -43,6 +46,10 @@ declare global {
 		interface ProcessEnv {
 			readonly DEPLOYMENT_MODE: string;
 			readonly DATABASE_URL: string;
+			readonly APP_NAME?: string;
+			readonly APP_ICON?: string;
+			readonly APP_WORDMARK?: string;
+			readonly APP_WORDMARK_ON_DARK?: string;
 			readonly APP_URL?: string;
 			readonly SCRAPE_TARGETS?: string;
 			readonly OPENAI_API_KEY: string;
@@ -84,6 +91,8 @@ declare global {
 			readonly GOOGLE_CLIENT_ID?: string;
 			readonly GOOGLE_CLIENT_SECRET?: string;
 			readonly RESEND_FROM_EMAIL?: string;
+			readonly VITE_POSTHOG_KEY?: string;
+			readonly VITE_POSTHOG_HOST?: string;
 		}
 	}
 }

@@ -1,17 +1,17 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Faq } from "@/components/faq";
 import { DirectoryHero, ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
-import { getAeoVertical, aeoVerticals, type AeoVertical } from "@/data/aeo-verticals";
+import { Faq } from "@/components/faq";
+import { Footer } from "@/components/footer";
+import { Navbar } from "@/components/navbar";
+import { type AeoVertical, aeoVerticals, getAeoVertical } from "@/data/aeo-verticals";
+import { breadcrumbJsonLd, canonicalUrl, faqJsonLd, ogMeta } from "@/lib/seo";
 
 export const Route = createFileRoute("/aeo-for/$slug")({
 	head: ({ params }) => {
 		const v = getAeoVertical(params.slug);
 		if (!v) return {};
-		const title = `AEO for ${v.audience} · Elmo`;
+		const title = `AEO for ${v.audience} · Yonaris`;
 		const description = v.short;
 		const path = `/aeo-for/${v.slug}`;
 		return {
@@ -98,8 +98,8 @@ function VerticalPage() {
 							</ol>
 
 							<div className="mt-12 rounded-md border border-blue-200 bg-blue-50/40 p-6">
-								<h2 className="font-heading text-xl text-zinc-950">Where Elmo fits</h2>
-								<p className="mt-2 leading-relaxed text-zinc-600">{vertical.elmoFit}</p>
+								<h2 className="font-heading text-xl text-zinc-950">Where Yonaris fits</h2>
+								<p className="mt-2 leading-relaxed text-zinc-600">{vertical.yonarisFit}</p>
 							</div>
 
 							<div className="mt-10">

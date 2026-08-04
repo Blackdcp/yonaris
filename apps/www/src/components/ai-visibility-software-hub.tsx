@@ -122,23 +122,22 @@ export function AiVisibilitySoftwareHub() {
 				</div>
 			</section>
 
-			{/* Elmo's approach */}
+			{/* Yonaris approach */}
 			<section className="border-b border-zinc-200 bg-zinc-50 py-12 lg:py-20">
 				<div className="mx-auto max-w-6xl px-4 md:px-6">
 					<div className="max-w-3xl">
-						<Eyebrow num="04" label="ELMO'S APPROACH" />
-						<h2 className="font-heading mt-3 text-3xl text-zinc-950 md:text-4xl">Elmo's approach</h2>
+						<Eyebrow num="04" label="YONARIS APPROACH" />
+						<h2 className="font-heading mt-3 text-3xl text-zinc-950 md:text-4xl">The Yonaris approach</h2>
 						<div className="mt-8 space-y-6 text-[1.0625rem] leading-relaxed text-zinc-600">
 							<p>
-								Elmo is open-source AI visibility software you can self-host. It tracks mentions, citations, and
-								competitor share across ChatGPT, Claude, Gemini, Grok, Perplexity, Copilot, and Google AI Mode and AI
-								Overviews — and because it's released under the MIT license, you can read exactly how every metric is
-								collected and computed.
+								Yonaris establishes repeatable GEO baselines by running a controlled prompt set across the AI providers
+								configured for each deployment. It records brand and competitor mentions, citations, and available query
+								fan-out evidence so teams can compare results over time.
 							</p>
 							<p>
-								That matters in a market full of opaque scoring and inflated pricing. With Elmo you own your data and
-								avoid vendor lock-in: the self-hosted core is free, with a managed cloud option on the way. To see how
-								it compares with the rest of the field, read our roundup of the{" "}
+								Fixed execution rules and scheduled reruns make changes in visibility, share of voice, and source
+								coverage easier to audit. Deployment choices, stored data, and provider credentials remain under the
+								control of the deployment operator. For more context, read our roundup of the{" "}
 								<a className={LINK} href="/blog/best-ai-visibility-tools">
 									best AI visibility tools
 								</a>{" "}
@@ -155,11 +154,6 @@ export function AiVisibilitySoftwareHub() {
 									Read the docs
 									<ArrowRight className="size-3.5" />
 								</Link>
-							</Button>
-							<Button asChild variant="outline" size="sm">
-								<a href="https://github.com/elmohq/elmo" target="_blank" rel="noopener noreferrer">
-									Star on GitHub
-								</a>
 							</Button>
 						</div>
 					</div>

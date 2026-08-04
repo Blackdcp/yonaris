@@ -12,6 +12,7 @@ import { PromptChartPrint } from "@/components/prompt-chart-print";
 import { Target, BarChart3, Rocket } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { useRouteContext } from "@tanstack/react-router";
+import { DEFAULT_APP_NAME, DEFAULT_APP_URL } from "@workspace/config/constants";
 import type { ClientConfig } from "@workspace/config/types";
 import {
 	computeOverallSoV,
@@ -121,6 +122,8 @@ function ReportRenderPage() {
 	const { report } = Route.useLoaderData();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const branding = context.clientConfig?.branding;
+	const appName = branding?.name || DEFAULT_APP_NAME;
+	const appUrl = formatBrandUrl(branding?.url || DEFAULT_APP_URL);
 
 	if (report.status !== "completed") {
 		return (
@@ -300,7 +303,12 @@ function ReportRenderPage() {
 				<div className="h-[3px] bg-slate-800 -mx-10 print:-mx-0 mb-8" />
 
 				<div className="flex items-center justify-between mb-16">
-					<Logo iconClassName="!size-5" textClassName="text-sm font-semibold text-slate-400" />
+					<Logo
+						iconClassName="!size-5"
+						wordmarkClassName="h-5 max-w-32"
+						textClassName="text-sm font-semibold text-slate-400"
+						surface="light"
+					/>
 					<span className="text-xs tracking-wide text-slate-400">
 						{new Date(report.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
 					</span>
@@ -745,7 +753,7 @@ function ReportRenderPage() {
 				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-10 text-center">
 					<h2 className="text-2xl font-bold text-slate-800 mb-2">Ready to Optimize Your AI Visibility?</h2>
 					<p className="text-slate-600 text-base mb-8">
-						Take your brand's AI presence to the next level with {branding?.name || "Elmo"}
+						Take your brand's AI presence to the next level with {appName}
 					</p>
 
 					<div className="grid grid-cols-3 gap-6 mb-8">
@@ -779,11 +787,12 @@ function ReportRenderPage() {
 					</div>
 
 					<div className="pt-6 border-t border-blue-200">
-						<p className="text-slate-800 font-medium mb-2">Get started with {branding?.name || "Elmo"} today</p>
-						<p className="text-slate-600 text-sm text-balance">
-							Visit <strong>{branding?.url || "elmo.chat"}</strong> to learn more about our AI visibility platform and
-							services.
-						</p>
+						<p className="text-slate-800 font-medium mb-2">Get started with {appName} today</p>
+						{appUrl && (
+							<p className="text-slate-600 text-sm text-balance">
+								Visit <strong>{appUrl}</strong> to learn more about our AI visibility platform and services.
+							</p>
+						)}
 					</div>
 				</div>
 			</div>
@@ -880,10 +889,27 @@ function Finding({ children }: { children: React.ReactNode }) {
 }
 
 function PageFooter({ branding }: { branding?: ClientConfig["branding"] }) {
+	const brandUrl = formatBrandUrl(branding?.url || DEFAULT_APP_URL);
+
 	return (
 		<div className="pt-4 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400">
-			<Logo iconClassName="!size-3" textClassName="text-[10px] font-medium text-slate-400" />
-			<span>{branding?.url || "elmo.chat"}</span>
+			<Logo
+				iconClassName="!size-3"
+				wordmarkClassName="h-3.5 max-w-24"
+				textClassName="text-[10px] font-medium text-slate-400"
+				surface="light"
+			/>
+			{brandUrl && <span>{brandUrl}</span>}
 		</div>
 	);
+}
+
+function formatBrandUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1") return "";
+		return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname.replace(/\/$/, "")}`;
+	} catch {
+		return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+	}
 }

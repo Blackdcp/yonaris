@@ -158,8 +158,9 @@ async function main(): Promise<void> {
 
 	// ── Step 1: Direct LLM APIs (loops until at least one is configured) ──
 	// The loop asks providers in the same order as the auto-pick preference:
-	// OpenRouter → Anthropic → OpenAI → Mistral. We say Yes to Anthropic and
-	// OpenAI to keep the resulting .env close to the pre-refactor shape.
+	// OpenRouter → Anthropic → OpenAI → Mistral → DeepSeek → Agnes.
+	// We say Yes to Anthropic and OpenAI to keep the resulting .env close to the
+	// pre-refactor shape.
 
 	// OpenRouter confirm (default No) → No
 	await waitFor("Configure OpenRouter?");
@@ -190,6 +191,14 @@ async function main(): Promise<void> {
 
 	// Mistral confirm (default No) → No
 	await waitFor("Configure Mistral API?");
+	await send(ENTER);
+
+	// DeepSeek confirm (default No) → No
+	await waitFor("Configure DeepSeek API?");
+	await send(ENTER);
+
+	// Agnes confirm (default No) → No
+	await waitFor("Configure Agnes API?");
 	await send(ENTER);
 
 	// ── Step 2: Scrapers + DataForSEO (optional) ──────────────────────────
@@ -223,15 +232,6 @@ async function main(): Promise<void> {
 
 	// SCRAPE_TARGETS edit confirm (default No)
 	await waitFor("Edit SCRAPE_TARGETS before saving?");
-	await send(ENTER);
-
-	// Telemetry opt-in (default Yes) → No
-	await waitFor("Share telemetry?");
-	await send(ARROW_LEFT);
-	await send(ENTER);
-
-	// Product updates email (optional)
-	await waitFor("email to receive product updates");
 	await send(ENTER);
 
 	// Web app port (default 1515) → accept default

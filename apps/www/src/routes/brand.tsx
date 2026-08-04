@@ -1,13 +1,13 @@
-import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Check, Copy, Download } from "lucide-react";
-import { Button } from "@workspace/ui/components/button";
-import { Navbar } from "@/components/navbar";
+import { useState } from "react";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
+import { Logo } from "@/components/logo";
+import { Navbar } from "@/components/navbar";
+import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
 
-const title = "Brand · Elmo";
-const description = "Download Elmo logos, icons, and brand assets. Everything you need to represent the Elmo brand.";
+const title = "Brand · Yonaris";
+const description = "Download Yonaris wordmarks and app icons.";
 
 export const Route = createFileRoute("/brand")({
 	head: () => ({
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/brand")({
 	component: BrandPage,
 });
 
-const BRAND_COLOR = "#2563eb";
+const BRAND_COLOR = "#0A1A2A";
 
 interface BrandAsset {
 	label: string;
@@ -40,45 +40,34 @@ interface BrandAsset {
 const icons: BrandAsset[] = [
 	{
 		label: "Icon",
-		filename: "elmo-icon-512.png",
-		path: "/brand/icons/elmo-icon-512.png",
-		svgPath: "/icons/elmo-icon.svg",
+		filename: "yonaris-icon-512.png",
+		path: "/icons/yonaris-icon-512.png",
+		svgPath: "/icons/yonaris-icon.svg",
 		transparent: true,
 		preview: { bg: "#ffffff" },
 	},
 	{
-		label: "Icon — Dark",
-		filename: "elmo-icon-dark-512.png",
-		path: "/brand/icons/elmo-icon-dark-512.png",
-		preview: { bg: "#111827" },
-	},
-	{
-		label: "Icon — White",
-		filename: "elmo-icon-white-512.png",
-		path: "/brand/icons/elmo-icon-white-512.png",
-		preview: { bg: "#ffffff" },
+		label: "Maskable Icon",
+		filename: "yonaris-icon-maskable-512.png",
+		path: "/icons/yonaris-icon-maskable-512.png",
+		svgPath: "/icons/yonaris-icon-maskable.svg",
+		preview: { bg: "#F8F6F3" },
 	},
 ];
 
 const logos: BrandAsset[] = [
 	{
-		label: "Logo",
-		filename: "elmo-logo-xl.png",
-		path: "/brand/logos/elmo-logo-xl.png",
+		label: "Navy Wordmark",
+		filename: "yonaris-wordmark-navy.png",
+		path: "/brand/logos/yonaris-wordmark-navy.png",
 		transparent: true,
 		preview: { bg: "#ffffff", padding: "p-8" },
 	},
 	{
-		label: "Logo — Dark",
-		filename: "elmo-logo-dark-xl.png",
-		path: "/brand/logos/elmo-logo-dark-xl.png",
+		label: "White Wordmark",
+		filename: "yonaris-wordmark-white.png",
+		path: "/brand/logos/yonaris-wordmark-white.png",
 		preview: { bg: "#111827", padding: "p-8" },
-	},
-	{
-		label: "Logo — White",
-		filename: "elmo-logo-white-xl.png",
-		path: "/brand/logos/elmo-logo-white-xl.png",
-		preview: { bg: "#ffffff", padding: "p-8" },
 	},
 ];
 
@@ -170,8 +159,8 @@ function BrandPage() {
 					<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ BRAND</p>
 					<h1 className="font-heading text-4xl text-zinc-950 lg:text-5xl">Brand Assets</h1>
 					<p className="max-w-2xl text-lg text-balance text-zinc-600">
-						Writing about Elmo or building an integration? Download official logos and icons to use in blog posts,
-						videos, partner pages, or anywhere you reference Elmo.
+						Use these official Yonaris wordmarks and app icons in approved product, partner, and customer-facing
+						materials.
 					</p>
 				</header>
 
@@ -204,10 +193,8 @@ function BrandPage() {
 				<section className="mb-16">
 					<h2 className="mb-6 text-xl font-semibold text-zinc-950">Colors</h2>
 					<div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-						<ColorSwatch color={BRAND_COLOR} label="Brand Blue" value="#2563eb" />
-						<ColorSwatch color="#f4d35e" label="Accent Yellow" value="#f4d35e" />
-						<ColorSwatch color="#ee964b" label="Accent Orange" value="#ee964b" />
-						<ColorSwatch color="#f95738" label="Accent Red" value="#f95738" />
+						<ColorSwatch color={BRAND_COLOR} label="Yonaris Navy" value="#0A1A2A" />
+						<ColorSwatch color="#F8F6F3" label="Yonaris Warm White" value="#F8F6F3" />
 					</div>
 				</section>
 
@@ -228,7 +215,7 @@ function BrandPage() {
 				<section className="mb-16">
 					<div className="mb-6 flex items-center justify-between">
 						<h2 className="text-xl font-semibold text-zinc-950">Wordmark</h2>
-						<span className="font-mono text-[11px] text-zinc-500">700 × 330px</span>
+						<span className="font-mono text-[11px] text-zinc-500">278 × 67px</span>
 					</div>
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 						{logos.map((asset) => (
@@ -241,16 +228,11 @@ function BrandPage() {
 				<section className="mb-16">
 					<h2 className="mb-6 text-xl font-semibold text-zinc-950">Typography</h2>
 					<div className="grid gap-6 sm:grid-cols-2">
-						<a
-							href="https://fonts.google.com/specimen/Titan+One"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="group rounded-md border border-zinc-200 bg-white p-6 transition-colors hover:bg-zinc-50"
-						>
-							<p className="font-titan-one text-4xl lowercase text-blue-600">elmo</p>
-							<p className="mt-3 text-sm font-medium text-zinc-950 group-hover:text-blue-600">Titan One</p>
-							<p className="text-xs text-zinc-500">Used for the logo wordmark and icon glyph</p>
-						</a>
+						<div className="rounded-md border border-zinc-200 bg-white p-6">
+							<Logo className="h-10" />
+							<p className="mt-3 text-sm font-medium text-zinc-950">Yonaris Wordmark</p>
+							<p className="text-xs text-zinc-500">Use the supplied artwork without recreating it as text.</p>
+						</div>
 						<a
 							href="https://vercel.com/font"
 							target="_blank"
@@ -268,21 +250,8 @@ function BrandPage() {
 				<div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center">
 					<h3 className="text-lg font-semibold text-zinc-950">Need something else?</h3>
 					<p className="mx-auto mt-2 max-w-md text-sm text-zinc-600">
-						If you need assets in a different format or size, or have questions about brand usage, reach out on Discord
-						or open a GitHub issue.
+						Use the provided assets as-is. Contact the Yonaris team internally if another format or size is required.
 					</p>
-					<div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-						<Button asChild variant="outline" size="sm">
-							<a href="https://discord.gg/s24nubCtKz" target="_blank" rel="noopener noreferrer">
-								Ask on Discord
-							</a>
-						</Button>
-						<Button asChild variant="outline" size="sm">
-							<a href="https://github.com/elmohq/elmo/issues/new" target="_blank" rel="noopener noreferrer">
-								Open an Issue
-							</a>
-						</Button>
-					</div>
 				</div>
 			</main>
 			<Footer />

@@ -2,6 +2,7 @@
  * Helpers for building route head() meta tags.
  * Respects white-label / deployment branding configuration.
  */
+import { DEFAULT_APP_NAME } from "@workspace/config/constants";
 
 const DEFAULT_DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
 
@@ -15,10 +16,10 @@ interface RouteMatchContext {
 
 /**
  * Get the app display name from route match context.
- * Returns the white-label branding name if configured, otherwise "Elmo".
+ * Returns the white-label branding name if configured, otherwise the default product name.
  */
 export function getAppName(match: RouteMatchContext): string {
-	return match.context?.clientConfig?.branding?.name || "Elmo";
+	return match.context?.clientConfig?.branding?.name || DEFAULT_APP_NAME;
 }
 
 /**

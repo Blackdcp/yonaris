@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowUpRight, GitCompare } from "lucide-react";
-import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
+import { Navbar } from "@/components/navbar";
+import { type ChangelogIssue, getGitHubChangelog } from "@/lib/github-changelog";
 import { getGitHubReleases, type ReleaseEntry } from "@/lib/github-releases";
-import { getGitHubChangelog, type ChangelogIssue } from "@/lib/github-changelog";
-import { ReleaseMarkdown, extractCompareUrl } from "@/lib/release-markdown";
+import { extractCompareUrl, ReleaseMarkdown } from "@/lib/release-markdown";
+import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
 
-const title = "Changelog · Elmo";
+const title = "Changelog · Yonaris";
 const description = "See what's new in Elmo. Track recent releases, improvements, bug fixes, and completed features.";
 
 export const Route = createFileRoute("/changelog")({

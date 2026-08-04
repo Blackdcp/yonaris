@@ -1,8 +1,8 @@
 /**
- * @workspace/cloud - Elmo Cloud deployment package
+ * @workspace/cloud - managed cloud deployment package
  *
  * Provides the cloud-mode implementation:
- * - createCloudDeployment() factory (Elmo branding, self-serve signup,
+ * - createCloudDeployment() factory (default branding, self-serve signup,
  *   multi-org, Stripe billing on, report generation off)
  *
  * Auth is handled by better-auth; this only provides static config. The

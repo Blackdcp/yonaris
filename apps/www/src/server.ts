@@ -1,14 +1,26 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { isMarkdownPreferred, rewritePath } from "fumadocs-core/negotiation";
 
+function configuredPosthogOrigin(): string | undefined {
+	if (!process.env.VITE_POSTHOG_KEY?.trim()) return undefined;
+	const host = process.env.VITE_POSTHOG_HOST?.trim() || "https://us.i.posthog.com";
+	try {
+		return new URL(host).origin;
+	} catch {
+		return undefined;
+	}
+}
+
+const posthogOrigin = configuredPosthogOrigin();
+
 const SECURITY_HEADERS: Record<string, string> = {
 	"Content-Security-Policy": [
 		"default-src 'self'",
-		"script-src 'self' 'unsafe-inline' https://var.elmohq.com",
+		"script-src 'self' 'unsafe-inline'",
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data: https:",
 		"font-src 'self' data:",
-		"connect-src 'self' https://var.elmohq.com https://*.mux.com https://*.litix.io",
+		`connect-src 'self'${posthogOrigin ? ` ${posthogOrigin}` : ""} https://*.mux.com https://*.litix.io`,
 		"media-src 'self' blob: https://*.mux.com",
 		"worker-src 'self' blob:",
 		// YouTube embeds in blog posts (privacy-enhanced youtube-nocookie host).

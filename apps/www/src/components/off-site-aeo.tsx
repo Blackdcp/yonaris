@@ -1,19 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowUpRight, CalendarClock, Check, PenLine, Quote, Target } from "lucide-react";
-import { externalRel } from "@/lib/external-link";
-
-// Cal.com booking page. The selected plan is prefilled into the booking
-// question with identifier "plan" so each call arrives pre-qualified.
-// See https://cal.com/help/bookings/prefill-fields#pre-fill-fields-questions
-const CAL_BASE = "https://cal.com/jrhizor/elmo-aeo";
-
-function calLink(plan: string): string {
-	return plan ? `${CAL_BASE}?plan=${encodeURIComponent(plan)}` : CAL_BASE;
-}
 
 function BookButton({
-	plan,
-	children,
 	variant = "primary",
 	className = "",
 }: {
@@ -22,16 +10,15 @@ function BookButton({
 	variant?: "primary" | "ghost";
 	className?: string;
 }) {
-	const href = calLink(plan);
 	const base = "inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium leading-none";
 	const styles =
 		variant === "primary"
-			? "bg-blue-600 text-white ring-1 ring-blue-600 hover:bg-blue-700"
-			: "bg-white text-zinc-900 ring-1 ring-zinc-200 hover:bg-zinc-50 hover:ring-zinc-300";
+			? "bg-zinc-200 text-zinc-500 ring-1 ring-zinc-200"
+			: "bg-white text-zinc-500 ring-1 ring-zinc-200";
 	return (
-		<a href={href} target="_blank" rel={externalRel(href)} className={`${base} ${styles} ${className}`}>
-			{children}
-		</a>
+		<span aria-disabled="true" className={`${base} ${styles} ${className}`}>
+			Contact details unavailable
+		</span>
 	);
 }
 
@@ -129,17 +116,7 @@ export function OffSiteValue() {
 				<div className="mt-8 rounded-lg border border-zinc-200 bg-zinc-50 p-6 lg:p-8">
 					<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ WHO RUNS THIS</p>
 					<p className="mt-3 max-w-[68ch] text-pretty text-zinc-700 md:text-lg">
-						Elmo is run by{" "}
-						<a
-							href="https://www.linkedin.com/in/jrhizor"
-							target="_blank"
-							rel={externalRel("https://www.linkedin.com/in/jrhizor")}
-							className="font-medium text-blue-600 underline-offset-4 hover:underline"
-						>
-							Jared Rhizor
-						</a>
-						, who's spent the last year finding the levers that move the needle on AI citations by building AEO tooling
-						for top e-commerce and B2B SaaS brands.
+						Service ownership, delivery scope, and contact details are confirmed directly by the Yonaris team.
 					</p>
 				</div>
 			</div>
@@ -285,7 +262,7 @@ function PlanCard({ plan }: { plan: OffSitePlan }) {
 
 				<p className="mt-6 text-sm font-medium text-zinc-950">{plan.posts} placements / month</p>
 				{/* Fixed height so the DR breakdown lines up across all plans. */}
-				<ul role="list" className="mt-3 min-h-[8rem] space-y-1.5">
+				<ul className="mt-3 min-h-[8rem] space-y-1.5">
 					{plan.buckets.map((b) => (
 						<li key={b.dr} className="flex items-center gap-2 text-sm text-zinc-700">
 							<span className="inline-flex min-w-7 justify-center rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-zinc-600">
@@ -296,7 +273,7 @@ function PlanCard({ plan }: { plan: OffSitePlan }) {
 					))}
 				</ul>
 
-				<ul role="list" className="mt-6 space-y-2.5 text-sm text-zinc-700">
+				<ul className="mt-6 space-y-2.5 text-sm text-zinc-700">
 					{plan.features.map((f) => (
 						<li key={f} className="flex items-start gap-2">
 							<Check className="mt-0.5 size-3.5 shrink-0 text-blue-600" strokeWidth={3} />

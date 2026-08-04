@@ -28,7 +28,7 @@ export function parseScrapeTargets(envValue?: string): ModelConfig[] {
 			"SCRAPE_TARGETS environment variable is required. " +
 				"Set it to configure which AI models to track. Example:\n" +
 				"  SCRAPE_TARGETS=chatgpt:olostep:online,google-ai-mode:olostep:online,copilot:olostep:online\n" +
-				"See https://docs.elmohq.com/docs/user-guide/providers for details.",
+				"See /docs/user-guide/providers for details.",
 		);
 	}
 	return envValue.split(",").map((raw) => {

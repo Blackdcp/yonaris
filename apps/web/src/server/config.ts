@@ -21,11 +21,9 @@ export type PublicClientConfig = Omit<ClientConfig, "branding"> & {
  * BrandingConfig.onboardingRedirectUrl is a function, so we strip it and send the
  * raw template string instead. The client can reconstruct the function if needed.
  */
-const POSTHOG_PUBLIC_KEY = "phc_Jhx9LnI9cTDFHpQmpOzJSDTW127qD9pFU65KRnYym6z";
-
 function resolvePosthogKey(): string | undefined {
 	if (process.env.DISABLE_TELEMETRY) return undefined;
-	return process.env.VITE_POSTHOG_KEY ?? POSTHOG_PUBLIC_KEY;
+	return process.env.VITE_POSTHOG_KEY;
 }
 
 export const getClientConfig = createServerFn({ method: "GET" }).handler(async (): Promise<PublicClientConfig> => {
@@ -48,6 +46,7 @@ export const getClientConfig = createServerFn({ method: "GET" }).handler(async (
 			plausibleDomain: process.env.VITE_PLAUSIBLE_DOMAIN,
 			clarityProjectId: process.env.VITE_CLARITY_PROJECT_ID,
 			posthogKey: resolvePosthogKey(),
+			posthogHost: process.env.VITE_POSTHOG_HOST,
 		},
 		defaultDelayHours: getDefaultDelayHours(),
 		canRegister,

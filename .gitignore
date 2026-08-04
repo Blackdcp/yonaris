@@ -61,6 +61,8 @@ next-env.d.ts
 
 # brand kit (generated assets)
 elmo-brand-kit.zip
+yonaris-brand-kit.zip
+.runtime/
 og-default.png
 
 # to remove

@@ -1,15 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Pricing } from "@/components/pricing";
 import { CTA } from "@/components/cta";
-import { Footer } from "@/components/footer";
 import { Faq } from "@/components/faq";
+import { Footer } from "@/components/footer";
+import { Navbar } from "@/components/navbar";
 import { PRICING_FAQS } from "@/lib/faqs";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, canonicalUrl, faqJsonLd, ogMeta } from "@/lib/seo";
 
-const title = "Pricing — Free & Open-Source AI Visibility · Elmo";
-const description =
-	"Elmo is free and open source to self-host. Managed cloud hosting coming soon. White-label available for agencies.";
+const title = "Pricing and Deployment Options · Yonaris";
+const description = "Explore self-hosted, managed, and white-label deployment options for Yonaris.";
 
 export const Route = createFileRoute("/pricing")({
 	head: () => ({
@@ -35,7 +33,18 @@ function PricingPage() {
 		<div className="min-h-screen">
 			<Navbar />
 			<main>
-				<Pricing />
+				<section className="border-b border-zinc-200 bg-white px-4 py-20 md:px-6 md:py-28">
+					<div className="mx-auto max-w-3xl text-center">
+						<p className="font-mono text-xs font-medium tracking-[0.2em] text-blue-600 uppercase">/ Pricing</p>
+						<h1 className="mt-4 text-balance font-semibold text-4xl tracking-tight text-zinc-950 md:text-6xl">
+							Pricing and deployment options
+						</h1>
+						<p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-zinc-600 leading-relaxed">
+							Yonaris can be configured for different delivery, data-control, and infrastructure requirements. Scope,
+							availability, and commercial terms are confirmed for each deployment.
+						</p>
+					</div>
+				</section>
 				<Faq items={PRICING_FAQS} eyebrow="/ FAQ" />
 				<CTA />
 			</main>

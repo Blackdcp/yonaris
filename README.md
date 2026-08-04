@@ -1,68 +1,59 @@
 <p align="center">
-  <a href="https://github.com/elmohq/elmo">
-    <img src="apps/www/public/brand/logos/elmo-logo-xl.png" alt="Elmo" width="300">
-  </a>
+  <img src="apps/web/public/brand/yonaris-wordmark-navy.png" alt="Yonaris" width="400">
 </p>
 
-<p align="center">
-  Open source AI visibility tracking and optimization.
-  <br />
-  <br />
-  <a href="https://www.elmohq.com/"><strong>Learn more »</strong></a>
-</p>
+# Yonaris
 
-<br />
+Self-hosted AI visibility tracking and optimization for Answer Engine Optimization (AEO), Generative Engine Optimization (GEO), and LLM Optimization (LLMO).
 
-<p align="center">
-  <a href="https://www.elmohq.com/docs"><img src="https://img.shields.io/badge/Docs-2563eb?style=flat&logo=readthedocs&logoColor=white" alt="Docs"></a>&nbsp;
-  <a href="https://demo.elmohq.com"><img src="https://img.shields.io/badge/Demo-22c55e?style=flat&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xNSAxNGMuMi0xIC43LTEuNyAxLjUtMi41IDEtLjkgMS41LTIuMiAxLjUtMy41QTYgNiAwIDAgMCA2IDhjMCAxIC4yIDIuMiAxLjUgMy41LjcuNyAxLjMgMS41IDEuNSAyLjUiLz48cGF0aCBkPSJNOSAxOGg2Ii8+PHBhdGggZD0iTTEwIDIyaDQiLz48L3N2Zz4%3D" alt="Demo"></a>&nbsp;
-  <a href="https://github.com/elmohq/elmo/issues"><img src="https://img.shields.io/badge/Issues-f95738?style=flat&logo=github&logoColor=white" alt="Issues"></a>&nbsp;
-  <a href="https://github.com/orgs/elmohq/projects/3/views/1"><img src="https://img.shields.io/badge/Roadmap-ee964b?style=flat&logo=github&logoColor=white" alt="Roadmap"></a>&nbsp;
-  <a href="https://discord.gg/s24nubCtKz"><img src="https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
-</p>
+Yonaris tracks how AI answer engines such as ChatGPT, Claude, Perplexity, Gemini, DeepSeek, and Google AI surfaces mention, cite, and describe a brand. It helps teams benchmark competitors, inspect source citations, and measure visibility over time while keeping deployment data under their control.
 
-<br />
+## Quick start
 
-## About
-
-Elmo is an open-source, self-hosted platform for optimizing your AI visibility, which is also known as:
-* Answer Engine Optimization (AEO)
-* Generative Engine Optimization (GEO)
-* LLM Optimization (LLMO, which is where the name Elmo is from)
-
-Elmo tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, and Google AI Overviews mention, cite, and describe your brand, so you can benchmark competitors and grow your visibility in AI answers.
-
-It's a free alternative to tools like [Profound](https://www.elmohq.com/ai-visibility-tools/profound), [Peec](https://www.elmohq.com/ai-visibility-tools/peec-ai), and [Otterly](https://www.elmohq.com/ai-visibility-tools/otterly-ai). You can run it on your own infrastructure, own your data, and audit exactly how every metric is calculated.
-
-## Demo
-
-Try the live demo at **[demo.elmohq.com](https://demo.elmohq.com)** to see how Elmo tracks prompts and analyzes citations.
-
-## Quick Start
-
-For local deployments, use Docker Compose as configured with the `@elmohq/cli` package:
+Yonaris currently uses the upstream-compatible CLI distribution:
 
 ```bash
-# Install the CLI globally
+# Install the compatible CLI
 npm install -g @elmohq/cli
 
-# Initialize configuration (interactive wizard)
+# Initialize a Yonaris deployment
 elmo init
 
 # Start the stack
 elmo compose up -d
 ```
 
-> [!TIP]
-> **Watch** this repo's **releases** to get notified of major updates.
+The dashboard is available at `http://localhost:1515` by default.
+
+## Compatibility identifiers
+
+The product shown to users is **Yonaris**. The following identifiers intentionally remain compatible with the upstream deployment tooling:
+
+- npm package: `@elmohq/cli`
+- CLI command: `elmo`
+- config directory and file: `~/.elmo` and `elmo.yaml`
+- Docker images: `elmohq/elmo-*`
+- encryption variables: `ELMO_ENCRYPTION_KEY` and `ELMO_ENCRYPTION_KEY_OLD`
+
+Do not rename these identifiers in an existing deployment without a migration plan. Changing the Compose project, image, database, or volume names can create a parallel stack that appears to have lost its existing data.
+
+## Documentation
+
+- [Introduction](packages/docs/content/docs/index.mdx)
+- [Quick start](packages/docs/content/docs/getting-started.mdx)
+- [User guide](packages/docs/content/docs/user-guide/index.mdx)
+- [API overview](packages/docs/content/docs/api/index.mdx)
 
 ## Architecture
 
-<p align="center">
-  <img src="apps/www/public/brand/architecture.svg" alt="Elmo system architecture" width="100%">
-</p>
+Yonaris runs as a Docker Compose stack:
 
-## Tech Stack
+- the web service provides the dashboard and REST API;
+- the worker schedules model evaluations, citations, and reports;
+- PostgreSQL stores product data and the background-job queue;
+- configured scraper and model providers collect the evaluated responses.
+
+## Tech stack
 
 - [Docker Compose](https://docs.docker.com/compose/)
 - [PostgreSQL](https://www.postgresql.org/)
@@ -70,12 +61,6 @@ elmo compose up -d
 - [TanStack Start](https://tanstack.com/start/latest)
 - [pg-boss](https://github.com/timgit/pg-boss)
 
-## Contact
+## Upstream and licensing
 
-- [Discord](https://discord.gg/s24nubCtKz)
-- [Email](mailto:support@elmohq.com)
-- [Schedule a call](https://cal.com/jrhizor/elmo)
-
-## Repo Activity
-
-![Repository activity](https://www.elmohq.com/repo-activity.svg "Repository activity")
+Yonaris is based on the MIT-licensed [Elmo upstream project](https://github.com/elmohq/elmo). The upstream technical identifiers above are retained so its published CLI and Docker images continue to work. See [LICENSE.md](LICENSE.md) for the required copyright and license notice.

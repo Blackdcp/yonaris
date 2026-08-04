@@ -1,12 +1,12 @@
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Faq } from "@/components/faq";
 import { ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, faqJsonLd, howToJsonLd } from "@/lib/seo";
+import { Faq } from "@/components/faq";
+import { Footer } from "@/components/footer";
+import { Navbar } from "@/components/navbar";
+import { type AiSearchEngine, aiSearchEngines, getAiSearchEngine } from "@/data/ai-search-engines";
 import type { FaqItem } from "@/lib/faqs";
-import { getAiSearchEngine, aiSearchEngines, type AiSearchEngine } from "@/data/ai-search-engines";
+import { breadcrumbJsonLd, canonicalUrl, faqJsonLd, howToJsonLd, ogMeta } from "@/lib/seo";
 
 function engineFaqs(e: AiSearchEngine): FaqItem[] {
 	return [
@@ -15,7 +15,7 @@ function engineFaqs(e: AiSearchEngine): FaqItem[] {
 			answer: `${e.short} In short: ${e.steps[0].text} ${e.steps[1].text}`,
 		},
 		{
-			question: `Does Elmo track ${e.name}?`,
+			question: `Does Yonaris track ${e.name}?`,
 			answer: e.tracking,
 		},
 	];
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/ai-search/$slug")({
 	head: ({ params }) => {
 		const e = getAiSearchEngine(params.slug);
 		if (!e) return {};
-		const title = `How to Appear in ${e.name} · Elmo`;
+		const title = `How to Appear in ${e.name} · Yonaris`;
 		const description = e.short;
 		const path = `/ai-search/${e.slug}`;
 		return {
@@ -111,7 +111,7 @@ function EnginePage() {
 									to="/docs"
 									className="inline-flex h-9 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
 								>
-									Start tracking with Elmo
+									Start tracking with Yonaris
 								</Link>
 							</div>
 						</div>

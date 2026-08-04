@@ -3,8 +3,8 @@ import path from "node:path";
 import { parse } from "dotenv";
 import { PostHog } from "posthog-node";
 
-const POSTHOG_PUBLIC_KEY = "phc_Jhx9LnI9cTDFHpQmpOzJSDTW127qD9pFU65KRnYym6z";
-const POSTHOG_HOST = "https://us.i.posthog.com";
+const TELEMETRY_KEY_ENV = "YONARIS_POSTHOG_KEY";
+const TELEMETRY_HOST_ENV = "YONARIS_POSTHOG_HOST";
 
 function envDisabled(): boolean {
 	return Boolean(process.env.DISABLE_TELEMETRY);
@@ -24,6 +24,20 @@ async function isTelemetryDisabled(configDir: string): Promise<boolean> {
 	return Boolean(await readEnvKey(configDir, "DISABLE_TELEMETRY"));
 }
 
+async function resolveTelemetryConfig(configDir: string): Promise<{ key: string; host: string } | null> {
+	const key = process.env[TELEMETRY_KEY_ENV] ?? (await readEnvKey(configDir, TELEMETRY_KEY_ENV));
+	const host = process.env[TELEMETRY_HOST_ENV] ?? (await readEnvKey(configDir, TELEMETRY_HOST_ENV));
+	if (!key || !host) return null;
+
+	try {
+		const url = new URL(host);
+		if (url.protocol !== "https:") return null;
+		return { key, host: url.toString() };
+	} catch {
+		return null;
+	}
+}
+
 export async function trackCliEvent(
 	configDir: string,
 	eventName: string,
@@ -33,9 +47,11 @@ export async function trackCliEvent(
 	if (await isTelemetryDisabled(configDir)) return;
 	const distinctId = await readEnvKey(configDir, "DEPLOYMENT_ID");
 	if (!distinctId) return;
+	const telemetry = await resolveTelemetryConfig(configDir);
+	if (!telemetry) return;
 
 	try {
-		const client = new PostHog(POSTHOG_PUBLIC_KEY, { host: POSTHOG_HOST });
+		const client = new PostHog(telemetry.key, { host: telemetry.host });
 		client.capture({
 			distinctId,
 			event: eventName,
@@ -47,31 +63,5 @@ export async function trackCliEvent(
 		await client.shutdown();
 	} catch {
 		// Telemetry should never block the CLI
-	}
-}
-
-// Newsletter signup is an explicit user action with clear intent, so it
-// fires even when anonymous telemetry is disabled. When telemetry is on the
-// event is keyed off the deployment UUID and the email is attached as a
-// person property — same identity as the rest of the CLI events. When
-// telemetry is off the event is keyed off the email itself, so it is never
-// linked back to the anonymous deployment UUID.
-export async function submitNewsletterSignup(configDir: string, email: string): Promise<void> {
-	try {
-		const disabled = await isTelemetryDisabled(configDir);
-		const deploymentId = disabled ? null : await readEnvKey(configDir, "DEPLOYMENT_ID");
-		const distinctId = deploymentId ?? email;
-		const client = new PostHog(POSTHOG_PUBLIC_KEY, { host: POSTHOG_HOST });
-		client.capture({
-			distinctId,
-			event: "newsletter_signup",
-			properties: {
-				source: "cli_init",
-				$set: { email, wants_updates: true },
-			},
-		});
-		await client.shutdown();
-	} catch {
-		// Newsletter signup should never block the CLI
 	}
 }

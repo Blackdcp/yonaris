@@ -1,10 +1,15 @@
 import { cn } from "@workspace/ui/lib/utils";
 import type { ComponentPropsWithoutRef } from "react";
 
-export function Logo({ className, ...props }: ComponentPropsWithoutRef<"span">) {
-	return (
-		<span {...props} className={cn("font-titan-one text-3xl font-normal lowercase text-blue-600", className)}>
-			elmo
-		</span>
-	);
+const WORDMARKS = {
+	navy: "/brand/logos/yonaris-wordmark-navy.png",
+	white: "/brand/logos/yonaris-wordmark-white.png",
+} as const;
+
+interface LogoProps extends Omit<ComponentPropsWithoutRef<"img">, "src"> {
+	variant?: keyof typeof WORDMARKS;
+}
+
+export function Logo({ variant = "navy", className, alt = "Yonaris", ...props }: LogoProps) {
+	return <img {...props} src={WORDMARKS[variant]} alt={alt} className={cn("h-7 w-auto object-contain", className)} />;
 }

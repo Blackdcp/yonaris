@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import titanOne400Data from "virtual:font/titan-one-400";
 import geistSans400Data from "virtual:font/geist-sans-400";
 import geistSans500Data from "virtual:font/geist-sans-500";
-import { DEFAULT_APP_NAME } from "@workspace/config/constants";
+import titanOne400Data from "virtual:font/titan-one-400";
+import { createFileRoute } from "@tanstack/react-router";
 import { renderOgPng } from "@workspace/og/rasterize";
 import { renderOgImage } from "@workspace/og/render";
+import { SITE_NAME } from "@/lib/seo";
 
 export const Route = createFileRoute("/og.png")({
 	server: {
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/og.png")({
 
 				const png = await renderOgPng(
 					renderOgImage({
-						appName: DEFAULT_APP_NAME,
+						appName: SITE_NAME,
 						title,
 						description,
 					}),

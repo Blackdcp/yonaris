@@ -2,7 +2,7 @@
 
 ## What this is
 
-Elmo is an open-source AI visibility platform (Answer Engine Optimization): it tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, and Google AI Overviews mention, cite, and describe brands. It is a **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**.
+Yonaris is a self-hosted AI visibility and GEO platform based on the MIT-licensed Elmo upstream project. It tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, DeepSeek, and Google AI surfaces mention, cite, and describe brands. The codebase is a **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**. Upstream CLI, Docker, database, and encryption identifiers remain Elmo-compatible until a managed migration is available.
 
 - `apps/web` — product dashboard (TanStack Start + Vite, port 3000)
 - `apps/worker` — pg-boss background jobs (AI evaluations, citation tracking, reports)

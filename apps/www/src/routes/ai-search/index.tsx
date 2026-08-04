@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
+import { Navbar } from "@/components/navbar";
 import { aiSearchEngines } from "@/data/ai-search-engines";
+import { breadcrumbJsonLd, canonicalUrl, itemListJsonLd, ogMeta } from "@/lib/seo";
 
-const title = "How to Show Up in AI Search Engines · Elmo";
+const title = "How to Show Up in AI Search Engines · Yonaris";
 const description =
 	"Practical guides to appearing in AI search: how ChatGPT, Perplexity, Google AI Overviews, Gemini, Claude, Copilot, and Grok choose what to cite, and how to become one of their sources.";
 

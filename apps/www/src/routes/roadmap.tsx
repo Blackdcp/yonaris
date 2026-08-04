@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight, ThumbsUp, MessageCircle } from "lucide-react";
-import { Navbar } from "@/components/navbar";
+import { ArrowUpRight, MessageCircle, ThumbsUp } from "lucide-react";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
-import { getGitHubRoadmap, type RoadmapIssue as GitHubRoadmapIssue } from "@/lib/github-roadmap";
+import { Navbar } from "@/components/navbar";
 import upcomingData from "@/data/upcoming-features.json";
+import { type RoadmapIssue as GitHubRoadmapIssue, getGitHubRoadmap } from "@/lib/github-roadmap";
+import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
 
-const title = "Roadmap · Elmo";
+const title = "Roadmap · Yonaris";
 const description = "See what's coming next for Elmo. React or comment on GitHub issues to help prioritize.";
 
 const PROJECT_BOARD_URL = "https://github.com/orgs/elmohq/projects/3/views/1";

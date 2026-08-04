@@ -4,7 +4,7 @@ import { HeadContent, Outlet, ScriptOnce, Scripts, createRootRouteWithContext } 
 import { NotFound } from "@/router-default-components";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
-import { DEFAULT_APP_ICON, ELMO_THEME_COLOR } from "@workspace/config/constants";
+import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_THEME_COLOR } from "@workspace/config/constants";
 import type { DeploymentMode } from "@workspace/config/types";
 import type { MissingEnvVar } from "@workspace/config/env";
 import { getClientConfig, getEnvValidationStateFn, type PublicClientConfig } from "@/server/config";
@@ -58,14 +58,14 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 		}
 
 		const hasCustomIcon = Boolean(branding?.icon && branding.icon !== DEFAULT_APP_ICON);
-		const appName = branding?.name || "Elmo";
-		const themeColor = hasCustomIcon ? "#000000" : ELMO_THEME_COLOR;
+		const appName = branding?.name || DEFAULT_APP_NAME;
+		const themeColor = hasCustomIcon ? "#000000" : DEFAULT_THEME_COLOR;
 		const appUrl = branding?.url ? branding.url.replace(/\/$/, "") : undefined;
 
 		const title = `${appName} - AI Search Optimization`;
 		const description = "Track and optimize your brand's visibility across AI models.";
 		// Don't pass `title` to /api/og — the renderer already shows the brand
-		// (Elmo logo or whitelabel icon + name), so a "Brand - AI Search Optimization"
+		// (default logo or whitelabel icon + name), so a "Brand - AI Search Optimization"
 		// title would render redundantly. Pages that override og:image can supply
 		// a page-specific title via the query param.
 		const ogImageParams = new URLSearchParams({ description });
@@ -106,7 +106,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 				{ rel: "stylesheet", href: appCss },
 				{ rel: "manifest", href: "/api/manifest" },
 				// Whitelabel uses its own icon URL for both favicon and iOS touch;
-				// Elmo default uses the committed SVG + opaque 180×180 PNG.
+				// The default brand uses the committed SVG + opaque 180×180 PNG.
 				...(hasCustomIcon && branding?.icon
 					? [
 							{ rel: "icon", type: "image/png", href: branding.icon },
@@ -115,9 +115,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 					: [
 							// Icons live under /icons/ (not the root) so browsers' default
 							// probes for /favicon.ico and /apple-touch-icon.png 404 on
-							// whitelabel deployments instead of picking up Elmo assets.
-							{ rel: "icon", type: "image/svg+xml", href: "/icons/elmo-icon.svg" },
-							{ rel: "icon", type: "image/png", sizes: "96x96", href: "/icons/elmo-icon-96.png" },
+							// whitelabel deployments instead of picking up default assets.
+							{ rel: "icon", type: "image/svg+xml", href: "/icons/yonaris-icon.svg" },
+							{ rel: "icon", type: "image/png", sizes: "96x96", href: "/icons/yonaris-icon-96.png" },
 							{ rel: "icon", type: "image/x-icon", href: "/icons/favicon.ico" },
 							{ rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
 						]),
@@ -134,8 +134,8 @@ function RootComponent() {
 
 	useEffect(() => {
 		const key = clientConfig?.analytics?.posthogKey;
-		if (key) initPostHog(key);
-	}, [clientConfig?.analytics?.posthogKey]);
+		if (key) initPostHog(key, clientConfig.analytics.posthogHost);
+	}, [clientConfig?.analytics?.posthogKey, clientConfig?.analytics?.posthogHost]);
 
 	const clarityQueueScript = `window.clarity=window.clarity||function(){(window.clarity.q=window.clarity.q||[]).push(arguments)};`;
 

@@ -1,9 +1,9 @@
 /**
- * Brand Kit story — previews all Elmo brand assets in one place.
+ * Brand Kit story — previews all Yonaris brand assets in one place.
  *
  * Sections:
- *  1. Logo — text logo ("elmo" in Titan One) and whitelabel variant
- *  2. Icon — the "e" icon at various sizes (16, 32, 64, 128, 256)
+ *  1. Logo — light and dark wordmark variants plus a whitelabel fallback
+ *  2. Icon — the Y icon at various sizes (16, 32, 64, 128, 256)
  *  3. Maskable Icon — for adaptive/PWA contexts
  *  4. Color Palette — brand color, theme colors, and chart palette
  */
@@ -12,7 +12,7 @@ import { Logo } from "@/components/logo";
 import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
 import { setMockRouteContext } from "./_mocks/tanstack-router";
 
-const BRAND_COLOR = "#2563eb";
+const BRAND_COLOR = "#0a1a2a";
 const CHART_COLORS = [
 	"#2563eb",
 	"#efb118",
@@ -27,7 +27,7 @@ const CHART_COLORS = [
 	"#9498a0",
 ];
 
-const elmoConfig: ClientConfig = {
+const yonarisConfig: ClientConfig = {
 	mode: "local",
 	features: {
 		readOnly: false,
@@ -36,7 +36,10 @@ const elmoConfig: ClientConfig = {
 		canCreateBrands: true,
 	},
 	branding: {
-		name: "Elmo",
+		name: "Yonaris",
+		icon: "/icons/yonaris-icon.svg",
+		wordmark: "/brand/yonaris-wordmark-navy.png",
+		wordmarkOnDark: "/brand/yonaris-wordmark-white.png",
 		chartColors: CHART_COLORS.map((c) => c),
 	},
 	analytics: {},
@@ -91,29 +94,29 @@ function ColorSwatch({ color, label }: { color: string; label: string }) {
 // Stories
 // ---------------------------------------------------------------------------
 
-/** Full Elmo brand kit — logo, icons, colors, typography */
-export const ElmoBrandKit = () => {
-	setMockClientConfig(elmoConfig);
-	setMockRouteContext({ clientConfig: elmoConfig });
+/** Full Yonaris brand kit — logo, icons, and colors */
+export const YonarisBrandKit = () => {
+	setMockClientConfig(yonarisConfig);
+	setMockRouteContext({ clientConfig: yonarisConfig });
 
 	const iconSizes = [16, 32, 64, 128, 256];
 
 	return (
 		<div className="p-8 max-w-4xl mx-auto space-y-2">
-			<h1 className="text-2xl font-bold text-foreground mb-8">Elmo Brand Kit</h1>
+			<h1 className="text-2xl font-bold text-foreground mb-8">Yonaris Brand Kit</h1>
 
 			{/* Logo */}
 			<Section title="Logo">
 				<div className="flex items-center gap-8">
 					<div className="flex flex-col items-center gap-2">
 						<div className="bg-background border rounded-lg p-6">
-							<Logo />
+							<Logo surface="light" />
 						</div>
 						<span className="text-xs text-muted-foreground">Light background</span>
 					</div>
 					<div className="flex flex-col items-center gap-2">
 						<div className="bg-gray-900 rounded-lg p-6">
-							<Logo />
+							<Logo surface="dark" />
 						</div>
 						<span className="text-xs text-muted-foreground">Dark background</span>
 					</div>
@@ -133,8 +136,8 @@ export const ElmoBrandKit = () => {
 										style={{ minWidth: Math.max(size + 16, 48), minHeight: Math.max(size + 16, 48) }}
 									>
 										<img
-											src="/icons/elmo-icon.svg"
-											alt={`Elmo icon ${size}px`}
+											src="/icons/yonaris-icon.svg"
+											alt={`Yonaris icon ${size}px`}
 											width={size}
 											height={size}
 											style={{ width: size, height: size }}
@@ -157,8 +160,8 @@ export const ElmoBrandKit = () => {
 										style={{ minWidth: Math.max(size + 16, 48), minHeight: Math.max(size + 16, 48) }}
 									>
 										<img
-											src="/icons/elmo-icon.svg"
-											alt={`Elmo icon ${size}px on dark`}
+											src="/icons/yonaris-icon.svg"
+											alt={`Yonaris icon ${size}px on dark`}
 											width={size}
 											height={size}
 											style={{ width: size, height: size }}
@@ -181,8 +184,8 @@ export const ElmoBrandKit = () => {
 						<div key={size} className="flex flex-col items-center gap-2">
 							<div className="border rounded-lg overflow-hidden flex items-center justify-center">
 								<img
-									src="/icons/elmo-icon-maskable.svg"
-									alt={`Elmo maskable icon ${size}px`}
+									src="/icons/yonaris-icon-maskable.svg"
+									alt={`Yonaris maskable icon ${size}px`}
 									width={size}
 									height={size}
 									style={{ width: size, height: size }}
@@ -199,8 +202,8 @@ export const ElmoBrandKit = () => {
 							style={{ width: 128, height: 128 }}
 						>
 							<img
-								src="/icons/elmo-icon-maskable.svg"
-								alt="Elmo maskable icon circular crop"
+								src="/icons/yonaris-icon-maskable.svg"
+								alt="Yonaris maskable icon circular crop"
 								width={128}
 								height={128}
 								style={{ width: 128, height: 128 }}
@@ -214,8 +217,8 @@ export const ElmoBrandKit = () => {
 			{/* Colors */}
 			<Section title="Brand Colors">
 				<div className="flex gap-6 flex-wrap">
-					<ColorSwatch color="#2563eb" label="Royal Blue" />
-					<ColorSwatch color="#faf0ca" label="Lemon Chiffon" />
+					<ColorSwatch color={BRAND_COLOR} label="Yonaris Navy" />
+					<ColorSwatch color="#f8f6f3" label="Warm White" />
 					<ColorSwatch color="#f4d35e" label="Royal Gold" />
 					<ColorSwatch color="#ee964b" label="Sandy Brown" />
 					<ColorSwatch color="#f95738" label="Tomato" />

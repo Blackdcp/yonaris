@@ -5,7 +5,7 @@ description: Configure your brand, competitors, prompts, and AI model settings.
 
 ## Settings Overview
 
-The **Settings** section is accessible from the sidebar. It has four sub-pages for managing your Elmo configuration.
+The **Settings** section is accessible from the sidebar. It has four sub-pages for managing your Yonaris configuration.
 
 ## Brand Settings
 
@@ -41,7 +41,7 @@ Manage your tracking prompts:
 
 ## LLM Settings
 
-Configure which AI models Elmo queries:
+Configure which AI models Yonaris queries:
 
 - **OpenAI (ChatGPT)** — Requires `OPENAI_API_KEY` in your environment
 - **Anthropic (Claude)** — Requires `ANTHROPIC_API_KEY` in your environment
@@ -58,7 +58,7 @@ Some settings (like API keys) are configured via environment variables rather th
 
 ```bash
 # Edit your .env file in the config directory
-nano ./elmo/.env
+nano ~/.elmo/.env
 
 # Restart to pick up changes
 elmo compose down

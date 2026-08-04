@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
 import { Footer } from "@/components/footer";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
+import { Navbar } from "@/components/navbar";
 import { aeoVerticals } from "@/data/aeo-verticals";
+import { breadcrumbJsonLd, canonicalUrl, itemListJsonLd, ogMeta } from "@/lib/seo";
 
-const title = "Answer Engine Optimization by Industry · Elmo";
+const title = "Answer Engine Optimization by Industry · Yonaris";
 const description =
 	"How answer engine optimization applies to your world: AEO for agencies, SaaS, e-commerce, B2B, startups, enterprise, healthcare, and financial services.";
 

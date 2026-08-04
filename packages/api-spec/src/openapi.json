@@ -1,11 +1,11 @@
 {
 	"openapi": "3.0.3",
 	"info": {
-		"title": "API",
+		"title": "Yonaris API",
 		"description": "API for managing prompts and generating AI Share of Voice reports.",
 		"version": "1.0.0",
 		"contact": {
-			"name": "API Support"
+			"name": "Yonaris API Support"
 		}
 	},
 	"servers": [

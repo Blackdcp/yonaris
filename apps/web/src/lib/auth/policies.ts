@@ -201,11 +201,11 @@ export function validateApiKeyFromRequest(request: Request): boolean {
  * Gates cloud self-serve signup while the mode is still being hardened. Entry
  * forms:
  *   - exact address — "alice@partner.com"
- *   - domain suffix — "@elmohq.com" admits any address at that domain
+ *   - domain suffix — "@example.com" admits any address at that domain
  *   - "*" — opens signup to everyone (the public-launch escape hatch)
  * An empty allowlist denies everyone, so cloud fails closed until configured.
  * Matching is case-insensitive; a domain entry matches the whole domain only,
- * never a lookalike suffix ("@elmohq.com" rejects "x@evil-elmohq.com").
+ * never a lookalike suffix ("@example.com" rejects "x@evil-example.com").
  */
 export function evaluateSignupAllowed(email: string, allowlist: readonly string[]): "allow" | "deny" {
 	const entries = allowlist.map((entry) => entry.trim().toLowerCase()).filter(Boolean);

@@ -1,12 +1,16 @@
 import { getMarketingOgImage } from "./og";
 
-export const SITE_URL = "https://www.elmohq.com";
-export const SITE_NAME = "Elmo";
-export const SITE_DESCRIPTION = "Open source AI visibility tracking and optimization.";
-export const SITE_LOGO_URL = `${SITE_URL}/brand/icons/elmo-icon-512.png`;
+const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
 
-export function canonicalUrl(path: string): string {
-	return `${SITE_URL}${path}`;
+export const SITE_URL = configuredSiteUrl ? configuredSiteUrl.replace(/\/$/, "") : "";
+export const SITE_NAME = "Yonaris";
+export const SITE_DESCRIPTION = "AI visibility tracking and optimization.";
+export const SITE_LOGO_URL = SITE_URL ? `${SITE_URL}/brand/logos/yonaris-wordmark-navy.png` : undefined;
+
+export function canonicalUrl(path: string): string | undefined {
+	if (path.startsWith("http")) return path;
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	return SITE_URL ? `${SITE_URL}${normalizedPath}` : undefined;
 }
 
 export function ogMeta({
@@ -29,18 +33,22 @@ export function ogMeta({
 	return [
 		{ property: "og:title", content: title },
 		{ property: "og:description", content: description },
-		{ property: "og:url", content: url },
+		...(url ? [{ property: "og:url", content: url }] : []),
 		{ property: "og:site_name", content: SITE_NAME },
 		{ property: "og:type", content: type },
 		{ property: "og:locale", content: "en_US" },
-		{ property: "og:image", content: absoluteImage },
-		{ property: "og:image:width", content: "1200" },
-		{ property: "og:image:height", content: "630" },
-		{ property: "og:image:alt", content: title },
+		...(absoluteImage
+			? [
+					{ property: "og:image", content: absoluteImage },
+					{ property: "og:image:width", content: "1200" },
+					{ property: "og:image:height", content: "630" },
+					{ property: "og:image:alt", content: title },
+				]
+			: []),
 		{ name: "twitter:card", content: "summary_large_image" },
 		{ name: "twitter:title", content: title },
 		{ name: "twitter:description", content: description },
-		{ name: "twitter:image", content: absoluteImage },
+		...(absoluteImage ? [{ name: "twitter:image", content: absoluteImage }] : []),
 	];
 }
 
@@ -58,7 +66,7 @@ export function websiteJsonLd() {
 	return jsonLd({
 		"@type": "WebSite",
 		name: SITE_NAME,
-		url: SITE_URL,
+		...(SITE_URL ? { url: SITE_URL } : {}),
 		description: SITE_DESCRIPTION,
 	});
 }
@@ -67,19 +75,8 @@ export function organizationJsonLd() {
 	return jsonLd({
 		"@type": "Organization",
 		name: SITE_NAME,
-		url: SITE_URL,
-		logo: SITE_LOGO_URL,
-		sameAs: [
-			"https://github.com/elmohq/elmo",
-			"https://x.com/tryelmo",
-			"https://www.linkedin.com/company/elmohq",
-			"https://discord.gg/s24nubCtKz",
-		],
-		parentOrganization: {
-			"@type": "Organization",
-			name: "Blue Whale Software, LLC",
-			url: "https://bluewhale.dev",
-		},
+		...(SITE_URL ? { url: SITE_URL } : {}),
+		...(SITE_LOGO_URL ? { logo: SITE_LOGO_URL } : {}),
 	});
 }
 
@@ -90,12 +87,7 @@ export function softwareApplicationJsonLd() {
 		description: SITE_DESCRIPTION,
 		applicationCategory: "BusinessApplication",
 		operatingSystem: "Any",
-		offers: {
-			"@type": "Offer",
-			price: "0",
-			priceCurrency: "USD",
-		},
-		url: SITE_URL,
+		...(SITE_URL ? { url: SITE_URL } : {}),
 	});
 }
 
@@ -104,11 +96,11 @@ export function articleJsonLd({ title, description, path }: { title: string; des
 		"@type": "TechArticle",
 		headline: title,
 		description,
-		url: canonicalUrl(path),
+		...(canonicalUrl(path) ? { url: canonicalUrl(path) } : {}),
 		publisher: {
 			"@type": "Organization",
 			name: SITE_NAME,
-			url: SITE_URL,
+			...(SITE_URL ? { url: SITE_URL } : {}),
 		},
 	});
 }
@@ -133,17 +125,17 @@ export function blogPostingJsonLd({
 		"@type": "BlogPosting",
 		headline: title,
 		description,
-		url: canonicalUrl(path),
+		...(canonicalUrl(path) ? { url: canonicalUrl(path) } : {}),
 		datePublished,
 		...(dateModified ? { dateModified } : {}),
 		author: authorName
 			? { "@type": "Person", name: authorName }
-			: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+			: { "@type": "Organization", name: SITE_NAME, ...(SITE_URL ? { url: SITE_URL } : {}) },
 		publisher: {
 			"@type": "Organization",
 			name: SITE_NAME,
-			url: SITE_URL,
-			logo: { "@type": "ImageObject", url: SITE_LOGO_URL },
+			...(SITE_URL ? { url: SITE_URL } : {}),
+			...(SITE_LOGO_URL ? { logo: { "@type": "ImageObject", url: SITE_LOGO_URL } } : {}),
 		},
 	});
 }
@@ -155,7 +147,7 @@ export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
 			"@type": "ListItem",
 			position: index + 1,
 			name: item.name,
-			item: canonicalUrl(item.path),
+			...(canonicalUrl(item.path) ? { item: canonicalUrl(item.path) } : {}),
 		})),
 	});
 }
@@ -201,15 +193,14 @@ export function itemListJsonLd(items: { name: string; path?: string; url?: strin
 	});
 }
 
-/** Elmo's entry for a comparison ItemList (always the open-source option). */
-export const ELMO_LISTING = { name: SITE_NAME, url: SITE_URL };
+/** The site's entry for a comparison ItemList. */
+export const ELMO_LISTING = { name: SITE_NAME, ...(SITE_URL ? { url: SITE_URL } : {}) };
 
 /**
  * ItemList of the software products weighed on a comparison page, each as a
  * SoftwareApplication. Honest structured data for "X vs Y" and "X vs Y vs Z"
  * pages: it names the tools compared so answer engines can parse the matchup,
- * without asserting prices or ratings we don't have for other vendors. Pair it
- * with softwareApplicationJsonLd() so Elmo's free offer is stated explicitly.
+ * without asserting prices or ratings we don't have for other vendors.
  */
 export function comparisonJsonLd(tools: { name: string; url?: string }[]) {
 	return jsonLd({

@@ -1,7 +1,7 @@
 import { createElement } from "react";
-import { DEFAULT_APP_NAME, ELMO_BRAND_COLOR } from "@workspace/config/constants";
+import { DEFAULT_APP_NAME, DEFAULT_BRAND_COLOR } from "@workspace/config/constants";
 
-export const ACCENT_COLORS = ["#2563eb", "#f4d35e", "#ee964b", "#f95738"];
+export const ACCENT_COLORS = ["#0a1a2a", "#34495e", "#b89b72", "#f8f6f3"];
 export const DEFAULT_TAGLINE = "AI Search Optimization";
 export const DEFAULT_DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
 
@@ -11,14 +11,22 @@ export interface OgImageOptions {
 	description?: string;
 	accentColors?: string[];
 	iconDataUri?: string;
+	wordmarkDataUri?: string;
 }
 
-export function renderOgImage({ appName, title, description, accentColors, iconDataUri }: OgImageOptions) {
-	const isElmo = appName === DEFAULT_APP_NAME;
-	const brandColor = isElmo ? ELMO_BRAND_COLOR : (accentColors?.[0] ?? "#1e293b");
+export function renderOgImage({
+	appName,
+	title,
+	description,
+	accentColors,
+	iconDataUri,
+	wordmarkDataUri,
+}: OgImageOptions) {
+	const isDefaultBrand = appName === DEFAULT_APP_NAME;
+	const brandColor = isDefaultBrand ? DEFAULT_BRAND_COLOR : (accentColors?.[0] ?? "#1e293b");
 	const desc = description || DEFAULT_DESCRIPTION;
-	const watermarkColor = isElmo ? "rgba(37,99,235,0.04)" : "rgba(0,0,0,0.03)";
-	const gradientColors = isElmo
+	const watermarkColor = isDefaultBrand ? "rgba(10,26,42,0.04)" : "rgba(0,0,0,0.03)";
+	const gradientColors = isDefaultBrand
 		? ACCENT_COLORS
 		: accentColors && accentColors.length >= 2
 			? accentColors.slice(0, 4)
@@ -36,13 +44,14 @@ export function renderOgImage({ appName, title, description, accentColors, iconD
 				backgroundColor: "#ffffff",
 			},
 		},
-		isElmo
+		isDefaultBrand
 			? createElement(
 					"div",
 					{
 						style: {
 							position: "absolute",
-							fontFamily: "Titan One",
+							fontFamily: "Geist Sans",
+							fontWeight: 500,
 							fontSize: 700,
 							color: watermarkColor,
 							lineHeight: 1,
@@ -50,7 +59,7 @@ export function renderOgImage({ appName, title, description, accentColors, iconD
 							top: -60,
 						},
 					},
-					"e",
+					"Y",
 				)
 			: null,
 		createElement(
@@ -65,28 +74,36 @@ export function renderOgImage({ appName, title, description, accentColors, iconD
 					paddingRight: 80,
 				},
 			},
-			isElmo
-				? createElement(
+			wordmarkDataUri
+				? createElement("img", {
+						src: wordmarkDataUri,
+						width: 360,
+						height: 88,
+						style: { marginBottom: 40, objectFit: "contain" },
+					})
+				: isDefaultBrand
+					? createElement(
 						"div",
 						{
 							style: {
-								fontFamily: "Titan One",
-								fontSize: 140,
-								color: ELMO_BRAND_COLOR,
+								fontFamily: "Geist Sans",
+								fontSize: 120,
+								fontWeight: 500,
+								color: DEFAULT_BRAND_COLOR,
 								lineHeight: 1,
 								marginBottom: 40,
 							},
 						},
-						"elmo",
+						DEFAULT_APP_NAME,
 					)
-				: iconDataUri
-					? createElement("img", {
+					: iconDataUri
+						? createElement("img", {
 							src: iconDataUri,
 							width: 120,
 							height: 120,
 							style: { marginBottom: 28, objectFit: "contain" },
-						})
-					: null,
+							})
+						: null,
 			createElement(
 				"div",
 				{
@@ -99,7 +116,7 @@ export function renderOgImage({ appName, title, description, accentColors, iconD
 						marginBottom: 28,
 					},
 				},
-				isElmo ? title || DEFAULT_TAGLINE : appName,
+				title || (isDefaultBrand ? DEFAULT_TAGLINE : appName),
 			),
 			createElement(
 				"div",

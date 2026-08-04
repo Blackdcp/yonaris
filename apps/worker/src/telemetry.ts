@@ -1,7 +1,6 @@
 import { PostHog } from "posthog-node";
 
-const POSTHOG_PUBLIC_KEY = "phc_Jhx9LnI9cTDFHpQmpOzJSDTW127qD9pFU65KRnYym6z";
-const POSTHOG_HOST = "https://us.i.posthog.com";
+const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 let client: PostHog | null = null;
 
@@ -12,9 +11,10 @@ function isTelemetryDisabled(): boolean {
 function getClient(): PostHog | null {
 	if (isTelemetryDisabled()) return null;
 	if (!process.env.DEPLOYMENT_ID) return null;
+	if (!process.env.VITE_POSTHOG_KEY) return null;
 	if (client) return client;
-	client = new PostHog(POSTHOG_PUBLIC_KEY, {
-		host: POSTHOG_HOST,
+	client = new PostHog(process.env.VITE_POSTHOG_KEY, {
+		host: process.env.VITE_POSTHOG_HOST ?? DEFAULT_POSTHOG_HOST,
 		flushAt: 20,
 		flushInterval: 30_000,
 	});

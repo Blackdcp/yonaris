@@ -56,6 +56,30 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 			"Public base URL of the web app. Required in cloud (used for auth, email links, and Stripe redirects); written by `elmo init` for local.",
 	},
 	{
+		name: "APP_NAME",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Application display name for local deployments.",
+	},
+	{
+		name: "APP_ICON",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Application icon path or URL for local deployments.",
+	},
+	{
+		name: "APP_WORDMARK",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Horizontal application wordmark for light backgrounds.",
+	},
+	{
+		name: "APP_WORDMARK_ON_DARK",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Horizontal application wordmark for dark backgrounds.",
+	},
+	{
 		name: "BETTER_AUTH_SECRET",
 		scope: "server",
 		requiredBy: VALIDATED_MODES,
@@ -289,6 +313,18 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "Application icon URL (must be an external URL, e.g., 'https://cdn.example.com/icon.png').",
 	},
 	{
+		name: "VITE_APP_WORDMARK",
+		scope: "client",
+		requiredBy: "optional",
+		description: "Horizontal application wordmark URL for light backgrounds.",
+	},
+	{
+		name: "VITE_APP_WORDMARK_ON_DARK",
+		scope: "client",
+		requiredBy: "optional",
+		description: "Horizontal application wordmark URL for dark backgrounds.",
+	},
+	{
 		name: "VITE_APP_URL",
 		scope: "client",
 		requiredBy: ["whitelabel"],
@@ -391,7 +427,20 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		name: "VITE_POSTHOG_KEY",
 		scope: "client",
 		requiredBy: "optional",
-		description: "PostHog project API key override.",
+		description: "PostHog project API key. Telemetry stays disabled when omitted.",
+	},
+	{
+		name: "VITE_POSTHOG_HOST",
+		scope: "client",
+		requiredBy: "optional",
+		description: "PostHog ingestion host (defaults to the official US endpoint when a key is configured).",
+	},
+	{
+		name: "VITE_SITE_URL",
+		scope: "client",
+		requiredBy: "optional",
+		wwwOnly: true,
+		description: "Public website origin used for canonical links, metadata, and generated site URLs.",
 	},
 	{
 		name: "VITE_CHART_COLORS",
@@ -443,7 +492,7 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		scope: "server",
 		requiredBy: ["cloud"],
 		description:
-			"Sender address for transactional email, in the form: Elmo <notifications@updates.example.com>. The domain must be verified in Resend.",
+			"Sender address for transactional email, in the form: Yonaris <notifications@updates.example.com>. The domain must be verified in Resend.",
 	},
 ];
 

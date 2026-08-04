@@ -56,7 +56,7 @@ function getDeploymentAuthOptions(): CreateAuthOptions | undefined {
 			// user.create.before hook so both gates run on every signup path
 			// (email/password, OAuth first-login, direct POST /api/auth/sign-up/email),
 			// unlike the UI's canRegister flag. Set CLOUD_SIGNUP_ALLOWLIST to admit
-			// people ("@elmohq.com,alice@x.com"); empty denies everyone (fails
+			// people ("@example.com,alice@x.com"); empty denies everyone (fails
 			// closed); "*" opens it up at launch. Sign-in is unaffected — create
 			// hooks don't fire for existing users. Each user provisions their own
 			// org via the create-brand flow (canCreateBrands), so no after hook.
