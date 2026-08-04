@@ -12,8 +12,9 @@ vi.mock("../website-excerpt", () => ({
 	getWebsiteExcerpt: vi.fn(async () => ""),
 }));
 
-import { runStructuredResearchPrompt } from "./llm";
+import { getWebsiteExcerpt } from "../website-excerpt";
 import { analyzeBrand } from "./analyze";
+import { runStructuredResearchPrompt } from "./llm";
 
 afterEach(() => {
 	vi.clearAllMocks();
@@ -84,6 +85,23 @@ describe("analyzeBrand", () => {
 
 		const result = await analyzeBrand({ website: "nike.com" });
 		expect(result.brandName).toBe("Nike");
+	});
+
+	it("preserves the supplied hostname but strips sensitive URL components when fetching context", async () => {
+		(runStructuredResearchPrompt as any).mockResolvedValueOnce({
+			brandName: "Acme",
+			additionalDomains: [],
+			aliases: [],
+			competitors: [],
+			suggestedPrompts: [],
+		});
+
+		await analyzeBrand({
+			website: "https://user:password@www.acme.com/products?token=secret#section",
+			brandName: "Acme",
+		});
+
+		expect(getWebsiteExcerpt).toHaveBeenCalledWith("https://www.acme.com");
 	});
 
 	it("respects maxCompetitors=0 / maxPrompts=0", async () => {

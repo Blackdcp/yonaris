@@ -140,7 +140,11 @@ export async function buildAnalysisContext(options: AnalyzeBrandOptions): Promis
 	}
 
 	const brandNameHint = providedBrandName?.trim() || inferBrandNameFromDomain(normalizedWebsite);
-	const websiteExcerpt = await safeGetExcerpt(normalizedWebsite);
+	// Identity normalization intentionally strips `www.`, but network fetching
+	// must preserve the supplied hostname because some sites only serve that
+	// host. Fetch only the origin: this keeps `www.` while ensuring credentials,
+	// query tokens, fragments, and arbitrary paths are never forwarded to Jina.
+	const websiteExcerpt = await safeGetExcerpt(toWebsiteFetchOrigin(website, normalizedWebsite));
 
 	const prompt = buildPrompt({
 		website: normalizedWebsite,
@@ -211,6 +215,20 @@ async function safeGetExcerpt(website: string): Promise<string> {
 	} catch (err) {
 		console.warn(`[onboarding] website excerpt failed for ${website}:`, err);
 		return "";
+	}
+}
+
+function toWebsiteFetchOrigin(input: string, fallbackDomain: string): string {
+	const trimmed = input.trim();
+	try {
+		if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed) && !/^https?:\/\//i.test(trimmed)) {
+			return `https://${fallbackDomain}`;
+		}
+		const parsed = new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
+		if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return `https://${fallbackDomain}`;
+		return parsed.origin;
+	} catch {
+		return `https://${fallbackDomain}`;
 	}
 }
 
