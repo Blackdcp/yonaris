@@ -5,27 +5,28 @@
  * Shows sidebar navigation, header, and optional demo banner.
  * If brand exists in auth but not in DB, shows onboarding.
  */
-import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
-import { getAppName } from "@/lib/route-head";
+import { createFileRoute, notFound, Outlet, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import {
-	requireAuthSession,
-	isAdmin,
-	hasReportAccess,
-	checkOrgAccess,
-	listUserOrganizations,
-} from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
-import { brands, prompts, competitors } from "@workspace/lib/db/schema";
-import { eq } from "drizzle-orm";
 import type { BrandWithPrompts } from "@workspace/lib/db/schema";
+import { brands, competitors, prompts } from "@workspace/lib/db/schema";
 import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
 import BrandOnboarding from "@/components/brand-onboarding";
+import { SiteHeader } from "@/components/site-header";
 import { validateBrandFilterSearch } from "@/hooks/use-list-filters";
+import {
+	checkOrgAccess,
+	hasReportAccess,
+	isAdmin,
+	listUserOrganizations,
+	requireAuthSession,
+} from "@/lib/auth/helpers";
+import { resolveBrandIdAlias } from "@/lib/brand-id-aliases";
+import { getAppName } from "@/lib/route-head";
 
 const getBrandData = createServerFn({ method: "GET" })
 	.validator(z.object({ brandId: z.string() }))
@@ -35,41 +36,57 @@ const getBrandData = createServerFn({ method: "GET" })
 		}): Promise<{
 			brand: BrandWithPrompts | null;
 			brandName: string | null;
+			canonicalBrandId: string;
 			isAdmin: boolean;
 			hasReportAccess: boolean;
 			hasAccess: boolean;
 		}> => {
 			const session = await requireAuthSession();
+			const canonicalBrandId = resolveBrandIdAlias(data.brandId, process.env.BRAND_ID_ALIASES);
 
 			// Verify access
-			const hasAccess = await checkOrgAccess(session.user.id, data.brandId);
+			const hasAccess = await checkOrgAccess(session.user.id, canonicalBrandId);
 			if (!hasAccess) {
-				return { brand: null, brandName: null, isAdmin: false, hasReportAccess: false, hasAccess: false };
+				return {
+					brand: null,
+					brandName: null,
+					canonicalBrandId,
+					isAdmin: false,
+					hasReportAccess: false,
+					hasAccess: false,
+				};
 			}
 
 			// Get brand metadata (name from org membership — org exists even if not in DB yet)
 			const orgs = await listUserOrganizations(session.user.id);
-			const orgMeta = orgs.find((o) => o.id === data.brandId);
-			const brandName = orgMeta?.name || data.brandId;
+			const orgMeta = orgs.find((o) => o.id === canonicalBrandId);
+			const brandName = orgMeta?.name || canonicalBrandId;
 
 			const admin = isAdmin(session);
 			const reportAccess = hasReportAccess(session);
 
 			// Get brand data from DB
 			const brand = await db.query.brands.findFirst({
-				where: eq(brands.id, data.brandId),
+				where: eq(brands.id, canonicalBrandId),
 			});
 
 			if (!brand) {
-				return { brand: null, brandName, isAdmin: admin, hasReportAccess: reportAccess, hasAccess: true };
+				return {
+					brand: null,
+					brandName,
+					canonicalBrandId,
+					isAdmin: admin,
+					hasReportAccess: reportAccess,
+					hasAccess: true,
+				};
 			}
 
 			const brandPrompts = await db.query.prompts.findMany({
-				where: eq(prompts.brandId, data.brandId),
+				where: eq(prompts.brandId, canonicalBrandId),
 			});
 
 			const brandCompetitors = await db.query.competitors.findMany({
-				where: eq(competitors.brandId, data.brandId),
+				where: eq(competitors.brandId, canonicalBrandId),
 			});
 
 			return {
@@ -79,6 +96,7 @@ const getBrandData = createServerFn({ method: "GET" })
 					competitors: brandCompetitors,
 				},
 				brandName: brand.name,
+				canonicalBrandId,
 				isAdmin: admin,
 				hasReportAccess: reportAccess,
 				hasAccess: true,
@@ -136,6 +154,9 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 
 		if (!result.hasAccess) {
 			throw notFound();
+		}
+		if (result.canonicalBrandId !== params.brand) {
+			throw redirect({ to: "/app/$brand", params: { brand: result.canonicalBrandId }, replace: true });
 		}
 
 		return {
