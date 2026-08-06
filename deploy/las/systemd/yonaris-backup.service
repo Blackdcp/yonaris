@@ -13,4 +13,3 @@ Environment=DEPLOY_ROOT=/opt/yonaris
 Environment=COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml
 Environment=ENV_FILE=/opt/yonaris/.env
 ExecStart=/usr/bin/bash /opt/yonaris/source/deploy/las/bin/backup.sh
-
