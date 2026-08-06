@@ -1,40 +1,36 @@
-import * as React from "react";
-import { Link, useRouteContext } from "@tanstack/react-router";
-import type { ClientConfig } from "@workspace/config/types";
 import {
-	IconDashboard,
-	IconChartBar,
-	IconSpeakerphone,
-	IconSitemap,
-	IconTarget,
-	IconLink,
 	IconBuilding,
 	IconBuildings,
-	IconListDetails,
+	IconChartBar,
 	IconCpu,
-	IconTable,
+	IconDashboard,
+	IconLink,
+	IconListDetails,
 	IconReport,
+	IconSitemap,
+	IconSpeakerphone,
+	IconTable,
+	IconTarget,
 	IconTimeline,
 	IconTool,
 	IconUsers,
 } from "@tabler/icons-react";
+import { Link, useRouteContext } from "@tanstack/react-router";
+import type { ClientConfig } from "@workspace/config/types";
+import type { BrandWithPrompts } from "@workspace/lib/db/schema";
 
 import {
 	Sidebar,
 	SidebarContent,
-	SidebarFooter,
 	SidebarHeader,
 	SidebarMenu,
 	SidebarMenuButton,
 	SidebarMenuItem,
 	useSidebar,
 } from "@workspace/ui/components/sidebar";
-import { NavMain, type NavGroup } from "@/components/nav-main";
-import { NavUser } from "@/components/nav-user";
-import { NavAppInfo } from "@/components/nav-app-info";
-import { DemoModePill } from "@/components/demo-mode-pill";
+import type * as React from "react";
 import { Logo } from "@/components/logo";
-import type { BrandWithPrompts } from "@workspace/lib/db/schema";
+import { type NavGroup, NavMain } from "@/components/nav-main";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isAdmin?: boolean;
@@ -186,9 +182,6 @@ export function AppSidebar({
 						<SidebarMenuButton size="lg" asChild>
 							<Link to="/app" onClick={() => setOpenMobile(false)}>
 								<Logo iconClassName="!size-5" />
-								<div className="ml-auto group-data-[collapsible=icon]:hidden">
-									<DemoModePill />
-								</div>
 							</Link>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
@@ -197,10 +190,6 @@ export function AppSidebar({
 			<SidebarContent>
 				<NavMain groups={groups} />
 			</SidebarContent>
-			<SidebarFooter>
-				<NavUser />
-				<NavAppInfo />
-			</SidebarFooter>
 		</Sidebar>
 	);
 }

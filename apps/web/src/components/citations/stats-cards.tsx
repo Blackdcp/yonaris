@@ -1,12 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 
 function StatCard({ title, tooltip, value }: { title: string; tooltip: React.ReactNode; value: React.ReactNode }) {
 	return (
-		<Card className="flex flex-col">
+		<Card data-yonaris-slot="metric-card" className="flex flex-col">
 			<CardHeader className="gap-0">
-				<CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+				<CardTitle data-yonaris-slot="metric-label" className="flex items-center gap-1.5">
 					{title}
 					<Tooltip>
 						<TooltipTrigger asChild>
@@ -17,7 +17,9 @@ function StatCard({ title, tooltip, value }: { title: string; tooltip: React.Rea
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="flex-1 flex items-center">
-				<div className="text-2xl sm:text-3xl lg:text-4xl font-bold">{value}</div>
+				<div data-yonaris-slot="metric-value" className="text-2xl sm:text-3xl lg:text-4xl">
+					{value}
+				</div>
 			</CardContent>
 		</Card>
 	);

@@ -48,7 +48,7 @@
 	--secondary: #e9e8e4;
 	--secondary-foreground: #1e2a39;
 	--muted: #eceae6;
-	--muted-foreground: #66717e;
+	--muted-foreground: #596675;
 	--accent: #dde2e8;
 	--accent-foreground: #0b1220;
 	--destructive: #c43d32;
@@ -60,13 +60,13 @@
 	--chart-3: #52677c;
 	--chart-4: #3e6259;
 	--chart-5: #8b6f5c;
-	--sidebar: #0b1220;
-	--sidebar-foreground: #f6f4f1;
+	--sidebar: #efede9;
+	--sidebar-foreground: #2f3e50;
 	--sidebar-primary: #ff6a00;
-	--sidebar-primary-foreground: #0b1220;
-	--sidebar-accent: #1e2a39;
-	--sidebar-accent-foreground: #f6f4f1;
-	--sidebar-border: rgb(246 244 241 / 12%);
+	--sidebar-primary-foreground: #fffefa;
+	--sidebar-accent: #fbfaf8;
+	--sidebar-accent-foreground: #0b1220;
+	--sidebar-border: rgb(11 18 32 / 10%);
 	--sidebar-ring: #ff6a00;
 	--yonaris-chart-primary: #1e2a39;
 	--yonaris-chart-focus: #ff6a00;
@@ -104,6 +104,11 @@ html.dark [data-brand="yonaris"] {
 	--accent-foreground: #f6f4f1;
 	--border: rgb(246 244 241 / 14%);
 	--input: rgb(246 244 241 / 18%);
+	--sidebar: #111b2a;
+	--sidebar-foreground: #c7cdd3;
+	--sidebar-accent: #1e2a39;
+	--sidebar-accent-foreground: #f6f4f1;
+	--sidebar-border: rgb(246 244 241 / 12%);
 	color-scheme: dark;
 }
 
@@ -125,44 +130,9 @@ body[data-brand="yonaris"] {
 	color: var(--yonaris-ink);
 }
 
-/* Upstream compatibility gate: ordinary info/decorative utilities collapse
-   into the approved brand range. Success and destructive colors remain
-   available only for explicit functional states. */
-[data-brand="yonaris"]
-	:is(
-		.text-blue-500,
-		.text-blue-600,
-		.text-blue-700,
-		.text-indigo-600,
-		.text-violet-600,
-		.text-purple-500,
-		.text-purple-600,
-		.text-pink-500,
-		.text-cyan-500,
-		.text-teal-500
-	) {
-	color: var(--yonaris-blue-gray);
-}
-
-[data-brand="yonaris"]
-	:is(.bg-blue-50, .bg-blue-100, .bg-indigo-50, .bg-violet-50, .bg-purple-50, .bg-pink-50, .bg-cyan-50, .bg-teal-50) {
-	background-color: color-mix(in srgb, var(--yonaris-mist) 72%, transparent);
-}
-
-[data-brand="yonaris"]
-	:is(
-		.bg-blue-500,
-		.bg-blue-600,
-		.bg-indigo-500,
-		.bg-violet-500,
-		.bg-purple-500,
-		.bg-pink-500,
-		.bg-cyan-500,
-		.bg-teal-500
-	) {
-	background-color: var(--yonaris-slate);
-}
-
+/* Warning utilities are translated to accessible Signal Orange tones.
+   Decorative and data colours are handled by semantic tokens in components,
+   not by globally rewriting utility classes. */
 [data-brand="yonaris"]
 	:is(
 		.text-amber-500,
@@ -210,7 +180,7 @@ body[data-brand="yonaris"] {
 [data-brand="yonaris"] [data-slot="sidebar-wrapper"] {
 	--sidebar-width: 15rem !important;
 	--sidebar-width-icon: 3.25rem !important;
-	background: var(--background);
+	background: var(--sidebar);
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-container"] {
@@ -220,64 +190,112 @@ body[data-brand="yonaris"] {
 [data-brand="yonaris"] [data-slot="sidebar-inner"] {
 	border-right: 1px solid var(--sidebar-border);
 	border-radius: 0;
-	box-shadow: 14px 0 36px rgb(11 18 32 / 8%);
+	box-shadow: none;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-header"] {
-	padding: 1rem 0.75rem 0.65rem;
+	padding: 1.15rem 0.9rem 0.8rem;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-content"] {
-	padding: 0.25rem 0.45rem;
+	padding: 0.35rem 0.6rem;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-footer"] {
-	padding: 0.65rem;
+	padding: 0.7rem 0.9rem;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-group"] {
-	padding: 0.65rem 0.35rem;
+	padding: 0.7rem 0.15rem;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-group-label"] {
 	height: 1.6rem;
-	padding-inline: 0.65rem;
-	color: rgb(246 244 241 / 48%);
+	padding-inline: 0.75rem;
+	color: #76818d;
 	font-size: 0.625rem;
-	font-weight: 600;
-	letter-spacing: 0.16em;
+	font-weight: 650;
+	letter-spacing: 0.14em;
 	text-transform: uppercase;
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-menu-button"] {
-	min-height: 2.35rem;
-	border-radius: 0.3rem;
-	color: rgb(246 244 241 / 72%);
+	position: relative;
+	min-height: 2.45rem;
+	border-radius: 0.4rem;
+	color: var(--yonaris-blue-gray);
 	font-weight: 500;
 	transition:
 		background-color 160ms ease,
 		color 160ms ease,
-		box-shadow 160ms ease;
+		box-shadow 160ms ease,
+		transform 160ms ease;
 }
 
-[data-brand="yonaris"] [data-slot="sidebar-menu-button"]:hover,
-[data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] {
-	background: var(--yonaris-slate);
-	color: var(--yonaris-paper);
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"]:hover {
+	background: rgb(255 254 250 / 66%);
+	color: var(--yonaris-ink);
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] {
-	box-shadow: inset 3px 0 0 var(--yonaris-signal);
+	background: var(--yonaris-surface);
+	color: var(--yonaris-ink);
+	box-shadow:
+		0 1px 2px rgb(11 18 32 / 5%),
+		inset 0 0 0 1px rgb(11 18 32 / 6%);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"]::before {
+	position: absolute;
+	top: 50%;
+	left: 0.3rem;
+	width: 2px;
+	height: 1.05rem;
+	border-radius: 999px;
+	background: var(--yonaris-signal);
+	content: "";
+	transform: translateY(-50%);
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-menu-button"] svg {
-	color: currentColor;
+	color: var(--yonaris-stone);
 	stroke-width: 1.7;
 }
 
-[data-brand="yonaris"] [data-slot="sidebar"] [data-slot="brand-logo"] img,
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] svg {
+	color: var(--yonaris-signal-strong);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-header"] [data-slot="sidebar-menu-button"] {
+	min-height: 2.75rem;
+	background: transparent;
+	box-shadow: none;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-header"] [data-slot="sidebar-menu-button"]::before {
+	display: none;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar"] [data-slot="brand-logo"] img {
+	filter: none;
+}
+
 [data-brand="yonaris"] [data-slot="full-page-brand"] [data-slot="brand-logo"] img {
 	filter: brightness(0) invert(1);
+}
+
+html.dark [data-brand="yonaris"] [data-slot="sidebar-group-label"] {
+	color: #9da7b2;
+}
+
+html.dark [data-brand="yonaris"] [data-slot="sidebar-menu-button"] {
+	color: #b7bec6;
+}
+
+html.dark [data-brand="yonaris"] [data-slot="sidebar-menu-button"]:hover,
+html.dark [data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] {
+	background: var(--yonaris-slate);
+	color: var(--yonaris-paper);
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-inset"] {
@@ -289,10 +307,10 @@ body[data-brand="yonaris"] {
 }
 
 [data-brand="yonaris"] [data-slot="site-header"] {
-	height: 3.5rem;
+	height: 4rem;
 	border-color: rgb(11 18 32 / 9%);
-	background: rgb(246 244 241 / 88%);
-	box-shadow: 0 1px 0 rgb(255 255 255 / 55%);
+	background: rgb(251 250 248 / 92%);
+	box-shadow: 0 1px 0 rgb(255 255 255 / 70%);
 	backdrop-filter: blur(14px);
 }
 
@@ -301,8 +319,29 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 }
 
 [data-brand="yonaris"] [data-slot="breadcrumb-list"] {
-	font-size: 0.75rem;
+	font-size: 0.8rem;
 	letter-spacing: 0.01em;
+}
+
+[data-brand="yonaris"] [data-slot="site-header-actions"] {
+	min-height: 2.5rem;
+}
+
+[data-brand="yonaris"] [data-slot="header-user-menu"] > button {
+	border: 1px solid rgb(11 18 32 / 8%);
+	background: rgb(255 254 250 / 72%);
+}
+
+[data-brand="yonaris"] [data-slot="header-user-menu"] > button:hover,
+[data-brand="yonaris"] [data-slot="header-user-menu"] > button[data-state="open"] {
+	border-color: rgb(11 18 32 / 14%);
+	background: var(--yonaris-surface);
+}
+
+[data-brand="yonaris"] [data-slot="deployment-status"] {
+	border-color: rgb(255 106 0 / 24%);
+	background: rgb(255 106 0 / 7%);
+	color: var(--yonaris-signal-strong);
 }
 
 [data-brand="yonaris"] [data-slot="card"] {
@@ -313,6 +352,51 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 
 [data-brand="yonaris"] [data-slot="card-title"] {
 	letter-spacing: -0.015em;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-card"] {
+	position: relative;
+	overflow: hidden;
+	background: linear-gradient(145deg, rgb(255 255 255 / 54%), transparent 58%), var(--card);
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-card"][data-metric-emphasis="brand"]::before {
+	position: absolute;
+	top: 0;
+	left: 1.25rem;
+	width: 2.5rem;
+	height: 2px;
+	background: var(--yonaris-signal);
+	content: "";
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-label"] {
+	color: var(--yonaris-blue-gray);
+	font-size: 0.72rem;
+	font-weight: 650;
+	letter-spacing: 0.035em;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-value"] {
+	color: var(--yonaris-ink);
+	font-weight: 620;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.045em;
+	line-height: 0.95;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-unit"] {
+	margin-left: 0.08em;
+	color: var(--yonaris-blue-gray);
+	font-size: 0.52em;
+	font-weight: 550;
+	letter-spacing: -0.02em;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="metric-context"] {
+	color: var(--muted-foreground);
+	font-size: 0.72rem;
+	line-height: 1.4;
 }
 
 [data-brand="yonaris"] [data-slot="button"] {

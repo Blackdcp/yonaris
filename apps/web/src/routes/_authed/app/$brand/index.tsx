@@ -4,31 +4,32 @@
  * Shows visibility charts, citation trends, and stats.
  * Displays onboarding wizard if brand is not yet onboarded.
  */
-import { useEffect } from "react";
-import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
+
 import {
-	IconArrowRight,
-	IconEye,
-	IconList,
 	IconActivity,
+	IconArrowRight,
 	IconClock,
+	IconEye,
 	IconInfoCircle,
+	IconList,
 	IconRefresh,
 	IconSpeakerphone,
 } from "@tabler/icons-react";
+import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
+import type { ClientConfig } from "@workspace/config/types";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { useEffect } from "react";
+import { YONARIS_CHART_FOCUS, YONARIS_CHART_PRIMARY } from "@/brand/chart-theme";
 import PromptWizard from "@/components/prompt-wizard";
+import { TrendChart } from "@/components/trend-chart";
 import { useBrand } from "@/hooks/use-brands";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useShareOfVoice } from "@/hooks/use-share-of-voice";
-import { TrendChart } from "@/components/trend-chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Button } from "@workspace/ui/components/button";
-import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
-import type { ClientConfig } from "@workspace/config/types";
 import { setPersonProperties } from "@/lib/posthog";
-import { YONARIS_CHART_PRIMARY } from "@/brand/chart-theme";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 /** Most recent non-null value in a daily series — matches the right end of the trend line. */
 function lastValue<T>(series: T[], key: keyof T): number | null {
@@ -98,12 +99,15 @@ function StatWithTooltip({
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<div className="flex items-center gap-2 cursor-help">
-					<Icon className="h-4 w-4 flex-shrink-0" />
-					<span>
-						<span className="font-semibold text-foreground">{value}</span> {label}
-					</span>
-					<IconInfoCircle className="h-3.5 w-3.5 opacity-50" />
+				<div className="flex min-w-0 cursor-help items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+					<div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-secondary text-secondary-foreground">
+						<Icon className="h-4 w-4" />
+					</div>
+					<div className="min-w-0 flex-1 leading-tight">
+						<div className="truncate text-sm font-semibold tabular-nums text-foreground">{value}</div>
+						<div className="mt-0.5 truncate text-xs text-muted-foreground">{label}</div>
+					</div>
+					<IconInfoCircle className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
 				</div>
 			</TooltipTrigger>
 			<TooltipContent className="max-w-xs text-sm">{tooltip}</TooltipContent>
@@ -133,16 +137,24 @@ function CardTitleWithTooltip({
 	);
 }
 
-/** The big "current" stat that fills a card — the latest point of its trend, colour-coded by value. */
-function HeroStat({ value, loading }: { value: number | null; loading: boolean }) {
+/** The latest point in a trend, presented as a primary metric rather than a status grade. */
+function HeroStat({ value, loading, label }: { value: number | null; loading: boolean; label: string }) {
 	return (
-		<CardContent className="flex-1 flex items-center justify-center">
-			<div
-				className={`font-semibold tracking-[-0.045em] tabular-nums ${value === null ? "text-muted-foreground" : "text-foreground"}`}
-				style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)" }}
-			>
-				{loading ? <Skeleton className="h-16 w-32" /> : value === null ? "—" : `${value}%`}
+		<CardContent className="flex flex-1 flex-col items-start justify-between gap-5 px-5 py-1">
+			<div data-yonaris-slot="metric-label">{label}</div>
+			<div data-yonaris-slot="metric-value" style={{ fontSize: "clamp(2.75rem, 5vw, 4.5rem)" }}>
+				{loading ? (
+					<Skeleton className="h-16 w-32" />
+				) : value === null ? (
+					"—"
+				) : (
+					<>
+						{value}
+						<span data-yonaris-slot="metric-unit">%</span>
+					</>
+				)}
 			</div>
+			<div data-yonaris-slot="metric-context">Latest recorded value · 30-day view</div>
 		</CardContent>
 	);
 }
@@ -157,7 +169,7 @@ function DashboardPage() {
 	const primaryChartColor =
 		clientConfig?.mode === "whitelabel"
 			? (clientConfig.branding?.chartColors?.[0] ?? YONARIS_CHART_PRIMARY)
-			: YONARIS_CHART_PRIMARY;
+			: YONARIS_CHART_FOCUS;
 
 	const isLoading = isLoadingBrand || isLoadingSummary;
 
@@ -192,8 +204,12 @@ function DashboardPage() {
 							</Button>
 						</div>
 						<div className="grid gap-4 lg:grid-cols-4">
-							<Card className="shadow-none flex flex-col gap-3 py-4">
-								<HeroStat value={null} loading />
+							<Card
+								data-yonaris-slot="metric-card"
+								data-metric-emphasis="brand"
+								className="shadow-none flex flex-col gap-3 py-4"
+							>
+								<HeroStat value={null} loading label="Current visibility" />
 							</Card>
 							<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 								<CardHeader className="border-b border-dotted pb-2!">
@@ -223,8 +239,12 @@ function DashboardPage() {
 							</Button>
 						</div>
 						<div className="grid gap-4 lg:grid-cols-4">
-							<Card className="shadow-none flex flex-col gap-3 py-4">
-								<HeroStat value={null} loading />
+							<Card
+								data-yonaris-slot="metric-card"
+								data-metric-emphasis="brand"
+								className="shadow-none flex flex-col gap-3 py-4"
+							>
+								<HeroStat value={null} loading label="Current share" />
 							</Card>
 							<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 								<CardHeader className="border-b border-dotted pb-2!">
@@ -242,22 +262,22 @@ function DashboardPage() {
 
 					{/* Footer stats skeleton */}
 					<section className="pt-2">
-						<div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
-							<div className="flex items-center gap-2">
-								<IconList className="h-4 w-4 flex-shrink-0" />
-								<Skeleton className="h-4 w-28" />
+						<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+							<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+								<Skeleton className="size-8 rounded-md" />
+								<Skeleton className="h-8 flex-1" />
 							</div>
-							<div className="flex items-center gap-2">
-								<IconActivity className="h-4 w-4 flex-shrink-0" />
-								<Skeleton className="h-4 w-32" />
+							<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+								<Skeleton className="size-8 rounded-md" />
+								<Skeleton className="h-8 flex-1" />
 							</div>
-							<div className="flex items-center gap-2">
-								<IconClock className="h-4 w-4 flex-shrink-0" />
-								<Skeleton className="h-4 w-24" />
+							<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+								<Skeleton className="size-8 rounded-md" />
+								<Skeleton className="h-8 flex-1" />
 							</div>
-							<div className="flex items-center gap-2">
-								<IconRefresh className="h-4 w-4 flex-shrink-0" />
-								<Skeleton className="h-4 w-24" />
+							<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+								<Skeleton className="size-8 rounded-md" />
+								<Skeleton className="h-8 flex-1" />
 							</div>
 						</div>
 					</section>
@@ -365,8 +385,12 @@ function DashboardPage() {
 
 					<div className="grid gap-4 lg:grid-cols-4">
 						{/* Hero Visibility Score */}
-						<Card data-yonaris-slot="metric-card" className="shadow-none flex flex-col gap-3 py-4">
-							<HeroStat value={currentVisibility} loading={isLoading} />
+						<Card
+							data-yonaris-slot="metric-card"
+							data-metric-emphasis="brand"
+							className="shadow-none flex flex-col gap-3 py-4"
+						>
+							<HeroStat value={currentVisibility} loading={isLoading} label="Current visibility" />
 						</Card>
 
 						{/* Visibility Chart */}
@@ -407,8 +431,12 @@ function DashboardPage() {
 					</div>
 
 					<div className="grid gap-4 lg:grid-cols-4">
-						<Card data-yonaris-slot="metric-card" className="shadow-none flex flex-col gap-3 py-4">
-							<HeroStat value={sovShare} loading={isLoadingSov} />
+						<Card
+							data-yonaris-slot="metric-card"
+							data-metric-emphasis="brand"
+							className="shadow-none flex flex-col gap-3 py-4"
+						>
+							<HeroStat value={sovShare} loading={isLoadingSov} label="Current share" />
 						</Card>
 
 						<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
@@ -435,24 +463,24 @@ function DashboardPage() {
 
 				{/* Section 3: Tracking Stats */}
 				<section className="pt-2">
-					<div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-sm text-muted-foreground">
+					<div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 						{isLoadingSummary ? (
 							<>
-								<div className="flex items-center gap-2">
-									<IconList className="h-4 w-4 flex-shrink-0" />
-									<Skeleton className="h-4 w-28" />
+								<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+									<Skeleton className="size-8 rounded-md" />
+									<Skeleton className="h-8 flex-1" />
 								</div>
-								<div className="flex items-center gap-2">
-									<IconActivity className="h-4 w-4 flex-shrink-0" />
-									<Skeleton className="h-4 w-32" />
+								<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+									<Skeleton className="size-8 rounded-md" />
+									<Skeleton className="h-8 flex-1" />
 								</div>
-								<div className="flex items-center gap-2">
-									<IconClock className="h-4 w-4 flex-shrink-0" />
-									<Skeleton className="h-4 w-24" />
+								<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+									<Skeleton className="size-8 rounded-md" />
+									<Skeleton className="h-8 flex-1" />
 								</div>
-								<div className="flex items-center gap-2">
-									<IconRefresh className="h-4 w-4 flex-shrink-0" />
-									<Skeleton className="h-4 w-24" />
+								<div className="flex items-center gap-3 rounded-md border border-border/70 bg-card px-3 py-2.5">
+									<Skeleton className="size-8 rounded-md" />
+									<Skeleton className="h-8 flex-1" />
 								</div>
 							</>
 						) : (

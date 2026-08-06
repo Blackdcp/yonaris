@@ -1,7 +1,4 @@
-import { useLocation } from "@tanstack/react-router";
-
-import { Separator } from "@workspace/ui/components/separator";
-import { SidebarTrigger } from "@workspace/ui/components/sidebar";
+import { Link, useLocation } from "@tanstack/react-router";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -10,8 +7,11 @@ import {
 	BreadcrumbPage,
 	BreadcrumbSeparator,
 } from "@workspace/ui/components/breadcrumb";
+import { Separator } from "@workspace/ui/components/separator";
+import { SidebarTrigger } from "@workspace/ui/components/sidebar";
+import { DemoModePill } from "@/components/demo-mode-pill";
+import { NavUser } from "@/components/nav-user";
 import { useBrand } from "@/hooks/use-brands";
-import { Link } from "@tanstack/react-router";
 
 /** Map of page segments to display names */
 const PAGE_NAMES: Record<string, string> = {
@@ -203,20 +203,27 @@ export function SiteHeader() {
 	return (
 		<header
 			data-slot="site-header"
+			data-page-context={isAdminPage ? "admin" : "brand"}
 			className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12"
 		>
-			<div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-				<SidebarTrigger className="-ml-1 cursor-pointer" />
-				<Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-				<Breadcrumb>
-					<BreadcrumbList>
-						{isAdminPage ? (
-							<AdminBreadcrumbs pathname={pathname} />
-						) : (
-							<BrandBreadcrumbs pathname={pathname} brandId={brandId} brandName={brand?.name || "Dashboard"} />
-						)}
-					</BreadcrumbList>
-				</Breadcrumb>
+			<div className="flex w-full items-center gap-3 px-4 lg:px-6">
+				<div className="flex min-w-0 flex-1 items-center gap-1 lg:gap-2">
+					<SidebarTrigger className="-ml-1 cursor-pointer" />
+					<Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
+					<Breadcrumb>
+						<BreadcrumbList>
+							{isAdminPage ? (
+								<AdminBreadcrumbs pathname={pathname} />
+							) : (
+								<BrandBreadcrumbs pathname={pathname} brandId={brandId} brandName={brand?.name || "Dashboard"} />
+							)}
+						</BreadcrumbList>
+					</Breadcrumb>
+				</div>
+				<div data-slot="site-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
+					<DemoModePill />
+					<NavUser />
+				</div>
 			</div>
 		</header>
 	);

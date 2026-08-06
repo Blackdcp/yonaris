@@ -11,12 +11,14 @@
  */
 import type { Meta } from "@storybook/react";
 import { DEFAULT_CHART_COLORS } from "@workspace/config/constants";
-import { SidebarProvider, SidebarInset } from "@workspace/ui/components/sidebar";
+import type { BrandWithPrompts } from "@workspace/lib/db/schema";
+import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { setMockBrand } from "./_mocks/use-brands";
-import { setMockAuth } from "./_mocks/use-auth";
-import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
+import { SiteHeader } from "@/components/site-header";
+import { type ClientConfig, setMockClientConfig } from "./_mocks/config-client";
 import { setMockRouteContext } from "./_mocks/tanstack-router";
+import { setMockAuth } from "./_mocks/use-auth";
+import { setMockBrand } from "./_mocks/use-brands";
 
 // ---------------------------------------------------------------------------
 // Shared mock data
@@ -24,24 +26,30 @@ import { setMockRouteContext } from "./_mocks/tanstack-router";
 
 const CHART_COLORS = DEFAULT_CHART_COLORS.slice(0, 8);
 
-const onboardedBrand = {
+const onboardedBrand: BrandWithPrompts = {
 	id: "brand-1",
 	name: "Acme Corp",
 	website: "https://acme.com",
+	additionalDomains: [],
+	aliases: [],
 	enabled: true,
 	onboarded: true,
-	createdAt: new Date().toISOString(),
-	updatedAt: new Date().toISOString(),
+	delayOverrideHours: null,
+	enabledModels: null,
+	organizationId: "brand-1",
+	createdAt: new Date(),
+	updatedAt: new Date(),
+	prompts: [],
+	competitors: [],
 };
 
-const newBrand = {
+const newBrand: BrandWithPrompts = {
+	...onboardedBrand,
 	id: "brand-2",
 	name: "NewStartup",
 	website: "https://newstartup.io",
-	enabled: true,
 	onboarded: false,
-	createdAt: new Date().toISOString(),
-	updatedAt: new Date().toISOString(),
+	organizationId: "brand-2",
 };
 
 // ---------------------------------------------------------------------------
@@ -111,7 +119,7 @@ const whitelabelAdminConfig: ClientConfig = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function configureMocks(config: ClientConfig, brand: any, auth?: Parameters<typeof setMockAuth>[0]) {
+function configureMocks(config: ClientConfig, brand: BrandWithPrompts, auth?: Parameters<typeof setMockAuth>[0]) {
 	setMockClientConfig(config);
 	setMockBrand(brand);
 	setMockRouteContext({ clientConfig: config });
@@ -148,7 +156,7 @@ const authedUser = (name: string, email: string, seed: string) => ({
 function SidebarFrame({ children, label }: { children: React.ReactNode; label: string }) {
 	return (
 		<div
-			className="sidebar-story-container relative h-[600px] w-full max-w-[1200px] border rounded-lg overflow-hidden bg-background"
+			className="sidebar-story-container relative h-[780px] w-full max-w-[1200px] border rounded-lg overflow-hidden bg-background"
 			style={{ transform: "translate(0)" }}
 		>
 			<style>{`
@@ -164,7 +172,8 @@ function SidebarFrame({ children, label }: { children: React.ReactNode; label: s
 			<SidebarProvider>
 				{children}
 				<SidebarInset>
-					<div className="flex items-center justify-center h-full text-muted-foreground text-sm">{label}</div>
+					<SiteHeader />
+					<div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">{label}</div>
 				</SidebarInset>
 			</SidebarProvider>
 		</div>
@@ -176,7 +185,7 @@ function SidebarFrame({ children, label }: { children: React.ReactNode; label: s
 // ---------------------------------------------------------------------------
 
 export default {
-	title: "App Sidebar",
+	title: "Dev Preview/Product Shell",
 } satisfies Meta;
 
 /** Local (self-hosted) — all nav visible, admin access, self-registered user */
@@ -185,7 +194,7 @@ export const Local = () => {
 
 	return (
 		<SidebarFrame label="Local — Self-hosted, full admin">
-			<AppSidebar isAdmin={true} hasReportAccess={true} />
+			<AppSidebar isAdmin={true} hasReportAccess={true} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
@@ -198,7 +207,7 @@ export const Demo = () => {
 
 	return (
 		<SidebarFrame label="Demo — Read-only, seeded user">
-			<AppSidebar isAdmin={false} hasReportAccess={false} />
+			<AppSidebar isAdmin={false} hasReportAccess={false} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
@@ -209,7 +218,7 @@ export const Whitelabel = () => {
 
 	return (
 		<SidebarFrame label="Whitelabel — Regular user, no admin section">
-			<AppSidebar isAdmin={false} hasReportAccess={false} />
+			<AppSidebar isAdmin={false} hasReportAccess={false} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
@@ -220,7 +229,7 @@ export const WhitelabelAdmin = () => {
 
 	return (
 		<SidebarFrame label="Whitelabel Admin — Full admin section visible">
-			<AppSidebar isAdmin={true} hasReportAccess={true} />
+			<AppSidebar isAdmin={true} hasReportAccess={true} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
@@ -231,7 +240,7 @@ export const WhitelabelReportOnly = () => {
 
 	return (
 		<SidebarFrame label="Whitelabel Report-only — Dashboard + Reports admin section">
-			<AppSidebar isAdmin={false} hasReportAccess={true} />
+			<AppSidebar isAdmin={false} hasReportAccess={true} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
@@ -242,7 +251,7 @@ export const WhitelabelOnboarding = () => {
 
 	return (
 		<SidebarFrame label="Whitelabel Onboarding — Brand not onboarded, minimal nav">
-			<AppSidebar isAdmin={false} hasReportAccess={false} />
+			<AppSidebar isAdmin={false} hasReportAccess={false} brand={newBrand} />
 		</SidebarFrame>
 	);
 };

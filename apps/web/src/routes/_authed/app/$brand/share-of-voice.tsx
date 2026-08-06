@@ -6,22 +6,22 @@
  * donut of top competitors, and share of voice over time.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Badge } from "@workspace/ui/components/badge";
-import { BRAND_COLOR, shareOfVoiceColorMap } from "@/lib/share-of-voice-palette";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { TooltipProvider } from "@workspace/ui/components/tooltip";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
-import { useShareOfVoice } from "@/hooks/use-share-of-voice";
-import { usePromptsSummary } from "@/hooks/use-prompts-summary";
-import { useBrand } from "@/hooks/use-brands";
-import { PageHeader, FilterSection } from "@/components/page-header";
-import { FilterBar, getAvailableModels, ALL_MODELS_VALUE } from "@/components/filter-bar";
-import { useListFilters } from "@/hooks/use-list-filters";
 import { ColHead } from "@/components/col-head";
+import { ALL_MODELS_VALUE, FilterBar, getAvailableModels } from "@/components/filter-bar";
+import { FilterSection, PageHeader } from "@/components/page-header";
 import { ShareOfVoiceDonut } from "@/components/share-of-voice-donut";
 import { TrendChart } from "@/components/trend-chart";
+import { useBrand } from "@/hooks/use-brands";
+import { useListFilters } from "@/hooks/use-list-filters";
+import { usePromptsSummary } from "@/hooks/use-prompts-summary";
+import { useShareOfVoice } from "@/hooks/use-share-of-voice";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
+import { BRAND_COLOR, shareOfVoiceColorMap } from "@/lib/share-of-voice-palette";
 
 export const Route = createFileRoute("/_authed/app/$brand/share-of-voice")({
 	head: ({ matches, match }) => {
@@ -110,16 +110,23 @@ function ShareOfVoicePage() {
 		content = (
 			<TooltipProvider delayDuration={150}>
 				<div className="grid gap-6 lg:grid-cols-2">
-					<Card>
+					<Card data-yonaris-slot="metric-card" data-metric-emphasis="brand">
 						<CardHeader>
-							<CardTitle>Share of Voice</CardTitle>
+							<CardTitle data-yonaris-slot="metric-label">Current share</CardTitle>
 						</CardHeader>
 						<CardContent className="flex items-center justify-between gap-4">
 							<div>
-								<div className="text-3xl sm:text-4xl font-bold tabular-nums">
-									{currentShare !== null ? `${currentShare}%` : "—"}
+								<div data-yonaris-slot="metric-value" className="text-3xl sm:text-4xl tabular-nums">
+									{currentShare !== null ? (
+										<>
+											{currentShare}
+											<span data-yonaris-slot="metric-unit">%</span>
+										</>
+									) : (
+										"—"
+									)}
 								</div>
-								<p className="text-sm text-muted-foreground mt-1 max-w-[18rem]">
+								<p data-yonaris-slot="metric-context" className="mt-2 max-w-[18rem]">
 									{data.brandName} across {data.totalRuns.toLocaleString()} runs
 									{data.entries.length > 1 ? ` and ${data.entries.length - 1} competitors` : ""}.
 								</p>

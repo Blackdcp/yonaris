@@ -1,7 +1,7 @@
-import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { IconInfoCircle } from "@tabler/icons-react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
-import { IconInfoCircle } from "@tabler/icons-react";
+import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
 
 interface VisibilityTimeSeriesPoint {
 	date: string;
@@ -23,8 +23,8 @@ const VISIBILITY_COLORS = {
 	text: "text-foreground",
 	border: "border-border",
 	muted: "text-muted-foreground",
-	stroke: "var(--foreground)",
-	fill: "var(--foreground)",
+	stroke: "var(--yonaris-chart-focus, var(--foreground))",
+	fill: "var(--yonaris-chart-focus, var(--foreground))",
 };
 
 export function VisibilityBar({
@@ -60,8 +60,12 @@ export function VisibilityBar({
 		>
 			{/* Left side: visibility + chart + info */}
 			<div className="flex items-center gap-2 min-w-0 shrink-0">
-				<span className={`text-base sm:text-lg font-semibold whitespace-nowrap ${colors.text}`}>
-					{currentVisibility}% <span className="font-normal">Visibility</span>
+				<span className={`inline-flex items-baseline gap-1.5 whitespace-nowrap ${colors.text}`}>
+					<span data-yonaris-slot="metric-value" className="text-lg sm:text-xl">
+						{currentVisibility}
+						<span data-yonaris-slot="metric-unit">%</span>
+					</span>
+					<span className="text-sm font-medium">Visibility</span>
 				</span>
 
 				{showChart && (
