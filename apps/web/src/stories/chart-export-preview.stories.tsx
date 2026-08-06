@@ -156,8 +156,8 @@ export const Whitelabel = () => {
 	const data = generateChartData(30);
 
 	const whitelabelBranding = {
-		name: "BrandMonitor Pro",
-		icon: "https://api.dicebear.com/9.x/shapes/svg?seed=brand",
+		name: "Northstar Analytics",
+		icon: "/icons/example-client-icon.svg",
 		parentUrl: "https://agency.example.com",
 		isWhitelabel: true,
 		chartColors: CHART_COLORS,

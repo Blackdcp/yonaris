@@ -27,7 +27,7 @@ export function TrendAreaChart({
 		a === "other" ? 1 : b === "other" ? -1 : (totals.get(b) ?? 0) - (totals.get(a) ?? 0),
 	);
 	const config: ChartConfig = Object.fromEntries(
-		ordered.map((k) => [k, { label: meta[k]?.label ?? k, color: meta[k]?.color ?? "#9ca3af" }]),
+		ordered.map((k) => [k, { label: meta[k]?.label ?? k, color: meta[k]?.color ?? "var(--yonaris-stone, #9ca3af)" }]),
 	);
 	return (
 		<Card>
@@ -92,7 +92,7 @@ export function TrendAreaChart({
 												<div key={r.k} className="flex items-center gap-2">
 													<span
 														className="shrink-0 rounded-[2px] h-2.5 w-2.5"
-														style={{ backgroundColor: meta[r.k]?.color ?? "#9ca3af" }}
+														style={{ backgroundColor: meta[r.k]?.color ?? "var(--yonaris-stone, #9ca3af)" }}
 													/>
 													<span className="text-muted-foreground">{meta[r.k]?.label ?? r.k}</span>
 													<span className="ml-auto font-mono tabular-nums">{r.value}%</span>

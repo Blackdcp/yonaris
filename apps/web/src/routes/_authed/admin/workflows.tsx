@@ -163,7 +163,7 @@ function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) 
 	const hasIssues = stats.failed > 0;
 
 	return (
-		<Card className={hasIssues ? "border-amber-500/50" : ""}>
+		<Card className={hasIssues ? "border-amber-500/50 yonaris-warning-border" : ""}>
 			<CardHeader className="pb-2">
 				<CardTitle className="text-sm font-medium flex items-center gap-2">
 					<Server className="h-4 w-4" />
@@ -175,15 +175,15 @@ function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) 
 				<div className="grid grid-cols-3 gap-4 text-sm">
 					<div title="Jobs waiting to be picked up by a worker">
 						<p className="text-muted-foreground">Created</p>
-						<p className="text-xl font-semibold text-blue-600">{stats.created}</p>
+						<p className="text-xl font-semibold text-foreground">{stats.created}</p>
 					</div>
 					<div title="Jobs currently being processed">
 						<p className="text-muted-foreground">Active</p>
-						<p className="text-xl font-semibold text-emerald-600">{stats.active}</p>
+						<p className="text-xl font-semibold text-foreground">{stats.active}</p>
 					</div>
 					<div title="Jobs waiting to be retried after failure">
 						<p className="text-muted-foreground">Retry</p>
-						<p className="text-xl font-semibold text-amber-600">{stats.retry}</p>
+						<p className="text-xl font-semibold text-amber-600 yonaris-warning-text">{stats.retry}</p>
 					</div>
 					<div>
 						<p className="text-muted-foreground">Completed</p>
@@ -195,7 +195,7 @@ function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) 
 					</div>
 					<div>
 						<p className="text-muted-foreground">Total Pending</p>
-						<p className="text-xl font-semibold text-violet-600">{stats.totalPending}</p>
+						<p className="text-xl font-semibold text-foreground">{stats.totalPending}</p>
 					</div>
 				</div>
 			</CardContent>
@@ -544,11 +544,7 @@ function BrandRow({
 																		Active
 																	</Badge>
 																)}
-																{prompt.jobStatus === "created" && (
-																	<Badge variant="secondary" className="bg-blue-100 text-blue-700">
-																		Queued
-																	</Badge>
-																)}
+																{prompt.jobStatus === "created" && <Badge variant="secondary">Queued</Badge>}
 																{prompt.jobStatus === "retry" && (
 																	<Badge variant="secondary" className="bg-amber-100 text-amber-700">
 																		Retry

@@ -34,7 +34,7 @@ function CustomXAxisTick(props: any) {
 				y={0}
 				dy={8}
 				textAnchor="middle"
-				fill="#374151"
+				fill="var(--yonaris-slate, #374151)"
 				fontSize="10"
 				fontWeight={isCurrentBrand ? "bold" : "normal"}
 			>
@@ -142,7 +142,7 @@ export function BaseChartPrint({
 							tickLine={false}
 							tick={{
 								fontSize: 10,
-								fill: "#6B7280",
+								fill: "var(--yonaris-stone, #6B7280)",
 							}}
 							tickFormatter={(value) => `${value}%`}
 							width={40}
@@ -155,7 +155,7 @@ export function BaseChartPrint({
 								position: "top",
 								fontSize: 11,
 								fontWeight: "bold",
-								fill: "#374151",
+								fill: "var(--yonaris-slate, #374151)",
 								formatter: (value: unknown) => `${value}%`,
 							}}
 						>

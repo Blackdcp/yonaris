@@ -10,9 +10,10 @@ export function useChartDownload(fileName: string) {
 
 		setIsDownloading(true);
 		try {
+			const pageBackground = getComputedStyle(document.body).backgroundColor;
 			const canvas = await html2canvas(chartRef.current, {
 				scale: 2,
-				backgroundColor: "#ffffff",
+				backgroundColor: pageBackground,
 				logging: false,
 				onclone: (clonedDoc) => {
 					const printHiddenElements = clonedDoc.querySelectorAll(".print\\:hidden");

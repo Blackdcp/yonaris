@@ -61,7 +61,11 @@ export const PAGE_TYPE_META: Record<string, { label: string; color: string }> = 
 );
 
 export const attributionDotClass = (a: "brand" | "competitor" | "other") =>
-	a === "brand" ? "bg-emerald-500" : a === "competitor" ? "bg-red-500" : "bg-gray-400";
+	a === "brand"
+		? "bg-emerald-500 yonaris-data-dot yonaris-data-1"
+		: a === "competitor"
+			? "bg-red-500 yonaris-data-dot yonaris-data-2"
+			: "bg-gray-400 yonaris-data-dot yonaris-data-4";
 
 export function UnderlineTabs<T extends string>({
 	tabs,
@@ -78,8 +82,9 @@ export function UnderlineTabs<T extends string>({
 				<button
 					key={key}
 					type="button"
+					data-active={activeKey === key}
 					onClick={() => onSelect(key)}
-					className={`shrink-0 cursor-pointer whitespace-nowrap pb-2.5 text-xs font-medium transition-colors border-b-2 ${
+					className={`yonaris-inline-tab shrink-0 cursor-pointer whitespace-nowrap pb-2.5 text-xs font-medium transition-colors border-b-2 ${
 						activeKey === key
 							? "border-foreground text-foreground"
 							: "border-transparent text-muted-foreground hover:text-foreground hover:border-border"

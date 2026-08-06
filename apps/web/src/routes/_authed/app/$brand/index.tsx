@@ -28,24 +28,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import type { ClientConfig } from "@workspace/config/types";
 import { setPersonProperties } from "@/lib/posthog";
-
-function getVisibilityBgColor(value: number): string {
-	if (value > 75) return "bg-emerald-50 dark:bg-emerald-950/30";
-	if (value > 45) return "bg-amber-50 dark:bg-amber-950/30";
-	return "bg-rose-50 dark:bg-rose-950/30";
-}
-
-function getVisibilityTextColor(value: number): string {
-	if (value > 75) return "text-emerald-700 dark:text-emerald-400";
-	if (value > 45) return "text-amber-700 dark:text-amber-400";
-	return "text-rose-700 dark:text-rose-400";
-}
-
-function getVisibilityBorderColor(value: number): string {
-	if (value > 75) return "border-emerald-200 dark:border-emerald-800";
-	if (value > 45) return "border-amber-200 dark:border-amber-800";
-	return "border-rose-200 dark:border-rose-800";
-}
+import { YONARIS_CHART_PRIMARY } from "@/brand/chart-theme";
 
 /** Most recent non-null value in a daily series — matches the right end of the trend line. */
 function lastValue<T>(series: T[], key: keyof T): number | null {
@@ -155,7 +138,7 @@ function HeroStat({ value, loading }: { value: number | null; loading: boolean }
 	return (
 		<CardContent className="flex-1 flex items-center justify-center">
 			<div
-				className={`font-bold tracking-tight tabular-nums ${value === null ? "text-muted-foreground" : getVisibilityTextColor(value)}`}
+				className={`font-semibold tracking-[-0.045em] tabular-nums ${value === null ? "text-muted-foreground" : "text-foreground"}`}
 				style={{ fontSize: "clamp(2.5rem, 6vw, 5rem)" }}
 			>
 				{loading ? <Skeleton className="h-16 w-32" /> : value === null ? "—" : `${value}%`}
@@ -171,7 +154,10 @@ function DashboardPage() {
 	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, { lookback: "1m" });
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const clientConfig = context.clientConfig;
-	const primaryChartColor = clientConfig?.branding?.chartColors?.[0] ?? "#1e2a39";
+	const primaryChartColor =
+		clientConfig?.mode === "whitelabel"
+			? (clientConfig.branding?.chartColors?.[0] ?? YONARIS_CHART_PRIMARY)
+			: YONARIS_CHART_PRIMARY;
 
 	const isLoading = isLoadingBrand || isLoadingSummary;
 
@@ -379,9 +365,7 @@ function DashboardPage() {
 
 					<div className="grid gap-4 lg:grid-cols-4">
 						{/* Hero Visibility Score */}
-						<Card
-							className={`shadow-none flex flex-col gap-3 py-4 ${currentVisibility === null ? "" : `${getVisibilityBgColor(currentVisibility)} ${getVisibilityBorderColor(currentVisibility)}`}`}
-						>
+						<Card data-yonaris-slot="metric-card" className="shadow-none flex flex-col gap-3 py-4">
 							<HeroStat value={currentVisibility} loading={isLoading} />
 						</Card>
 
@@ -423,9 +407,7 @@ function DashboardPage() {
 					</div>
 
 					<div className="grid gap-4 lg:grid-cols-4">
-						<Card
-							className={`shadow-none flex flex-col gap-3 py-4 ${sovShare === null ? "" : `${getVisibilityBgColor(sovShare)} ${getVisibilityBorderColor(sovShare)}`}`}
-						>
+						<Card data-yonaris-slot="metric-card" className="shadow-none flex flex-col gap-3 py-4">
 							<HeroStat value={sovShare} loading={isLoadingSov} />
 						</Card>
 

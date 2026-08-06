@@ -32,6 +32,7 @@
 	--yonaris-stone: #8a95a3;
 	--yonaris-mist: #dde2e8;
 	--yonaris-signal: #ff6a00;
+	--yonaris-signal-strong: #c94f00;
 	--yonaris-blue-gray: #2f3e50;
 	--yonaris-surface: #fbfaf8;
 
@@ -69,6 +70,20 @@
 	--sidebar-ring: #ff6a00;
 	--yonaris-chart-primary: #1e2a39;
 	--yonaris-chart-focus: #ff6a00;
+	--yonaris-data-1: #ff6a00;
+	--yonaris-data-2: #1e2a39;
+	--yonaris-data-3: #2f3e50;
+	--yonaris-data-4: #8a95a3;
+	--yonaris-data-5: #0b1220;
+	--yonaris-data-6: #4a5664;
+	--yonaris-data-7: #64717e;
+	--yonaris-data-8: #768390;
+	--yonaris-data-9: #9da7b2;
+	--yonaris-data-10: #b7bec6;
+	--yonaris-data-11: #c7cdd3;
+	--yonaris-data-12: #d2d7dc;
+	--yonaris-data-13: #c94f00;
+	--yonaris-data-14: #e65f00;
 	color-scheme: light;
 }
 
@@ -108,6 +123,88 @@ body[data-brand="yonaris"] {
 [data-brand="yonaris"] ::selection {
 	background: rgb(255 106 0 / 22%);
 	color: var(--yonaris-ink);
+}
+
+/* Upstream compatibility gate: ordinary info/decorative utilities collapse
+   into the approved brand range. Success and destructive colors remain
+   available only for explicit functional states. */
+[data-brand="yonaris"]
+	:is(
+		.text-blue-500,
+		.text-blue-600,
+		.text-blue-700,
+		.text-indigo-600,
+		.text-violet-600,
+		.text-purple-500,
+		.text-purple-600,
+		.text-pink-500,
+		.text-cyan-500,
+		.text-teal-500
+	) {
+	color: var(--yonaris-blue-gray);
+}
+
+[data-brand="yonaris"]
+	:is(.bg-blue-50, .bg-blue-100, .bg-indigo-50, .bg-violet-50, .bg-purple-50, .bg-pink-50, .bg-cyan-50, .bg-teal-50) {
+	background-color: color-mix(in srgb, var(--yonaris-mist) 72%, transparent);
+}
+
+[data-brand="yonaris"]
+	:is(
+		.bg-blue-500,
+		.bg-blue-600,
+		.bg-indigo-500,
+		.bg-violet-500,
+		.bg-purple-500,
+		.bg-pink-500,
+		.bg-cyan-500,
+		.bg-teal-500
+	) {
+	background-color: var(--yonaris-slate);
+}
+
+[data-brand="yonaris"]
+	:is(
+		.text-amber-500,
+		.text-amber-600,
+		.text-amber-700,
+		.text-yellow-600,
+		.text-yellow-700,
+		.text-orange-500,
+		.text-orange-600
+	) {
+	color: var(--yonaris-signal-strong);
+}
+
+[data-brand="yonaris"] :is(.bg-amber-50, .bg-amber-100, .bg-yellow-50, .bg-yellow-100, .bg-yellow-200, .bg-orange-50) {
+	background-color: rgb(255 106 0 / 7%);
+}
+
+[data-brand="yonaris"] .bg-yellow-200 {
+	background-color: rgb(255 106 0 / 18%);
+}
+
+[data-brand="yonaris"] :is(.bg-amber-500, .bg-orange-500) {
+	background-color: var(--yonaris-signal);
+	color: var(--yonaris-ink);
+}
+
+[data-brand="yonaris"]
+	:is(.border-amber-200, .border-amber-300, .border-amber-500, .border-yellow-200, .border-orange-200),
+[data-brand="yonaris"] .yonaris-warning-border {
+	border-color: rgb(255 106 0 / 36%);
+}
+
+[data-brand="yonaris"] .yonaris-warning-text {
+	color: var(--yonaris-signal-strong);
+}
+
+[data-brand="yonaris"] .yonaris-brand-data-text {
+	color: var(--yonaris-signal-strong);
+}
+
+[data-brand="yonaris"] .yonaris-competitor-data-text {
+	color: var(--yonaris-slate);
 }
 
 [data-brand="yonaris"] [data-slot="sidebar-wrapper"] {
@@ -179,7 +276,7 @@ body[data-brand="yonaris"] {
 }
 
 [data-brand="yonaris"] [data-slot="sidebar"] [data-slot="brand-logo"] img,
-[data-brand="yonaris"] [data-slot="full-page-shell"] [data-slot="brand-logo"] img {
+[data-brand="yonaris"] [data-slot="full-page-brand"] [data-slot="brand-logo"] img {
 	filter: brightness(0) invert(1);
 }
 
@@ -254,6 +351,65 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 		0 1px 2px rgb(11 18 32 / 5%);
 }
 
+[data-brand="yonaris"] .yonaris-inline-tab[data-active="true"] {
+	border-color: var(--yonaris-signal);
+	color: var(--yonaris-ink);
+}
+
+[data-brand="yonaris"] .yonaris-data-1 {
+	--yonaris-data-color: var(--yonaris-data-1);
+}
+
+[data-brand="yonaris"] .yonaris-data-2 {
+	--yonaris-data-color: var(--yonaris-data-2);
+}
+
+[data-brand="yonaris"] .yonaris-data-3 {
+	--yonaris-data-color: var(--yonaris-data-3);
+}
+
+[data-brand="yonaris"] .yonaris-data-4 {
+	--yonaris-data-color: var(--yonaris-data-4);
+}
+
+[data-brand="yonaris"] .yonaris-data-5 {
+	--yonaris-data-color: var(--yonaris-data-5);
+}
+
+[data-brand="yonaris"] .yonaris-data-6 {
+	--yonaris-data-color: var(--yonaris-data-6);
+}
+
+[data-brand="yonaris"] .yonaris-data-7 {
+	--yonaris-data-color: var(--yonaris-data-7);
+}
+
+[data-brand="yonaris"] .yonaris-data-8 {
+	--yonaris-data-color: var(--yonaris-data-8);
+}
+
+[data-brand="yonaris"] .yonaris-data-9 {
+	--yonaris-data-color: var(--yonaris-data-9);
+}
+
+[data-brand="yonaris"] .yonaris-data-10 {
+	--yonaris-data-color: var(--yonaris-data-10);
+}
+
+[data-brand="yonaris"] .yonaris-data-11 {
+	--yonaris-data-color: var(--yonaris-data-11);
+}
+
+[data-brand="yonaris"] .yonaris-category-badge {
+	border: 1px solid color-mix(in srgb, var(--yonaris-data-color) 42%, transparent);
+	background: color-mix(in srgb, var(--yonaris-data-color) 14%, transparent);
+	color: var(--yonaris-ink);
+}
+
+[data-brand="yonaris"] .yonaris-data-dot {
+	background-color: var(--yonaris-data-color);
+}
+
 [data-brand="yonaris"] [data-slot="table-head"] {
 	color: var(--muted-foreground);
 	font-size: 0.675rem;
@@ -280,47 +436,69 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 }
 
 [data-brand="yonaris"] [data-slot="full-page-shell"] {
+	display: grid;
+	grid-template-columns: minmax(17rem, 34vw) minmax(0, 1fr);
+	align-items: stretch;
+	padding: 0;
+	background: var(--yonaris-paper);
+	color: var(--yonaris-ink);
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand"] {
+	display: flex;
+	align-items: flex-end;
+	min-height: 100svh;
+	padding: clamp(1.75rem, 4vw, 3.5rem);
 	background: var(--yonaris-ink);
 	color: var(--yonaris-paper);
 }
 
-[data-brand="yonaris"] .yonaris-brand-paths {
+[data-brand="yonaris"] [data-slot="full-page-brand-copy"] {
+	position: relative;
+	z-index: 1;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand"] .yonaris-brand-paths {
 	display: block;
 	position: absolute;
-	inset: 0;
-	width: 100%;
-	height: 100%;
+	right: -38%;
+	bottom: 8%;
+	width: 150%;
+	height: 72%;
 	color: var(--yonaris-paper);
+	opacity: 0.46;
 }
 
 [data-brand="yonaris"] .yonaris-brand-statement {
 	display: block;
-	margin-top: 1rem;
-	color: rgb(246 244 241 / 58%);
+	margin-top: 0.8rem;
+	color: rgb(246 244 241 / 54%);
 	font-size: 0.68rem;
 	font-weight: 500;
-	letter-spacing: 0.16em;
-	text-align: center;
+	letter-spacing: 0.12em;
 	text-transform: uppercase;
 }
 
-[data-brand="yonaris"] [data-yonaris-slot="full-page-card"] {
-	position: relative;
-	overflow: hidden;
-	border-color: rgb(246 244 241 / 18%);
+[data-brand="yonaris"] [data-slot="full-page-stage"] {
+	min-width: 0;
+	padding: clamp(2rem, 7vw, 7rem);
 	background: var(--yonaris-paper);
-	color: var(--yonaris-ink);
-	box-shadow: 0 32px 90px rgb(0 0 0 / 28%) !important;
 }
 
-[data-brand="yonaris"] [data-yonaris-slot="full-page-card"]::before {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 4rem;
-	height: 2px;
-	background: var(--yonaris-signal);
-	content: "";
+[data-brand="yonaris"] [data-slot="full-page-content"] {
+	width: min(100%, 28rem);
+}
+
+[data-brand="yonaris"] [data-slot="full-page-form-logo"] {
+	display: none;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="full-page-card"] {
+	gap: 1.5rem;
+	border: 0;
+	background: transparent;
+	color: var(--yonaris-ink);
+	box-shadow: none !important;
 }
 
 [data-brand="yonaris"] [data-yonaris-slot="full-page-card"] [data-slot="card-header"] {
@@ -328,20 +506,27 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 }
 
 [data-brand="yonaris"] [data-slot="full-page-back"] [data-slot="button"] {
-	border-color: rgb(246 244 241 / 24%);
 	background: transparent;
-	color: var(--yonaris-paper);
+	color: var(--yonaris-blue-gray);
 }
 
 @media (max-width: 767px) {
 	[data-brand="yonaris"] [data-slot="full-page-shell"] {
-		align-items: flex-start;
-		padding-top: 3.5rem;
+		display: flex;
+		align-items: center;
+		padding: 0;
 	}
 
-	[data-brand="yonaris"] .yonaris-brand-paths {
-		opacity: 0.58;
-		transform: translateX(18%);
+	[data-brand="yonaris"] [data-slot="full-page-brand"] {
+		display: none;
+	}
+
+	[data-brand="yonaris"] [data-slot="full-page-stage"] {
+		padding: 2.25rem 1.5rem;
+	}
+
+	[data-brand="yonaris"] [data-slot="full-page-form-logo"] {
+		display: flex;
 	}
 }
 

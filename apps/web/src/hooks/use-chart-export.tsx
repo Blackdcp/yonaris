@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import html2canvas from "html2canvas-pro";
 import { useRouteContext } from "@tanstack/react-router";
+import { YONARIS_COLORS } from "@workspace/config/constants";
 import type { ClientConfig } from "@workspace/config/types";
 import { ChartExportPreview, type ChartExportPreviewProps } from "@/components/chart-export-preview";
 
@@ -44,7 +45,7 @@ export function useChartExport(fileName: string) {
 
 				const canvas = await html2canvas(containerRef.current, {
 					scale: 1,
-					backgroundColor: "#ffffff",
+					backgroundColor: mode === "whitelabel" ? "#ffffff" : YONARIS_COLORS.paper,
 					logging: false,
 					useCORS: true,
 				});

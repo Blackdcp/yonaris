@@ -82,10 +82,14 @@ export function GoogleShoppingCard({ googleModule, brandId }: { googleModule: Go
 				</CardTitle>
 				<CardDescription>
 					Products Google AI Mode surfaced —{" "}
-					<span className="font-medium text-emerald-600">{googleModule.shopping.brandCount.toLocaleString()}</span>{" "}
+					<span className="font-medium text-emerald-600 yonaris-brand-data-text">
+						{googleModule.shopping.brandCount.toLocaleString()}
+					</span>{" "}
 					appearances for yours vs{" "}
-					<span className="font-medium text-red-600">{googleModule.shopping.competitorCount.toLocaleString()}</span> for
-					competitors
+					<span className="font-medium text-red-600 yonaris-competitor-data-text">
+						{googleModule.shopping.competitorCount.toLocaleString()}
+					</span>{" "}
+					for competitors
 				</CardDescription>
 			</CardHeader>
 			<Separator />

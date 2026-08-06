@@ -3,13 +3,9 @@
  * brand identically — the brand in its blue, competitors from a fixed palette in
  * rank order, and the long tail in a neutral "others" grey.
  */
-import {
-	YONARIS_CHART_CATEGORICAL,
-	YONARIS_CHART_NEUTRAL,
-	YONARIS_CHART_PRIMARY,
-} from "@/brand/chart-theme";
+import { YONARIS_CHART_CATEGORICAL, YONARIS_CHART_FOCUS, YONARIS_CHART_NEUTRAL } from "@/brand/chart-theme";
 
-export const BRAND_COLOR = YONARIS_CHART_PRIMARY;
+export const BRAND_COLOR = YONARIS_CHART_FOCUS;
 export const OTHERS_COLOR = YONARIS_CHART_NEUTRAL;
 export const COMPETITOR_PALETTE = YONARIS_CHART_CATEGORICAL;
 

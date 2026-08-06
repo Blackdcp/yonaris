@@ -1,4 +1,4 @@
-import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK } from "@workspace/config/constants";
+import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK, YONARIS_COLORS } from "@workspace/config/constants";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Badge } from "@workspace/ui/components/badge";
 import type { ChartDataPoint, LookbackPeriod } from "@/lib/chart-utils";
@@ -68,15 +68,25 @@ export function ChartExportPreview({
 
 	return (
 		<div
-			style={{ width: EXPORT_W, height: EXPORT_H, paddingTop: HEADER_TOP, fontSize: 16 }}
-			className="bg-white overflow-hidden flex flex-col"
+			style={{
+				width: EXPORT_W,
+				height: EXPORT_H,
+				paddingTop: HEADER_TOP,
+				fontSize: 16,
+				backgroundColor: branding.isWhitelabel ? "#ffffff" : YONARIS_COLORS.paper,
+			}}
+			className="overflow-hidden flex flex-col"
 		>
 			{/* Title bar */}
 			<div
 				style={{ height: HEADER_H, marginBottom: GAP_HEADER_CARD }}
 				className="flex items-center justify-between px-10 gap-6 shrink-0"
 			>
-				<h2 className="font-semibold text-gray-900 truncate flex-1 min-w-0" style={{ fontSize: 22 }} title={promptName}>
+				<h2
+					className="font-semibold truncate flex-1 min-w-0"
+					style={{ fontSize: 22, color: branding.isWhitelabel ? "#111827" : YONARIS_COLORS.ink }}
+					title={promptName}
+				>
 					{promptName}
 				</h2>
 				{visibility !== null && (
@@ -93,8 +103,13 @@ export function ChartExportPreview({
 			{/* Chart card */}
 			<div className="px-8 shrink-0">
 				<div
-					className="rounded-xl border border-gray-200 overflow-hidden pl-0"
-					style={{ paddingRight: 12, paddingTop: 12, paddingBottom: 8 }}
+					className="rounded-xl border overflow-hidden pl-0"
+					style={{
+						paddingRight: 12,
+						paddingTop: 12,
+						paddingBottom: 8,
+						borderColor: branding.isWhitelabel ? "#e5e7eb" : YONARIS_COLORS.mist,
+					}}
 				>
 					<BaseChart
 						data={data}

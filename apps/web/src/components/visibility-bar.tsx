@@ -18,36 +18,14 @@ interface VisibilityBarProps {
 	isLoading?: boolean;
 }
 
-function getVisibilityColors(value: number) {
-	if (value > 75) {
-		return {
-			bg: "bg-emerald-50 dark:bg-emerald-950/40",
-			text: "text-emerald-600 dark:text-emerald-400",
-			border: "border-emerald-200 dark:border-emerald-800/60",
-			muted: "text-emerald-600/70 dark:text-emerald-400/70",
-			stroke: "#10b981",
-			fill: "#10b981",
-		};
-	}
-	if (value > 45) {
-		return {
-			bg: "bg-amber-50 dark:bg-amber-950/40",
-			text: "text-amber-600 dark:text-amber-400",
-			border: "border-amber-200 dark:border-amber-800/60",
-			muted: "text-amber-600/70 dark:text-amber-400/70",
-			stroke: "#f59e0b",
-			fill: "#f59e0b",
-		};
-	}
-	return {
-		bg: "bg-rose-50 dark:bg-rose-950/40",
-		text: "text-rose-600 dark:text-rose-400",
-		border: "border-rose-200 dark:border-rose-800/60",
-		muted: "text-rose-600/70 dark:text-rose-400/70",
-		stroke: "#ef4444",
-		fill: "#ef4444",
-	};
-}
+const VISIBILITY_COLORS = {
+	bg: "bg-card",
+	text: "text-foreground",
+	border: "border-border",
+	muted: "text-muted-foreground",
+	stroke: "var(--foreground)",
+	fill: "var(--foreground)",
+};
 
 export function VisibilityBar({
 	currentVisibility,
@@ -67,7 +45,7 @@ export function VisibilityBar({
 		return null;
 	}
 
-	const colors = getVisibilityColors(currentVisibility);
+	const colors = VISIBILITY_COLORS;
 	const showChart = lookback !== "1w";
 
 	// Prepare chart data

@@ -4,6 +4,7 @@
  * Components import `clientConfig` directly from this module.
  * Stories call `setMockClientConfig()` before rendering to control values.
  */
+import { DEFAULT_CHART_COLORS as YONARIS_CHART_COLORS } from "@workspace/config/constants";
 
 export type DeploymentMode = "whitelabel" | "local" | "demo" | "cloud";
 
@@ -44,7 +45,7 @@ export interface ClientConfig {
 	hasUsers: boolean;
 }
 
-const DEFAULT_CHART_COLORS = ["#1e2a39", "#ff6a00", "#52677c", "#3e6259", "#8b6f5c", "#6e7f91", "#c57b45", "#4f6b75"];
+const DEFAULT_CHART_COLORS = YONARIS_CHART_COLORS.slice(0, 8);
 
 // ---------------------------------------------------------------------------
 // Module-level config that stories can mutate

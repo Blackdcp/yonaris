@@ -263,16 +263,12 @@ export const normalizeToPercentage = (value: number): number => {
 	return Math.min(roundedPercentage, 100); // Ensure it never exceeds 100%
 };
 
-export function getBadgeVariant(value: number): "default" | "secondary" | "destructive" {
-	if (value > 75) return "default";
-	if (value > 45) return "secondary";
-	return "destructive";
+export function getBadgeVariant(_value: number): "secondary" {
+	return "secondary";
 }
 
-export function getBadgeClassName(value: number): string {
-	if (value > 75) return "bg-emerald-600 hover:bg-emerald-600 text-white";
-	if (value > 45) return "bg-amber-500 hover:bg-amber-500 text-white";
-	return "bg-rose-500 hover:bg-rose-500 text-white";
+export function getBadgeClassName(_value: number): string {
+	return "border-border bg-secondary text-secondary-foreground hover:bg-secondary";
 }
 
 export interface ChartDataPoint {

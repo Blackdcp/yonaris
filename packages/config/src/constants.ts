@@ -38,46 +38,31 @@ export const ELMO_THEME_COLOR = DEFAULT_THEME_COLOR;
 export const ELMO_BACKGROUND_COLOR = DEFAULT_BACKGROUND_COLOR;
 
 /**
- * Default product chart colors. The first two carry the primary/focus
- * relationship used throughout the interface; the remaining hues provide
- * categorical range without colliding with status colors. Whitelabel
- * deployments can override this through VITE_CHART_COLORS.
+ * Tonal data palette derived only from the approved Yonaris hues. Signal
+ * Orange identifies the tracked brand; neutral series use Ink, Slate,
+ * Blue Gray, Stone, and their tonal steps. Functional success/error colors
+ * are intentionally not part of this palette.
  */
-export const DEFAULT_CHART_COLORS = [
-	// Core
-	YONARIS_COLORS.slate,
+export const YONARIS_DATA_COLORS = [
 	YONARIS_COLORS.signal,
-	"#52677c",
-	"#3e6259",
-	"#8b6f5c",
-	"#6e7f91",
-	"#c57b45",
-	"#4f6b75",
-	"#82748a",
-	"#9b835f",
-	"#4c5968",
-	// Dark
-	YONARIS_COLORS.ink,
-	"#c94f00",
-	"#34485b",
-	"#2b4a43",
-	"#684f40",
-	"#4a5a6a",
-	"#96552a",
-	"#354e57",
-	"#61546a",
-	"#746044",
-	"#333d49",
-	// Light
-	"#7c8997",
-	"#ff9a57",
-	"#7e91a4",
-	"#718e87",
-	"#ae9382",
-	"#98a5b1",
-	"#dba17a",
-	"#7b969e",
-	"#a296a8",
-	"#b5a789",
+	YONARIS_COLORS.slate,
+	YONARIS_COLORS.blueGray,
 	YONARIS_COLORS.stone,
-];
+	YONARIS_COLORS.ink,
+	"#4a5664",
+	"#64717e",
+	"#768390",
+	"#9da7b2",
+	"#b7bec6",
+	"#c7cdd3",
+	"#d2d7dc",
+	"#c94f00",
+	"#e65f00",
+	"#ff8533",
+	"#ff9f66",
+	"#364554",
+	"#526273",
+] as const;
+
+/** Whitelabel deployments can override this through VITE_CHART_COLORS. */
+export const DEFAULT_CHART_COLORS = [...YONARIS_DATA_COLORS];

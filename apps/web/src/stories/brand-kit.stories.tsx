@@ -43,8 +43,8 @@ const whitelabelConfig: ClientConfig = {
 		canCreateBrands: false,
 	},
 	branding: {
-		name: "BrandMonitor Pro",
-		icon: "https://api.dicebear.com/9.x/shapes/svg?seed=brand",
+		name: "Northstar Analytics",
+		icon: "/icons/example-client-icon.svg",
 		parentName: "AgencyCo",
 		parentUrl: "https://agency.example.com",
 		chartColors: CHART_COLORS.map((c) => c),

@@ -13,6 +13,7 @@
 		"test:storybook": "vitest run --project=storybook",
 		"lint": "biome lint",
 		"check-types": "tsc --noEmit",
+		"check-brand-colors": "tsx scripts/check-brand-colors.ts",
 		"generate-icons": "tsx scripts/generate-brand-icons.tsx",
 		"generate-brand-kit": "tsx scripts/generate-brand-kit.tsx",
 		"storybook": "storybook dev -p 6006",

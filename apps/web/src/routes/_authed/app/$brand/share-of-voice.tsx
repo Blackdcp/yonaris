@@ -186,7 +186,7 @@ function ShareOfVoicePage() {
 														className="h-full rounded-full"
 														style={{
 															width: `${maxMentions > 0 ? (e.mentions / maxMentions) * 100 : 0}%`,
-															backgroundColor: barColors.get(e.name) ?? "#cbd5e1",
+															backgroundColor: barColors.get(e.name) ?? "var(--yonaris-mist, #cbd5e1)",
 														}}
 													/>
 												</div>
