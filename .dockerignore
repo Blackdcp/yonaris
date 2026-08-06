@@ -18,6 +18,8 @@ build
 # Turborepo cache
 .turbo
 **/.turbo
+.runtime
+**/.runtime
 
 # Git
 .git
