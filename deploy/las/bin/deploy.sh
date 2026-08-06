@@ -45,6 +45,12 @@ set -a
 source "$ENV_FILE"
 set +a
 
+WORKER_ENABLED="${WORKER_ENABLED:-true}"
+if [[ "$WORKER_ENABLED" != true ]] && [[ "$WORKER_ENABLED" != false ]]; then
+  echo "WORKER_ENABLED must be true or false." >&2
+  exit 1
+fi
+
 required_vars=(
   POSTGRES_USER
   POSTGRES_PASSWORD
@@ -133,8 +139,15 @@ DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
 echo "Running database migrations"
 IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps db-migrate
 
-echo "Starting Web and Worker"
-IMAGE_TAG="$release_tag" "${compose[@]}" up -d --no-deps web worker
+echo "Starting Yonaris runtime services"
+runtime_services=(web)
+if [[ "$WORKER_ENABLED" == true ]]; then
+  runtime_services+=(worker)
+fi
+IMAGE_TAG="$release_tag" "${compose[@]}" up -d --no-deps "${runtime_services[@]}"
+if [[ "$WORKER_ENABLED" == false ]]; then
+  IMAGE_TAG="$release_tag" "${compose[@]}" stop worker >/dev/null 2>&1 || true
+fi
 
 web_ready=false
 for _ in $(seq 1 45); do
@@ -151,26 +164,33 @@ if [[ "$web_ready" != true ]]; then
   if [[ "$previous_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
     echo "Rolling Web and Worker back to $previous_tag; the database migration is not reversed."
     IMAGE_TAG="$previous_tag" "${compose[@]}" pull web worker || true
-    IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps web worker
+    IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps "${runtime_services[@]}"
+    if [[ "$WORKER_ENABLED" == false ]]; then
+      IMAGE_TAG="$previous_tag" "${compose[@]}" stop worker >/dev/null 2>&1 || true
+    fi
   fi
   exit 1
 fi
 
 worker_ready=false
-stable_checks=0
-for _ in $(seq 1 15); do
-  worker_id="$(IMAGE_TAG="$release_tag" "${compose[@]}" ps -q worker)"
-  if [[ -n "$worker_id" ]] && [[ "$(docker inspect --format '{{.State.Status}} {{.RestartCount}}' "$worker_id")" == "running 0" ]]; then
-    stable_checks=$((stable_checks + 1))
-    if [[ "$stable_checks" -ge 5 ]]; then
-      worker_ready=true
-      break
+if [[ "$WORKER_ENABLED" == true ]]; then
+  stable_checks=0
+  for _ in $(seq 1 15); do
+    worker_id="$(IMAGE_TAG="$release_tag" "${compose[@]}" ps -q worker)"
+    if [[ -n "$worker_id" ]] && [[ "$(docker inspect --format '{{.State.Status}} {{.RestartCount}}' "$worker_id")" == "running 0" ]]; then
+      stable_checks=$((stable_checks + 1))
+      if [[ "$stable_checks" -ge 5 ]]; then
+        worker_ready=true
+        break
+      fi
+    else
+      stable_checks=0
     fi
-  else
-    stable_checks=0
-  fi
-  sleep 2
-done
+    sleep 2
+  done
+else
+  worker_ready=true
+fi
 
 if [[ "$worker_ready" != true ]]; then
   echo "Yonaris Worker did not remain stable." >&2
@@ -178,10 +198,14 @@ if [[ "$worker_ready" != true ]]; then
   if [[ "$previous_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
     echo "Rolling Web and Worker back to $previous_tag; the database migration is not reversed."
     IMAGE_TAG="$previous_tag" "${compose[@]}" pull web worker || true
-    IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps web worker
+    IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps "${runtime_services[@]}"
   fi
   exit 1
 fi
 
 printf '%s\n' "$release_tag" >"$RELEASE_FILE"
-echo "Yonaris $release_tag is healthy on 127.0.0.1:${WEB_PORT}; Worker is stable."
+if [[ "$WORKER_ENABLED" == true ]]; then
+  echo "Yonaris $release_tag is healthy on 127.0.0.1:${WEB_PORT}; Worker is stable."
+else
+  echo "Yonaris $release_tag is healthy on 127.0.0.1:${WEB_PORT}; Worker is intentionally paused."
+fi

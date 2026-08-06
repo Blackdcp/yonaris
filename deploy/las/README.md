@@ -117,6 +117,11 @@ script rejects missing required values and every `replace_with_...` placeholder.
 After PostgreSQL is initialized, changing `POSTGRES_PASSWORD` in the file alone
 does not rotate the database user's password.
 
+`WORKER_ENABLED=true` runs scheduled evaluations. Set it to `false` for a
+static showcase environment: Web remains available and queued jobs are kept,
+but no model or scraper requests are processed. Change it back to `true` and
+deploy again when recurring collection should resume.
+
 Log in to GHCR once on the server with a read-only classic token that has the
 `read:packages` scope:
 
