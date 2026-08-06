@@ -28,6 +28,7 @@ When you run `elmo init`, the CLI generates a `.env` file in your config directo
 | `ELMO_ENCRYPTION_KEY_OLD` | Previous encryption keys, comma-separated, kept readable during a rotation | — |
 | `DISABLE_TELEMETRY` | Set to `1` to disable all telemetry. See [Telemetry](/docs/developer-guide/telemetry). | — |
 | `DEFAULT_DELAY_HOURS` | How often each enabled prompt is re-run against the AI models, in hours. | `24` |
+| `RUNS_PER_PROMPT` | Independent samples collected for each prompt/model pair per cycle. | `5` |
 
 <Callout type="warn">
 	Back up `ELMO_ENCRYPTION_KEY` alongside your database. Credentials stored in the database are encrypted with it and nothing else — if you lose the key, or restore a database backup onto a deployment that generated a different one, those credentials cannot be recovered and have to be entered again. Yonaris logs an error and falls back to the provider keys in your `.env` when a stored credential will not decrypt.

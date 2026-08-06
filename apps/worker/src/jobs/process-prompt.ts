@@ -1,25 +1,25 @@
 import * as Sentry from "@sentry/node";
-import type { Job } from "pg-boss";
+import { getDefaultDelayHours, getRunsPerPrompt } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import {
+	type Brand,
 	brands,
+	type Competitor,
 	citations,
 	competitors,
 	promptRuns,
 	prompts,
-	type Brand,
-	type Competitor,
 } from "@workspace/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { RUNS_PER_PROMPT, getDefaultDelayHours } from "@workspace/lib/constants";
 import {
 	getProvider,
-	parseScrapeTargets,
-	selectTargetsForBrand,
 	type ModelConfig,
 	type Provider,
+	parseScrapeTargets,
+	selectTargetsForBrand,
 } from "@workspace/lib/providers";
 import type { Citation } from "@workspace/lib/text-extraction";
+import { eq } from "drizzle-orm";
+import type { Job } from "pg-boss";
 import boss from "../boss";
 import { trackWorkerEvent } from "../telemetry";
 
@@ -316,10 +316,11 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 
 		// Run all model iterations in parallel
 		const runPromises: Promise<void>[] = [];
+		const runsPerPrompt = getRunsPerPrompt();
 
 		for (const config of selectedConfigs) {
 			const providerImpl = getProvider(config.provider);
-			for (let i = 0; i < RUNS_PER_PROMPT; i++) {
+			for (let i = 0; i < runsPerPrompt; i++) {
 				runPromises.push(
 					runModelIteration({
 						promptId,

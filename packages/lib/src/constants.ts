@@ -1,5 +1,24 @@
 // Constants for prompt processing
-export const RUNS_PER_PROMPT = 5;
+export const RUNS_PER_PROMPT_FALLBACK = 5;
+
+/**
+ * Legacy fallback retained for callers that need a compile-time value.
+ * Runtime workers should use getRunsPerPrompt() so deployments can tune cost
+ * without carrying a source-code fork.
+ */
+export const RUNS_PER_PROMPT = RUNS_PER_PROMPT_FALLBACK;
+
+/**
+ * Resolves how many independent samples each prompt/model pair runs per cycle.
+ * Falls back to 5 when RUNS_PER_PROMPT is unset or is not a positive integer.
+ */
+export function getRunsPerPrompt(): number {
+	const raw = typeof process !== "undefined" ? process.env.RUNS_PER_PROMPT : undefined;
+	if (!raw) return RUNS_PER_PROMPT_FALLBACK;
+	const parsed = Number(raw);
+	if (!Number.isInteger(parsed) || parsed <= 0) return RUNS_PER_PROMPT_FALLBACK;
+	return parsed;
+}
 
 // Fallback cadence (hours) when the DEFAULT_DELAY_HOURS env var is unset or invalid.
 export const DEFAULT_DELAY_HOURS_FALLBACK = 24;

@@ -126,6 +126,11 @@ Set `WORKER_QUEUE_SCOPE=analysis-only` together with `WORKER_ENABLED=true` to
 run onboarding brand analysis without consuming queued prompt evaluations or
 scheduling new ones. The default `full` scope processes every production queue.
 
+`DEFAULT_DELAY_HOURS` controls the cadence for newly scheduled prompts, while
+`RUNS_PER_PROMPT` controls the independent samples taken for each prompt/model
+pair per cycle. Existing scheduled jobs must be rescheduled when their cadence
+changes; changing the environment file alone does not rewrite queued job data.
+
 Log in to GHCR once on the server with a read-only classic token that has the
 `read:packages` scope:
 

@@ -57,6 +57,12 @@ if [[ "$WORKER_QUEUE_SCOPE" != full ]] && [[ "$WORKER_QUEUE_SCOPE" != analysis-o
   exit 1
 fi
 
+RUNS_PER_PROMPT="${RUNS_PER_PROMPT:-5}"
+if [[ ! "$RUNS_PER_PROMPT" =~ ^[1-9][0-9]*$ ]]; then
+  echo "RUNS_PER_PROMPT must be a positive integer." >&2
+  exit 1
+fi
+
 required_vars=(
   POSTGRES_USER
   POSTGRES_PASSWORD
