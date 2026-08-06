@@ -180,6 +180,19 @@ sudo -H -u yonaris-deploy docker compose --project-name yonaris \
 The restore command replaces matching objects in the new Yonaris database. It
 must not be used after production begins receiving writes.
 
+For a guarded first import, the checked-in helper refuses any database whose
+public schema is non-empty and compares every table count in the export
+manifest:
+
+```bash
+sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
+  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
+  ENV_FILE=/opt/yonaris/.env \
+  bash /opt/yonaris/source/deploy/las/bin/restore-initial.sh \
+  /opt/yonaris/import/yonaris.dump \
+  /opt/yonaris/import/yonaris.manifest.txt
+```
+
 ## 7. GitHub deployment settings
 
 Add these repository secrets:
