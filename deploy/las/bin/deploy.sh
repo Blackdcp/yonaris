@@ -31,6 +31,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+cd -- "$(dirname -- "$COMPOSE_FILE")"
+
 mkdir -p "$DEPLOY_ROOT"
 exec 9>"$DEPLOY_ROOT/.deploy.lock"
 if ! flock -n 9; then

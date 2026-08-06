@@ -15,6 +15,8 @@ if [[ ! -f "$ENV_FILE" ]]; then
   exit 1
 fi
 
+cd -- "$(dirname -- "$COMPOSE_FILE")"
+
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"

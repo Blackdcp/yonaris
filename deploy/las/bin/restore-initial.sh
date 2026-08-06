@@ -21,6 +21,8 @@ for file in "$dump_file" "$manifest_file" "$COMPOSE_FILE" "$ENV_FILE"; do
   fi
 done
 
+cd -- "$(dirname -- "$COMPOSE_FILE")"
+
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
