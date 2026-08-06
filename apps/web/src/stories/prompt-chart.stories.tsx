@@ -5,6 +5,7 @@
  *     search highlight, and long prompt name edge cases
  */
 import type { Meta } from "@storybook/react";
+import { DEFAULT_CHART_COLORS } from "@workspace/config/constants";
 import { CachedPromptChart, type CachedPromptChartProps } from "@/components/cached-prompt-chart";
 import { setMockChartDataContext, type ProcessedChartData } from "./_mocks/chart-data-context";
 import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
@@ -15,7 +16,7 @@ import { setMockBrand } from "./_mocks/use-brands";
 // Shared fixtures
 // ---------------------------------------------------------------------------
 
-const CHART_COLORS = ["#2563eb", "#efb118", "#3ca951", "#ff725c", "#a463f2", "#ff8ab7", "#38b2ac", "#9c6b4e"];
+const CHART_COLORS = DEFAULT_CHART_COLORS.slice(0, 8);
 
 const defaultClientConfig: ClientConfig = {
 	mode: "local",

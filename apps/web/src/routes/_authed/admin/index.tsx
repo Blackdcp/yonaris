@@ -374,15 +374,15 @@ function AdminDashboard() {
 					</CardHeader>
 					<CardContent className="p-0 pb-4">
 						<ChartContainer
-							config={{ count: { label: "Total Brands", color: "#3b82f6" } }}
+							config={{ count: { label: "Total Brands", color: "#1e2a39" } }}
 							className="h-[120px] w-full px-4"
 						>
 							<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 								<AreaChart data={brandsOverTime}>
 									<defs>
 										<linearGradient id="fillBrands" x1="0" y1="0" x2="0" y2="1">
-											<stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
-											<stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+											<stop offset="5%" stopColor="#1e2a39" stopOpacity={0.8} />
+											<stop offset="95%" stopColor="#1e2a39" stopOpacity={0.1} />
 										</linearGradient>
 									</defs>
 									<CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -399,7 +399,7 @@ function AdminDashboard() {
 										isAnimationActive={false}
 										content={<ChartTooltipContent className="min-w-[180px]" labelFormatter={tooltipLabelFormatter} />}
 									/>
-									<Area type="monotone" dataKey="count" stroke="#3b82f6" fill="url(#fillBrands)" strokeWidth={2} />
+									<Area type="monotone" dataKey="count" stroke="#1e2a39" fill="url(#fillBrands)" strokeWidth={2} />
 								</AreaChart>
 							</ResponsiveContainer>
 						</ChartContainer>
@@ -538,7 +538,7 @@ function AdminDashboard() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="p-0 pb-4">
-						<ChartContainer config={{ count: { label: "Runs", color: "#8b5cf6" } }} className="h-[120px] w-full px-4">
+						<ChartContainer config={{ count: { label: "Runs", color: "#ff6a00" } }} className="h-[120px] w-full px-4">
 							<ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 1, height: 1 }}>
 								<BarChart data={runsOverTime}>
 									<CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -555,7 +555,7 @@ function AdminDashboard() {
 										isAnimationActive={false}
 										content={<ChartTooltipContent className="min-w-[180px]" labelFormatter={tooltipLabelFormatter} />}
 									/>
-									<Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+									<Bar dataKey="count" fill="#ff6a00" radius={[4, 4, 0, 0]} />
 								</BarChart>
 							</ResponsiveContainer>
 						</ChartContainer>

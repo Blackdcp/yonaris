@@ -11,6 +11,7 @@ import { Switch } from "@workspace/ui/components/switch";
 import { Tabs, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { IconInfoCircle } from "@tabler/icons-react";
+import { YONARIS_CHART_FOCUS } from "@/brand/chart-theme";
 import { getModelDisplayName } from "@/lib/utils";
 import { ProgressBarChart } from "@/components/progress-bar-chart";
 import { WordCloud } from "@/components/word-cloud";
@@ -23,7 +24,7 @@ import {
 	type WordChangeStat,
 } from "@/lib/fanout-analysis";
 
-export const FANOUT_PURPLE = "#8b5cf6";
+export const FANOUT_ACCENT = YONARIS_CHART_FOCUS;
 
 export function InfoTip({ children }: { children: React.ReactNode }) {
 	return (
@@ -203,7 +204,7 @@ export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; w
 				<Separator />
 				<CardContent>
 					{items.length > 0 ? (
-						<ProgressBarChart items={items} defaultColor={FANOUT_PURPLE} />
+						<ProgressBarChart items={items} defaultColor={FANOUT_ACCENT} />
 					) : (
 						<div className="text-muted-foreground py-6 text-center text-sm">
 							No {tab} words{hideStop ? " (try showing stop words)" : ""}.

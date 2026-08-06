@@ -131,6 +131,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 function RootComponent() {
 	const { envValidation, clientConfig } = Route.useRouteContext();
 	const clarityProjectId = clientConfig?.analytics?.clarityProjectId;
+	const brandProfile = clientConfig?.mode === "whitelabel" ? "custom" : "yonaris";
 
 	useEffect(() => {
 		const key = clientConfig?.analytics?.posthogKey;
@@ -145,7 +146,7 @@ function RootComponent() {
 				<head>
 					<HeadContent />
 				</head>
-				<body className="font-sans antialiased">
+				<body data-brand={brandProfile} className="font-sans antialiased">
 					<MissingEnvPage mode={envValidation.mode} missing={envValidation.missing} />
 					<Scripts />
 				</body>
@@ -159,7 +160,7 @@ function RootComponent() {
 				{clarityProjectId && <ScriptOnce>{clarityQueueScript}</ScriptOnce>}
 				<HeadContent />
 			</head>
-			<body className="font-sans antialiased">
+			<body data-brand={brandProfile} className="font-sans antialiased">
 				<Outlet />
 				<TanStackDevtools plugins={[queryDevtools]} />
 				<Scripts />

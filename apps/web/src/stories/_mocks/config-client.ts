@@ -44,7 +44,7 @@ export interface ClientConfig {
 	hasUsers: boolean;
 }
 
-const DEFAULT_CHART_COLORS = ["#2563eb", "#efb118", "#3ca951", "#ff725c", "#a463f2", "#ff8ab7", "#38b2ac", "#9c6b4e"];
+const DEFAULT_CHART_COLORS = ["#1e2a39", "#ff6a00", "#52677c", "#3e6259", "#8b6f5c", "#6e7f91", "#c57b45", "#4f6b75"];
 
 // ---------------------------------------------------------------------------
 // Module-level config that stories can mutate

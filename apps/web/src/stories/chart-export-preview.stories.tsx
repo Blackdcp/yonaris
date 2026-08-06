@@ -1,9 +1,10 @@
 import type { Meta } from "@storybook/react";
+import { DEFAULT_CHART_COLORS } from "@workspace/config/constants";
 import { ChartExportPreview, type ChartExportPreviewProps } from "@/components/chart-export-preview";
 import { setMockRouteContext, MockRouteContextProvider } from "./_mocks/tanstack-router";
 import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
 
-const CHART_COLORS = ["#2563eb", "#efb118", "#3ca951", "#ff725c", "#a463f2", "#ff8ab7", "#38b2ac", "#9c6b4e"];
+const CHART_COLORS = DEFAULT_CHART_COLORS.slice(0, 8);
 
 const mockBrand = {
 	id: "brand-1",

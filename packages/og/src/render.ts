@@ -1,7 +1,17 @@
 import { createElement } from "react";
-import { DEFAULT_APP_NAME, DEFAULT_BRAND_COLOR } from "@workspace/config/constants";
+import {
+	DEFAULT_APP_NAME,
+	DEFAULT_BACKGROUND_COLOR,
+	DEFAULT_BRAND_COLOR,
+	YONARIS_COLORS,
+} from "@workspace/config/constants";
 
-export const ACCENT_COLORS = ["#0a1a2a", "#34495e", "#b89b72", "#f8f6f3"];
+export const ACCENT_COLORS = [
+	YONARIS_COLORS.ink,
+	YONARIS_COLORS.slate,
+	YONARIS_COLORS.signal,
+	YONARIS_COLORS.paper,
+];
 export const DEFAULT_TAGLINE = "AI Search Optimization";
 export const DEFAULT_DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
 
@@ -25,7 +35,7 @@ export function renderOgImage({
 	const isDefaultBrand = appName === DEFAULT_APP_NAME;
 	const brandColor = isDefaultBrand ? DEFAULT_BRAND_COLOR : (accentColors?.[0] ?? "#1e293b");
 	const desc = description || DEFAULT_DESCRIPTION;
-	const watermarkColor = isDefaultBrand ? "rgba(10,26,42,0.04)" : "rgba(0,0,0,0.03)";
+	const watermarkColor = isDefaultBrand ? "rgba(11,18,32,0.04)" : "rgba(0,0,0,0.03)";
 	const gradientColors = isDefaultBrand
 		? ACCENT_COLORS
 		: accentColors && accentColors.length >= 2
@@ -41,7 +51,7 @@ export function renderOgImage({
 				height: "100%",
 				position: "relative",
 				overflow: "hidden",
-				backgroundColor: "#ffffff",
+				backgroundColor: isDefaultBrand ? DEFAULT_BACKGROUND_COLOR : "#ffffff",
 			},
 		},
 		isDefaultBrand

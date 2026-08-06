@@ -171,6 +171,7 @@ function DashboardPage() {
 	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, { lookback: "1m" });
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const clientConfig = context.clientConfig;
+	const primaryChartColor = clientConfig?.branding?.chartColors?.[0] ?? "#1e2a39";
 
 	const isLoading = isLoadingBrand || isLoadingSummary;
 
@@ -361,7 +362,7 @@ function DashboardPage() {
 
 	return (
 		<div className="flex flex-1 flex-col">
-			<div className="m-auto flex w-full max-w-[1600px] flex-col gap-3 p-4">
+			<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 p-4">
 				{/* Section 1: AI Visibility */}
 				<section className="space-y-2">
 					<div className="flex items-center justify-between">
@@ -399,7 +400,7 @@ function DashboardPage() {
 									<TrendChart
 										data={visibilityTimeSeries.map((p) => ({ date: p.date, value: p.overall }))}
 										label="AI Visibility (7d avg)"
-										color="#2563eb"
+										color={primaryChartColor}
 									/>
 								)}
 							</CardContent>
@@ -442,7 +443,7 @@ function DashboardPage() {
 									<TrendChart
 										data={(sovData?.shareTimeSeries ?? []).map((p) => ({ date: p.date, value: p.share }))}
 										label="Share of Voice"
-										color="#2563eb"
+										color={primaryChartColor}
 									/>
 								)}
 							</CardContent>

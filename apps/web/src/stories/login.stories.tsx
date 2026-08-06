@@ -9,6 +9,7 @@ import { EmailPasswordLogin } from "@/routes/auth/login";
 
 export default {
 	title: "Auth / Login",
+	parameters: { layout: "fullscreen" },
 } satisfies Meta;
 
 /** Demo mode — shows the pre-filled credentials callout. */

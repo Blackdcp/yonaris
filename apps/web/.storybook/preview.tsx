@@ -12,4 +12,14 @@ const withQueryClient: Decorator = (Story) => (
 	</QueryClientProvider>
 );
 
-export const decorators: Decorator[] = [withQueryClient];
+const withBrandTheme: Decorator = (Story, context) => {
+	const brandProfile = context.id.includes("whitelabel") ? "custom" : "yonaris";
+
+	return (
+		<div data-brand={brandProfile} className="min-h-svh bg-background text-foreground">
+			<Story />
+		</div>
+	);
+};
+
+export const decorators: Decorator[] = [withBrandTheme, withQueryClient];

@@ -1,0 +1,364 @@
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 400;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 500;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 600 700;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-600-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+[data-brand="yonaris"] {
+	--font-geist-sans: "Geist Sans", Inter, "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+	--font-geist-mono: "SFMono-Regular", Consolas, "Liberation Mono", ui-monospace, monospace;
+
+	--yonaris-ink: #0b1220;
+	--yonaris-paper: #f6f4f1;
+	--yonaris-slate: #1e2a39;
+	--yonaris-stone: #8a95a3;
+	--yonaris-mist: #dde2e8;
+	--yonaris-signal: #ff6a00;
+	--yonaris-blue-gray: #2f3e50;
+	--yonaris-surface: #fbfaf8;
+
+	--radius: 0.45rem;
+	--background: #f6f4f1;
+	--foreground: #0b1220;
+	--card: #fbfaf8;
+	--card-foreground: #0b1220;
+	--popover: #fffefa;
+	--popover-foreground: #0b1220;
+	--primary: #0b1220;
+	--primary-foreground: #f6f4f1;
+	--secondary: #e9e8e4;
+	--secondary-foreground: #1e2a39;
+	--muted: #eceae6;
+	--muted-foreground: #66717e;
+	--accent: #dde2e8;
+	--accent-foreground: #0b1220;
+	--destructive: #c43d32;
+	--border: #d8dce0;
+	--input: #cfd5db;
+	--ring: #ff6a00;
+	--chart-1: #1e2a39;
+	--chart-2: #ff6a00;
+	--chart-3: #52677c;
+	--chart-4: #3e6259;
+	--chart-5: #8b6f5c;
+	--sidebar: #0b1220;
+	--sidebar-foreground: #f6f4f1;
+	--sidebar-primary: #ff6a00;
+	--sidebar-primary-foreground: #0b1220;
+	--sidebar-accent: #1e2a39;
+	--sidebar-accent-foreground: #f6f4f1;
+	--sidebar-border: rgb(246 244 241 / 12%);
+	--sidebar-ring: #ff6a00;
+	--yonaris-chart-primary: #1e2a39;
+	--yonaris-chart-focus: #ff6a00;
+	color-scheme: light;
+}
+
+html.dark [data-brand="yonaris"] {
+	--background: #0b1220;
+	--foreground: #f6f4f1;
+	--card: #111b2a;
+	--card-foreground: #f6f4f1;
+	--popover: #111b2a;
+	--popover-foreground: #f6f4f1;
+	--primary: #f6f4f1;
+	--primary-foreground: #0b1220;
+	--secondary: #1e2a39;
+	--secondary-foreground: #f6f4f1;
+	--muted: #1e2a39;
+	--muted-foreground: #aeb6bf;
+	--accent: #2f3e50;
+	--accent-foreground: #f6f4f1;
+	--border: rgb(246 244 241 / 14%);
+	--input: rgb(246 244 241 / 18%);
+	color-scheme: dark;
+}
+
+body[data-brand="yonaris"],
+[data-brand="yonaris"] {
+	font-family: var(--font-geist-sans);
+	font-feature-settings: "kern", "ss01", "tnum";
+}
+
+body[data-brand="yonaris"] {
+	background:
+		linear-gradient(rgb(11 18 32 / 2%) 1px, transparent 1px),
+		linear-gradient(90deg, rgb(11 18 32 / 2%) 1px, transparent 1px), var(--background);
+	background-size: 32px 32px;
+}
+
+[data-brand="yonaris"] ::selection {
+	background: rgb(255 106 0 / 22%);
+	color: var(--yonaris-ink);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-wrapper"] {
+	--sidebar-width: 15rem !important;
+	--sidebar-width-icon: 3.25rem !important;
+	background: var(--background);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-container"] {
+	padding: 0;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-inner"] {
+	border-right: 1px solid var(--sidebar-border);
+	border-radius: 0;
+	box-shadow: 14px 0 36px rgb(11 18 32 / 8%);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-header"] {
+	padding: 1rem 0.75rem 0.65rem;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-content"] {
+	padding: 0.25rem 0.45rem;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-footer"] {
+	padding: 0.65rem;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-group"] {
+	padding: 0.65rem 0.35rem;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-group-label"] {
+	height: 1.6rem;
+	padding-inline: 0.65rem;
+	color: rgb(246 244 241 / 48%);
+	font-size: 0.625rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"] {
+	min-height: 2.35rem;
+	border-radius: 0.3rem;
+	color: rgb(246 244 241 / 72%);
+	font-weight: 500;
+	transition:
+		background-color 160ms ease,
+		color 160ms ease,
+		box-shadow 160ms ease;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"]:hover,
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] {
+	background: var(--yonaris-slate);
+	color: var(--yonaris-paper);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"][data-active="true"] {
+	box-shadow: inset 3px 0 0 var(--yonaris-signal);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-menu-button"] svg {
+	color: currentColor;
+	stroke-width: 1.7;
+}
+
+[data-brand="yonaris"] [data-slot="sidebar"] [data-slot="brand-logo"] img,
+[data-brand="yonaris"] [data-slot="full-page-shell"] [data-slot="brand-logo"] img {
+	filter: brightness(0) invert(1);
+}
+
+[data-brand="yonaris"] [data-slot="sidebar-inset"] {
+	margin: 0 !important;
+	border: 0 !important;
+	border-radius: 0 !important;
+	background: var(--background);
+	box-shadow: none !important;
+}
+
+[data-brand="yonaris"] [data-slot="site-header"] {
+	height: 3.5rem;
+	border-color: rgb(11 18 32 / 9%);
+	background: rgb(246 244 241 / 88%);
+	box-shadow: 0 1px 0 rgb(255 255 255 / 55%);
+	backdrop-filter: blur(14px);
+}
+
+html.dark [data-brand="yonaris"] [data-slot="site-header"] {
+	background: rgb(11 18 32 / 88%);
+}
+
+[data-brand="yonaris"] [data-slot="breadcrumb-list"] {
+	font-size: 0.75rem;
+	letter-spacing: 0.01em;
+}
+
+[data-brand="yonaris"] [data-slot="card"] {
+	border-color: rgb(11 18 32 / 10%);
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 0 rgb(255 255 255 / 72%) !important;
+}
+
+[data-brand="yonaris"] [data-slot="card-title"] {
+	letter-spacing: -0.015em;
+}
+
+[data-brand="yonaris"] [data-slot="button"] {
+	border-radius: 0.3rem;
+	box-shadow: none;
+	font-weight: 550;
+	letter-spacing: -0.005em;
+}
+
+[data-brand="yonaris"] [data-slot="button"]:focus-visible,
+[data-brand="yonaris"] [data-slot="input"]:focus-visible,
+[data-brand="yonaris"] [data-slot="textarea"]:focus-visible,
+[data-brand="yonaris"] [data-slot="select-trigger"]:focus-visible {
+	border-color: var(--yonaris-signal);
+	box-shadow: 0 0 0 3px rgb(255 106 0 / 16%);
+}
+
+[data-brand="yonaris"] [data-slot="input"],
+[data-brand="yonaris"] [data-slot="textarea"],
+[data-brand="yonaris"] [data-slot="select-trigger"] {
+	border-color: rgb(11 18 32 / 14%);
+	border-radius: 0.3rem;
+	background: rgb(255 254 250 / 72%);
+	box-shadow: inset 0 1px 0 rgb(11 18 32 / 2%);
+}
+
+[data-brand="yonaris"] [data-slot="tabs-list"] {
+	border: 1px solid rgb(11 18 32 / 8%);
+	border-radius: 0.35rem;
+	background: rgb(221 226 232 / 58%);
+}
+
+[data-brand="yonaris"] [data-slot="tabs-trigger"][data-state="active"] {
+	box-shadow:
+		inset 0 -2px 0 var(--yonaris-signal),
+		0 1px 2px rgb(11 18 32 / 5%);
+}
+
+[data-brand="yonaris"] [data-slot="table-head"] {
+	color: var(--muted-foreground);
+	font-size: 0.675rem;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+[data-brand="yonaris"] [data-slot="table-row"] {
+	border-color: rgb(11 18 32 / 8%);
+}
+
+[data-brand="yonaris"] [data-slot="dialog-content"],
+[data-brand="yonaris"] [data-slot="popover-content"],
+[data-brand="yonaris"] [data-slot="dropdown-menu-content"] {
+	border-color: rgb(11 18 32 / 12%);
+	border-radius: 0.45rem;
+	box-shadow: 0 18px 50px rgb(11 18 32 / 14%);
+}
+
+.yonaris-brand-paths,
+.yonaris-brand-statement {
+	display: none;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-shell"] {
+	background: var(--yonaris-ink);
+	color: var(--yonaris-paper);
+}
+
+[data-brand="yonaris"] .yonaris-brand-paths {
+	display: block;
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	color: var(--yonaris-paper);
+}
+
+[data-brand="yonaris"] .yonaris-brand-statement {
+	display: block;
+	margin-top: 1rem;
+	color: rgb(246 244 241 / 58%);
+	font-size: 0.68rem;
+	font-weight: 500;
+	letter-spacing: 0.16em;
+	text-align: center;
+	text-transform: uppercase;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="full-page-card"] {
+	position: relative;
+	overflow: hidden;
+	border-color: rgb(246 244 241 / 18%);
+	background: var(--yonaris-paper);
+	color: var(--yonaris-ink);
+	box-shadow: 0 32px 90px rgb(0 0 0 / 28%) !important;
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="full-page-card"]::before {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 4rem;
+	height: 2px;
+	background: var(--yonaris-signal);
+	content: "";
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="full-page-card"] [data-slot="card-header"] {
+	text-align: left;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-back"] [data-slot="button"] {
+	border-color: rgb(246 244 241 / 24%);
+	background: transparent;
+	color: var(--yonaris-paper);
+}
+
+@media (max-width: 767px) {
+	[data-brand="yonaris"] [data-slot="full-page-shell"] {
+		align-items: flex-start;
+		padding-top: 3.5rem;
+	}
+
+	[data-brand="yonaris"] .yonaris-brand-paths {
+		opacity: 0.58;
+		transform: translateX(18%);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-brand="yonaris"] *,
+	[data-brand="yonaris"] *::before,
+	[data-brand="yonaris"] *::after {
+		scroll-behavior: auto !important;
+		transition-duration: 0.01ms !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+	}
+}
+
+@media print {
+	[data-brand="yonaris"] .yonaris-brand-paths,
+	[data-brand="yonaris"] .yonaris-brand-statement {
+		display: none !important;
+	}
+}

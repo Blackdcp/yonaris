@@ -9,7 +9,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Badge } from "@workspace/ui/components/badge";
-import { shareOfVoiceColorMap } from "@/lib/share-of-voice-palette";
+import { BRAND_COLOR, shareOfVoiceColorMap } from "@/lib/share-of-voice-palette";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { TooltipProvider } from "@workspace/ui/components/tooltip";
 import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
@@ -136,7 +136,7 @@ function ShareOfVoicePage() {
 							<TrendChart
 								data={data.shareTimeSeries.map((p) => ({ date: p.date, value: p.share }))}
 								label="Share of Voice"
-								color="#2563eb"
+								color={BRAND_COLOR}
 								className="aspect-auto h-[180px] w-full"
 							/>
 						</CardContent>

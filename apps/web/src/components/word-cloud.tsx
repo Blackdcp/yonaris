@@ -5,6 +5,7 @@
  * placement — so it's SSR-stable.
  */
 import { cn } from "@workspace/ui/lib/utils";
+import { YONARIS_WORD_CLOUD_COLORS } from "@/brand/chart-theme";
 
 export interface WordCloudTerm {
 	term: string;
@@ -12,15 +13,7 @@ export interface WordCloudTerm {
 }
 
 // Frequent → rare. Index 0 is for the biggest terms.
-const PALETTE = [
-	"#7c3aed", // violet
-	"#4f46e5", // indigo
-	"#2563eb", // blue
-	"#0891b2", // cyan
-	"#0d9488", // teal
-	"#059669", // emerald
-	"#d97706", // amber
-];
+const PALETTE = YONARIS_WORD_CLOUD_COLORS;
 
 const MIN_PX = 13;
 const MAX_PX = 40;

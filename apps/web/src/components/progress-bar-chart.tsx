@@ -60,7 +60,7 @@ export type ProgressBarChartProps = {
 export function ProgressBarChart({
 	items,
 	colorMapping = {},
-	defaultColor = "#3b82f6",
+	defaultColor = "#1e2a39",
 	trackColor = "bg-primary/10",
 	barHeight = "h-2",
 	percentageMode = "max",
@@ -189,14 +189,14 @@ const COLOR_BY_ICON: Record<string, string> = {
 
 /** Resolve a model id to a display color. "all" is a no-filter sentinel. */
 export function getModelColor(model: string): string | undefined {
-	if (model === "all") return "#8b5cf6";
+	if (model === "all") return "#ff6a00";
 	return COLOR_BY_ICON[getModelMeta(model).iconId];
 }
 
 /** Colors for every model id in `KNOWN_MODELS` plus "all". Unknown deployment
  *  models fall back to `ProgressBarChart`'s `defaultColor`. */
 export const MODEL_COLORS: ColorMapping = {
-	all: "#8b5cf6",
+	all: "#ff6a00",
 	...Object.fromEntries(
 		Object.keys(KNOWN_MODELS)
 			.map((m) => [m, getModelColor(m)])

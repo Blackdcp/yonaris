@@ -1,8 +1,9 @@
-import { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
+import type { ReactNode } from "react";
+import { BrandPaths } from "@/brand/brand-paths";
 import { Logo } from "@/components/logo";
 
 interface FullPageCardProps {
@@ -27,12 +28,17 @@ export default function FullPageCard({
 	className = "w-md",
 }: FullPageCardProps) {
 	return (
-		<div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
-			<div className={`mx-auto ${className}`}>
+		<div
+			data-slot="full-page-shell"
+			className="relative min-h-screen bg-muted/30 flex items-center justify-center overflow-hidden p-4"
+		>
+			<BrandPaths />
+			<div data-slot="full-page-content" className={`relative z-10 mx-auto ${className}`}>
 				<div className="flex items-center justify-center space-x-3">
 					<Logo />
 				</div>
-				<Card className="my-8">
+				<p className="yonaris-brand-statement">Finite truths. Recursive growth.</p>
+				<Card data-yonaris-slot="full-page-card" className="my-8">
 					{(title || subtitle) && (
 						<CardHeader className={subtitle ? "text-center" : "text-center grid-rows-1 gap-0"}>
 							{title && <CardTitle className="text-xl">{title}</CardTitle>}
@@ -49,9 +55,11 @@ export default function FullPageCard({
 					)}
 				</Card>
 				{customBackButton ? (
-					<div className="flex justify-center">{customBackButton}</div>
+					<div data-slot="full-page-back" className="flex justify-center">
+						{customBackButton}
+					</div>
 				) : showBackButton ? (
-					<div className="flex justify-center">
+					<div data-slot="full-page-back" className="flex justify-center">
 						<Button variant="outline" size="sm" asChild>
 							<Link to={backButtonHref}>{backButtonText}</Link>
 						</Button>

@@ -8,24 +8,13 @@
  *  4. Color Palette — brand color, theme colors, and chart palette
  */
 import type { Meta } from "@storybook/react";
+import { DEFAULT_CHART_COLORS, YONARIS_COLORS } from "@workspace/config/constants";
 import { Logo } from "@/components/logo";
 import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
 import { setMockRouteContext } from "./_mocks/tanstack-router";
 
-const BRAND_COLOR = "#0a1a2a";
-const CHART_COLORS = [
-	"#2563eb",
-	"#efb118",
-	"#3ca951",
-	"#ff725c",
-	"#a463f2",
-	"#ff8ab7",
-	"#38b2ac",
-	"#9c6b4e",
-	"#7cb342",
-	"#b07aa1",
-	"#9498a0",
-];
+const BRAND_COLOR = YONARIS_COLORS.ink;
+const CHART_COLORS = DEFAULT_CHART_COLORS.slice(0, 11);
 
 const yonarisConfig: ClientConfig = {
 	mode: "local",
@@ -217,11 +206,12 @@ export const YonarisBrandKit = () => {
 			{/* Colors */}
 			<Section title="Brand Colors">
 				<div className="flex gap-6 flex-wrap">
-					<ColorSwatch color={BRAND_COLOR} label="Yonaris Navy" />
-					<ColorSwatch color="#f8f6f3" label="Warm White" />
-					<ColorSwatch color="#f4d35e" label="Royal Gold" />
-					<ColorSwatch color="#ee964b" label="Sandy Brown" />
-					<ColorSwatch color="#f95738" label="Tomato" />
+					<ColorSwatch color={BRAND_COLOR} label="Ink" />
+					<ColorSwatch color={YONARIS_COLORS.paper} label="Paper" />
+					<ColorSwatch color={YONARIS_COLORS.slate} label="Slate" />
+					<ColorSwatch color={YONARIS_COLORS.stone} label="Stone" />
+					<ColorSwatch color={YONARIS_COLORS.mist} label="Mist" />
+					<ColorSwatch color={YONARIS_COLORS.signal} label="Signal Orange" />
 				</div>
 			</Section>
 

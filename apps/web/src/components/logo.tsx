@@ -38,7 +38,7 @@ export function Logo({
 		if (surface !== "auto") {
 			const src = surface === "dark" ? wordmarkOnDark || wordmark : wordmark;
 			return (
-				<div {...props} className={cn("flex items-center gap-2", className)}>
+				<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
 					<img
 						src={src}
 						alt={`${name} logo`}
@@ -51,7 +51,7 @@ export function Logo({
 		}
 
 		return (
-			<div {...props} className={cn("flex items-center gap-2", className)}>
+			<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
 				<img
 					src={wordmark}
 					alt={`${name} logo`}
@@ -74,7 +74,7 @@ export function Logo({
 	}
 
 	return (
-		<div {...props} className={cn("flex items-center gap-2", className)}>
+		<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
 			{icon && (
 				<img
 					src={icon}

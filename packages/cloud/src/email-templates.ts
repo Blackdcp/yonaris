@@ -5,7 +5,7 @@
  * mocking Resend. All interpolated user-controlled strings (inviter name,
  * organization name) are HTML-escaped before landing in markup.
  */
-import { DEFAULT_APP_NAME } from "@workspace/config/constants";
+import { DEFAULT_APP_NAME, YONARIS_COLORS } from "@workspace/config/constants";
 
 export interface EmailContent {
 	subject: string;
@@ -24,17 +24,23 @@ function escapeHtml(value: string): string {
 
 function wrapHtml(heading: string, sentence: string, url: string): string {
 	return `
-		<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-			<h1 style="font-size: 20px;">${heading}</h1>
-			<p>${sentence}</p>
-			<p>
-				<a href="${url}" style="display: inline-block; padding: 10px 20px; background-color: #111827; color: #ffffff; text-decoration: none; border-radius: 6px;">
-					Continue
-				</a>
-			</p>
-			<p style="color: #6b7280; font-size: 13px;">
-				If the button doesn't work, copy and paste this link into your browser: ${url}
-			</p>
+		<div style="background-color: ${YONARIS_COLORS.paper}; padding: 32px 16px;">
+			<div style="font-family: Inter, Arial, sans-serif; max-width: 520px; margin: 0 auto; color: ${YONARIS_COLORS.ink};">
+				<div style="font-size: 24px; font-weight: 600; letter-spacing: -0.03em; margin-bottom: 24px;">${DEFAULT_APP_NAME}</div>
+				<div style="background-color: #fffefa; border: 1px solid ${YONARIS_COLORS.mist}; border-top: 3px solid ${YONARIS_COLORS.signal}; border-radius: 8px; padding: 32px;">
+					<h1 style="font-size: 22px; line-height: 1.25; margin: 0 0 14px;">${heading}</h1>
+					<p style="color: ${YONARIS_COLORS.blueGray}; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">${sentence}</p>
+					<p style="margin: 0 0 24px;">
+						<a href="${url}" style="display: inline-block; padding: 11px 20px; background-color: ${YONARIS_COLORS.ink}; color: ${YONARIS_COLORS.paper}; text-decoration: none; border-radius: 5px; font-size: 14px; font-weight: 600;">
+							Continue
+						</a>
+					</p>
+					<p style="border-top: 1px solid ${YONARIS_COLORS.mist}; color: #66717e; font-size: 12px; line-height: 1.5; margin: 0; padding-top: 18px; word-break: break-all;">
+						If the button doesn't work, copy and paste this link into your browser: ${url}
+					</p>
+				</div>
+				<p style="color: ${YONARIS_COLORS.stone}; font-size: 11px; letter-spacing: 0.08em; margin: 20px 0 0; text-transform: uppercase;">Finite truths. Recursive growth.</p>
+			</div>
 		</div>
 	`.trim();
 }

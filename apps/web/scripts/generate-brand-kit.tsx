@@ -27,15 +27,16 @@ import { createWriteStream, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_BRAND_COLOR, YONARIS_COLORS } from "@workspace/config/constants";
 import { renderOgPng } from "@workspace/og/rasterize";
 import { ZipArchive } from "archiver";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-const BRAND_COLOR = "#0A1A2A";
-const BACKGROUND_COLOR = "#F8F6F3";
-const ACCENT_COLORS = [BRAND_COLOR, "#34495e", "#b89b72", BACKGROUND_COLOR];
+const BRAND_COLOR = DEFAULT_BRAND_COLOR;
+const BACKGROUND_COLOR = DEFAULT_BACKGROUND_COLOR;
+const ACCENT_COLORS = [BRAND_COLOR, YONARIS_COLORS.slate, YONARIS_COLORS.signal, BACKGROUND_COLOR];
 const TAGLINE = "AI Search Optimization";
 const DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
 const OUTPUT_ZIP = resolve(__dirname, "../yonaris-brand-kit.zip");
@@ -229,7 +230,7 @@ function OgImage({ title }: { title: string }) {
 					fontFamily: "Geist Sans",
 					fontWeight: 500,
 					fontSize: 700,
-					color: "rgba(10,26,42,0.04)",
+					color: "rgba(11,18,32,0.04)",
 					lineHeight: 1,
 					right: -60,
 					top: -60,
@@ -346,7 +347,14 @@ console.log("\nSocial Banners:");
 
 const sharedBannerStyle = {
 	bg: BACKGROUND_COLOR,
-	colors: [BRAND_COLOR, "#34495e", "#6b7c8f", "#b89b72", "#d5c4aa", "#ffffff"],
+	colors: [
+		BRAND_COLOR,
+		YONARIS_COLORS.slate,
+		YONARIS_COLORS.blueGray,
+		YONARIS_COLORS.stone,
+		YONARIS_COLORS.signal,
+		YONARIS_COLORS.paper,
+	],
 	angle: 15,
 } as const;
 

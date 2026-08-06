@@ -429,7 +429,7 @@ function MentionsTab({
 			<CardContent>
 				<ProgressBarChart
 					items={mentionStats.map((stat) => ({ label: stat.name, count: stat.count }))}
-					defaultColor="#3b82f6"
+					defaultColor="#1e2a39"
 					customTotal={totalRuns || 1}
 					highlightLabel={brandName}
 				/>

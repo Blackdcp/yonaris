@@ -401,7 +401,7 @@ function ReportRenderPage() {
 							]
 								.sort((a, b) => b.sov - a.sov)
 								.map((row, i) => (
-									<tr key={`sov-${i}`} className={row.isBrand ? "bg-blue-50/30" : ""}>
+									<tr key={`sov-${i}`} className={row.isBrand ? "bg-[#fff4ec]" : ""}>
 										<td className={`py-2.5 px-4 text-sm ${row.isBrand ? "font-semibold" : "text-slate-600"}`}>
 											{row.name}
 										</td>
@@ -411,7 +411,7 @@ function ReportRenderPage() {
 											</span>
 										</td>
 										<td className="py-2.5 px-4">
-											<Bar value={row.sov} color={row.isBrand ? "bg-blue-500" : "bg-slate-300"} />
+											<Bar value={row.sov} color={row.isBrand ? "bg-[#1e2a39]" : "bg-slate-300"} />
 										</td>
 									</tr>
 								))}
@@ -449,7 +449,7 @@ function ReportRenderPage() {
 									]
 										.sort((a, b) => b.mentionCount - a.mentionCount)
 										.map((c, i) => (
-											<tr key={`mention-${i}`} className={c.isBrand ? "bg-blue-50/30" : ""}>
+											<tr key={`mention-${i}`} className={c.isBrand ? "bg-[#fff4ec]" : ""}>
 												<td
 													className={`py-2 px-4 text-xs font-medium ${c.isBrand ? "text-slate-900" : "text-slate-700"}`}
 												>
@@ -750,7 +750,7 @@ function ReportRenderPage() {
 
 			{/* ===== CTA ===== */}
 			<div className="print:break-before-page print:h-[9.5in] print:flex print:flex-col print:justify-center p-10 print:p-0">
-				<div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-10 text-center">
+				<div className="bg-gradient-to-r from-[#f6f4f1] to-[#fff4ec] border border-[#dde2e8] rounded-xl p-10 text-center">
 					<h2 className="text-2xl font-bold text-slate-800 mb-2">Ready to Optimize Your AI Visibility?</h2>
 					<p className="text-slate-600 text-base mb-8">
 						Take your brand's AI presence to the next level with {appName}
@@ -786,7 +786,7 @@ function ReportRenderPage() {
 						</div>
 					</div>
 
-					<div className="pt-6 border-t border-blue-200">
+					<div className="pt-6 border-t border-[#dde2e8]">
 						<p className="text-slate-800 font-medium mb-2">Get started with {appName} today</p>
 						{appUrl && (
 							<p className="text-slate-600 text-sm text-balance">
@@ -882,7 +882,7 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 function Finding({ children }: { children: React.ReactNode }) {
 	return (
 		<div className="flex gap-3 items-start">
-			<div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-[7px] shrink-0" />
+			<div className="w-1.5 h-1.5 rounded-full bg-[#ff6a00] mt-[7px] shrink-0" />
 			<p className="text-sm text-slate-700 leading-relaxed">{children}</p>
 		</div>
 	);

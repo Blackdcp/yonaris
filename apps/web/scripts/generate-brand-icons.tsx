@@ -12,14 +12,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_BRAND_COLOR } from "@workspace/config/constants";
 import { renderOgPng } from "@workspace/og/rasterize";
 import pngToIco from "png-to-ico";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const OUTPUT_DIR = resolve(__dirname, "../public/icons");
-const BRAND_COLOR = "#0A1A2A";
-const BACKGROUND_COLOR = "#F8F6F3";
+const BRAND_COLOR = DEFAULT_BRAND_COLOR;
+const BACKGROUND_COLOR = DEFAULT_BACKGROUND_COLOR;
 const STANDARD_PATH = "M1 1h13l15 26L44 1h13L35 38v25H23V38L1 1Z";
 const MASKABLE_PATH = "M25 28h16l23 39 23-39h16L72 80v26H56V80L25 28Z";
 
