@@ -193,6 +193,9 @@ sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
   /opt/yonaris/import/yonaris.manifest.txt
 ```
 
+To repeat only the row-count verification after the initial restore, append
+`--verify-only` to the command.
+
 ## 7. GitHub deployment settings
 
 Add these repository secrets:

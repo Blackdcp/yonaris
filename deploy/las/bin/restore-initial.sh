@@ -2,13 +2,20 @@
 
 set -Eeuo pipefail
 
-if [[ $# -ne 2 ]]; then
-  echo "Usage: $0 /absolute/path/to/database.dump /absolute/path/to/manifest.txt" >&2
+if [[ $# -lt 2 ]] || [[ $# -gt 3 ]]; then
+  echo "Usage: $0 /absolute/path/to/database.dump /absolute/path/to/manifest.txt [--verify-only]" >&2
   exit 2
 fi
 
 dump_file="$1"
 manifest_file="$2"
+verify_only=false
+if [[ "${3:-}" == "--verify-only" ]]; then
+  verify_only=true
+elif [[ -n "${3:-}" ]]; then
+  echo "Unknown option: $3" >&2
+  exit 2
+fi
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/yonaris}"
 COMPOSE_FILE="${COMPOSE_FILE:-$(cd -- "$SCRIPT_DIR/.." && pwd)/compose.yaml}"
@@ -46,22 +53,35 @@ if [[ "$database_ready" != true ]]; then
   exit 1
 fi
 
-public_table_count="$(
-  "${compose[@]}" exec -T postgres psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --tuples-only --no-align \
-    --command "select count(*) from pg_tables where schemaname = 'public'"
-)"
+if [[ "$verify_only" != true ]]; then
+  public_table_count="$(
+    "${compose[@]}" exec -T postgres psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --tuples-only --no-align \
+      --command "select count(*) from pg_tables where schemaname = 'public'" </dev/null
+  )"
 
-if [[ "$public_table_count" != 0 ]]; then
-  echo "Refusing initial restore: the public schema already has $public_table_count tables." >&2
-  exit 1
+  if [[ "$public_table_count" != 0 ]]; then
+    echo "Refusing initial restore: the public schema already has $public_table_count tables." >&2
+    exit 1
+  fi
+
+  "${compose[@]}" exec -T postgres pg_restore \
+    --username "$POSTGRES_USER" \
+    --dbname "$POSTGRES_DB" \
+    --exit-on-error \
+    --no-owner \
+    --no-acl <"$dump_file"
 fi
 
-"${compose[@]}" exec -T postgres pg_restore \
-  --username "$POSTGRES_USER" \
-  --dbname "$POSTGRES_DB" \
-  --exit-on-error \
-  --no-owner \
-  --no-acl <"$dump_file"
+manifest_table_count="$(awk '
+  /^\[row_counts\]$/ { in_counts = 1; next }
+  in_counts && /^[a-z_]+=[0-9]+$/ { count++ }
+  END { print count + 0 }
+' "$manifest_file")"
+
+if [[ "$manifest_table_count" -eq 0 ]]; then
+  echo "The manifest did not contain row counts." >&2
+  exit 1
+fi
 
 in_row_counts=false
 checked_tables=0
@@ -80,7 +100,7 @@ while IFS='=' read -r table expected; do
 
   actual="$(
     "${compose[@]}" exec -T postgres psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --tuples-only --no-align \
-      --command "select count(*) from public.$table"
+      --command "select count(*) from public.$table" </dev/null
   )"
   if [[ "$actual" != "$expected" ]]; then
     echo "Row-count mismatch for $table: expected $expected, got $actual" >&2
@@ -90,8 +110,8 @@ while IFS='=' read -r table expected; do
   checked_tables=$((checked_tables + 1))
 done <"$manifest_file"
 
-if [[ "$checked_tables" -eq 0 ]]; then
-  echo "The manifest did not contain row counts." >&2
+if [[ "$checked_tables" -ne "$manifest_table_count" ]]; then
+  echo "Verified $checked_tables tables, but the manifest contains $manifest_table_count." >&2
   exit 1
 fi
 
