@@ -1,12 +1,14 @@
 import * as Sentry from "@sentry/node";
-import type { Job, PgBoss } from "pg-boss";
 import { getDeployment } from "@workspace/deployment";
 import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
-import { processPromptJob, type ProcessPromptData } from "./jobs/process-prompt";
-import { generateReportJob, type GenerateReportData } from "./jobs/generate-report";
-import { scheduleMaintenanceJob, type ScheduleMaintenanceData } from "./jobs/schedule-maintenance";
-import { syncAuth0MembershipsJob, type SyncAuth0MembershipsData } from "./jobs/sync-auth0-memberships";
-import { analyzeBrandJob, type AnalyzeBrandData } from "./jobs/analyze-brand";
+import type { Job, PgBoss } from "pg-boss";
+import { type AnalyzeBrandData, analyzeBrandJob } from "./jobs/analyze-brand";
+import { type GenerateReportData, generateReportJob } from "./jobs/generate-report";
+import { type ProcessPromptData, processPromptJob } from "./jobs/process-prompt";
+import { type ScheduleMaintenanceData, scheduleMaintenanceJob } from "./jobs/schedule-maintenance";
+import { type SyncAuth0MembershipsData, syncAuth0MembershipsJob } from "./jobs/sync-auth0-memberships";
+
+export type WorkerQueueScope = "full" | "analysis-only";
 
 /**
  * Wraps a pg-boss handler to report errors to Sentry before re-throwing.
@@ -29,21 +31,23 @@ function withSentry<T, R>(queueName: string, handler: (jobs: Job<T>[]) => Promis
 /**
  * Register all job handlers with pg-boss.
  */
-export async function registerHandlers(boss: PgBoss): Promise<void> {
-	await boss.work<ProcessPromptData>(
-		"process-prompt",
-		{ localConcurrency: 10 },
-		withSentry("process-prompt", processPromptJob),
-	);
-	console.log("Registered handler: process-prompt");
-
-	if (getDeployment().features.reportGeneration) {
-		await boss.work<GenerateReportData>(
-			"generate-report",
-			{ localConcurrency: 2 },
-			withSentry("generate-report", generateReportJob),
+export async function registerHandlers(boss: PgBoss, scope: WorkerQueueScope = "full"): Promise<void> {
+	if (scope === "full") {
+		await boss.work<ProcessPromptData>(
+			"process-prompt",
+			{ localConcurrency: 10 },
+			withSentry("process-prompt", processPromptJob),
 		);
-		console.log("Registered handler: generate-report");
+		console.log("Registered handler: process-prompt");
+
+		if (getDeployment().features.reportGeneration) {
+			await boss.work<GenerateReportData>(
+				"generate-report",
+				{ localConcurrency: 2 },
+				withSentry("generate-report", generateReportJob),
+			);
+			console.log("Registered handler: generate-report");
+		}
 	}
 
 	// batchSize: 1 keeps the returned suggestion mapped 1:1 to a single job's
@@ -55,19 +59,21 @@ export async function registerHandlers(boss: PgBoss): Promise<void> {
 	);
 	console.log("Registered handler: analyze-brand");
 
-	await boss.work<ScheduleMaintenanceData>(
-		"schedule-maintenance",
-		{ localConcurrency: 1 },
-		withSentry("schedule-maintenance", scheduleMaintenanceJob),
-	);
-	console.log("Registered handler: schedule-maintenance");
-
-	if (process.env.DEPLOYMENT_MODE === "whitelabel") {
-		await boss.work<SyncAuth0MembershipsData>(
-			"sync-auth0-memberships",
+	if (scope === "full") {
+		await boss.work<ScheduleMaintenanceData>(
+			"schedule-maintenance",
 			{ localConcurrency: 1 },
-			withSentry("sync-auth0-memberships", syncAuth0MembershipsJob),
+			withSentry("schedule-maintenance", scheduleMaintenanceJob),
 		);
-		console.log("Registered handler: sync-auth0-memberships");
+		console.log("Registered handler: schedule-maintenance");
+
+		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
+			await boss.work<SyncAuth0MembershipsData>(
+				"sync-auth0-memberships",
+				{ localConcurrency: 1 },
+				withSentry("sync-auth0-memberships", syncAuth0MembershipsJob),
+			);
+			console.log("Registered handler: sync-auth0-memberships");
+		}
 	}
 }

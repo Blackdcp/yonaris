@@ -122,6 +122,10 @@ static showcase environment: Web remains available and queued jobs are kept,
 but no model or scraper requests are processed. Change it back to `true` and
 deploy again when recurring collection should resume.
 
+Set `WORKER_QUEUE_SCOPE=analysis-only` together with `WORKER_ENABLED=true` to
+run onboarding brand analysis without consuming queued prompt evaluations or
+scheduling new ones. The default `full` scope processes every production queue.
+
 Log in to GHCR once on the server with a read-only classic token that has the
 `read:packages` scope:
 

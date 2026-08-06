@@ -3,7 +3,7 @@ import { getDeployment } from "@workspace/deployment";
 import { getProvider, parseScrapeTargets, validateScrapeTargets } from "@workspace/lib/providers";
 import { startCredentialRefresh } from "@workspace/lib/secrets";
 import boss from "./boss";
-import { registerHandlers } from "./handlers";
+import { registerHandlers, type WorkerQueueScope } from "./handlers";
 import { shutdownTelemetry } from "./telemetry";
 
 if (process.env.SENTRY_DSN) {
@@ -16,6 +16,13 @@ if (process.env.SENTRY_DSN) {
 
 async function main() {
 	console.log("Starting pg-boss worker...");
+
+	const queueScope = process.env.WORKER_QUEUE_SCOPE ?? "full";
+	if (queueScope !== "full" && queueScope !== "analysis-only") {
+		throw new Error('WORKER_QUEUE_SCOPE must be "full" or "analysis-only"');
+	}
+	const scope = queueScope as WorkerQueueScope;
+	console.log(`Worker queue scope: ${scope}`);
 
 	// Awaited so a stored credential counts toward the validation below.
 	await startCredentialRefresh();
@@ -38,19 +45,21 @@ async function main() {
 	console.log("pg-boss started");
 
 	// Create queues if they don't exist (required in pg-boss v12)
-	await boss.createQueue("process-prompt", {
-		retryLimit: 3,
-		retryDelay: 60,
-		retryBackoff: true,
-		expireInSeconds: 60 * 15, // 15 minute timeout
-	});
-	if (getDeployment().features.reportGeneration) {
-		await boss.createQueue("generate-report", {
+	if (scope === "full") {
+		await boss.createQueue("process-prompt", {
 			retryLimit: 3,
 			retryDelay: 60,
 			retryBackoff: true,
-			expireInSeconds: 60 * 60, // 1 hour timeout for reports
+			expireInSeconds: 60 * 15, // 15 minute timeout
 		});
+		if (getDeployment().features.reportGeneration) {
+			await boss.createQueue("generate-report", {
+				retryLimit: 3,
+				retryDelay: 60,
+				retryBackoff: true,
+				expireInSeconds: 60 * 60, // 1 hour timeout for reports
+			});
+		}
 	}
 	await boss.createQueue("analyze-brand", {
 		retryLimit: 1,
@@ -58,32 +67,36 @@ async function main() {
 		retryBackoff: false,
 		expireInSeconds: 60 * 15, // 15 minute timeout for onboarding brand analysis
 	});
-	await boss.createQueue("schedule-maintenance", {
-		retryLimit: 3,
-		retryDelay: 300, // 5 minutes between retries
-		retryBackoff: true,
-		expireInSeconds: 60 * 30, // 30 minute timeout
-	});
-	if (process.env.DEPLOYMENT_MODE === "whitelabel") {
-		await boss.createQueue("sync-auth0-memberships", {
+	if (scope === "full") {
+		await boss.createQueue("schedule-maintenance", {
 			retryLimit: 3,
-			retryDelay: 60,
+			retryDelay: 300, // 5 minutes between retries
 			retryBackoff: true,
-			expireInSeconds: 60 * 10,
+			expireInSeconds: 60 * 30, // 30 minute timeout
 		});
+		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
+			await boss.createQueue("sync-auth0-memberships", {
+				retryLimit: 3,
+				retryDelay: 60,
+				retryBackoff: true,
+				expireInSeconds: 60 * 10,
+			});
+		}
 	}
 	console.log("Queues created");
 
-	await boss.schedule("schedule-maintenance", "*/5 * * * *", { source: "scheduled" }, { tz: "UTC" });
-	console.log("Scheduled maintenance job (every 5 minutes)");
+	if (scope === "full") {
+		await boss.schedule("schedule-maintenance", "*/5 * * * *", { source: "scheduled" }, { tz: "UTC" });
+		console.log("Scheduled maintenance job (every 5 minutes)");
 
-	if (process.env.DEPLOYMENT_MODE === "whitelabel") {
-		await boss.schedule("sync-auth0-memberships", "*/15 * * * *", { source: "scheduled" }, { tz: "UTC" });
-		console.log("Scheduled Auth0 membership sync (every 15 minutes)");
+		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
+			await boss.schedule("sync-auth0-memberships", "*/15 * * * *", { source: "scheduled" }, { tz: "UTC" });
+			console.log("Scheduled Auth0 membership sync (every 15 minutes)");
+		}
 	}
 
 	// Register job handlers
-	await registerHandlers(boss);
+	await registerHandlers(boss, scope);
 	console.log("All handlers registered, worker is ready");
 }
 

@@ -51,6 +51,12 @@ if [[ "$WORKER_ENABLED" != true ]] && [[ "$WORKER_ENABLED" != false ]]; then
   exit 1
 fi
 
+WORKER_QUEUE_SCOPE="${WORKER_QUEUE_SCOPE:-full}"
+if [[ "$WORKER_QUEUE_SCOPE" != full ]] && [[ "$WORKER_QUEUE_SCOPE" != analysis-only ]]; then
+  echo "WORKER_QUEUE_SCOPE must be full or analysis-only." >&2
+  exit 1
+fi
+
 required_vars=(
   POSTGRES_USER
   POSTGRES_PASSWORD
