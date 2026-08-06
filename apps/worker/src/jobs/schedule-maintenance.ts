@@ -112,6 +112,7 @@ async function runMaintenanceCheck(): Promise<void> {
 		defaultDelayHours,
 		lastRunsMap,
 		modelNames,
+		pendingJobMap,
 		now,
 	});
 
@@ -120,6 +121,13 @@ async function runMaintenanceCheck(): Promise<void> {
 
 		// Skip if there's an active or retry job (already being worked on)
 		if (pendingJob && (pendingJob.state === "active" || pendingJob.state === "retry")) {
+			continue;
+		}
+
+		// A future start_after is an explicit schedule, not a stalled job. Respect it
+		// even when historical per-model data makes the prompt look overdue (for
+		// example after lowering a deployment's cadence or importing old data).
+		if (pendingJob?.state === "created" && pendingJob.startAfter.getTime() > now) {
 			continue;
 		}
 
@@ -235,12 +243,18 @@ function reportOverduePrompts(input: {
 	defaultDelayHours: number;
 	lastRunsMap: Record<string, Record<string, Date>>;
 	modelNames: string[];
+	pendingJobMap: Map<string, PendingJobInfo>;
 	now: number;
 }): void {
-	const { prompts: enabled, brandDelayHours, defaultDelayHours, lastRunsMap, modelNames, now } = input;
+	const { prompts: enabled, brandDelayHours, defaultDelayHours, lastRunsMap, modelNames, pendingJobMap, now } = input;
 
 	let overduePrompts = 0;
 	for (const prompt of enabled) {
+		const pendingJob = pendingJobMap.get(prompt.id);
+		if (pendingJob?.state === "created" && pendingJob.startAfter.getTime() > now) {
+			continue;
+		}
+
 		const runFrequencyMs = (brandDelayHours[prompt.brandId] ?? defaultDelayHours) * 60 * 60 * 1000;
 		const overdue = isPromptOverdue({
 			models: modelNames,
@@ -273,11 +287,12 @@ function reportOverduePrompts(input: {
 interface PendingJobInfo {
 	jobId: string;
 	state: "created" | "active" | "retry";
+	startAfter: Date;
 }
 
 async function getPendingJobMap(): Promise<Map<string, PendingJobInfo>> {
 	const result = await db.execute(sql`
-		SELECT id, data->>'promptId' as prompt_id, state
+		SELECT id, data->>'promptId' as prompt_id, state, start_after
 		FROM pgboss.job
 		WHERE name = 'process-prompt'
 		  AND state IN ('created', 'active', 'retry')
@@ -291,11 +306,12 @@ async function getPendingJobMap(): Promise<Map<string, PendingJobInfo>> {
 	`);
 
 	const map = new Map<string, PendingJobInfo>();
-	for (const row of result.rows as { id: string; prompt_id: string; state: string }[]) {
+	for (const row of result.rows as { id: string; prompt_id: string; state: string; start_after: Date }[]) {
 		if (row.prompt_id && !map.has(row.prompt_id)) {
 			map.set(row.prompt_id, {
 				jobId: row.id,
 				state: row.state as "created" | "active" | "retry",
+				startAfter: new Date(row.start_after),
 			});
 		}
 	}
