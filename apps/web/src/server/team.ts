@@ -12,7 +12,7 @@ import { db } from "@workspace/lib/db/db";
 import { invitation, member, user } from "@workspace/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
+import { requireAuthSession, requireOrgWriteAccess } from "@/lib/auth/helpers";
 import { auth } from "@/lib/auth/server";
 import { getDeployment } from "@/lib/config/server";
 
@@ -36,7 +36,7 @@ export const listTeamFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }): Promise<TeamData> => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireOrgWriteAccess(session.user.id, data.brandId);
 
 		const members = await db
 			.select({
@@ -75,7 +75,7 @@ export const inviteTeamMemberFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireOrgWriteAccess(session.user.id, data.brandId);
 
 		await auth.api.createInvitation({
 			body: { email: data.email, role: data.role, organizationId: data.brandId },
@@ -90,7 +90,7 @@ export const cancelInvitationFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireOrgWriteAccess(session.user.id, data.brandId);
 
 		await auth.api.cancelInvitation({
 			body: { invitationId: data.invitationId },
@@ -105,7 +105,7 @@ export const removeTeamMemberFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireOrgWriteAccess(session.user.id, data.brandId);
 
 		const [row] = await db
 			.select({ userId: member.userId })

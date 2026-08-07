@@ -35,6 +35,8 @@ import { type NavGroup, NavMain } from "@/components/nav-main";
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isAdmin?: boolean;
 	hasReportAccess?: boolean;
+	/** Whether this user may change the current brand's configuration. */
+	canManageBrand?: boolean;
 	/** When true, only show admin section (no brand-specific nav) */
 	adminOnly?: boolean;
 	/** Brand data from route loader — avoids a separate client-side fetch */
@@ -44,6 +46,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({
 	isAdmin = false,
 	hasReportAccess = false,
+	canManageBrand = true,
 	adminOnly = false,
 	brand,
 	...props
@@ -104,7 +107,7 @@ export function AppSidebar({
 		});
 
 		// Settings section - only show if onboarded
-		if (brand?.onboarded) {
+		if (brand?.onboarded && canManageBrand) {
 			groups.push({
 				label: "Settings",
 				items: [

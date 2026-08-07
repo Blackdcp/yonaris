@@ -7,6 +7,7 @@
  */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PromptsDisplay } from "@/components/prompts-display";
+import { useBrandAccess } from "@/hooks/use-brand-access";
 import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
 import { coercePromptOrder, DEFAULT_PROMPT_ORDER, type PromptOrder } from "@/lib/prompt-order";
 
@@ -33,13 +34,18 @@ export const Route = createFileRoute("/_authed/app/$brand/visibility")({
 
 function VisibilityPage() {
 	const { brand: brandId } = Route.useParams();
+	const { canManageBrand } = useBrandAccess();
 
 	const infoContent = (
 		<>
 			Track how different LLMs respond to prompts related to your brand, products, and{" "}
-			<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-				competitors
-			</Link>
+			{canManageBrand ? (
+				<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
+					competitors
+				</Link>
+			) : (
+				"competitors"
+			)}
 			.
 		</>
 	);
@@ -49,7 +55,7 @@ function VisibilityPage() {
 			pageTitle="Visibility"
 			pageDescription="See how LLMs are evaluating prompts related to your brand."
 			pageInfoContent={infoContent}
-			editLink={`/app/${brandId}/settings/prompts`}
+			editLink={canManageBrand ? `/app/${brandId}/settings/prompts` : undefined}
 		/>
 	);
 }

@@ -36,6 +36,18 @@ const DEMO_AUTH_WRITE_ALLOWLIST = new Set([
 	"/api/auth/sign-out/",
 ]);
 
+/** Organization reads that expose other users or pending invitation emails. */
+const SENSITIVE_ORG_READ_ENDPOINTS = new Set([
+	"/api/auth/organization/get-full-organization",
+	"/api/auth/organization/get-full-organization/",
+	"/api/auth/organization/list-members",
+	"/api/auth/organization/list-members/",
+	"/api/auth/organization/list-invitations",
+	"/api/auth/organization/list-invitations/",
+	"/api/auth/organization/list-team-members",
+	"/api/auth/organization/list-team-members/",
+]);
+
 export type DeploymentPolicyResult =
 	| { action: "allow" }
 	| { action: "block"; status: 401 | 403; error: string; message: string }
@@ -70,18 +82,20 @@ export function evaluateDeploymentPolicy(
 	const isServerFunctionRoute = pathname.startsWith("/_server");
 	const isAllowedAuthWrite = DEMO_AUTH_WRITE_ALLOWLIST.has(pathname);
 	const isOrgPluginMutation = pathname.startsWith("/api/auth/organization/") && isWriteMethod;
+	const isSensitiveOrgRead = SENSITIVE_ORG_READ_ENDPOINTS.has(pathname);
 
-	// 0. Better-auth org plugin mutations are blocked everywhere over HTTP.
+	// 0. Better-auth org plugin mutations and user-roster reads are blocked
+	// everywhere over HTTP.
 	// Orgs are created server-side only — via the provisioning module
 	// (local/demo/cloud create-brand) or Auth0 sync (whitelabel) — and cloud
-	// team invitations go through server functions that call auth.api
-	// in-process, so no mode needs these HTTP endpoints.
-	if (isOrgPluginMutation) {
+	// team operations go through scoped server functions that call auth.api
+	// in-process. The browser never needs raw member or invitation rosters.
+	if (isOrgPluginMutation || isSensitiveOrgRead) {
 		return {
 			action: "block",
 			status: 403,
 			error: "Forbidden",
-			message: "Organization mutations are not available via the API",
+			message: "This organization endpoint is not available via the API",
 		};
 	}
 
@@ -249,6 +263,22 @@ export function evaluateRequireAdmin(isAdmin: boolean): "allow" | "deny" {
  */
 export function evaluateRequireOrgAccess(hasAccess: boolean): "allow" | "deny" {
 	return hasAccess ? "allow" : "deny";
+}
+
+/**
+ * The application-level `viewer` role is reserved for client-facing,
+ * read-only access. Better Auth's built-in owner/admin/member roles keep their
+ * normal collaborative write permissions.
+ * Better Auth can serialize multiple custom roles as a comma-separated value,
+ * so evaluate every assigned role instead of comparing the raw string.
+ */
+export function evaluateOrgWriteAccess(role: string | null | undefined): "allow" | "deny" {
+	if (!role) return "deny";
+	const roles = role
+		.split(",")
+		.map((value) => value.trim())
+		.filter(Boolean);
+	return roles.some((value) => value === "owner" || value === "admin" || value === "member") ? "allow" : "deny";
 }
 
 /**

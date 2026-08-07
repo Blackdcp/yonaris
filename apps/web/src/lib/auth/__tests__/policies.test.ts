@@ -20,6 +20,7 @@ import {
 	evaluateBrandRouteGuard,
 	evaluateDeploymentPolicy,
 	evaluateOrgScope,
+	evaluateOrgWriteAccess,
 	evaluateReadOnly,
 	evaluateRequireAdmin,
 	evaluateRequireCanCreateBrands,
@@ -349,6 +350,16 @@ describe("evaluateDeploymentPolicy", () => {
 					expect(result).toMatchObject({ action: "block", status: 403 });
 				});
 
+				it.each([
+					"/api/auth/organization/get-full-organization",
+					"/api/auth/organization/list-members",
+					"/api/auth/organization/list-invitations",
+					"/api/auth/organization/list-team-members",
+				])("blocks sensitive organization read %s", (pathname) => {
+					const result = evaluateDeploymentPolicy(features, req("GET", pathname));
+					expect(result).toMatchObject({ action: "block", status: 403 });
+				});
+
 				it("allows GET /api/auth/organization/list (read endpoints unchanged)", () => {
 					const result = evaluateDeploymentPolicy(features, req("GET", "/api/auth/organization/list"));
 					expect(result.action).toBe("allow");
@@ -412,6 +423,24 @@ describe("evaluateRequireOrgAccess", () => {
 
 	it("allows when user has org access", () => {
 		expect(evaluateRequireOrgAccess(true)).toBe("allow");
+	});
+});
+
+describe("evaluateOrgWriteAccess", () => {
+	it("keeps client viewers read-only", () => {
+		expect(evaluateOrgWriteAccess("viewer")).toBe("deny");
+	});
+
+	it("allows built-in collaborators to manage a brand", () => {
+		expect(evaluateOrgWriteAccess("admin")).toBe("allow");
+		expect(evaluateOrgWriteAccess("owner")).toBe("allow");
+		expect(evaluateOrgWriteAccess("member")).toBe("allow");
+	});
+
+	it("supports Better Auth multi-role values and fails closed", () => {
+		expect(evaluateOrgWriteAccess("viewer,admin")).toBe("allow");
+		expect(evaluateOrgWriteAccess(null)).toBe("deny");
+		expect(evaluateOrgWriteAccess("unknown")).toBe("deny");
 	});
 });
 

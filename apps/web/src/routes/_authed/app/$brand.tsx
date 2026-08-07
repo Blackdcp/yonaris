@@ -20,6 +20,7 @@ import { SiteHeader } from "@/components/site-header";
 import { validateBrandFilterSearch } from "@/hooks/use-list-filters";
 import {
 	checkOrgAccess,
+	checkOrgWriteAccess,
 	hasReportAccess,
 	isAdmin,
 	listUserOrganizations,
@@ -39,6 +40,7 @@ const getBrandData = createServerFn({ method: "GET" })
 			canonicalBrandId: string;
 			isAdmin: boolean;
 			hasReportAccess: boolean;
+			canManageBrand: boolean;
 			hasAccess: boolean;
 		}> => {
 			const session = await requireAuthSession();
@@ -53,6 +55,7 @@ const getBrandData = createServerFn({ method: "GET" })
 					canonicalBrandId,
 					isAdmin: false,
 					hasReportAccess: false,
+					canManageBrand: false,
 					hasAccess: false,
 				};
 			}
@@ -64,6 +67,7 @@ const getBrandData = createServerFn({ method: "GET" })
 
 			const admin = isAdmin(session);
 			const reportAccess = hasReportAccess(session);
+			const canManageBrand = await checkOrgWriteAccess(session.user.id, canonicalBrandId);
 
 			// Get brand data from DB
 			const brand = await db.query.brands.findFirst({
@@ -77,6 +81,7 @@ const getBrandData = createServerFn({ method: "GET" })
 					canonicalBrandId,
 					isAdmin: admin,
 					hasReportAccess: reportAccess,
+					canManageBrand,
 					hasAccess: true,
 				};
 			}
@@ -99,6 +104,7 @@ const getBrandData = createServerFn({ method: "GET" })
 				canonicalBrandId,
 				isAdmin: admin,
 				hasReportAccess: reportAccess,
+				canManageBrand,
 				hasAccess: true,
 			};
 		},
@@ -155,6 +161,9 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 		if (!result.hasAccess) {
 			throw notFound();
 		}
+		if (!result.brand && !result.canManageBrand) {
+			throw notFound();
+		}
 		if (result.canonicalBrandId !== params.brand) {
 			throw redirect({ to: "/app/$brand", params: { brand: result.canonicalBrandId }, replace: true });
 		}
@@ -164,6 +173,7 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 			brandName: result.brandName,
 			isAdmin: result.isAdmin,
 			hasReportAccess: result.hasReportAccess,
+			canManageBrand: result.canManageBrand,
 			needsOnboarding: result.hasAccess && !result.brand,
 		};
 	},
@@ -187,7 +197,7 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 });
 
 function BrandLayout() {
-	const { brand, brandName, isAdmin, hasReportAccess, needsOnboarding } = Route.useLoaderData();
+	const { brand, brandName, isAdmin, hasReportAccess, canManageBrand, needsOnboarding } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
 
 	// Brand exists in auth but not in DB - show onboarding
@@ -197,7 +207,12 @@ function BrandLayout() {
 
 	return (
 		<SidebarProvider>
-			<AppSidebar isAdmin={isAdmin} hasReportAccess={hasReportAccess} brand={brand} />
+			<AppSidebar
+				isAdmin={isAdmin}
+				hasReportAccess={hasReportAccess}
+				canManageBrand={canManageBrand}
+				brand={brand}
+			/>
 			<SidebarInset className="md:border md:border-border/60 md:rounded-xl overflow-hidden">
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">

@@ -32,6 +32,7 @@ interface CitationsDisplayProps {
 	maxDomains?: number;
 	maxUrls?: number;
 	days?: number;
+	canManageBrand?: boolean;
 	onCompetitorAdded?: () => void;
 }
 
@@ -47,6 +48,7 @@ export function CitationsDisplay({
 	maxDomains = 10,
 	maxUrls = 20,
 	days = 7,
+	canManageBrand = true,
 	onCompetitorAdded,
 }: CitationsDisplayProps) {
 	// Match the last point of the Citation Categories chart exactly (smoothed daily
@@ -157,6 +159,7 @@ export function CitationsDisplay({
 					brandId={brandId}
 					brandName={brandName}
 					competitors={citationData.competitors}
+					canManageBrand={canManageBrand}
 					onCompetitorAdded={onCompetitorAdded}
 				/>
 			)}
@@ -172,6 +175,7 @@ export function CitationsDisplay({
 					brandName={brandName}
 					brandShare={brandShare}
 					brandIsCited={citationData.categoryCounts.brand > 0}
+					canManageBrand={canManageBrand}
 				/>
 			)}
 

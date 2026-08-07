@@ -11,6 +11,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { useCitations } from "@/hooks/use-citations";
 import { useBrand, brandKeys } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
+import { useBrandAccess } from "@/hooks/use-brand-access";
 import { dashboardKeys } from "@/hooks/use-dashboard-summary";
 import { CitationsDisplay } from "@/components/citations-display";
 import { FilteredListShell } from "@/components/filtered-list-shell";
@@ -34,6 +35,7 @@ export const Route = createFileRoute("/_authed/app/$brand/citations")({
 
 function CitationsPage() {
 	const { brand: brandId } = Route.useParams();
+	const { canManageBrand } = useBrandAccess();
 	const queryClient = useQueryClient();
 
 	const filters = useListFilters();
@@ -63,9 +65,13 @@ function CitationsPage() {
 			</p>
 			<p>
 				<strong>Competitor</strong> domains are only those you&apos;ve added to your{" "}
-				<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-					tracked competitors list
-				</Link>
+				{canManageBrand ? (
+					<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
+						tracked competitors list
+					</Link>
+				) : (
+					"tracked competitors list"
+				)}
 				. Other domains appear under their detected category (Google, Social Media, Institutional, or Other).
 			</p>
 		</>
@@ -131,6 +137,7 @@ function CitationsPage() {
 						maxDomains={10}
 						maxUrls={20}
 						days={days}
+						canManageBrand={canManageBrand}
 						onCompetitorAdded={() => {
 							revalidateCitations();
 							queryClient.invalidateQueries({ queryKey: dashboardKeys.all });

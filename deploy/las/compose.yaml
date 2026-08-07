@@ -48,6 +48,23 @@ services:
     cpus: 1.0
     logging: *default-logging
 
+  account-ops:
+    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-worker:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    env_file:
+      - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
+        required: true
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - operations
+    restart: "no"
+    mem_limit: 512m
+    cpus: 0.5
+    logging: *default-logging
+
   web:
     image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-web:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
     env_file:

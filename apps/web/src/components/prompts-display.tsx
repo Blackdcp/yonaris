@@ -25,7 +25,7 @@ interface PromptsDisplayProps {
 	pageTitle: string;
 	pageDescription: string;
 	pageInfoContent?: React.ReactNode;
-	editLink: string;
+	editLink?: string;
 }
 
 /** Host component: renders the page shell (title, sticky bar, content)
@@ -47,7 +47,7 @@ export function PromptsDisplay({ pageTitle, pageDescription, pageInfoContent, ed
  *  components still hold their own subscriptions to whichever URL keys
  *  they need, so a click on "Lookback" only invalidates the data users
  *  and not `FilterBar` itself. */
-function PromptsContent({ brandId, editLink }: { brandId: string | undefined; editLink: string }) {
+function PromptsContent({ brandId, editLink }: { brandId: string | undefined; editLink?: string }) {
 	const { brand } = useBrand(brandId);
 	const filters = useListFilters();
 	const { model, lookback, tags, search } = filters;
@@ -124,12 +124,14 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 					<div className="text-center py-8 text-muted-foreground">
 						<Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
 						<p className="mb-4">No prompts yet.</p>
-						<Button asChild size="sm" className="h-7 flex cursor-pointer">
-							<Link to={editLink}>
-								<IconEditCircle />
-								<span>Edit</span>
-							</Link>
-						</Button>
+						{editLink && (
+							<Button asChild size="sm" className="h-7 flex cursor-pointer">
+								<Link to={editLink}>
+									<IconEditCircle />
+									<span>Edit</span>
+								</Link>
+							</Button>
+						)}
 					</div>
 				</div>
 			}

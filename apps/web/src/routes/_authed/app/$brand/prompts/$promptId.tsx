@@ -28,6 +28,7 @@ import { getDaysFromLookback } from "@/lib/chart-utils";
 import { getModelDisplayName } from "@/lib/utils";
 import { promptKeywords } from "@/lib/fanout-analysis";
 import { useBrand } from "@/hooks/use-brands";
+import { useBrandAccess } from "@/hooks/use-brand-access";
 import { usePromptStats } from "@/hooks/use-prompt-stats";
 import { usePromptRunsOnly } from "@/hooks/use-prompt-runs-only";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
@@ -80,6 +81,7 @@ export const Route = createFileRoute("/_authed/app/$brand/prompts/$promptId")({
 
 function PromptHistoryPage() {
 	const { brand: brandId, promptId } = Route.useParams();
+	const { canManageBrand } = useBrandAccess();
 
 	const lookback = useLookbackPeriod();
 	const days = getDaysFromLookback(lookback);
@@ -266,15 +268,18 @@ function PromptHistoryPage() {
 							</div>
 						)}
 
-						<span className="text-border">|</span>
-
-						<Link
-							to="/app/$brand/settings/prompts"
-							params={{ brand: brandId }}
-							className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 decoration-muted-foreground/40 hover:decoration-foreground/40"
-						>
-							Edit prompts
-						</Link>
+						{canManageBrand && (
+							<>
+								<span className="text-border">|</span>
+								<Link
+									to="/app/$brand/settings/prompts"
+									params={{ brand: brandId }}
+									className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 decoration-muted-foreground/40 hover:decoration-foreground/40"
+								>
+									Edit prompts
+								</Link>
+							</>
+						)}
 					</div>
 				)}
 			</div>
@@ -315,6 +320,7 @@ function PromptHistoryPage() {
 						totalRuns={aggregations?.totalRuns || 0}
 						brandName={brand?.name}
 						brandId={brandId}
+						canManageBrand={canManageBrand}
 					/>
 				)}
 
@@ -333,6 +339,7 @@ function PromptHistoryPage() {
 						citationStats={citationStats}
 						brandId={brandId}
 						brandName={brand?.name}
+						canManageBrand={canManageBrand}
 					/>
 				)}
 
@@ -378,12 +385,14 @@ function MentionsTab({
 	totalRuns,
 	brandName,
 	brandId,
+	canManageBrand,
 }: {
 	isLoading: boolean;
 	mentionStats: { name: string; count: number }[];
 	totalRuns: number;
 	brandName?: string;
 	brandId: string;
+	canManageBrand: boolean;
 }) {
 	if (isLoading) return <TabLoadingSkeleton lines={5} />;
 
@@ -410,13 +419,17 @@ function MentionsTab({
 						</TooltipTrigger>
 						<TooltipContent className="max-w-xs text-sm font-normal">
 							<p>
-								Only competitors from your{" "}
-								<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-									tracked competitors list
-								</Link>{" "}
+								Only competitors from the{" "}
+								{canManageBrand ? (
+									<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
+										tracked competitors list
+									</Link>
+								) : (
+									"tracked competitors list"
+								)}{" "}
 								are shown here.
 							</p>
-							<p className="mt-2">If a competitor isn&apos;t showing up, add them to your list.</p>
+							{canManageBrand && <p className="mt-2">If a competitor isn&apos;t showing up, add it to your list.</p>}
 						</TooltipContent>
 					</Tooltip>
 				</CardTitle>
@@ -529,11 +542,13 @@ function CitationsTab({
 	citationStats,
 	brandId,
 	brandName,
+	canManageBrand,
 }: {
 	isLoading: boolean;
 	citationStats: CitationData | undefined;
 	brandId: string;
 	brandName?: string;
+	canManageBrand: boolean;
 }) {
 	if (isLoading) return <TabLoadingSkeleton lines={6} />;
 
@@ -553,6 +568,7 @@ function CitationsTab({
 			showStats={true}
 			maxDomains={10}
 			maxUrls={50}
+			canManageBrand={canManageBrand}
 		/>
 	);
 }

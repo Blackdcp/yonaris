@@ -22,7 +22,7 @@ import { brandOpportunities, brands, competitors } from "@workspace/lib/db/schem
 import { runStructuredCompletionPrompt } from "@workspace/lib/onboarding";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
+import { checkOrgWriteAccess, requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { extractDomain } from "@/lib/domain-categories";
 import { categorizeDomain } from "@/lib/domain-categories.server";
 import {
@@ -475,6 +475,7 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
+		const canManageBrand = await checkOrgWriteAccess(session.user.id, data.brandId);
 
 		// Serve the most recent stored report while it's fresh. Every generation is
 		// kept (append-only); we regenerate only when the latest is stale.
@@ -488,6 +489,13 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 		const isFresh = latest && Date.now() - new Date(latest.createdAt).getTime() < REFRESH_AFTER_DAYS * 86_400_000;
 		if (latest && isFresh) {
 			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
+		}
+		// Client viewers may inspect the latest persisted recommendation set, but
+		// merely opening a page must never trigger a paid model call or a write.
+		if (!canManageBrand) {
+			if (latest)
+				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
+			return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
 		}
 
 		const digest = await buildDigest(data.brandId, data.timezone);

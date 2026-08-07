@@ -11,7 +11,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { syncAuth0UserById } from "@workspace/whitelabel/auth-hooks";
 import FullPageCard from "@/components/full-page-card";
-import { listUserOrganizations, requireAuthSession } from "@/lib/auth/helpers";
+import { checkAnyOrgWriteAccess, listUserOrganizations, requireAuthSession } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
 
 const getOrganizations = createServerFn({ method: "GET" }).handler(
@@ -33,10 +33,13 @@ const getOrganizations = createServerFn({ method: "GET" }).handler(
 		}
 
 		const organizations = await listUserOrganizations(session.user.id);
+		const canCreateBrands =
+			deployment.features.canCreateBrands &&
+			(deployment.mode !== "local" || (await checkAnyOrgWriteAccess(session.user.id)));
 		return {
 			organizations,
 			supportsMultiOrg: deployment.features.supportsMultiOrg,
-			canCreateBrands: deployment.features.canCreateBrands,
+			canCreateBrands,
 		};
 	},
 );
@@ -60,6 +63,9 @@ export const Route = createFileRoute("/_authed/app/")({
 
 		// Single-org mode: redirect to the user's one org (created on signup).
 		if (!result.supportsMultiOrg && result.organizations.length > 0) {
+			throw redirect({ to: "/app/$brand", params: { brand: result.organizations[0].id } });
+		}
+		if (result.organizations.length === 1 && !result.canCreateBrands) {
 			throw redirect({ to: "/app/$brand", params: { brand: result.organizations[0].id } });
 		}
 

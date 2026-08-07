@@ -26,6 +26,7 @@ import { YONARIS_CHART_FOCUS, YONARIS_CHART_PRIMARY } from "@/brand/chart-theme"
 import PromptWizard from "@/components/prompt-wizard";
 import { TrendChart } from "@/components/trend-chart";
 import { useBrand } from "@/hooks/use-brands";
+import { useBrandAccess } from "@/hooks/use-brand-access";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useShareOfVoice } from "@/hooks/use-share-of-voice";
 import { setPersonProperties } from "@/lib/posthog";
@@ -161,6 +162,7 @@ function HeroStat({ value, loading, label }: { value: number | null; loading: bo
 
 function DashboardPage() {
 	const { brand: brandId } = Route.useParams();
+	const { canManageBrand } = useBrandAccess();
 	const { brand, isLoading: isLoadingBrand } = useBrand();
 	const { dashboardSummary, isLoading: isLoadingSummary } = useDashboardSummary(brand?.id, "1m");
 	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, { lookback: "1m" });
@@ -350,12 +352,14 @@ function DashboardPage() {
 							<span className="font-semibold">{totalPrompts.toLocaleString()}</span>
 						</div>
 					)}
-					<Button asChild variant="outline" className="w-full">
-						<Link to="/app/$brand/settings/prompts" params={{ brand: brandId }}>
-							{hasEnabledPrompts ? "View Your Prompts" : hasPrompts ? "Edit Prompts" : "Set Up Prompts"}{" "}
-							<IconArrowRight className="h-4 w-4 ml-1" />
-						</Link>
-					</Button>
+					{canManageBrand && (
+						<Button asChild variant="outline" className="w-full">
+							<Link to="/app/$brand/settings/prompts" params={{ brand: brandId }}>
+								{hasEnabledPrompts ? "View Your Prompts" : hasPrompts ? "Edit Prompts" : "Set Up Prompts"}{" "}
+								<IconArrowRight className="h-4 w-4 ml-1" />
+							</Link>
+						</Button>
+					)}
 				</div>
 				{hasEnabledPrompts && (
 					<p className="text-xs text-muted-foreground mt-6">

@@ -25,6 +25,7 @@ export function TopUrlsCard({
 	brandName,
 	brandShare,
 	brandIsCited,
+	canManageBrand = true,
 }: {
 	urls: CitationData["specificUrls"];
 	sourceTabs: { key: string; label: string }[];
@@ -34,6 +35,7 @@ export function TopUrlsCard({
 	brandName?: string;
 	brandShare: number;
 	brandIsCited: boolean;
+	canManageBrand?: boolean;
 }) {
 	const [urlSearch, setUrlSearch] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -77,7 +79,7 @@ export function TopUrlsCard({
 									</p>
 									<p>
 										<strong>Competitor</strong> domains are only those in your{" "}
-										{brandId ? (
+										{brandId && canManageBrand ? (
 											<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
 												tracked competitors list
 											</Link>

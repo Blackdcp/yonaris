@@ -17,6 +17,7 @@ export function TopDomainsCard({
 	brandId,
 	brandName,
 	competitors,
+	canManageBrand = true,
 	onCompetitorAdded,
 }: {
 	domains: CitationData["domainDistribution"];
@@ -25,6 +26,7 @@ export function TopDomainsCard({
 	brandId?: string;
 	brandName?: string;
 	competitors?: CitationData["competitors"];
+	canManageBrand?: boolean;
 	onCompetitorAdded?: () => void;
 }) {
 	const [domainSearch, setDomainSearch] = useState("");
@@ -102,7 +104,7 @@ export function TopDomainsCard({
 								count: domain.count,
 								category: domain.category || "other",
 								action:
-									domain.category === "other" && brandId && competitors ? (
+								domain.category === "other" && brandId && competitors && canManageBrand ? (
 										<TrackDomainPopover
 											domain={domain.domain}
 											brandId={brandId}

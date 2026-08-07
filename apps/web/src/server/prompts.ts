@@ -4,7 +4,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
+import { requireAuthSession, requireOrgAccess, requireOrgWriteAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
 import { prompts, promptRuns, brands, competitors, SYSTEM_TAGS } from "@workspace/lib/db/schema";
 import { eq, and, desc, gte, count, sql } from "drizzle-orm";
@@ -552,7 +552,7 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireOrgWriteAccess(session.user.id, data.brandId);
 
 		const brand = await db.query.brands.findFirst({
 			where: eq(brands.id, data.brandId),
@@ -813,6 +813,12 @@ export const getPromptWebQueryFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
+
+		const prompt = await db.query.prompts.findFirst({
+			columns: { id: true },
+			where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
+		});
+		if (!prompt) return { webQuery: null, modelWebQueries: {} };
 
 		const timezone = data.timezone || "UTC";
 		const now = new Date();
