@@ -1,7 +1,14 @@
 import { formatScrapeTarget, type ModelConfig } from "@workspace/config/scrape-targets";
 
 export type SurfaceKind = "consumer_web" | "search_surface" | "official_api" | "aggregated_api" | "llm_response";
-export type CaptureMode = "vendor_browser" | "vendor_api" | "official_api" | "aggregated_api" | "test";
+export type CaptureMode =
+	| "vendor_browser"
+	| "vendor_api"
+	| "official_api"
+	| "aggregated_api"
+	| "manual_import"
+	| "assisted_browser"
+	| "test";
 
 export interface ObservationTargetDescriptor {
 	surfaceTargetKey: string;
