@@ -1,7 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
-import { brands, promptRuns, prompts } from "@workspace/lib/db/schema";
+import { brands, observationAttempts, promptRuns, prompts } from "@workspace/lib/db/schema";
 import { isPromptOverdue } from "@workspace/lib/overdue";
 import { parseScrapeTargets } from "@workspace/lib/providers";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -99,6 +99,24 @@ async function runMaintenanceCheck(): Promise<void> {
 		lastRunsMap[run.promptId][run.model] = run.lastRunAt;
 	}
 
+	// Scheduling cadence follows the latest completed planned observation,
+	// including failures. Health alerts below still use successful prompt runs,
+	// so a broken Provider does not look healthy, but it also cannot trigger a
+	// five-minute retry storm after pg-boss exhausts its own retries.
+	const lastTerminalAttempts = await db
+		.select({
+			promptId: observationAttempts.promptId,
+			lastCompletedAt: sql<Date>`MAX(${observationAttempts.completedAt})`.as("last_completed_at"),
+		})
+		.from(observationAttempts)
+		.where(inArray(observationAttempts.status, ["succeeded", "failed", "cancelled"]))
+		.groupBy(observationAttempts.promptId);
+	const lastTerminalAttemptMap = new Map(
+		lastTerminalAttempts
+			.filter((row): row is { promptId: string; lastCompletedAt: Date } => row.lastCompletedAt !== null)
+			.map((row) => [row.promptId, new Date(row.lastCompletedAt)]),
+	);
+
 	// Get all pending jobs with their state info
 	const pendingJobMap = await getPendingJobMap();
 
@@ -134,24 +152,21 @@ async function runMaintenanceCheck(): Promise<void> {
 		const cadenceHours = brandDelayMap[prompt.brandId] ?? defaultDelayHours;
 		const runFrequencyMs = cadenceHours * 60 * 60 * 1000;
 		const lastRuns = lastRunsMap[prompt.id] || {};
+		const successfulRunTimes = Object.values(lastRuns).map((date) => new Date(date).getTime());
+		const lastTerminalAttemptMs = lastTerminalAttemptMap.get(prompt.id)?.getTime();
+		const latestActivityMs = Math.max(
+			prompt.createdAt.getTime(),
+			...(successfulRunTimes.length > 0 ? successfulRunTimes : [0]),
+			lastTerminalAttemptMs ?? 0,
+		);
 
-		const isOverdue = isPromptOverdue({
-			models: modelNames,
-			lastRunByModel: lastRuns,
-			promptCreatedAt: prompt.createdAt,
-			runFrequencyMs,
-			now,
-		});
-
-		if (!isOverdue) continue;
+		if (now - latestActivityMs < runFrequencyMs) continue;
 
 		if (pendingJob && pendingJob.state === "created") {
 			// Throttle: if the prompt ran within the window it isn't really stalled,
 			// so don't drag its next job forward again. A never-recording target
 			// would otherwise keep it perpetually "overdue" and re-fire it every tick.
-			const lastRunTimes = Object.values(lastRuns).map((d) => new Date(d).getTime());
-			const mostRecentRunMs = lastRunTimes.length > 0 ? Math.max(...lastRunTimes) : null;
-			if (mostRecentRunMs !== null && now - mostRecentRunMs < Math.min(runFrequencyMs, EXPEDITE_MIN_INTERVAL_MS)) {
+			if (now - latestActivityMs < Math.min(runFrequencyMs, EXPEDITE_MIN_INTERVAL_MS)) {
 				continue;
 			}
 			// There's a future job scheduled - expedite it to run now

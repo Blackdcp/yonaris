@@ -10,6 +10,7 @@
 
 import { MAX_COMPETITORS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
+import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
 import { ensureOrganization } from "@workspace/lib/db/provisioning";
 import { brands, competitors, prompts } from "@workspace/lib/db/schema";
 import { computeSystemTags, sanitizeUserTags } from "@workspace/lib/tag-utils";
@@ -255,6 +256,7 @@ async function insertPrompts(args: {
 	dedupeAgainstExisting: boolean;
 }): Promise<number> {
 	if (args.source.length === 0) return 0;
+	const scopeId = await ensureLegacyMeasurementScope(args.brandId);
 
 	const seen = new Set<string>();
 	if (args.dedupeAgainstExisting) {
@@ -266,6 +268,7 @@ async function insertPrompts(args: {
 
 	const rows: Array<{
 		brandId: string;
+		scopeId: string;
 		value: string;
 		enabled: boolean;
 		tags: string[];
@@ -279,6 +282,7 @@ async function insertPrompts(args: {
 		seen.add(key);
 		rows.push({
 			brandId: args.brandId,
+			scopeId,
 			value,
 			enabled: p.enabled,
 			tags: p.tags,
@@ -324,6 +328,7 @@ export async function createBrand(input: CreateBrandInput): Promise<BrandResult>
 		.onConflictDoNothing()
 		.returning({ id: brands.id });
 	if (!inserted) throw new BrandConflictError(input.id);
+	await ensureLegacyMeasurementScope(input.id);
 
 	await insertCompetitors({
 		brandId: input.id,

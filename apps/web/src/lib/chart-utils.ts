@@ -1,6 +1,6 @@
-import type { PerPromptVisibilityPoint, PerPromptDailyCitationStats } from "@/lib/postgres-read";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
-import { type CitationCategory, CITATION_CATEGORIES } from "@/lib/domain-categories";
+import { CITATION_CATEGORIES, type CitationCategory } from "@/lib/domain-categories";
+import type { PerPromptDailyCitationStats, PerPromptVisibilityPoint } from "@/lib/postgres-read";
 
 export type LookbackPeriod = "1w" | "1m" | "3m" | "6m" | "1y" | "all";
 
@@ -276,13 +276,15 @@ export interface ChartDataPoint {
 	[key: string]: number | string | boolean | null; // Dynamic keys for brand/competitor IDs and _extended_ flags
 }
 
-import type { PromptRun, Brand, Competitor } from "@workspace/lib/db/schema";
+import type { Brand, Competitor, PromptRun } from "@workspace/lib/db/schema";
+
+type VisibilityPromptRun = Pick<PromptRun, "createdAt" | "brandMentioned" | "competitorsMentioned">;
 
 /**
  * Calculate visibility percentages for brand vs competitors from prompt runs
  */
 export function calculateVisibilityPercentages(
-	promptRuns: PromptRun[],
+	promptRuns: VisibilityPromptRun[],
 	brand: Brand,
 	competitors: Competitor[],
 	lookback: LookbackPeriod,
@@ -340,7 +342,7 @@ export function calculateVisibilityPercentages(
 			acc[dateKey].push(run);
 			return acc;
 		},
-		{} as Record<string, PromptRun[]>,
+		{} as Record<string, VisibilityPromptRun[]>,
 	);
 
 	// Calculate visibility percentages for each date in the UTC range

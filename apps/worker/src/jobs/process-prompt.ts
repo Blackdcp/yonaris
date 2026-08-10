@@ -1,15 +1,9 @@
 import * as Sentry from "@sentry/node";
 import { getDefaultDelayHours, getRunsPerPrompt } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
-import {
-	type Brand,
-	brands,
-	type Competitor,
-	citations,
-	competitors,
-	promptRuns,
-	prompts,
-} from "@workspace/lib/db/schema";
+import { resolvePromptMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { type Brand, brands, type Competitor, competitors, prompts } from "@workspace/lib/db/schema";
+import { assertObservationRouteSupportsScope, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import {
 	getProvider,
 	type ModelConfig,
@@ -17,10 +11,10 @@ import {
 	parseScrapeTargets,
 	selectTargetsForBrand,
 } from "@workspace/lib/providers";
-import type { Citation } from "@workspace/lib/text-extraction";
 import { eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
+import { claimObservationAttempt, markObservationFailed, persistSuccessfulObservation } from "../observations";
 import { trackWorkerEvent } from "../telemetry";
 
 export interface ProcessPromptData {
@@ -150,86 +144,54 @@ function analyzeMentions(
 	return { brandMentioned, competitorsMentioned };
 }
 
-async function savePromptRun(
-	promptId: string,
-	brandId: string,
-	model: string,
-	provider: string | null,
-	version: string,
-	webSearchEnabled: boolean,
-	rawOutput: unknown,
-	webQueries: string[],
-	brandMentioned: boolean,
-	competitorsMentioned: string[],
-): Promise<{ id: string; createdAt: Date }> {
-	const [result] = await db
-		.insert(promptRuns)
-		.values({
-			promptId,
-			brandId,
-			model,
-			provider,
-			version,
-			webSearchEnabled,
-			rawOutput,
-			webQueries,
-			brandMentioned,
-			competitorsMentioned,
-		})
-		.returning({ id: promptRuns.id, createdAt: promptRuns.createdAt });
-
-	return result;
-}
-
-async function saveCitations(
-	promptRunId: string,
-	promptId: string,
-	brandId: string,
-	model: string,
-	extracted: Citation[],
-	createdAt: Date,
-): Promise<void> {
-	if (extracted.length === 0) return;
-
-	await db.insert(citations).values(
-		extracted.map((c) => ({
-			promptRunId,
-			promptId,
-			brandId,
-			model,
-			url: c.url,
-			domain: c.domain,
-			title: c.title || null,
-			citationIndex: c.citationIndex,
-			createdAt,
-		})),
-	);
-}
-
 async function runModelIteration({
+	sourceJobId,
 	promptId,
 	promptValue,
 	brand,
+	scope,
 	competitorsList,
 	config,
 	providerImpl,
 	runIndex,
 }: {
+	sourceJobId: string;
 	promptId: string;
 	promptValue: string;
 	brand: Brand;
+	scope: Awaited<ReturnType<typeof resolvePromptMeasurementScope>>;
 	competitorsList: Competitor[];
 	config: ModelConfig;
 	providerImpl: Provider;
 	runIndex: number;
 }): Promise<void> {
 	const logPrefix = `[${config.model}_${runIndex}]`;
+	const target = resolveObservationTarget(config);
+	const attempt = await claimObservationAttempt({
+		sourceJobId,
+		promptId,
+		promptText: promptValue,
+		brandId: brand.id,
+		scope,
+		target,
+		config,
+		sampleIndex: runIndex,
+	});
+	if (!attempt.shouldExecute) {
+		console.log(`${logPrefix} Observation already completed; skipping duplicate execution`);
+		return;
+	}
 
+	let failureStage: "configuration" | "provider" | "persistence" = "configuration";
 	try {
+		assertObservationRouteSupportsScope(target, scope);
+		failureStage = "provider";
 		const result = await providerImpl.run(config.model, promptValue, {
 			webSearch: config.webSearch,
 			version: config.version,
 		});
+		const observedAt = new Date();
+		failureStage = "persistence";
 
 		// `webQueries` is stored exactly as the provider reported it — engines do
 		// sometimes genuinely search the prompt verbatim, and that's real data. The
@@ -245,29 +207,50 @@ async function runModelIteration({
 
 		const recordedVersion = modelVersion ?? config.version ?? config.provider;
 
-		const { id: promptRunId, createdAt } = await savePromptRun(
+		const { id: promptRunId } = await persistSuccessfulObservation({
+			attemptId: attempt.id,
+			startedAt: attempt.startedAt,
+			observedAt,
 			promptId,
-			brand.id,
-			config.model,
-			config.provider,
+			brand,
+			scope,
+			target,
+			config,
 			recordedVersion,
-			config.webSearch,
+			answerText: safeTextContent,
 			rawOutput,
 			webQueries,
 			brandMentioned,
 			competitorsMentioned,
-		);
+			extractedCitations,
+		});
 		console.log(`${logPrefix} Saved prompt run ${promptRunId}`);
-
-		await saveCitations(promptRunId, promptId, brand.id, config.model, extractedCitations, createdAt);
 	} catch (error) {
+		try {
+			await markObservationFailed({
+				attemptId: attempt.id,
+				startedAt: attempt.startedAt,
+				error,
+				stage: failureStage,
+			});
+		} catch (attemptError) {
+			Sentry.withScope((scope) => {
+				scope.setTag("queue", "process-prompt");
+				scope.setTag("failure_stage", "attempt-persistence");
+				scope.setContext("run", { promptId, brandId: brand.id, runIndex, attemptId: attempt.id });
+				Sentry.captureException(attemptError);
+			});
+		}
 		// A single run's failure doesn't fail the job (only an all-runs failure
 		// does), so report it here to keep per-provider failure rates visible.
 		Sentry.withScope((scope) => {
 			scope.setTag("queue", "process-prompt");
 			scope.setTag("provider", config.provider);
 			scope.setTag("model", config.model);
-			scope.setContext("run", { promptId, brandId: brand.id, runIndex });
+			scope.setTag("surface_target", target.surfaceTargetKey);
+			scope.setTag("capture_route", target.captureRouteKey);
+			scope.setTag("failure_stage", failureStage);
+			scope.setContext("run", { promptId, brandId: brand.id, runIndex, attemptId: attempt.id });
 			Sentry.captureException(error);
 		});
 		throw error;
@@ -307,6 +290,8 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 			continue;
 		}
 
+		const scope = await resolvePromptMeasurementScope(prompt);
+
 		const selectedConfigs = selectTargetsForBrand(scrapeConfigs, brand.enabledModels);
 		if (selectedConfigs.length === 0) {
 			console.log(`Prompt ${promptId} for brand ${brand.id} has no targets (brand.enabledModels=[])`);
@@ -323,9 +308,11 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 			for (let i = 0; i < runsPerPrompt; i++) {
 				runPromises.push(
 					runModelIteration({
+						sourceJobId: String(job.id),
 						promptId,
 						promptValue: prompt.value,
 						brand,
+						scope,
 						competitorsList,
 						config,
 						providerImpl,
@@ -357,6 +344,9 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 
 		trackWorkerEvent("prompt_processed", {
 			brand_id: brand.id,
+			scope_id: scope.id,
+			surface_targets: [...new Set(selectedConfigs.map((config) => resolveObservationTarget(config).surfaceTargetKey))],
+			capture_routes: [...new Set(selectedConfigs.map((config) => resolveObservationTarget(config).captureRouteKey))],
 			models: [...new Set(selectedConfigs.map((c) => c.model))],
 			providers: [...new Set(selectedConfigs.map((c) => c.provider))],
 			total_runs: runPromises.length,

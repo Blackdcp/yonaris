@@ -1,4 +1,19 @@
-import { pgEnum, pgTable, uuid, text, timestamp, boolean, json, index, integer, smallint } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+	boolean,
+	check,
+	foreignKey,
+	index,
+	integer,
+	json,
+	pgEnum,
+	pgTable,
+	smallint,
+	text,
+	timestamp,
+	uniqueIndex,
+	uuid,
+} from "drizzle-orm/pg-core";
 // `organization` is referenced by the brands FK below; the re-export makes it
 // (and the rest of the auth schema) visible to `import * as schema` consumers.
 import { organization } from "./schema-auth";
@@ -12,6 +27,13 @@ export * from "./schema-auth";
 // ============================================================================
 
 export const reportStatusEnum = pgEnum("report_status", ["pending", "processing", "completed", "failed"]);
+export const observationStatusEnum = pgEnum("observation_status", [
+	"pending",
+	"running",
+	"succeeded",
+	"failed",
+	"cancelled",
+]);
 
 export const brands = pgTable(
 	"brands",
@@ -44,6 +66,36 @@ export const brands = pgTable(
 	}),
 ).enableRLS();
 
+export const measurementScopes = pgTable(
+	"measurement_scopes",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		key: text("key").notNull(),
+		name: text("name").notNull(),
+		market: text("market").notNull(),
+		locale: text("locale").notNull(),
+		timezone: text("timezone").notNull().default("UTC"),
+		enabled: boolean("enabled").notNull().default(true),
+		isDefault: boolean("is_default").notNull().default(false),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		brandKeyIdx: uniqueIndex("measurement_scopes_brand_key_uidx").on(table.brandId, table.key),
+		brandIdIdx: uniqueIndex("measurement_scopes_brand_id_uidx").on(table.brandId, table.id),
+		defaultScopeIdx: uniqueIndex("measurement_scopes_one_default_per_brand_uidx")
+			.on(table.brandId)
+			.where(sql`${table.isDefault} = true`),
+		brandEnabledIdx: index("measurement_scopes_brand_enabled_idx").on(table.brandId, table.enabled),
+	}),
+).enableRLS();
+
 export const prompts = pgTable(
 	"prompts",
 	{
@@ -51,6 +103,7 @@ export const prompts = pgTable(
 		brandId: text("brand_id")
 			.references(() => brands.id)
 			.notNull(),
+		scopeId: uuid("scope_id"),
 		value: text("value").notNull(),
 		enabled: boolean("enabled").default(true).notNull(),
 		tags: text("tags").array().notNull().default([]),
@@ -64,6 +117,12 @@ export const prompts = pgTable(
 	(table) => ({
 		brandIdIdx: index("prompts_brand_id_idx").on(table.brandId),
 		brandIdEnabledIdx: index("prompts_brand_id_enabled_idx").on(table.brandId, table.enabled),
+		brandScopeEnabledIdx: index("prompts_brand_scope_enabled_idx").on(table.brandId, table.scopeId, table.enabled),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "prompts_brand_scope_fk",
+		}),
 	}),
 ).enableRLS();
 
@@ -82,6 +141,62 @@ export const competitors = pgTable("competitors", {
 		.notNull(),
 }).enableRLS();
 
+export const observationAttempts = pgTable(
+	"observation_attempts",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		sourceKey: text("source_key").notNull(),
+		sourceJobId: text("source_job_id"),
+		promptId: uuid("prompt_id")
+			.references(() => prompts.id, { onDelete: "cascade" })
+			.notNull(),
+		promptText: text("prompt_text").notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		surfaceTargetKey: text("surface_target_key").notNull(),
+		captureRouteKey: text("capture_route_key").notNull(),
+		model: text("model").notNull(),
+		provider: text("provider").notNull(),
+		requestedVersion: text("requested_version"),
+		webSearchEnabled: boolean("web_search_enabled").notNull(),
+		sampleIndex: smallint("sample_index").notNull(),
+		executionCount: smallint("execution_count").notNull().default(1),
+		status: observationStatusEnum().notNull().default("pending"),
+		startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		latencyMs: integer("latency_ms"),
+		errorClass: text("error_class"),
+		errorCode: text("error_code"),
+		errorMessage: text("error_message"),
+		failureStage: text("failure_stage"),
+		captureMetadata: json("capture_metadata").notNull().default({}),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		sourceKeyIdx: uniqueIndex("observation_attempts_brand_source_key_uidx").on(table.brandId, table.sourceKey),
+		promptCreatedIdx: index("observation_attempts_prompt_created_idx").on(table.promptId, table.createdAt),
+		brandScopeTargetStatusCreatedIdx: index("observation_attempts_scope_target_status_created_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.surfaceTargetKey,
+			table.status,
+			table.createdAt,
+		),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "observation_attempts_brand_scope_fk",
+		}),
+		positiveSampleIndex: check("observation_attempts_positive_sample_index", sql`${table.sampleIndex} > 0`),
+	}),
+).enableRLS();
+
 export const promptRuns = pgTable(
 	"prompt_runs",
 	{
@@ -92,14 +207,20 @@ export const promptRuns = pgTable(
 		brandId: text("brand_id")
 			.references(() => brands.id)
 			.notNull(),
+		observationAttemptId: uuid("observation_attempt_id").references(() => observationAttempts.id),
+		scopeId: uuid("scope_id"),
+		surfaceTargetKey: text("surface_target_key"),
+		captureRouteKey: text("capture_route_key"),
 		model: text("model").notNull(),
 		provider: text("provider"),
 		version: text("version").notNull(),
 		webSearchEnabled: boolean("web_search_enabled").notNull(),
 		rawOutput: json("raw_output").notNull(),
+		answerText: text("answer_text"),
 		webQueries: text("web_queries").array().notNull().default([]),
 		brandMentioned: boolean("brand_mentioned").notNull(),
 		competitorsMentioned: text("competitors_mentioned").array().notNull().default([]),
+		observedAt: timestamp("observed_at", { withTimezone: true }),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => ({
@@ -112,7 +233,19 @@ export const promptRuns = pgTable(
 			table.createdAt,
 		),
 		providerIdx: index("prompt_runs_provider_idx").on(table.provider),
+		observationAttemptIdx: uniqueIndex("prompt_runs_observation_attempt_id_uidx").on(table.observationAttemptId),
 		modelCreatedAtIdx: index("prompt_runs_model_created_at_idx").on(table.model, table.createdAt),
+		scopeTargetCreatedAtIdx: index("prompt_runs_scope_target_created_at_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.surfaceTargetKey,
+			table.createdAt,
+		),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "prompt_runs_brand_scope_fk",
+		}),
 	}),
 ).enableRLS();
 
@@ -199,6 +332,9 @@ export type NewBrandOpportunity = typeof brandOpportunities.$inferInsert;
 export type Brand = typeof brands.$inferSelect;
 export type NewBrand = typeof brands.$inferInsert;
 
+export type MeasurementScope = typeof measurementScopes.$inferSelect;
+export type NewMeasurementScope = typeof measurementScopes.$inferInsert;
+
 export type Prompt = typeof prompts.$inferSelect;
 export type NewPrompt = typeof prompts.$inferInsert;
 
@@ -207,6 +343,9 @@ export type NewCompetitor = typeof competitors.$inferInsert;
 
 export type PromptRun = typeof promptRuns.$inferSelect;
 export type NewPromptRun = typeof promptRuns.$inferInsert;
+
+export type ObservationAttempt = typeof observationAttempts.$inferSelect;
+export type NewObservationAttempt = typeof observationAttempts.$inferInsert;
 
 export type BrandWithPrompts = Brand & {
 	prompts: Prompt[];

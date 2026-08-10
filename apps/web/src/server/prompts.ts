@@ -3,35 +3,36 @@
  * Replaces apps/web/src/app/api/prompts/* and brands/[id]/prompts-summary API routes.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { db } from "@workspace/lib/db/db";
+import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { brands, competitors, promptRuns, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
+import { computeSystemTags, getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
+import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess, requireOrgWriteAccess } from "@/lib/auth/helpers";
-import { db } from "@workspace/lib/db/db";
-import { prompts, promptRuns, brands, competitors, SYSTEM_TAGS } from "@workspace/lib/db/schema";
-import { eq, and, desc, gte, count, sql } from "drizzle-orm";
-import {
-	getPromptsSummary,
-	getPromptsFirstEvaluatedAt,
-	getPromptCitationUrlStats,
-	getPromptDailyStats,
-	getPromptCompetitorDailyStats,
-	getPromptWebQueriesForMapping,
-	getPromptWebQueryCounts,
-} from "@/lib/postgres-read";
-import { generateDateRange } from "@/lib/chart-utils";
 import type { LookbackPeriod } from "@/lib/chart-utils";
-import { getEffectiveBrandedStatus, computeSystemTags } from "@workspace/lib/tag-utils";
-import { createMultiplePromptJobSchedulers } from "@/lib/job-scheduler";
+import { generateDateRange } from "@/lib/chart-utils";
 import {
-	extractDomain,
-	normalizeUrl,
+	CITATION_PAGE_TYPES,
 	emptyCategoryCounts,
 	emptyPageTypeCounts,
-	resolvePageType,
+	extractDomain,
 	isGoogleSurfaceUrl,
-	CITATION_PAGE_TYPES,
+	normalizeUrl,
+	resolvePageType,
 } from "@/lib/domain-categories";
 import { classifyUrl } from "@/lib/domain-categories.server";
 import { buildGoogleModule } from "@/lib/google-module";
+import { createMultiplePromptJobSchedulers } from "@/lib/job-scheduler";
+import {
+	getPromptCitationUrlStats,
+	getPromptCompetitorDailyStats,
+	getPromptDailyStats,
+	getPromptsFirstEvaluatedAt,
+	getPromptsSummary,
+	getPromptWebQueriesForMapping,
+	getPromptWebQueryCounts,
+} from "@/lib/postgres-read";
 // Server Functions
 // ============================================================================
 
@@ -562,6 +563,7 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 		const existingIds = new Set(
 			(await db.select({ id: prompts.id }).from(prompts).where(eq(prompts.brandId, data.brandId))).map((p) => p.id),
 		);
+		const defaultScopeId = await ensureLegacyMeasurementScope(data.brandId);
 
 		const saved = await db.transaction(async (tx) => {
 			const toUpdate = data.prompts.filter((p) => p.id);
@@ -583,6 +585,7 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 				await tx.insert(prompts).values(
 					toInsert.map((p) => ({
 						brandId: data.brandId,
+						scopeId: defaultScopeId,
 						value: p.value,
 						enabled: p.enabled,
 						tags: p.tags || [],

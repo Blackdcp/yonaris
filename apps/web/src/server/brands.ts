@@ -3,6 +3,14 @@
  * Replaces apps/web/src/app/api/brands/* API routes.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { MAX_COMPETITORS } from "@workspace/lib/constants";
+import { db } from "@workspace/lib/db/db";
+import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { provisionAdditionalLocalOrg } from "@workspace/lib/db/provisioning";
+import { type Brand, type BrandWithPrompts, brands, competitors, prompts } from "@workspace/lib/db/schema";
+import type { ModelConfig } from "@workspace/lib/providers";
+import { parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	checkAnyOrgWriteAccess,
@@ -12,17 +20,10 @@ import {
 	requireOrgWriteAccess,
 } from "@/lib/auth/helpers";
 import { evaluateRequireCanCreateBrands } from "@/lib/auth/policies";
-import { getDeployment } from "@/lib/config/server";
-import { db } from "@workspace/lib/db/db";
-import { brands, prompts, competitors, type BrandWithPrompts, type Brand } from "@workspace/lib/db/schema";
-import { provisionAdditionalLocalOrg } from "@workspace/lib/db/provisioning";
-import { eq, and, count, sql, inArray } from "drizzle-orm";
-import { MAX_COMPETITORS } from "@workspace/lib/constants";
-import { cleanAndValidateDomain } from "@/lib/domain-categories";
-import { validateWebsiteUrl } from "@/lib/brand-website";
 import { normalizeBrandUpdate } from "@/lib/brand-settings";
-import { parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
-import type { ModelConfig } from "@workspace/lib/providers";
+import { validateWebsiteUrl } from "@/lib/brand-website";
+import { getDeployment } from "@/lib/config/server";
+import { cleanAndValidateDomain } from "@/lib/domain-categories";
 
 /**
  * Deployment-configured models this brand actually runs, after applying
@@ -192,6 +193,7 @@ export const createBrandFn = createServerFn({ method: "POST" })
 		if (!brand) {
 			throw new Error("Failed to create brand");
 		}
+		await ensureLegacyMeasurementScope(brand.id);
 
 		return { success: true, brand };
 	});
@@ -245,6 +247,7 @@ export const createBrandWithOrgFn = createServerFn({ method: "POST" })
 			enabled: true,
 			...(defaultDomains.length > 0 && { additionalDomains: defaultDomains }),
 		});
+		await ensureLegacyMeasurementScope(orgId);
 
 		return { brandId: orgId };
 	});
