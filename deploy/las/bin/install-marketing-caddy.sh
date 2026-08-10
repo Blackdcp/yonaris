@@ -56,6 +56,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
 
     for _ in 1 2 3; do
       if caddy reload --config "$target_config" --adapter caddyfile --force; then
+        keep_state_dir=false
         return 0
       fi
       sleep 1
@@ -110,6 +111,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
 
   caddy validate --config "$candidate_config" --adapter caddyfile >/dev/null
   install -o root -g root -m 0644 -- "$target_config" "$backup_config"
+  keep_state_dir=true
   mv -f -- "$candidate_config" "$target_config"
 
   if ! caddy reload --config "$target_config" --adapter caddyfile --force; then
@@ -140,6 +142,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     exit 1
   fi
 
+  keep_state_dir=false
   if [[ "$changed_config" == true ]]; then
     echo "Caddy now proxies yonaris.com to the marketing site."
   else
