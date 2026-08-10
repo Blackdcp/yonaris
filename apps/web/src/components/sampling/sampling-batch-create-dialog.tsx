@@ -1,0 +1,436 @@
+import { Button } from "@workspace/ui/components/button";
+import { Checkbox } from "@workspace/ui/components/checkbox";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+} from "@workspace/ui/components/dialog";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Loader2, Plus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import type {
+	CreateSamplingBatchInput,
+	SamplingContextView,
+	SamplingSearchRequirement,
+	SamplingSessionRequirement,
+	SamplingTargetOption,
+} from "./types";
+
+interface TargetDraft {
+	samplesPerPrompt: number;
+	sessionRequirement: SamplingSessionRequirement;
+	searchRequirement: SamplingSearchRequirement;
+}
+
+function defaultTargetDraft(target: SamplingTargetOption): TargetDraft {
+	return {
+		samplesPerPrompt: 1,
+		sessionRequirement:
+			target.defaultSessionRequirement === "new_account_clean" ? "new_account_clean" : "anonymous_clean",
+		searchRequirement: target.defaultSearchRequirement,
+	};
+}
+
+function newIdempotencyKey(): string {
+	const suffix =
+		typeof globalThis.crypto?.randomUUID === "function"
+			? globalThis.crypto.randomUUID()
+			: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+	return `sampling-ui:${suffix}`;
+}
+
+function localDateTimeValue(date: Date): string {
+	const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+	return local.toISOString().slice(0, 16);
+}
+
+export function SamplingBatchCreateDialog({
+	context,
+	onCreate,
+}: {
+	context: SamplingContextView;
+	onCreate: (input: CreateSamplingBatchInput) => Promise<void>;
+}) {
+	const [open, setOpen] = useState(false);
+	const [name, setName] = useState("");
+	const [scopeId, setScopeId] = useState("");
+	const [promptIds, setPromptIds] = useState<Set<string>>(new Set());
+	const [targetDrafts, setTargetDrafts] = useState<Record<string, TargetDraft>>({});
+	const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
+	const [windowStartsAt, setWindowStartsAt] = useState(() => localDateTimeValue(new Date()));
+	const [windowEndsAt, setWindowEndsAt] = useState(() =>
+		localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)),
+	);
+	const [submitting, setSubmitting] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
+	const brand = context.selectedBrand;
+	const brandId = brand?.id;
+	const brandName = brand?.name ?? "";
+	const scopes = useMemo(
+		() =>
+			brand?.scopes.filter((scope) => scope.enabled && scope.manualOnly && scope.samplingEvaluationRole !== null) ?? [],
+		[brand],
+	);
+	const firstScopeId = scopes[0]?.id ?? "";
+	const selectedScope = scopes.find((scope) => scope.id === scopeId);
+	const prompts = useMemo(
+		() => brand?.prompts.filter((prompt) => prompt.enabled && prompt.scopeId === scopeId) ?? [],
+		[brand, scopeId],
+	);
+
+	useEffect(() => {
+		setScopeId(firstScopeId);
+		setPromptIds(new Set());
+		setTargetDrafts({});
+		setIdempotencyKey(newIdempotencyKey());
+		setError(null);
+		setName(brandId ? `${brandName} sampling ${new Date().toLocaleDateString()}` : "");
+		setWindowStartsAt(localDateTimeValue(new Date()));
+		setWindowEndsAt(localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)));
+	}, [brandId, brandName, firstScopeId]);
+
+	const togglePrompt = (promptId: string) => {
+		setPromptIds((previous) => {
+			const next = new Set(previous);
+			if (next.has(promptId)) next.delete(promptId);
+			else next.add(promptId);
+			return next;
+		});
+	};
+
+	const toggleAllPrompts = () => {
+		setPromptIds((previous) =>
+			previous.size === prompts.length ? new Set() : new Set(prompts.map((prompt) => prompt.id)),
+		);
+	};
+
+	const toggleTarget = (target: SamplingTargetOption) => {
+		setTargetDrafts((previous) => {
+			const next = { ...previous };
+			if (next[target.surfaceTargetKey]) delete next[target.surfaceTargetKey];
+			else next[target.surfaceTargetKey] = defaultTargetDraft(target);
+			return next;
+		});
+	};
+
+	const updateTarget = (surfaceTargetKey: string, patch: Partial<TargetDraft>) => {
+		setTargetDrafts((previous) => {
+			const current = previous[surfaceTargetKey];
+			if (!current) return previous;
+			return { ...previous, [surfaceTargetKey]: { ...current, ...patch } };
+		});
+	};
+
+	const handleSubmit = async () => {
+		if (!brand || !scopeId) return;
+		const evaluationRole = selectedScope?.samplingEvaluationRole;
+		if (!evaluationRole) {
+			setError("Select a provisioned sampling scope with a fixed evaluation pool.");
+			return;
+		}
+		if (!name.trim()) {
+			setError("Batch name is required.");
+			return;
+		}
+		if (promptIds.size === 0) {
+			setError("Select at least one prompt.");
+			return;
+		}
+		const selectedTargets = context.targets.filter((target) => targetDrafts[target.surfaceTargetKey]);
+		if (selectedTargets.length === 0) {
+			setError("Select at least one consumer surface.");
+			return;
+		}
+		const startsAt = new Date(windowStartsAt);
+		const endsAt = new Date(windowEndsAt);
+		if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+			setError("Measurement window end must be after its start.");
+			return;
+		}
+
+		setSubmitting(true);
+		setError(null);
+		try {
+			await onCreate({
+				brandId: brand.id,
+				scopeId,
+				idempotencyKey,
+				name: name.trim(),
+				promptIds: [...promptIds],
+				targets: selectedTargets.map((target) => {
+					const draft = targetDrafts[target.surfaceTargetKey];
+					if (!draft) throw new Error(`Target ${target.surfaceTargetKey} is no longer selected.`);
+					return {
+						surfaceTargetKey: target.surfaceTargetKey,
+						captureRouteKey: target.captureRouteKey,
+						evaluationRole,
+						...draft,
+					};
+				}),
+				protocol: {
+					measurementWindow: { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() },
+					evidence: {
+						minimumArtifacts: 1,
+						requireSha256: true,
+						requirePageUrl: true,
+						allowedUriSchemes: ["https", "http"],
+					},
+				},
+			});
+			setOpen(false);
+			setIdempotencyKey(newIdempotencyKey());
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Failed to create sampling batch.");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	return (
+		<Dialog open={open} onOpenChange={setOpen}>
+			<DialogTrigger asChild>
+				<Button disabled={!brand || scopes.length === 0}>
+					<Plus />
+					Create batch
+				</Button>
+			</DialogTrigger>
+			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+				<DialogHeader>
+					<DialogTitle>Create sampling batch</DialogTitle>
+					<DialogDescription>
+						Freeze a set of prompts and consumer surfaces into an auditable delivery denominator.
+					</DialogDescription>
+				</DialogHeader>
+
+				<div className="space-y-6">
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="sampling-batch-name">Batch name</Label>
+							<Input
+								id="sampling-batch-name"
+								value={name}
+								onChange={(event) => setName(event.target.value)}
+								disabled={submitting}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label>Measurement scope</Label>
+							<Select
+								value={scopeId}
+								onValueChange={(nextScopeId) => {
+									setScopeId(nextScopeId);
+									setPromptIds(new Set());
+								}}
+								disabled={submitting}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue placeholder="Select a manual-only scope" />
+								</SelectTrigger>
+								<SelectContent>
+									{scopes.map((scope) => (
+										<SelectItem key={scope.id} value={scope.id}>
+											{scope.name} · {scope.market}/{scope.locale}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
+						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label>Evaluation pool</Label>
+							<Input
+								value={
+									selectedScope?.samplingEvaluationRole === "scored"
+										? "Scored · counts toward assessment"
+										: "Observation · monitoring only"
+								}
+								readOnly
+								className="w-full sm:w-72"
+							/>
+							<p className="text-xs text-muted-foreground">
+								This pool is fixed by the selected scope. Provision a separate scope for the other pool; prompts can be
+								copied between them.
+							</p>
+						</div>
+					</div>
+
+					<div className="grid gap-4 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="sampling-window-start">Measurement window starts</Label>
+							<Input
+								id="sampling-window-start"
+								type="datetime-local"
+								value={windowStartsAt}
+								onChange={(event) => setWindowStartsAt(event.target.value)}
+								disabled={submitting}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="sampling-window-end">Measurement window ends</Label>
+							<Input
+								id="sampling-window-end"
+								type="datetime-local"
+								value={windowEndsAt}
+								onChange={(event) => setWindowEndsAt(event.target.value)}
+								disabled={submitting}
+							/>
+						</div>
+						<p className="text-xs text-muted-foreground sm:col-span-2">
+							The frozen denominator and all scored observations are constrained to this delivery window.
+						</p>
+					</div>
+
+					<div className="space-y-2">
+						<div className="flex items-center justify-between gap-3">
+							<Label>Prompts ({promptIds.size} selected)</Label>
+							<Button
+								type="button"
+								variant="ghost"
+								size="sm"
+								onClick={toggleAllPrompts}
+								disabled={prompts.length === 0}
+							>
+								{promptIds.size === prompts.length && prompts.length > 0 ? "Clear all" : "Select all"}
+							</Button>
+						</div>
+						<div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
+							{prompts.length === 0 ? (
+								<p className="p-3 text-sm text-muted-foreground">No enabled prompts exist in this scope.</p>
+							) : (
+								prompts.map((prompt) => {
+									const checkboxId = `sampling-prompt-${prompt.id}`;
+									return (
+										<div key={prompt.id} className="flex items-start gap-2 rounded px-2 py-2 hover:bg-muted/60">
+											<Checkbox
+												id={checkboxId}
+												checked={promptIds.has(prompt.id)}
+												onCheckedChange={() => togglePrompt(prompt.id)}
+											/>
+											<Label htmlFor={checkboxId} className="min-w-0 cursor-pointer text-sm leading-snug font-normal">
+												{prompt.value}
+											</Label>
+										</div>
+									);
+								})
+							)}
+						</div>
+					</div>
+
+					<div className="space-y-3">
+						<Label>Consumer surfaces ({Object.keys(targetDrafts).length} selected)</Label>
+						<div className="grid gap-2 sm:grid-cols-2">
+							{context.targets.map((target) => {
+								const checkboxId = `sampling-target-${target.surfaceTargetKey}`;
+								return (
+									<div
+										key={target.surfaceTargetKey}
+										className="flex items-start gap-2 rounded-md border p-3 hover:bg-muted/40"
+									>
+										<Checkbox
+											id={checkboxId}
+											checked={Boolean(targetDrafts[target.surfaceTargetKey])}
+											onCheckedChange={() => toggleTarget(target)}
+										/>
+										<Label htmlFor={checkboxId} className="min-w-0 cursor-pointer font-normal">
+											<span className="block text-sm font-medium">{target.label}</span>
+											<span className="block truncate text-xs text-muted-foreground">{target.surfaceTargetKey}</span>
+										</Label>
+									</div>
+								);
+							})}
+						</div>
+
+						{context.targets
+							.filter((target) => targetDrafts[target.surfaceTargetKey])
+							.map((target) => {
+								const draft = targetDrafts[target.surfaceTargetKey];
+								if (!draft) return null;
+								return (
+									<div
+										key={target.surfaceTargetKey}
+										className="grid gap-3 rounded-md border bg-muted/20 p-3 sm:grid-cols-3"
+									>
+										<div className="sm:col-span-3">
+											<p className="text-sm font-medium">{target.label}</p>
+										</div>
+										<div className="space-y-1.5">
+											<Label className="text-xs">Samples / prompt</Label>
+											<Input
+												type="number"
+												min={1}
+												max={20}
+												value={draft.samplesPerPrompt}
+												onChange={(event) =>
+													updateTarget(target.surfaceTargetKey, {
+														samplesPerPrompt: Math.max(1, Math.min(20, Number(event.target.value) || 1)),
+													})
+												}
+											/>
+										</div>
+										<div className="space-y-1.5">
+											<Label className="text-xs">Session</Label>
+											<Select
+												value={draft.sessionRequirement}
+												onValueChange={(value: SamplingSessionRequirement) =>
+													updateTarget(target.surfaceTargetKey, { sessionRequirement: value })
+												}
+											>
+												<SelectTrigger className="w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="anonymous_clean">Anonymous clean</SelectItem>
+													<SelectItem value="new_account_clean">New account</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+										<div className="space-y-1.5">
+											<Label className="text-xs">Search</Label>
+											<Select
+												value={draft.searchRequirement}
+												onValueChange={(value: SamplingSearchRequirement) =>
+													updateTarget(target.surfaceTargetKey, { searchRequirement: value })
+												}
+												disabled={target.surfaceKind === "search_surface"}
+											>
+												<SelectTrigger className="w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="required">Required</SelectItem>
+													{target.surfaceKind !== "search_surface" && (
+														<>
+															<SelectItem value="forbidden">Forbidden</SelectItem>
+															<SelectItem value="not_applicable">Not applicable</SelectItem>
+														</>
+													)}
+												</SelectContent>
+											</Select>
+										</div>
+									</div>
+								);
+							})}
+					</div>
+
+					{error && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+				</div>
+
+				<DialogFooter>
+					<Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
+						Cancel
+					</Button>
+					<Button onClick={handleSubmit} disabled={submitting || !brand}>
+						{submitting && <Loader2 className="animate-spin" />}
+						Create and freeze batch
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}

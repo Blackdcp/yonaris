@@ -2,6 +2,7 @@ import {
 	IconBuilding,
 	IconBuildings,
 	IconChartBar,
+	IconClipboardCheck,
 	IconCpu,
 	IconDashboard,
 	IconLink,
@@ -160,6 +161,12 @@ export function AppSidebar({
 						title: "Workflows",
 						url: "/admin/workflows",
 						icon: IconTimeline,
+						absolute: true,
+					},
+					{
+						title: "Sampling",
+						url: "/admin/sampling",
+						icon: IconClipboardCheck,
 						absolute: true,
 					},
 					{

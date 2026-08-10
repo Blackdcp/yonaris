@@ -31,6 +31,8 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiManifestIndexRouteImport } from './routes/api/manifest/index'
 import { Route as ApiOgIndexRouteImport } from './routes/api/og/index'
 import { Route as ApiSetupStatusIndexRouteImport } from './routes/api/setup-status/index'
+import { Route as AuthedAdminSamplingIndexRouteImport } from './routes/_authed/admin/sampling/index'
+import { Route as AuthedAdminSamplingTaskIdRouteImport } from './routes/_authed/admin/sampling/$taskId'
 import { Route as AuthedAppBrandIndexRouteImport } from './routes/_authed/app/$brand/index'
 import { Route as AuthedAppBrandSplatRouteImport } from './routes/_authed/app/$brand/$'
 import { Route as AuthedAppBrandCitationsRouteImport } from './routes/_authed/app/$brand/citations'
@@ -176,6 +178,18 @@ const ApiSetupStatusIndexRoute = ApiSetupStatusIndexRouteImport.update({
   path: '/api/setup-status/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedAdminSamplingIndexRoute =
+  AuthedAdminSamplingIndexRouteImport.update({
+    id: '/sampling/',
+    path: '/sampling/',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedAdminSamplingTaskIdRoute =
+  AuthedAdminSamplingTaskIdRouteImport.update({
+    id: '/sampling/$taskId',
+    path: '/sampling/$taskId',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
 const AuthedAppBrandIndexRoute = AuthedAppBrandIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -388,6 +402,7 @@ export interface FileRoutesByFullPath {
   '/api/manifest/': typeof ApiManifestIndexRoute
   '/api/og/': typeof ApiOgIndexRoute
   '/api/setup-status/': typeof ApiSetupStatusIndexRoute
+  '/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -403,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
+  '/admin/sampling/': typeof AuthedAdminSamplingIndexRoute
   '/app/$brand/': typeof AuthedAppBrandIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/v1/brands/': typeof ApiV1BrandsIndexRoute
@@ -441,6 +457,7 @@ export interface FileRoutesByTo {
   '/api/manifest': typeof ApiManifestIndexRoute
   '/api/og': typeof ApiOgIndexRoute
   '/api/setup-status': typeof ApiSetupStatusIndexRoute
+  '/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -455,6 +472,7 @@ export interface FileRoutesByTo {
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
+  '/admin/sampling': typeof AuthedAdminSamplingIndexRoute
   '/app/$brand': typeof AuthedAppBrandIndexRoute
   '/api/plausible/event': typeof ApiPlausibleEventIndexRoute
   '/api/v1/brands': typeof ApiV1BrandsIndexRoute
@@ -499,6 +517,7 @@ export interface FileRoutesById {
   '/api/manifest/': typeof ApiManifestIndexRoute
   '/api/og/': typeof ApiOgIndexRoute
   '/api/setup-status/': typeof ApiSetupStatusIndexRoute
+  '/_authed/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
   '/_authed/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/_authed/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/_authed/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -514,6 +533,7 @@ export interface FileRoutesById {
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
+  '/_authed/admin/sampling/': typeof AuthedAdminSamplingIndexRoute
   '/_authed/app/$brand/': typeof AuthedAppBrandIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/v1/brands/': typeof ApiV1BrandsIndexRoute
@@ -558,6 +578,7 @@ export interface FileRouteTypes {
     | '/api/manifest/'
     | '/api/og/'
     | '/api/setup-status/'
+    | '/admin/sampling/$taskId'
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
@@ -573,6 +594,7 @@ export interface FileRouteTypes {
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
+    | '/admin/sampling/'
     | '/app/$brand/'
     | '/api/plausible/event/'
     | '/api/v1/brands/'
@@ -611,6 +633,7 @@ export interface FileRouteTypes {
     | '/api/manifest'
     | '/api/og'
     | '/api/setup-status'
+    | '/admin/sampling/$taskId'
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
@@ -625,6 +648,7 @@ export interface FileRouteTypes {
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
+    | '/admin/sampling'
     | '/app/$brand'
     | '/api/plausible/event'
     | '/api/v1/brands'
@@ -668,6 +692,7 @@ export interface FileRouteTypes {
     | '/api/manifest/'
     | '/api/og/'
     | '/api/setup-status/'
+    | '/_authed/admin/sampling/$taskId'
     | '/_authed/app/$brand/$'
     | '/_authed/app/$brand/citations'
     | '/_authed/app/$brand/opportunities'
@@ -683,6 +708,7 @@ export interface FileRouteTypes {
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
+    | '/_authed/admin/sampling/'
     | '/_authed/app/$brand/'
     | '/api/plausible/event/'
     | '/api/v1/brands/'
@@ -888,6 +914,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/setup-status/'
       preLoaderRoute: typeof ApiSetupStatusIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/admin/sampling/': {
+      id: '/_authed/admin/sampling/'
+      path: '/sampling'
+      fullPath: '/admin/sampling/'
+      preLoaderRoute: typeof AuthedAdminSamplingIndexRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/admin/sampling/$taskId': {
+      id: '/_authed/admin/sampling/$taskId'
+      path: '/sampling/$taskId'
+      fullPath: '/admin/sampling/$taskId'
+      preLoaderRoute: typeof AuthedAdminSamplingTaskIdRouteImport
+      parentRoute: typeof AuthedAdminRoute
     }
     '/_authed/app/$brand/': {
       id: '/_authed/app/$brand/'
@@ -1134,12 +1174,16 @@ interface AuthedAdminRouteChildren {
   AuthedAdminToolsRoute: typeof AuthedAdminToolsRoute
   AuthedAdminWorkflowsRoute: typeof AuthedAdminWorkflowsRoute
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
+  AuthedAdminSamplingTaskIdRoute: typeof AuthedAdminSamplingTaskIdRoute
+  AuthedAdminSamplingIndexRoute: typeof AuthedAdminSamplingIndexRoute
 }
 
 const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
   AuthedAdminToolsRoute: AuthedAdminToolsRoute,
   AuthedAdminWorkflowsRoute: AuthedAdminWorkflowsRoute,
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
+  AuthedAdminSamplingTaskIdRoute: AuthedAdminSamplingTaskIdRoute,
+  AuthedAdminSamplingIndexRoute: AuthedAdminSamplingIndexRoute,
 }
 
 const AuthedAdminRouteWithChildren = AuthedAdminRoute._addFileChildren(
