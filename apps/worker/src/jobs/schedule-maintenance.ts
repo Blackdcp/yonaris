@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/node";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
+import { cleanupStaleEvidenceArtifacts } from "@workspace/lib/db/evidence-artifacts";
 import { brands, measurementScopes, observationAttempts, promptRuns, prompts } from "@workspace/lib/db/schema";
 import { isPromptOverdue } from "@workspace/lib/overdue";
 import { formatScrapeTarget, parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
@@ -49,6 +50,14 @@ export async function scheduleMaintenanceJob(jobs: Job<ScheduleMaintenanceData>[
 }
 
 async function runMaintenanceCheck(): Promise<void> {
+	// Staged uploads are bound to one claim generation. If an operator closes
+	// the tab or releases the task, those bytes must not accumulate forever.
+	// Attached evidence is immutable and intentionally excluded from cleanup.
+	const cleanedEvidenceArtifacts = await cleanupStaleEvidenceArtifacts();
+	if (cleanedEvidenceArtifacts > 0) {
+		console.log(`[schedule-maintenance] Removed ${cleanedEvidenceArtifacts} stale staged evidence artifact(s)`);
+	}
+
 	// Get all enabled brands
 	const enabledBrands = await db.query.brands.findMany({
 		where: eq(brands.enabled, true),
