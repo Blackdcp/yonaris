@@ -54,11 +54,30 @@ compose=(docker compose --project-name yonaris-marketing --env-file "$ENV_FILE" 
 rollback_marketing() {
   if [[ "$previous_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
     echo "Restoring the previous marketing image $previous_tag."
-    if IMAGE_TAG="$previous_tag" "${compose[@]}" pull www; then
-      IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps www || true
+    if ! IMAGE_TAG="$previous_tag" "${compose[@]}" pull www; then
+      echo "Could not refresh the previous image; trying the local cached image." >&2
     fi
+    if ! IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps www; then
+      echo "Failed to restore the previous marketing container." >&2
+      return 1
+    fi
+
+    for _ in $(seq 1 30); do
+      if curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:1516/" >/dev/null 2>&1; then
+        echo "Previous marketing release $previous_tag is healthy again."
+        return 0
+      fi
+      sleep 2
+    done
+
+    echo "The previous marketing container did not recover its health check." >&2
+    IMAGE_TAG="$previous_tag" "${compose[@]}" logs --tail 80 www >&2 || true
+    return 1
   else
-    IMAGE_TAG="$release_tag" "${compose[@]}" stop www >/dev/null 2>&1 || true
+    if ! IMAGE_TAG="$release_tag" "${compose[@]}" stop www >/dev/null 2>&1; then
+      echo "Failed to stop the first unhealthy marketing release." >&2
+      return 1
+    fi
   fi
 }
 
