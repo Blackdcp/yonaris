@@ -1,0 +1,56 @@
+name: Inspect LAS proxy
+
+on:
+  push:
+    branches:
+      - codex/proxy-inspect
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    name: Inspect production proxy
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Read proxy state
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            'set -u
+             echo "== identity =="
+             id
+             echo "== services =="
+             systemctl is-active caddy nginx 2>&1 || true
+             echo "== listeners =="
+             ss -lntp "( sport = :80 or sport = :443 or sport = :2019 )" 2>&1 || true
+             echo "== binaries =="
+             command -v caddy || true
+             command -v nginx || true
+             command -v docker || true
+             echo "== caddy directory =="
+             ls -la /etc/caddy 2>&1 || true
+             echo "== caddyfile =="
+             sed -n "1,260p" /etc/caddy/Caddyfile 2>&1 || true
+             echo "== caddy unit =="
+             systemctl cat caddy 2>&1 || true
+             echo "== nginx unit =="
+             systemctl cat nginx 2>&1 || true'
