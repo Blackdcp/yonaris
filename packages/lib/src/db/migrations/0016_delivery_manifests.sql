@@ -120,6 +120,9 @@ BEGIN
 	END IF;
 
 	IF OLD.status = 'draft' AND NEW.status = 'frozen' THEN
+		IF NEW.manifest_hash !~ '^[0-9a-f]{64}$' THEN
+			RAISE EXCEPTION 'delivery batch % manifest hash is invalid', OLD.id;
+		END IF;
 		SELECT count(*) INTO task_count FROM delivery_tasks WHERE batch_id = OLD.id;
 		IF task_count = 0 OR task_count <> NEW.planned_task_count THEN
 			RAISE EXCEPTION 'delivery batch % planned task count does not match its manifest', OLD.id;
@@ -155,6 +158,9 @@ BEGIN
 		SELECT status INTO batch_status FROM delivery_batches WHERE id = NEW.batch_id;
 		IF batch_status IS DISTINCT FROM 'draft' THEN
 			RAISE EXCEPTION 'tasks can only be added to a draft delivery batch';
+		END IF;
+		IF NEW.slot_key !~ '^[0-9a-f]{64}$' THEN
+			RAISE EXCEPTION 'delivery task slot key must be a SHA-256 digest';
 		END IF;
 		RETURN NEW;
 	END IF;
@@ -203,6 +209,14 @@ BEGIN
 		RAISE EXCEPTION 'invalid delivery task transition from % to %', OLD.status, NEW.status;
 	END IF;
 
+	IF NEW.status = 'claimed' AND (
+		NEW.lease_token_hash !~ '^[0-9a-f]{64}$' OR
+		((OLD.status <> 'claimed' OR NEW.lease_token_hash IS DISTINCT FROM OLD.lease_token_hash) AND
+			NEW.lease_generation <= OLD.lease_generation)
+	) THEN
+		RAISE EXCEPTION 'delivery task % claim does not advance a hashed lease generation', OLD.id;
+	END IF;
+
 	IF NEW.observation_attempt_id IS NOT NULL THEN
 		SELECT * INTO attempt FROM observation_attempts WHERE id = NEW.observation_attempt_id;
 		IF NOT FOUND OR
@@ -214,6 +228,11 @@ BEGIN
 			attempt.capture_route_key IS DISTINCT FROM NEW.capture_route_key OR
 			attempt.sample_index IS DISTINCT FROM NEW.sample_index THEN
 			RAISE EXCEPTION 'observation attempt does not match delivery task %', NEW.id;
+		END IF;
+		IF (NEW.status = 'succeeded' AND attempt.status <> 'succeeded') OR
+			(NEW.status = 'failed' AND attempt.status <> 'failed') OR
+			NEW.status NOT IN ('succeeded', 'failed') THEN
+			RAISE EXCEPTION 'observation attempt status does not match delivery task %', NEW.id;
 		END IF;
 	END IF;
 
