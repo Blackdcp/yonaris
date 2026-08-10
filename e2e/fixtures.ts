@@ -21,6 +21,7 @@ export const TEST_USER = {
 export const TEST_BRAND_ID = "default";
 export const TEST_BRAND_NAME = "Test Organization";
 export const TEST_BRAND_WEBSITE = "https://example.com";
+export const TEST_SCOPE_ID = "00000000-0000-0000-0000-500000000001";
 
 export const PROMPT_IDS = {
   branded1: "00000000-0000-0000-0000-000000000001",
@@ -45,6 +46,7 @@ export const REPORT_IDS = {
 // Second tenant — a brand in an org the E2E user is NOT a member of.
 export const NIKE_ORG_ID = "nike";
 export const NIKE_BRAND_ID = "nike";
+export const NIKE_SCOPE_ID = "00000000-0000-0000-0000-500000000002";
 export const NIKE_PROMPT_IDS = {
   training: "00000000-0000-0000-0000-400000000001",
   lifestyle: "00000000-0000-0000-0000-400000000002",

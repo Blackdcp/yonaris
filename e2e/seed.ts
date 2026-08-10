@@ -17,11 +17,13 @@ import {
   NIKE_COMPETITOR_IDS,
   NIKE_ORG_ID,
   NIKE_PROMPT_IDS,
+  NIKE_SCOPE_ID,
   PROMPT_IDS,
   REPORT_IDS,
   TEST_BRAND_ID,
   TEST_BRAND_NAME,
   TEST_BRAND_WEBSITE,
+  TEST_SCOPE_ID,
 } from "./fixtures";
 
 // Prompt run IDs (for prompt detail page testing)
@@ -43,13 +45,23 @@ async function seed() {
   try {
     console.log("Seeding E2E test database...");
 
-    // Clear existing data (in reverse FK order)
-    await client.query("DELETE FROM citations");
-    await client.query("DELETE FROM prompt_runs");
-    await client.query("DELETE FROM prompts");
-    await client.query("DELETE FROM competitors");
-    await client.query("DELETE FROM reports");
-    await client.query("DELETE FROM brands");
+    // This database URL is hardcoded to localhost in fixtures.ts. TRUNCATE is
+    // intentional here: delivery manifests retain audit rows and reject the
+    // ordinary DELETE sequence used before scoped observations existed.
+    await client.query(`
+      TRUNCATE TABLE
+        citations,
+        prompt_runs,
+        delivery_tasks,
+        delivery_batches,
+        observation_attempts,
+        prompts,
+        measurement_scopes,
+        competitors,
+        reports,
+        brands
+      RESTART IDENTITY CASCADE
+    `);
 
     // -----------------------------------------------------------------------
     // 1. Brand (scoped to an organization that shares its id)
@@ -67,6 +79,13 @@ async function seed() {
       [TEST_BRAND_ID, TEST_BRAND_NAME, TEST_BRAND_WEBSITE]
     );
     console.log("  Created brand:", TEST_BRAND_ID);
+
+    await client.query(
+      `INSERT INTO measurement_scopes
+         (id, brand_id, key, name, market, locale, timezone, automatic_target_keys, enabled, is_default, created_at, updated_at)
+       VALUES ($1, $2, 'legacy-unspecified', 'Legacy / Unspecified', 'ZZ', 'und', 'UTC', NULL, true, true, NOW(), NOW())`,
+      [TEST_SCOPE_ID, TEST_BRAND_ID],
+    );
 
     // -----------------------------------------------------------------------
     // 2. Prompts
@@ -106,9 +125,9 @@ async function seed() {
 
     for (const p of promptData) {
       await client.query(
-        `INSERT INTO prompts (id, brand_id, value, enabled, tags, system_tags, created_at, updated_at)
-         VALUES ($1, $2, $3, true, $4, $5, NOW(), NOW())`,
-        [p.id, TEST_BRAND_ID, p.value, p.tags, p.systemTags]
+        `INSERT INTO prompts (id, brand_id, scope_id, value, enabled, tags, system_tags, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, $5, $6, NOW(), NOW())`,
+        [p.id, TEST_BRAND_ID, TEST_SCOPE_ID, p.value, p.tags, p.systemTags]
       );
     }
     console.log(`  Created ${promptData.length} prompts`);
@@ -304,16 +323,18 @@ async function seed() {
 
     for (const run of promptRuns) {
       await client.query(
-        `INSERT INTO prompt_runs (id, prompt_id, brand_id, model, version, web_search_enabled, raw_output, web_queries, brand_mentioned, competitors_mentioned, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        `INSERT INTO prompt_runs (id, prompt_id, brand_id, scope_id, model, version, web_search_enabled, raw_output, answer_text, web_queries, brand_mentioned, competitors_mentioned, observed_at, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13)`,
         [
           run.id,
           run.promptId,
           TEST_BRAND_ID,
+          TEST_SCOPE_ID,
           run.model,
           run.version,
           run.webSearchEnabled,
           JSON.stringify(run.rawOutput),
+          run.textContent,
           run.webQueries,
           run.brandMentioned,
           run.competitorsMentioned,
@@ -415,6 +436,12 @@ async function seed() {
        VALUES ($1, $2, 'Nike', 'https://nike.com', $3, $4, true, true, NOW(), NOW())`,
       [NIKE_BRAND_ID, NIKE_ORG_ID, ["jordan.com", "converse.com"], ["Just Do It", "Swoosh", "Air Jordan"]],
     );
+    await client.query(
+      `INSERT INTO measurement_scopes
+         (id, brand_id, key, name, market, locale, timezone, automatic_target_keys, enabled, is_default, created_at, updated_at)
+       VALUES ($1, $2, 'legacy-unspecified', 'Legacy / Unspecified', 'ZZ', 'und', 'UTC', NULL, true, true, NOW(), NOW())`,
+      [NIKE_SCOPE_ID, NIKE_BRAND_ID],
+    );
 
     const nikePrompts = [
       { id: NIKE_PROMPT_IDS.training, value: "Best weightlifting shoes for squats and deadlifts", tags: ["training"] },
@@ -422,9 +449,9 @@ async function seed() {
     ];
     for (const p of nikePrompts) {
       await client.query(
-        `INSERT INTO prompts (id, brand_id, value, enabled, tags, system_tags, created_at, updated_at)
-         VALUES ($1, $2, $3, true, $4, '{}', NOW(), NOW())`,
-        [p.id, NIKE_BRAND_ID, p.value, p.tags],
+        `INSERT INTO prompts (id, brand_id, scope_id, value, enabled, tags, system_tags, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, $5, '{}', NOW(), NOW())`,
+        [p.id, NIKE_BRAND_ID, NIKE_SCOPE_ID, p.value, p.tags],
       );
     }
 
@@ -443,9 +470,18 @@ async function seed() {
     // A couple of realistic prompt runs + citations for the training prompt.
     const nikeRunId = "00000000-0000-0000-0000-420000000001";
     await client.query(
-      `INSERT INTO prompt_runs (id, prompt_id, brand_id, model, provider, version, web_search_enabled, raw_output, web_queries, brand_mentioned, competitors_mentioned, created_at)
-       VALUES ($1, $2, $3, 'chatgpt', 'brightdata', 'gpt-5-5', true, $4, $5, true, $6, NOW())`,
-      [nikeRunId, NIKE_PROMPT_IDS.training, NIKE_BRAND_ID, JSON.stringify({ response: "Nike Metcon and Romaleos are top picks; Adidas Powerlift is an alternative." }), ["best weightlifting shoes"], ["Adidas"]],
+      `INSERT INTO prompt_runs (id, prompt_id, brand_id, scope_id, model, provider, version, web_search_enabled, raw_output, answer_text, web_queries, brand_mentioned, competitors_mentioned, observed_at, created_at)
+       VALUES ($1, $2, $3, $4, 'chatgpt', 'brightdata', 'gpt-5-5', true, $5, $6, $7, true, $8, NOW(), NOW())`,
+      [
+        nikeRunId,
+        NIKE_PROMPT_IDS.training,
+        NIKE_BRAND_ID,
+        NIKE_SCOPE_ID,
+        JSON.stringify({ response: "Nike Metcon and Romaleos are top picks; Adidas Powerlift is an alternative." }),
+        "Nike Metcon and Romaleos are top picks; Adidas Powerlift is an alternative.",
+        ["best weightlifting shoes"],
+        ["Adidas"],
+      ],
     );
     for (const [i, cite] of [
       { url: "https://runrepeat.com/best-weightlifting-shoes", domain: "runrepeat.com", title: "Best Weightlifting Shoes" },
