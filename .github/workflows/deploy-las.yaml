@@ -4,6 +4,18 @@ on:
   push:
     branches:
       - main
+    paths:
+      - apps/web/**
+      - apps/worker/**
+      - packages/**
+      - docker/Dockerfile
+      - docker/entrypoint.sh
+      - deploy/las/compose.yaml
+      - deploy/las/env.example
+      - deploy/las/bin/deploy.sh
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
   workflow_dispatch:
 
 permissions:
@@ -11,6 +23,7 @@ permissions:
 
 concurrency:
   group: yonaris-production
+  queue: max
   cancel-in-progress: false
 
 env:
@@ -110,4 +123,4 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "set -e; cd /opt/yonaris/source; git fetch --depth=50 origin main; git checkout --detach '$RELEASE_SHA'; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/deploy.sh 'sha-$RELEASE_SHA'"
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; git fetch --depth=50 origin main; git checkout --detach $RELEASE_SHA; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/deploy.sh sha-$RELEASE_SHA'"

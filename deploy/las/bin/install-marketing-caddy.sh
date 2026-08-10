@@ -13,18 +13,53 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   extracted_block="$target_dir/.Caddyfile.yonaris-block-$$"
   apex_response="/tmp/yonaris-apex-response-$$"
   changed_config=false
+  keep_backup=false
 
   cleanup() {
-    rm -f -- "$candidate_config" "$backup_config" "$extracted_block" "$apex_response"
+    rm -f -- "$candidate_config" "$extracted_block" "$apex_response"
+    if [[ "$keep_backup" == true ]]; then
+      echo "Emergency Caddy backup retained at $backup_config" >&2
+    else
+      rm -f -- "$backup_config"
+    fi
   }
   trap cleanup EXIT
 
   restore_previous_config() {
     echo "Restoring the previous Caddy configuration." >&2
-    install -o root -g root -m 0644 -- "$backup_config" "$candidate_config"
-    mv -f -- "$candidate_config" "$target_config"
-    caddy validate --config "$target_config" --adapter caddyfile >/dev/null
-    caddy reload --config "$target_config" --adapter caddyfile --force
+    if ! install -o root -g root -m 0644 -- "$backup_config" "$candidate_config"; then
+      keep_backup=true
+      echo "Could not stage the previous Caddy configuration." >&2
+      return 1
+    fi
+    if ! mv -f -- "$candidate_config" "$target_config"; then
+      keep_backup=true
+      echo "Could not restore the previous Caddyfile on disk." >&2
+      return 1
+    fi
+    if ! caddy validate --config "$target_config" --adapter caddyfile >/dev/null; then
+      keep_backup=true
+      echo "The restored Caddyfile failed validation." >&2
+      return 1
+    fi
+
+    for _ in 1 2 3; do
+      if caddy reload --config "$target_config" --adapter caddyfile --force; then
+        return 0
+      fi
+      sleep 1
+    done
+
+    keep_backup=true
+    echo "The previous Caddyfile is restored on disk, but its active reload could not be confirmed." >&2
+    return 1
+  }
+
+  restore_or_emergency_exit() {
+    if ! restore_previous_config; then
+      echo "CRITICAL: keeping the marketing container running because Caddy rollback is unconfirmed." >&2
+      exit 75
+    fi
   }
 
   for required_file in "$legacy_fragment" "$marketing_fragment" "$target_config"; do
@@ -67,7 +102,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   mv -f -- "$candidate_config" "$target_config"
 
   if ! caddy reload --config "$target_config" --adapter caddyfile --force; then
-    restore_previous_config
+    restore_or_emergency_exit
     exit 1
   fi
 
@@ -75,7 +110,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     --output "$apex_response" --write-out '%{http_code}' \
     --resolve yonaris.com:443:127.0.0.1 https://yonaris.com/)"; then
     echo "The direct apex health check could not connect." >&2
-    restore_previous_config
+    restore_or_emergency_exit
     exit 1
   fi
 
@@ -83,14 +118,14 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     --output /dev/null --write-out '%{http_code}' \
     --resolve portal.yonaris.com:443:127.0.0.1 https://portal.yonaris.com/)"; then
     echo "The direct portal health check could not connect." >&2
-    restore_previous_config
+    restore_or_emergency_exit
     exit 1
   fi
 
   if [[ "$apex_status" != 200 ]] || ! grep -Fq "Product Truth" "$apex_response" ||
     [[ "$portal_status" != 200 ]]; then
     echo "Post-reload checks failed (apex=$apex_status, portal=$portal_status)." >&2
-    restore_previous_config
+    restore_or_emergency_exit
     exit 1
   fi
 

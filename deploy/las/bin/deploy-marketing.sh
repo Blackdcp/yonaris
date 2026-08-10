@@ -57,7 +57,7 @@ rollback_marketing() {
     if ! IMAGE_TAG="$previous_tag" "${compose[@]}" pull www; then
       echo "Could not refresh the previous image; trying the local cached image." >&2
     fi
-    if ! IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps www; then
+    if ! IMAGE_TAG="$previous_tag" "${compose[@]}" up -d --no-deps --pull never www; then
       echo "Failed to restore the previous marketing container." >&2
       return 1
     fi
@@ -85,7 +85,7 @@ echo "Pulling the Yonaris marketing image for $release_tag"
 IMAGE_TAG="$release_tag" "${compose[@]}" pull www
 
 echo "Starting the Yonaris marketing site"
-if ! IMAGE_TAG="$release_tag" "${compose[@]}" up -d --no-deps www; then
+if ! IMAGE_TAG="$release_tag" "${compose[@]}" up -d --no-deps --pull never www; then
   echo "The Yonaris marketing container failed to start." >&2
   IMAGE_TAG="$release_tag" "${compose[@]}" logs --tail 80 www >&2 || true
   rollback_marketing
@@ -109,10 +109,23 @@ if [[ "$www_ready" != true ]]; then
 fi
 
 helper_image="${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-www:${release_tag}"
-if ! CADDY_HELPER_IMAGE="$helper_image" bash "$SCRIPT_DIR/install-marketing-caddy.sh"; then
+set +e
+CADDY_HELPER_IMAGE="$helper_image" bash "$SCRIPT_DIR/install-marketing-caddy.sh"
+caddy_install_status=$?
+set -e
+if (( caddy_install_status == 75 )); then
+  echo "Caddy rollback could not be confirmed; leaving the healthy marketing container running for recovery." >&2
+  exit 75
+fi
+if (( caddy_install_status != 0 )); then
   rollback_marketing
   exit 1
 fi
 
-printf '%s\n' "$release_tag" >"$RELEASE_FILE"
+release_file_tmp="${RELEASE_FILE}.tmp.$$"
+if ! { printf '%s\n' "$release_tag" >"$release_file_tmp" && mv -f -- "$release_file_tmp" "$RELEASE_FILE"; }; then
+  rm -f -- "$release_file_tmp"
+  echo "The site is live, but the marketing release marker could not be updated." >&2
+  exit 1
+fi
 echo "Yonaris marketing $release_tag is healthy on 127.0.0.1:1516 and live on yonaris.com."
