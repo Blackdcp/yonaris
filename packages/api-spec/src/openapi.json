@@ -588,6 +588,12 @@
 						"items": { "type": "string" },
 						"description": "Exact automatic target keys; null inherits legacy targets and an empty list is manual-only"
 					},
+					"samplingEvaluationRole": {
+						"type": "string",
+						"nullable": true,
+						"enum": ["scored", "observation"],
+						"description": "Dedicated contractual metric lane for a manual sampling scope"
+					},
 					"enabled": { "type": "boolean" },
 					"isDefault": { "type": "boolean" },
 					"createdAt": { "type": "string", "format": "date-time" },
@@ -612,6 +618,13 @@
 						"items": { "type": "string" },
 						"default": [],
 						"description": "Exact automatic targets enabled in this scope; omit for a manual-only scope"
+					},
+					"samplingEvaluationRole": {
+						"type": "string",
+						"nullable": true,
+						"enum": ["scored", "observation"],
+						"default": null,
+						"description": "Bind a manual-only scope to one contractual metric lane"
 					},
 					"isDefault": { "type": "boolean", "default": false }
 				},
@@ -1232,7 +1245,7 @@
 		"/observations/coverage": {
 			"get": {
 				"summary": "Get observation coverage",
-				"description": "Returns registered attempt and terminal counts. This endpoint does not yet apply an external contractual delivery manifest, so samples never registered are outside its denominator.",
+				"description": "Returns coverage for a measurement scope. When batchId is supplied, the frozen delivery manifest is the contractual denominator and planned, failed, or cancelled tasks remain visible. Without batchId, coverage is based only on registered observation attempts.",
 				"operationId": "getObservationCoverage",
 				"tags": ["Measurement"],
 				"parameters": [
@@ -1246,6 +1259,13 @@
 						"name": "scopeId",
 						"in": "query",
 						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					},
+					{
+						"name": "batchId",
+						"in": "query",
+						"required": false,
+						"description": "Frozen delivery batch whose task manifest becomes the contractual denominator.",
 						"schema": { "type": "string", "format": "uuid" }
 					},
 					{
@@ -1263,7 +1283,9 @@
 						}
 					},
 					"400": { "$ref": "#/components/responses/ValidationError" },
-					"401": { "$ref": "#/components/responses/UnauthorizedError" }
+					"401": { "$ref": "#/components/responses/UnauthorizedError" },
+					"404": { "$ref": "#/components/responses/NotFoundError" },
+					"409": { "$ref": "#/components/responses/ConflictError" }
 				}
 			}
 		},

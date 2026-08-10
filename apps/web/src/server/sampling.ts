@@ -6,22 +6,20 @@ import {
 	claimNextDeliveryTask,
 	completeDeliveryTaskSuccess,
 	createDraftDeliveryBatch,
+	type DeliveryTaskPlanInput,
+	type DeliveryTaskView,
 	failDeliveryTask,
 	freezeDeliveryBatch,
 	getDeliveryBatch,
 	getDeliveryTask,
 	heartbeatDeliveryTask,
 	releaseDeliveryTask,
-	type DeliveryTaskPlanInput,
-	type DeliveryTaskView,
 } from "@workspace/lib/db/delivery-batches";
 import {
 	claimImportedObservationAttempt,
 	markObservationFailed,
 	persistSuccessfulObservation,
 } from "@workspace/lib/db/observations";
-import type { DeliveryManifestSnapshot, DeliveryProtocol } from "@workspace/lib/delivery-manifest";
-import { DEFAULT_DELIVERY_EVIDENCE_POLICY, summarizeDeliveryCoverage } from "@workspace/lib/delivery-manifest";
 import {
 	brands,
 	deliveryBatches,
@@ -31,12 +29,18 @@ import {
 	promptRuns,
 	prompts,
 } from "@workspace/lib/db/schema";
+import type { DeliveryManifestSnapshot, DeliveryProtocol } from "@workspace/lib/delivery-manifest";
+import {
+	DEFAULT_DELIVERY_EVIDENCE_POLICY,
+	normalizeDeliveryProtocol,
+	summarizeDeliveryCoverage,
+} from "@workspace/lib/delivery-manifest";
 import {
 	MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS,
 	MANUAL_OBSERVATION_SURFACE_TARGET_KEYS,
 	resolveManualObservationTarget,
 } from "@workspace/lib/manual-observation-targets";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
@@ -79,6 +83,43 @@ const brandIdSchema = z.string().trim().min(1, "brandId is required");
 const guidSchema = z.guid();
 const batchStatusSchema = z.enum(["draft", "frozen", "in_progress", "completed", "cancelled"]);
 
+const samplingMarketSchema = z
+	.string()
+	.trim()
+	.regex(/^[A-Za-z]{2}$/, "market must be a two-letter country or market code")
+	.transform((value) => value.toUpperCase())
+	.refine((value) => value !== "ZZ", "sampling scopes require an explicit market");
+
+const samplingLocaleSchema = z
+	.string()
+	.trim()
+	.min(2)
+	.max(35)
+	.refine((value) => {
+		try {
+			return Intl.getCanonicalLocales(value).length === 1;
+		} catch {
+			return false;
+		}
+	}, "locale must be a valid BCP 47 language tag")
+	.transform((value) => Intl.getCanonicalLocales(value)[0] ?? value)
+	.refine((value) => value !== "und", "sampling scopes require an explicit locale");
+
+const samplingTimezoneSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(100)
+	.refine((value) => {
+		try {
+			new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
+			return true;
+		} catch {
+			return false;
+		}
+	}, "timezone must be a valid IANA time zone")
+	.transform((value) => new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone);
+
 const evidenceProtocolSchema = z.object({
 	minimumArtifacts: z.number().int().min(1).max(20),
 	requireSha256: z.boolean(),
@@ -118,6 +159,22 @@ const createSamplingBatchInputSchema = z.object({
 		.min(1)
 		.max(50),
 	protocol: deliveryProtocolSchema,
+});
+
+const provisionSamplingScopeInputSchema = z.object({
+	brandId: brandIdSchema,
+	key: z
+		.string()
+		.trim()
+		.min(1)
+		.max(64)
+		.regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, "key must be a lowercase slug"),
+	name: z.string().trim().min(1).max(120),
+	market: samplingMarketSchema,
+	locale: samplingLocaleSchema,
+	timezone: samplingTimezoneSchema,
+	evaluationRole: z.enum(["scored", "observation"]),
+	sourceScopeId: guidSchema.optional(),
 });
 
 const listSamplingBatchesInputSchema = z.object({
@@ -162,6 +219,7 @@ function getSamplingTargetPresentation(surfaceTargetKey: string) {
 function buildSamplingBatchSummary(
 	batch: typeof deliveryBatches.$inferSelect,
 	coverage: ReturnType<typeof summarizeDeliveryCoverage>,
+	claimableTaskCount = coverage.overall.available,
 ) {
 	return {
 		id: batch.id,
@@ -179,6 +237,7 @@ function buildSamplingBatchSummary(
 		createdAt: batch.createdAt,
 		updatedAt: batch.updatedAt,
 		coverage,
+		claimableTaskCount,
 	};
 }
 
@@ -331,12 +390,90 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 					locale: scope.locale,
 					timezone: scope.timezone,
 					enabled: scope.enabled,
+					samplingEvaluationRole: scope.samplingEvaluationRole,
 					manualOnly: scope.automaticTargetKeys !== null && scope.automaticTargetKeys.length === 0,
 				})),
 				prompts: promptRows,
 			},
 			targets: SAMPLING_TARGETS,
 		};
+	});
+
+export const provisionSamplingScopeFn = createServerFn({ method: "POST" })
+	.validator(provisionSamplingScopeInputSchema)
+	.handler(async ({ data }) => {
+		await requireSamplingAdminBrand(data.brandId);
+		return db.transaction(async (tx) => {
+			const [lockedBrand] = await tx
+				.select({ id: brands.id })
+				.from(brands)
+				.where(eq(brands.id, data.brandId))
+				.limit(1)
+				.for("update");
+			if (!lockedBrand) throw new Error(`Brand "${data.brandId}" not found`);
+
+			const existing = await tx.query.measurementScopes.findFirst({
+				where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.key, data.key)),
+				columns: { id: true },
+			});
+			if (existing) throw new Error(`Measurement scope key "${data.key}" already exists for this brand`);
+
+			let sourcePrompts: Array<{
+				value: string;
+				enabled: boolean;
+				tags: string[];
+				systemTags: string[];
+			}> = [];
+			if (data.sourceScopeId) {
+				const sourceScope = await tx.query.measurementScopes.findFirst({
+					where: and(eq(measurementScopes.id, data.sourceScopeId), eq(measurementScopes.brandId, data.brandId)),
+					columns: { id: true },
+				});
+				if (!sourceScope) throw new Error("The prompt source scope does not belong to this brand");
+				sourcePrompts = await tx
+					.select({
+						value: prompts.value,
+						enabled: prompts.enabled,
+						tags: prompts.tags,
+						systemTags: prompts.systemTags,
+					})
+					.from(prompts)
+					.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, sourceScope.id), eq(prompts.enabled, true)))
+					.orderBy(asc(prompts.createdAt), asc(prompts.id));
+			}
+
+			const [scope] = await tx
+				.insert(measurementScopes)
+				.values({
+					brandId: data.brandId,
+					key: data.key,
+					name: data.name,
+					market: data.market,
+					locale: data.locale,
+					timezone: data.timezone,
+					automaticTargetKeys: [],
+					samplingEvaluationRole: data.evaluationRole,
+					enabled: true,
+					isDefault: false,
+				})
+				.returning();
+			if (!scope) throw new Error("Failed to create sampling measurement scope");
+
+			if (sourcePrompts.length > 0) {
+				await tx.insert(prompts).values(
+					sourcePrompts.map((prompt) => ({
+						brandId: data.brandId,
+						scopeId: scope.id,
+						value: prompt.value,
+						enabled: prompt.enabled,
+						tags: prompt.tags,
+						systemTags: prompt.systemTags,
+					})),
+				);
+			}
+
+			return { scope, copiedPromptCount: sourcePrompts.length };
+		});
 	});
 
 export const listSamplingBatchesFn = createServerFn({ method: "GET" })
@@ -364,10 +501,31 @@ export const listSamplingBatchesFn = createServerFn({ method: "GET" })
 		const batchesWithCoverage = await Promise.all(
 			batchesList.map(async (batch) => {
 				const taskRows = await db
-					.select({ status: deliveryTasks.status, evaluationRole: deliveryTasks.evaluationRole })
+					.select({
+						status: deliveryTasks.status,
+						evaluationRole: deliveryTasks.evaluationRole,
+						leaseExpiresAt: deliveryTasks.leaseExpiresAt,
+					})
 					.from(deliveryTasks)
 					.where(and(eq(deliveryTasks.batchId, batch.id), eq(deliveryTasks.brandId, batch.brandId)));
-				return buildSamplingBatchSummary(batch, summarizeDeliveryCoverage(taskRows));
+				const now = Date.now();
+				let windowIsOpen = false;
+				try {
+					const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+					const startsAt = new Date(protocol.measurementWindow.startsAt).getTime();
+					const endsAt = new Date(protocol.measurementWindow.endsAt).getTime();
+					windowIsOpen = now >= startsAt && now <= endsAt;
+				} catch {
+					windowIsOpen = false;
+				}
+				const claimableTaskCount = !windowIsOpen
+					? 0
+					: taskRows.filter(
+							({ status, leaseExpiresAt }) =>
+								status === "available" ||
+								(status === "claimed" && leaseExpiresAt !== null && leaseExpiresAt.getTime() <= now),
+						).length;
+				return buildSamplingBatchSummary(batch, summarizeDeliveryCoverage(taskRows), claimableTaskCount);
 			}),
 		);
 
@@ -403,15 +561,15 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 			throw new Error("A sampling batch can include each surface target only once");
 		}
 
-		const scope = await db.query.measurementScopes.findFirst({
+		const scopeCandidate = await db.query.measurementScopes.findFirst({
 			where: and(eq(measurementScopes.id, data.scopeId), eq(measurementScopes.brandId, brand.id)),
 		});
-		if (!scope) throw new Error(`Measurement scope "${data.scopeId}" was not found for this brand`);
-		if (!scope.enabled) throw new Error(`Measurement scope "${scope.name}" is disabled`);
-		if (scope.market === "ZZ" || scope.locale === "und") {
+		if (!scopeCandidate) throw new Error(`Measurement scope "${data.scopeId}" was not found for this brand`);
+		if (!scopeCandidate.enabled) throw new Error(`Measurement scope "${scopeCandidate.name}" is disabled`);
+		if (scopeCandidate.market === "ZZ" || scopeCandidate.locale === "und") {
 			throw new Error("Sampling batches require an explicit market and locale");
 		}
-		if (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0) {
+		if (scopeCandidate.automaticTargetKeys === null || scopeCandidate.automaticTargetKeys.length > 0) {
 			throw new Error("Sampling batches require a manual-only measurement scope");
 		}
 
@@ -420,6 +578,61 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 			if (target.surfaceKind === "search_surface" && targetInput.searchRequirement !== "required") {
 				throw new Error(`Search surface ${target.surfaceTargetKey} must require search mode`);
 			}
+		}
+		const evaluationRole = data.targets[0]?.evaluationRole;
+		if (!evaluationRole) throw new Error("A sampling batch requires at least one target");
+		if (data.targets.some((target) => target.evaluationRole !== evaluationRole)) {
+			throw new Error(
+				"A sampling scope cannot mix scored and observation pools. Provision a separate scope and copy the prompts.",
+			);
+		}
+		const [existingRoles, contaminatedRuns] = await Promise.all([
+			db
+				.selectDistinct({ evaluationRole: deliveryTasks.evaluationRole })
+				.from(deliveryTasks)
+				.where(and(eq(deliveryTasks.brandId, brand.id), eq(deliveryTasks.scopeId, scopeCandidate.id))),
+			db
+				.select({ id: promptRuns.id })
+				.from(promptRuns)
+				.leftJoin(
+					deliveryTasks,
+					and(
+						eq(deliveryTasks.observationAttemptId, promptRuns.observationAttemptId),
+						eq(deliveryTasks.brandId, promptRuns.brandId),
+					),
+				)
+				.where(
+					and(
+						eq(promptRuns.brandId, brand.id),
+						eq(promptRuns.scopeId, scopeCandidate.id),
+						or(isNull(deliveryTasks.id), ne(deliveryTasks.evaluationRole, evaluationRole)),
+					),
+				)
+				.limit(1),
+		]);
+		if (existingRoles.some((row) => row.evaluationRole !== evaluationRole) || contaminatedRuns.length > 0) {
+			throw new Error(
+				`Measurement scope "${scopeCandidate.name}" already contains a different metric lane. Use a dedicated ${evaluationRole} sampling scope.`,
+			);
+		}
+		const [scope] = await db
+			.update(measurementScopes)
+			.set({ samplingEvaluationRole: evaluationRole })
+			.where(
+				and(
+					eq(measurementScopes.id, scopeCandidate.id),
+					eq(measurementScopes.brandId, brand.id),
+					or(
+						isNull(measurementScopes.samplingEvaluationRole),
+						eq(measurementScopes.samplingEvaluationRole, evaluationRole),
+					),
+				),
+			)
+			.returning();
+		if (!scope) {
+			throw new Error(
+				`Measurement scope "${scopeCandidate.name}" belongs to a different evaluation pool. Provision a separate scope.`,
+			);
 		}
 
 		const promptRows = await db
@@ -667,7 +880,7 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 				deliveryClaim,
 			});
 			const completed = await getDeliveryTask({ brandId: task.brandId, taskId: task.id });
-			if (!completed || completed.status !== "succeeded") {
+			if (completed?.status !== "succeeded") {
 				throw new Error(`Sampling task ${task.id} was not completed with its observation`);
 			}
 			return {
@@ -688,21 +901,15 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 						startedAt: attempt.startedAt,
 						error,
 						stage: "import",
-						deliveryClaim,
 					});
 				} catch (markError) {
-					console.error(`Failed to atomically mark sampling task ${task.id} after submission error:`, markError);
-					try {
-						await markObservationFailed({
-							attemptId: attempt.id,
-							startedAt: attempt.startedAt,
-							error,
-							stage: "import",
-						});
-					} catch (fallbackError) {
-						console.error(`Failed to mark observation attempt ${attempt.id} after lease loss:`, fallbackError);
-					}
+					console.error(`Failed to mark observation attempt ${attempt.id} after submission error:`, markError);
 				}
+			}
+			try {
+				await releaseDeliveryTask(deliveryClaim);
+			} catch (releaseError) {
+				console.error(`Failed to release sampling task ${task.id} after submission error:`, releaseError);
 			}
 			throw error;
 		}

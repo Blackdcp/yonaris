@@ -164,6 +164,13 @@ export const Route = createFileRoute("/api/v1/observations/import")({
 							"Consumer-surface imports currently require a manual-only scope so automatic API/vendor routes cannot be mixed into the same score.",
 						);
 					}
+					if (scope.samplingEvaluationRole !== null) {
+						throw new ApiError(
+							409,
+							"Dedicated Sampling Scope",
+							"This scope is bound to a frozen delivery evaluation pool. Submit observations through the Sampling workbench so its contractual denominator and role remain intact.",
+						);
+					}
 
 					const [competitorRows, promptRows] = await Promise.all([
 						db.query.competitors.findMany({ where: eq(competitors.brandId, body.brandId) }),

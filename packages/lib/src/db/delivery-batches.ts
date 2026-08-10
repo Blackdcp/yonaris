@@ -4,22 +4,22 @@ import {
 	buildDeliveryManifestHash,
 	buildDeliveryManifestSnapshot,
 	buildDeliveryTaskSlotKey,
-	normalizeDeliveryProtocol,
-	normalizeDeliveryTaskPlan,
-	summarizeDeliveryCoverage,
 	type DeliveryCoverage,
 	type DeliveryEvaluationRole,
 	type DeliveryManifestTaskSnapshot,
 	type DeliveryProtocol,
 	type DeliverySearchRequirement,
 	type DeliverySessionRequirement,
+	normalizeDeliveryProtocol,
+	normalizeDeliveryTaskPlan,
+	summarizeDeliveryCoverage,
 } from "../delivery-manifest";
 import { db } from "./db";
 import {
-	type DeliveryBatch,
-	type DeliveryTask,
 	brands,
 	competitors,
+	type DeliveryBatch,
+	type DeliveryTask,
 	deliveryBatches,
 	deliveryTasks,
 	measurementScopes,
@@ -173,16 +173,19 @@ export async function addDeliveryTasks(input: {
 
 		const existingTasks = await tx.select().from(deliveryTasks).where(eq(deliveryTasks.batchId, batch.id));
 		const existingBySlot = new Map(existingTasks.map((task) => [task.slotKey, task]));
-		const newPlans = plans.filter(({ slotKey }) => !existingBySlot.has(slotKey));
-		const inserted =
-			newPlans.length === 0
-				? []
-				: await tx
-						.insert(deliveryTasks)
-						.values(newPlans.map((plan) => ({ batchId: batch.id, ...plan })))
-						.returning();
-		const resultBySlot = new Map([...existingTasks, ...inserted].map((task) => [task.slotKey, task]));
-		return plans.map(({ slotKey }) => redactDeliveryTask(requiredMapValue(resultBySlot, slotKey)));
+		if (existingTasks.length > 0) {
+			if (existingTasks.length !== plans.length || plans.some(({ slotKey }) => !existingBySlot.has(slotKey))) {
+				throw new DeliveryBatchConflictError(batch.idempotencyKey);
+			}
+			return plans.map(({ slotKey }) => redactDeliveryTask(requiredMapValue(existingBySlot, slotKey)));
+		}
+
+		const inserted = await tx
+			.insert(deliveryTasks)
+			.values(plans.map((plan) => ({ batchId: batch.id, ...plan })))
+			.returning();
+		const insertedBySlot = new Map(inserted.map((task) => [task.slotKey, task]));
+		return plans.map(({ slotKey }) => redactDeliveryTask(requiredMapValue(insertedBySlot, slotKey)));
 	});
 }
 
@@ -369,86 +372,137 @@ export async function claimNextDeliveryTask(input: {
 			inArray(deliveryBatches.status, ["frozen", "in_progress"]),
 		];
 		if (input.batchId) batchConditions.push(eq(deliveryBatches.id, input.batchId));
-		const [batch] = await tx
-			.select({ id: deliveryBatches.id, status: deliveryBatches.status, startedAt: deliveryBatches.startedAt })
+		const batches = await tx
+			.select({
+				id: deliveryBatches.id,
+				status: deliveryBatches.status,
+				startedAt: deliveryBatches.startedAt,
+				protocol: deliveryBatches.protocol,
+			})
 			.from(deliveryBatches)
 			.where(and(...batchConditions))
-			.orderBy(asc(deliveryBatches.createdAt))
-			.limit(1);
-		if (!batch) return null;
+			.orderBy(asc(deliveryBatches.createdAt));
+		if (batches.length === 0) return null;
 
 		const now = new Date();
-		const taskConditions = [
-			eq(deliveryTasks.batchId, batch.id),
-			or(
+		const eligibleBatches: Array<{ batch: (typeof batches)[number]; windowEndsAt: Date }> = [];
+		for (const batch of batches) {
+			const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+			const windowStartsAt = new Date(protocol.measurementWindow.startsAt);
+			const windowEndsAt = new Date(protocol.measurementWindow.endsAt);
+			if (now < windowStartsAt) {
+				if (input.batchId) {
+					throw new DeliveryBatchStateError(`Delivery batch ${batch.id} measurement window has not started`);
+				}
+				continue;
+			}
+			if (now >= windowEndsAt) {
+				if (input.batchId) {
+					throw new DeliveryBatchStateError(`Delivery batch ${batch.id} measurement window has ended`);
+				}
+				continue;
+			}
+			eligibleBatches.push({ batch, windowEndsAt });
+		}
+
+		for (const { batch, windowEndsAt } of eligibleBatches) {
+			const availabilityCondition = or(
 				eq(deliveryTasks.status, "available"),
 				and(eq(deliveryTasks.status, "claimed"), lt(deliveryTasks.leaseExpiresAt, now)),
-			)!,
-		];
-		if (input.surfaceTargetKeys) taskConditions.push(inArray(deliveryTasks.surfaceTargetKey, input.surfaceTargetKeys));
-		if (input.evaluationRoles) taskConditions.push(inArray(deliveryTasks.evaluationRole, input.evaluationRoles));
+			);
+			if (!availabilityCondition) throw new Error("Failed to build delivery task availability condition");
+			const taskConditions = [eq(deliveryTasks.batchId, batch.id), availabilityCondition];
+			if (input.surfaceTargetKeys)
+				taskConditions.push(inArray(deliveryTasks.surfaceTargetKey, input.surfaceTargetKeys));
+			if (input.evaluationRoles) taskConditions.push(inArray(deliveryTasks.evaluationRole, input.evaluationRoles));
 
-		const [candidate] = await tx
-			.select()
-			.from(deliveryTasks)
-			.where(and(...taskConditions))
-			.orderBy(asc(deliveryTasks.createdAt), asc(deliveryTasks.id))
-			.limit(1)
-			.for("update", { skipLocked: true });
-		if (!candidate) return null;
+			const [candidate] = await tx
+				.select()
+				.from(deliveryTasks)
+				.where(and(...taskConditions))
+				.orderBy(asc(deliveryTasks.createdAt), asc(deliveryTasks.id))
+				.limit(1)
+				.for("update", { skipLocked: true });
+			if (!candidate) continue;
 
-		const leaseToken = randomBytes(32).toString("base64url");
-		const leaseExpiresAt = new Date(now.getTime() + leaseDurationMs);
-		const leaseGeneration = candidate.leaseGeneration + 1;
-		const [claimed] = await tx
-			.update(deliveryTasks)
-			.set({
-				status: "claimed",
-				claimedBy,
-				leaseTokenHash: hashLeaseToken(leaseToken),
+			const leaseToken = randomBytes(32).toString("base64url");
+			const leaseExpiresAt = boundedLeaseExpiry(now, leaseDurationMs, windowEndsAt);
+			const leaseGeneration = candidate.leaseGeneration + 1;
+			const [claimed] = await tx
+				.update(deliveryTasks)
+				.set({
+					status: "claimed",
+					claimedBy,
+					leaseTokenHash: hashLeaseToken(leaseToken),
+					leaseGeneration,
+					leaseExpiresAt,
+					claimCount: candidate.claimCount + 1,
+					claimedAt: now,
+				})
+				.where(
+					and(
+						eq(deliveryTasks.id, candidate.id),
+						eq(deliveryTasks.status, candidate.status),
+						eq(deliveryTasks.leaseGeneration, candidate.leaseGeneration),
+						candidate.status === "claimed" ? lt(deliveryTasks.leaseExpiresAt, now) : undefined,
+					),
+				)
+				.returning();
+			if (!claimed) continue;
+
+			if (batch.status === "frozen") {
+				await tx
+					.update(deliveryBatches)
+					.set({ status: "in_progress", startedAt: batch.startedAt ?? now })
+					.where(and(eq(deliveryBatches.id, batch.id), eq(deliveryBatches.status, "frozen")));
+			}
+			return {
+				task: redactDeliveryTask(claimed),
+				leaseToken,
 				leaseGeneration,
 				leaseExpiresAt,
-				claimCount: candidate.claimCount + 1,
-				claimedAt: now,
-			})
-			.where(
-				and(
-					eq(deliveryTasks.id, candidate.id),
-					eq(deliveryTasks.status, candidate.status),
-					eq(deliveryTasks.leaseGeneration, candidate.leaseGeneration),
-					candidate.status === "claimed" ? lt(deliveryTasks.leaseExpiresAt, now) : undefined,
-				),
-			)
-			.returning();
-		if (!claimed) return null;
-
-		if (batch.status === "frozen") {
-			await tx
-				.update(deliveryBatches)
-				.set({ status: "in_progress", startedAt: batch.startedAt ?? now })
-				.where(and(eq(deliveryBatches.id, batch.id), eq(deliveryBatches.status, "frozen")));
+			};
 		}
-		return {
-			task: redactDeliveryTask(claimed),
-			leaseToken,
-			leaseGeneration,
-			leaseExpiresAt,
-		};
+		return null;
 	});
 }
 
 export async function heartbeatDeliveryTask(
 	claim: DeliveryClaimProof & { leaseDurationMs?: number },
 ): Promise<{ leaseGeneration: number; leaseExpiresAt: Date }> {
-	const now = new Date();
-	const leaseExpiresAt = new Date(now.getTime() + validLeaseDuration(claim.leaseDurationMs));
-	const [updated] = await db
-		.update(deliveryTasks)
-		.set({ leaseExpiresAt })
-		.where(activeLeaseCondition(claim, now))
-		.returning({ leaseGeneration: deliveryTasks.leaseGeneration, leaseExpiresAt: deliveryTasks.leaseExpiresAt });
-	if (!updated) throw new DeliveryTaskLeaseError(claim.taskId);
-	return { leaseGeneration: updated.leaseGeneration, leaseExpiresAt: requiredDate(updated.leaseExpiresAt) };
+	const leaseDurationMs = validLeaseDuration(claim.leaseDurationMs);
+	return db.transaction(async (tx) => {
+		const checkedAt = new Date();
+		const [lockedTask] = await tx
+			.select({ batchId: deliveryTasks.batchId, leaseExpiresAt: deliveryTasks.leaseExpiresAt })
+			.from(deliveryTasks)
+			.where(activeLeaseCondition(claim, checkedAt))
+			.limit(1)
+			.for("update");
+		const now = new Date();
+		if (!lockedTask || requiredDate(lockedTask.leaseExpiresAt) <= now) {
+			throw new DeliveryTaskLeaseError(claim.taskId);
+		}
+
+		const [batch] = await tx
+			.select({ protocol: deliveryBatches.protocol })
+			.from(deliveryBatches)
+			.where(eq(deliveryBatches.id, lockedTask.batchId))
+			.limit(1);
+		if (!batch) throw new DeliveryTaskLeaseError(claim.taskId);
+		const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+		const windowEndsAt = new Date(protocol.measurementWindow.endsAt);
+		if (now >= windowEndsAt) throw new DeliveryTaskLeaseError(claim.taskId);
+
+		const leaseExpiresAt = boundedLeaseExpiry(now, leaseDurationMs, windowEndsAt);
+		const [updated] = await tx
+			.update(deliveryTasks)
+			.set({ leaseExpiresAt })
+			.where(activeLeaseCondition(claim, now))
+			.returning({ leaseGeneration: deliveryTasks.leaseGeneration, leaseExpiresAt: deliveryTasks.leaseExpiresAt });
+		if (!updated) throw new DeliveryTaskLeaseError(claim.taskId);
+		return { leaseGeneration: updated.leaseGeneration, leaseExpiresAt: requiredDate(updated.leaseExpiresAt) };
+	});
 }
 
 export async function releaseDeliveryTask(claim: DeliveryClaimProof & { error?: unknown }): Promise<DeliveryTaskView> {
@@ -673,6 +727,10 @@ function validLeaseDuration(value = 15 * 60 * 1_000): number {
 		throw new Error("leaseDurationMs must be an integer between 10000 and 3600000");
 	}
 	return value;
+}
+
+function boundedLeaseExpiry(now: Date, leaseDurationMs: number, windowEndsAt: Date): Date {
+	return new Date(Math.min(now.getTime() + leaseDurationMs, windowEndsAt.getTime()));
 }
 
 function requiredText(value: string, field: string, maxLength: number): string {

@@ -67,6 +67,7 @@ const createMeasurementScopeBody = z.object({
 	locale: localeSchema,
 	timezone: timezoneSchema,
 	automaticTargetKeys: z.array(z.string().trim().min(1).max(500)).max(50).optional().default([]),
+	samplingEvaluationRole: z.enum(["scored", "observation"]).nullable().optional().default(null),
 	isDefault: z.boolean().optional().default(false),
 });
 
@@ -117,6 +118,20 @@ export const Route = createFileRoute("/api/v1/measurement-scopes/")({
 				body: createMeasurementScopeBody,
 				status: 201,
 				handle: async ({ body }) => {
+					if (body.samplingEvaluationRole && body.automaticTargetKeys.length > 0) {
+						throw new ApiError(
+							400,
+							"Validation Error",
+							"A sampling evaluation role requires a manual-only scope with no automatic targets.",
+						);
+					}
+					if (body.samplingEvaluationRole && (body.market === "ZZ" || body.locale === "und")) {
+						throw new ApiError(
+							400,
+							"Validation Error",
+							"A sampling evaluation scope requires an explicit market and locale.",
+						);
+					}
 					if (new Set(body.automaticTargetKeys).size !== body.automaticTargetKeys.length) {
 						throw new ApiError(400, "Validation Error", "automaticTargetKeys must not contain duplicates.");
 					}

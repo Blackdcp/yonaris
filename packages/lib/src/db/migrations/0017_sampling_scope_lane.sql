@@ -1,0 +1,1 @@
+ALTER TABLE "measurement_scopes" ADD COLUMN "sampling_evaluation_role" "delivery_evaluation_role";

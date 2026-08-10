@@ -105,6 +105,7 @@ export const measurementScopes = pgTable(
 		locale: text("locale").notNull(),
 		timezone: text("timezone").notNull().default("UTC"),
 		automaticTargetKeys: text("automatic_target_keys").array(),
+		samplingEvaluationRole: deliveryEvaluationRoleEnum("sampling_evaluation_role"),
 		enabled: boolean("enabled").notNull().default(true),
 		isDefault: boolean("is_default").notNull().default(false),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
