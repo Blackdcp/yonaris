@@ -485,8 +485,8 @@ export async function completeDeliveryTaskInTransaction(
 	executor: DeliveryExecutor,
 	claim: DeliveryClaimProof & { observationAttemptId: string },
 ): Promise<DeliveryTaskView> {
-	const now = new Date();
 	await lockDeliveryTaskBatch(executor, claim.taskId);
+	const now = new Date();
 	await assertAttemptMatchesTask(executor, claim.taskId, claim.observationAttemptId, "succeeded");
 	const [completed] = await executor
 		.update(deliveryTasks)
@@ -511,8 +511,8 @@ export async function failDeliveryTaskInTransaction(
 	executor: DeliveryExecutor,
 	claim: DeliveryClaimProof & { observationAttemptId?: string; error: unknown },
 ): Promise<DeliveryTaskView> {
-	const now = new Date();
 	await lockDeliveryTaskBatch(executor, claim.taskId);
+	const now = new Date();
 	if (claim.observationAttemptId) {
 		await assertAttemptMatchesTask(executor, claim.taskId, claim.observationAttemptId, "failed");
 	}
@@ -578,6 +578,9 @@ export async function cancelDeliveryBatch(input: {
 }
 
 function activeLeaseCondition(claim: DeliveryClaimProof, now: Date) {
+	if (!Number.isSafeInteger(claim.leaseGeneration) || claim.leaseGeneration <= 0) {
+		throw new Error("leaseGeneration must be a positive integer");
+	}
 	return and(
 		eq(deliveryTasks.id, claim.taskId),
 		eq(deliveryTasks.status, "claimed"),
@@ -661,6 +664,7 @@ function redactDeliveryTask(task: DeliveryTask): DeliveryTaskView {
 
 function hashLeaseToken(token: string): string {
 	if (!token) throw new Error("leaseToken must not be empty");
+	if (token.length > 500) throw new Error("leaseToken must not exceed 500 characters");
 	return createHash("sha256").update(token).digest("hex");
 }
 
