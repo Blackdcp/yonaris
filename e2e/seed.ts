@@ -50,6 +50,7 @@ async function seed() {
     // ordinary DELETE sequence used before scoped observations existed.
     await client.query(`
       TRUNCATE TABLE
+        evidence_artifacts,
         citations,
         prompt_runs,
         delivery_tasks,

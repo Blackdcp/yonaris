@@ -92,7 +92,7 @@ jobs:
         run: |
           mkdir -p e2e/.elmo
           cd e2e
-          npx tsx cli-driver.ts "$PWD/.elmo" "$GITHUB_WORKSPACE"
+          pnpm exec tsx cli-driver.ts "$PWD/.elmo" "$GITHUB_WORKSPACE"
 
       - name: Patch .env with test overrides
         run: |
@@ -139,7 +139,7 @@ jobs:
           exit 1
 
       - name: Seed test data
-        run: cd e2e && npx tsx seed.ts
+        run: pnpm -C e2e exec tsx seed.ts
 
       # Phase 1 — worker still down. Run everything that reads the seeded
       # fixtures, so no background job can mutate them mid-suite.
@@ -148,6 +148,13 @@ jobs:
 
       - name: Run Bruno API tests
         run: pnpm test:api
+
+      # Sampling owns a separate delivery batch so its mutations cannot race
+      # with the fixture readers. This validates the frozen denominator,
+      # server-managed evidence, observation ledger, and analytics handoff;
+      # it deliberately does not contact or impersonate a consumer AI site.
+      - name: Run sampling delivery test
+        run: pnpm -C e2e exec playwright test --project=sampling --reporter=list,github
 
       # Phase 2 — bring the worker up and prove it processes a submitted job.
       # No readiness wait: the job the spec submits is durable in pg-boss, so
@@ -179,5 +186,6 @@ jobs:
           name: test-results
           path: |
             e2e/test-results/
+            e2e/test-results-sampling/
             e2e/test-results-worker/
           retention-days: 7

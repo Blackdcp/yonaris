@@ -31,7 +31,18 @@ export default defineConfig({
   projects: [
     {
       name: "fixtures",
-      testIgnore: /worker\.spec\.ts/,
+      testIgnore: /(worker|sampling)\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Sampling mutates its own frozen delivery manifest and is intentionally
+    // serialized after the read-only fixture suite. It never opens a real AI
+    // surface or invokes a paid provider; the test proves the internal
+    // evidence/ledger/analytics path only.
+    {
+      name: "sampling",
+      testMatch: /sampling\.spec\.ts/,
+      outputDir: "test-results-sampling",
+      workers: 1,
       use: { ...devices["Desktop Chrome"] },
     },
     // Run explicitly by CI phase 2 (--project=worker) once the worker
