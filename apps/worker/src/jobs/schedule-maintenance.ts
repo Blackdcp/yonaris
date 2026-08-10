@@ -1,9 +1,9 @@
 import * as Sentry from "@sentry/node";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
-import { brands, observationAttempts, promptRuns, prompts } from "@workspace/lib/db/schema";
+import { brands, measurementScopes, observationAttempts, promptRuns, prompts } from "@workspace/lib/db/schema";
 import { isPromptOverdue } from "@workspace/lib/overdue";
-import { parseScrapeTargets } from "@workspace/lib/providers";
+import { formatScrapeTarget, parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
@@ -67,8 +67,17 @@ async function runMaintenanceCheck(): Promise<void> {
 	}
 
 	// Get all enabled prompts for enabled brands
-	const enabledPrompts = await db.query.prompts.findMany({
+	const allEnabledPrompts = await db.query.prompts.findMany({
 		where: and(eq(prompts.enabled, true), inArray(prompts.brandId, brandIds)),
+	});
+	const scopes = await db.query.measurementScopes.findMany({
+		where: inArray(measurementScopes.brandId, brandIds),
+	});
+	const scopeById = new Map(scopes.map((scope) => [scope.id, scope]));
+	const enabledPrompts = allEnabledPrompts.filter((prompt) => {
+		if (!prompt.scopeId) return true;
+		const scope = scopeById.get(prompt.scopeId);
+		return scope?.enabled === true && (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0);
 	});
 
 	if (enabledPrompts.length === 0) {
@@ -79,7 +88,18 @@ async function runMaintenanceCheck(): Promise<void> {
 	console.log(`[schedule-maintenance] Checking ${enabledPrompts.length} enabled prompts`);
 
 	const allModels = parseScrapeTargets(process.env.SCRAPE_TARGETS);
-	const modelNames = allModels.map((cfg) => cfg.model);
+	const brandById = new Map(enabledBrands.map((brand) => [brand.id, brand]));
+	const expectedModelNamesByPrompt: Record<string, string[]> = {};
+	for (const prompt of enabledPrompts) {
+		const brand = brandById.get(prompt.brandId);
+		const brandConfigs = selectTargetsForBrand(allModels, brand?.enabledModels ?? null);
+		const scope = prompt.scopeId ? scopeById.get(prompt.scopeId) : undefined;
+		const scopeConfigs =
+			scope?.automaticTargetKeys === null || scope === undefined
+				? brandConfigs
+				: brandConfigs.filter((config) => scope.automaticTargetKeys?.includes(formatScrapeTarget(config)));
+		expectedModelNamesByPrompt[prompt.id] = [...new Set(scopeConfigs.map((config) => config.model))];
+	}
 
 	// Get last runs per prompt per model (matches dashboard overdue logic)
 	const lastRunsQuery = await db
@@ -129,7 +149,7 @@ async function runMaintenanceCheck(): Promise<void> {
 		brandDelayHours: brandDelayMap,
 		defaultDelayHours,
 		lastRunsMap,
-		modelNames,
+		expectedModelNamesByPrompt,
 		pendingJobMap,
 		now,
 	});
@@ -257,11 +277,19 @@ function reportOverduePrompts(input: {
 	brandDelayHours: Record<string, number>;
 	defaultDelayHours: number;
 	lastRunsMap: Record<string, Record<string, Date>>;
-	modelNames: string[];
+	expectedModelNamesByPrompt: Record<string, string[]>;
 	pendingJobMap: Map<string, PendingJobInfo>;
 	now: number;
 }): void {
-	const { prompts: enabled, brandDelayHours, defaultDelayHours, lastRunsMap, modelNames, pendingJobMap, now } = input;
+	const {
+		prompts: enabled,
+		brandDelayHours,
+		defaultDelayHours,
+		lastRunsMap,
+		expectedModelNamesByPrompt,
+		pendingJobMap,
+		now,
+	} = input;
 
 	let overduePrompts = 0;
 	for (const prompt of enabled) {
@@ -272,7 +300,7 @@ function reportOverduePrompts(input: {
 
 		const runFrequencyMs = (brandDelayHours[prompt.brandId] ?? defaultDelayHours) * 60 * 60 * 1000;
 		const overdue = isPromptOverdue({
-			models: modelNames,
+			models: expectedModelNamesByPrompt[prompt.id] ?? [],
 			lastRunByModel: lastRunsMap[prompt.id] ?? {},
 			promptCreatedAt: prompt.createdAt,
 			runFrequencyMs,

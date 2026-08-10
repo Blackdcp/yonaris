@@ -9,25 +9,43 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
-import { prompts } from "@workspace/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { measurementScopes, prompts } from "@workspace/lib/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { PromptsEditor } from "@/components/prompts-editor";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 
 const getPromptsForEditing = createServerFn({ method: "GET" })
-	.validator(z.object({ brandId: z.string() }))
+	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid().optional() }))
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 
-		// Fetch all prompts (including disabled) for editing
+		const requestedScope = data.scopeId
+			? await db.query.measurementScopes.findFirst({
+					where: and(
+						eq(measurementScopes.id, data.scopeId),
+						eq(measurementScopes.brandId, data.brandId),
+						eq(measurementScopes.enabled, true),
+					),
+				})
+			: undefined;
+		const scope =
+			requestedScope ??
+			(await db.query.measurementScopes.findFirst({
+				where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.enabled, true)),
+				orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
+			}));
+		const scopeId = scope?.id ?? (await ensureLegacyMeasurementScope(data.brandId));
+
+		// Fetch all prompts (including disabled) for this measurement scope.
 		const brandPrompts = await db
 			.select()
 			.from(prompts)
-			.where(eq(prompts.brandId, data.brandId))
+			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scopeId)))
 			.orderBy(prompts.value, desc(prompts.enabled), prompts.id);
 
-		return brandPrompts;
+		return { prompts: brandPrompts, scopeId, scopeName: scope?.name ?? "Legacy / Unspecified" };
 	});
 
 function PromptsSettingsSkeleton() {
@@ -51,9 +69,11 @@ function PromptsSettingsSkeleton() {
 }
 
 export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
-	loader: async ({ params }) => {
-		const brandPrompts = await getPromptsForEditing({ data: { brandId: params.brand } });
-		return { prompts: brandPrompts };
+	loaderDeps: ({ search }) => ({
+		scopeId: z.string().uuid().safeParse(search.scope).success ? search.scope : undefined,
+	}),
+	loader: async ({ params, deps }) => {
+		return getPromptsForEditing({ data: { brandId: params.brand, scopeId: deps.scopeId } });
 	},
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
@@ -70,15 +90,17 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 });
 
 function PromptsSettingsPage() {
-	const { prompts: brandPrompts } = Route.useLoaderData();
+	const { prompts: brandPrompts, scopeId, scopeName } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
 
 	return (
 		<PromptsEditor
+			key={scopeId}
 			initialPrompts={brandPrompts}
 			brandId={brandId}
-			pageTitle="Prompts"
-			pageDescription="Add, edit, or remove your brand tracking keywords and prompts"
+			scopeId={scopeId}
+			pageTitle={`Prompts - ${scopeName}`}
+			pageDescription="Add, edit, or remove prompts for this measurement scope"
 		/>
 	);
 }

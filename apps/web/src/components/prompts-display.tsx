@@ -1,25 +1,26 @@
-import { useMemo } from "react";
+import { IconEditCircle } from "@tabler/icons-react";
+import { Link, useSearch } from "@tanstack/react-router";
+import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
-import { Button } from "@workspace/ui/components/button";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Inbox } from "lucide-react";
-import { IconEditCircle } from "@tabler/icons-react";
-import { usePromptsSummary } from "@/hooks/use-prompts-summary";
+import { useMemo } from "react";
+import { ALL_MODELS_VALUE, getAvailableModels } from "@/components/filter-bar";
+import { FilteredListShell } from "@/components/filtered-list-shell";
+import { PageHeader } from "@/components/page-header";
+import { PromptOrderDropdown } from "@/components/prompt-order-dropdown";
+import { VirtualizedPromptList } from "@/components/virtualized-prompt-list";
+import { VisibilityBarSection } from "@/components/visibility-bar-section";
+import { ChartDataProvider } from "@/contexts/chart-data-context";
 import { useBatchChartData } from "@/hooks/use-batch-chart-data";
 import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
-import { Link, useSearch } from "@tanstack/react-router";
-import { VirtualizedPromptList } from "@/components/virtualized-prompt-list";
-import { ChartDataProvider } from "@/contexts/chart-data-context";
-import { Skeleton } from "@workspace/ui/components/skeleton";
-import { PageHeader } from "@/components/page-header";
-import { getAvailableModels, ALL_MODELS_VALUE } from "@/components/filter-bar";
-import { FilteredListShell } from "@/components/filtered-list-shell";
-import { PromptOrderDropdown } from "@/components/prompt-order-dropdown";
-import { VisibilityBarSection } from "@/components/visibility-bar-section";
-import { coercePromptOrder, orderPrompts } from "@/lib/prompt-order";
+import { usePromptsSummary } from "@/hooks/use-prompts-summary";
+import { useScopeModels } from "@/hooks/use-scope-models";
 import type { LookbackPeriod } from "@/lib/chart-utils";
-import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { coercePromptOrder, orderPrompts } from "@/lib/prompt-order";
 
 interface PromptsDisplayProps {
 	pageTitle: string;
@@ -48,9 +49,9 @@ export function PromptsDisplay({ pageTitle, pageDescription, pageInfoContent, ed
  *  they need, so a click on "Lookback" only invalidates the data users
  *  and not `FilterBar` itself. */
 function PromptsContent({ brandId, editLink }: { brandId: string | undefined; editLink?: string }) {
-	const { brand } = useBrand(brandId);
 	const filters = useListFilters();
-	const { model, lookback, tags, search } = filters;
+	const { scopeId, model, lookback, tags, search } = filters;
+	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, scopeId);
 	// `order` is this route's own search key (not a narrowing filter), so it
 	// rides outside `useListFilters` / `isFiltered`.
 	const order = useSearch({
@@ -58,20 +59,19 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 		select: (s) => coercePromptOrder((s as { order?: unknown }).order),
 	});
 
-	// Server hands us `effectiveModels` — the deployment-configured model ids
-	// this brand actually runs, after applying `enabledModels`. FilterBar
-	// adds the "all" sentinel on top; per-prompt chart controls only care
-	// about the concrete list.
-	const effectiveModels = brand?.effectiveModels ?? [];
-	const availableModels = useMemo(() => getAvailableModels(effectiveModels), [effectiveModels]);
-	const availableIndividualModels = effectiveModels;
+	// Models come from this Scope's configured routes plus observations already
+	// captured in it, so a manual China Scope never inherits overseas filters.
+	const availableModels = useMemo(() => getAvailableModels(scopeModels), [scopeModels]);
+	const availableIndividualModels = scopeModels;
 
-	const modelParam = model === ALL_MODELS_VALUE ? undefined : model;
+	const modelParam =
+		model === ALL_MODELS_VALUE || (scopeModelsResolved && !scopeModels.includes(model)) ? undefined : model;
 	const {
 		promptsSummary,
 		isLoading: isLoadingSummary,
 		isError: summaryError,
 	} = usePromptsSummary(brandId, {
+		scopeId: scopeId ?? "",
 		lookback,
 		model: modelParam,
 		tags: tags.length > 0 ? tags : undefined,
@@ -92,7 +92,7 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 		return orderPrompts(filtered, order);
 	}, [promptsSummary, search, order]);
 
-	const isInitialLoad = isLoadingSummary && !promptsSummary;
+	const isInitialLoad = filters.isScopeResolving || (isLoadingSummary && !promptsSummary);
 
 	return (
 		<FilteredListShell
@@ -103,7 +103,7 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 			showModelSelector
 			showResultCount
 			filterBarExtras={<PromptOrderDropdown />}
-			filterSectionExtras={<VisibilityBarSection brandId={brandId} />}
+			filterSectionExtras={<VisibilityBarSection brandId={brandId} modelParam={modelParam} />}
 			isLoading={isInitialLoad}
 			loadingState={<ContentLoadingSkeleton />}
 			isError={Boolean(summaryError)}
@@ -138,6 +138,7 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 		>
 			<ChartSection
 				brandId={brandId}
+				scopeId={scopeId ?? ""}
 				lookback={lookback}
 				selectedModel={model}
 				modelParam={modelParam}
@@ -156,6 +157,7 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
  *  state (like visibility refetch) moves. */
 function ChartSection({
 	brandId,
+	scopeId,
 	lookback,
 	selectedModel,
 	modelParam,
@@ -165,6 +167,7 @@ function ChartSection({
 	availableIndividualModels,
 }: {
 	brandId: string | undefined;
+	scopeId: string;
 	lookback: LookbackPeriod;
 	selectedModel: string;
 	modelParam: string | undefined;
@@ -174,6 +177,7 @@ function ChartSection({
 	availableIndividualModels: string[];
 }) {
 	const { batchChartData, isLoading: isLoadingChartData } = useBatchChartData(brandId, {
+		scopeId,
 		lookback,
 		model: modelParam,
 		tags: selectedTags.length > 0 ? selectedTags : undefined,

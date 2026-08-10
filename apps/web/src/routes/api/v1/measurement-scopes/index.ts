@@ -9,6 +9,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { db } from "@workspace/lib/db/db";
 import { brands, measurementScopes } from "@workspace/lib/db/schema";
+import {
+	assertObservationRouteSupportsScope,
+	getObservationTargetCohort,
+	resolveObservationTarget,
+} from "@workspace/lib/observation-targets";
+import { formatScrapeTarget, parseScrapeTargets } from "@workspace/lib/providers";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { ApiError, createApiHandler } from "@/lib/api/handler";
@@ -60,6 +66,7 @@ const createMeasurementScopeBody = z.object({
 	market: marketSchema,
 	locale: localeSchema,
 	timezone: timezoneSchema,
+	automaticTargetKeys: z.array(z.string().trim().min(1).max(500)).max(50).optional().default([]),
 	isDefault: z.boolean().optional().default(false),
 });
 
@@ -110,6 +117,58 @@ export const Route = createFileRoute("/api/v1/measurement-scopes/")({
 				body: createMeasurementScopeBody,
 				status: 201,
 				handle: async ({ body }) => {
+					if (new Set(body.automaticTargetKeys).size !== body.automaticTargetKeys.length) {
+						throw new ApiError(400, "Validation Error", "automaticTargetKeys must not contain duplicates.");
+					}
+					const configuredTargets = new Map(
+						parseScrapeTargets(process.env.SCRAPE_TARGETS).map((target) => [formatScrapeTarget(target), target]),
+					);
+					const unknownTarget = body.automaticTargetKeys.find((target) => !configuredTargets.has(target));
+					if (unknownTarget) {
+						throw new ApiError(
+							400,
+							"Validation Error",
+							`Automatic target "${unknownTarget}" is not configured in this deployment.`,
+						);
+					}
+					const targetCohorts = new Set<string>();
+					for (const targetKey of body.automaticTargetKeys) {
+						const config = configuredTargets.get(targetKey);
+						if (!config) continue;
+						try {
+							const descriptor = resolveObservationTarget(config);
+							assertObservationRouteSupportsScope(descriptor, body);
+							targetCohorts.add(getObservationTargetCohort(descriptor));
+						} catch (error) {
+							throw new ApiError(
+								400,
+								"Validation Error",
+								error instanceof Error ? error.message : `Automatic target "${targetKey}" does not support this scope.`,
+							);
+						}
+					}
+					if (targetCohorts.size > 1) {
+						throw new ApiError(
+							400,
+							"Validation Error",
+							"A measurement scope cannot mix consumer/search observations with API diagnostic observations.",
+						);
+					}
+					const targetByModel = new Map<string, string>();
+					for (const targetKey of body.automaticTargetKeys) {
+						const config = configuredTargets.get(targetKey);
+						if (!config) continue;
+						const existingTarget = targetByModel.get(config.model);
+						if (existingTarget) {
+							throw new ApiError(
+								400,
+								"Validation Error",
+								`Model "${config.model}" has multiple automatic targets (${existingTarget}, ${targetKey}). ` +
+									"This product version allows one capture route per model in a scope.",
+							);
+						}
+						targetByModel.set(config.model, targetKey);
+					}
 					try {
 						return await db.transaction(async (tx) => {
 							const [brand] = await tx

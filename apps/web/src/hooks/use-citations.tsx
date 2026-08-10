@@ -3,6 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { getCitationsFn } from "@/server/citations";
 
 export interface CitationFilters {
+	scopeId: string;
 	days?: number;
 	tags?: string[];
 	model?: string;
@@ -23,16 +24,16 @@ export function useCitations(brandId?: string, filters?: CitationFilters) {
 			getCitationsFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: filters!.scopeId,
 					days: filters?.days || 7,
 					tags: filters?.tags?.join(","),
 					model: filters?.model,
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && !!filters?.scopeId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
 		refetchInterval: 60_000,
-		placeholderData: (prev) => prev, // Keep previous data while refetching with new filters
 	});
 
 	return {

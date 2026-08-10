@@ -6,6 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getCitationUrlStats, getPerPromptDailyCitationPages, getPerPromptCitationPages } from "@/lib/postgres-read";
@@ -37,6 +38,7 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			days: z.number().optional().default(7),
 			tags: z.string().optional(),
 			model: z.string().optional(),
@@ -45,15 +47,19 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 
 		// Window: `data.days` calendar days ending today (inclusive), plus the
-		// contiguous equal-length previous window — all UTC (server-TZ independent).
+		// contiguous equal-length previous window in the scope's timezone.
 		// `dateRange` is reused for the trend charts so totals + charts span identically.
+		const todayInScope = new Date(
+			`${new Date().toLocaleDateString("en-CA", { timeZone: measurementScope.timezone })}T00:00:00Z`,
+		);
 		const { fromDateStr, toDateStr, prevFromDateStr, prevToDateStr, dateRange } = citationDateWindow(
-			new Date(),
+			todayInScope,
 			data.days,
 		);
-		const timezone = "UTC";
+		const timezone = measurementScope.timezone;
 
 		// Get brand info, competitors, and all enabled prompts
 		const [brandResult, competitorsList, allPrompts] = await Promise.all([
@@ -62,7 +68,7 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 			db
 				.select({ id: prompts.id, value: prompts.value, tags: prompts.tags, systemTags: prompts.systemTags })
 				.from(prompts)
-				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.enabled, true))),
+				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, data.scopeId), eq(prompts.enabled, true))),
 		]);
 
 		const primaryBrandDomain = extractDomain(brandResult[0]?.website || "");

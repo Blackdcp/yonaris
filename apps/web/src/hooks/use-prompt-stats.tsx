@@ -8,14 +8,14 @@ export const promptStatsKeys = {
 
 export function usePromptStats(promptId?: string, options?: { days?: number }) {
 	const days = options?.days || 7;
+	const resolvedPromptId = promptId ?? "";
 
 	const query = useQuery({
-		queryKey: promptStatsKeys.detail(promptId || "", days),
-		queryFn: () => getPromptStatsFn({ data: { promptId: promptId!, days } }),
+		queryKey: promptStatsKeys.detail(resolvedPromptId, days),
+		queryFn: () => getPromptStatsFn({ data: { promptId: resolvedPromptId, days } }),
 		enabled: !!promptId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
-		placeholderData: (prev) => prev, // Keep previous data while refetching
 	});
 
 	return {

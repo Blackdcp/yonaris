@@ -20,11 +20,12 @@ interface Prompt {
 interface PromptsEditorProps {
 	initialPrompts: Prompt[];
 	brandId: string;
+	scopeId: string;
 	pageTitle: string;
 	pageDescription: string;
 }
 
-export function PromptsEditor({ initialPrompts, brandId, pageTitle, pageDescription }: PromptsEditorProps) {
+export function PromptsEditor({ initialPrompts, brandId, scopeId, pageTitle, pageDescription }: PromptsEditorProps) {
 	const [prompts, setPrompts] = useState<EditablePrompt[]>(() =>
 		initialPrompts.map((p) => ({
 			id: p.id,
@@ -66,7 +67,7 @@ export function PromptsEditor({ initialPrompts, brandId, pageTitle, pageDescript
 				...removedPrompts,
 			];
 
-			await updatePromptsFn({ data: { brandId, prompts: allPrompts } });
+			await updatePromptsFn({ data: { brandId, scopeId, prompts: allPrompts } });
 
 			const added = validPrompts.filter((p) => !p.id).length;
 			const edited = validPrompts.filter((p) => p.id).length;
@@ -74,7 +75,7 @@ export function PromptsEditor({ initialPrompts, brandId, pageTitle, pageDescript
 			trackEvent("prompts_updated", { added, edited, deleted });
 
 			invalidatePromptsSummary(brandId);
-			navigate({ to: `/app/${brandId}/visibility` });
+			navigate({ to: "/app/$brand/visibility", params: { brand: brandId }, search: { scope: scopeId } });
 		} catch (error) {
 			console.error("Error saving prompts:", error);
 			alert(`Failed to save prompts: ${error instanceof Error ? error.message : "Unknown error"}`);

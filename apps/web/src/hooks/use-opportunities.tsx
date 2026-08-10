@@ -12,17 +12,14 @@ export const opportunitiesKeys = {
  * only when the latest is stale, so this is held for the session (staleTime:
  * Infinity, no refetch-on-focus) rather than refetched.
  */
-export function useOpportunities(brandId?: string) {
+export function useOpportunities(brandId?: string, enabled = true) {
 	const params = useParams({ strict: false }) as { brand?: string };
 	const resolvedBrandId = brandId || params.brand;
 
 	const query = useQuery({
 		queryKey: opportunitiesKeys.detail(resolvedBrandId || ""),
-		queryFn: () =>
-			getOpportunitiesFn({
-				data: { brandId: resolvedBrandId!, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-			}),
-		enabled: !!resolvedBrandId,
+		queryFn: () => getOpportunitiesFn({ data: { brandId: resolvedBrandId ?? "" } }),
+		enabled: !!resolvedBrandId && enabled,
 		staleTime: Number.POSITIVE_INFINITY,
 		refetchOnWindowFocus: false,
 		retry: false,

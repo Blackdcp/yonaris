@@ -27,6 +27,9 @@ export const Route = createFileRoute("/api/v1/prompts/")({
 					const { searchParams } = new URL(request.url);
 					const brandId = searchParams.get("brandId");
 					const scopeId = searchParams.get("scopeId");
+					if (scopeId && !z.guid().safeParse(scopeId).success) {
+						throw new ApiError(400, "Validation Error", "scopeId must be a valid GUID");
+					}
 					const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
 					const limit = Math.max(1, parseInt(searchParams.get("limit") || "20"));
 					const offset = (page - 1) * limit;
@@ -77,7 +80,16 @@ export const Route = createFileRoute("/api/v1/prompts/")({
 					}
 
 					const brand = brandInfo[0];
-					const scope = await resolveMeasurementScopeForBrand(brandId, requestedScopeId);
+					let scope: Awaited<ReturnType<typeof resolveMeasurementScopeForBrand>>;
+					try {
+						scope = await resolveMeasurementScopeForBrand(brandId, requestedScopeId);
+					} catch (error) {
+						throw new ApiError(
+							400,
+							"Validation Error",
+							error instanceof Error ? error.message : "Invalid measurement scope.",
+						);
+					}
 					const userTags = tags ? sanitizeUserTags(tags) : [];
 					const systemTags = computeSystemTags(value, brand.name, brand.website);
 
@@ -86,7 +98,9 @@ export const Route = createFileRoute("/api/v1/prompts/")({
 						.values({ brandId, scopeId: scope.id, value, tags: userTags, systemTags, enabled: true })
 						.returning();
 
-					await createPromptJobScheduler(newPrompt.id);
+					if (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0) {
+						await createPromptJobScheduler(newPrompt.id);
+					}
 
 					return newPrompt;
 				},

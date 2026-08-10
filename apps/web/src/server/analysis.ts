@@ -12,6 +12,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands } from "@workspace/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -65,6 +66,7 @@ export const getShareOfVoiceFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			lookback: LOOKBACK.default("1m"),
 			model: z.string().optional(),
 			tags: z.string().optional(),
@@ -76,11 +78,15 @@ export const getShareOfVoiceFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 
-		const { timezone, fromDateStr, toDateStr } = resolveRange(data.lookback as LookbackPeriod, data.timezone);
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		const { timezone, fromDateStr, toDateStr } = resolveRange(
+			data.lookback as LookbackPeriod,
+			measurementScope.timezone,
+		);
 
 		const [brandRow, resolved] = await Promise.all([
 			db.select({ name: brands.name }).from(brands).where(eq(brands.id, data.brandId)).limit(1),
-			resolveFilteredPrompts(data.brandId, { tags: data.tags, search: data.search }),
+			resolveFilteredPrompts(data.brandId, { scopeId: data.scopeId, tags: data.tags, search: data.search }),
 		]);
 		const brandName = brandRow[0]?.name ?? "Your brand";
 		const promptIds = resolved.map((p) => p.id);

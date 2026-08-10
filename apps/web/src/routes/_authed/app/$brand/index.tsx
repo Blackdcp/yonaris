@@ -29,6 +29,7 @@ import { useBrand } from "@/hooks/use-brands";
 import { useBrandAccess } from "@/hooks/use-brand-access";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
 import { useShareOfVoice } from "@/hooks/use-share-of-voice";
+import { useListFilters } from "@/hooks/use-list-filters";
 import { setPersonProperties } from "@/lib/posthog";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
@@ -162,10 +163,14 @@ function HeroStat({ value, loading, label }: { value: number | null; loading: bo
 
 function DashboardPage() {
 	const { brand: brandId } = Route.useParams();
+	const { scopeId } = useListFilters();
 	const { canManageBrand } = useBrandAccess();
 	const { brand, isLoading: isLoadingBrand } = useBrand();
-	const { dashboardSummary, isLoading: isLoadingSummary } = useDashboardSummary(brand?.id, "1m");
-	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, { lookback: "1m" });
+	const { dashboardSummary, isLoading: isLoadingSummary } = useDashboardSummary(brand?.id, scopeId, "1m");
+	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, {
+		scopeId: scopeId ?? "",
+		lookback: "1m",
+	});
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const clientConfig = context.clientConfig;
 	const primaryChartColor =

@@ -1,8 +1,6 @@
-import { useRef } from "react";
 import { useFilteredVisibility } from "@/hooks/use-filtered-visibility";
 import { VisibilityBar, VisibilityBarSkeleton, VisibilityBarEmpty } from "@/components/visibility-bar";
 import { useListFilters } from "@/hooks/use-list-filters";
-import { ALL_MODELS_VALUE } from "@/lib/model-filter";
 
 /**
  * Self-contained visibility bar. Subscribes directly to the filter URL
@@ -16,27 +14,28 @@ import { ALL_MODELS_VALUE } from "@/lib/model-filter";
  * its vertical space on load and doesn't shove the charts down when the
  * real bar comes in.
  */
-export function VisibilityBarSection({ brandId }: { brandId: string | undefined }) {
-	const { lookback, model, tags, search } = useListFilters();
-	const modelParam = model === ALL_MODELS_VALUE ? undefined : model;
+export function VisibilityBarSection({
+	brandId,
+	modelParam,
+}: {
+	brandId: string | undefined;
+	modelParam: string | undefined;
+}) {
+	const { scopeId, lookback, tags, search } = useListFilters();
 
 	const {
 		filteredVisibility,
 		isLoading: isLoadingVisibility,
 		isValidating: isValidatingVisibility,
 	} = useFilteredVisibility(brandId, {
+		scopeId: scopeId ?? "",
 		lookback,
 		tags: tags.length > 0 ? tags : undefined,
 		search: search || undefined,
 		model: modelParam,
 	});
 
-	// Keep the last-known visibility around so we don't flash the skeleton
-	// on a refetch (react-query's isValidating flips true while the new data
-	// is in flight even though we already have a prior result to show).
-	const lastRef = useRef(filteredVisibility);
-	if (filteredVisibility) lastRef.current = filteredVisibility;
-	const stable = filteredVisibility || lastRef.current;
+	const stable = filteredVisibility;
 
 	const hasLoaded = stable && !isLoadingVisibility;
 	const hasData = hasLoaded && stable.totalRuns > 0;

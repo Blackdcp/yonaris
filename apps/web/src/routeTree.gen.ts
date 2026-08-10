@@ -47,6 +47,8 @@ import { Route as ApiV1CompetitorsIndexRouteImport } from './routes/api/v1/compe
 import { Route as ApiV1CompetitorsCompetitorIdRouteImport } from './routes/api/v1/competitors/$competitorId'
 import { Route as ApiV1DocsIndexRouteImport } from './routes/api/v1/docs/index'
 import { Route as ApiV1MeasurementScopesIndexRouteImport } from './routes/api/v1/measurement-scopes/index'
+import { Route as ApiV1ObservationsCoverageRouteImport } from './routes/api/v1/observations/coverage'
+import { Route as ApiV1ObservationsImportRouteImport } from './routes/api/v1/observations/import'
 import { Route as ApiV1PromptsIndexRouteImport } from './routes/api/v1/prompts/index'
 import { Route as ApiV1PromptsPromptIdRouteImport } from './routes/api/v1/prompts/$promptId'
 import { Route as ApiV1ReportsIndexRouteImport } from './routes/api/v1/reports/index'
@@ -261,6 +263,17 @@ const ApiV1MeasurementScopesIndexRoute =
     path: '/api/v1/measurement-scopes/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1ObservationsCoverageRoute =
+  ApiV1ObservationsCoverageRouteImport.update({
+    id: '/api/v1/observations/coverage',
+    path: '/api/v1/observations/coverage',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiV1ObservationsImportRoute = ApiV1ObservationsImportRouteImport.update({
+  id: '/api/v1/observations/import',
+  path: '/api/v1/observations/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1PromptsIndexRoute = ApiV1PromptsIndexRouteImport.update({
   id: '/api/v1/prompts/',
   path: '/api/v1/prompts/',
@@ -385,6 +398,8 @@ export interface FileRoutesByFullPath {
   '/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
+  '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
+  '/api/v1/observations/import': typeof ApiV1ObservationsImportRoute
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
@@ -435,6 +450,8 @@ export interface FileRoutesByTo {
   '/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
+  '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
+  '/api/v1/observations/import': typeof ApiV1ObservationsImportRoute
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
@@ -492,6 +509,8 @@ export interface FileRoutesById {
   '/_authed/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
+  '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
+  '/api/v1/observations/import': typeof ApiV1ObservationsImportRoute
   '/api/v1/prompts/$promptId': typeof ApiV1PromptsPromptIdRouteWithChildren
   '/api/v1/reports/$reportId': typeof ApiV1ReportsReportIdRoute
   '/api/v1/tools/analyze': typeof ApiV1ToolsAnalyzeRoute
@@ -549,6 +568,8 @@ export interface FileRouteTypes {
     | '/reports/render/$reportId'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
+    | '/api/v1/observations/coverage'
+    | '/api/v1/observations/import'
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
@@ -599,6 +620,8 @@ export interface FileRouteTypes {
     | '/reports/render/$reportId'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
+    | '/api/v1/observations/coverage'
+    | '/api/v1/observations/import'
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
@@ -655,6 +678,8 @@ export interface FileRouteTypes {
     | '/_authed/reports/render/$reportId'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
+    | '/api/v1/observations/coverage'
+    | '/api/v1/observations/import'
     | '/api/v1/prompts/$promptId'
     | '/api/v1/reports/$reportId'
     | '/api/v1/tools/analyze'
@@ -693,6 +718,8 @@ export interface RootRouteChildren {
   ApiSetupStatusIndexRoute: typeof ApiSetupStatusIndexRoute
   ApiV1BrandsBrandIdRoute: typeof ApiV1BrandsBrandIdRoute
   ApiV1CompetitorsCompetitorIdRoute: typeof ApiV1CompetitorsCompetitorIdRoute
+  ApiV1ObservationsCoverageRoute: typeof ApiV1ObservationsCoverageRoute
+  ApiV1ObservationsImportRoute: typeof ApiV1ObservationsImportRoute
   ApiV1PromptsPromptIdRoute: typeof ApiV1PromptsPromptIdRouteWithChildren
   ApiV1ReportsReportIdRoute: typeof ApiV1ReportsReportIdRoute
   ApiV1ToolsAnalyzeRoute: typeof ApiV1ToolsAnalyzeRoute
@@ -974,6 +1001,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1MeasurementScopesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/observations/coverage': {
+      id: '/api/v1/observations/coverage'
+      path: '/api/v1/observations/coverage'
+      fullPath: '/api/v1/observations/coverage'
+      preLoaderRoute: typeof ApiV1ObservationsCoverageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/observations/import': {
+      id: '/api/v1/observations/import'
+      path: '/api/v1/observations/import'
+      fullPath: '/api/v1/observations/import'
+      preLoaderRoute: typeof ApiV1ObservationsImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/prompts/': {
       id: '/api/v1/prompts/'
       path: '/api/v1/prompts'
@@ -1235,6 +1276,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupStatusIndexRoute: ApiSetupStatusIndexRoute,
   ApiV1BrandsBrandIdRoute: ApiV1BrandsBrandIdRoute,
   ApiV1CompetitorsCompetitorIdRoute: ApiV1CompetitorsCompetitorIdRoute,
+  ApiV1ObservationsCoverageRoute: ApiV1ObservationsCoverageRoute,
+  ApiV1ObservationsImportRoute: ApiV1ObservationsImportRoute,
   ApiV1PromptsPromptIdRoute: ApiV1PromptsPromptIdRouteWithChildren,
   ApiV1ReportsReportIdRoute: ApiV1ReportsReportIdRoute,
   ApiV1ToolsAnalyzeRoute: ApiV1ToolsAnalyzeRoute,

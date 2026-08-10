@@ -4,6 +4,7 @@ export type ObservationCoverageSelector = Pick<ObservationAttempt, "brandId" | "
 	Partial<Pick<ObservationAttempt, "surfaceTargetKey">>;
 
 export type ObservationCoverage = {
+	/** Samples registered as attempt rows; an external delivery manifest may define a larger contractual denominator. */
 	planned: number;
 	pending: number;
 	running: number;

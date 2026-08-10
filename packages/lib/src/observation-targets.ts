@@ -9,6 +9,7 @@ export type CaptureMode =
 	| "manual_import"
 	| "assisted_browser"
 	| "test";
+export type ObservationCohort = "consumer_measurement" | "api_diagnostic";
 
 export interface ObservationTargetDescriptor {
 	surfaceTargetKey: string;
@@ -205,6 +206,15 @@ export function assertObservationRouteSupportsScope(
 	// during the compatibility window, but are never presented as localized data.
 	if (scope.market === "ZZ" && scope.locale === "und") return;
 
+	if (
+		(descriptor.surfaceKind === "consumer_web" || descriptor.surfaceKind === "search_surface") &&
+		(!descriptor.fixedMarket || !descriptor.fixedLocale)
+	) {
+		throw new Error(
+			`Capture route ${descriptor.captureRouteKey} has no verified market/locale routing and cannot be assigned to an explicit scope`,
+		);
+	}
+
 	if (descriptor.fixedMarket && descriptor.fixedMarket.toUpperCase() !== scope.market.toUpperCase()) {
 		throw new Error(
 			`Capture route ${descriptor.captureRouteKey} is fixed to market ${descriptor.fixedMarket}, ` +
@@ -222,6 +232,12 @@ export function assertObservationRouteSupportsScope(
 			);
 		}
 	}
+}
+
+export function getObservationTargetCohort(descriptor: ObservationTargetDescriptor): ObservationCohort {
+	return descriptor.surfaceKind === "consumer_web" || descriptor.surfaceKind === "search_surface"
+		? "consumer_measurement"
+		: "api_diagnostic";
 }
 
 export function buildObservationSourceKey(input: {

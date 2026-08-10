@@ -79,7 +79,7 @@ export function getTimezoneLookbackRange(
 	if (lookback === "all") {
 		if (options?.allStrategy === "1y") {
 			return {
-				fromDateStr: shiftDateStr(todayStr, { years: -1 }),
+				fromDateStr: shiftDateStr(todayStr, { days: -364 }),
 				toDateStr: todayStr,
 			};
 		}
@@ -94,22 +94,22 @@ export function getTimezoneLookbackRange(
 			};
 		case "1m":
 			return {
-				fromDateStr: shiftDateStr(todayStr, { months: -1 }),
+				fromDateStr: shiftDateStr(todayStr, { days: -29 }), // 30 days including today
 				toDateStr: todayStr,
 			};
 		case "3m":
 			return {
-				fromDateStr: shiftDateStr(todayStr, { months: -3 }),
+				fromDateStr: shiftDateStr(todayStr, { days: -89 }),
 				toDateStr: todayStr,
 			};
 		case "6m":
 			return {
-				fromDateStr: shiftDateStr(todayStr, { months: -6 }),
+				fromDateStr: shiftDateStr(todayStr, { days: -179 }),
 				toDateStr: todayStr,
 			};
 		case "1y":
 			return {
-				fromDateStr: shiftDateStr(todayStr, { years: -1 }),
+				fromDateStr: shiftDateStr(todayStr, { days: -364 }),
 				toDateStr: todayStr,
 			};
 	}

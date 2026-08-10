@@ -78,6 +78,7 @@ export const measurementScopes = pgTable(
 		market: text("market").notNull(),
 		locale: text("locale").notNull(),
 		timezone: text("timezone").notNull().default("UTC"),
+		automaticTargetKeys: text("automatic_target_keys").array(),
 		enabled: boolean("enabled").notNull().default(true),
 		isDefault: boolean("is_default").notNull().default(false),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
@@ -148,7 +149,7 @@ export const observationAttempts = pgTable(
 		sourceKey: text("source_key").notNull(),
 		sourceJobId: text("source_job_id"),
 		promptId: uuid("prompt_id")
-			.references(() => prompts.id, { onDelete: "cascade" })
+			.references(() => prompts.id)
 			.notNull(),
 		promptText: text("prompt_text").notNull(),
 		brandId: text("brand_id")

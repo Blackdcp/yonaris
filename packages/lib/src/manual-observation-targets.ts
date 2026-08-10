@@ -73,6 +73,47 @@ const MANUAL_CAPTURE_MODES: Record<ManualObservationCaptureRouteKey, ManualObser
 		"assisted_browser.generic": "assisted_browser",
 	};
 
+const SURFACE_HOSTS: Record<ManualObservationSurfaceTargetKey, readonly string[]> = {
+	"doubao.consumer_web": ["doubao.com"],
+	"deepseek.consumer_web": ["chat.deepseek.com"],
+	"kimi.consumer_web": ["kimi.com", "kimi.moonshot.cn"],
+	"yuanbao.consumer_web": ["yuanbao.tencent.com"],
+	"qwen.consumer_web": ["qianwen.com", "tongyi.aliyun.com"],
+	"wenxin.consumer_web": ["yiyan.baidu.com", "wenxin.baidu.com"],
+	"chatgpt.consumer_web": ["chatgpt.com"],
+	"perplexity.consumer_web": ["perplexity.ai"],
+	"gemini.consumer_web": ["gemini.google.com"],
+	"copilot.consumer_web": ["copilot.microsoft.com", "bing.com"],
+	"claude.consumer_web": ["claude.ai"],
+	"grok.consumer_web": ["grok.com", "x.com"],
+	"google_search.ai_overview": [
+		"google.com",
+		"google.com.hk",
+		"google.com.sg",
+		"google.co.jp",
+		"google.co.uk",
+		"google.com.au",
+		"google.co.in",
+		"google.ca",
+		"google.de",
+		"google.es",
+		"google.fr",
+	],
+	"google_search.ai_mode": [
+		"google.com",
+		"google.com.hk",
+		"google.com.sg",
+		"google.co.jp",
+		"google.co.uk",
+		"google.com.au",
+		"google.co.in",
+		"google.ca",
+		"google.de",
+		"google.es",
+		"google.fr",
+	],
+};
+
 export function isManualObservationSurfaceTargetKey(value: string): value is ManualObservationSurfaceTargetKey {
 	return Object.hasOwn(MANUAL_SURFACES, value);
 }
@@ -113,4 +154,17 @@ export function resolveManualObservationTarget(input: {
 		surfaceKind: surface.surfaceKind,
 		captureMode: MANUAL_CAPTURE_MODES[input.captureRouteKey],
 	};
+}
+
+export function assertManualObservationPageUrl(
+	surfaceTargetKey: ManualObservationSurfaceTargetKey,
+	pageUrl: string,
+): void {
+	const hostname = new URL(pageUrl).hostname.toLowerCase().replace(/\.$/, "");
+	const matches = SURFACE_HOSTS[surfaceTargetKey].some(
+		(allowedHost) => hostname === allowedHost || hostname.endsWith(`.${allowedHost}`),
+	);
+	if (!matches) {
+		throw new Error(`Page host ${hostname} does not match manual observation surface ${surfaceTargetKey}`);
+	}
 }

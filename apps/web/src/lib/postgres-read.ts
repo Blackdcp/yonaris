@@ -146,7 +146,8 @@ function uuidList(ids: string[]): SQL {
 }
 
 function promptIdFilter(enabledPromptIds?: string[]): SQL {
-	if (!enabledPromptIds?.length) return sql``;
+	if (enabledPromptIds === undefined) return sql``;
+	if (enabledPromptIds.length === 0) return sql`AND FALSE`;
 	return sql`AND prompt_id IN (${uuidList(enabledPromptIds)})`;
 }
 

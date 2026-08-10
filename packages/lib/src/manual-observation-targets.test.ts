@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	assertManualObservationPageUrl,
 	assertManualObservationCaptureRouteKey,
 	assertManualObservationSurfaceTargetKey,
 	isManualObservationCaptureRouteKey,
@@ -84,5 +85,15 @@ describe("manual observation targets", () => {
 		expect(isManualObservationCaptureRouteKey("assisted_browser.generic")).toBe(true);
 		expect(() => assertManualObservationSurfaceTargetKey("wenxin.official_api")).toThrow();
 		expect(() => assertManualObservationCaptureRouteKey("unknown.generic")).toThrow();
+	});
+
+	it("rejects evidence pages from a different product surface", () => {
+		expect(() => assertManualObservationPageUrl("doubao.consumer_web", "https://www.doubao.com/chat/1")).not.toThrow();
+		expect(() => assertManualObservationPageUrl("doubao.consumer_web", "https://chat.deepseek.com/a/chat/1")).toThrow(
+			/Page host .* does not match/,
+		);
+		expect(() =>
+			assertManualObservationPageUrl("google_search.ai_overview", "https://www.google.com.sg/search?q=geo"),
+		).not.toThrow();
 	});
 });

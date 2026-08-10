@@ -5,7 +5,7 @@
  * Shows sidebar navigation, header, and optional demo banner.
  * If brand exists in auth but not in DB, shows onboarding.
  */
-import { createFileRoute, notFound, Outlet, redirect } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet, redirect, retainSearchParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
 import type { BrandWithPrompts } from "@workspace/lib/db/schema";
@@ -155,6 +155,11 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 	// once so every child route inherits them in its search schema. The loader
 	// has no `loaderDeps`, so filter-only navigations never re-run it.
 	validateSearch: validateBrandFilterSearch,
+	search: {
+		// Scope is product context, not a disposable page filter. Preserve it
+		// across sidebar and deep-link navigation within the brand layout.
+		middlewares: [retainSearchParams(["scope"])],
+	},
 	loader: async ({ params }) => {
 		const result = await getBrandData({ data: { brandId: params.brand } });
 
@@ -207,12 +212,7 @@ function BrandLayout() {
 
 	return (
 		<SidebarProvider>
-			<AppSidebar
-				isAdmin={isAdmin}
-				hasReportAccess={hasReportAccess}
-				canManageBrand={canManageBrand}
-				brand={brand}
-			/>
+			<AppSidebar isAdmin={isAdmin} hasReportAccess={hasReportAccess} canManageBrand={canManageBrand} brand={brand} />
 			<SidebarInset className="md:border md:border-border/60 md:rounded-xl overflow-hidden">
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">

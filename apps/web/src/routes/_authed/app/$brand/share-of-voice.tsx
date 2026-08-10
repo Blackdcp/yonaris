@@ -16,9 +16,9 @@ import { ALL_MODELS_VALUE, FilterBar, getAvailableModels } from "@/components/fi
 import { FilterSection, PageHeader } from "@/components/page-header";
 import { ShareOfVoiceDonut } from "@/components/share-of-voice-donut";
 import { TrendChart } from "@/components/trend-chart";
-import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
+import { useScopeModels } from "@/hooks/use-scope-models";
 import { useShareOfVoice } from "@/hooks/use-share-of-voice";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { BRAND_COLOR, shareOfVoiceColorMap } from "@/lib/share-of-voice-palette";
@@ -56,16 +56,22 @@ const TIPS = {
 
 function ShareOfVoicePage() {
 	const { brand: brandId } = Route.useParams();
-	const { model, lookback, tags } = useListFilters();
+	const { scopeId, isScopeResolving, model, lookback, tags } = useListFilters();
 
-	const { brand } = useBrand(brandId);
-	const availableModels = getAvailableModels(brand?.effectiveModels ?? []);
-	const modelParam = model === ALL_MODELS_VALUE ? undefined : model;
+	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, scopeId);
+	const availableModels = getAvailableModels(scopeModels);
+	const modelParam =
+		model === ALL_MODELS_VALUE || (scopeModelsResolved && !scopeModels.includes(model)) ? undefined : model;
 
-	const { promptsSummary } = usePromptsSummary(brandId, { lookback, model: modelParam });
+	const { promptsSummary } = usePromptsSummary(brandId, { scopeId: scopeId ?? "", lookback, model: modelParam });
 	const availableTags = promptsSummary?.availableTags ?? [];
 
-	const { data, isLoading } = useShareOfVoice(brandId, { lookback, model: modelParam, tags });
+	const { data, isLoading } = useShareOfVoice(brandId, {
+		scopeId: scopeId ?? "",
+		lookback,
+		model: modelParam,
+		tags,
+	});
 
 	const infoContent = (
 		<>
@@ -81,7 +87,7 @@ function ShareOfVoicePage() {
 	const barColors = shareOfVoiceColorMap(data?.entries ?? []);
 
 	let content: React.ReactNode;
-	if (isLoading && !data) {
+	if (isScopeResolving || (isLoading && !data)) {
 		content = (
 			<Card>
 				<CardHeader>

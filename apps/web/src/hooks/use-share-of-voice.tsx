@@ -4,6 +4,7 @@ import { getShareOfVoiceFn } from "@/server/analysis";
 import type { LookbackPeriod } from "@/lib/chart-utils";
 
 export interface ShareOfVoiceFilters {
+	scopeId: string;
 	lookback?: LookbackPeriod;
 	model?: string;
 	/** Tag filter (resolved to prompt IDs server-side, like the visibility page). */
@@ -25,15 +26,15 @@ export function useShareOfVoice(brandId?: string, filters?: ShareOfVoiceFilters)
 			getShareOfVoiceFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: filters!.scopeId,
 					lookback: filters?.lookback ?? "1m",
 					model: filters?.model,
 					tags: filters?.tags?.join(","),
 					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && !!filters?.scopeId,
 		staleTime: 30_000,
-		placeholderData: (prev) => prev,
 	});
 
 	return {

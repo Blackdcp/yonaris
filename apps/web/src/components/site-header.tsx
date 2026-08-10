@@ -10,6 +10,7 @@ import {
 import { Separator } from "@workspace/ui/components/separator";
 import { SidebarTrigger } from "@workspace/ui/components/sidebar";
 import { DemoModePill } from "@/components/demo-mode-pill";
+import { MeasurementScopeSwitcher } from "@/components/measurement-scope-switcher";
 import { NavUser } from "@/components/nav-user";
 import { useBrand } from "@/hooks/use-brands";
 
@@ -221,6 +222,7 @@ export function SiteHeader() {
 					</Breadcrumb>
 				</div>
 				<div data-slot="site-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
+					{!isAdminPage && <MeasurementScopeSwitcher />}
 					<DemoModePill />
 					<NavUser />
 				</div>

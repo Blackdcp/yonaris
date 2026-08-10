@@ -11,14 +11,14 @@ export function usePromptRunsOnly(promptId?: string, options?: { page?: number; 
 	const page = options?.page || 1;
 	const limit = options?.limit || 10;
 	const days = options?.days || 7;
+	const resolvedPromptId = promptId ?? "";
 
 	const query = useQuery({
-		queryKey: promptRunsKeys.list(promptId || "", { page, limit, days }),
-		queryFn: () => getPromptRunsFn({ data: { promptId: promptId!, page, limit, days } }),
+		queryKey: promptRunsKeys.list(resolvedPromptId, { page, limit, days }),
+		queryFn: () => getPromptRunsFn({ data: { promptId: resolvedPromptId, page, limit, days } }),
 		enabled: !!promptId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
-		placeholderData: (prev) => prev,
 	});
 
 	const total = Number(query.data?.total || 0);

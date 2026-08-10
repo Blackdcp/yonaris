@@ -7,29 +7,34 @@ export type { DashboardSummaryResponse, VisibilityTimeSeriesPoint, CitationTimeS
 
 export const dashboardKeys = {
 	all: ["dashboard"] as const,
-	summary: (brandId: string, lookback: LookbackPeriod) => [...dashboardKeys.all, "summary", brandId, lookback] as const,
+	summary: (brandId: string, scopeId: string, lookback: LookbackPeriod) =>
+		[...dashboardKeys.all, "summary", brandId, scopeId, lookback] as const,
 };
 
-export function useDashboardSummary(brandId?: string, lookback: LookbackPeriod = "1m") {
+export function useDashboardSummary(
+	brandId: string | undefined,
+	scopeId: string | undefined,
+	lookback: LookbackPeriod = "1m",
+) {
 	const params = useParams({ strict: false }) as { brand?: string };
 	const resolvedBrandId = brandId || params.brand;
 
 	const query = useQuery({
-		queryKey: dashboardKeys.summary(resolvedBrandId || "", lookback),
+		queryKey: dashboardKeys.summary(resolvedBrandId || "", scopeId || "", lookback),
 		queryFn: () =>
 			getDashboardSummaryFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: scopeId!,
 					lookback,
 					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && !!scopeId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
 		refetchOnReconnect: true,
 		refetchInterval: 60_000, // Auto-refresh every 60 seconds
-		placeholderData: (prev) => prev, // Keep previous data while refetching with new filters
 	});
 
 	return {

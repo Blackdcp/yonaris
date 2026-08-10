@@ -7,7 +7,15 @@ import { MAX_COMPETITORS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
 import { provisionAdditionalLocalOrg } from "@workspace/lib/db/provisioning";
-import { type Brand, type BrandWithPrompts, brands, competitors, prompts } from "@workspace/lib/db/schema";
+import {
+	type Brand,
+	type BrandWithPrompts,
+	brands,
+	competitors,
+	type MeasurementScope,
+	measurementScopes,
+	prompts,
+} from "@workspace/lib/db/schema";
 import type { ModelConfig } from "@workspace/lib/providers";
 import { parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
 import { and, count, eq, inArray, sql } from "drizzle-orm";
@@ -70,9 +78,14 @@ function getDefaultBrandDomains(): string[] {
 // Helper functions (migrated from apps/web/src/lib/metadata.ts)
 // ============================================================================
 
-async function getBrandWithPromptsFromDb(
-	brandId: string,
-): Promise<(BrandWithPrompts & { effectiveModels: string[]; effectiveModelConfigs: ModelConfig[] }) | undefined> {
+async function getBrandWithPromptsFromDb(brandId: string): Promise<
+	| (BrandWithPrompts & {
+			effectiveModels: string[];
+			effectiveModelConfigs: ModelConfig[];
+			measurementScopes: MeasurementScope[];
+	  })
+	| undefined
+> {
 	try {
 		const brand = await db.query.brands.findFirst({
 			where: eq(brands.id, brandId),
@@ -85,11 +98,16 @@ async function getBrandWithPromptsFromDb(
 		const brandCompetitors = await db.query.competitors.findMany({
 			where: eq(competitors.brandId, brandId),
 		});
+		const brandScopes = await db.query.measurementScopes.findMany({
+			where: eq(measurementScopes.brandId, brandId),
+			orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
+		});
 
 		return {
 			...brand,
 			prompts: brandPrompts,
 			competitors: brandCompetitors,
+			measurementScopes: brandScopes,
 			...computeEffectiveModels(brand),
 		};
 	} catch (error) {
@@ -125,8 +143,13 @@ export const getBrands = createServerFn({ method: "GET" }).handler(async () => {
 	const brandsData = await Promise.all(scopedBrands.map((brand) => getBrandWithPromptsFromDb(brand.id)));
 
 	return brandsData.filter(
-		(brand): brand is BrandWithPrompts & { effectiveModels: string[]; effectiveModelConfigs: ModelConfig[] } =>
-			brand !== undefined,
+		(
+			brand,
+		): brand is BrandWithPrompts & {
+			effectiveModels: string[];
+			effectiveModelConfigs: ModelConfig[];
+			measurementScopes: MeasurementScope[];
+		} => brand !== undefined,
 	);
 });
 

@@ -5,6 +5,7 @@ import { getFilteredVisibilityFn, type FilteredVisibilityResponse } from "@/serv
 export type LookbackPeriod = "1w" | "1m" | "3m" | "6m" | "1y" | "all";
 
 export interface FilteredVisibilityFilters {
+	scopeId: string;
 	lookback?: LookbackPeriod;
 	model?: string;
 	/** Tag filter (resolved to prompt IDs server-side). */
@@ -22,6 +23,7 @@ export function useFilteredVisibility(brandId?: string, filters?: FilteredVisibi
 			"filtered-visibility",
 			resolvedBrandId,
 			filters?.lookback,
+			filters?.scopeId,
 			filters?.model,
 			filters?.tags?.join(","),
 			filters?.search,
@@ -30,6 +32,7 @@ export function useFilteredVisibility(brandId?: string, filters?: FilteredVisibi
 			getFilteredVisibilityFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: filters!.scopeId,
 					lookback: filters?.lookback || "1m",
 					model: filters?.model,
 					tags: filters?.tags?.join(","),
@@ -37,12 +40,11 @@ export function useFilteredVisibility(brandId?: string, filters?: FilteredVisibi
 					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && !!filters?.scopeId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
 		refetchOnReconnect: true,
 		refetchInterval: 60_000,
-		placeholderData: (prev) => prev,
 	});
 
 	return {

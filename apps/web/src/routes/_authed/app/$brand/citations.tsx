@@ -3,21 +3,23 @@
  *
  * Shows citation statistics with filtering by model, tags, and lookback period.
  */
-import { createFileRoute, Link } from "@tanstack/react-router";
+
 import { useQueryClient } from "@tanstack/react-query";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { useCitations } from "@/hooks/use-citations";
-import { useBrand, brandKeys } from "@/hooks/use-brands";
-import { useListFilters } from "@/hooks/use-list-filters";
-import { useBrandAccess } from "@/hooks/use-brand-access";
-import { dashboardKeys } from "@/hooks/use-dashboard-summary";
 import { CitationsDisplay } from "@/components/citations-display";
+import { ALL_MODELS_VALUE, getAvailableModels } from "@/components/filter-bar";
 import { FilteredListShell } from "@/components/filtered-list-shell";
-import { getDaysFromLookback } from "@/lib/chart-utils";
 import { PageHeader } from "@/components/page-header";
-import { getAvailableModels, ALL_MODELS_VALUE } from "@/components/filter-bar";
+import { useBrandAccess } from "@/hooks/use-brand-access";
+import { brandKeys, useBrand } from "@/hooks/use-brands";
+import { useCitations } from "@/hooks/use-citations";
+import { dashboardKeys } from "@/hooks/use-dashboard-summary";
+import { useListFilters } from "@/hooks/use-list-filters";
+import { useScopeModels } from "@/hooks/use-scope-models";
+import { getDaysFromLookback } from "@/lib/chart-utils";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 export const Route = createFileRoute("/_authed/app/$brand/citations")({
 	head: ({ matches, match }) => {
@@ -42,16 +44,21 @@ function CitationsPage() {
 	const days = getDaysFromLookback(filters.lookback);
 
 	const { brand } = useBrand(brandId);
-	const availableModels = getAvailableModels(brand?.effectiveModels ?? []);
+	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, filters.scopeId);
+	const availableModels = getAvailableModels(scopeModels);
 
 	// Get citation data with tag and model filter
-	const modelParam = filters.model === ALL_MODELS_VALUE ? undefined : filters.model;
+	const modelParam =
+		filters.model === ALL_MODELS_VALUE || (scopeModelsResolved && !scopeModels.includes(filters.model))
+			? undefined
+			: filters.model;
 	const {
 		citations: citationData,
 		isLoading,
 		isError,
 		revalidate: revalidateCitations,
 	} = useCitations(brandId, {
+		scopeId: filters.scopeId ?? "",
 		days,
 		tags: filters.tags.length > 0 ? filters.tags : undefined,
 		model: modelParam,
@@ -77,7 +84,7 @@ function CitationsPage() {
 		</>
 	);
 
-	const showFullSkeleton = isLoading && !citationData;
+	const showFullSkeleton = filters.isScopeResolving || (isLoading && !citationData);
 
 	return (
 		<PageHeader
@@ -105,7 +112,7 @@ function CitationsPage() {
 						</CardContent>
 					</Card>
 				}
-				isError={Boolean(isError) || !citationData}
+				isError={!filters.isScopeResolving && (Boolean(isError) || !citationData)}
 				errorState={
 					<Card>
 						<CardContent className="pt-6">

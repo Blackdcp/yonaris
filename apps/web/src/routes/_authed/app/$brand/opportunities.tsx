@@ -15,6 +15,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { OpportunitiesReport } from "@/components/opportunities-report";
 import { PageHeader } from "@/components/page-header";
 import { useOpportunities } from "@/hooks/use-opportunities";
+import { useBrand } from "@/hooks/use-brands";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 export const Route = createFileRoute("/_authed/app/$brand/opportunities")({
@@ -33,12 +34,24 @@ export const Route = createFileRoute("/_authed/app/$brand/opportunities")({
 
 function OpportunitiesPage() {
 	const { brand: brandId } = Route.useParams();
-	const { data, isLoading, isError } = useOpportunities(brandId);
+	const { brand } = useBrand(brandId);
+	const scopesLoaded = brand !== undefined;
+	const scopeSafe = scopesLoaded && brand.measurementScopes.length <= 1;
+	const { data, isLoading, isError } = useOpportunities(brandId, scopeSafe);
 
 	const infoContent = "Recommendations based on your visibility and citation metrics. Refreshed weekly.";
 
 	let content: React.ReactNode;
-	if (isLoading) {
+	if (!scopesLoaded) {
+		content = <LoadingState />;
+	} else if (!scopeSafe) {
+		content = (
+			<EmptyCard>
+				Scoped opportunities are not available yet. Visibility, share of voice, citations, and query fan-out remain
+				isolated by the selected market.
+			</EmptyCard>
+		);
+	} else if (isLoading) {
 		content = <LoadingState />;
 	} else if (isError) {
 		content = <EmptyCard>Couldn't generate recommendations right now. Reload the page to try again.</EmptyCard>;

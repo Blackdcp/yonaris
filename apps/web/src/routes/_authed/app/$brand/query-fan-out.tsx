@@ -25,10 +25,10 @@ import { InfoTip, QueryWordsSection, VariationLine } from "@/components/fanout-s
 import { ALL_MODELS_VALUE, FilterBar, getAvailableModels } from "@/components/filter-bar";
 import { HistoryButton } from "@/components/history-button";
 import { FilterSection, PageHeader } from "@/components/page-header";
-import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
+import { useScopeModels } from "@/hooks/use-scope-models";
 import { type PromptFanoutStat, promptKeywords, type TopQueryStat } from "@/lib/fanout-analysis";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { getModelDisplayName } from "@/lib/utils";
@@ -60,7 +60,7 @@ export const Route = createFileRoute("/_authed/app/$brand/query-fan-out")({
 
 function QueryFanoutPage() {
 	const { brand: brandId } = Route.useParams();
-	const { model, lookback, tags } = useListFilters();
+	const { scopeId, isScopeResolving, model, lookback, tags } = useListFilters();
 	const tab = Route.useSearch({ select: (s) => s.tab ?? "fanout" });
 	const navigate = Route.useNavigate();
 	const setTab = (next: FanoutTab) =>
@@ -70,14 +70,16 @@ function QueryFanoutPage() {
 			resetScroll: false,
 		});
 
-	const { brand } = useBrand(brandId);
-	const availableModels = getAvailableModels(brand?.effectiveModels ?? []);
-	const modelParam = model === ALL_MODELS_VALUE ? undefined : model;
+	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, scopeId);
+	const availableModels = getAvailableModels(scopeModels);
+	const modelParam =
+		model === ALL_MODELS_VALUE || (scopeModelsResolved && !scopeModels.includes(model)) ? undefined : model;
 
-	const { promptsSummary } = usePromptsSummary(brandId, { lookback, model: modelParam });
+	const { promptsSummary } = usePromptsSummary(brandId, { scopeId: scopeId ?? "", lookback, model: modelParam });
 	const availableTags = promptsSummary?.availableTags ?? [];
 
 	const { data, isLoading, isError } = useQueryFanout(brandId, {
+		scopeId,
 		lookback,
 		tags,
 		model: modelParam,
@@ -92,7 +94,7 @@ function QueryFanoutPage() {
 	);
 
 	let content: React.ReactNode;
-	if (isLoading && !data) {
+	if (isScopeResolving || (isLoading && !data)) {
 		content = <LoadingState />;
 	} else if (isError && !data) {
 		content = <EmptyState message="Couldn't load query fan-out right now. Reload the page to try again." />;

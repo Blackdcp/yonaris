@@ -6,6 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { prompts, competitors, brands } from "@workspace/lib/db/schema";
 import { eq, and, count } from "drizzle-orm";
 import {
@@ -60,6 +61,7 @@ export const getDashboardSummaryFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			lookback: z.enum(["1w", "1m", "3m", "6m", "1y", "all"]).default("1m"),
 			timezone: z.string().default("UTC"),
 		}),
@@ -69,7 +71,8 @@ export const getDashboardSummaryFn = createServerFn({ method: "GET" })
 		await requireOrgAccess(session.user.id, data.brandId);
 
 		const lookbackParam = data.lookback as LookbackPeriod;
-		const timezone = resolveTimezone(data.timezone);
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		const timezone = resolveTimezone(measurementScope.timezone);
 
 		// Same timezone-aware window as the visibility and share-of-voice pages, so
 		// the overview's two trend charts share one date domain (issue #413).
@@ -94,11 +97,11 @@ export const getDashboardSummaryFn = createServerFn({ method: "GET" })
 			db
 				.select({ id: prompts.id, value: prompts.value, systemTags: prompts.systemTags, tags: prompts.tags })
 				.from(prompts)
-				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.enabled, true))),
+				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, data.scopeId), eq(prompts.enabled, true))),
 			db
 				.select({ count: count() })
 				.from(prompts)
-				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.enabled, true))),
+				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, data.scopeId), eq(prompts.enabled, true))),
 		]);
 
 		const brandWebsite = brandResult[0]?.website || "";

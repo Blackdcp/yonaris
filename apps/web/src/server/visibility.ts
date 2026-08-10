@@ -8,6 +8,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors } from "@workspace/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { type LookbackPeriod } from "@/lib/chart-utils";
@@ -63,6 +64,7 @@ export const getBatchChartDataFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			lookback: z.enum(["1w", "1m", "3m", "6m", "1y", "all"]).default("1m"),
 			model: z.string().optional(),
 			tags: z.string().optional(),
@@ -74,7 +76,8 @@ export const getBatchChartDataFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 
-		const timezone = resolveTimezone(data.timezone);
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		const timezone = resolveTimezone(measurementScope.timezone);
 		const lookbackParam = data.lookback as LookbackPeriod;
 
 		// `allStrategy: "1y"` guarantees concrete bounds for every lookback
@@ -86,6 +89,7 @@ export const getBatchChartDataFn = createServerFn({ method: "GET" })
 		// Resolve the in-scope prompts server-side from the filter criteria so
 		// the client never ships the full prompt-id list (issue #68).
 		const resolvedPrompts = await resolveFilteredPrompts(data.brandId, {
+			scopeId: data.scopeId,
 			tags: data.tags,
 			search: data.search,
 		});
@@ -143,6 +147,7 @@ export const getFilteredVisibilityFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			lookback: z.enum(["1w", "1m", "3m", "6m", "1y", "all"]).default("1m"),
 			model: z.string().optional(),
 			tags: z.string().optional(),
@@ -155,10 +160,12 @@ export const getFilteredVisibilityFn = createServerFn({ method: "GET" })
 		const lookbackParam = data.lookback as LookbackPeriod;
 
 		await requireOrgAccess(session.user.id, data.brandId);
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 
 		// Resolve the in-scope prompts server-side from the filter criteria so
 		// the client never ships the full prompt-id list (issue #68).
 		const resolvedPrompts = await resolveFilteredPrompts(data.brandId, {
+			scopeId: data.scopeId,
 			tags: data.tags,
 			search: data.search,
 		});
@@ -176,7 +183,7 @@ export const getFilteredVisibilityFn = createServerFn({ method: "GET" })
 			};
 		}
 
-		const timezone = resolveTimezone(data.timezone);
+		const timezone = resolveTimezone(measurementScope.timezone);
 
 		// Determine branded prompt IDs from effective branded status
 		const brandedPromptIds = resolvedPrompts

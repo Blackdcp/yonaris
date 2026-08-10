@@ -15,31 +15,65 @@ export const LEGACY_SCOPE = {
  * paths until the product exposes explicit scope selection.
  */
 export async function ensureLegacyMeasurementScope(brandId: string): Promise<string> {
+	const existing = await db.query.measurementScopes.findFirst({
+		where: and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, LEGACY_SCOPE.key)),
+		columns: { id: true },
+	});
+	if (existing) return existing.id;
+
+	const defaultScope = await db.query.measurementScopes.findFirst({
+		where: and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.isDefault, true)),
+		columns: { id: true },
+	});
 	const [inserted] = await db
 		.insert(measurementScopes)
 		.values({
 			brandId,
 			...LEGACY_SCOPE,
-			isDefault: true,
+			isDefault: !defaultScope,
 		})
-		.onConflictDoNothing({ target: [measurementScopes.brandId, measurementScopes.key] })
+		.onConflictDoNothing()
 		.returning({ id: measurementScopes.id });
 
 	if (inserted) return inserted.id;
 
-	const existing = await db.query.measurementScopes.findFirst({
+	const concurrentlyInserted = await db.query.measurementScopes.findFirst({
 		where: and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, LEGACY_SCOPE.key)),
 		columns: { id: true },
 	});
-	if (!existing) {
-		throw new Error(`Failed to resolve the legacy measurement scope for brand ${brandId}`);
-	}
+	if (concurrentlyInserted) return concurrentlyInserted.id;
 
-	return existing.id;
+	// Another request may have created a default scope between the read and the
+	// insert. In that case the partial unique default index rejects the first
+	// insert; retry the compatibility scope as non-default.
+	const [fallback] = await db
+		.insert(measurementScopes)
+		.values({ brandId, ...LEGACY_SCOPE, isDefault: false })
+		.onConflictDoNothing({ target: [measurementScopes.brandId, measurementScopes.key] })
+		.returning({ id: measurementScopes.id });
+	if (fallback) return fallback.id;
+
+	const finalExisting = await db.query.measurementScopes.findFirst({
+		where: and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, LEGACY_SCOPE.key)),
+		columns: { id: true },
+	});
+	if (!finalExisting) throw new Error(`Failed to resolve the legacy measurement scope for brand ${brandId}`);
+	return finalExisting.id;
 }
 
 export async function resolveMeasurementScopeForBrand(brandId: string, scopeId?: string): Promise<MeasurementScope> {
-	const resolvedScopeId = scopeId ?? (await ensureLegacyMeasurementScope(brandId));
+	let resolvedScopeId = scopeId;
+	if (!resolvedScopeId) {
+		const defaultScope = await db.query.measurementScopes.findFirst({
+			where: and(
+				eq(measurementScopes.brandId, brandId),
+				eq(measurementScopes.isDefault, true),
+				eq(measurementScopes.enabled, true),
+			),
+			columns: { id: true },
+		});
+		resolvedScopeId = defaultScope?.id ?? (await ensureLegacyMeasurementScope(brandId));
+	}
 	const scope = await db.query.measurementScopes.findFirst({
 		where: and(eq(measurementScopes.id, resolvedScopeId), eq(measurementScopes.brandId, brandId)),
 	});

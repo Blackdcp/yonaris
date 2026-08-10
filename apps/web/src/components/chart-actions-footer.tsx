@@ -7,6 +7,7 @@ import { useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
 import { getOptimizeButtonForMode } from "@workspace/deployment/client";
 import { getPromptWebQueryFn } from "@/server/prompts";
+import { coerceLookback } from "@/hooks/use-list-filters";
 
 type LookbackPeriod = "1w" | "1m" | "3m" | "6m" | "1y" | "all";
 
@@ -52,9 +53,8 @@ export function ChartActionsFooter({
 				data: {
 					brandId,
 					promptId: pId,
-					lookback: lb,
+					lookback: coerceLookback(lb, "1m"),
 					model,
-					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			});
 		},

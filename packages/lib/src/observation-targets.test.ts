@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	assertObservationRouteSupportsScope,
 	buildObservationSourceKey,
+	getObservationTargetCohort,
 	resolveObservationTarget,
 } from "./observation-targets";
 
@@ -62,6 +63,19 @@ describe("resolveObservationTarget", () => {
 		expect(target.captureMode).toBe("aggregated_api");
 	});
 
+	it("separates consumer scoring routes from API diagnostic routes", () => {
+		const consumer = resolveObservationTarget({ model: "chatgpt", provider: "brightdata", webSearch: true });
+		const diagnostic = resolveObservationTarget({
+			model: "deepseek",
+			provider: "deepseek-api",
+			version: "deepseek-chat",
+			webSearch: true,
+		});
+
+		expect(getObservationTargetCohort(consumer)).toBe("consumer_measurement");
+		expect(getObservationTargetCohort(diagnostic)).toBe("api_diagnostic");
+	});
+
 	it("fails closed when a provider route has no declared measurement surface", () => {
 		expect(() => resolveObservationTarget({ model: "chatgpt", provider: "unknown-provider", webSearch: true })).toThrow(
 			/No measurement target is registered/,
@@ -75,6 +89,15 @@ describe("resolveObservationTarget", () => {
 			/fixed to market US/,
 		);
 		expect(() => assertObservationRouteSupportsScope(target, { market: "US", locale: "en-US" })).not.toThrow();
+		expect(() => assertObservationRouteSupportsScope(target, { market: "ZZ", locale: "und" })).not.toThrow();
+	});
+
+	it("rejects consumer routes whose localization is not verified", () => {
+		const target = resolveObservationTarget({ model: "chatgpt", provider: "olostep", webSearch: true });
+
+		expect(() => assertObservationRouteSupportsScope(target, { market: "US", locale: "en-US" })).toThrow(
+			/no verified market\/locale routing/,
+		);
 		expect(() => assertObservationRouteSupportsScope(target, { market: "ZZ", locale: "und" })).not.toThrow();
 	});
 

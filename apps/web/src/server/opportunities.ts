@@ -18,7 +18,7 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
-import { brandOpportunities, brands, competitors } from "@workspace/lib/db/schema";
+import { brandOpportunities, brands, competitors, measurementScopes } from "@workspace/lib/db/schema";
 import { runStructuredCompletionPrompt } from "@workspace/lib/onboarding";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -471,11 +471,19 @@ async function generateValidReport(prompt: string): Promise<{ report: RawReport;
 // ============================================================================
 
 export const getOpportunitiesFn = createServerFn({ method: "GET" })
-	.validator(z.object({ brandId: z.string(), timezone: z.string().default("UTC") }))
+	.validator(z.object({ brandId: z.string() }))
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 		const canManageBrand = await checkOrgWriteAccess(session.user.id, data.brandId);
+		const storedScopes = await db
+			.select({ id: measurementScopes.id, timezone: measurementScopes.timezone, enabled: measurementScopes.enabled })
+			.from(measurementScopes)
+			.where(eq(measurementScopes.brandId, data.brandId))
+			.limit(2);
+		if (storedScopes.length !== 1 || !storedScopes[0]?.enabled) {
+			throw new Error("Opportunities are disabled until reports can be generated within one measurement scope.");
+		}
 
 		// Serve the most recent stored report while it's fresh. Every generation is
 		// kept (append-only); we regenerate only when the latest is stale.
@@ -498,7 +506,7 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 			return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
 		}
 
-		const digest = await buildDigest(data.brandId, data.timezone);
+		const digest = await buildDigest(data.brandId, storedScopes[0]?.timezone ?? "UTC");
 		if (!digest) {
 			if (latest)
 				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };

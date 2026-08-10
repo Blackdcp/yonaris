@@ -2,19 +2,25 @@ import * as Sentry from "@sentry/node";
 import { getDefaultDelayHours, getRunsPerPrompt } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { resolvePromptMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import {
+	claimObservationAttempt,
+	markObservationFailed,
+	persistSuccessfulObservation,
+} from "@workspace/lib/db/observations";
 import { type Brand, brands, type Competitor, competitors, prompts } from "@workspace/lib/db/schema";
+import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import { assertObservationRouteSupportsScope, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import {
 	getProvider,
 	type ModelConfig,
 	type Provider,
+	formatScrapeTarget,
 	parseScrapeTargets,
 	selectTargetsForBrand,
 } from "@workspace/lib/providers";
 import { eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
-import { claimObservationAttempt, markObservationFailed, persistSuccessfulObservation } from "../observations";
 import { trackWorkerEvent } from "../telemetry";
 
 export interface ProcessPromptData {
@@ -105,45 +111,6 @@ async function getPromptContext(promptId: string): Promise<PromptContext | null>
 	};
 }
 
-function extractDomainFromUrl(urlOrDomain: string): string {
-	try {
-		const url = new URL(urlOrDomain.startsWith("http") ? urlOrDomain : `https://${urlOrDomain}`);
-		return url.hostname.replace(/^www\./, "").toLowerCase();
-	} catch {
-		return urlOrDomain.replace(/^www\./, "").toLowerCase();
-	}
-}
-
-function analyzeMentions(
-	content: string,
-	brand: Brand,
-	competitorsList: Competitor[],
-): {
-	brandMentioned: boolean;
-	competitorsMentioned: string[];
-} {
-	const contentLower = content.toLowerCase();
-
-	const brandNames = [brand.name, ...(brand.aliases || [])].map((n) => n.toLowerCase());
-	const brandDomains = [
-		extractDomainFromUrl(brand.website),
-		...(brand.additionalDomains || []).map(extractDomainFromUrl),
-	];
-	const brandMentioned =
-		brandNames.some((n) => contentLower.includes(n)) || brandDomains.some((d) => contentLower.includes(d));
-
-	const competitorsMentioned = competitorsList
-		.filter((competitor) => {
-			const names = [competitor.name, ...(competitor.aliases || [])].map((n) => n.toLowerCase());
-			const nameMatch = names.some((n) => contentLower.includes(n));
-			const domainMatch = (competitor.domains || []).some((d) => contentLower.includes(extractDomainFromUrl(d)));
-			return nameMatch || domainMatch;
-		})
-		.map((competitor) => competitor.name);
-
-	return { brandMentioned, competitorsMentioned };
-}
-
 async function runModelIteration({
 	sourceJobId,
 	promptId,
@@ -177,9 +144,12 @@ async function runModelIteration({
 		config,
 		sampleIndex: runIndex,
 	});
-	if (!attempt.shouldExecute) {
+	if (attempt.state === "completed") {
 		console.log(`${logPrefix} Observation already completed; skipping duplicate execution`);
 		return;
+	}
+	if (attempt.state === "in_progress") {
+		throw new Error(`${logPrefix} Observation is already in progress`);
 	}
 
 	let failureStage: "configuration" | "provider" | "persistence" = "configuration";
@@ -292,9 +262,31 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 
 		const scope = await resolvePromptMeasurementScope(prompt);
 
-		const selectedConfigs = selectTargetsForBrand(scrapeConfigs, brand.enabledModels);
+		const brandConfigs = selectTargetsForBrand(scrapeConfigs, brand.enabledModels);
+		const selectedConfigs =
+			scope.automaticTargetKeys === null
+				? brandConfigs
+				: brandConfigs.filter((config) => scope.automaticTargetKeys?.includes(formatScrapeTarget(config)));
+		if (scope.automaticTargetKeys && scope.automaticTargetKeys.length > 0) {
+			const selectedTargetKeys = new Set(selectedConfigs.map((config) => formatScrapeTarget(config)));
+			const missingTargetKeys = scope.automaticTargetKeys.filter((targetKey) => !selectedTargetKeys.has(targetKey));
+			if (missingTargetKeys.length > 0) {
+				throw new Error(
+					`Scope ${scope.key} automatic targets are unavailable in the deployment or disabled for the brand: ${missingTargetKeys.join(", ")}`,
+				);
+			}
+		}
 		if (selectedConfigs.length === 0) {
 			console.log(`Prompt ${promptId} for brand ${brand.id} has no targets (brand.enabledModels=[])`);
+			if (scope.automaticTargetKeys?.length === 0) {
+				console.log(`Scope ${scope.key} is manual-only; prompt ${promptId} will not be rescheduled`);
+				continue;
+			}
+			if (scope.automaticTargetKeys && scope.automaticTargetKeys.length > 0) {
+				throw new Error(
+					`Scope ${scope.key} has automatic targets configured, but none match the deployment and brand target configuration`,
+				);
+			}
 		}
 
 		console.log(`Processing prompt "${prompt.value}" for brand "${brand.name}"`);

@@ -10,8 +10,9 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
-import { brands } from "@workspace/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
+import { brands, prompts } from "@workspace/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import type { LookbackPeriod } from "@/lib/chart-utils";
@@ -49,6 +50,7 @@ export const getQueryFanoutFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid().optional(),
 			lookback: LOOKBACK.default("1m"),
 			model: z.string().optional(),
 			tags: z.string().optional(),
@@ -62,12 +64,28 @@ export const getQueryFanoutFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 
-		const { timezone, fromDateStr, toDateStr } = resolveRange(data.lookback as LookbackPeriod, data.timezone);
+		let scopeId = data.scopeId;
+		if (!scopeId && data.promptId) {
+			const prompt = await db.query.prompts.findFirst({
+				where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
+				columns: { scopeId: true },
+			});
+			scopeId = prompt?.scopeId ?? undefined;
+		}
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, scopeId);
+		const { timezone, fromDateStr, toDateStr } = resolveRange(
+			data.lookback as LookbackPeriod,
+			measurementScope.timezone,
+		);
 		const model = data.model;
 
 		const [brandRow, allResolved] = await Promise.all([
 			db.select({ name: brands.name }).from(brands).where(eq(brands.id, data.brandId)).limit(1),
-			resolveFilteredPrompts(data.brandId, { tags: data.tags, search: data.search }),
+			resolveFilteredPrompts(data.brandId, {
+				scopeId: measurementScope.id,
+				tags: data.tags,
+				search: data.search,
+			}),
 		]);
 		const brandName = brandRow[0]?.name ?? "Your brand";
 		// Resolving then filtering (rather than trusting the input id) keeps the

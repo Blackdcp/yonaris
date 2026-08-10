@@ -1,0 +1,1 @@
+ALTER TABLE "measurement_scopes" ADD COLUMN "automatic_target_keys" text[];

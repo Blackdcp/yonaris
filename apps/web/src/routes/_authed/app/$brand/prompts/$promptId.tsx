@@ -4,7 +4,7 @@
  * Shows prompt details with tabs: Mentions, Web Queries, Citations, LLM Responses.
  */
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Badge } from "@workspace/ui/components/badge";
@@ -43,6 +43,7 @@ import ReactMarkdown from "react-markdown";
 type PromptMetadata = {
 	id: string;
 	brandId: string;
+	scopeId: string;
 	value: string;
 	enabled: boolean;
 	tags: string[];
@@ -87,6 +88,7 @@ function PromptHistoryPage() {
 	const days = getDaysFromLookback(lookback);
 
 	const activeTab = Route.useSearch({ select: (s) => s.tab ?? "mentions" });
+	const urlScope = useSearch({ strict: false, select: (search) => search.scope });
 	const navigate = Route.useNavigate();
 	const setActiveTab = useCallback(
 		(tab: TabKey) =>
@@ -127,16 +129,28 @@ function PromptHistoryPage() {
 	// Fetch prompt metadata
 	useEffect(() => {
 		if (!brandId || !promptId) return;
+		let cancelled = false;
+		setPromptMeta(null);
 		setIsMetaLoading(true);
 		getPromptMetadataFn({ data: { brandId, promptId } })
 			.then((data) => {
-				if (data) {
+				if (!cancelled && data) {
 					setPromptMeta(data);
+					if (data.scopeId !== urlScope) {
+						navigate({ search: (previous) => ({ ...previous, scope: data.scopeId }), replace: true });
+					}
 				}
 			})
-			.catch(console.error)
-			.finally(() => setIsMetaLoading(false));
-	}, [brandId, promptId]);
+			.catch((error) => {
+				if (!cancelled) console.error(error);
+			})
+			.finally(() => {
+				if (!cancelled) setIsMetaLoading(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [brandId, promptId, navigate, urlScope]);
 
 	const handleTabChange = useCallback(
 		(tab: TabKey) => {

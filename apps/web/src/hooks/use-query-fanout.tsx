@@ -4,6 +4,7 @@ import { getQueryFanoutFn } from "@/server/query-fanout";
 import type { LookbackPeriod } from "@/lib/chart-utils";
 
 export interface QueryFanoutFilters {
+	scopeId?: string;
 	lookback?: LookbackPeriod;
 	model?: string;
 	/** Tag filter (resolved to prompt IDs server-side, like Share of Voice). */
@@ -27,6 +28,7 @@ export function useQueryFanout(brandId?: string, filters?: QueryFanoutFilters) {
 			getQueryFanoutFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: filters?.scopeId,
 					lookback: filters?.lookback ?? "1m",
 					model: filters?.model,
 					tags: filters?.tags?.join(","),
@@ -34,9 +36,8 @@ export function useQueryFanout(brandId?: string, filters?: QueryFanoutFilters) {
 					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && (!!filters?.scopeId || !!filters?.promptId),
 		staleTime: 30_000,
-		placeholderData: (prev) => prev,
 	});
 
 	return {

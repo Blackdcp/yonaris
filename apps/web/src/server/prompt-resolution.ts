@@ -40,7 +40,7 @@ export interface ResolvedPrompt {
  */
 export async function resolveFilteredPrompts(
 	brandId: string,
-	opts: { tags?: string; search?: string },
+	opts: { scopeId?: string; tags?: string; search?: string },
 ): Promise<ResolvedPrompt[]> {
 	const allPrompts = await db
 		.select({
@@ -50,7 +50,13 @@ export async function resolveFilteredPrompts(
 			tags: prompts.tags,
 		})
 		.from(prompts)
-		.where(and(eq(prompts.brandId, brandId), eq(prompts.enabled, true)));
+		.where(
+			and(
+				eq(prompts.brandId, brandId),
+				eq(prompts.enabled, true),
+				opts.scopeId ? eq(prompts.scopeId, opts.scopeId) : undefined,
+			),
+		);
 
 	const tagFilter = opts.tags?.split(",").filter(Boolean) || [];
 	const search = opts.search;

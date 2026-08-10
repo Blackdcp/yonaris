@@ -5,6 +5,7 @@ import { getPromptsSummaryFn } from "@/server/prompts";
 export type LookbackPeriod = "1w" | "1m" | "3m" | "6m" | "1y" | "all";
 
 export interface PromptsSummaryFilters {
+	scopeId: string;
 	lookback?: LookbackPeriod;
 	webSearchEnabled?: boolean;
 	model?: string;
@@ -26,18 +27,18 @@ export function usePromptsSummary(brandId?: string, filters?: PromptsSummaryFilt
 			getPromptsSummaryFn({
 				data: {
 					brandId: resolvedBrandId!,
+					scopeId: filters!.scopeId,
 					lookback: filters?.lookback || "1m",
 					webSearchEnabled: filters?.webSearchEnabled?.toString(),
 					model: filters?.model,
 					tags: filters?.tags?.join(","),
 				},
 			}),
-		enabled: !!resolvedBrandId,
+		enabled: !!resolvedBrandId && !!filters?.scopeId,
 		staleTime: 30_000,
 		refetchOnWindowFocus: true,
 		refetchOnReconnect: true,
 		refetchInterval: 60_000,
-		placeholderData: (prev) => prev, // Keep previous data while refetching
 	});
 
 	return {

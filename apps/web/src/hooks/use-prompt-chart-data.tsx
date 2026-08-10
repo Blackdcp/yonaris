@@ -36,24 +36,23 @@ export function usePromptChartData(
 ) {
 	const params = useParams({ strict: false });
 	const resolvedBrandId = brandId || (params && "brand" in params ? (params.brand as string) : undefined);
+	const queryBrandId = resolvedBrandId ?? "";
 
 	const { data, error, isLoading, refetch } = useQuery({
 		queryKey: ["promptChartData", resolvedBrandId, promptId, filters],
 		queryFn: () =>
 			getPromptChartDataFn({
 				data: {
-					brandId: resolvedBrandId!,
+					brandId: queryBrandId,
 					promptId,
 					lookback: filters?.lookback || "1m",
 					webSearchEnabled: filters?.webSearchEnabled?.toString(),
 					model: filters?.model,
-					timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				},
 			}),
 		enabled: enabled && !!resolvedBrandId,
 		staleTime: 60_000,
 		retry: 3,
-		placeholderData: (prev) => prev, // Keep previous data while refetching with new filters
 	});
 
 	return {

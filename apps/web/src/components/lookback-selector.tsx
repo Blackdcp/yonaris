@@ -44,7 +44,7 @@ export function LookbackSelector({ defaultPeriod, onLookbackChange }: LookbackSe
 
 	return (
 		<div className="flex rounded-md bg-muted p-1">
-			{(["1w", "1m", "3m", "6m", "1y", "all"] as LookbackPeriod[]).map((period) => (
+			{(["1w", "1m", "3m", "6m", "1y"] as LookbackPeriod[]).map((period) => (
 				<button
 					key={period}
 					onClick={() => handleChange(period)}

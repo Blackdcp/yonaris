@@ -40,6 +40,12 @@
 						"type": "string",
 						"description": "Brand identifier this prompt belongs to"
 					},
+					"scopeId": {
+						"type": "string",
+						"format": "uuid",
+						"nullable": true,
+						"description": "Measurement scope for this prompt"
+					},
 					"value": {
 						"type": "string",
 						"description": "The actual prompt text"
@@ -82,9 +88,14 @@
 						"type": "string",
 						"description": "Brand identifier this prompt belongs to"
 					},
+					"scopeId": {
+						"type": "string",
+						"format": "uuid",
+						"description": "Optional explicit measurement scope; the brand default is used when omitted"
+					},
 					"value": {
 						"type": "string",
-						"description": "The prompt text",
+						"description": "Stored prompt text is immutable. If supplied, it must equal the current value; create a new prompt to change the question.",
 						"minLength": 1
 					},
 					"tags": {
@@ -316,7 +327,10 @@
 				"properties": {
 					"brandName": { "type": "string" },
 					"website": { "type": "string", "description": "Cleaned hostname" },
-					"additionalDomains": { "type": "array", "items": { "type": "string" } },
+					"additionalDomains": {
+						"type": "array",
+						"items": { "type": "string" }
+					},
 					"aliases": { "type": "array", "items": { "type": "string" } },
 					"competitors": {
 						"type": "array",
@@ -403,7 +417,10 @@
 			"Brand": {
 				"type": "object",
 				"properties": {
-					"id": { "type": "string", "description": "User-supplied brand identifier (e.g. \"acme\")" },
+					"id": {
+						"type": "string",
+						"description": "User-supplied brand identifier (e.g. \"acme\")"
+					},
 					"name": { "type": "string" },
 					"domains": {
 						"type": "array",
@@ -421,7 +438,10 @@
 			"BrandsList": {
 				"type": "object",
 				"properties": {
-					"brands": { "type": "array", "items": { "$ref": "#/components/schemas/Brand" } },
+					"brands": {
+						"type": "array",
+						"items": { "$ref": "#/components/schemas/Brand" }
+					},
 					"pagination": {
 						"type": "object",
 						"properties": {
@@ -451,7 +471,10 @@
 			"CompetitorsList": {
 				"type": "object",
 				"properties": {
-					"competitors": { "type": "array", "items": { "$ref": "#/components/schemas/Competitor" } },
+					"competitors": {
+						"type": "array",
+						"items": { "$ref": "#/components/schemas/Competitor" }
+					},
 					"pagination": {
 						"type": "object",
 						"properties": {
@@ -542,6 +565,173 @@
 					}
 				},
 				"required": ["brandId", "promptId", "promptValue", "startDate", "endDate", "mentions", "citations"]
+			},
+			"MeasurementScope": {
+				"type": "object",
+				"properties": {
+					"id": { "type": "string", "format": "uuid" },
+					"brandId": { "type": "string" },
+					"key": { "type": "string" },
+					"name": { "type": "string" },
+					"market": {
+						"type": "string",
+						"description": "Two-letter market code"
+					},
+					"locale": {
+						"type": "string",
+						"description": "Canonical BCP 47 locale"
+					},
+					"timezone": { "type": "string", "description": "IANA time zone" },
+					"automaticTargetKeys": {
+						"type": "array",
+						"nullable": true,
+						"items": { "type": "string" },
+						"description": "Exact automatic target keys; null inherits legacy targets and an empty list is manual-only"
+					},
+					"enabled": { "type": "boolean" },
+					"isDefault": { "type": "boolean" },
+					"createdAt": { "type": "string", "format": "date-time" },
+					"updatedAt": { "type": "string", "format": "date-time" }
+				},
+				"required": ["id", "brandId", "key", "name", "market", "locale", "timezone", "enabled", "isDefault"]
+			},
+			"CreateMeasurementScopeRequest": {
+				"type": "object",
+				"properties": {
+					"brandId": { "type": "string", "minLength": 1 },
+					"key": {
+						"type": "string",
+						"pattern": "^[a-z0-9]+(?:[-_][a-z0-9]+)*$"
+					},
+					"name": { "type": "string", "minLength": 1, "maxLength": 120 },
+					"market": { "type": "string", "pattern": "^[A-Za-z]{2}$" },
+					"locale": { "type": "string", "description": "BCP 47 language tag" },
+					"timezone": { "type": "string", "description": "IANA time zone" },
+					"automaticTargetKeys": {
+						"type": "array",
+						"items": { "type": "string" },
+						"default": [],
+						"description": "Exact automatic targets enabled in this scope; omit for a manual-only scope"
+					},
+					"isDefault": { "type": "boolean", "default": false }
+				},
+				"required": ["brandId", "key", "name", "market", "locale", "timezone"]
+			},
+			"ImportObservationsRequest": {
+				"type": "object",
+				"description": "Preview or import clean-session, evidence-backed operator/browser-assisted consumer-surface observations.",
+				"properties": {
+					"brandId": { "type": "string" },
+					"scopeId": { "type": "string", "format": "uuid" },
+					"dryRun": { "type": "boolean", "default": true },
+					"observations": {
+						"type": "array",
+						"minItems": 1,
+						"maxItems": 100,
+						"items": {
+							"type": "object",
+							"properties": {
+								"externalId": {
+									"type": "string",
+									"description": "Stable idempotency key from the capture client"
+								},
+								"promptId": { "type": "string", "format": "uuid" },
+								"promptText": {
+									"type": "string",
+									"description": "Must exactly match the stored prompt"
+								},
+								"surfaceTargetKey": {
+									"type": "string",
+									"enum": [
+										"doubao.consumer_web",
+										"deepseek.consumer_web",
+										"kimi.consumer_web",
+										"yuanbao.consumer_web",
+										"qwen.consumer_web",
+										"wenxin.consumer_web",
+										"chatgpt.consumer_web",
+										"perplexity.consumer_web",
+										"gemini.consumer_web",
+										"copilot.consumer_web",
+										"claude.consumer_web",
+										"grok.consumer_web",
+										"google_search.ai_overview",
+										"google_search.ai_mode"
+									]
+								},
+								"captureRouteKey": {
+									"type": "string",
+									"enum": ["manual_import.generic", "assisted_browser.generic"],
+									"default": "manual_import.generic"
+								},
+								"answerText": { "type": "string", "minLength": 1 },
+								"observedAt": { "type": "string", "format": "date-time" },
+								"pageUrl": { "type": "string", "format": "uri" },
+								"sessionMode": {
+									"type": "string",
+									"enum": ["anonymous_clean", "new_account_clean"]
+								},
+								"searchMode": { "type": "string", "enum": ["on", "off"] },
+								"modelVersion": { "type": "string" },
+								"sampleIndex": {
+									"type": "integer",
+									"minimum": 1,
+									"default": 1
+								},
+								"actualMarket": { "type": "string" },
+								"actualLocale": { "type": "string" },
+								"operatorReference": { "type": "string" },
+								"evidenceRefs": {
+									"type": "array",
+									"minItems": 1,
+									"items": {
+										"type": "object",
+										"properties": {
+											"type": {
+												"type": "string",
+												"enum": ["screenshot", "video", "page_snapshot", "other"]
+											},
+											"uri": { "type": "string" },
+											"sha256": {
+												"type": "string",
+												"pattern": "^[a-fA-F0-9]{64}$"
+											}
+										},
+										"required": ["type", "uri", "sha256"]
+									}
+								},
+								"citations": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"url": { "type": "string", "format": "uri" },
+											"title": { "type": "string" },
+											"citationIndex": { "type": "integer", "minimum": 0 }
+										},
+										"required": ["url"]
+									}
+								},
+								"webQueries": { "type": "array", "items": { "type": "string" } }
+							},
+							"required": [
+								"externalId",
+								"promptId",
+								"promptText",
+								"surfaceTargetKey",
+								"answerText",
+								"observedAt",
+								"pageUrl",
+								"sessionMode",
+								"searchMode",
+								"actualMarket",
+								"actualLocale",
+								"evidenceRefs"
+							]
+						}
+					}
+				},
+				"required": ["brandId", "scopeId", "observations"]
 			}
 		},
 		"responses": {
@@ -617,7 +807,9 @@
 						"description": "Brand analysis suggestion",
 						"content": {
 							"application/json": {
-								"schema": { "$ref": "#/components/schemas/OnboardingSuggestion" }
+								"schema": {
+									"$ref": "#/components/schemas/OnboardingSuggestion"
+								}
 							}
 						}
 					},
@@ -643,7 +835,12 @@
 						"name": "limit",
 						"in": "query",
 						"required": false,
-						"schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100,
+							"default": 20
+						}
 					}
 				],
 				"responses": {
@@ -774,7 +971,12 @@
 						"name": "limit",
 						"in": "query",
 						"required": false,
-						"schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 20 }
+						"schema": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 100,
+							"default": 20
+						}
 					}
 				],
 				"responses": {
@@ -798,7 +1000,9 @@
 					"required": true,
 					"content": {
 						"application/json": {
-							"schema": { "$ref": "#/components/schemas/CreateCompetitorRequest" }
+							"schema": {
+								"$ref": "#/components/schemas/CreateCompetitorRequest"
+							}
 						}
 					}
 				},
@@ -864,7 +1068,9 @@
 					"required": true,
 					"content": {
 						"application/json": {
-							"schema": { "$ref": "#/components/schemas/UpdateCompetitorRequest" }
+							"schema": {
+								"$ref": "#/components/schemas/UpdateCompetitorRequest"
+							}
 						}
 					}
 				},
@@ -912,6 +1118,155 @@
 				}
 			}
 		},
+		"/measurement-scopes": {
+			"get": {
+				"summary": "List measurement scopes",
+				"operationId": "listMeasurementScopes",
+				"tags": ["Measurement"],
+				"parameters": [
+					{
+						"name": "brandId",
+						"in": "query",
+						"required": true,
+						"schema": { "type": "string" }
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Scopes for the brand",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"scopes": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/MeasurementScope"
+											}
+										}
+									},
+									"required": ["scopes"]
+								}
+							}
+						}
+					},
+					"400": { "$ref": "#/components/responses/ValidationError" },
+					"401": { "$ref": "#/components/responses/UnauthorizedError" },
+					"404": { "$ref": "#/components/responses/NotFoundError" }
+				}
+			},
+			"post": {
+				"summary": "Create a measurement scope",
+				"operationId": "createMeasurementScope",
+				"tags": ["Measurement"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/CreateMeasurementScopeRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"201": {
+						"description": "Scope created",
+						"content": {
+							"application/json": {
+								"schema": { "$ref": "#/components/schemas/MeasurementScope" }
+							}
+						}
+					},
+					"400": { "$ref": "#/components/responses/ValidationError" },
+					"401": { "$ref": "#/components/responses/UnauthorizedError" },
+					"404": { "$ref": "#/components/responses/NotFoundError" },
+					"409": { "$ref": "#/components/responses/ConflictError" }
+				}
+			}
+		},
+		"/observations/import": {
+			"post": {
+				"summary": "Preview or import consumer-surface observations",
+				"description": "Validates a batch by default. Set dryRun=false to persist idempotent manual or browser-assisted observations.",
+				"operationId": "importObservations",
+				"tags": ["Measurement"],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/ImportObservationsRequest"
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Preview or import result",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"dryRun": { "type": "boolean" },
+										"total": { "type": "integer" },
+										"observations": {
+											"type": "array",
+											"items": { "type": "object" }
+										}
+									},
+									"required": ["dryRun", "total", "observations"]
+								}
+							}
+						}
+					},
+					"400": { "$ref": "#/components/responses/ValidationError" },
+					"401": { "$ref": "#/components/responses/UnauthorizedError" },
+					"404": { "$ref": "#/components/responses/NotFoundError" },
+					"409": { "$ref": "#/components/responses/ConflictError" }
+				}
+			}
+		},
+		"/observations/coverage": {
+			"get": {
+				"summary": "Get observation coverage",
+				"description": "Returns registered attempt and terminal counts. This endpoint does not yet apply an external contractual delivery manifest, so samples never registered are outside its denominator.",
+				"operationId": "getObservationCoverage",
+				"tags": ["Measurement"],
+				"parameters": [
+					{
+						"name": "brandId",
+						"in": "query",
+						"required": true,
+						"schema": { "type": "string" }
+					},
+					{
+						"name": "scopeId",
+						"in": "query",
+						"required": true,
+						"schema": { "type": "string", "format": "uuid" }
+					},
+					{
+						"name": "surfaceTargetKey",
+						"in": "query",
+						"required": false,
+						"schema": { "type": "string" }
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Coverage counts and ratio",
+						"content": {
+							"application/json": { "schema": { "type": "object" } }
+						}
+					},
+					"400": { "$ref": "#/components/responses/ValidationError" },
+					"401": { "$ref": "#/components/responses/UnauthorizedError" }
+				}
+			}
+		},
 		"/prompts": {
 			"get": {
 				"summary": "List all prompts",
@@ -927,6 +1282,13 @@
 						"schema": {
 							"type": "string"
 						}
+					},
+					{
+						"name": "scopeId",
+						"in": "query",
+						"description": "Filter prompts by measurement scope",
+						"required": false,
+						"schema": { "type": "string", "format": "uuid" }
 					},
 					{
 						"name": "page",
@@ -1203,7 +1565,7 @@
 			},
 			"patch": {
 				"summary": "Update a prompt",
-				"description": "Update a prompt's properties. Only provided fields will be updated. Toggling `enabled` schedules or unschedules the recurring run job.",
+				"description": "Update mutable prompt properties. Stored prompt text is immutable; create a new prompt and disable the old one to change the question. Toggling `enabled` schedules or unschedules the recurring run job.",
 				"operationId": "updatePrompt",
 				"tags": ["Prompts"],
 				"parameters": [
@@ -1248,6 +1610,9 @@
 					"404": {
 						"$ref": "#/components/responses/NotFoundError"
 					},
+					"409": {
+						"$ref": "#/components/responses/ConflictError"
+					},
 					"500": {
 						"$ref": "#/components/responses/InternalServerError"
 					}
@@ -1255,7 +1620,7 @@
 			},
 			"delete": {
 				"summary": "Delete a prompt",
-				"description": "Permanently delete a prompt and cancel all related scheduled jobs. This will also cascade delete all associated prompt runs.",
+				"description": "Delete a prompt only before any measurement attempt or historical run exists. Measured prompts must be disabled so their audit history is retained.",
 				"operationId": "deletePrompt",
 				"tags": ["Prompts"],
 				"parameters": [
@@ -1301,6 +1666,9 @@
 					},
 					"404": {
 						"$ref": "#/components/responses/NotFoundError"
+					},
+					"409": {
+						"$ref": "#/components/responses/ConflictError"
 					},
 					"500": {
 						"$ref": "#/components/responses/InternalServerError"
@@ -1546,7 +1914,10 @@
 													"items": {
 														"type": "object",
 														"properties": {
-															"name": { "type": "string", "description": "Competitor name" },
+															"name": {
+																"type": "string",
+																"description": "Competitor name"
+															},
 															"sov": {
 																"type": "number",
 																"minimum": 0,
@@ -1667,6 +2038,10 @@
 		{
 			"name": "Reports",
 			"description": "Generate and retrieve AI Share of Voice reports"
+		},
+		{
+			"name": "Measurement",
+			"description": "Measurement scopes and consumer-surface observation ingestion"
 		}
 	]
 }

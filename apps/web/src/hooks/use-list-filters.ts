@@ -10,6 +10,7 @@ import { ALL_MODELS_VALUE } from "@/lib/model-filter";
  *  comma-joined string in the URL (the format our old nuqs links used);
  *  consumers split/join via `splitTags`/`joinTags`. */
 export type BrandFilterSearch = {
+	scope?: string;
 	model?: string;
 	lookback?: string;
 	tags?: string;
@@ -27,6 +28,7 @@ function asString(value: unknown): string | undefined {
 
 export function validateBrandFilterSearch(search: Record<string, unknown>): BrandFilterSearch {
 	return {
+		scope: asString(search.scope),
 		model: asString(search.model),
 		lookback: asString(search.lookback),
 		tags: Array.isArray(search.tags) ? search.tags.map(String).join(",") : asString(search.tags),
@@ -42,7 +44,9 @@ export function joinTags(tags: readonly string[]): string | undefined {
 	return tags.length > 0 ? tags.join(",") : undefined;
 }
 
-const LOOKBACK_VALUES = ["1w", "1m", "3m", "6m", "1y", "all"] as const;
+// "all" previously meant three different windows across the product. Until
+// true all-time queries share one contract, fail closed to a bounded period.
+const LOOKBACK_VALUES = ["1w", "1m", "3m", "6m", "1y"] as const;
 export function coerceLookback(raw: string | null | undefined, fallback: LookbackPeriod): LookbackPeriod {
 	return (LOOKBACK_VALUES as readonly string[]).includes(raw ?? "") ? (raw as LookbackPeriod) : fallback;
 }
@@ -74,17 +78,22 @@ export function useFilterNavigate() {
  *  keep their own per-key `useSearch` selectors so a lookback click doesn't
  *  re-render the whole bar. */
 export function useListFilters() {
-	const { brand } = useBrand();
+	const { brand, isLoading: isBrandLoading } = useBrand();
 	const defaultLookback = useMemo(() => getDefaultLookbackPeriod(brand?.earliestDataDate), [brand?.earliestDataDate]);
 
 	const urlFilters: BrandFilterSearch = useSearch({ strict: false });
 	const setFilters = useFilterNavigate();
 
 	const model = urlFilters.model ?? ALL_MODELS_VALUE;
+	const enabledScopes = brand?.measurementScopes.filter((scope) => scope.enabled) ?? [];
+	const defaultScope = enabledScopes.find((scope) => scope.isDefault) ?? enabledScopes[0];
+	const scopeId = enabledScopes.some((scope) => scope.id === urlFilters.scope) ? urlFilters.scope : defaultScope?.id;
 	const tags = useMemo(() => splitTags(urlFilters.tags), [urlFilters.tags]);
 	const search = urlFilters.q ?? "";
 
 	return {
+		scopeId,
+		isScopeResolving: isBrandLoading,
 		model,
 		lookback: coerceLookback(urlFilters.lookback, defaultLookback),
 		tags,

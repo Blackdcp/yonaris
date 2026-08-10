@@ -4,10 +4,10 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
-import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { ensureLegacyMeasurementScope, resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors, promptRuns, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
 import { computeSystemTags, getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuthSession, requireOrgAccess, requireOrgWriteAccess } from "@/lib/auth/helpers";
 import type { LookbackPeriod } from "@/lib/chart-utils";
@@ -33,6 +33,7 @@ import {
 	getPromptWebQueriesForMapping,
 	getPromptWebQueryCounts,
 } from "@/lib/postgres-read";
+import { getTimezoneLookbackRange, shiftDateStr } from "@/lib/timezone-utils";
 // Server Functions
 // ============================================================================
 
@@ -76,6 +77,7 @@ export const getPromptMetadataFn = createServerFn({ method: "GET" })
 		return {
 			id: prompt.id,
 			brandId: prompt.brandId,
+			scopeId: prompt.scopeId ?? (await ensureLegacyMeasurementScope(prompt.brandId)),
 			value: prompt.value,
 			enabled: prompt.enabled,
 			tags: prompt.tags || [],
@@ -91,6 +93,7 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			lookback: z.string().optional().default("1m"),
 			webSearchEnabled: z.string().optional(),
 			model: z.string().optional(),
@@ -105,7 +108,7 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 		const allPrompts = await db
 			.select()
 			.from(prompts)
-			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.enabled, true)))
+			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, data.scopeId), eq(prompts.enabled, true)))
 			.orderBy(desc(prompts.createdAt));
 
 		const promptIds = allPrompts.map((p) => p.id);
@@ -114,35 +117,10 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 			return { prompts: [], totalPrompts: 0, availableTags: [] };
 		}
 
-		// Compute date range from lookback parameter
-		const timezone = "UTC";
-		let fromDateStr: string | null = null;
-		let toDateStr: string | null = null;
-
-		const lookbackParam = data.lookback || "1m";
-		if (lookbackParam && lookbackParam !== "all") {
-			const toDate = new Date();
-			const fromDate = new Date();
-			switch (lookbackParam) {
-				case "1w":
-					fromDate.setDate(fromDate.getDate() - 7);
-					break;
-				case "1m":
-					fromDate.setMonth(fromDate.getMonth() - 1);
-					break;
-				case "3m":
-					fromDate.setMonth(fromDate.getMonth() - 3);
-					break;
-				case "6m":
-					fromDate.setMonth(fromDate.getMonth() - 6);
-					break;
-				case "1y":
-					fromDate.setFullYear(fromDate.getFullYear() - 1);
-					break;
-			}
-			fromDateStr = fromDate.toISOString().split("T")[0];
-			toDateStr = toDate.toISOString().split("T")[0];
-		}
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		const timezone = measurementScope.timezone;
+		const lookbackParam = (data.lookback || "1m") as LookbackPeriod;
+		const { fromDateStr, toDateStr } = getTimezoneLookbackRange(lookbackParam, timezone);
 
 		// Parse webSearchEnabled
 		const webSearchEnabled = data.webSearchEnabled != null ? data.webSearchEnabled === "true" : undefined;
@@ -253,21 +231,20 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 
 		const prompt = await db
-			.select({ id: prompts.id, brandId: prompts.brandId, value: prompts.value })
+			.select({ id: prompts.id, brandId: prompts.brandId, scopeId: prompts.scopeId, value: prompts.value })
 			.from(prompts)
 			.where(eq(prompts.id, data.promptId))
 			.limit(1);
 
 		if (prompt.length === 0) throw new Error("Prompt not found");
 		await requireOrgAccess(session.user.id, prompt[0].brandId);
+		const measurementScope = await resolveMeasurementScopeForBrand(prompt[0].brandId, prompt[0].scopeId ?? undefined);
 
-		const fromDate = new Date();
-		fromDate.setDate(fromDate.getDate() - data.days);
-		const toDate = new Date();
-		const fromDateStr = fromDate.toISOString().split("T")[0];
-		const toDateStr = toDate.toISOString().split("T")[0];
-		const timezone = "UTC";
-		const timeCondition = gte(promptRuns.createdAt, fromDate);
+		const timezone = measurementScope.timezone;
+		const toDateStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+		const fromDateStr = shiftDateStr(toDateStr, { days: -(Math.max(1, data.days) - 1) });
+		const timeCondition = sql`${promptRuns.createdAt} >= (${fromDateStr}::date AT TIME ZONE ${timezone})
+			AND ${promptRuns.createdAt} < ((${toDateStr}::date + interval '1 day') AT TIME ZONE ${timezone})`;
 
 		// Run aggregation queries in parallel. Web-query stats used to be computed
 		// here too — the Web Queries tab now goes through getQueryFanoutFn instead.
@@ -318,7 +295,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 			// Tally competitor mentions
 			competitorMentionsResult.forEach((row: any) => {
 				(row.competitorsMentioned || []).forEach((name: string) => {
-					if (name?.trim() && competitorCounts.hasOwnProperty(name)) {
+					if (name?.trim() && Object.hasOwn(competitorCounts, name)) {
 						competitorCounts[name] += 1;
 					}
 				});
@@ -355,7 +332,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 		// prompt level: classify each citation at the URL level, pull Google AI Mode
 		// search/shopping surfaces OUT of the source mix into a dedicated Google
 		// Shopping module, and rebuild the domain distribution from the URL data.
-		let citationStats = undefined;
+		let citationStats;
 		const [brandInfo, competitorsList] = await Promise.all([
 			db
 				.select({ name: brands.name, website: brands.website, additionalDomains: brands.additionalDomains })
@@ -506,15 +483,18 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, prompt.brandId);
-
-		const fromDate = new Date();
-		fromDate.setDate(fromDate.getDate() - data.days);
+		const measurementScope = await resolveMeasurementScopeForBrand(prompt.brandId, prompt.scopeId ?? undefined);
+		const timezone = measurementScope.timezone;
+		const toDateStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
+		const fromDateStr = shiftDateStr(toDateStr, { days: -(Math.max(1, data.days) - 1) });
+		const timeCondition = sql`${promptRuns.createdAt} >= (${fromDateStr}::date AT TIME ZONE ${timezone})
+			AND ${promptRuns.createdAt} < ((${toDateStr}::date + interval '1 day') AT TIME ZONE ${timezone})`;
 
 		const offset = (data.page - 1) * data.limit;
 
 		const [runs, totalResult] = await Promise.all([
 			db.query.promptRuns.findMany({
-				where: and(eq(promptRuns.promptId, data.promptId), gte(promptRuns.createdAt, fromDate)),
+				where: and(eq(promptRuns.promptId, data.promptId), timeCondition),
 				orderBy: desc(promptRuns.createdAt),
 				limit: data.limit,
 				offset,
@@ -522,7 +502,7 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 			db
 				.select({ count: count() })
 				.from(promptRuns)
-				.where(and(eq(promptRuns.promptId, data.promptId), gte(promptRuns.createdAt, fromDate))),
+				.where(and(eq(promptRuns.promptId, data.promptId), timeCondition)),
 		]);
 
 		return {
@@ -541,6 +521,7 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 	.validator(
 		z.object({
 			brandId: z.string(),
+			scopeId: z.string().uuid(),
 			prompts: z.array(
 				z.object({
 					id: z.string().optional(),
@@ -559,11 +540,26 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 			where: eq(brands.id, data.brandId),
 		});
 		if (!brand) throw new Error("Brand not found");
+		const scope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 
-		const existingIds = new Set(
-			(await db.select({ id: prompts.id }).from(prompts).where(eq(prompts.brandId, data.brandId))).map((p) => p.id),
-		);
-		const defaultScopeId = await ensureLegacyMeasurementScope(data.brandId);
+		const existingRows = await db
+			.select({ id: prompts.id, value: prompts.value })
+			.from(prompts)
+			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
+		const existingIds = new Set(existingRows.map((prompt) => prompt.id));
+		const existingById = new Map(existingRows.map((prompt) => [prompt.id, prompt]));
+		const crossScopeId = data.prompts.find((prompt) => prompt.id && !existingIds.has(prompt.id))?.id;
+		if (crossScopeId) {
+			throw new Error(`Prompt ${crossScopeId} does not belong to measurement scope ${scope.id}`);
+		}
+		const changedPromptIds = data.prompts
+			.filter((prompt) => prompt.id && existingById.get(prompt.id)?.value !== prompt.value)
+			.map((prompt) => prompt.id as string);
+		if (changedPromptIds.length > 0) {
+			throw new Error(
+				`Stored prompt ${changedPromptIds[0]} is immutable; create a new prompt and disable the old one instead.`,
+			);
+		}
 
 		const saved = await db.transaction(async (tx) => {
 			const toUpdate = data.prompts.filter((p) => p.id);
@@ -578,14 +574,14 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 						tags: p.tags || [],
 						systemTags: computeSystemTags(p.value, brand.name, brand.website),
 					})
-					.where(and(eq(prompts.id, p.id!), eq(prompts.brandId, data.brandId)));
+					.where(and(eq(prompts.id, p.id!), eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
 			}
 
 			if (toInsert.length > 0) {
 				await tx.insert(prompts).values(
 					toInsert.map((p) => ({
 						brandId: data.brandId,
-						scopeId: defaultScopeId,
+						scopeId: scope.id,
 						value: p.value,
 						enabled: p.enabled,
 						tags: p.tags || [],
@@ -595,12 +591,12 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 			}
 
 			return tx.query.prompts.findMany({
-				where: eq(prompts.brandId, data.brandId),
+				where: and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)),
 			});
 		});
 
 		const newPromptIds = saved.filter((p) => !existingIds.has(p.id)).map((p) => p.id);
-		if (newPromptIds.length > 0) {
+		if (newPromptIds.length > 0 && (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0)) {
 			createMultiplePromptJobSchedulers(newPromptIds).catch((err) =>
 				console.error("Failed to create job schedulers for new prompts:", err),
 			);
@@ -618,7 +614,7 @@ export const getPromptChartDataFn = createServerFn({ method: "GET" })
 		z.object({
 			brandId: z.string(),
 			promptId: z.string(),
-			lookback: z.string().optional().default("1m"),
+			lookback: z.enum(["1w", "1m", "3m", "6m", "1y", "all"]).optional().default("1m"),
 			webSearchEnabled: z.string().optional(),
 			model: z.string().optional(),
 			timezone: z.string().optional(),
@@ -628,63 +624,25 @@ export const getPromptChartDataFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 		await requireOrgAccess(session.user.id, data.brandId);
 
-		const timezone = data.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-		const lookbackParam = (data.lookback || "1m") as LookbackPeriod;
+		const prompt = await db.query.prompts.findFirst({
+			where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
+			columns: { id: true, value: true, brandId: true, scopeId: true },
+		});
+		if (!prompt) throw new Error("Prompt not found");
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, prompt.scopeId ?? undefined);
+		const timezone = measurementScope.timezone;
+		const lookbackParam = data.lookback as LookbackPeriod;
+		const { fromDateStr, toDateStr } = getTimezoneLookbackRange(lookbackParam, timezone);
+		let startDate = new Date(fromDateStr ?? toDateStr ?? new Date().toISOString().slice(0, 10));
+		const endDate = new Date(toDateStr ?? new Date().toISOString().slice(0, 10));
 
-		// Calculate date range
-		let fromDateStr: string | null = null;
-		let toDateStr: string | null = null;
-		let startDate: Date;
-		let endDate: Date;
-
-		const now = new Date();
-		const todayStr = now.toLocaleDateString("en-CA", { timeZone: timezone });
-
-		if (lookbackParam && lookbackParam !== "all") {
-			toDateStr = todayStr;
-			const fromDate = new Date(now);
-			switch (lookbackParam) {
-				case "1w":
-					fromDate.setDate(fromDate.getDate() - 6);
-					break;
-				case "1m":
-					fromDate.setMonth(fromDate.getMonth() - 1);
-					break;
-				case "3m":
-					fromDate.setMonth(fromDate.getMonth() - 3);
-					break;
-				case "6m":
-					fromDate.setMonth(fromDate.getMonth() - 6);
-					break;
-				case "1y":
-					fromDate.setFullYear(fromDate.getFullYear() - 1);
-					break;
-			}
-			fromDateStr = fromDate.toLocaleDateString("en-CA", { timeZone: timezone });
-			startDate = new Date(fromDateStr);
-			endDate = new Date(toDateStr);
-		} else {
-			toDateStr = todayStr;
-			startDate = new Date();
-			endDate = new Date(todayStr);
-		}
-
-		// Get metadata from DB
-		const [promptData, brandData, competitorsData] = await Promise.all([
-			db
-				.select({ id: prompts.id, value: prompts.value, brandId: prompts.brandId })
-				.from(prompts)
-				.where(eq(prompts.id, data.promptId))
-				.limit(1),
+		const [brandData, competitorsData] = await Promise.all([
 			db.select().from(brands).where(eq(brands.id, data.brandId)).limit(1),
 			db.select().from(competitors).where(eq(competitors.brandId, data.brandId)),
 		]);
 
-		if (promptData.length === 0) throw new Error("Prompt not found");
 		if (brandData.length === 0) throw new Error("Brand not found");
-		if (promptData[0].brandId !== data.brandId) throw new Error("Access denied");
 
-		const prompt = promptData[0];
 		const brand = brandData[0];
 		const brandCompetitors = competitorsData;
 
@@ -808,7 +766,7 @@ export const getPromptWebQueryFn = createServerFn({ method: "GET" })
 		z.object({
 			brandId: z.string(),
 			promptId: z.string(),
-			lookback: z.string().optional().default("1m"),
+			lookback: z.enum(["1w", "1m", "3m", "6m", "1y", "all"]).optional().default("1m"),
 			model: z.string().optional(),
 			timezone: z.string().optional(),
 		}),
@@ -818,38 +776,14 @@ export const getPromptWebQueryFn = createServerFn({ method: "GET" })
 		await requireOrgAccess(session.user.id, data.brandId);
 
 		const prompt = await db.query.prompts.findFirst({
-			columns: { id: true },
+			columns: { id: true, scopeId: true },
 			where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
 		});
 		if (!prompt) return { webQuery: null, modelWebQueries: {} };
 
-		const timezone = data.timezone || "UTC";
-		const now = new Date();
-		const todayStr = now.toLocaleDateString("en-CA", { timeZone: timezone });
-		const toDateStr = todayStr;
-		let fromDateStr: string | null = null;
-
-		if (data.lookback && data.lookback !== "all") {
-			const fromDate = new Date(now);
-			switch (data.lookback) {
-				case "1w":
-					fromDate.setDate(fromDate.getDate() - 6);
-					break;
-				case "1m":
-					fromDate.setMonth(fromDate.getMonth() - 1);
-					break;
-				case "3m":
-					fromDate.setMonth(fromDate.getMonth() - 3);
-					break;
-				case "6m":
-					fromDate.setMonth(fromDate.getMonth() - 6);
-					break;
-				case "1y":
-					fromDate.setFullYear(fromDate.getFullYear() - 1);
-					break;
-			}
-			fromDateStr = fromDate.toLocaleDateString("en-CA", { timeZone: timezone });
-		}
+		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, prompt.scopeId ?? undefined);
+		const timezone = measurementScope.timezone;
+		const { fromDateStr, toDateStr } = getTimezoneLookbackRange(data.lookback as LookbackPeriod, timezone);
 
 		const webQueryData = await getPromptWebQueryCounts(data.promptId, fromDateStr, toDateStr, timezone, data.model);
 
