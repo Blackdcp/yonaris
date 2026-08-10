@@ -53,11 +53,11 @@ ALTER TABLE "prompt_runs" ADD COLUMN "answer_text" text;--> statement-breakpoint
 ALTER TABLE "prompt_runs" ADD COLUMN "observed_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "prompts" ADD COLUMN "scope_id" uuid;--> statement-breakpoint
 ALTER TABLE "measurement_scopes" ADD CONSTRAINT "measurement_scopes_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "measurement_scopes_brand_id_uidx" ON "measurement_scopes" USING btree ("brand_id","id");--> statement-breakpoint
 ALTER TABLE "observation_attempts" ADD CONSTRAINT "observation_attempts_prompt_id_prompts_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompts"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "observation_attempts" ADD CONSTRAINT "observation_attempts_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "observation_attempts" ADD CONSTRAINT "observation_attempts_brand_scope_fk" FOREIGN KEY ("brand_id","scope_id") REFERENCES "public"."measurement_scopes"("brand_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "measurement_scopes_brand_key_uidx" ON "measurement_scopes" USING btree ("brand_id","key");--> statement-breakpoint
-CREATE UNIQUE INDEX "measurement_scopes_brand_id_uidx" ON "measurement_scopes" USING btree ("brand_id","id");--> statement-breakpoint
 CREATE UNIQUE INDEX "measurement_scopes_one_default_per_brand_uidx" ON "measurement_scopes" USING btree ("brand_id") WHERE "measurement_scopes"."is_default" = true;--> statement-breakpoint
 CREATE INDEX "measurement_scopes_brand_enabled_idx" ON "measurement_scopes" USING btree ("brand_id","enabled");--> statement-breakpoint
 CREATE UNIQUE INDEX "observation_attempts_brand_source_key_uidx" ON "observation_attempts" USING btree ("brand_id","source_key");--> statement-breakpoint

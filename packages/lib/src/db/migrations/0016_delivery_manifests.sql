@@ -67,20 +67,20 @@ CREATE TABLE "delivery_tasks" (
 );
 --> statement-breakpoint
 ALTER TABLE "delivery_tasks" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE UNIQUE INDEX "delivery_batches_identity_uidx" ON "delivery_batches" USING btree ("brand_id","scope_id","id");--> statement-breakpoint
+CREATE UNIQUE INDEX "prompts_brand_scope_id_uidx" ON "prompts" USING btree ("brand_id","scope_id","id");--> statement-breakpoint
 ALTER TABLE "delivery_batches" ADD CONSTRAINT "delivery_batches_brand_id_brands_id_fk" FOREIGN KEY ("brand_id") REFERENCES "public"."brands"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "delivery_batches" ADD CONSTRAINT "delivery_batches_brand_scope_fk" FOREIGN KEY ("brand_id","scope_id") REFERENCES "public"."measurement_scopes"("brand_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "delivery_tasks" ADD CONSTRAINT "delivery_tasks_observation_attempt_id_observation_attempts_id_fk" FOREIGN KEY ("observation_attempt_id") REFERENCES "public"."observation_attempts"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "delivery_tasks" ADD CONSTRAINT "delivery_tasks_batch_identity_fk" FOREIGN KEY ("brand_id","scope_id","batch_id") REFERENCES "public"."delivery_batches"("brand_id","scope_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "delivery_tasks" ADD CONSTRAINT "delivery_tasks_prompt_identity_fk" FOREIGN KEY ("brand_id","scope_id","prompt_id") REFERENCES "public"."prompts"("brand_id","scope_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "delivery_batches_brand_idempotency_uidx" ON "delivery_batches" USING btree ("brand_id","idempotency_key");--> statement-breakpoint
-CREATE UNIQUE INDEX "delivery_batches_identity_uidx" ON "delivery_batches" USING btree ("brand_id","scope_id","id");--> statement-breakpoint
 CREATE INDEX "delivery_batches_scope_status_created_idx" ON "delivery_batches" USING btree ("brand_id","scope_id","status","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "delivery_tasks_batch_slot_uidx" ON "delivery_tasks" USING btree ("batch_id","slot_key");--> statement-breakpoint
 CREATE UNIQUE INDEX "delivery_tasks_batch_manifest_slot_uidx" ON "delivery_tasks" USING btree ("batch_id","prompt_id","surface_target_key","capture_route_key","sample_index","session_requirement","search_requirement","evaluation_role");--> statement-breakpoint
 CREATE UNIQUE INDEX "delivery_tasks_observation_attempt_id_uidx" ON "delivery_tasks" USING btree ("observation_attempt_id");--> statement-breakpoint
 CREATE INDEX "delivery_tasks_batch_status_lease_idx" ON "delivery_tasks" USING btree ("batch_id","status","lease_expires_at","created_at");--> statement-breakpoint
 CREATE INDEX "delivery_tasks_scope_target_status_idx" ON "delivery_tasks" USING btree ("brand_id","scope_id","surface_target_key","status");--> statement-breakpoint
-CREATE UNIQUE INDEX "prompts_brand_scope_id_uidx" ON "prompts" USING btree ("brand_id","scope_id","id");--> statement-breakpoint
 
 CREATE FUNCTION "enforce_delivery_batch_manifest"() RETURNS trigger
 LANGUAGE plpgsql
