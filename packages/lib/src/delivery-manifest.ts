@@ -15,17 +15,19 @@ export interface DeliveryEvidencePolicy {
 }
 
 export interface DeliveryProtocol {
+	measurementWindow: {
+		startsAt: string;
+		endsAt: string;
+	};
 	evidence: DeliveryEvidencePolicy;
 	notes?: string;
 }
 
-export const DEFAULT_DELIVERY_PROTOCOL: DeliveryProtocol = {
-	evidence: {
-		minimumArtifacts: 1,
-		requireSha256: true,
-		requirePageUrl: true,
-		allowedUriSchemes: ["https", "http"],
-	},
+export const DEFAULT_DELIVERY_EVIDENCE_POLICY: DeliveryEvidencePolicy = {
+	minimumArtifacts: 1,
+	requireSha256: true,
+	requirePageUrl: true,
+	allowedUriSchemes: ["https", "http"],
 };
 
 export interface DeliveryTaskPlan {
@@ -120,7 +122,12 @@ export function assertDeliveryBatchTransition(from: DeliveryBatchStatus, to: Del
 	}
 }
 
-export function normalizeDeliveryProtocol(protocol: DeliveryProtocol = DEFAULT_DELIVERY_PROTOCOL): DeliveryProtocol {
+export function normalizeDeliveryProtocol(protocol: DeliveryProtocol): DeliveryProtocol {
+	const startsAt = parseProtocolInstant(protocol.measurementWindow.startsAt, "startsAt");
+	const endsAt = parseProtocolInstant(protocol.measurementWindow.endsAt, "endsAt");
+	if (endsAt.getTime() <= startsAt.getTime()) {
+		throw new Error("Delivery measurementWindow endsAt must be after startsAt");
+	}
 	const minimumArtifacts = protocol.evidence.minimumArtifacts;
 	if (!Number.isSafeInteger(minimumArtifacts) || minimumArtifacts < 0) {
 		throw new Error("Delivery evidence minimumArtifacts must be a non-negative integer");
@@ -131,6 +138,10 @@ export function normalizeDeliveryProtocol(protocol: DeliveryProtocol = DEFAULT_D
 	}
 
 	return {
+		measurementWindow: {
+			startsAt: startsAt.toISOString(),
+			endsAt: endsAt.toISOString(),
+		},
 		evidence: {
 			minimumArtifacts,
 			requireSha256: protocol.evidence.requireSha256,
@@ -139,6 +150,14 @@ export function normalizeDeliveryProtocol(protocol: DeliveryProtocol = DEFAULT_D
 		},
 		...(protocol.notes === undefined ? {} : { notes: protocol.notes }),
 	};
+}
+
+function parseProtocolInstant(value: string, field: "startsAt" | "endsAt"): Date {
+	const parsed = new Date(value);
+	if (!value || Number.isNaN(parsed.getTime())) {
+		throw new Error(`Delivery measurementWindow ${field} must be an ISO timestamp`);
+	}
+	return parsed;
 }
 
 export function normalizeDeliveryTaskPlan(input: DeliveryTaskPlan): NormalizedDeliveryTaskPlan {
@@ -184,7 +203,8 @@ export function buildDeliveryManifestSnapshot(
 		.map((task) => ({ ...normalizeDeliveryTaskPlan(task), id: task.id, slotKey: task.slotKey }))
 		.sort((left, right) => left.slotKey.localeCompare(right.slotKey) || left.id.localeCompare(right.id));
 	const slotKeys = new Set(normalizedTasks.map(({ slotKey }) => slotKey));
-	if (slotKeys.size !== normalizedTasks.length) throw new Error("A delivery manifest cannot contain duplicate task slots");
+	if (slotKeys.size !== normalizedTasks.length)
+		throw new Error("A delivery manifest cannot contain duplicate task slots");
 
 	return {
 		schemaVersion: 1,

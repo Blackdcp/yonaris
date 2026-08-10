@@ -195,7 +195,7 @@ BEGIN
 	IF NOT (
 		(OLD.status = 'planned' AND NEW.status IN ('planned', 'available', 'cancelled')) OR
 		(OLD.status = 'available' AND NEW.status IN ('available', 'claimed', 'cancelled')) OR
-		(OLD.status = 'claimed' AND NEW.status IN ('claimed', 'succeeded', 'failed', 'cancelled')) OR
+		(OLD.status = 'claimed' AND NEW.status IN ('available', 'claimed', 'succeeded', 'failed', 'cancelled')) OR
 		(OLD.status = 'succeeded' AND NEW.status = 'succeeded') OR
 		(OLD.status = 'failed' AND NEW.status = 'failed') OR
 		(OLD.status = 'cancelled' AND NEW.status = 'cancelled')

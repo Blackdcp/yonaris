@@ -4,6 +4,11 @@ import type { ObservationTargetDescriptor } from "../observation-targets";
 import { buildObservationSourceKey } from "../observation-targets";
 import type { Citation } from "../text-extraction";
 import { db } from "./db";
+import {
+	completeDeliveryTaskInTransaction,
+	failDeliveryTaskInTransaction,
+	type DeliveryClaimProof,
+} from "./delivery-batches";
 import { type Brand, citations, type MeasurementScope, observationAttempts, promptRuns } from "./schema";
 
 export class ObservationSourceConflictError extends Error {
@@ -216,26 +221,46 @@ export async function markObservationFailed(input: {
 	startedAt: Date;
 	error: unknown;
 	stage: "configuration" | "provider" | "persistence" | "import";
+	deliveryClaim?: DeliveryClaimProof;
 }): Promise<void> {
 	const completedAt = new Date();
-	await db
-		.update(observationAttempts)
-		.set({
-			status: "failed",
-			completedAt,
-			latencyMs: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
-			errorClass: input.error instanceof Error ? input.error.name : "UnknownError",
-			errorCode: errorCode(input.error),
-			errorMessage: sanitizeErrorMessage(input.error),
-			failureStage: input.stage,
-		})
-		.where(
-			and(
-				eq(observationAttempts.id, input.attemptId),
-				eq(observationAttempts.status, "running"),
-				eq(observationAttempts.startedAt, input.startedAt),
-			),
-		);
+	const markFailed = async (executor: Pick<typeof db, "update">) => {
+		return executor
+			.update(observationAttempts)
+			.set({
+				status: "failed",
+				completedAt,
+				latencyMs: Math.max(0, completedAt.getTime() - input.startedAt.getTime()),
+				errorClass: input.error instanceof Error ? input.error.name : "UnknownError",
+				errorCode: errorCode(input.error),
+				errorMessage: sanitizeErrorMessage(input.error),
+				failureStage: input.stage,
+			})
+			.where(
+				and(
+					eq(observationAttempts.id, input.attemptId),
+					eq(observationAttempts.status, "running"),
+					eq(observationAttempts.startedAt, input.startedAt),
+				),
+			)
+			.returning({ id: observationAttempts.id });
+	};
+
+	if (!input.deliveryClaim) {
+		await markFailed(db);
+		return;
+	}
+	const deliveryClaim = input.deliveryClaim;
+
+	await db.transaction(async (tx) => {
+		const [failedAttempt] = await markFailed(tx);
+		if (!failedAttempt) throw new Error(`Observation attempt ${input.attemptId} lease was lost`);
+		await failDeliveryTaskInTransaction(tx, {
+			...deliveryClaim,
+			observationAttemptId: input.attemptId,
+			error: input.error,
+		});
+	});
 }
 
 export async function persistSuccessfulObservation(input: {
@@ -254,6 +279,7 @@ export async function persistSuccessfulObservation(input: {
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
 	extractedCitations: Citation[];
+	deliveryClaim?: DeliveryClaimProof;
 }): Promise<{ id: string; createdAt: Date }> {
 	return db.transaction(async (tx) => {
 		const completedAt = new Date();
@@ -316,6 +342,13 @@ export async function persistSuccessfulObservation(input: {
 					createdAt: input.observedAt,
 				})),
 			);
+		}
+
+		if (input.deliveryClaim) {
+			await completeDeliveryTaskInTransaction(tx, {
+				...input.deliveryClaim,
+				observationAttemptId: input.attemptId,
+			});
 		}
 
 		return promptRun;

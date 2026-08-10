@@ -38,6 +38,10 @@ const context: DeliveryManifestContext = {
 		{ id: "competitor-1", name: "A", domains: ["a.example"], aliases: ["Alpha"] },
 	],
 	protocol: {
+		measurementWindow: {
+			startsAt: "2026-08-10T00:00:00+08:00",
+			endsAt: "2026-08-17T00:00:00+08:00",
+		},
 		evidence: {
 			minimumArtifacts: 1,
 			requireSha256: true,
