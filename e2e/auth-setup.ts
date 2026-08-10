@@ -40,9 +40,6 @@ export default async function globalSetup(config: FullConfig) {
 			}
 		}
 
-		await page.context().storageState({ path: AUTH_STATE_PATH });
-		console.log(`[auth-setup] Authenticated as ${TEST_USER.email}`);
-
 		const client = new pg.Client({ connectionString: DATABASE_URL });
 		await client.connect();
 		try {
@@ -89,6 +86,39 @@ export default async function globalSetup(config: FullConfig) {
 		} finally {
 			await client.end();
 		}
+
+		// Better Auth's session response may be cookie-cached with the user fields
+		// that existed when the session was created. Refresh the session after the
+		// database promotion so admin-only routes see the same role that the test
+		// database now stores.
+		const signOutResponse = await page.request.post("/api/auth/sign-out", {
+			data: {},
+			headers: { Origin: baseURL },
+		});
+		if (!signOutResponse.ok()) {
+			throw new Error(`Auth setup sign-out failed: ${signOutResponse.status()} ${await signOutResponse.text()}`);
+		}
+		const refreshedSignInResponse = await page.request.post("/api/auth/sign-in/email", {
+			headers: { Origin: baseURL },
+			data: {
+				email: TEST_USER.email,
+				password: TEST_USER.password,
+			},
+		});
+		if (!refreshedSignInResponse.ok()) {
+			throw new Error(
+				`Auth setup refreshed sign-in failed: ${refreshedSignInResponse.status()} ${await refreshedSignInResponse.text()}`,
+			);
+		}
+
+		const sessionResponse = await page.request.get("/api/auth/get-session");
+		const refreshedSession = (await sessionResponse.json()) as { user?: { role?: string } };
+		if (!sessionResponse.ok() || refreshedSession.user?.role !== "admin") {
+			throw new Error(`Auth setup did not refresh the admin role (status ${sessionResponse.status()})`);
+		}
+
+		await page.context().storageState({ path: AUTH_STATE_PATH });
+		console.log(`[auth-setup] Authenticated as admin ${TEST_USER.email}`);
 	} finally {
 		await browser.close();
 	}
