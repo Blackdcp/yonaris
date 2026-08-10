@@ -72,7 +72,7 @@ RUN adduser --system --uid 1001 elmo
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Copy Nitro output - this is the entire server bundle
 COPY --from=builder --chown=elmo:nodejs /app/apps/web/.output ./.output
@@ -104,7 +104,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 worker
 
 COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 COPY --from=builder --chown=worker:nodejs /deploy/worker ./
 
