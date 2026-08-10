@@ -8,6 +8,7 @@ import {
 	EvidenceArtifactValidationError,
 	type EvidenceArtifactView,
 	isEvidenceByteCapacityAvailable,
+	isStagedEvidenceArtifactCleanupEligible,
 	prepareEvidenceArtifact,
 } from "./evidence-artifacts";
 
@@ -81,6 +82,45 @@ describe("evidence artifact validation", () => {
 	it("bounds one staged cleanup pass to 400 MiB at the per-artifact maximum", () => {
 		expect(EVIDENCE_STAGED_CLEANUP_BATCH_SIZE).toBe(50);
 		expect(EVIDENCE_STAGED_CLEANUP_BATCH_SIZE * EVIDENCE_ARTIFACT_MAX_BYTES).toBe(400 * 1024 * 1024);
+	});
+
+	it("cleans expired or superseded staged evidence without deleting the active heartbeat generation", () => {
+		const now = new Date("2026-08-11T12:00:00.000Z");
+		const before = new Date("2026-08-10T12:00:00.000Z");
+		const staleArtifact = {
+			status: "staged" as const,
+			createdAt: new Date("2026-08-10T11:59:59.999Z"),
+			leaseGeneration: 4,
+			taskStatus: "claimed" as const,
+			taskLeaseGeneration: 4,
+			taskLeaseExpiresAt: new Date("2026-08-11T12:05:00.000Z"),
+		};
+
+		expect(isStagedEvidenceArtifactCleanupEligible(staleArtifact, { before, now })).toBe(false);
+		expect(
+			isStagedEvidenceArtifactCleanupEligible(
+				{ ...staleArtifact, taskLeaseExpiresAt: new Date("2026-08-11T12:00:00.000Z") },
+				{ before, now },
+			),
+		).toBe(true);
+		expect(
+			isStagedEvidenceArtifactCleanupEligible(
+				{ ...staleArtifact, taskLeaseGeneration: staleArtifact.leaseGeneration + 1 },
+				{ before, now },
+			),
+		).toBe(true);
+		expect(
+			isStagedEvidenceArtifactCleanupEligible(
+				{ ...staleArtifact, taskStatus: "available", taskLeaseExpiresAt: null },
+				{ before, now },
+			),
+		).toBe(true);
+		expect(isStagedEvidenceArtifactCleanupEligible({ ...staleArtifact, createdAt: before }, { before, now })).toBe(
+			false,
+		);
+		expect(isStagedEvidenceArtifactCleanupEligible({ ...staleArtifact, status: "attached" }, { before, now })).toBe(
+			false,
+		);
 	});
 });
 

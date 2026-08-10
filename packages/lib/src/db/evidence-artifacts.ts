@@ -32,6 +32,15 @@ export interface EvidenceArtifactDownload {
 	content: Buffer;
 }
 
+export interface EvidenceArtifactCleanupCandidate {
+	status: EvidenceArtifact["status"];
+	createdAt: Date;
+	leaseGeneration: number;
+	taskStatus: (typeof deliveryTasks.$inferSelect)["status"];
+	taskLeaseGeneration: number;
+	taskLeaseExpiresAt: Date | null;
+}
+
 export type EvidenceArtifactValidationCode = "too_large" | "unsupported_media" | "kind_mismatch" | "invalid";
 
 export class EvidenceArtifactValidationError extends Error {
@@ -361,27 +370,45 @@ export async function cleanupStaleEvidenceArtifacts(input?: { before?: Date; lim
 	);
 	if (!inactiveClaim) throw new Error("Failed to build stale evidence claim condition");
 	const candidates = await db
-		.select({ id: evidenceArtifacts.id })
+		.select({
+			id: evidenceArtifacts.id,
+			status: evidenceArtifacts.status,
+			createdAt: evidenceArtifacts.createdAt,
+			leaseGeneration: evidenceArtifacts.leaseGeneration,
+			taskStatus: deliveryTasks.status,
+			taskLeaseGeneration: deliveryTasks.leaseGeneration,
+			taskLeaseExpiresAt: deliveryTasks.leaseExpiresAt,
+		})
 		.from(evidenceArtifacts)
 		.innerJoin(deliveryTasks, eq(deliveryTasks.id, evidenceArtifacts.taskId))
 		.where(and(eq(evidenceArtifacts.status, "staged"), lt(evidenceArtifacts.createdAt, before), inactiveClaim))
 		.orderBy(asc(evidenceArtifacts.createdAt), asc(evidenceArtifacts.id))
 		.limit(limit);
-	if (candidates.length === 0) return 0;
+	const eligibleCandidateIds = candidates
+		.filter((candidate) => isStagedEvidenceArtifactCleanupEligible(candidate, { before, now }))
+		.map(({ id }) => id);
+	if (eligibleCandidateIds.length === 0) return 0;
 	const deleted = await db
 		.delete(evidenceArtifacts)
 		.where(
 			and(
-				inArray(
-					evidenceArtifacts.id,
-					candidates.map(({ id }) => id),
-				),
+				inArray(evidenceArtifacts.id, eligibleCandidateIds),
 				eq(evidenceArtifacts.status, "staged"),
 				lt(evidenceArtifacts.createdAt, before),
 			),
 		)
 		.returning({ id: evidenceArtifacts.id });
 	return deleted.length;
+}
+
+export function isStagedEvidenceArtifactCleanupEligible(
+	candidate: EvidenceArtifactCleanupCandidate,
+	clock: { before: Date; now: Date },
+): boolean {
+	if (candidate.status !== "staged" || candidate.createdAt >= clock.before) return false;
+	if (candidate.taskStatus !== "claimed") return true;
+	if (candidate.taskLeaseGeneration !== candidate.leaseGeneration) return true;
+	return candidate.taskLeaseExpiresAt === null || candidate.taskLeaseExpiresAt <= clock.now;
 }
 
 export function prepareEvidenceArtifact(
