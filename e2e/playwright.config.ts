@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
 
 // Base URL can be overridden via environment variable.
 // Default: http://localhost:1515 (Docker Compose maps web:3000 → host:1515)
@@ -25,7 +26,7 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    storageState: "e2e/.auth/user.json",
+    storageState: path.join(import.meta.dirname, ".auth", "user.json"),
   },
 
   projects: [

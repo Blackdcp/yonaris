@@ -6,10 +6,11 @@
  * so all tests run as an authenticated admin user.
  */
 import { chromium, type FullConfig } from "@playwright/test";
+import path from "node:path";
 import pg from "pg";
 import { DATABASE_URL, TEST_USER, TEST_BRAND_ID, TEST_BRAND_NAME } from "./fixtures";
 
-const AUTH_STATE_PATH = "e2e/.auth/user.json";
+const AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "user.json");
 
 export default async function globalSetup(config: FullConfig) {
 	const baseURL = config.projects[0]?.use?.baseURL || "http://localhost:1515";
