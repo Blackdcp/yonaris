@@ -1,0 +1,53 @@
+# Yonaris marketing site
+
+FROM node:24-alpine AS base
+RUN corepack enable pnpm
+RUN apk add --no-cache curl
+
+FROM base AS deps
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/worker/package.json ./apps/worker/
+COPY apps/www/package.json ./apps/www/
+COPY packages/api-spec/package.json ./packages/api-spec/
+COPY packages/cloud/package.json ./packages/cloud/
+COPY packages/config/package.json ./packages/config/
+COPY packages/deployment/package.json ./packages/deployment/
+COPY packages/docs/package.json ./packages/docs/
+COPY packages/lib/package.json ./packages/lib/
+COPY packages/local/package.json ./packages/local/
+COPY packages/og/package.json ./packages/og/
+COPY packages/ui/package.json ./packages/ui/
+COPY packages/whitelabel/package.json ./packages/whitelabel/
+
+RUN pnpm install --frozen-lockfile
+
+FROM deps AS builder
+WORKDIR /app
+COPY . .
+
+ARG VITE_SITE_URL=https://yonaris.com
+ARG VITE_FOUNDER_CONTACT_EMAIL=black.dcp@outlook.com
+ENV VITE_SITE_URL=${VITE_SITE_URL}
+ENV VITE_FOUNDER_CONTACT_EMAIL=${VITE_FOUNDER_CONTACT_EMAIL}
+
+RUN pnpm --filter @workspace/www build
+
+FROM base AS www
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 www
+
+COPY --from=builder --chown=www:nodejs /app/apps/www/.output ./.output
+
+USER www
+EXPOSE 3000
+
+CMD ["node", ".output/server/index.mjs"]

@@ -5,6 +5,7 @@ interface ImportMetaEnv {
 	readonly VITE_PLAUSIBLE_DOMAIN?: string;
 	readonly VITE_POSTHOG_KEY?: string;
 	readonly VITE_POSTHOG_HOST?: string;
+	readonly VITE_FOUNDER_CONTACT_EMAIL?: string;
 }
 
 interface ImportMeta {

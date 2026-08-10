@@ -7,12 +7,14 @@ default `127.0.0.1:4173` route, the running One API container, or the stopped
 
 ## Production layout
 
-- `yonaris.com` redirects to `https://portal.yonaris.com` until the marketing
-  site is deployed.
-- `portal.yonaris.com` is proxied by the existing host Nginx to
+- `yonaris.com` is proxied by the existing host Caddy to the marketing site on
+  `127.0.0.1:1516`.
+- `portal.yonaris.com` is proxied by the existing host Caddy to
   `127.0.0.1:1515`.
 - PostgreSQL is available only on the private `yonaris_backend` Docker network.
-- GitHub Actions builds immutable Web, Worker, and migration images in GHCR.
+- GitHub Actions builds immutable Web, Worker, migration, and marketing images
+  in GHCR. Portal and marketing deployments use separate workflows and release
+  markers.
 - The LAS host checks out the exact Git commit before running its deployment
   script, so Compose and deployment-script changes travel with the release.
 
@@ -35,24 +37,25 @@ Create these A records with the LAS fixed IPv4 address `149.71.241.139`:
 
 Do not change the existing `api.cheng-zi-ai.com` record.
 
-The zone currently uses Cloudflare nameservers. Start both new records in
-**DNS only** mode while issuing the origin certificate and validating the app.
-Cloudflare proxying can be enabled later after Nginx is configured to restore
-the real client IP from trusted Cloudflare ranges.
+The zone uses Cloudflare nameservers and both Yonaris records are proxied. Caddy
+serves the Cloudflare Origin certificate stored under
+`/etc/caddy/certs/yonaris/`.
 
 ## 3. Preserve the existing proxy and applications
 
-Nginx is the production reverse proxy. Caddy is also enabled but fails because
-Nginx already owns port 80. Before disabling Caddy, preserve its configuration:
+Caddy is the production reverse proxy and owns ports 80 and 443. Nginx is
+installed but inactive. Preserve the live Caddy configuration before any
+manual proxy work:
 
 ```bash
 sudo install -d -m 700 /root/yonaris-preflight
 sudo cp -a /etc/caddy/Caddyfile /root/yonaris-preflight/Caddyfile
-sudo systemctl disable --now caddy
 ```
 
-This does not change the existing Nginx routes. Do not remove the stopped
-`new-api-prod` container or the default Nginx route to port 4173.
+Do not replace the full Caddyfile: it also owns `cheng-zi-ai.com`,
+`api.cheng-zi-ai.com`, and `jiacanmou.uk`. The marketing installer only accepts
+the reviewed Yonaris redirect block and replaces that exact block atomically.
+Do not remove the stopped `new-api-prod` container or the route to port 4173.
 
 ## 4. Bootstrap the deployment account and checkout
 
@@ -142,25 +145,27 @@ echo '<GHCR_READ_TOKEN>' | sudo -H -u yonaris-deploy \
 Do not put model-provider credentials in GitHub. They stay only in
 `/opt/yonaris/.env` on the LAS host.
 
-## 5. Nginx and HTTPS
+## 5. Caddy and HTTPS
 
-Install the new site alongside the current ones:
+The live Caddyfile uses the Cloudflare Origin certificate for both Yonaris
+hosts. The portal route remains:
 
-```bash
-sudo cp /opt/yonaris/source/deploy/las/nginx/portal.yonaris.com.conf \
-  /etc/nginx/sites-available/portal.yonaris.com
-sudo ln -s /etc/nginx/sites-available/portal.yonaris.com \
-  /etc/nginx/sites-enabled/portal.yonaris.com
-sudo nginx -t
-sudo systemctl reload nginx
+```caddyfile
+portal.yonaris.com {
+	tls /etc/caddy/certs/yonaris/yonaris-origin.pem /etc/caddy/certs/yonaris/yonaris-origin.key
+	reverse_proxy 127.0.0.1:1515
+}
 ```
 
-After DNS resolves to the LAS host, use Certbot's Nginx integration to issue
-and renew the certificate:
+The marketing workflow starts and health-checks the isolated `www` Compose
+project before `install-marketing-caddy.sh` replaces only the apex redirect
+block. The installer validates a candidate Caddyfile, atomically installs it,
+performs a graceful reload through the Caddy admin API, and checks both apex
+and portal directly against the origin. Any failure restores and reloads the
+previous configuration before the marketing container is rolled back.
 
-```bash
-sudo certbot --nginx -d yonaris.com -d portal.yonaris.com
-```
+Port 1516 is intentionally fixed in both the isolated Compose file and the
+reviewed Caddy fragment so their upstreams cannot drift.
 
 ## 6. Initial memory-tensor data import
 
@@ -244,13 +249,12 @@ disk, so they protect against application and migration mistakes but not loss
 of the server or disk. Add encrypted off-host object-storage replication before
 the portal contains irreplaceable customer data.
 
-## Future marketing site
+## Marketing site
 
-The current `web` image is the authenticated product portal, not the marketing
-site in `apps/www`. When the website is ready, give it a separate loopback port
-(for example `127.0.0.1:1516`) and replace only the `yonaris.com` redirect with
-an Nginx proxy. `portal.yonaris.com`, its database, and its deployment URL can
-remain unchanged.
+The `www` image serves `apps/www` on `127.0.0.1:1516` in the independent
+`yonaris-marketing` Compose project. Its deployment script and `.marketing-release`
+marker are separate from the portal release. `portal.yonaris.com`, its
+database, containers, and deployment URL remain unchanged.
 
 ## Operations
 

@@ -5,8 +5,9 @@ import geistMonoFont from "@fontsource/geist-mono/files/geist-mono-latin-400-nor
 // in parallel with the CSS instead of after it (the H1 LCP element was being
 // held back by the HTML→CSS→font waterfall).
 import geistSansFont from "@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2?url";
+import geistSansMediumFont from "@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2?url";
 import titanOneFont from "@fontsource/titan-one/files/titan-one-latin-400-normal.woff2?url";
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { NotFound } from "@/components/not-found";
 import { getMarketingOgImage } from "@/lib/og";
@@ -14,7 +15,7 @@ import { initPostHog } from "@/lib/posthog";
 import { canonicalUrl, organizationJsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL, websiteJsonLd } from "@/lib/seo";
 import appCss from "../styles.css?url";
 
-const ROOT_TITLE = `${SITE_NAME} · AI Visibility & GEO`;
+const ROOT_TITLE = SITE_NAME;
 const ROOT_OG_IMAGE = canonicalUrl(getMarketingOgImage({ title: ROOT_TITLE, description: SITE_DESCRIPTION }));
 
 export const Route = createRootRoute({
@@ -49,7 +50,7 @@ export const Route = createRootRoute({
 				{ name: "twitter:title", content: ROOT_TITLE },
 				{ name: "twitter:description", content: SITE_DESCRIPTION },
 				...(ROOT_OG_IMAGE ? [{ name: "twitter:image", content: ROOT_OG_IMAGE }] : []),
-				{ name: "theme-color", content: "#0A1A2A" },
+				{ name: "theme-color", content: "#0b1220" },
 				{ name: "apple-mobile-web-app-title", content: SITE_NAME },
 			],
 			links: [
@@ -58,6 +59,13 @@ export const Route = createRootRoute({
 					as: "font",
 					type: "font/woff2",
 					href: geistSansFont,
+					crossOrigin: "anonymous",
+				},
+				{
+					rel: "preload",
+					as: "font",
+					type: "font/woff2",
+					href: geistSansMediumFont,
 					crossOrigin: "anonymous",
 				},
 				{
@@ -113,8 +121,10 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+	const language = useRouterState({ select: (state) => (state.location.pathname === "/" ? "zh-CN" : "en") });
+
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang={language} suppressHydrationWarning>
 			<head>
 				<HeadContent />
 			</head>
