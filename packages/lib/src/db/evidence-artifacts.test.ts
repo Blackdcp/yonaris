@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
 	buildEvidenceArtifactReference,
 	EVIDENCE_ARTIFACT_MAX_BYTES,
+	EVIDENCE_BATCH_MAX_BYTES,
 	EvidenceArtifactValidationError,
 	type EvidenceArtifactView,
+	isEvidenceByteCapacityAvailable,
 	prepareEvidenceArtifact,
 } from "./evidence-artifacts";
 
@@ -67,6 +69,12 @@ describe("evidence artifact validation", () => {
 		expect(() => prepareEvidenceArtifact(png, "page_snapshot")).toThrowError(
 			expect.objectContaining({ code: "kind_mismatch" }),
 		);
+	});
+
+	it("enforces the delivery-batch byte boundary without an overflow gap", () => {
+		expect(isEvidenceByteCapacityAvailable(EVIDENCE_BATCH_MAX_BYTES - 1, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(true);
+		expect(isEvidenceByteCapacityAvailable(EVIDENCE_BATCH_MAX_BYTES, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(false);
+		expect(isEvidenceByteCapacityAvailable(-1, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(false);
 	});
 });
 

@@ -419,6 +419,7 @@ export const evidenceArtifacts = pgTable(
 			table.status,
 			table.createdAt,
 		),
+		statusCreatedIdx: index("evidence_artifacts_status_created_idx").on(table.status, table.createdAt),
 		attemptIdx: index("evidence_artifacts_attempt_id_idx").on(table.observationAttemptId),
 		taskIdentityFk: foreignKey({
 			columns: [table.brandId, table.scopeId, table.batchId, table.taskId],

@@ -10,6 +10,7 @@ import { deliveryTasks, type EvidenceArtifact, evidenceArtifacts } from "./schem
 
 export const EVIDENCE_ARTIFACT_MAX_BYTES = 8 * 1024 * 1024;
 export const EVIDENCE_TASK_MAX_BYTES = 40 * 1024 * 1024;
+export const EVIDENCE_BATCH_MAX_BYTES = 512 * 1024 * 1024;
 export const EVIDENCE_ARTIFACT_MAX_COUNT = 20;
 export const EVIDENCE_STAGED_TTL_MS = 24 * 60 * 60 * 1_000;
 
@@ -114,9 +115,25 @@ export async function stageEvidenceArtifact(input: {
 				`A delivery task may contain at most ${EVIDENCE_ARTIFACT_MAX_COUNT} evidence artifacts`,
 			);
 		}
-		if (taskByteSize + prepared.byteSize > EVIDENCE_TASK_MAX_BYTES) {
+		if (!isEvidenceByteCapacityAvailable(taskByteSize, prepared.byteSize, EVIDENCE_TASK_MAX_BYTES)) {
 			throw new EvidenceArtifactValidationError(
 				`Evidence for one delivery task may not exceed ${EVIDENCE_TASK_MAX_BYTES} bytes`,
+				"too_large",
+			);
+		}
+
+		// assertActiveDeliveryClaimInTransaction holds the batch row lock, so this aggregate and insert
+		// form one serialization fence for every evidence upload in the batch.
+		const [batchUsage] = await tx
+			.select({
+				byteSize: sql<number>`coalesce(sum(${evidenceArtifacts.byteSize}), 0)::bigint`,
+			})
+			.from(evidenceArtifacts)
+			.where(eq(evidenceArtifacts.batchId, active.task.batchId));
+		const batchByteSize = Number(batchUsage?.byteSize ?? 0);
+		if (!isEvidenceByteCapacityAvailable(batchByteSize, prepared.byteSize, EVIDENCE_BATCH_MAX_BYTES)) {
+			throw new EvidenceArtifactValidationError(
+				`Evidence for one delivery batch may not exceed ${EVIDENCE_BATCH_MAX_BYTES} bytes`,
 				"too_large",
 			);
 		}
@@ -163,6 +180,22 @@ export async function stageEvidenceArtifact(input: {
 		}
 		return redactEvidenceArtifact(concurrentlyInserted);
 	});
+}
+
+export function isEvidenceByteCapacityAvailable(
+	currentBytes: number,
+	incomingBytes: number,
+	maximumBytes: number,
+): boolean {
+	return (
+		Number.isSafeInteger(currentBytes) &&
+		currentBytes >= 0 &&
+		Number.isSafeInteger(incomingBytes) &&
+		incomingBytes > 0 &&
+		Number.isSafeInteger(maximumBytes) &&
+		maximumBytes >= 0 &&
+		currentBytes <= maximumBytes - incomingBytes
+	);
 }
 
 export async function listEvidenceArtifactsForClaim(input: {

@@ -35,6 +35,7 @@ ALTER TABLE "evidence_artifacts" ADD CONSTRAINT "evidence_artifacts_observation_
 ALTER TABLE "evidence_artifacts" ADD CONSTRAINT "evidence_artifacts_task_identity_fk" FOREIGN KEY ("brand_id","scope_id","batch_id","task_id") REFERENCES "public"."delivery_tasks"("brand_id","scope_id","batch_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "evidence_artifacts_task_generation_sha_uidx" ON "evidence_artifacts" USING btree ("task_id","lease_generation","sha256");--> statement-breakpoint
 CREATE INDEX "evidence_artifacts_task_status_created_idx" ON "evidence_artifacts" USING btree ("task_id","status","created_at");--> statement-breakpoint
+CREATE INDEX "evidence_artifacts_status_created_idx" ON "evidence_artifacts" USING btree ("status","created_at");--> statement-breakpoint
 CREATE INDEX "evidence_artifacts_attempt_id_idx" ON "evidence_artifacts" USING btree ("observation_attempt_id");--> statement-breakpoint
 
 CREATE FUNCTION "enforce_evidence_artifact"() RETURNS trigger

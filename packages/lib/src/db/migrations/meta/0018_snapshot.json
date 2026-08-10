@@ -1382,6 +1382,27 @@
           "method": "btree",
           "with": {}
         },
+        "evidence_artifacts_status_created_idx": {
+          "name": "evidence_artifacts_status_created_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "evidence_artifacts_attempt_id_idx": {
           "name": "evidence_artifacts_attempt_id_idx",
           "columns": [
