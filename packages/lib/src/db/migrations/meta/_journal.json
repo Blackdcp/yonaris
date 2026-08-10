@@ -127,6 +127,13 @@
       "when": 1786376773194,
       "tag": "0017_sampling_scope_lane",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786379690434,
+      "tag": "0018_sampling_evidence_artifacts",
+      "breakpoints": true
     }
   ]
 }

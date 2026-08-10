@@ -6,9 +6,15 @@ import type { Citation } from "../text-extraction";
 import { db } from "./db";
 import {
 	completeDeliveryTaskInTransaction,
-	failDeliveryTaskInTransaction,
 	type DeliveryClaimProof,
+	failDeliveryTaskInTransaction,
 } from "./delivery-batches";
+import {
+	attachEvidenceArtifactsInTransaction,
+	type EvidenceArtifactReference,
+	EvidenceArtifactValidationError,
+	resolveEvidenceArtifactsForSubmission,
+} from "./evidence-artifacts";
 import { type Brand, citations, type MeasurementScope, observationAttempts, promptRuns } from "./schema";
 
 export class ObservationSourceConflictError extends Error {
@@ -107,7 +113,7 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 		},
 	});
 	if (!existing) throw new Error(`Failed to resolve observation attempt ${input.sourceKey}`);
-	if (
+	const identityChanged =
 		existing.promptId !== input.promptId ||
 		existing.scopeId !== input.scope.id ||
 		existing.surfaceTargetKey !== input.target.surfaceTargetKey ||
@@ -117,9 +123,15 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 		existing.provider !== input.config.provider ||
 		(existing.requestedVersion ?? undefined) !== input.config.version ||
 		existing.webSearchEnabled !== input.config.webSearch ||
-		existing.sampleIndex !== input.sampleIndex ||
-		(input.sampleFingerprint !== undefined &&
-			(existing.captureMetadata as { sampleFingerprint?: unknown }).sampleFingerprint !== input.sampleFingerprint)
+		existing.sampleIndex !== input.sampleIndex;
+	const fingerprintChanged =
+		input.sampleFingerprint !== undefined &&
+		(existing.captureMetadata as { sampleFingerprint?: unknown }).sampleFingerprint !== input.sampleFingerprint;
+	const runningLeaseActive =
+		existing.status === "running" && Date.now() - existing.startedAt.getTime() < RUNNING_ATTEMPT_LEASE_MS;
+	if (
+		identityChanged ||
+		(fingerprintChanged && (existing.status === "succeeded" || existing.status === "cancelled" || runningLeaseActive))
 	) {
 		throw new ObservationSourceConflictError(input.sourceKey);
 	}
@@ -136,7 +148,7 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 			promptRunId: existingRun?.id,
 		};
 	}
-	if (existing.status === "running" && Date.now() - existing.startedAt.getTime() < RUNNING_ATTEMPT_LEASE_MS) {
+	if (runningLeaseActive) {
 		return { id: existing.id, startedAt: existing.startedAt, state: "in_progress" };
 	}
 
@@ -280,7 +292,11 @@ export async function persistSuccessfulObservation(input: {
 	competitorsMentioned: string[];
 	extractedCitations: Citation[];
 	deliveryClaim?: DeliveryClaimProof;
-}): Promise<{ id: string; createdAt: Date }> {
+	evidenceArtifacts?: {
+		artifactIds: readonly string[];
+		uriForArtifact: (artifactId: string) => string;
+	};
+}): Promise<{ id: string; createdAt: Date; evidenceRefs: EvidenceArtifactReference[] }> {
 	return db.transaction(async (tx) => {
 		const completedAt = new Date();
 		const [completed] = await tx
@@ -304,6 +320,27 @@ export async function persistSuccessfulObservation(input: {
 			.returning({ id: observationAttempts.id });
 		if (!completed) throw new Error(`Observation attempt ${input.attemptId} lease was lost`);
 
+		if (input.evidenceArtifacts && !input.deliveryClaim) {
+			throw new EvidenceArtifactValidationError("Managed evidence artifacts require a delivery claim");
+		}
+		const evidenceRefs =
+			input.evidenceArtifacts && input.deliveryClaim
+				? await resolveEvidenceArtifactsForSubmission(tx, {
+						brandId: input.brand.id,
+						claim: input.deliveryClaim,
+						artifactIds: input.evidenceArtifacts.artifactIds,
+						uriForArtifact: input.evidenceArtifacts.uriForArtifact,
+					})
+				: [];
+		if (evidenceRefs.length > 0) {
+			await tx
+				.update(observationAttempts)
+				.set({
+					captureMetadata: sql`(${observationAttempts.captureMetadata}::jsonb || ${JSON.stringify({ evidenceRefs })}::jsonb)::json`,
+				})
+				.where(eq(observationAttempts.id, input.attemptId));
+		}
+
 		const [promptRun] = await tx
 			.insert(promptRuns)
 			.values({
@@ -317,7 +354,7 @@ export async function persistSuccessfulObservation(input: {
 				provider: input.config.provider,
 				version: input.recordedVersion,
 				webSearchEnabled: input.config.webSearch,
-				rawOutput: input.rawOutput,
+				rawOutput: mergeEvidenceRefs(input.rawOutput, evidenceRefs),
 				answerText: input.answerText,
 				webQueries: input.webQueries,
 				brandMentioned: input.brandMentioned,
@@ -345,12 +382,29 @@ export async function persistSuccessfulObservation(input: {
 		}
 
 		if (input.deliveryClaim) {
+			if (input.evidenceArtifacts) {
+				await attachEvidenceArtifactsInTransaction(tx, {
+					brandId: input.brand.id,
+					claim: input.deliveryClaim,
+					artifactIds: input.evidenceArtifacts.artifactIds,
+					observationAttemptId: input.attemptId,
+					uriForArtifact: input.evidenceArtifacts.uriForArtifact,
+				});
+			}
 			await completeDeliveryTaskInTransaction(tx, {
 				...input.deliveryClaim,
 				observationAttemptId: input.attemptId,
 			});
 		}
 
-		return promptRun;
+		return { ...promptRun, evidenceRefs };
 	});
+}
+
+function mergeEvidenceRefs(rawOutput: unknown, evidenceRefs: EvidenceArtifactReference[]): unknown {
+	if (evidenceRefs.length === 0) return rawOutput;
+	if (!rawOutput || typeof rawOutput !== "object" || Array.isArray(rawOutput)) {
+		throw new EvidenceArtifactValidationError("Managed evidence requires an object-shaped raw output");
+	}
+	return { ...rawOutput, evidenceRefs };
 }

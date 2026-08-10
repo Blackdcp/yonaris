@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	check,
+	customType,
 	foreignKey,
 	index,
 	integer,
@@ -60,6 +61,14 @@ export const deliverySearchRequirementEnum = pgEnum("delivery_search_requirement
 	"forbidden",
 ]);
 export const deliveryEvaluationRoleEnum = pgEnum("delivery_evaluation_role", ["scored", "observation"]);
+export const evidenceArtifactStatusEnum = pgEnum("evidence_artifact_status", ["staged", "attached"]);
+export const evidenceArtifactKindEnum = pgEnum("evidence_artifact_kind", ["screenshot", "page_snapshot"]);
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+	dataType() {
+		return "bytea";
+	},
+});
 
 export const brands = pgTable(
 	"brands",
@@ -184,10 +193,7 @@ export const deliveryBatches = pgTable(
 			.notNull(),
 	},
 	(table) => ({
-		brandIdempotencyIdx: uniqueIndex("delivery_batches_brand_idempotency_uidx").on(
-			table.brandId,
-			table.idempotencyKey,
-		),
+		brandIdempotencyIdx: uniqueIndex("delivery_batches_brand_idempotency_uidx").on(table.brandId, table.idempotencyKey),
 		identityIdx: uniqueIndex("delivery_batches_identity_uidx").on(table.brandId, table.scopeId, table.id),
 		brandScopeStatusCreatedIdx: index("delivery_batches_scope_status_created_idx").on(
 			table.brandId,
@@ -331,9 +337,7 @@ export const deliveryTasks = pgTable(
 			table.searchRequirement,
 			table.evaluationRole,
 		),
-		observationAttemptIdx: uniqueIndex("delivery_tasks_observation_attempt_id_uidx").on(
-			table.observationAttemptId,
-		),
+		observationAttemptIdx: uniqueIndex("delivery_tasks_observation_attempt_id_uidx").on(table.observationAttemptId),
 		batchStatusLeaseIdx: index("delivery_tasks_batch_status_lease_idx").on(
 			table.batchId,
 			table.status,
@@ -345,6 +349,12 @@ export const deliveryTasks = pgTable(
 			table.scopeId,
 			table.surfaceTargetKey,
 			table.status,
+		),
+		evidenceIdentityIdx: uniqueIndex("delivery_tasks_evidence_identity_uidx").on(
+			table.brandId,
+			table.scopeId,
+			table.batchId,
+			table.id,
 		),
 		batchIdentityFk: foreignKey({
 			columns: [table.brandId, table.scopeId, table.batchId],
@@ -369,6 +379,69 @@ export const deliveryTasks = pgTable(
 		terminalStateConsistent: check(
 			"delivery_tasks_terminal_state_consistent",
 			sql`(${table.status} = 'succeeded' AND ${table.observationAttemptId} IS NOT NULL AND ${table.succeededAt} IS NOT NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NULL) OR (${table.status} = 'failed' AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NOT NULL AND ${table.cancelledAt} IS NULL) OR (${table.status} = 'cancelled' AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NOT NULL) OR (${table.status} IN ('planned', 'available', 'claimed') AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NULL)`,
+		),
+	}),
+).enableRLS();
+
+export const evidenceArtifacts = pgTable(
+	"evidence_artifacts",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		taskId: uuid("task_id")
+			.references(() => deliveryTasks.id)
+			.notNull(),
+		batchId: uuid("batch_id").notNull(),
+		brandId: text("brand_id").notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		leaseGeneration: integer("lease_generation").notNull(),
+		uploadedBy: text("uploaded_by").notNull(),
+		kind: evidenceArtifactKindEnum().notNull(),
+		mediaType: text("media_type").notNull(),
+		originalFilename: text("original_filename"),
+		byteSize: integer("byte_size").notNull(),
+		sha256: text("sha256").notNull(),
+		storageBackend: text("storage_backend").notNull().default("postgres"),
+		storageKey: text("storage_key").notNull(),
+		content: bytea("content").notNull(),
+		status: evidenceArtifactStatusEnum().notNull().default("staged"),
+		observationAttemptId: uuid("observation_attempt_id").references(() => observationAttempts.id),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		attachedAt: timestamp("attached_at", { withTimezone: true }),
+	},
+	(table) => ({
+		taskGenerationShaIdx: uniqueIndex("evidence_artifacts_task_generation_sha_uidx").on(
+			table.taskId,
+			table.leaseGeneration,
+			table.sha256,
+		),
+		taskStatusCreatedIdx: index("evidence_artifacts_task_status_created_idx").on(
+			table.taskId,
+			table.status,
+			table.createdAt,
+		),
+		attemptIdx: index("evidence_artifacts_attempt_id_idx").on(table.observationAttemptId),
+		taskIdentityFk: foreignKey({
+			columns: [table.brandId, table.scopeId, table.batchId, table.taskId],
+			foreignColumns: [deliveryTasks.brandId, deliveryTasks.scopeId, deliveryTasks.batchId, deliveryTasks.id],
+			name: "evidence_artifacts_task_identity_fk",
+		}),
+		positiveLeaseGeneration: check("evidence_artifacts_positive_lease_generation", sql`${table.leaseGeneration} > 0`),
+		validByteSize: check(
+			"evidence_artifacts_valid_byte_size",
+			sql`${table.byteSize} > 0 AND ${table.byteSize} <= 8388608 AND octet_length(${table.content}) = ${table.byteSize}`,
+		),
+		validSha256: check("evidence_artifacts_valid_sha256", sql`${table.sha256} ~ '^[0-9a-f]{64}$'`),
+		postgresStorage: check(
+			"evidence_artifacts_postgres_storage",
+			sql`${table.storageBackend} = 'postgres' AND ${table.storageKey} = 'evidence/' || ${table.id}::text`,
+		),
+		validMediaType: check(
+			"evidence_artifacts_valid_media_type",
+			sql`(${table.kind} = 'screenshot' AND ${table.mediaType} IN ('image/png', 'image/jpeg', 'image/webp')) OR (${table.kind} = 'page_snapshot' AND ${table.mediaType} = 'application/pdf')`,
+		),
+		stateConsistent: check(
+			"evidence_artifacts_state_consistent",
+			sql`(${table.status} = 'staged' AND ${table.observationAttemptId} IS NULL AND ${table.attachedAt} IS NULL) OR (${table.status} = 'attached' AND ${table.observationAttemptId} IS NOT NULL AND ${table.attachedAt} IS NOT NULL)`,
 		),
 	}),
 ).enableRLS();
@@ -528,6 +601,9 @@ export type NewDeliveryBatch = typeof deliveryBatches.$inferInsert;
 
 export type DeliveryTask = typeof deliveryTasks.$inferSelect;
 export type NewDeliveryTask = typeof deliveryTasks.$inferInsert;
+
+export type EvidenceArtifact = typeof evidenceArtifacts.$inferSelect;
+export type NewEvidenceArtifact = typeof evidenceArtifacts.$inferInsert;
 
 export type BrandWithPrompts = Brand & {
 	prompts: Prompt[];

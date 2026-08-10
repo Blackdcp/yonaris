@@ -79,6 +79,13 @@ export interface ClaimedDeliveryTask {
 	leaseExpiresAt: Date;
 }
 
+export interface ActiveDeliveryClaimContext {
+	task: DeliveryTaskView;
+	batch: Pick<DeliveryBatch, "id" | "brandId" | "scopeId" | "status" | "protocol">;
+	verifiedAt: Date;
+	measurementWindowEndsAt: Date;
+}
+
 export async function createDraftDeliveryBatch(input: {
 	brandId: string;
 	scopeId: string;
@@ -503,6 +510,64 @@ export async function heartbeatDeliveryTask(
 		if (!updated) throw new DeliveryTaskLeaseError(claim.taskId);
 		return { leaseGeneration: updated.leaseGeneration, leaseExpiresAt: requiredDate(updated.leaseExpiresAt) };
 	});
+}
+
+export async function assertActiveDeliveryClaim(claim: DeliveryClaimProof): Promise<ActiveDeliveryClaimContext> {
+	return db.transaction((tx) => assertActiveDeliveryClaimInTransaction(tx, claim));
+}
+
+export async function assertActiveDeliveryClaimInTransaction(
+	executor: Pick<DeliveryTransaction, "select">,
+	claim: DeliveryClaimProof,
+): Promise<ActiveDeliveryClaimContext> {
+	const [taskIdentity] = await executor
+		.select({ batchId: deliveryTasks.batchId })
+		.from(deliveryTasks)
+		.where(eq(deliveryTasks.id, claim.taskId))
+		.limit(1);
+	if (!taskIdentity) throw new DeliveryTaskLeaseError(claim.taskId);
+
+	const [batch] = await executor
+		.select({
+			id: deliveryBatches.id,
+			brandId: deliveryBatches.brandId,
+			scopeId: deliveryBatches.scopeId,
+			status: deliveryBatches.status,
+			protocol: deliveryBatches.protocol,
+		})
+		.from(deliveryBatches)
+		.where(eq(deliveryBatches.id, taskIdentity.batchId))
+		.limit(1)
+		.for("update");
+	if (!batch || (batch.status !== "frozen" && batch.status !== "in_progress")) {
+		throw new DeliveryTaskLeaseError(claim.taskId);
+	}
+
+	const checkedAt = new Date();
+	const [task] = await executor
+		.select()
+		.from(deliveryTasks)
+		.where(activeLeaseCondition(claim, checkedAt))
+		.limit(1)
+		.for("update");
+	const verifiedAt = new Date();
+	if (!task?.leaseExpiresAt || task.leaseExpiresAt <= verifiedAt) {
+		throw new DeliveryTaskLeaseError(claim.taskId);
+	}
+
+	const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+	const measurementWindowStartsAt = new Date(protocol.measurementWindow.startsAt);
+	const measurementWindowEndsAt = new Date(protocol.measurementWindow.endsAt);
+	if (verifiedAt < measurementWindowStartsAt || verifiedAt >= measurementWindowEndsAt) {
+		throw new DeliveryTaskLeaseError(claim.taskId);
+	}
+
+	return {
+		task: redactDeliveryTask(task),
+		batch,
+		verifiedAt,
+		measurementWindowEndsAt,
+	};
 }
 
 export async function releaseDeliveryTask(claim: DeliveryClaimProof & { error?: unknown }): Promise<DeliveryTaskView> {

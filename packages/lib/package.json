@@ -15,6 +15,7 @@
 		"./db/observation-coverage": "./src/db/observation-coverage.ts",
 		"./db/observations": "./src/db/observations.ts",
 		"./db/delivery-batches": "./src/db/delivery-batches.ts",
+		"./db/evidence-artifacts": "./src/db/evidence-artifacts.ts",
 		"./db/auth-sync": "./src/db/auth-sync.ts",
 		"./db/provisioning": "./src/db/provisioning.ts",
 		"./auth/server": "./src/auth/server.ts",
