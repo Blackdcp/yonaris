@@ -13,6 +13,7 @@ export const EVIDENCE_TASK_MAX_BYTES = 40 * 1024 * 1024;
 export const EVIDENCE_BATCH_MAX_BYTES = 512 * 1024 * 1024;
 export const EVIDENCE_ARTIFACT_MAX_COUNT = 20;
 export const EVIDENCE_STAGED_TTL_MS = 24 * 60 * 60 * 1_000;
+export const EVIDENCE_STAGED_CLEANUP_BATCH_SIZE = 50;
 
 export type EvidenceArtifactKind = EvidenceArtifact["kind"];
 export type EvidenceArtifactView = Omit<EvidenceArtifact, "content">;
@@ -348,7 +349,7 @@ export async function attachEvidenceArtifactsInTransaction(
 export async function cleanupStaleEvidenceArtifacts(input?: { before?: Date; limit?: number }): Promise<number> {
 	const before = input?.before ?? new Date(Date.now() - EVIDENCE_STAGED_TTL_MS);
 	if (Number.isNaN(before.getTime())) throw new EvidenceArtifactValidationError("Cleanup cutoff must be a valid date");
-	const limit = input?.limit ?? 500;
+	const limit = input?.limit ?? EVIDENCE_STAGED_CLEANUP_BATCH_SIZE;
 	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1_000) {
 		throw new EvidenceArtifactValidationError("Cleanup limit must be an integer between 1 and 1000");
 	}

@@ -4,6 +4,7 @@ import {
 	buildEvidenceArtifactReference,
 	EVIDENCE_ARTIFACT_MAX_BYTES,
 	EVIDENCE_BATCH_MAX_BYTES,
+	EVIDENCE_STAGED_CLEANUP_BATCH_SIZE,
 	EvidenceArtifactValidationError,
 	type EvidenceArtifactView,
 	isEvidenceByteCapacityAvailable,
@@ -75,6 +76,11 @@ describe("evidence artifact validation", () => {
 		expect(isEvidenceByteCapacityAvailable(EVIDENCE_BATCH_MAX_BYTES - 1, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(true);
 		expect(isEvidenceByteCapacityAvailable(EVIDENCE_BATCH_MAX_BYTES, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(false);
 		expect(isEvidenceByteCapacityAvailable(-1, 1, EVIDENCE_BATCH_MAX_BYTES)).toBe(false);
+	});
+
+	it("bounds one staged cleanup pass to 400 MiB at the per-artifact maximum", () => {
+		expect(EVIDENCE_STAGED_CLEANUP_BATCH_SIZE).toBe(50);
+		expect(EVIDENCE_STAGED_CLEANUP_BATCH_SIZE * EVIDENCE_ARTIFACT_MAX_BYTES).toBe(400 * 1024 * 1024);
 	});
 });
 
