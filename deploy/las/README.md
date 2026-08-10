@@ -256,6 +256,12 @@ The `www` image serves `apps/www` on `127.0.0.1:1516` in the independent
 marker are separate from the portal release. `portal.yonaris.com`, its
 database, containers, and deployment URL remain unchanged.
 
+Caddy forwards only `/`, the homepage's static assets, its OG image, and the
+single-page `robots.txt`/`sitemap.xml` endpoints. Legacy documentation, status,
+and product-marketing routes in `apps/www` are not exposed on the production
+domain. Portal and marketing workflows share both an ordered Actions queue and
+a host-side source lock, so fetch/checkout/deploy operations cannot race.
+
 ## Operations
 
 Create a database backup:
