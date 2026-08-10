@@ -4,6 +4,18 @@ on:
   push:
     branches:
       - main
+    paths:
+      - apps/web/**
+      - apps/worker/**
+      - packages/**
+      - docker/Dockerfile
+      - docker/entrypoint.sh
+      - deploy/las/compose.yaml
+      - deploy/las/env.example
+      - deploy/las/bin/deploy.sh
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
   workflow_dispatch:
 
 permissions:

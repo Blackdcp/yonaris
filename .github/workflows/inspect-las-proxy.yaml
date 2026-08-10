@@ -3,7 +3,7 @@ name: Inspect LAS proxy
 on:
   push:
     branches:
-      - codex/proxy-inspect
+      - main
 
 permissions:
   contents: read
