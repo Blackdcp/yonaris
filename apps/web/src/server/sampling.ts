@@ -15,6 +15,7 @@ import {
 	heartbeatDeliveryTask,
 	releaseDeliveryTask,
 } from "@workspace/lib/db/delivery-batches";
+import { listEvidenceArtifactsForClaim } from "@workspace/lib/db/evidence-artifacts";
 import {
 	claimImportedObservationAttempt,
 	markObservationFailed,
@@ -43,6 +44,7 @@ import {
 import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
 
 const SAMPLING_TARGET_PRESENTATION = {
@@ -214,6 +216,26 @@ function getSamplingTargetPresentation(surfaceTargetKey: string) {
 	const target = SAMPLING_TARGETS.find((candidate) => candidate.surfaceTargetKey === surfaceTargetKey);
 	if (!target) throw new Error(`Sampling target "${surfaceTargetKey}" is not registered`);
 	return target;
+}
+
+function canonicalSamplingEvidenceUrl(brandId: string, artifactId: string, protocol: DeliveryProtocol): string {
+	const appUrl = process.env.APP_URL;
+	if (!appUrl) throw new Error("APP_URL is required to persist sampling evidence references");
+	let configuredOrigin: string;
+	try {
+		configuredOrigin = new URL(appUrl).origin;
+	} catch {
+		throw new Error("APP_URL must be a valid absolute URL");
+	}
+	const url = new URL(samplingEvidenceDownloadUrl(brandId, artifactId), configuredOrigin);
+	const scheme = url.protocol.slice(0, -1);
+	if (scheme !== "http" && scheme !== "https") {
+		throw new Error("APP_URL must use HTTP or HTTPS for sampling evidence references");
+	}
+	if (!protocol.evidence.allowedUriSchemes.includes(scheme)) {
+		throw new Error(`APP_URL uses ${scheme}, which is outside this batch's frozen evidence policy`);
+	}
+	return url.toString();
 }
 
 function buildSamplingBatchSummary(
@@ -544,6 +566,24 @@ export const getSamplingTaskFn = createServerFn({ method: "GET" })
 		const task = await getDeliveryTask(data);
 		if (!task) throw new Error(`Sampling task "${data.taskId}" not found`);
 		return buildSamplingTaskDetail(task);
+	});
+
+export const listSamplingEvidenceArtifactsFn = createServerFn({ method: "POST" })
+	.validator(samplingTaskLeaseSchema)
+	.handler(async ({ data }) => {
+		const { session } = await requireSamplingAdminBrand(data.brandId);
+		const task = await getDeliveryTask({ brandId: data.brandId, taskId: data.taskId });
+		if (!task) throw new Error(`Sampling task "${data.taskId}" not found`);
+		const artifacts = await listEvidenceArtifactsForClaim({
+			brandId: data.brandId,
+			claim: {
+				taskId: task.id,
+				claimedBy: session.user.id,
+				leaseToken: data.leaseToken,
+				leaseGeneration: data.leaseGeneration,
+			},
+		});
+		return { artifacts: artifacts.map(toSamplingEvidenceArtifactDto) };
 	});
 
 export const createSamplingBatchFn = createServerFn({ method: "POST" })
@@ -878,6 +918,10 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 				competitorsMentioned: prepared.mentionResult.competitorsMentioned,
 				extractedCitations: prepared.citations,
 				deliveryClaim,
+				evidenceArtifacts: {
+					artifactIds: data.observation.evidenceArtifactIds,
+					uriForArtifact: (artifactId) => canonicalSamplingEvidenceUrl(task.brandId, artifactId, manifest.protocol),
+				},
 			});
 			const completed = await getDeliveryTask({ brandId: task.brandId, taskId: task.id });
 			if (completed?.status !== "succeeded") {

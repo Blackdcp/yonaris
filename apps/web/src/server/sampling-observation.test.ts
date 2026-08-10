@@ -5,7 +5,11 @@ import {
 	type DeliveryManifestTaskSnapshot,
 } from "@workspace/lib/delivery-manifest";
 import { describe, expect, it } from "vitest";
-import { prepareSamplingObservation, type SamplingObservationInput } from "./sampling-observation";
+import {
+	prepareSamplingObservation,
+	type SamplingObservationInput,
+	samplingObservationInputSchema,
+} from "./sampling-observation";
 
 const frozenTask: DeliveryManifestTaskSnapshot = {
 	id: "10000000-0000-4000-8000-000000000001",
@@ -84,6 +88,8 @@ const task: DeliveryTaskView = {
 	updatedAt: new Date("2020-08-10T00:01:00.000Z"),
 };
 
+const evidenceArtifactId = "50000000-0000-4000-8000-000000000001";
+
 const observation: SamplingObservationInput = {
 	answerText: "阶跃星辰的 StepFun 是一个可考虑的选项。",
 	observedAt: "2020-08-10T02:00:00.000Z",
@@ -91,13 +97,7 @@ const observation: SamplingObservationInput = {
 	sessionMode: "anonymous_clean",
 	searchMode: "off",
 	operatorAttested: true,
-	evidenceRefs: [
-		{
-			type: "screenshot",
-			uri: "https://evidence.example/sample.png",
-			sha256: "a".repeat(64),
-		},
-	],
+	evidenceArtifactIds: [evidenceArtifactId],
 	citations: [],
 	webQueries: [],
 };
@@ -158,10 +158,53 @@ describe("prepareSamplingObservation", () => {
 			prepareSamplingObservation({
 				task,
 				manifest,
-				observation: { ...observation, evidenceRefs: [] },
+				observation: { ...observation, evidenceArtifactIds: [] },
 				operatorUserId: "admin-1",
 				leaseGeneration: 1,
 			}),
 		).toThrow("At least 1 evidence artifact");
+	});
+
+	it("rejects duplicate artifact IDs and client-authored evidence references", () => {
+		expect(() =>
+			prepareSamplingObservation({
+				task,
+				manifest,
+				observation: {
+					...observation,
+					evidenceArtifactIds: [evidenceArtifactId, evidenceArtifactId],
+				},
+				operatorUserId: "admin-1",
+				leaseGeneration: 1,
+			}),
+		).toThrow("must not contain duplicates");
+
+		expect(
+			samplingObservationInputSchema.safeParse({
+				...observation,
+				evidenceRefs: [
+					{
+						type: "screenshot",
+						uri: "https://attacker.example/fabricated.png",
+						sha256: "a".repeat(64),
+					},
+				],
+			}).success,
+		).toBe(false);
+	});
+
+	it("keeps the observation fingerprint stable when a retry uses a new lease generation's artifacts", () => {
+		const prepare = (artifactId: string) =>
+			prepareSamplingObservation({
+				task,
+				manifest,
+				observation: { ...observation, evidenceArtifactIds: [artifactId] },
+				operatorUserId: "admin-1",
+				leaseGeneration: 1,
+			});
+
+		expect(prepare("50000000-0000-4000-8000-000000000001").sampleFingerprint).toBe(
+			prepare("50000000-0000-4000-8000-000000000002").sampleFingerprint,
+		);
 	});
 });

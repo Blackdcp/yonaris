@@ -65,6 +65,8 @@ import { Route as AuthedAppBrandSettingsCompetitorsRouteImport } from './routes/
 import { Route as AuthedAppBrandSettingsLlmsRouteImport } from './routes/_authed/app/$brand/settings/llms'
 import { Route as AuthedAppBrandSettingsMembersRouteImport } from './routes/_authed/app/$brand/settings/members'
 import { Route as AuthedAppBrandSettingsPromptsRouteImport } from './routes/_authed/app/$brand/settings/prompts'
+import { Route as ApiAdminSamplingEvidenceIndexRouteImport } from './routes/api/admin/sampling/evidence/index'
+import { Route as ApiAdminSamplingEvidenceArtifactIdRouteImport } from './routes/api/admin/sampling/evidence/$artifactId'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 import { Route as ApiV1PromptsPromptIdSnapshotRouteImport } from './routes/api/v1/prompts/$promptId/snapshot'
 
@@ -367,6 +369,18 @@ const AuthedAppBrandSettingsPromptsRoute =
     path: '/prompts',
     getParentRoute: () => AuthedAppBrandSettingsRoute,
   } as any)
+const ApiAdminSamplingEvidenceIndexRoute =
+  ApiAdminSamplingEvidenceIndexRouteImport.update({
+    id: '/api/admin/sampling/evidence/',
+    path: '/api/admin/sampling/evidence/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAdminSamplingEvidenceArtifactIdRoute =
+  ApiAdminSamplingEvidenceArtifactIdRouteImport.update({
+    id: '/api/admin/sampling/evidence/$artifactId',
+    path: '/api/admin/sampling/evidence/$artifactId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPlausibleJsScriptIndexRoute =
   ApiPlausibleJsScriptIndexRouteImport.update({
     id: '/api/plausible/js/script/',
@@ -434,9 +448,11 @@ export interface FileRoutesByFullPath {
   '/app/$brand/settings/llms': typeof AuthedAppBrandSettingsLlmsRoute
   '/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
+  '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
+  '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
 }
 export interface FileRoutesByTo {
@@ -488,9 +504,11 @@ export interface FileRoutesByTo {
   '/app/$brand/settings/llms': typeof AuthedAppBrandSettingsLlmsRoute
   '/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
+  '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings': typeof AuthedAppBrandSettingsIndexRoute
+  '/api/admin/sampling/evidence': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
 }
 export interface FileRoutesById {
@@ -549,9 +567,11 @@ export interface FileRoutesById {
   '/_authed/app/$brand/settings/llms': typeof AuthedAppBrandSettingsLlmsRoute
   '/_authed/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/_authed/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
+  '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/_authed/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/_authed/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
+  '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
 }
 export interface FileRouteTypes {
@@ -610,9 +630,11 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/llms'
     | '/app/$brand/settings/members'
     | '/app/$brand/settings/prompts'
+    | '/api/admin/sampling/evidence/$artifactId'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts/'
     | '/app/$brand/settings/'
+    | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -664,9 +686,11 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/llms'
     | '/app/$brand/settings/members'
     | '/app/$brand/settings/prompts'
+    | '/api/admin/sampling/evidence/$artifactId'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts'
     | '/app/$brand/settings'
+    | '/api/admin/sampling/evidence'
     | '/api/plausible/js/script'
   id:
     | '__root__'
@@ -724,9 +748,11 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/settings/llms'
     | '/_authed/app/$brand/settings/members'
     | '/_authed/app/$brand/settings/prompts'
+    | '/api/admin/sampling/evidence/$artifactId'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/_authed/app/$brand/prompts/'
     | '/_authed/app/$brand/settings/'
+    | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
   fileRoutesById: FileRoutesById
 }
@@ -756,6 +782,8 @@ export interface RootRouteChildren {
   ApiV1MeasurementScopesIndexRoute: typeof ApiV1MeasurementScopesIndexRoute
   ApiV1PromptsIndexRoute: typeof ApiV1PromptsIndexRoute
   ApiV1ReportsIndexRoute: typeof ApiV1ReportsIndexRoute
+  ApiAdminSamplingEvidenceArtifactIdRoute: typeof ApiAdminSamplingEvidenceArtifactIdRoute
+  ApiAdminSamplingEvidenceIndexRoute: typeof ApiAdminSamplingEvidenceIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
 }
 
@@ -1153,6 +1181,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAppBrandSettingsPromptsRouteImport
       parentRoute: typeof AuthedAppBrandSettingsRoute
     }
+    '/api/admin/sampling/evidence/': {
+      id: '/api/admin/sampling/evidence/'
+      path: '/api/admin/sampling/evidence'
+      fullPath: '/api/admin/sampling/evidence/'
+      preLoaderRoute: typeof ApiAdminSamplingEvidenceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin/sampling/evidence/$artifactId': {
+      id: '/api/admin/sampling/evidence/$artifactId'
+      path: '/api/admin/sampling/evidence/$artifactId'
+      fullPath: '/api/admin/sampling/evidence/$artifactId'
+      preLoaderRoute: typeof ApiAdminSamplingEvidenceArtifactIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/plausible/js/script/': {
       id: '/api/plausible/js/script/'
       path: '/api/plausible/js/script'
@@ -1332,6 +1374,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1MeasurementScopesIndexRoute: ApiV1MeasurementScopesIndexRoute,
   ApiV1PromptsIndexRoute: ApiV1PromptsIndexRoute,
   ApiV1ReportsIndexRoute: ApiV1ReportsIndexRoute,
+  ApiAdminSamplingEvidenceArtifactIdRoute:
+    ApiAdminSamplingEvidenceArtifactIdRoute,
+  ApiAdminSamplingEvidenceIndexRoute: ApiAdminSamplingEvidenceIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
 }
 export const routeTree = rootRouteImport
