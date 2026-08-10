@@ -34,6 +34,32 @@ export const observationStatusEnum = pgEnum("observation_status", [
 	"failed",
 	"cancelled",
 ]);
+export const deliveryBatchStatusEnum = pgEnum("delivery_batch_status", [
+	"draft",
+	"frozen",
+	"in_progress",
+	"completed",
+	"cancelled",
+]);
+export const deliveryTaskStatusEnum = pgEnum("delivery_task_status", [
+	"planned",
+	"available",
+	"claimed",
+	"succeeded",
+	"failed",
+	"cancelled",
+]);
+export const deliverySessionRequirementEnum = pgEnum("delivery_session_requirement", [
+	"none",
+	"anonymous_clean",
+	"new_account_clean",
+]);
+export const deliverySearchRequirementEnum = pgEnum("delivery_search_requirement", [
+	"not_applicable",
+	"required",
+	"forbidden",
+]);
+export const deliveryEvaluationRoleEnum = pgEnum("delivery_evaluation_role", ["scored", "observation"]);
 
 export const brands = pgTable(
 	"brands",
@@ -119,11 +145,68 @@ export const prompts = pgTable(
 		brandIdIdx: index("prompts_brand_id_idx").on(table.brandId),
 		brandIdEnabledIdx: index("prompts_brand_id_enabled_idx").on(table.brandId, table.enabled),
 		brandScopeEnabledIdx: index("prompts_brand_scope_enabled_idx").on(table.brandId, table.scopeId, table.enabled),
+		brandScopeIdIdx: uniqueIndex("prompts_brand_scope_id_uidx").on(table.brandId, table.scopeId, table.id),
 		scopeBrandFk: foreignKey({
 			columns: [table.brandId, table.scopeId],
 			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
 			name: "prompts_brand_scope_fk",
 		}),
+	}),
+).enableRLS();
+
+export const deliveryBatches = pgTable(
+	"delivery_batches",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		idempotencyKey: text("idempotency_key").notNull(),
+		name: text("name").notNull(),
+		status: deliveryBatchStatusEnum().notNull().default("draft"),
+		plannedTaskCount: integer("planned_task_count").notNull().default(0),
+		protocol: json("protocol").notNull().default({}),
+		manifestSnapshot: json("manifest_snapshot"),
+		manifestHash: text("manifest_hash"),
+		createdBy: text("created_by"),
+		frozenBy: text("frozen_by"),
+		cancelledBy: text("cancelled_by"),
+		frozenAt: timestamp("frozen_at", { withTimezone: true }),
+		startedAt: timestamp("started_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		brandIdempotencyIdx: uniqueIndex("delivery_batches_brand_idempotency_uidx").on(
+			table.brandId,
+			table.idempotencyKey,
+		),
+		identityIdx: uniqueIndex("delivery_batches_identity_uidx").on(table.brandId, table.scopeId, table.id),
+		brandScopeStatusCreatedIdx: index("delivery_batches_scope_status_created_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.status,
+			table.createdAt,
+		),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "delivery_batches_brand_scope_fk",
+		}),
+		nonnegativePlannedTaskCount: check(
+			"delivery_batches_nonnegative_planned_task_count",
+			sql`${table.plannedTaskCount} >= 0`,
+		),
+		frozenManifestPresent: check(
+			"delivery_batches_frozen_manifest_present",
+			sql`${table.status} IN ('draft', 'cancelled') OR (${table.plannedTaskCount} > 0 AND ${table.manifestSnapshot} IS NOT NULL AND ${table.manifestHash} IS NOT NULL AND ${table.frozenAt} IS NOT NULL)`,
+		),
 	}),
 ).enableRLS();
 
@@ -195,6 +278,97 @@ export const observationAttempts = pgTable(
 			name: "observation_attempts_brand_scope_fk",
 		}),
 		positiveSampleIndex: check("observation_attempts_positive_sample_index", sql`${table.sampleIndex} > 0`),
+	}),
+).enableRLS();
+
+export const deliveryTasks = pgTable(
+	"delivery_tasks",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		batchId: uuid("batch_id").notNull(),
+		brandId: text("brand_id").notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		promptId: uuid("prompt_id").notNull(),
+		promptText: text("prompt_text").notNull(),
+		surfaceTargetKey: text("surface_target_key").notNull(),
+		captureRouteKey: text("capture_route_key").notNull(),
+		sampleIndex: smallint("sample_index").notNull(),
+		sessionRequirement: deliverySessionRequirementEnum("session_requirement").notNull(),
+		searchRequirement: deliverySearchRequirementEnum("search_requirement").notNull(),
+		evaluationRole: deliveryEvaluationRoleEnum("evaluation_role").notNull().default("scored"),
+		slotKey: text("slot_key").notNull(),
+		status: deliveryTaskStatusEnum().notNull().default("planned"),
+		observationAttemptId: uuid("observation_attempt_id").references(() => observationAttempts.id),
+		claimedBy: text("claimed_by"),
+		leaseTokenHash: text("lease_token_hash"),
+		leaseGeneration: integer("lease_generation").notNull().default(0),
+		leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+		claimCount: smallint("claim_count").notNull().default(0),
+		lastErrorClass: text("last_error_class"),
+		lastErrorCode: text("last_error_code"),
+		lastErrorMessage: text("last_error_message"),
+		availableAt: timestamp("available_at", { withTimezone: true }),
+		claimedAt: timestamp("claimed_at", { withTimezone: true }),
+		succeededAt: timestamp("succeeded_at", { withTimezone: true }),
+		failedAt: timestamp("failed_at", { withTimezone: true }),
+		cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		batchSlotIdx: uniqueIndex("delivery_tasks_batch_slot_uidx").on(table.batchId, table.slotKey),
+		batchManifestSlotIdx: uniqueIndex("delivery_tasks_batch_manifest_slot_uidx").on(
+			table.batchId,
+			table.promptId,
+			table.surfaceTargetKey,
+			table.captureRouteKey,
+			table.sampleIndex,
+			table.sessionRequirement,
+			table.searchRequirement,
+			table.evaluationRole,
+		),
+		observationAttemptIdx: uniqueIndex("delivery_tasks_observation_attempt_id_uidx").on(
+			table.observationAttemptId,
+		),
+		batchStatusLeaseIdx: index("delivery_tasks_batch_status_lease_idx").on(
+			table.batchId,
+			table.status,
+			table.leaseExpiresAt,
+			table.createdAt,
+		),
+		brandScopeTargetStatusIdx: index("delivery_tasks_scope_target_status_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.surfaceTargetKey,
+			table.status,
+		),
+		batchIdentityFk: foreignKey({
+			columns: [table.brandId, table.scopeId, table.batchId],
+			foreignColumns: [deliveryBatches.brandId, deliveryBatches.scopeId, deliveryBatches.id],
+			name: "delivery_tasks_batch_identity_fk",
+		}),
+		promptIdentityFk: foreignKey({
+			columns: [table.brandId, table.scopeId, table.promptId],
+			foreignColumns: [prompts.brandId, prompts.scopeId, prompts.id],
+			name: "delivery_tasks_prompt_identity_fk",
+		}),
+		positiveSampleIndex: check("delivery_tasks_positive_sample_index", sql`${table.sampleIndex} > 0`),
+		nonnegativeClaimCount: check("delivery_tasks_nonnegative_claim_count", sql`${table.claimCount} >= 0`),
+		nonnegativeLeaseGeneration: check(
+			"delivery_tasks_nonnegative_lease_generation",
+			sql`${table.leaseGeneration} >= 0`,
+		),
+		leaseStateConsistent: check(
+			"delivery_tasks_lease_state_consistent",
+			sql`(${table.status} = 'claimed' AND ${table.claimedBy} IS NOT NULL AND ${table.leaseTokenHash} IS NOT NULL AND ${table.leaseExpiresAt} IS NOT NULL AND ${table.claimedAt} IS NOT NULL) OR (${table.status} <> 'claimed' AND ${table.leaseTokenHash} IS NULL AND ${table.leaseExpiresAt} IS NULL)`,
+		),
+		terminalStateConsistent: check(
+			"delivery_tasks_terminal_state_consistent",
+			sql`(${table.status} = 'succeeded' AND ${table.observationAttemptId} IS NOT NULL AND ${table.succeededAt} IS NOT NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NULL) OR (${table.status} = 'failed' AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NOT NULL AND ${table.cancelledAt} IS NULL) OR (${table.status} = 'cancelled' AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NOT NULL) OR (${table.status} IN ('planned', 'available', 'claimed') AND ${table.succeededAt} IS NULL AND ${table.failedAt} IS NULL AND ${table.cancelledAt} IS NULL)`,
+		),
 	}),
 ).enableRLS();
 
@@ -347,6 +521,12 @@ export type NewPromptRun = typeof promptRuns.$inferInsert;
 
 export type ObservationAttempt = typeof observationAttempts.$inferSelect;
 export type NewObservationAttempt = typeof observationAttempts.$inferInsert;
+
+export type DeliveryBatch = typeof deliveryBatches.$inferSelect;
+export type NewDeliveryBatch = typeof deliveryBatches.$inferInsert;
+
+export type DeliveryTask = typeof deliveryTasks.$inferSelect;
+export type NewDeliveryTask = typeof deliveryTasks.$inferInsert;
 
 export type BrandWithPrompts = Brand & {
 	prompts: Prompt[];

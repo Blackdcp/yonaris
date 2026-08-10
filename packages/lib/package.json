@@ -30,6 +30,7 @@
 		"./manual-observation-targets": "./src/manual-observation-targets.ts",
 		"./observation-coverage": "./src/observation-coverage.ts",
 		"./observation-targets": "./src/observation-targets.ts",
+		"./delivery-manifest": "./src/delivery-manifest.ts",
 		"./secrets": "./src/secrets/index.ts",
 		"./providers": "./src/providers/index.ts",
 		"./providers/models": "./src/providers/models.ts",
