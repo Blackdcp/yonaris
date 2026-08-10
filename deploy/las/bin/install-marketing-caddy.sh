@@ -7,20 +7,31 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   legacy_fragment="${2:?Missing expected legacy Caddy fragment}"
   marketing_fragment="${3:?Missing marketing Caddy fragment}"
   target_config="${4:?Missing target Caddy config}"
-  target_dir="$(dirname -- "$target_config")"
-  candidate_config="$target_dir/.Caddyfile.yonaris-candidate-$$"
-  backup_config="$target_dir/.Caddyfile.yonaris-backup-$$"
-  extracted_block="$target_dir/.Caddyfile.yonaris-block-$$"
-  apex_response="/tmp/yonaris-apex-response-$$"
+  target_dir="$(cd -- "$(dirname -- "$target_config")" && pwd -P)"
+  target_config="$target_dir/$(basename -- "$target_config")"
+  state_dir="$(mktemp -d "$target_dir/.yonaris-caddy.XXXXXXXX")"
+  case "$state_dir" in
+    "$target_dir"/.yonaris-caddy.*) ;;
+    *)
+      echo "Refusing unexpected Caddy state directory: $state_dir" >&2
+      exit 1
+      ;;
+  esac
+  candidate_config="$state_dir/Caddyfile.candidate"
+  backup_config="$state_dir/Caddyfile.backup"
+  extracted_block="$state_dir/yonaris-apex.block"
+  apex_response="$state_dir/apex-response.html"
   changed_config=false
-  keep_backup=false
+  keep_state_dir=false
 
   cleanup() {
-    rm -f -- "$candidate_config" "$extracted_block" "$apex_response"
-    if [[ "$keep_backup" == true ]]; then
-      echo "Emergency Caddy backup retained at $backup_config" >&2
+    if [[ "$keep_state_dir" == true ]]; then
+      echo "Emergency Caddy recovery directory retained at $state_dir" >&2
     else
-      rm -f -- "$backup_config"
+      case "$state_dir" in
+        "$target_dir"/.yonaris-caddy.*) rm -rf -- "$state_dir" ;;
+        *) echo "Refusing to remove unexpected state directory: $state_dir" >&2 ;;
+      esac
     fi
   }
   trap cleanup EXIT
@@ -28,17 +39,17 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   restore_previous_config() {
     echo "Restoring the previous Caddy configuration." >&2
     if ! install -o root -g root -m 0644 -- "$backup_config" "$candidate_config"; then
-      keep_backup=true
+      keep_state_dir=true
       echo "Could not stage the previous Caddy configuration." >&2
       return 1
     fi
     if ! mv -f -- "$candidate_config" "$target_config"; then
-      keep_backup=true
+      keep_state_dir=true
       echo "Could not restore the previous Caddyfile on disk." >&2
       return 1
     fi
     if ! caddy validate --config "$target_config" --adapter caddyfile >/dev/null; then
-      keep_backup=true
+      keep_state_dir=true
       echo "The restored Caddyfile failed validation." >&2
       return 1
     fi
@@ -50,7 +61,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
       sleep 1
     done
 
-    keep_backup=true
+    keep_state_dir=true
     echo "The previous Caddyfile is restored on disk, but its active reload could not be confirmed." >&2
     return 1
   }
