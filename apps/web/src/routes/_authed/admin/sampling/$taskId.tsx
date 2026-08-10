@@ -12,17 +12,23 @@ import {
 	storeSamplingLease,
 } from "@/components/sampling/sampling-lease-storage";
 import { SamplingTaskWorkbench } from "@/components/sampling/sampling-task-workbench";
-import type { SamplingObservationInput, SamplingTaskView } from "@/components/sampling/types";
+import type {
+	SamplingEvidenceArtifactView,
+	SamplingObservationInput,
+	SamplingTaskView,
+} from "@/components/sampling/types";
 import { getAppName } from "@/lib/route-head";
 import {
 	failSamplingTaskFn,
 	getSamplingTaskFn,
 	heartbeatSamplingTaskFn,
+	listSamplingEvidenceArtifactsFn,
 	releaseSamplingTaskFn,
 	submitSamplingTaskFn,
 } from "@/server/sampling";
 
 type TaskSearch = { brand?: string };
+const NO_EVIDENCE_ARTIFACTS: SamplingEvidenceArtifactView[] = [];
 
 export const Route = createFileRoute("/_authed/admin/sampling/$taskId")({
 	validateSearch: (search: Record<string, unknown>): TaskSearch => ({
@@ -66,6 +72,20 @@ function SamplingTaskPage() {
 		},
 		enabled: Boolean(brandId),
 		refetchInterval: 60_000,
+	});
+	const evidenceArtifactsQuery = useQuery({
+		queryKey: ["admin", "sampling", "evidence", brandId, taskId, leaseGeneration],
+		queryFn: () => {
+			if (!brandId || !leaseToken || leaseGeneration === undefined) {
+				throw new Error("A current sampling claim is required to recover staged evidence.");
+			}
+			return listSamplingEvidenceArtifactsFn({
+				data: { brandId, taskId, leaseToken, leaseGeneration },
+			});
+		},
+		enabled: Boolean(
+			brandId && leaseToken && leaseGeneration !== undefined && leaseBrandId === brandId && leaseTaskId === taskId,
+		),
 	});
 
 	useEffect(() => {
@@ -284,6 +304,15 @@ function SamplingTaskPage() {
 				task={task}
 				lease={lease}
 				heartbeatError={heartbeatError}
+				initialEvidenceArtifacts={evidenceArtifactsQuery.data?.artifacts ?? NO_EVIDENCE_ARTIFACTS}
+				evidenceArtifactsLoading={evidenceArtifactsQuery.isPending}
+				evidenceArtifactsError={
+					evidenceArtifactsQuery.isError
+						? evidenceArtifactsQuery.error instanceof Error
+							? evidenceArtifactsQuery.error.message
+							: "Could not recover staged evidence."
+						: null
+				}
 				onRelease={release}
 				onSubmit={submit}
 				onFail={fail}

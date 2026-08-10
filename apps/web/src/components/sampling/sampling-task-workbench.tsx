@@ -14,30 +14,60 @@ import {
 } from "@workspace/ui/components/dialog";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
+import { Progress } from "@workspace/ui/components/progress";
 import { Separator } from "@workspace/ui/components/separator";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { AlertTriangle, Check, Clipboard, ExternalLink, Loader2, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+	AlertTriangle,
+	Check,
+	Clipboard,
+	Download,
+	ExternalLink,
+	FileUp,
+	Loader2,
+	RefreshCw,
+	RotateCcw,
+	Send,
+	Trash2,
+	X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+	deleteSamplingEvidence,
+	formatEvidenceBytes,
+	MAX_SAMPLING_EVIDENCE_ARTIFACTS,
+	MAX_SAMPLING_EVIDENCE_TASK_BYTES,
+	SAMPLING_EVIDENCE_ACCEPT,
+	type SamplingEvidenceTransferState,
+	samplingEvidenceSubmitBlocker,
+	uploadSamplingEvidence,
+	validateSamplingEvidenceFile,
+} from "./sampling-evidence";
 import { SamplingStatusBadge } from "./sampling-status-badge";
-import type { SamplingEvidenceInput, SamplingLease, SamplingObservationInput, SamplingTaskView } from "./types";
+import type {
+	SamplingEvidenceArtifactView,
+	SamplingEvidenceKind,
+	SamplingLease,
+	SamplingObservationInput,
+	SamplingTaskView,
+} from "./types";
 
 function localDateTimeValue(date = new Date()): string {
 	const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
 	return local.toISOString().slice(0, 16);
 }
 
-interface EvidenceDraft extends SamplingEvidenceInput {
+interface EvidenceDraft {
 	clientId: string;
-}
-
-function emptyEvidence(): EvidenceDraft {
-	return {
-		clientId: `evidence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
-		type: "screenshot",
-		uri: "",
-		sha256: "",
-	};
+	state: SamplingEvidenceTransferState;
+	kind: SamplingEvidenceKind;
+	fileName: string;
+	mimeType: string;
+	sizeBytes: number;
+	progress: number;
+	file?: File;
+	artifact?: SamplingEvidenceArtifactView;
+	error?: string;
 }
 
 function lines(value: string): string[] {
@@ -59,6 +89,9 @@ export function SamplingTaskWorkbench({
 	task,
 	lease,
 	heartbeatError,
+	initialEvidenceArtifacts,
+	evidenceArtifactsLoading,
+	evidenceArtifactsError,
 	onRelease,
 	onSubmit,
 	onFail,
@@ -66,6 +99,9 @@ export function SamplingTaskWorkbench({
 	task: SamplingTaskView;
 	lease: SamplingLease;
 	heartbeatError: string | null;
+	initialEvidenceArtifacts: SamplingEvidenceArtifactView[];
+	evidenceArtifactsLoading: boolean;
+	evidenceArtifactsError: string | null;
 	onRelease: () => Promise<void>;
 	onSubmit: (observation: SamplingObservationInput) => Promise<void>;
 	onFail: (input: { errorCode?: string; errorMessage: string }) => Promise<void>;
@@ -78,9 +114,7 @@ export function SamplingTaskWorkbench({
 	const [citationUrls, setCitationUrls] = useState("");
 	const [webQueries, setWebQueries] = useState("");
 	const [operatorAttested, setOperatorAttested] = useState(false);
-	const [evidence, setEvidence] = useState<EvidenceDraft[]>(() =>
-		Array.from({ length: Math.max(1, evidenceMinimum) }, emptyEvidence),
-	);
+	const [evidence, setEvidence] = useState<EvidenceDraft[]>([]);
 	const [copied, setCopied] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [releasing, setReleasing] = useState(false);
@@ -89,12 +123,53 @@ export function SamplingTaskWorkbench({
 	const [failureMessage, setFailureMessage] = useState("");
 	const [failureCode, setFailureCode] = useState("");
 	const [reportingFailure, setReportingFailure] = useState(false);
+	const uploadAborters = useRef(new Map<string, () => void>());
 
 	const sessionMode = task.sessionRequirement;
 	const searchMode = task.searchRequirement === "required" ? "on" : "off";
 	const leaseExpiry = useMemo(
 		() => (lease.leaseExpiresAt ? new Date(lease.leaseExpiresAt).toLocaleTimeString() : "refreshing"),
 		[lease.leaseExpiresAt],
+	);
+	const evidenceTotalBytes = useMemo(() => evidence.reduce((total, item) => total + item.sizeBytes, 0), [evidence]);
+	const evidenceBlocker = useMemo(
+		() =>
+			samplingEvidenceSubmitBlocker({
+				states: evidence,
+				minimumArtifacts: evidenceMinimum,
+				recovering: evidenceArtifactsLoading,
+				recoveryError: evidenceArtifactsError,
+			}),
+		[evidence, evidenceArtifactsError, evidenceArtifactsLoading, evidenceMinimum],
+	);
+	const evidenceOperationPending = evidence.some(({ state }) => state === "uploading" || state === "deleting");
+
+	useEffect(() => {
+		setEvidence((previous) => {
+			const knownIds = new Set(previous.flatMap(({ artifact }) => (artifact ? [artifact.id] : [])));
+			const recovered = initialEvidenceArtifacts
+				.filter((artifact) => !knownIds.has(artifact.id))
+				.map<EvidenceDraft>((artifact) => ({
+					clientId: `artifact-${artifact.id}`,
+					state: artifact.status === "staged" ? "ready" : "failed",
+					kind: artifact.kind,
+					fileName: artifact.fileName,
+					mimeType: artifact.mimeType,
+					sizeBytes: artifact.sizeBytes,
+					progress: 100,
+					artifact,
+					error: artifact.status === "staged" ? undefined : "Attached evidence cannot be reused for this claim.",
+				}));
+			return recovered.length ? [...previous, ...recovered] : previous;
+		});
+	}, [initialEvidenceArtifacts]);
+
+	useEffect(
+		() => () => {
+			for (const abort of uploadAborters.current.values()) abort();
+			uploadAborters.current.clear();
+		},
+		[],
 	);
 
 	const copyPrompt = async () => {
@@ -107,12 +182,117 @@ export function SamplingTaskWorkbench({
 		}
 	};
 
-	const updateEvidence = (index: number, patch: Partial<EvidenceDraft>) => {
-		setEvidence((previous) => previous.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+	const patchEvidence = (clientId: string, patch: Partial<EvidenceDraft>) => {
+		setEvidence((previous) => previous.map((item) => (item.clientId === clientId ? { ...item, ...patch } : item)));
 	};
 
-	const removeEvidence = (index: number) => {
-		setEvidence((previous) => previous.filter((_, itemIndex) => itemIndex !== index));
+	const startEvidenceUpload = (draft: EvidenceDraft) => {
+		if (!draft.file) return;
+		setError(null);
+		patchEvidence(draft.clientId, { state: "uploading", progress: 0, error: undefined });
+		const upload = uploadSamplingEvidence({
+			file: draft.file,
+			kind: draft.kind,
+			task,
+			lease,
+			onProgress: (progress) => patchEvidence(draft.clientId, { progress }),
+		});
+		uploadAborters.current.set(draft.clientId, upload.abort);
+		void upload.promise
+			.then((artifact) => {
+				setEvidence((previous) => {
+					if (previous.some((item) => item.clientId !== draft.clientId && item.artifact?.id === artifact.id)) {
+						return previous.filter(({ clientId }) => clientId !== draft.clientId);
+					}
+					return previous.map((item) =>
+						item.clientId === draft.clientId
+							? {
+									...item,
+									state: "ready",
+									kind: artifact.kind,
+									fileName: artifact.fileName,
+									mimeType: artifact.mimeType,
+									sizeBytes: artifact.sizeBytes,
+									progress: 100,
+									file: undefined,
+									artifact,
+									error: undefined,
+								}
+							: item,
+					);
+				});
+			})
+			.catch((caught) => {
+				if (caught instanceof Error && caught.name === "AbortError") return;
+				patchEvidence(draft.clientId, {
+					state: "failed",
+					progress: 0,
+					error: caught instanceof Error ? caught.message : "Evidence upload failed.",
+				});
+			})
+			.finally(() => uploadAborters.current.delete(draft.clientId));
+	};
+
+	const chooseEvidence = (files: FileList | null) => {
+		if (!files?.length) return;
+		let artifactCount = evidence.length;
+		let totalBytes = evidenceTotalBytes;
+		const accepted: EvidenceDraft[] = [];
+		const rejected: string[] = [];
+		for (const file of Array.from(files)) {
+			const result = validateSamplingEvidenceFile(file, { artifactCount, totalBytes });
+			if (!result.ok) {
+				rejected.push(`${file.name}: ${result.message}`);
+				continue;
+			}
+			const draft: EvidenceDraft = {
+				clientId: `evidence-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+				state: "uploading",
+				kind: result.kind,
+				fileName: file.name,
+				mimeType: file.type || "application/octet-stream",
+				sizeBytes: file.size,
+				progress: 0,
+				file,
+			};
+			accepted.push(draft);
+			artifactCount += 1;
+			totalBytes += file.size;
+		}
+		if (accepted.length) {
+			setEvidence((previous) => [...previous, ...accepted]);
+			for (const draft of accepted) startEvidenceUpload(draft);
+		}
+		if (rejected.length) setError(rejected.join("\n"));
+	};
+
+	const removeEvidence = async (item: EvidenceDraft) => {
+		if (item.state === "uploading") {
+			uploadAborters.current.get(item.clientId)?.();
+			uploadAborters.current.delete(item.clientId);
+			setEvidence((previous) => previous.filter(({ clientId }) => clientId !== item.clientId));
+			return;
+		}
+		if (item.state === "failed" || !item.artifact) {
+			setEvidence((previous) => previous.filter(({ clientId }) => clientId !== item.clientId));
+			return;
+		}
+		setError(null);
+		patchEvidence(item.clientId, { state: "deleting", error: undefined });
+		try {
+			await deleteSamplingEvidence({
+				artifactId: item.artifact.id,
+				brandId: task.brandId,
+				taskId: task.id,
+				leaseToken: lease.leaseToken,
+				leaseGeneration: lease.leaseGeneration,
+			});
+			setEvidence((previous) => previous.filter(({ clientId }) => clientId !== item.clientId));
+		} catch (caught) {
+			const message = caught instanceof Error ? caught.message : "Could not delete staged evidence.";
+			patchEvidence(item.clientId, { state: "ready", error: message });
+			setError(message);
+		}
 	};
 
 	const handleSubmit = async () => {
@@ -140,15 +320,13 @@ export function SamplingTaskWorkbench({
 			setError("The frozen evidence protocol requires the result page URL.");
 			return;
 		}
-		const completedEvidence = evidence.filter((item) => item.uri.trim());
-		if (completedEvidence.length < evidenceMinimum) {
-			setError(`This task requires at least ${evidenceMinimum} evidence artifact(s).`);
+		if (evidenceBlocker) {
+			setError(evidenceBlocker);
 			return;
 		}
-		if (task.requireEvidenceSha256 && completedEvidence.some((item) => !/^[a-fA-F0-9]{64}$/.test(item.sha256))) {
-			setError("Every evidence artifact must include a 64-character SHA-256 hash.");
-			return;
-		}
+		const evidenceArtifactIds = evidence.flatMap(({ artifact, state }) =>
+			state === "ready" && artifact ? [artifact.id] : [],
+		);
 
 		setSubmitting(true);
 		try {
@@ -160,11 +338,7 @@ export function SamplingTaskWorkbench({
 				searchMode,
 				operatorAttested: true,
 				...(modelVersion.trim() ? { modelVersion: modelVersion.trim() } : {}),
-				evidenceRefs: completedEvidence.map((item) => ({
-					type: item.type,
-					uri: item.uri.trim(),
-					sha256: item.sha256.trim().toLowerCase(),
-				})),
+				evidenceArtifactIds,
 				citations: lines(citationUrls).map((url) => ({ url })),
 				webQueries: lines(webQueries),
 			});
@@ -360,85 +534,143 @@ export function SamplingTaskWorkbench({
 
 				<Card>
 					<CardHeader>
-						<div className="flex items-start justify-between gap-3">
-							<div>
-								<CardTitle>Evidence references</CardTitle>
-								<CardDescription>
-									At least {evidenceMinimum} artifact(s); provide an HTTP(S) URI and its SHA-256 hash.
-								</CardDescription>
-							</div>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setEvidence((items) => [...items, emptyEvidence()])}
-								disabled={evidence.length >= 20}
-							>
-								<Plus /> Add
-							</Button>
-						</div>
+						<CardTitle>Evidence uploads</CardTitle>
+						<CardDescription>
+							Upload at least {evidenceMinimum} artifact(s). Yonaris stores the file and computes its SHA-256 digest.
+						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<Alert>
-							<AlertTriangle />
-							<AlertTitle>Reference-only evidence</AlertTitle>
+							<FileUp />
+							<AlertTitle>V1 file policy</AlertTitle>
 							<AlertDescription>
-								Yonaris records the URI and reported hash. This form does not upload, fetch, or independently verify the
-								artifact.
+								PNG, JPEG, WebP, or PDF only; 8 MiB per file and 40 MiB per task. Video is not supported in V1.
 							</AlertDescription>
 						</Alert>
-						{evidence.map((item, index) => (
-							<div
-								key={item.clientId}
-								className="grid gap-3 rounded-md border p-3 md:grid-cols-[10rem_minmax(0,1fr)_minmax(0,1fr)_auto]"
-							>
-								<div className="space-y-1.5">
-									<Label className="text-xs">Type</Label>
-									<Select
-										value={item.type}
-										onValueChange={(value: SamplingEvidenceInput["type"]) => updateEvidence(index, { type: value })}
-									>
-										<SelectTrigger className="w-full">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="screenshot">Screenshot</SelectItem>
-											<SelectItem value="page_snapshot">Page snapshot</SelectItem>
-											<SelectItem value="video">Video</SelectItem>
-											<SelectItem value="other">Other</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="space-y-1.5">
-									<Label className="text-xs">Evidence URI</Label>
-									<Input
-										type="url"
-										value={item.uri}
-										onChange={(event) => updateEvidence(index, { uri: event.target.value })}
-										placeholder="https://..."
-									/>
-								</div>
-								<div className="space-y-1.5">
-									<Label className="text-xs">SHA-256</Label>
-									<Input
-										value={item.sha256}
-										onChange={(event) => updateEvidence(index, { sha256: event.target.value })}
-										placeholder="64 hexadecimal characters"
-										className="font-mono text-xs"
-									/>
-								</div>
-								<div className="flex items-end">
-									<Button
-										variant="ghost"
-										size="icon"
-										onClick={() => removeEvidence(index)}
-										disabled={evidence.length <= evidenceMinimum}
-										aria-label="Remove evidence"
-									>
-										<Trash2 />
-									</Button>
-								</div>
+						<div className="flex flex-col gap-3 rounded-md border border-dashed p-4 sm:flex-row sm:items-end sm:justify-between">
+							<div className="space-y-1.5">
+								<Label htmlFor="sampling-evidence-files">Upload evidence</Label>
+								<p className="text-xs text-muted-foreground">
+									{evidence.length}/{MAX_SAMPLING_EVIDENCE_ARTIFACTS} files 路 {formatEvidenceBytes(evidenceTotalBytes)}{" "}
+									/ {formatEvidenceBytes(MAX_SAMPLING_EVIDENCE_TASK_BYTES)}
+								</p>
 							</div>
-						))}
+							<Input
+								id="sampling-evidence-files"
+								data-testid="sampling-evidence-file-input"
+								type="file"
+								multiple
+								accept={SAMPLING_EVIDENCE_ACCEPT}
+								aria-label="Upload evidence"
+								onChange={(event) => {
+									chooseEvidence(event.currentTarget.files);
+									event.currentTarget.value = "";
+								}}
+								disabled={
+									evidenceArtifactsLoading ||
+									Boolean(evidenceArtifactsError) ||
+									evidence.length >= MAX_SAMPLING_EVIDENCE_ARTIFACTS ||
+									evidenceTotalBytes >= MAX_SAMPLING_EVIDENCE_TASK_BYTES
+								}
+								className="max-w-sm"
+							/>
+						</div>
+						{evidenceArtifactsLoading && (
+							<div
+								className="flex items-center gap-2 text-sm text-muted-foreground"
+								data-testid="sampling-evidence-recovering"
+							>
+								<Loader2 className="size-4 animate-spin" /> Recovering staged evidence…
+							</div>
+						)}
+						{evidenceArtifactsError && (
+							<Alert variant="destructive">
+								<AlertTriangle />
+								<AlertTitle>Could not recover staged evidence</AlertTitle>
+								<AlertDescription>{evidenceArtifactsError}</AlertDescription>
+							</Alert>
+						)}
+						{!evidenceArtifactsLoading && !evidence.length && (
+							<p className="rounded-md bg-muted/30 p-4 text-sm text-muted-foreground">No evidence uploaded yet.</p>
+						)}
+						{evidence.map((item) => {
+							const artifact = item.state === "ready" ? item.artifact : undefined;
+							const canDeleteArtifact = !artifact || artifact.status === "staged";
+							return (
+								<div
+									key={item.clientId}
+									data-testid={artifact ? "sampling-evidence-ready" : "sampling-evidence-upload-row"}
+									data-upload-state={item.state}
+									data-artifact-id={item.artifact?.id}
+									className="space-y-3 rounded-md border p-3"
+								>
+									<div className="flex min-w-0 items-start justify-between gap-3">
+										<div className="min-w-0">
+											<p className="truncate text-sm font-medium">{item.fileName}</p>
+											<p className="text-xs text-muted-foreground">
+												{item.kind === "screenshot" ? "Screenshot" : "PDF page snapshot"} 路{" "}
+												{formatEvidenceBytes(item.sizeBytes)}
+											</p>
+										</div>
+										<div className="flex shrink-0 gap-1">
+											{artifact && (
+												<Button variant="ghost" size="icon" asChild>
+													<a href={artifact.downloadUrl} aria-label={`Download ${item.fileName}`}>
+														<Download />
+													</a>
+												</Button>
+											)}
+											{item.state === "failed" && item.file && (
+												<Button
+													variant="ghost"
+													size="icon"
+													onClick={() => startEvidenceUpload(item)}
+													aria-label={`Retry ${item.fileName}`}
+												>
+													<RefreshCw />
+												</Button>
+											)}
+											<Button
+												variant="ghost"
+												size="icon"
+												onClick={() => void removeEvidence(item)}
+												disabled={item.state === "deleting" || !canDeleteArtifact}
+												aria-label={item.state === "uploading" ? `Cancel ${item.fileName}` : `Remove ${item.fileName}`}
+											>
+												{item.state === "deleting" ? (
+													<Loader2 className="animate-spin" />
+												) : item.state === "uploading" ? (
+													<X />
+												) : (
+													<Trash2 />
+												)}
+											</Button>
+										</div>
+									</div>
+									{item.state === "uploading" && (
+										<div className="space-y-1" data-testid="sampling-evidence-upload-progress">
+											<div className="flex justify-between text-xs text-muted-foreground">
+												<span>{item.progress >= 100 ? "Server verifying" : "Uploading"}</span>
+												<span>{item.progress}%</span>
+											</div>
+											<Progress value={item.progress} aria-label={`Upload progress for ${item.fileName}`} />
+										</div>
+									)}
+									{item.state === "failed" && (
+										<p className="text-sm text-destructive" role="alert">
+											{item.error ?? "Evidence upload failed."}
+										</p>
+									)}
+									{artifact && (
+										<div className="rounded bg-muted/40 p-2 text-xs">
+											<p className="font-medium text-emerald-700 dark:text-emerald-400">Upload verified</p>
+											<p className="mt-1 break-all font-mono text-muted-foreground">SHA-256 {artifact.sha256}</p>
+										</div>
+									)}
+									{item.error && item.state === "ready" && <p className="text-sm text-destructive">{item.error}</p>}
+								</div>
+							);
+						})}
 					</CardContent>
 				</Card>
 
@@ -452,13 +684,17 @@ export function SamplingTaskWorkbench({
 
 				<div className="sticky bottom-3 z-10 flex flex-col gap-2 rounded-lg border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:justify-between">
 					<div className="flex gap-2">
-						<Button variant="outline" onClick={handleRelease} disabled={releasing || submitting}>
+						<Button
+							variant="outline"
+							onClick={handleRelease}
+							disabled={releasing || submitting || evidenceOperationPending}
+						>
 							{releasing ? <Loader2 className="animate-spin" /> : <RotateCcw />}
 							Release to queue
 						</Button>
 						<Dialog open={failureOpen} onOpenChange={setFailureOpen}>
 							<DialogTrigger asChild>
-								<Button variant="destructive" disabled={submitting}>
+								<Button variant="destructive" disabled={submitting || evidenceOperationPending}>
 									Report failure
 								</Button>
 							</DialogTrigger>
@@ -505,7 +741,11 @@ export function SamplingTaskWorkbench({
 							</DialogContent>
 						</Dialog>
 					</div>
-					<Button onClick={handleSubmit} disabled={submitting || releasing}>
+					<Button
+						onClick={handleSubmit}
+						disabled={submitting || releasing || Boolean(evidenceBlocker)}
+						data-testid="sampling-submit-observation"
+					>
 						{submitting ? <Loader2 className="animate-spin" /> : <Send />}
 						Submit observation
 					</Button>

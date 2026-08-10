@@ -168,10 +168,18 @@ export interface SamplingLease {
 	leaseExpiresAt: string | Date | null;
 }
 
-export interface SamplingEvidenceInput {
-	type: "screenshot" | "video" | "page_snapshot" | "other";
-	uri: string;
+export type SamplingEvidenceKind = "screenshot" | "page_snapshot";
+
+export interface SamplingEvidenceArtifactView {
+	id: string;
+	kind: SamplingEvidenceKind;
+	fileName: string;
+	mimeType: string;
+	sizeBytes: number;
 	sha256: string;
+	status: "staged" | "attached";
+	createdAt: string;
+	downloadUrl: string;
 }
 
 export interface SamplingObservationInput {
@@ -182,7 +190,7 @@ export interface SamplingObservationInput {
 	searchMode: "on" | "off";
 	operatorAttested: true;
 	modelVersion?: string;
-	evidenceRefs: SamplingEvidenceInput[];
+	evidenceArtifactIds: string[];
 	citations?: Array<{ url: string }>;
 	webQueries?: string[];
 }
