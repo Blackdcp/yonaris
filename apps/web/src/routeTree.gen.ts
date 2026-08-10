@@ -46,6 +46,7 @@ import { Route as ApiV1BrandsBrandIdRouteImport } from './routes/api/v1/brands/$
 import { Route as ApiV1CompetitorsIndexRouteImport } from './routes/api/v1/competitors/index'
 import { Route as ApiV1CompetitorsCompetitorIdRouteImport } from './routes/api/v1/competitors/$competitorId'
 import { Route as ApiV1DocsIndexRouteImport } from './routes/api/v1/docs/index'
+import { Route as ApiV1MeasurementScopesIndexRouteImport } from './routes/api/v1/measurement-scopes/index'
 import { Route as ApiV1PromptsIndexRouteImport } from './routes/api/v1/prompts/index'
 import { Route as ApiV1PromptsPromptIdRouteImport } from './routes/api/v1/prompts/$promptId'
 import { Route as ApiV1ReportsIndexRouteImport } from './routes/api/v1/reports/index'
@@ -254,6 +255,12 @@ const ApiV1DocsIndexRoute = ApiV1DocsIndexRouteImport.update({
   path: '/api/v1/docs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1MeasurementScopesIndexRoute =
+  ApiV1MeasurementScopesIndexRouteImport.update({
+    id: '/api/v1/measurement-scopes/',
+    path: '/api/v1/measurement-scopes/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiV1PromptsIndexRoute = ApiV1PromptsIndexRouteImport.update({
   id: '/api/v1/prompts/',
   path: '/api/v1/prompts/',
@@ -386,6 +393,7 @@ export interface FileRoutesByFullPath {
   '/api/v1/brands/': typeof ApiV1BrandsIndexRoute
   '/api/v1/competitors/': typeof ApiV1CompetitorsIndexRoute
   '/api/v1/docs/': typeof ApiV1DocsIndexRoute
+  '/api/v1/measurement-scopes/': typeof ApiV1MeasurementScopesIndexRoute
   '/api/v1/prompts/': typeof ApiV1PromptsIndexRoute
   '/api/v1/reports/': typeof ApiV1ReportsIndexRoute
   '/app/$brand/prompts/$promptId': typeof AuthedAppBrandPromptsPromptIdRoute
@@ -435,6 +443,7 @@ export interface FileRoutesByTo {
   '/api/v1/brands': typeof ApiV1BrandsIndexRoute
   '/api/v1/competitors': typeof ApiV1CompetitorsIndexRoute
   '/api/v1/docs': typeof ApiV1DocsIndexRoute
+  '/api/v1/measurement-scopes': typeof ApiV1MeasurementScopesIndexRoute
   '/api/v1/prompts': typeof ApiV1PromptsIndexRoute
   '/api/v1/reports': typeof ApiV1ReportsIndexRoute
   '/app/$brand/prompts/$promptId': typeof AuthedAppBrandPromptsPromptIdRoute
@@ -491,6 +500,7 @@ export interface FileRoutesById {
   '/api/v1/brands/': typeof ApiV1BrandsIndexRoute
   '/api/v1/competitors/': typeof ApiV1CompetitorsIndexRoute
   '/api/v1/docs/': typeof ApiV1DocsIndexRoute
+  '/api/v1/measurement-scopes/': typeof ApiV1MeasurementScopesIndexRoute
   '/api/v1/prompts/': typeof ApiV1PromptsIndexRoute
   '/api/v1/reports/': typeof ApiV1ReportsIndexRoute
   '/_authed/app/$brand/prompts/$promptId': typeof AuthedAppBrandPromptsPromptIdRoute
@@ -547,6 +557,7 @@ export interface FileRouteTypes {
     | '/api/v1/brands/'
     | '/api/v1/competitors/'
     | '/api/v1/docs/'
+    | '/api/v1/measurement-scopes/'
     | '/api/v1/prompts/'
     | '/api/v1/reports/'
     | '/app/$brand/prompts/$promptId'
@@ -596,6 +607,7 @@ export interface FileRouteTypes {
     | '/api/v1/brands'
     | '/api/v1/competitors'
     | '/api/v1/docs'
+    | '/api/v1/measurement-scopes'
     | '/api/v1/prompts'
     | '/api/v1/reports'
     | '/app/$brand/prompts/$promptId'
@@ -651,6 +663,7 @@ export interface FileRouteTypes {
     | '/api/v1/brands/'
     | '/api/v1/competitors/'
     | '/api/v1/docs/'
+    | '/api/v1/measurement-scopes/'
     | '/api/v1/prompts/'
     | '/api/v1/reports/'
     | '/_authed/app/$brand/prompts/$promptId'
@@ -687,6 +700,7 @@ export interface RootRouteChildren {
   ApiV1BrandsIndexRoute: typeof ApiV1BrandsIndexRoute
   ApiV1CompetitorsIndexRoute: typeof ApiV1CompetitorsIndexRoute
   ApiV1DocsIndexRoute: typeof ApiV1DocsIndexRoute
+  ApiV1MeasurementScopesIndexRoute: typeof ApiV1MeasurementScopesIndexRoute
   ApiV1PromptsIndexRoute: typeof ApiV1PromptsIndexRoute
   ApiV1ReportsIndexRoute: typeof ApiV1ReportsIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
@@ -951,6 +965,13 @@ declare module '@tanstack/react-router' {
       path: '/api/v1/docs'
       fullPath: '/api/v1/docs/'
       preLoaderRoute: typeof ApiV1DocsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/v1/measurement-scopes/': {
+      id: '/api/v1/measurement-scopes/'
+      path: '/api/v1/measurement-scopes'
+      fullPath: '/api/v1/measurement-scopes/'
+      preLoaderRoute: typeof ApiV1MeasurementScopesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/prompts/': {
@@ -1221,6 +1242,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1BrandsIndexRoute: ApiV1BrandsIndexRoute,
   ApiV1CompetitorsIndexRoute: ApiV1CompetitorsIndexRoute,
   ApiV1DocsIndexRoute: ApiV1DocsIndexRoute,
+  ApiV1MeasurementScopesIndexRoute: ApiV1MeasurementScopesIndexRoute,
   ApiV1PromptsIndexRoute: ApiV1PromptsIndexRoute,
   ApiV1ReportsIndexRoute: ApiV1ReportsIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
