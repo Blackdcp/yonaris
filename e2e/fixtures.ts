@@ -4,9 +4,20 @@
  * has no side effects, so specs can import from it freely.
  */
 
-// Hardcoded to localhost so the destructive seeder can never point at a
-// production database.
-export const DATABASE_URL = "postgres://postgres:postgres@localhost:5432/elmo";
+// The host, credentials, and database stay hardcoded to localhost so the
+// destructive seeder can never point at a production database. Only the host
+// port is configurable, which lets an isolated E2E Postgres coexist with a
+// developer database already listening on 5432.
+const e2ePostgresPort = process.env.E2E_POSTGRES_PORT ?? "5432";
+if (!/^\d{1,5}$/.test(e2ePostgresPort)) {
+  throw new Error(`Invalid E2E_POSTGRES_PORT: ${e2ePostgresPort}`);
+}
+const parsedE2ePostgresPort = Number(e2ePostgresPort);
+if (parsedE2ePostgresPort < 1 || parsedE2ePostgresPort > 65_535) {
+  throw new Error(`E2E_POSTGRES_PORT is out of range: ${e2ePostgresPort}`);
+}
+export const DATABASE_URL =
+  `postgres://postgres:postgres@localhost:${parsedE2ePostgresPort}/elmo`;
 
 // Must match ADMIN_API_KEYS in the CI-patched .env (.github/workflows/e2e.yaml)
 // and bruno/environments/local.bru.

@@ -3,9 +3,10 @@
  *
  * Seeds the LOCAL test database with realistic fixture data for E2E testing.
  *
- * SAFETY: the database URL (see fixtures.ts) is hardcoded to localhost to
- * prevent accidentally running this against a production database (it DELETEs
- * all data).
+ * SAFETY: the database host, credentials, and name (see fixtures.ts) are
+ * hardcoded to localhost to prevent accidentally running this against a
+ * production database. Only its local port can be overridden (it DELETEs all
+ * data).
  *
  * Usage: tsx seed.ts
  */
@@ -45,9 +46,9 @@ async function seed() {
   try {
     console.log("Seeding E2E test database...");
 
-    // This database URL is hardcoded to localhost in fixtures.ts. TRUNCATE is
-    // intentional here: delivery manifests retain audit rows and reject the
-    // ordinary DELETE sequence used before scoped observations existed.
+    // This database host is hardcoded to localhost in fixtures.ts. TRUNCATE
+    // is intentional here: delivery manifests retain audit rows and reject
+    // the ordinary DELETE sequence used before scoped observations existed.
     await client.query(`
       TRUNCATE TABLE
         evidence_artifacts,
