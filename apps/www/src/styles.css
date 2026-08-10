@@ -46,19 +46,20 @@
 	font-display: swap;
 }
 
-/*
- * Geist Sans / Mono ship only the 400-weight static file. The declared
- * font-weight: 100 900 range tells the browser to use this single face
- * for any requested weight WITHOUT synthesizing bold — so font-medium,
- * font-semibold, etc. all render at the 400 file's visual weight. This
- * is intentional: it keeps the lighter, uniform look across headings
- * and avoids shipping additional weight files.
- */
+/* Geist 400 is the site default; Sans 500 is loaded separately for display copy. */
 @font-face {
 	font-family: "Geist Sans";
 	font-style: normal;
 	font-weight: 100 900;
 	src: url("@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 500;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2") format("woff2");
 	font-display: swap;
 }
 
@@ -150,4 +151,100 @@
 .prose tbody td:first-child,
 .prose tfoot td:first-child {
 	padding-inline-start: 0.571429em;
+}
+
+.yonaris-home {
+	font-family: "Geist Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+	font-feature-settings: "kern", "ss01", "tnum";
+}
+
+.yonaris-home ::selection {
+	background: #ff6a00;
+	color: #0b1220;
+}
+
+.yonaris-hero-copy > * {
+	animation: yonaris-copy-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.yonaris-hero-copy > :nth-child(2) {
+	animation-delay: 80ms;
+}
+
+.yonaris-hero-copy > :nth-child(3) {
+	animation-delay: 150ms;
+}
+
+.yonaris-hero-copy > :nth-child(4) {
+	animation-delay: 210ms;
+}
+
+.yonaris-hero-copy > :nth-child(5) {
+	animation-delay: 270ms;
+}
+
+.yonaris-hero-copy > :nth-child(6) {
+	animation-delay: 330ms;
+}
+
+.yonaris-signal-path {
+	stroke-dasharray: 1600;
+	stroke-dashoffset: 1600;
+	animation: yonaris-path-reveal 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.yonaris-evidence-ticks path,
+.yonaris-signal-ticks path {
+	stroke-dasharray: 140;
+	stroke-dashoffset: 140;
+	animation: yonaris-path-reveal 700ms 520ms ease-out forwards;
+}
+
+.yonaris-mobile-signal {
+	display: none;
+}
+
+@keyframes yonaris-copy-enter {
+	from {
+		opacity: 0;
+		transform: translateY(14px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes yonaris-path-reveal {
+	to {
+		stroke-dashoffset: 0;
+	}
+}
+
+@media (max-width: 767px) and (min-height: 780px) {
+	.yonaris-mobile-signal {
+		display: block;
+	}
+}
+
+@media (max-width: 767px) and (max-height: 760px) {
+	.yonaris-thesis-layout {
+		padding-top: 1.25rem;
+		padding-bottom: 1.25rem;
+	}
+
+	.yonaris-thesis-rule {
+		margin-top: 1.25rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.yonaris-hero-copy > *,
+	.yonaris-signal-path,
+	.yonaris-evidence-ticks path,
+	.yonaris-signal-ticks path {
+		animation: none;
+		opacity: 1;
+		stroke-dashoffset: 0;
+	}
 }

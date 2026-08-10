@@ -4,7 +4,8 @@ const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
 
 export const SITE_URL = configuredSiteUrl ? configuredSiteUrl.replace(/\/$/, "") : "";
 export const SITE_NAME = "Yonaris";
-export const SITE_DESCRIPTION = "AI visibility tracking and optimization.";
+export const SITE_DESCRIPTION =
+	"Yonaris is an early-stage company building a continuously updated, verifiable system for market understanding.";
 export const SITE_LOGO_URL = SITE_URL ? `${SITE_URL}/brand/logos/yonaris-wordmark-navy.png` : undefined;
 
 export function canonicalUrl(path: string): string | undefined {
@@ -19,12 +20,14 @@ export function ogMeta({
 	path,
 	image,
 	type = "website",
+	locale = "en_US",
 }: {
 	title: string;
 	description: string;
 	path: string;
 	image?: string;
 	type?: "website" | "article";
+	locale?: string;
 }) {
 	const url = canonicalUrl(path);
 	const resolvedImage = image ?? getMarketingOgImage({ title, description });
@@ -36,7 +39,7 @@ export function ogMeta({
 		...(url ? [{ property: "og:url", content: url }] : []),
 		{ property: "og:site_name", content: SITE_NAME },
 		{ property: "og:type", content: type },
-		{ property: "og:locale", content: "en_US" },
+		{ property: "og:locale", content: locale },
 		...(absoluteImage
 			? [
 					{ property: "og:image", content: absoluteImage },
@@ -80,11 +83,11 @@ export function organizationJsonLd() {
 	});
 }
 
-export function softwareApplicationJsonLd() {
+export function softwareApplicationJsonLd(description = SITE_DESCRIPTION) {
 	return jsonLd({
 		"@type": "SoftwareApplication",
 		name: SITE_NAME,
-		description: SITE_DESCRIPTION,
+		description,
 		applicationCategory: "BusinessApplication",
 		operatingSystem: "Any",
 		...(SITE_URL ? { url: SITE_URL } : {}),

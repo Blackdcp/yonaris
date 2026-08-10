@@ -1,0 +1,4 @@
+yonaris.com, www.yonaris.com {
+	tls /etc/caddy/certs/yonaris/yonaris-origin.pem /etc/caddy/certs/yonaris/yonaris-origin.key
+	redir https://portal.yonaris.com{uri} permanent
+}
