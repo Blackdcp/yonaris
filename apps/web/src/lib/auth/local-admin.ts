@@ -14,14 +14,14 @@ export type RoleSession = {
  * The returned session is patched immediately because Better Auth's signed
  * cookie cache can still contain the pre-repair role for a few minutes.
  */
-export async function repairLocalAdminSession<T extends RoleSession>(input: {
+export async function repairLocalDefaultOrgAdminSession<T extends RoleSession>(input: {
 	session: T | null;
 	mode: DeploymentMode;
-	promoteSoleUser: (userId: string) => Promise<boolean>;
+	promoteUniqueDefaultOrgAdmin: (userId: string) => Promise<boolean>;
 }): Promise<T | null> {
-	const { session, mode, promoteSoleUser } = input;
+	const { session, mode, promoteUniqueDefaultOrgAdmin } = input;
 	if (!session || mode !== "local" || session.user.role === "admin") return session;
-	if (!(await promoteSoleUser(session.user.id))) return session;
+	if (!(await promoteUniqueDefaultOrgAdmin(session.user.id))) return session;
 
 	return {
 		...session,

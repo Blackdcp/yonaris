@@ -7,7 +7,7 @@
  * provisioning path — the public demo box is just a read-only view over
  * that already-bootstrapped data.
  *
- * Everything here is one-shot: the better-auth `user.create.before` hook
+ * The signup provisioning inserts are one-shot: the better-auth `user.create.before` hook
  * rejects any signup when a user already exists, so these inserts only
  * ever run once against a given database. The SQL is plain INSERTs (no
  * upsert, no existence checks) to make that intent obvious — a second
@@ -17,6 +17,30 @@
 import { count, eq, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { member, organization, user } from "./schema";
+
+const DEFAULT_ORG_PRIVILEGED_ROLES = ["owner", "admin"] as const;
+const DEFAULT_ORG_PRIVILEGED_ROLE_SET = new Set<string>(DEFAULT_ORG_PRIVILEGED_ROLES);
+
+/** Match Better Auth's comma-separated organization roles by exact token. */
+export function hasOwnerOrAdminOrgRole(role: string | null | undefined): boolean {
+	if (!role) return false;
+	return role.split(",").some((value) => DEFAULT_ORG_PRIVILEGED_ROLE_SET.has(value.trim()));
+}
+
+function buildOwnerOrAdminMemberRolePredicate() {
+	const roles = sql.join(
+		DEFAULT_ORG_PRIVILEGED_ROLES.map((role) => sql`${role}`),
+		sql`, `,
+	);
+
+	return sql`
+		exists (
+			select 1
+			from unnest(string_to_array(${member.role}, ',')) as privileged_role(value)
+			where btrim(privileged_role.value) in (${roles})
+		)
+	`;
+}
 
 /**
  * Number of users in the database.
@@ -31,24 +55,34 @@ export async function countUsers(): Promise<number> {
 }
 
 /**
- * Promote an existing local installation's only user to a global admin.
+ * Promote the default organization's only owner/admin member to a global admin.
  *
  * The caller is responsible for gating this to local deployment mode. Keeping
- * the identity check and exact user count in one UPDATE prevents a stale
- * count-then-write sequence from granting privileges in a multi-user database.
+ * the membership check and update in one statement prevents a stale
+ * check-then-write sequence. Other users and read-only members may coexist;
+ * more than one privileged default-org member fails closed.
  */
-export function buildPromoteSoleUserToAdminQuery(userId: string) {
+export function buildPromoteUniqueDefaultOrgAdminQuery(userId: string) {
+	const isOwnerOrAdmin = buildOwnerOrAdminMemberRolePredicate();
+
 	return sql`
-		with eligible as materialized (
+		with privileged_default_org_members as materialized (
+			select ${member.userId} as user_id
+			from ${member}
+			where ${member.organizationId} = 'default'
+				and ${isOwnerOrAdmin}
+		),
+		eligible as materialized (
 			select ${user.id}
 			from ${user}
+			inner join privileged_default_org_members
+				on privileged_default_org_members.user_id = ${user.id}
 			where ${user.id} = ${userId}
-				and (select count(*) from ${user}) = 1
+				and (select count(*) from privileged_default_org_members) = 1
 		), promoted as (
 			update ${user}
 			set ${sql.identifier(user.role.name)} = 'admin', ${sql.identifier(user.updatedAt.name)} = now()
-			where ${user.id} = ${userId}
-				and exists(select 1 from eligible)
+			where ${user.id} in (select id from eligible)
 				and ${user.role} is distinct from 'admin'
 			returning ${user.id}
 		)
@@ -56,8 +90,8 @@ export function buildPromoteSoleUserToAdminQuery(userId: string) {
 	`;
 }
 
-export async function promoteSoleUserToAdmin(userId: string): Promise<boolean> {
-	const result = await db.execute<{ eligible: boolean }>(buildPromoteSoleUserToAdminQuery(userId));
+export async function promoteUniqueDefaultOrgAdmin(userId: string): Promise<boolean> {
+	const result = await db.execute<{ eligible: boolean }>(buildPromoteUniqueDefaultOrgAdminQuery(userId));
 
 	return result.rows[0]?.eligible === true;
 }
