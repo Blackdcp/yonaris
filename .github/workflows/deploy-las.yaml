@@ -5,6 +5,9 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/deploy-las.yaml
+      - .github/workflows/e2e.yaml
+      - .github/workflows/mode-compat.yaml
       - apps/web/**
       - apps/worker/**
       - packages/**
@@ -12,7 +15,7 @@ on:
       - docker/entrypoint.sh
       - deploy/las/compose.yaml
       - deploy/las/env.example
-      - deploy/las/bin/deploy.sh
+      - deploy/las/bin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
