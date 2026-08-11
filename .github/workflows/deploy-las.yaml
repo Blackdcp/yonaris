@@ -35,6 +35,33 @@ env:
   IMAGE_NAMESPACE: blackdcp
 
 jobs:
+  report_operation_plan:
+    name: Plan approved report operations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_requests: ${{ steps.plan.outputs.has_requests }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Detect checked-in report requests
+        id: plan
+        shell: bash
+        run: |
+          shopt -s nullglob
+          requests=(apps/worker/src/report-requests/*.json)
+          if (( ${#requests[@]} > 1 )); then
+            echo "Only one approved report request is allowed per release." >&2
+            exit 1
+          elif (( ${#requests[@]} == 1 )); then
+            echo "has_requests=true" >> "$GITHUB_OUTPUT"
+            echo "Approved report request count: 1"
+          else
+            echo "has_requests=false" >> "$GITHUB_OUTPUT"
+          fi
+
   e2e-gate:
     name: E2E gate
     permissions:
@@ -128,3 +155,40 @@ jobs:
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; git fetch --depth=50 origin main; git checkout --detach $RELEASE_SHA; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/deploy.sh sha-$RELEASE_SHA'"
+
+  report-operations:
+    name: Run approved production report operations
+    needs:
+      - deploy
+      - report_operation_plan
+    if: needs.deploy.result == 'success' && needs.report_operation_plan.outputs.has_requests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://portal.yonaris.com/reports
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Execute idempotent database report requests
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-report-requests.sh sha-$RELEASE_SHA'"

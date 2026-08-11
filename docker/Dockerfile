@@ -112,7 +112,9 @@ COPY --from=builder --chown=worker:nodejs /deploy/worker ./
 # Keep their checked-in TS entrypoint and the already-installed tsx runtime in
 # the immutable worker image so deployment repairs never need network writes.
 RUN test -r ./node_modules/tsx/dist/cli.mjs \
-  && test -r ./src/repair-local-admin.ts
+  && test -r ./src/repair-local-admin.ts \
+  && test -r ./src/run-database-report.ts \
+  && test -r ./src/report-requests/mentensor-real-20260811.json
 
 USER worker
 

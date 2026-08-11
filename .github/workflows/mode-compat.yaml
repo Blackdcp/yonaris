@@ -70,6 +70,9 @@ jobs:
       - name: Test LAS bootstrap owner deployment gate
         run: bash deploy/las/bin/deploy-bootstrap-owner.test.sh
 
+      - name: Test idempotent LAS report operations
+        run: bash deploy/las/bin/run-report-requests.test.sh
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 

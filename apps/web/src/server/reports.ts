@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireAuthSession, hasReportAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
 import { reports, type NewReport } from "@workspace/lib/db/schema";
+import { parseGeneratedReportOutput } from "@workspace/lib/report-output";
 import { desc, eq } from "drizzle-orm";
 import { sendReportJob } from "@/lib/job-scheduler";
 
@@ -46,7 +47,10 @@ export const getReportByIdFn = createServerFn({ method: "GET" })
 		const result = await db.select().from(reports).where(eq(reports.id, data.reportId)).limit(1);
 		if (result.length === 0) throw new Error("Report not found");
 		const report = result[0];
-		return { ...report, rawOutput: report.rawOutput as {} | null };
+		return {
+			...report,
+			rawOutput: report.rawOutput === null ? null : parseGeneratedReportOutput(report.rawOutput),
+		};
 	});
 
 /**

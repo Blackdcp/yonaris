@@ -1,12 +1,12 @@
 import { getRunsPerPrompt } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
-import { type Brand, brands, reports } from "@workspace/lib/db/schema";
+import { reports } from "@workspace/lib/db/schema";
 import { analyzeBrand } from "@workspace/lib/onboarding";
 import { getProvider, type ModelConfig, parseScrapeTargets } from "@workspace/lib/providers";
 import { computeSystemTags, isPromptBranded } from "@workspace/lib/tag-utils";
 import { eq } from "drizzle-orm";
 
-interface CompetitorResult {
+export interface CompetitorResult {
 	name: string;
 	domain: string;
 }
@@ -22,8 +22,6 @@ interface PromptData {
 // Report constants
 const TARGET_PROMPTS_COUNT = 70;
 const CANDIDATE_PROMPTS_COUNT = Math.ceil(TARGET_PROMPTS_COUNT * 1.2);
-const MIN_BRAND_MENTIONS = 14;
-const MAX_BRAND_MENTIONS = 28;
 
 // Whitelabel deployments preserve the legacy asymmetric per-candidate sample
 // counts used before SCRAPE_TARGETS drove dispatch. Any model outside this map
@@ -55,6 +53,12 @@ export interface ReportJobData {
 	brandName: string;
 	brandWebsite: string;
 	manualPrompts?: string[];
+	/** Frozen database snapshot for controlled runs. Presence (including []) skips analyzeBrand entirely. */
+	competitorSnapshot?: CompetitorResult[];
+	/** Internal account-ops override used by reviewed, budget-capped report manifests. */
+	runsPerTargetOverride?: number;
+	/** Fail the report before completion unless the final payload contains exactly this many runs. */
+	expectedRunCount?: number;
 }
 
 export interface ReportJobContext {
@@ -220,6 +224,7 @@ async function runPrompt(
 	competitors: CompetitorResult[],
 	scrapeConfigs: ModelConfig[],
 	job: ReportJobContext,
+	runsPerTargetOverride?: number,
 ): Promise<PromptRunResult> {
 	const runOne = async (config: ModelConfig) => {
 		const providerImpl = getProvider(config.provider);
@@ -246,7 +251,7 @@ async function runPrompt(
 	};
 
 	const runPromises = scrapeConfigs.flatMap((config) => {
-		const count = getReportRunsForModel(config.model);
+		const count = runsPerTargetOverride ?? getReportRunsForModel(config.model);
 		return Array.from({ length: count }, () => runOne(config));
 	});
 
@@ -262,7 +267,15 @@ async function runPrompt(
 
 // Main report worker function
 export async function processReportJob(job: ReportJobContext) {
-	const { reportId, brandName, brandWebsite, manualPrompts } = job.data;
+	const {
+		reportId,
+		brandName,
+		brandWebsite,
+		manualPrompts,
+		competitorSnapshot,
+		runsPerTargetOverride,
+		expectedRunCount,
+	} = job.data;
 
 	job.log(`Processing report ID: ${reportId} for brand: ${brandName}`);
 
@@ -272,6 +285,9 @@ export async function processReportJob(job: ReportJobContext) {
 	const useManualPrompts = manualPrompts && manualPrompts.length > 0;
 	if (useManualPrompts) {
 		job.log(`Using ${manualPrompts.length} manual prompts - skipping auto-generation`);
+	}
+	if (competitorSnapshot !== undefined && !useManualPrompts) {
+		throw new Error("A competitor snapshot requires at least one manual prompt");
 	}
 
 	try {
@@ -285,18 +301,26 @@ export async function processReportJob(job: ReportJobContext) {
 		// LLM call (same `analyzeBrand` the onboarding flow uses; provider-
 		// agnostic with native web search wired in). Manual-prompt path skips
 		// the prompt generation but still needs competitors.
-		job.log(`Analyzing brand: ${brandWebsite}`);
-		const suggestion = await analyzeBrand({
-			website: brandWebsite,
-			brandName,
-			maxPrompts: useManualPrompts ? 0 : CANDIDATE_PROMPTS_COUNT,
-		});
-		// The report renderer's CompetitorResult expects a single primary domain;
-		// analyzeBrand returns the full list now. Take the first as the canonical
-		// one for the report's UI (which doesn't display the rest anyway).
-		const competitors: CompetitorResult[] = suggestion.competitors
-			.filter((c) => c.domains.length > 0)
-			.map((c) => ({ name: c.name, domain: c.domains[0] }));
+		let suggestedPrompts: Array<{ prompt: string }> = [];
+		let competitors: CompetitorResult[];
+		if (competitorSnapshot !== undefined) {
+			competitors = competitorSnapshot.map((competitor) => ({ ...competitor }));
+			job.log(`Using frozen competitor snapshot (${competitors.length} competitors) - skipping brand analysis`);
+		} else {
+			job.log(`Analyzing brand: ${brandWebsite}`);
+			const suggestion = await analyzeBrand({
+				website: brandWebsite,
+				brandName,
+				maxPrompts: useManualPrompts ? 0 : CANDIDATE_PROMPTS_COUNT,
+			});
+			// The report renderer's CompetitorResult expects a single primary domain;
+			// analyzeBrand returns the full list now. Take the first as the canonical
+			// one for the report's UI (which doesn't display the rest anyway).
+			competitors = suggestion.competitors
+				.filter((c) => c.domains.length > 0)
+				.map((c) => ({ name: c.name, domain: c.domains[0] }));
+			suggestedPrompts = suggestion.suggestedPrompts;
+		}
 		job.updateProgress(35);
 
 		// Step 2: Build candidate prompt list — manual override or analyzeBrand output
@@ -305,7 +329,7 @@ export async function processReportJob(job: ReportJobContext) {
 					prompt: prompt.toLowerCase().trim(),
 					brandedPrompt: isPromptBranded(prompt, brandName, brandWebsite),
 				}))
-			: suggestion.suggestedPrompts.map((p) => ({
+			: suggestedPrompts.map((p) => ({
 					prompt: p.prompt,
 					brandedPrompt: isPromptBranded(p.prompt, brandName, brandWebsite),
 				}));
@@ -346,7 +370,15 @@ export async function processReportJob(job: ReportJobContext) {
 			const batch = candidatePrompts.slice(i, i + batchSize);
 			const batchPromises = batch.map(async (candidate) => {
 				try {
-					const result = await runPrompt(candidate.prompt, brandName, brandWebsite, competitors, scrapeConfigs, job);
+					const result = await runPrompt(
+						candidate.prompt,
+						brandName,
+						brandWebsite,
+						competitors,
+						scrapeConfigs,
+						job,
+						runsPerTargetOverride,
+					);
 					completedCandidates++;
 					const progress = 40 + (completedCandidates / totalCandidates) * 30; // 40-70% for testing
 					job.updateProgress(progress);
@@ -425,8 +457,12 @@ export async function processReportJob(job: ReportJobContext) {
 			prompts,
 			promptRuns,
 		};
+		const actualRunCount = promptRuns.reduce((total, promptRun) => total + promptRun.runs.length, 0);
+		if (expectedRunCount !== undefined && actualRunCount !== expectedRunCount) {
+			throw new Error(`Expected ${expectedRunCount} final report runs, received ${actualRunCount}`);
+		}
 
-		job.log(`Finalizing report with ${promptRuns.length} prompt run results`);
+		job.log(`Finalizing report with ${promptRuns.length} prompts and ${actualRunCount} model runs`);
 
 		// Update report status to completed
 		await db
@@ -435,7 +471,7 @@ export async function processReportJob(job: ReportJobContext) {
 				status: "completed",
 				completedAt: new Date(),
 				updatedAt: new Date(),
-				rawOutput: JSON.stringify(reportData),
+				rawOutput: reportData,
 			})
 			.where(eq(reports.id, reportId));
 

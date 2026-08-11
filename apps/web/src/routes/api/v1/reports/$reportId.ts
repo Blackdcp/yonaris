@@ -9,9 +9,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { db } from "@workspace/lib/db/db";
 import { reports } from "@workspace/lib/db/schema";
+import { computeReportUnstableStats } from "@workspace/lib/report-metrics";
+import { parseGeneratedReportOutput } from "@workspace/lib/report-output";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { computeReportUnstableStats } from "@workspace/lib/report-metrics";
 import { ApiError, createApiHandler } from "@/lib/api/handler";
 
 export const Route = createFileRoute("/api/v1/reports/$reportId")({
@@ -49,18 +50,7 @@ export const Route = createFileRoute("/api/v1/reports/$reportId")({
 					const kMentions = Number.isNaN(kMentionsParam) ? 5 : Math.max(1, Math.min(50, kMentionsParam));
 
 					// Parse raw output
-					const rawOutput = report.rawOutput as {
-						competitors: Array<{ name: string; domain: string }>;
-						prompts: Array<{ value: string }>;
-						promptRuns: Array<{
-							promptValue: string;
-							runs: Array<{
-								model: string;
-								brandMentioned: boolean;
-								competitorsMentioned: string[];
-							}>;
-						}>;
-					};
+					const rawOutput = parseGeneratedReportOutput(report.rawOutput);
 
 					// Build per-prompt snapshot data
 					const allPromptSnapshots = rawOutput.promptRuns.map((pr) => {

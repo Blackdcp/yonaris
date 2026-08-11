@@ -1,8 +1,8 @@
-import type { Job } from "pg-boss";
-import { processReportJob, type ReportJobData } from "../report-worker";
 import { db } from "@workspace/lib/db/db";
 import { reports } from "@workspace/lib/db/schema";
 import { eq } from "drizzle-orm";
+import type { Job } from "pg-boss";
+import { processReportJob, type ReportJobData } from "../report-worker";
 
 export interface GenerateReportData extends ReportJobData {}
 
@@ -13,7 +13,15 @@ export interface GenerateReportData extends ReportJobData {}
 export async function generateReportJob(jobs: Job<GenerateReportData>[]): Promise<void> {
 	// pg-boss v12 passes an array of jobs - process each one
 	for (const job of jobs) {
-		const { reportId, brandName, brandWebsite, manualPrompts } = job.data;
+		const {
+			reportId,
+			brandName,
+			brandWebsite,
+			manualPrompts,
+			competitorSnapshot,
+			runsPerTargetOverride,
+			expectedRunCount,
+		} = job.data;
 
 		console.log(`Generating report ${reportId} for ${brandName}`);
 
@@ -36,6 +44,9 @@ export async function generateReportJob(jobs: Job<GenerateReportData>[]): Promis
 				brandName,
 				brandWebsite,
 				manualPrompts,
+				competitorSnapshot,
+				runsPerTargetOverride,
+				expectedRunCount,
 			},
 			log,
 			updateProgress,

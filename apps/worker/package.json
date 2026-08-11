@@ -8,7 +8,8 @@
 		"start": "tsx src/index.ts",
 		"provision:client-viewer": "tsx src/provision-client-viewer.ts",
 		"repair:local-admin": "tsx src/repair-local-admin.ts",
-		"test": "tsx --test src/local-admin-repair.test.ts",
+		"run:database-report": "tsx src/run-database-report.ts",
+		"test": "tsx --test src/local-admin-repair.test.ts src/database-report-request.test.ts",
 		"build": "tsc -p tsconfig.json",
 		"check-types": "tsc --noEmit"
 	},
