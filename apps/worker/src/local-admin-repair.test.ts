@@ -60,6 +60,7 @@ describe("local admin repair ambiguity guards", () => {
 				selectUniqueBootstrapOwner([
 					{
 						membershipId: "member-1",
+						organizationId: "org-1",
 						userId: "user-1",
 						memberRole: "owner",
 						userRole: "user",
@@ -67,6 +68,7 @@ describe("local admin repair ambiguity guards", () => {
 					},
 					{
 						membershipId: "member-2",
+						organizationId: "org-2",
 						userId: "user-2",
 						memberRole: "admin",
 						userRole: "user",
@@ -74,6 +76,70 @@ describe("local admin repair ambiguity guards", () => {
 					},
 				]),
 			(error: unknown) => error instanceof LocalAdminRepairError && error.code === "bootstrap_owner_ambiguous",
+		);
+	});
+
+	it("does not treat viewer or lookalike roles as bootstrap ownership", () => {
+		assert.throws(
+			() =>
+				selectUniqueBootstrapOwner([
+					{
+						membershipId: "viewer-1",
+						organizationId: "org-1",
+						userId: "user-1",
+						memberRole: "viewer",
+						userRole: "user",
+						hasReportGeneratorAccess: false,
+					},
+					{
+						membershipId: "lookalike-1",
+						organizationId: "org-2",
+						userId: "user-2",
+						memberRole: "superadmin",
+						userRole: "user",
+						hasReportGeneratorAccess: false,
+					},
+				]),
+			(error: unknown) => error instanceof LocalAdminRepairError && error.code === "bootstrap_owner_not_found",
+		);
+	});
+
+	it("allows one bootstrap owner to administer multiple non-default organizations", () => {
+		assert.deepEqual(
+			selectUniqueBootstrapOwner([
+				{
+					membershipId: "member-z",
+					organizationId: "yonaris-brand-z",
+					userId: "user-1",
+					memberRole: "admin",
+					userRole: "user",
+					hasReportGeneratorAccess: false,
+				},
+				{
+					membershipId: "member-a",
+					organizationId: "yonaris-brand-a",
+					userId: "user-1",
+					memberRole: "owner",
+					userRole: "user",
+					hasReportGeneratorAccess: false,
+				},
+				{
+					membershipId: "viewer-1",
+					organizationId: "client-read-only",
+					userId: "user-2",
+					memberRole: "viewer",
+					userRole: "user",
+					hasReportGeneratorAccess: false,
+				},
+			]),
+			{
+				membershipId: "member-a",
+				organizationId: "yonaris-brand-a",
+				userId: "user-1",
+				memberRole: "owner",
+				userRole: "user",
+				hasReportGeneratorAccess: false,
+			},
 		);
 	});
 

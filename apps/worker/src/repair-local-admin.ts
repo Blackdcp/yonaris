@@ -2,9 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { hashPassword } from "@workspace/lib/auth/password";
 import { db } from "@workspace/lib/db/db";
 import { account, brands, member, organization, session, user } from "@workspace/lib/db/schema";
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, or, sql } from "drizzle-orm";
 import {
-	BOOTSTRAP_ORGANIZATION_ID,
 	LocalAdminRepairError,
 	parseLocalAdminRepairOptions,
 	planAdminMembership,
@@ -12,6 +11,8 @@ import {
 	selectUniqueBootstrapOwner,
 	validateStdinPassword,
 } from "./local-admin-repair";
+
+const BOOTSTRAP_ORGANIZATION_ID = "default";
 
 async function readPasswordFromStdin(): Promise<string> {
 	if (process.stdin.isTTY) {
@@ -87,16 +88,17 @@ async function main() {
 				.where(eq(organization.id, BOOTSTRAP_ORGANIZATION_ID))
 				.limit(2)
 				.for("update");
-			if (defaultOrganizations.length !== 1) {
+			if (defaultOrganizations.length > 1) {
 				throw new LocalAdminRepairError(
-					"bootstrap_organization_not_found",
-					"The default organization does not exist unambiguously",
+					"bootstrap_organization_ambiguous",
+					"The canonical bootstrap organization is duplicated",
 				);
 			}
 
-			const candidates = await tx
+			const baseCandidateQuery = tx
 				.select({
 					membershipId: member.id,
+					organizationId: organization.id,
 					userId: user.id,
 					memberRole: member.role,
 					userRole: user.role,
@@ -104,17 +106,25 @@ async function main() {
 				})
 				.from(member)
 				.innerJoin(user, eq(user.id, member.userId))
-				.where(eq(member.organizationId, BOOTSTRAP_ORGANIZATION_ID))
-				.for("update");
+				.innerJoin(organization, eq(organization.id, member.organizationId));
+			const candidates =
+				defaultOrganizations.length === 1
+					? await baseCandidateQuery
+							.where(eq(organization.id, BOOTSTRAP_ORGANIZATION_ID))
+							.orderBy(asc(organization.id), asc(member.id))
+							.for("update")
+					: await baseCandidateQuery.orderBy(asc(organization.id), asc(member.id)).for("update");
 			const selected = selectUniqueBootstrapOwner(candidates);
 			target = {
 				userId: selected.userId,
 				userRole: selected.userRole,
 				hasReportGeneratorAccess: selected.hasReportGeneratorAccess,
-				organizationId: BOOTSTRAP_ORGANIZATION_ID,
+				organizationId: selected.organizationId,
 				brandId: null,
 				memberships: candidates
-					.filter((candidate) => candidate.userId === selected.userId)
+					.filter(
+						(candidate) => candidate.userId === selected.userId && candidate.organizationId === selected.organizationId,
+					)
 					.map((candidate) => ({ id: candidate.membershipId, role: candidate.memberRole })),
 			};
 		} else {
@@ -170,6 +180,12 @@ async function main() {
 		}
 
 		const membershipPlan = planAdminMembership(target.memberships);
+		if (options.selector.type === "bootstrap-owner" && membershipPlan.action !== "none") {
+			throw new LocalAdminRepairError(
+				"bootstrap_membership_not_privileged",
+				"Bootstrap repair never creates or promotes an organization membership",
+			);
+		}
 		const userNeedsRepair = target.userRole !== "admin" || target.hasReportGeneratorAccess !== true;
 		let credentialPlan: ReturnType<typeof planCredentialReset> | null = null;
 		if (options.resetPassword) {

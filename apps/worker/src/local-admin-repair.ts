@@ -1,5 +1,3 @@
-export const BOOTSTRAP_ORGANIZATION_ID = "default";
-
 export class LocalAdminRepairError extends Error {
 	constructor(
 		readonly code: string,
@@ -105,6 +103,7 @@ export function parseLocalAdminRepairOptions(argv: string[]): LocalAdminRepairOp
 
 export type BootstrapOwnerCandidate = {
 	membershipId: string;
+	organizationId: string;
 	userId: string;
 	memberRole: string;
 	userRole: string | null;
@@ -125,18 +124,24 @@ export function selectUniqueBootstrapOwner(candidates: BootstrapOwnerCandidate[]
 	);
 	const selected = privilegedCandidates[0];
 	if (!selected) {
-		throw new LocalAdminRepairError("bootstrap_owner_not_found", "The default organization has no owner/admin member");
+		throw new LocalAdminRepairError("bootstrap_owner_not_found", "No organization has an owner/admin member");
 	}
 
 	const uniqueUserIds = new Set(privilegedCandidates.map((candidate) => candidate.userId));
-	if (uniqueUserIds.size !== 1 || privilegedCandidates.length !== 1) {
+	if (uniqueUserIds.size !== 1) {
 		throw new LocalAdminRepairError(
 			"bootstrap_owner_ambiguous",
-			"The default organization does not have exactly one unambiguous owner/admin member",
+			"The deployment has more than one distinct organization owner/admin",
 		);
 	}
 
-	return selected;
+	return [...privilegedCandidates].sort((left, right) => {
+		if (left.organizationId !== right.organizationId) {
+			return left.organizationId < right.organizationId ? -1 : 1;
+		}
+		if (left.membershipId === right.membershipId) return 0;
+		return left.membershipId < right.membershipId ? -1 : 1;
+	})[0] as BootstrapOwnerCandidate;
 }
 
 export type MembershipRow = { id: string; role: string };
