@@ -26,3 +26,9 @@ needed for later cleanup.
 For a local checkout-only test, replace `--image ...` with `--local-pnpm`.
 Mutable image tags and backups without checksums require separate explicit
 override flags and should not be used for a release decision.
+
+`deploy.sh` runs this full rehearsal automatically for every release. It uses
+the exact dump path printed by `backup.sh` and the immutable `db-migrate` image
+for that release. Production migration and runtime rollout remain blocked until
+the rehearsal succeeds. The standalone command above remains useful for an
+operator-initiated rehearsal before starting a deployment.

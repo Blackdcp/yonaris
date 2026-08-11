@@ -14,7 +14,7 @@ BACKUP_DIR="${BACKUP_DIR:-$DEPLOY_ROOT/backups}"
 
 usage() {
 	cat <<'EOF'
-Usage: check-sampling-storage.sh [--help]
+Usage: check-sampling-storage.sh [--allow-missing-evidence-schema] [--help]
 
 Run a read-only storage preflight for Sampling evidence on the LAS host. The
 script uses the same DEPLOY_ROOT, ENV_FILE, COMPOSE_FILE, BACKUP_DIR, and
@@ -40,6 +40,13 @@ Threshold environment variables (unsigned decimal integers):
   SAMPLING_STORAGE_MAX_7D_GROWTH_BYTES          default: 0 (disabled)
   SAMPLING_STORAGE_MAX_30D_GROWTH_BYTES         default: 0 (disabled)
 
+Options:
+  --allow-missing-evidence-schema  Permit migration 0018 to be absent while
+                                   still enforcing every available storage and
+                                   filesystem threshold. Intended only for the
+                                   pre-migration deployment check.
+  --help                           Show this help.
+
 A breached threshold exits 2. Configuration, Docker, SQL, du, or df failures
 exit 1. No threshold breach exits 0. The script performs only SELECT queries
 and read-only du/df inspection; it never deletes files, starts containers,
@@ -47,13 +54,13 @@ VACUUMs, or changes database data. Credentials are never printed.
 EOF
 }
 
-if [[ $# -gt 1 ]]; then
-	usage >&2
-	exit 1
-fi
-
-if [[ $# -eq 1 ]]; then
+allow_missing_evidence_schema=false
+while [[ $# -gt 0 ]]; do
 	case "$1" in
+		--allow-missing-evidence-schema)
+			allow_missing_evidence_schema=true
+			shift
+			;;
 		-h | --help)
 			usage
 			exit 0
@@ -64,7 +71,7 @@ if [[ $# -eq 1 ]]; then
 			exit 1
 			;;
 	esac
-fi
+done
 
 for required_file in "$COMPOSE_FILE" "$ENV_FILE"; do
 	if [[ ! -f "$required_file" ]]; then
@@ -291,8 +298,12 @@ printf '%s\n' \
 
 warnings=()
 
-if [[ "$evidence_schema" == "no-evidence-schema" ]]; then
+if [[ "$evidence_schema" == "no-evidence-schema" ]] && \
+	[[ "$allow_missing_evidence_schema" != true ]]; then
 	warnings+=("evidence.schema is no-evidence-schema; migration 0018 is not applied")
+elif [[ "$evidence_schema" == "no-evidence-schema" ]]; then
+	printf '%s\n' \
+		'NOTICE: evidence.schema is no-evidence-schema; explicitly allowed for this pre-migration check.' >&2
 fi
 
 warn_over() {

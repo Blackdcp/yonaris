@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
+# Never let an inherited xtrace setting expose values sourced from the env file.
+set +x
 umask 077
 
 if [[ $# -ne 1 ]]; then
@@ -30,6 +32,16 @@ if [[ ! -f "$ENV_FILE" ]]; then
   echo "Missing production environment file: $ENV_FILE" >&2
   exit 1
 fi
+
+for required_script in \
+  "$SCRIPT_DIR/backup.sh" \
+  "$SCRIPT_DIR/check-sampling-storage.sh" \
+  "$SCRIPT_DIR/rehearse-db-upgrade.sh"; do
+  if [[ ! -f "$required_script" || ! -r "$required_script" ]]; then
+    echo "Missing required deployment script: $required_script" >&2
+    exit 1
+  fi
+done
 
 cd -- "$(dirname -- "$COMPOSE_FILE")"
 
@@ -144,12 +156,34 @@ if [[ "$database_ready" != true ]]; then
   exit 1
 fi
 
-echo "Creating a pre-migration backup"
+echo "Running the pre-migration Sampling storage preflight"
 DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
-  bash "$SCRIPT_DIR/backup.sh" >/dev/null
+  bash "$SCRIPT_DIR/check-sampling-storage.sh" --allow-missing-evidence-schema
+
+echo "Creating a pre-migration backup"
+backup_file="$(
+  DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
+    bash "$SCRIPT_DIR/backup.sh"
+)"
+if [[ "$backup_file" != /* ]] || \
+  [[ "$backup_file" == *$'\n'* || "$backup_file" == *$'\r'* ]] || \
+  [[ ! -f "$backup_file" || ! -r "$backup_file" ]]; then
+  echo "Backup script did not return one readable absolute dump path." >&2
+  exit 1
+fi
+
+migration_image="${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-db-migrate:$release_tag"
+echo "Rehearsing the database upgrade with the immutable candidate image"
+bash "$SCRIPT_DIR/rehearse-db-upgrade.sh" \
+  "$backup_file" \
+  --image "$migration_image"
 
 echo "Running database migrations"
 IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps db-migrate
+
+echo "Running the post-migration strict Sampling storage preflight"
+DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
+  bash "$SCRIPT_DIR/check-sampling-storage.sh"
 
 echo "Starting Yonaris runtime services"
 runtime_services=(web)

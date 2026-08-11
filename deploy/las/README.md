@@ -282,9 +282,13 @@ sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
   bash /opt/yonaris/source/deploy/las/bin/deploy.sh sha-<full-40-character-commit>
 ```
 
-An application rollback does not reverse a database migration. Every deploy
-creates a database backup first; schema-destructive releases require a planned
-database restore.
+An application rollback does not reverse a database migration. Before every
+production migration, the deploy script runs a storage preflight, creates a
+checksummed database backup, and restores that exact backup into an isolated
+PostgreSQL instance. The immutable candidate `db-migrate` image must upgrade
+the isolated copy successfully before it can touch production. After the real
+migration, the strict storage preflight must also pass before Web or Worker is
+updated. Schema-destructive releases still require a planned database restore.
 
 This deployment never runs global Docker prune commands because the LAS host is
 shared with other applications.
