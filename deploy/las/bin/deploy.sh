@@ -185,6 +185,15 @@ echo "Running the post-migration strict Sampling storage preflight"
 DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
   bash "$SCRIPT_DIR/check-sampling-storage.sh"
 
+if [[ "${DEPLOYMENT_MODE:-}" == local ]]; then
+  echo "Ensuring the local bootstrap owner has global admin access"
+  if ! IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps -T \
+    account-ops pnpm run repair:local-admin -- --bootstrap-owner --apply; then
+    echo "Bootstrap owner repair failed; keeping the current runtime services unchanged." >&2
+    exit 1
+  fi
+fi
+
 echo "Starting Yonaris runtime services"
 runtime_services=(web)
 if [[ "$WORKER_ENABLED" == true ]]; then

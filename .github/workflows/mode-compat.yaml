@@ -61,6 +61,9 @@ jobs:
       - name: Test LAS Sampling storage preflight
         run: bash deploy/las/bin/check-sampling-storage.test.sh
 
+      - name: Test LAS bootstrap owner deployment gate
+        run: bash deploy/las/bin/deploy-bootstrap-owner.test.sh
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
 
