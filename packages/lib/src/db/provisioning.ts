@@ -37,8 +37,8 @@ export async function countUsers(): Promise<number> {
  * the identity check and exact user count in one UPDATE prevents a stale
  * count-then-write sequence from granting privileges in a multi-user database.
  */
-export async function promoteSoleUserToAdmin(userId: string): Promise<boolean> {
-	const result = await db.execute<{ eligible: boolean }>(sql`
+export function buildPromoteSoleUserToAdminQuery(userId: string) {
+	return sql`
 		with eligible as materialized (
 			select ${user.id}
 			from ${user}
@@ -46,14 +46,18 @@ export async function promoteSoleUserToAdmin(userId: string): Promise<boolean> {
 				and (select count(*) from ${user}) = 1
 		), promoted as (
 			update ${user}
-			set ${user.role} = 'admin', ${user.updatedAt} = now()
+			set ${sql.identifier(user.role.name)} = 'admin', ${sql.identifier(user.updatedAt.name)} = now()
 			where ${user.id} = ${userId}
 				and exists(select 1 from eligible)
 				and ${user.role} is distinct from 'admin'
 			returning ${user.id}
 		)
 		select exists(select 1 from eligible) as eligible
-	`);
+	`;
+}
+
+export async function promoteSoleUserToAdmin(userId: string): Promise<boolean> {
+	const result = await db.execute<{ eligible: boolean }>(buildPromoteSoleUserToAdminQuery(userId));
 
 	return result.rows[0]?.eligible === true;
 }

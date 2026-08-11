@@ -1,5 +1,16 @@
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { slugifyOrgName } from "./provisioning";
+import { buildPromoteSoleUserToAdminQuery, slugifyOrgName } from "./provisioning";
+
+describe("promoteSoleUserToAdmin SQL", () => {
+	it("uses unqualified SET targets accepted by PostgreSQL", () => {
+		const query = new PgDialect().sqlToQuery(buildPromoteSoleUserToAdminQuery("user-1"));
+
+		expect(query.sql).toContain('set "role" = \'admin\', "updated_at" = now()');
+		expect(query.sql).not.toContain('set "user"."role"');
+		expect(query.sql).not.toContain('"user"."updated_at" = now()');
+	});
+});
 
 describe("slugifyOrgName", () => {
 	it("lowercases", () => {
