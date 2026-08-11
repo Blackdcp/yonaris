@@ -7,12 +7,16 @@ let _mockBrand: any = null;
 let _mockBrands: any[] = [];
 let _mockCompetitors: any[] = [];
 
+function normalizeMockBrand(brand: any) {
+	return brand == null ? brand : { ...brand, measurementScopes: brand.measurementScopes ?? [] };
+}
+
 export function setMockBrand(brand: any) {
-	_mockBrand = brand;
+	_mockBrand = normalizeMockBrand(brand);
 }
 
 export function setMockBrands(brands: any[]) {
-	_mockBrands = brands;
+	_mockBrands = brands.map(normalizeMockBrand);
 }
 
 export function setMockCompetitors(competitors: any[]) {

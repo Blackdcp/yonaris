@@ -55,6 +55,12 @@ export function createFileRoute(_path: string) {
 	});
 }
 
+export function getRouteApi(_path: string) {
+	return {
+		useLoaderData: () => ({ canManageBrand: true }),
+	};
+}
+
 export function createRootRouteWithContext<TContext>() {
 	return (_opts: any) => {
 		// Root route component isn't needed in stories; only exports must exist.
