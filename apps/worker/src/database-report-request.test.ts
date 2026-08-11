@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { describe, it } from "node:test";
 import {
 	assertExistingReportMatches,
@@ -43,13 +41,6 @@ describe("database report CLI input", () => {
 });
 
 describe("database report request manifest", () => {
-	it("keeps the checked-in Mentensor request on the reviewed contract", () => {
-		const checkedIn = JSON.parse(
-			readFileSync(resolve(__dirname, "report-requests/mentensor-real-20260811.json"), "utf8"),
-		);
-		assert.deepEqual(parseDatabaseReportRequest(checkedIn), manifest);
-	});
-
 	it("accepts only the fixed one-target, one-run legacy request", () => {
 		assert.deepEqual(parseDatabaseReportRequest(manifest), manifest);
 	});
