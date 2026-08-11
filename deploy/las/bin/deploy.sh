@@ -188,7 +188,7 @@ DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
 if [[ "${DEPLOYMENT_MODE:-}" == local ]]; then
   echo "Ensuring the local bootstrap owner has global admin access"
   if ! IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps -T \
-    account-ops pnpm run repair:local-admin -- --bootstrap-owner --apply; then
+    account-ops pnpm run repair:local-admin --bootstrap-owner --apply; then
     echo "Bootstrap owner repair failed; keeping the current runtime services unchanged." >&2
     exit 1
   fi
