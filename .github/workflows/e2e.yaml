@@ -159,6 +159,8 @@ jobs:
       # it deliberately does not contact or impersonate a consumer AI site.
       - name: Run sampling delivery test
         run: pnpm -C e2e exec playwright test --project=sampling --reporter=list,github
+        env:
+          E2E_SKIP_AUTH_SETUP: "true"
 
       # Phase 2 — bring the worker up and prove it processes a submitted job.
       # No readiness wait: the job the spec submits is durable in pg-boss, so
@@ -170,6 +172,8 @@ jobs:
       # 1's playwright-report/ untouched for the upload below.
       - name: Run worker job-processing test
         run: pnpm -C e2e exec playwright test --project=worker --reporter=list,github
+        env:
+          E2E_SKIP_AUTH_SETUP: "true"
 
       - name: Dump worker logs
         if: failure()

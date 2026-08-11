@@ -20,7 +20,10 @@ export default defineConfig({
   },
   maxFailures: process.env.CI ? 10 : 5,
 
-  globalSetup: "./auth-setup.ts",
+  // CI invokes Playwright in three phases inside the same job. The first
+  // phase creates the authenticated storage state; later phases explicitly
+  // reuse it so they do not repeatedly hit Better Auth's sign-in rate limit.
+  globalSetup: process.env.E2E_SKIP_AUTH_SETUP === "true" ? undefined : "./auth-setup.ts",
 
   use: {
     baseURL: BASE_URL,
