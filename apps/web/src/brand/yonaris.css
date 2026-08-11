@@ -530,7 +530,7 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 
 [data-brand="yonaris"] [data-slot="full-page-brand"] {
 	display: grid;
-	grid-template-rows: auto 1fr auto;
+	grid-template-rows: auto 1fr;
 	align-items: stretch;
 	min-height: 100svh;
 	padding: clamp(1.75rem, 4vw, 3.5rem);
@@ -556,17 +556,8 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 	padding-block: 3rem;
 }
 
-[data-brand="yonaris"] [data-slot="full-page-brand-eyebrow"] {
-	margin-bottom: 1.25rem;
-	color: rgb(246 244 241 / 50%);
-	font-size: 0.66rem;
-	font-weight: 600;
-	letter-spacing: 0.16em;
-	text-transform: uppercase;
-}
-
 [data-brand="yonaris"] [data-slot="full-page-brand-title"] {
-	max-width: 11em;
+	max-width: 9em;
 	color: var(--yonaris-paper);
 	font-size: clamp(2rem, 3vw, 3.35rem);
 	font-weight: 520;
@@ -574,20 +565,12 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 	line-height: 1.08;
 }
 
-[data-brand="yonaris"] [data-slot="full-page-brand-description"] {
-	max-width: 31rem;
-	margin-top: 1.5rem;
-	color: rgb(246 244 241 / 68%);
-	font-size: clamp(0.88rem, 1.05vw, 1rem);
-	line-height: 1.75;
-}
-
 [data-brand="yonaris"] [data-slot="full-page-brand-capabilities"] {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 	gap: 0.65rem 1rem;
 	max-width: 27rem;
-	margin-top: 2rem;
+	margin-top: 1.75rem;
 	padding-top: 1.25rem;
 	border-top: 1px solid rgb(246 244 241 / 12%);
 }
@@ -609,20 +592,6 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 	height: 3px;
 	background: var(--yonaris-signal);
 	content: "";
-}
-
-[data-brand="yonaris"] [data-slot="full-page-brand-footer"] {
-	position: relative;
-	z-index: 1;
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-[data-brand="yonaris"] [data-slot="full-page-brand-footer"] > span {
-	width: 1.5rem;
-	height: 1px;
-	background: var(--yonaris-signal);
 }
 
 [data-brand="yonaris"] [data-slot="full-page-brand"] .yonaris-brand-paths {
@@ -669,15 +638,6 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 
 [data-brand="yonaris"] [data-yonaris-slot="full-page-card"] [data-slot="card-header"] {
 	text-align: left;
-}
-
-[data-brand="yonaris"] [data-yonaris-slot="brand-switcher"] [data-slot="button"] {
-	border-color: rgb(11 18 32 / 12%);
-	box-shadow: 0 1px 0 rgb(255 255 255 / 72%);
-}
-
-[data-brand="yonaris"] [data-yonaris-slot="brand-switcher"] [data-slot="button"]:hover {
-	box-shadow: inset 2px 0 0 var(--yonaris-signal);
 }
 
 [data-brand="yonaris"] [data-slot="full-page-back"] [data-slot="button"] {

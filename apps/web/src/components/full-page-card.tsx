@@ -1,6 +1,4 @@
-import { Link, useRouteContext } from "@tanstack/react-router";
-import { DEFAULT_APP_NAME } from "@workspace/config/constants";
-import type { ClientConfig } from "@workspace/config/types";
+import { Link } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
@@ -29,9 +27,6 @@ export default function FullPageCard({
 	customBackButton,
 	className = "w-md",
 }: FullPageCardProps) {
-	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
-	const brandName = context.clientConfig?.branding?.name || DEFAULT_APP_NAME;
-	const isYonaris = brandName === DEFAULT_APP_NAME;
 	const capabilities = ["Product Truth", "Market Intent", "Model Intelligence", "Commercial Feedback"];
 
 	return (
@@ -45,24 +40,12 @@ export default function FullPageCard({
 					<Logo surface="dark" />
 				</div>
 				<div data-slot="full-page-brand-copy">
-					<p data-slot="full-page-brand-eyebrow">
-						{isYonaris ? "Market intelligence system" : "Intelligence workspace"}
-					</p>
-					<h2 data-slot="full-page-brand-title">{isYonaris ? "看清市场如何理解你" : `Welcome to ${brandName}`}</h2>
-					<p data-slot="full-page-brand-description">
-						{isYonaris
-							? "Yonaris 是面向新一代营销决策的市场情报系统。我们连接产品事实、市场意图、模型认知与商业反馈，让团队基于同一份外部事实行动。"
-							: "Bring brand signals, market understanding, and team action into one intelligence workspace."}
-					</p>
+					<h2 data-slot="full-page-brand-title">See yourself as the market does</h2>
 					<div data-slot="full-page-brand-capabilities">
 						{capabilities.map((capability) => (
 							<span key={capability}>{capability}</span>
 						))}
 					</div>
-				</div>
-				<div data-slot="full-page-brand-footer">
-					<span aria-hidden="true" />
-					<p className="yonaris-brand-statement">Finite truths. Recursive growth.</p>
 				</div>
 			</aside>
 
