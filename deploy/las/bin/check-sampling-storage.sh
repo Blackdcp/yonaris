@@ -21,6 +21,11 @@ script uses the same DEPLOY_ROOT, ENV_FILE, COMPOSE_FILE, BACKUP_DIR, and
 Docker Compose project contract as the backup/deploy scripts. PostgreSQL must
 already be running; this script never starts a service.
 
+If the host user cannot traverse the backup directory, the script retries the
+backup size inspection in a networkless temporary container based on the
+already-running PostgreSQL container's local image. The backup directory is
+mounted read-only and its permissions are not changed.
+
 The report includes:
   - total PostgreSQL database and evidence table storage
   - staged, attached, and total evidence logical bytes/counts
@@ -85,7 +90,7 @@ if [[ ! -d "$DEPLOY_ROOT" ]]; then
 	exit 1
 fi
 
-for required_command in docker du df awk; do
+for required_command in docker du df awk readlink; do
 	if ! command -v "$required_command" >/dev/null 2>&1; then
 		echo "Missing required command: $required_command" >&2
 		exit 1
@@ -101,6 +106,23 @@ if [[ -z "${POSTGRES_USER:-}" || -z "${POSTGRES_DB:-}" ]]; then
 	echo "POSTGRES_USER and POSTGRES_DB must be set in the environment file" >&2
 	exit 1
 fi
+
+validate_backup_dir() {
+	local path="$1"
+	if [[ "$path" != /* || "$path" == "/" || "$path" == *$'\r'* ||
+		"$path" == *$'\n'* || "$path" == *,* ]]; then
+		echo "BACKUP_DIR must be a non-root absolute path without CR, LF, or commas." >&2
+		exit 1
+	fi
+}
+
+validate_backup_dir "$BACKUP_DIR"
+if ! resolved_backup_dir="$(readlink -f -- "$BACKUP_DIR")"; then
+	echo "BACKUP_DIR could not be resolved safely: $BACKUP_DIR" >&2
+	exit 1
+fi
+validate_backup_dir "$resolved_backup_dir"
+BACKUP_DIR="$resolved_backup_dir"
 
 min_free_percent="${SAMPLING_STORAGE_MIN_FREE_PERCENT:-20}"
 min_postgres_free_percent="${SAMPLING_STORAGE_MIN_POSTGRES_FREE_PERCENT:-$min_free_percent}"
@@ -143,6 +165,71 @@ validate_uint SAMPLING_STORAGE_MAX_30D_GROWTH_BYTES "$max_30d_growth_bytes"
 
 cd -- "$(dirname -- "$COMPOSE_FILE")"
 compose=(docker compose --project-name yonaris --env-file "$ENV_FILE" --file "$COMPOSE_FILE")
+
+parse_du_kib() {
+	local output="$1"
+	local expected_path="$2"
+	if [[ "$output" == *$'\r'* || "$output" == *$'\n'* ]] ||
+		[[ ! "$output" =~ ^(0|[1-9][0-9]{0,17})[[:blank:]]+(.+)$ ]] ||
+		[[ "${BASH_REMATCH[2]:-}" != "$expected_path" ]]; then
+		return 1
+	fi
+	printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+measure_backup_kib() {
+	local backup_du_output
+	local backup_kib
+	if backup_du_output="$(du -sk -- "$BACKUP_DIR" 2>/dev/null)" &&
+		backup_kib="$(parse_du_kib "$backup_du_output" "$BACKUP_DIR")"; then
+		printf '%s\n' "$backup_kib"
+		return
+	fi
+
+	echo "Host du could not read the complete backup tree; retrying with the running PostgreSQL image." >&2
+
+	local postgres_container_id
+	if ! postgres_container_id="$("${compose[@]}" ps -q postgres)" ||
+		[[ ! "$postgres_container_id" =~ ^[0-9a-f]{12,64}$ ]]; then
+		echo "Cannot identify the running PostgreSQL container for backup size inspection." >&2
+		return 1
+	fi
+
+	local postgres_image
+	if ! postgres_image="$(
+		docker inspect \
+			--format '{{if .State.Running}}{{.Image}}{{end}}' \
+			"$postgres_container_id"
+	)" || [[ ! "$postgres_image" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+		echo "Cannot identify the running PostgreSQL container's local image." >&2
+		return 1
+	fi
+
+	if ! backup_du_output="$(
+		docker run \
+			--rm \
+			--pull never \
+			--network none \
+			--read-only \
+			--cap-drop ALL \
+			--cap-add DAC_READ_SEARCH \
+			--security-opt no-new-privileges \
+			--user 0:0 \
+			--mount "type=bind,source=$BACKUP_DIR,target=/backups,readonly" \
+			--entrypoint du \
+			"$postgres_image" \
+			-sk -- /backups
+	)"; then
+		echo "PostgreSQL image fallback could not read the complete backup tree." >&2
+		return 1
+	fi
+
+	if ! backup_kib="$(parse_du_kib "$backup_du_output" /backups)"; then
+		echo "PostgreSQL image fallback returned an invalid backup size result." >&2
+		return 1
+	fi
+	printf '%s\n' "$backup_kib"
+}
 
 schema_metrics_sql=$(cat <<'SQL'
 SELECT
@@ -243,7 +330,7 @@ else
 fi
 
 if [[ -d "$BACKUP_DIR" ]]; then
-	backup_kib="$(du -sk -- "$BACKUP_DIR" | awk '{print $1}')"
+	backup_kib="$(measure_backup_kib)"
 else
 	backup_kib=0
 fi
