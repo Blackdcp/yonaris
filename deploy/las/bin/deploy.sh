@@ -187,11 +187,24 @@ DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
 
 if [[ "${DEPLOYMENT_MODE:-}" == local ]]; then
   echo "Ensuring the local bootstrap owner has global admin access"
-  if ! IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps -T \
-    account-ops pnpm run repair:local-admin --bootstrap-owner --apply; then
+  if ! bootstrap_repair_output="$(
+    IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps -T \
+      account-ops pnpm run repair:local-admin --bootstrap-owner --apply 2>&1
+  )"; then
+    printf '%s\n' "$bootstrap_repair_output" >&2
+    bootstrap_repair_code="$(
+      printf '%s\n' "$bootstrap_repair_output" |
+        sed -n 's/.*"code":"\([a-z0-9_]*\)".*/\1/p' |
+        tail -n 1
+    )"
+    if [[ ! "$bootstrap_repair_code" =~ ^[a-z0-9_]+$ ]]; then
+      bootstrap_repair_code="command_failed"
+    fi
+    printf '::error title=Bootstrap owner repair failed::code=%s\n' "$bootstrap_repair_code" >&2
     echo "Bootstrap owner repair failed; keeping the current runtime services unchanged." >&2
     exit 1
   fi
+  printf '%s\n' "$bootstrap_repair_output"
 fi
 
 echo "Starting Yonaris runtime services"

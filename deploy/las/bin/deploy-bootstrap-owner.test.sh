@@ -92,7 +92,7 @@ if [[ "$joined" == *" --profile operations run --rm --no-deps -T account-ops "* 
     exit 91
   fi
   if [[ "$MOCK_BOOTSTRAP_RESULT" == failure ]]; then
-    printf '{"status":"error","code":"ambiguous_bootstrap_owner"}\n' >&2
+    printf '{"status":"error","code":"bootstrap_owner_ambiguous"}\n' >&2
     exit 1
   fi
   printf '{"status":"applied","changesRequired":false,"changed":false,"sessionsRevoked":0}\n'
@@ -187,6 +187,8 @@ if [[ "$failure_status" -eq 0 ]]; then
   exit 1
 fi
 grep -Fq 'Bootstrap owner repair failed; keeping the current runtime services unchanged.' \
+  "$TEST_ROOT/failure.err"
+grep -Fq '::error title=Bootstrap owner repair failed::code=bootstrap_owner_ambiguous' \
   "$TEST_ROOT/failure.err"
 grep -Fq 'bootstrap:' "$EVENT_LOG"
 if grep -Fq 'runtime:start' "$EVENT_LOG"; then
