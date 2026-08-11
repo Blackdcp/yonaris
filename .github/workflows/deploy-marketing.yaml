@@ -57,17 +57,32 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build release image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile.www
           target: www
           platforms: linux/amd64
-          push: true
+          load: true
+          push: false
+          provenance: false
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
           cache-from: type=gha,scope=www
           cache-to: type=gha,mode=max,scope=www
+
+      - name: Verify homepage and referenced assets
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
+        run: |
+          container_id="$(docker run --rm --detach --pull never --publish 127.0.0.1:15161:3000 "$IMAGE_REF")"
+          trap 'docker stop "$container_id" >/dev/null 2>&1 || true' EXIT
+          node apps/www/scripts/smoke-marketing.mjs http://127.0.0.1:15161/
+
+      - name: Push verified image
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
+        run: docker push "$IMAGE_REF"
 
   deploy:
     name: Deploy marketing
