@@ -96,7 +96,7 @@ if [[ "$joined" == *" run --rm --no-deps db-migrate "* ]]; then
 fi
 if [[ "$joined" == *" --profile operations run --rm --no-deps -T account-ops "* ]]; then
   printf 'bootstrap:%s\n' "$*" >>"$MOCK_EVENT_LOG"
-  if [[ "$joined" != *" account-ops pnpm run repair:local-admin --bootstrap-owner --apply "* ]]; then
+  if [[ "$joined" != *" account-ops node ./node_modules/tsx/dist/cli.mjs ./src/repair-local-admin.ts --bootstrap-owner --apply "* ]]; then
     echo "Unexpected bootstrap owner command: $*" >&2
     exit 91
   fi
@@ -179,7 +179,11 @@ assert_order() {
 printf '%s\n' "$OLD_RELEASE" >"$DEPLOY_ROOT/.release"
 success_output="$(run_deploy success)"
 grep -Fq '"status":"applied"' <<<"$success_output"
-grep -Fq -- 'account-ops pnpm run repair:local-admin --bootstrap-owner --apply' "$EVENT_LOG"
+grep -Fq -- 'account-ops node ./node_modules/tsx/dist/cli.mjs ./src/repair-local-admin.ts --bootstrap-owner --apply' "$EVENT_LOG"
+if grep -Eq 'account-ops (pnpm|npx)' "$EVENT_LOG"; then
+  echo "Bootstrap repair unexpectedly invoked a runtime package manager." >&2
+  exit 1
+fi
 assert_order 'migration' 'preflight:post-migration'
 assert_order 'images:prune:' 'preflight:pre-migration'
 assert_order 'preflight:post-migration' 'bootstrap:'

@@ -195,7 +195,8 @@ if [[ "${DEPLOYMENT_MODE:-}" == local ]]; then
   echo "Ensuring the local bootstrap owner has global admin access"
   if ! bootstrap_repair_output="$(
     IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps -T \
-      account-ops pnpm run repair:local-admin --bootstrap-owner --apply 2>&1
+      account-ops node ./node_modules/tsx/dist/cli.mjs \
+      ./src/repair-local-admin.ts --bootstrap-owner --apply 2>&1
   )"; then
     printf '%s\n' "$bootstrap_repair_output" >&2
     bootstrap_repair_code="$(

@@ -108,7 +108,18 @@ RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 COPY --from=builder --chown=worker:nodejs /deploy/worker ./
 
+# Account operations bypass package-manager startup checks in production.
+# Keep their checked-in TS entrypoint and the already-installed tsx runtime in
+# the immutable worker image so deployment repairs never need network writes.
+RUN test -r ./node_modules/tsx/dist/cli.mjs \
+  && test -r ./src/repair-local-admin.ts
+
 USER worker
+
+# Exercise TypeScript transpilation as the same unprivileged user used by
+# worker and account-ops containers.
+RUN node ./node_modules/tsx/dist/cli.mjs --eval \
+  'const state: number = 7; if (state !== 7) process.exit(1)'
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["npx", "tsx", "src/index.ts"]
