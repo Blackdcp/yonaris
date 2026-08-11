@@ -22,6 +22,9 @@ export default defineConfig({
 				extends: true,
 				test: {
 					name: "unit",
+					env: {
+						APP_URL: "http://localhost:3000",
+					},
 					include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
 				},
 			},
