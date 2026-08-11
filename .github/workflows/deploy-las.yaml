@@ -10,6 +10,7 @@ on:
       - .github/workflows/mode-compat.yaml
       - apps/web/**
       - apps/worker/**
+      - e2e/**
       - packages/**
       - docker/Dockerfile
       - docker/entrypoint.sh
