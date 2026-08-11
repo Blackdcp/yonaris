@@ -9,7 +9,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { getDeployment } from "@/lib/config/server";
-import { auth } from "@/lib/auth/server";
+import { resolveAuthSession } from "@/lib/auth/resolve-session";
 import { isAdmin } from "@/lib/auth/helpers";
 import { evaluateRequireAdmin } from "@/lib/auth/policies";
 
@@ -20,7 +20,7 @@ import { evaluateRequireAdmin } from "@/lib/auth/policies";
 export const authMiddleware = createMiddleware({ type: "function" }).server(async ({ next }) => {
 	const deployment = getDeployment();
 	const headers = getRequestHeaders();
-	const session = await auth.api.getSession({ headers });
+	const session = await resolveAuthSession(headers);
 
 	return next({
 		context: {

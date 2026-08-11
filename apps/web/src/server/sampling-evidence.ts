@@ -6,7 +6,7 @@ import {
 	type EvidenceArtifactView,
 } from "@workspace/lib/db/evidence-artifacts";
 import { isAdmin } from "@/lib/auth/helpers";
-import { auth } from "@/lib/auth/server";
+import { resolveAuthSession } from "@/lib/auth/resolve-session";
 import { SamplingEvidenceHttpError } from "./sampling-evidence-http";
 
 export interface SamplingEvidenceArtifactDto {
@@ -67,7 +67,7 @@ export function toSamplingEvidenceArtifactDto(artifact: EvidenceArtifactView): S
 }
 
 export async function requireSamplingEvidenceAdmin(request: Request) {
-	const session = await auth.api.getSession({ headers: request.headers });
+	const session = await resolveAuthSession(request.headers);
 	if (!session) throw new SamplingEvidenceHttpError(401, "Authentication required");
 	if (!isAdmin(session)) throw new SamplingEvidenceHttpError(403, "Administrator access required");
 	return session;

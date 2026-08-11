@@ -7,13 +7,13 @@ import { member, organization } from "@workspace/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getDeployment } from "@/lib/config/server";
 import { evaluateOrgWriteAccess } from "./policies";
-import { auth } from "./server";
+import { resolveAuthSession } from "./resolve-session";
 
 type SessionLike = { user: { id: string; [key: string]: unknown }; session?: unknown };
 
 export async function getAuthSession() {
 	const headers = getRequestHeaders();
-	return auth.api.getSession({ headers });
+	return resolveAuthSession(headers);
 }
 
 export async function requireAuthSession() {

@@ -9,8 +9,8 @@
  */
 import { getCloudAuthOptions } from "@workspace/cloud/auth-hooks";
 import { createAuth, type CreateAuthOptions } from "@workspace/lib/auth/server";
-import { getWhitelabelAuthOptions } from "@workspace/whitelabel/auth-hooks";
 import { countUsers, provisionLocalOrg } from "@workspace/lib/db/provisioning";
+import { getWhitelabelAuthOptions } from "@workspace/whitelabel/auth-hooks";
 import { evaluateSignupAllowed, getSignupAllowlist } from "./policies";
 
 /**

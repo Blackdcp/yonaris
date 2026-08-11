@@ -14,7 +14,7 @@
  * call is a bug and should fail at the database layer rather than
  * silently rewriting rows.
  */
-import { count, eq, or } from "drizzle-orm";
+import { count, eq, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { member, organization, user } from "./schema";
 
@@ -28,6 +28,34 @@ import { member, organization, user } from "./schema";
 export async function countUsers(): Promise<number> {
 	const [row] = await db.select({ count: count() }).from(user);
 	return row?.count ?? 0;
+}
+
+/**
+ * Promote an existing local installation's only user to a global admin.
+ *
+ * The caller is responsible for gating this to local deployment mode. Keeping
+ * the identity check and exact user count in one UPDATE prevents a stale
+ * count-then-write sequence from granting privileges in a multi-user database.
+ */
+export async function promoteSoleUserToAdmin(userId: string): Promise<boolean> {
+	const result = await db.execute<{ eligible: boolean }>(sql`
+		with eligible as materialized (
+			select ${user.id}
+			from ${user}
+			where ${user.id} = ${userId}
+				and (select count(*) from ${user}) = 1
+		), promoted as (
+			update ${user}
+			set ${user.role} = 'admin', ${user.updatedAt} = now()
+			where ${user.id} = ${userId}
+				and exists(select 1 from eligible)
+				and ${user.role} is distinct from 'admin'
+			returning ${user.id}
+		)
+		select exists(select 1 from eligible) as eligible
+	`);
+
+	return result.rows[0]?.eligible === true;
 }
 
 /**
