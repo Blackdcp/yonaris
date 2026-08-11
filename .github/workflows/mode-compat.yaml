@@ -61,6 +61,9 @@ jobs:
       - name: Test LAS Sampling storage preflight
         run: bash deploy/las/bin/check-sampling-storage.test.sh
 
+      - name: Test targeted LAS image cleanup
+        run: bash deploy/las/bin/prune-superseded-images.test.sh
+
       - name: Test LAS bootstrap owner deployment gate
         run: bash deploy/las/bin/deploy-bootstrap-owner.test.sh
 

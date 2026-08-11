@@ -36,6 +36,7 @@ fi
 for required_script in \
   "$SCRIPT_DIR/backup.sh" \
   "$SCRIPT_DIR/check-sampling-storage.sh" \
+  "$SCRIPT_DIR/prune-superseded-images.sh" \
   "$SCRIPT_DIR/rehearse-db-upgrade.sh"; do
   if [[ ! -f "$required_script" || ! -r "$required_script" ]]; then
     echo "Missing required deployment script: $required_script" >&2
@@ -134,6 +135,11 @@ if [[ -f "$RELEASE_FILE" ]]; then
 fi
 
 compose=(docker compose --project-name yonaris --env-file "$ENV_FILE" --file "$COMPOSE_FILE")
+
+echo "Removing superseded, unused Yonaris release images"
+DEPLOY_ROOT="$DEPLOY_ROOT" IMAGE_REGISTRY="${IMAGE_REGISTRY:-ghcr.io}" \
+  IMAGE_NAMESPACE="${IMAGE_NAMESPACE:-blackdcp}" \
+  bash "$SCRIPT_DIR/prune-superseded-images.sh" "$release_tag"
 
 echo "Pulling Yonaris images for $release_tag"
 IMAGE_TAG="$release_tag" "${compose[@]}" pull web worker db-migrate

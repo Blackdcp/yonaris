@@ -44,6 +44,15 @@ else
 fi
 EOF
 
+cat >"$MOCK_SCRIPT_DIR/prune-superseded-images.sh" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+printf 'images:prune:%s\n' "$*" >>"$MOCK_EVENT_LOG"
+if [[ "${MOCK_PRUNE_RESULT:-success}" == failure ]]; then
+  exit 1
+fi
+EOF
+
 cat >"$MOCK_SCRIPT_DIR/backup.sh" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -132,6 +141,7 @@ chmod +x \
   "$MOCK_SCRIPT_DIR/deploy.sh" \
   "$MOCK_SCRIPT_DIR/backup.sh" \
   "$MOCK_SCRIPT_DIR/check-sampling-storage.sh" \
+  "$MOCK_SCRIPT_DIR/prune-superseded-images.sh" \
   "$MOCK_SCRIPT_DIR/rehearse-db-upgrade.sh" \
   "$MOCK_BIN/docker" \
   "$MOCK_BIN/curl" \
@@ -140,6 +150,7 @@ chmod +x \
 
 run_deploy() {
   local bootstrap_result="$1"
+  local prune_result="${2:-success}"
   env \
     PATH="$MOCK_BIN:$PATH" \
     DEPLOY_ROOT="$DEPLOY_ROOT" \
@@ -147,6 +158,7 @@ run_deploy() {
     ENV_FILE="$ENV_FILE" \
     MOCK_EVENT_LOG="$EVENT_LOG" \
     MOCK_BOOTSTRAP_RESULT="$bootstrap_result" \
+    MOCK_PRUNE_RESULT="$prune_result" \
     bash "$MOCK_SCRIPT_DIR/deploy.sh" "$NEW_RELEASE"
 }
 
@@ -169,6 +181,7 @@ success_output="$(run_deploy success)"
 grep -Fq '"status":"applied"' <<<"$success_output"
 grep -Fq -- 'account-ops pnpm run repair:local-admin --bootstrap-owner --apply' "$EVENT_LOG"
 assert_order 'migration' 'preflight:post-migration'
+assert_order 'images:prune:' 'preflight:pre-migration'
 assert_order 'preflight:post-migration' 'bootstrap:'
 assert_order 'bootstrap:' 'runtime:start'
 if [[ "$(tr -d '[:space:]' <"$DEPLOY_ROOT/.release")" != "$NEW_RELEASE" ]]; then
@@ -208,5 +221,20 @@ if grep -Fq 'bootstrap:' "$EVENT_LOG"; then
   exit 1
 fi
 grep -Fq 'runtime:start' "$EVENT_LOG"
+
+: >"$EVENT_LOG"
+set +e
+run_deploy success failure >"$TEST_ROOT/prune-failure.out" 2>"$TEST_ROOT/prune-failure.err"
+prune_failure_status=$?
+set -e
+if [[ "$prune_failure_status" -eq 0 ]]; then
+  echo "Failed image inventory unexpectedly allowed deployment to continue." >&2
+  exit 1
+fi
+grep -Fq "images:prune:$NEW_RELEASE" "$EVENT_LOG"
+if grep -Eq 'preflight:|backup|migration|bootstrap:|runtime:start' "$EVENT_LOG"; then
+  echo "Deployment continued after targeted image cleanup failed." >&2
+  exit 1
+fi
 
 echo "deploy bootstrap owner mock tests passed"
