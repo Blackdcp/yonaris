@@ -344,23 +344,24 @@ async function main() {
 		};
 	});
 
-	console.log(JSON.stringify(summary));
+	return summary;
 }
 
 main().then(
-	() => process.exit(0),
+	(summary) => {
+		process.stdout.write(`${JSON.stringify(summary)}\n`, () => process.exit(0));
+	},
 	(error: unknown) => {
+		let output: Record<string, unknown>;
 		if (error instanceof LocalAdminRepairError) {
-			console.error(JSON.stringify({ status: "error", code: error.code, message: error.message }));
+			output = { status: "error", code: error.code, message: error.message };
 		} else {
-			console.error(
-				JSON.stringify({
-					status: "error",
-					code: "unexpected_failure",
-					message: "Local admin repair failed; the transaction was rolled back",
-				}),
-			);
+			output = {
+				status: "error",
+				code: "unexpected_failure",
+				message: "Local admin repair failed; the transaction was rolled back",
+			};
 		}
-		process.exit(1);
+		process.stderr.write(`${JSON.stringify(output)}\n`, () => process.exit(1));
 	},
 );

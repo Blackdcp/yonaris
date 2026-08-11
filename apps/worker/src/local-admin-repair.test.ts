@@ -35,10 +35,14 @@ describe("local admin repair input", () => {
 	});
 
 	it("rejects password material in command-line options", () => {
+		const secretBearingOption = "--password=must-not-appear-in-output";
 		assert.throws(
 			() =>
-				parseLocalAdminRepairOptions(["--email", "owner@example.com", "--brand-id", "brand-1", "--password", "secret"]),
-			(error: unknown) => error instanceof LocalAdminRepairError && error.code === "unknown_option",
+				parseLocalAdminRepairOptions(["--email", "owner@example.com", "--brand-id", "brand-1", secretBearingOption]),
+			(error: unknown) =>
+				error instanceof LocalAdminRepairError &&
+				error.code === "unknown_option" &&
+				!error.message.includes("must-not-appear-in-output"),
 		);
 	});
 });

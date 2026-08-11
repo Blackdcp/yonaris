@@ -48,7 +48,7 @@ export function parseLocalAdminRepairOptions(argv: string[]): LocalAdminRepairOp
 		}
 
 		if (!VALUE_OPTIONS.has(argument)) {
-			throw new LocalAdminRepairError("unknown_option", `Unknown option: ${argument}`);
+			throw new LocalAdminRepairError("unknown_option", "Unknown option");
 		}
 		if (values.has(argument)) {
 			throw new LocalAdminRepairError("duplicate_option", `Option ${argument} may only be supplied once`);
