@@ -529,35 +529,117 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 }
 
 [data-brand="yonaris"] [data-slot="full-page-brand"] {
-	display: flex;
-	align-items: flex-end;
+	display: grid;
+	grid-template-rows: auto 1fr auto;
+	align-items: stretch;
 	min-height: 100svh;
 	padding: clamp(1.75rem, 4vw, 3.5rem);
 	background: var(--yonaris-ink);
 	color: var(--yonaris-paper);
 }
 
+[data-brand="yonaris"] [data-slot="full-page-brand-header"] {
+	position: relative;
+	z-index: 1;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-header"] [data-slot="brand-logo"] img {
+	height: clamp(1.8rem, 2.4vw, 2.35rem);
+	max-width: 12rem;
+}
+
 [data-brand="yonaris"] [data-slot="full-page-brand-copy"] {
 	position: relative;
 	z-index: 1;
+	align-self: center;
+	max-width: 29rem;
+	padding-block: 3rem;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-eyebrow"] {
+	margin-bottom: 1.25rem;
+	color: rgb(246 244 241 / 50%);
+	font-size: 0.66rem;
+	font-weight: 600;
+	letter-spacing: 0.16em;
+	text-transform: uppercase;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-title"] {
+	max-width: 11em;
+	color: var(--yonaris-paper);
+	font-size: clamp(2rem, 3vw, 3.35rem);
+	font-weight: 520;
+	letter-spacing: -0.045em;
+	line-height: 1.08;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-description"] {
+	max-width: 31rem;
+	margin-top: 1.5rem;
+	color: rgb(246 244 241 / 68%);
+	font-size: clamp(0.88rem, 1.05vw, 1rem);
+	line-height: 1.75;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-capabilities"] {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0.65rem 1rem;
+	max-width: 27rem;
+	margin-top: 2rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgb(246 244 241 / 12%);
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-capabilities"] span {
+	position: relative;
+	padding-left: 0.75rem;
+	color: rgb(246 244 241 / 58%);
+	font-size: 0.68rem;
+	font-weight: 550;
+	letter-spacing: 0.025em;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-capabilities"] span::before {
+	position: absolute;
+	top: 0.48em;
+	left: 0;
+	width: 3px;
+	height: 3px;
+	background: var(--yonaris-signal);
+	content: "";
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-footer"] {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+[data-brand="yonaris"] [data-slot="full-page-brand-footer"] > span {
+	width: 1.5rem;
+	height: 1px;
+	background: var(--yonaris-signal);
 }
 
 [data-brand="yonaris"] [data-slot="full-page-brand"] .yonaris-brand-paths {
 	display: block;
 	position: absolute;
-	right: -38%;
-	bottom: 8%;
-	width: 150%;
-	height: 72%;
+	right: -34%;
+	bottom: -2%;
+	width: 145%;
+	height: 68%;
 	color: var(--yonaris-paper);
 	opacity: 0.46;
 }
 
 [data-brand="yonaris"] .yonaris-brand-statement {
 	display: block;
-	margin-top: 0.8rem;
 	color: rgb(246 244 241 / 54%);
-	font-size: 0.68rem;
+	font-size: 0.62rem;
 	font-weight: 500;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
@@ -589,12 +671,21 @@ html.dark [data-brand="yonaris"] [data-slot="site-header"] {
 	text-align: left;
 }
 
+[data-brand="yonaris"] [data-yonaris-slot="brand-switcher"] [data-slot="button"] {
+	border-color: rgb(11 18 32 / 12%);
+	box-shadow: 0 1px 0 rgb(255 255 255 / 72%);
+}
+
+[data-brand="yonaris"] [data-yonaris-slot="brand-switcher"] [data-slot="button"]:hover {
+	box-shadow: inset 2px 0 0 var(--yonaris-signal);
+}
+
 [data-brand="yonaris"] [data-slot="full-page-back"] [data-slot="button"] {
 	background: transparent;
 	color: var(--yonaris-blue-gray);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
 	[data-brand="yonaris"] [data-slot="full-page-shell"] {
 		display: flex;
 		align-items: center;
