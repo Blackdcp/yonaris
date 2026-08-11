@@ -13,7 +13,7 @@ import { NotFound } from "@/components/not-found";
 import { getMarketingOgImage } from "@/lib/og";
 import { initPostHog } from "@/lib/posthog";
 import { canonicalUrl, organizationJsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL, websiteJsonLd } from "@/lib/seo";
-import appCss from "../styles.css?url";
+import "../styles.css";
 
 const ROOT_TITLE = SITE_NAME;
 const ROOT_OG_IMAGE = canonicalUrl(getMarketingOgImage({ title: ROOT_TITLE, description: SITE_DESCRIPTION }));
@@ -87,7 +87,6 @@ export const Route = createRootRoute({
 				{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
 				{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
 				{ rel: "manifest", href: "/site.webmanifest" },
-				{ rel: "stylesheet", href: appCss },
 			],
 			scripts: [
 				websiteJsonLd(),
