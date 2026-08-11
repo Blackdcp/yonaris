@@ -436,6 +436,13 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "PostHog ingestion host (defaults to the official US endpoint when a key is configured).",
 	},
 	{
+		name: "VITE_FOUNDER_CONTACT_EMAIL",
+		scope: "client",
+		requiredBy: "optional",
+		wwwOnly: true,
+		description: "Optional founder contact email displayed by the public marketing site.",
+	},
+	{
 		name: "VITE_SITE_URL",
 		scope: "client",
 		requiredBy: "optional",
