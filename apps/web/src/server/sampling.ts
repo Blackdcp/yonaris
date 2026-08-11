@@ -46,6 +46,7 @@ import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
+import { provisionManualSamplingScope, provisionSamplingScopeInputSchema } from "./sampling-scope-provisioning";
 
 const SAMPLING_TARGET_PRESENTATION = {
 	"doubao.consumer_web": { label: "豆包", launchUrl: "https://www.doubao.com/chat/" },
@@ -84,43 +85,6 @@ export const SAMPLING_TARGETS = MANUAL_OBSERVATION_SURFACE_TARGET_KEYS.map((surf
 const brandIdSchema = z.string().trim().min(1, "brandId is required");
 const guidSchema = z.guid();
 const batchStatusSchema = z.enum(["draft", "frozen", "in_progress", "completed", "cancelled"]);
-
-const samplingMarketSchema = z
-	.string()
-	.trim()
-	.regex(/^[A-Za-z]{2}$/, "market must be a two-letter country or market code")
-	.transform((value) => value.toUpperCase())
-	.refine((value) => value !== "ZZ", "sampling scopes require an explicit market");
-
-const samplingLocaleSchema = z
-	.string()
-	.trim()
-	.min(2)
-	.max(35)
-	.refine((value) => {
-		try {
-			return Intl.getCanonicalLocales(value).length === 1;
-		} catch {
-			return false;
-		}
-	}, "locale must be a valid BCP 47 language tag")
-	.transform((value) => Intl.getCanonicalLocales(value)[0] ?? value)
-	.refine((value) => value !== "und", "sampling scopes require an explicit locale");
-
-const samplingTimezoneSchema = z
-	.string()
-	.trim()
-	.min(1)
-	.max(100)
-	.refine((value) => {
-		try {
-			new Intl.DateTimeFormat("en-US", { timeZone: value }).format();
-			return true;
-		} catch {
-			return false;
-		}
-	}, "timezone must be a valid IANA time zone")
-	.transform((value) => new Intl.DateTimeFormat("en-US", { timeZone: value }).resolvedOptions().timeZone);
 
 const evidenceProtocolSchema = z.object({
 	minimumArtifacts: z.number().int().min(1).max(20),
@@ -161,22 +125,6 @@ const createSamplingBatchInputSchema = z.object({
 		.min(1)
 		.max(50),
 	protocol: deliveryProtocolSchema,
-});
-
-const provisionSamplingScopeInputSchema = z.object({
-	brandId: brandIdSchema,
-	key: z
-		.string()
-		.trim()
-		.min(1)
-		.max(64)
-		.regex(/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/, "key must be a lowercase slug"),
-	name: z.string().trim().min(1).max(120),
-	market: samplingMarketSchema,
-	locale: samplingLocaleSchema,
-	timezone: samplingTimezoneSchema,
-	evaluationRole: z.enum(["scored", "observation"]),
-	sourceScopeId: guidSchema.optional(),
 });
 
 const listSamplingBatchesInputSchema = z.object({
@@ -425,77 +373,7 @@ export const provisionSamplingScopeFn = createServerFn({ method: "POST" })
 	.validator(provisionSamplingScopeInputSchema)
 	.handler(async ({ data }) => {
 		await requireSamplingAdminBrand(data.brandId);
-		return db.transaction(async (tx) => {
-			const [lockedBrand] = await tx
-				.select({ id: brands.id })
-				.from(brands)
-				.where(eq(brands.id, data.brandId))
-				.limit(1)
-				.for("update");
-			if (!lockedBrand) throw new Error(`Brand "${data.brandId}" not found`);
-
-			const existing = await tx.query.measurementScopes.findFirst({
-				where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.key, data.key)),
-				columns: { id: true },
-			});
-			if (existing) throw new Error(`Measurement scope key "${data.key}" already exists for this brand`);
-
-			let sourcePrompts: Array<{
-				value: string;
-				enabled: boolean;
-				tags: string[];
-				systemTags: string[];
-			}> = [];
-			if (data.sourceScopeId) {
-				const sourceScope = await tx.query.measurementScopes.findFirst({
-					where: and(eq(measurementScopes.id, data.sourceScopeId), eq(measurementScopes.brandId, data.brandId)),
-					columns: { id: true },
-				});
-				if (!sourceScope) throw new Error("The prompt source scope does not belong to this brand");
-				sourcePrompts = await tx
-					.select({
-						value: prompts.value,
-						enabled: prompts.enabled,
-						tags: prompts.tags,
-						systemTags: prompts.systemTags,
-					})
-					.from(prompts)
-					.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, sourceScope.id), eq(prompts.enabled, true)))
-					.orderBy(asc(prompts.createdAt), asc(prompts.id));
-			}
-
-			const [scope] = await tx
-				.insert(measurementScopes)
-				.values({
-					brandId: data.brandId,
-					key: data.key,
-					name: data.name,
-					market: data.market,
-					locale: data.locale,
-					timezone: data.timezone,
-					automaticTargetKeys: [],
-					samplingEvaluationRole: data.evaluationRole,
-					enabled: true,
-					isDefault: false,
-				})
-				.returning();
-			if (!scope) throw new Error("Failed to create sampling measurement scope");
-
-			if (sourcePrompts.length > 0) {
-				await tx.insert(prompts).values(
-					sourcePrompts.map((prompt) => ({
-						brandId: data.brandId,
-						scopeId: scope.id,
-						value: prompt.value,
-						enabled: prompt.enabled,
-						tags: prompt.tags,
-						systemTags: prompt.systemTags,
-					})),
-				);
-			}
-
-			return { scope, copiedPromptCount: sourcePrompts.length };
-		});
+		return provisionManualSamplingScope(data);
 	});
 
 export const listSamplingBatchesFn = createServerFn({ method: "GET" })

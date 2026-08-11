@@ -45,9 +45,13 @@ const getBrandData = createServerFn({ method: "GET" })
 		}> => {
 			const session = await requireAuthSession();
 			const canonicalBrandId = resolveBrandIdAlias(data.brandId, process.env.BRAND_ID_ALIASES);
+			const brand = await db.query.brands.findFirst({
+				where: eq(brands.id, canonicalBrandId),
+			});
+			const tenantOrgId = brand?.organizationId ?? canonicalBrandId;
 
 			// Verify access
-			const hasAccess = await checkOrgAccess(session.user.id, canonicalBrandId);
+			const hasAccess = await checkOrgAccess(session.user.id, tenantOrgId);
 			if (!hasAccess) {
 				return {
 					brand: null,
@@ -62,18 +66,14 @@ const getBrandData = createServerFn({ method: "GET" })
 
 			// Get brand metadata (name from org membership — org exists even if not in DB yet)
 			const orgs = await listUserOrganizations(session.user.id);
-			const orgMeta = orgs.find((o) => o.id === canonicalBrandId);
-			const brandName = orgMeta?.name || canonicalBrandId;
+			const orgMeta = orgs.find((organization) => organization.id === tenantOrgId);
+			const brandName = brand?.name ?? orgMeta?.name ?? canonicalBrandId;
 
 			const admin = isAdmin(session);
 			const reportAccess = hasReportAccess(session);
-			const canManageBrand = await checkOrgWriteAccess(session.user.id, canonicalBrandId);
+			const canManageBrand = await checkOrgWriteAccess(session.user.id, tenantOrgId);
 
 			// Get brand data from DB
-			const brand = await db.query.brands.findFirst({
-				where: eq(brands.id, canonicalBrandId),
-			});
-
 			if (!brand) {
 				return {
 					brand: null,

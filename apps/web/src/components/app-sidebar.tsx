@@ -5,6 +5,7 @@ import {
 	IconClipboardCheck,
 	IconCpu,
 	IconDashboard,
+	IconFolders,
 	IconLink,
 	IconListDetails,
 	IconReport,
@@ -74,6 +75,11 @@ export function AppSidebar({
 		// Only show Visibility and Citations if the brand is onboarded
 		if (brand?.onboarded) {
 			dashboardItems.push(
+				{
+					title: "Programs",
+					url: "/programs",
+					icon: IconFolders,
+				},
 				{
 					title: "Visibility",
 					url: "/visibility",

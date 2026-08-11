@@ -37,6 +37,7 @@ import { Route as AuthedAppBrandIndexRouteImport } from './routes/_authed/app/$b
 import { Route as AuthedAppBrandSplatRouteImport } from './routes/_authed/app/$brand/$'
 import { Route as AuthedAppBrandCitationsRouteImport } from './routes/_authed/app/$brand/citations'
 import { Route as AuthedAppBrandOpportunitiesRouteImport } from './routes/_authed/app/$brand/opportunities'
+import { Route as AuthedAppBrandProgramsRouteImport } from './routes/_authed/app/$brand/programs'
 import { Route as AuthedAppBrandQueryFanOutRouteImport } from './routes/_authed/app/$brand/query-fan-out'
 import { Route as AuthedAppBrandSettingsRouteImport } from './routes/_authed/app/$brand/settings'
 import { Route as AuthedAppBrandShareOfVoiceRouteImport } from './routes/_authed/app/$brand/share-of-voice'
@@ -213,6 +214,11 @@ const AuthedAppBrandOpportunitiesRoute =
     path: '/opportunities',
     getParentRoute: () => AuthedAppBrandRoute,
   } as any)
+const AuthedAppBrandProgramsRoute = AuthedAppBrandProgramsRouteImport.update({
+  id: '/programs',
+  path: '/programs',
+  getParentRoute: () => AuthedAppBrandRoute,
+} as any)
 const AuthedAppBrandQueryFanOutRoute =
   AuthedAppBrandQueryFanOutRouteImport.update({
     id: '/query-fan-out',
@@ -420,6 +426,7 @@ export interface FileRoutesByFullPath {
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
+  '/app/$brand/programs': typeof AuthedAppBrandProgramsRoute
   '/app/$brand/query-fan-out': typeof AuthedAppBrandQueryFanOutRoute
   '/app/$brand/settings': typeof AuthedAppBrandSettingsRouteWithChildren
   '/app/$brand/share-of-voice': typeof AuthedAppBrandShareOfVoiceRoute
@@ -477,6 +484,7 @@ export interface FileRoutesByTo {
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
+  '/app/$brand/programs': typeof AuthedAppBrandProgramsRoute
   '/app/$brand/query-fan-out': typeof AuthedAppBrandQueryFanOutRoute
   '/app/$brand/share-of-voice': typeof AuthedAppBrandShareOfVoiceRoute
   '/app/$brand/visibility': typeof AuthedAppBrandVisibilityRoute
@@ -539,6 +547,7 @@ export interface FileRoutesById {
   '/_authed/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/_authed/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/_authed/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
+  '/_authed/app/$brand/programs': typeof AuthedAppBrandProgramsRoute
   '/_authed/app/$brand/query-fan-out': typeof AuthedAppBrandQueryFanOutRoute
   '/_authed/app/$brand/settings': typeof AuthedAppBrandSettingsRouteWithChildren
   '/_authed/app/$brand/share-of-voice': typeof AuthedAppBrandShareOfVoiceRoute
@@ -602,6 +611,7 @@ export interface FileRouteTypes {
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
+    | '/app/$brand/programs'
     | '/app/$brand/query-fan-out'
     | '/app/$brand/settings'
     | '/app/$brand/share-of-voice'
@@ -659,6 +669,7 @@ export interface FileRouteTypes {
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
+    | '/app/$brand/programs'
     | '/app/$brand/query-fan-out'
     | '/app/$brand/share-of-voice'
     | '/app/$brand/visibility'
@@ -720,6 +731,7 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/$'
     | '/_authed/app/$brand/citations'
     | '/_authed/app/$brand/opportunities'
+    | '/_authed/app/$brand/programs'
     | '/_authed/app/$brand/query-fan-out'
     | '/_authed/app/$brand/settings'
     | '/_authed/app/$brand/share-of-voice'
@@ -983,6 +995,13 @@ declare module '@tanstack/react-router' {
       path: '/opportunities'
       fullPath: '/app/$brand/opportunities'
       preLoaderRoute: typeof AuthedAppBrandOpportunitiesRouteImport
+      parentRoute: typeof AuthedAppBrandRoute
+    }
+    '/_authed/app/$brand/programs': {
+      id: '/_authed/app/$brand/programs'
+      path: '/programs'
+      fullPath: '/app/$brand/programs'
+      preLoaderRoute: typeof AuthedAppBrandProgramsRouteImport
       parentRoute: typeof AuthedAppBrandRoute
     }
     '/_authed/app/$brand/query-fan-out': {
@@ -1261,6 +1280,7 @@ interface AuthedAppBrandRouteChildren {
   AuthedAppBrandSplatRoute: typeof AuthedAppBrandSplatRoute
   AuthedAppBrandCitationsRoute: typeof AuthedAppBrandCitationsRoute
   AuthedAppBrandOpportunitiesRoute: typeof AuthedAppBrandOpportunitiesRoute
+  AuthedAppBrandProgramsRoute: typeof AuthedAppBrandProgramsRoute
   AuthedAppBrandQueryFanOutRoute: typeof AuthedAppBrandQueryFanOutRoute
   AuthedAppBrandSettingsRoute: typeof AuthedAppBrandSettingsRouteWithChildren
   AuthedAppBrandShareOfVoiceRoute: typeof AuthedAppBrandShareOfVoiceRoute
@@ -1275,6 +1295,7 @@ const AuthedAppBrandRouteChildren: AuthedAppBrandRouteChildren = {
   AuthedAppBrandSplatRoute: AuthedAppBrandSplatRoute,
   AuthedAppBrandCitationsRoute: AuthedAppBrandCitationsRoute,
   AuthedAppBrandOpportunitiesRoute: AuthedAppBrandOpportunitiesRoute,
+  AuthedAppBrandProgramsRoute: AuthedAppBrandProgramsRoute,
   AuthedAppBrandQueryFanOutRoute: AuthedAppBrandQueryFanOutRoute,
   AuthedAppBrandSettingsRoute: AuthedAppBrandSettingsRouteWithChildren,
   AuthedAppBrandShareOfVoiceRoute: AuthedAppBrandShareOfVoiceRoute,
