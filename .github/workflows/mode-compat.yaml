@@ -64,6 +64,9 @@ jobs:
       - name: Test targeted LAS image cleanup
         run: bash deploy/las/bin/prune-superseded-images.test.sh
 
+      - name: Test rehearsal PostgreSQL readiness
+        run: bash deploy/las/bin/wait-rehearsal-postgres.test.sh
+
       - name: Test LAS bootstrap owner deployment gate
         run: bash deploy/las/bin/deploy-bootstrap-owner.test.sh
 

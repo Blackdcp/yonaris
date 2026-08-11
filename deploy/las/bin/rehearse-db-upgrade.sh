@@ -124,7 +124,7 @@ if [[ "$runner_mode" == image ]]; then
   fi
 fi
 
-for command_name in awk date docker readlink sed seq sha256sum sleep tee tr; do
+for command_name in awk date docker readlink sed sha256sum tee tr; do
   command -v "$command_name" >/dev/null 2>&1 || fail "Missing required command: $command_name"
 done
 if [[ "$runner_mode" == local-pnpm ]]; then
@@ -133,8 +133,11 @@ fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPOSITORY_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
+POSTGRES_READY_SCRIPT="$SCRIPT_DIR/wait-rehearsal-postgres.sh"
 JOURNAL_FILE="$REPOSITORY_ROOT/packages/lib/src/db/migrations/meta/_journal.json"
 MIGRATIONS_DIR="$REPOSITORY_ROOT/packages/lib/src/db/migrations"
+[[ -f "$POSTGRES_READY_SCRIPT" && -r "$POSTGRES_READY_SCRIPT" ]] || \
+  fail "Missing rehearsal PostgreSQL readiness helper: $POSTGRES_READY_SCRIPT"
 [[ -f "$JOURNAL_FILE" ]] || fail "Missing migration journal: $JOURNAL_FILE"
 
 expected_migration_count="$(awk '/"tag"[[:space:]]*:/ { count++ } END { print count + 0 }' "$JOURNAL_FILE")"
@@ -316,19 +319,7 @@ docker run --detach \
   postgres:16-alpine >/dev/null
 db_created=true
 
-database_ready=false
-for _ in $(seq 1 60); do
-  if docker exec "$db_container" pg_isready \
-    --username "$db_user" --dbname "$db_name" >/dev/null 2>&1; then
-    database_ready=true
-    break
-  fi
-  sleep 1
-done
-[[ "$database_ready" == true ]] || {
-  docker logs --tail 100 "$db_container" >&2 || true
-  fail "Isolated PostgreSQL did not become ready."
-}
+bash "$POSTGRES_READY_SCRIPT" "$db_container"
 
 published_endpoint="$(docker port "$db_container" 5432/tcp | awk '/^127[.]0[.]0[.]1:/ { print; exit }')"
 [[ "$published_endpoint" =~ ^127\.0\.0\.1:[0-9]+$ ]] || \
