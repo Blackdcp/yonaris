@@ -1,0 +1,23 @@
+meta {
+  name: update prompt value frozen 409
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/prompts/{{createdPromptId}}
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "value": "Bruno E2E prompt updated"
+  }
+}
+
+assert {
+  res.status: eq 409
+  res.body.error: eq Prompt Frozen
+  res.body.message: contains Stored prompt text is immutable
+}

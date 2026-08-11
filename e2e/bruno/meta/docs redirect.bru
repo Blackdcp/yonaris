@@ -1,5 +1,5 @@
 meta {
-  name: docs redirects to public reference
+  name: docs spec alias is served
   type: http
   seq: 2
 }
@@ -10,16 +10,9 @@ get {
   auth: none
 }
 
-script:pre-request {
-  req.setMaxRedirects(0);
-}
-
 assert {
-  res.headers.location: eq https://www.elmohq.com/docs/api
-}
-
-tests {
-  test("redirects with a 3xx status", function() {
-    expect([301, 302, 307, 308]).to.include(res.getStatus());
-  });
+  res.status: eq 200
+  res.body.openapi: eq 3.0.3
+  res.body.info.title: eq Yonaris API
+  res.body.paths: isDefined
 }

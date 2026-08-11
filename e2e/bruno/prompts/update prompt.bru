@@ -12,12 +12,13 @@ patch {
 
 body:json {
   {
-    "value": "Bruno E2E prompt updated",
     "tags": ["updated"]
   }
 }
 
 assert {
   res.status: eq 200
-  res.body.value: eq Bruno E2E prompt updated
+  res.body.id: eq {{createdPromptId}}
+  res.body.value: contains best testing framework
+  res.body.tags: contains updated
 }
