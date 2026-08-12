@@ -24,14 +24,13 @@ const citationSchema = z.object({
 	citationIndex: z.number().int().min(0).max(32_767).optional(),
 });
 
-export const samplingObservationInputSchema = z
+export const samplingObservationBaseSchema = z
 	.object({
 		answerText: z.string().trim().min(1).max(500_000),
 		observedAt: z.string().datetime({ offset: true }),
 		pageUrl: httpUrl,
 		sessionMode: z.enum(["anonymous_clean", "new_account_clean"]),
 		searchMode: z.enum(["on", "off"]),
-		operatorAttested: z.literal(true),
 		modelVersion: z.string().trim().min(1).max(200).optional(),
 		evidenceArtifactIds: z.array(z.guid()).min(1).max(20),
 		citations: z.array(citationSchema).max(200).default([]),
@@ -39,9 +38,14 @@ export const samplingObservationInputSchema = z
 	})
 	.strict();
 
-export type SamplingObservationInput = z.infer<typeof samplingObservationInputSchema>;
+export const samplingObservationInputSchema = samplingObservationBaseSchema.extend({
+	operatorAttested: z.literal(true),
+});
 
-function normalizeCitations(input: SamplingObservationInput["citations"]): Citation[] {
+export type SamplingObservationInput = z.infer<typeof samplingObservationInputSchema>;
+export type SamplingObservationBase = z.infer<typeof samplingObservationBaseSchema>;
+
+function normalizeCitations(input: SamplingObservationBase["citations"]): Citation[] {
 	const seen = new Set<string>();
 	const normalized: Citation[] = [];
 	for (const [index, citation] of input.entries()) {
@@ -57,7 +61,7 @@ function normalizeCitations(input: SamplingObservationInput["citations"]): Citat
 	return normalized;
 }
 
-function assertEvidencePolicy(input: SamplingObservationInput, protocol: DeliveryProtocol): void {
+function assertEvidencePolicy(input: SamplingObservationBase, protocol: DeliveryProtocol): void {
 	if (input.evidenceArtifactIds.length < protocol.evidence.minimumArtifacts) {
 		throw new Error(`At least ${protocol.evidence.minimumArtifacts} evidence artifact(s) are required`);
 	}
@@ -89,10 +93,24 @@ function assertFrozenTask(snapshot: DeliveryManifestSnapshot, task: DeliveryTask
 export function prepareSamplingObservation(input: {
 	task: DeliveryTaskView;
 	manifest: DeliveryManifestSnapshot;
-	observation: SamplingObservationInput;
-	operatorUserId: string;
+	observation: SamplingObservationBase & { operatorAttested?: true };
+	captureActor?:
+		| { kind: "operator"; id: string }
+		| {
+				kind: "browser_runner";
+				id: string;
+				adapterVersion: string;
+				browserVersion: string;
+				market: "CN";
+				locale: "zh-CN";
+				timezone: "Asia/Shanghai";
+		  };
+	operatorUserId?: string;
 	leaseGeneration: number;
 }) {
+	const captureActor =
+		input.captureActor ?? (input.operatorUserId ? { kind: "operator" as const, id: input.operatorUserId } : undefined);
+	if (!captureActor) throw new Error("A capture actor is required");
 	assertFrozenTask(input.manifest, input.task);
 	assertEvidencePolicy(input.observation, input.manifest.protocol);
 
@@ -128,12 +146,18 @@ export function prepareSamplingObservation(input: {
 	const mentionResult = analyzeMentions(input.observation.answerText, input.manifest.brand, input.manifest.competitors);
 	const config = {
 		model: target.model,
-		provider: target.captureMode === "manual_import" ? "manual-import" : "assisted-browser",
+		provider:
+			target.captureMode === "manual_import"
+				? "manual-import"
+				: target.captureMode === "browser_runner"
+					? "browser-runner"
+					: "assisted-browser",
 		version: input.observation.modelVersion,
 		webSearch: input.observation.searchMode === "on",
 	};
 	const captureMetadata = {
-		measurementEligibility: "operator_attested_clean_session",
+		measurementEligibility:
+			captureActor.kind === "operator" ? "operator_attested_clean_session" : "browser_runner_clean_session",
 		deliveryBatchId: input.task.batchId,
 		deliveryTaskId: input.task.id,
 		leaseGeneration: input.leaseGeneration,
@@ -143,9 +167,22 @@ export function prepareSamplingObservation(input: {
 		reportedMarket: input.manifest.scope.market,
 		reportedLocale: input.manifest.scope.locale,
 		executionMarketVerified: false,
-		localizationEvidence: "operator_attested",
-		operatorAttested: input.observation.operatorAttested,
-		operatorReference: input.operatorUserId,
+		localizationEvidence: captureActor.kind === "operator" ? "operator_attested" : "runner_registered_cn_unverified",
+		...(captureActor.kind === "operator"
+			? { operatorAttested: input.observation.operatorAttested, operatorReference: captureActor.id }
+			: {}),
+		captureActorKind: captureActor.kind,
+		captureActorId: captureActor.id,
+		...(captureActor.kind === "browser_runner"
+			? {
+					adapterVersion: captureActor.adapterVersion,
+					browserVersion: captureActor.browserVersion,
+					registeredMarket: captureActor.market,
+					registeredLocale: captureActor.locale,
+					registeredTimezone: captureActor.timezone,
+					localizationRegistrationSource: "server_bound_runner_registration",
+				}
+			: {}),
 	};
 	// Artifact IDs are lease-generation-local handles. A failed submission can be
 	// retried only after a new claim uploads fresh artifacts, so including those

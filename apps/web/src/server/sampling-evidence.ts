@@ -37,6 +37,8 @@ function extensionForMediaType(mediaType: string): string {
 			return "webp";
 		case "application/pdf":
 			return "pdf";
+		case "text/html":
+			return "html";
 		default:
 			return "bin";
 	}

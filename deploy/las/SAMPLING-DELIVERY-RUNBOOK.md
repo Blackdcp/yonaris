@@ -2,6 +2,29 @@
 
 本 Runbook 适用于当前 Yonaris 的人工 consumer-surface Sampling 交付。目标是固定考核分母、保留可核验的执行证据，并把计分样本与观察样本分开。执行入口为管理员登录后的 `Sampling`（`/admin/sampling`）。
 
+## Browser Runner（默认关闭）
+
+Browser Runner 是平台侧的执行能力，不属于客户账户权限。当前发布只提供“显式启动一批”的执行链，不创建 cron、定时任务或每日自动批次；在合同生效并完成真实站 UAT 之前，生产环境必须保持 `BROWSER_RUNNER_ENABLED=false` 或不配置该变量。
+
+它不改变 Elmo 的指标公式：冻结任务数为 `N`，成功保存的有效回答数为 `S`，其中品牌被提及的回答数为 `M`，Visibility 仍为 `M / S`。登录墙、验证码、页面漂移、网络错误和采集失败都不会伪装成 `brandMentioned=false`，只会让 success coverage `S / N` 降低。只有拿到有效回答且答案确实未提及品牌时，才保存成功观察并以 `brandMentioned=false` 进入指标。
+
+自动批次遵循以下固定流程：
+
+1. 管理员创建 `Browser Runner` batch；创建只冻结 manifest 和分母，不执行任务。
+2. 管理员显式点击 `Start automated run`，中国节点上的 Runner 才能领取该批次。
+3. 每个任务在发送 prompt 前先持久化 submit intent；一旦 intent 存在，系统禁止自动重发。
+4. 仅白名单内的提交前瞬时错误允许一次自动重试，总尝试数最多为 2。登录、验证码、页面漂移和适配器未验证直接进入人工队列。
+5. Runner 继续处理整批其余任务，不因单条异常暂停。自动阶段结束后统一显示 `Needs human`。
+6. 提交前异常可由管理员工作台完成；提交后异常只能通过 Runner 保留的同一浏览器 profile 恢复原回答，不得重新提问。无法恢复时由管理员确认终局技术失败。
+7. 每个自动成功任务必须同时关联一张截图和一份 HTML/PDF 页面快照；两者都受 lease、SHA-256、大小和类型校验。
+8. 全部冻结任务成功后结果才标记 `Final`；存在终局技术失败时标记 `Incomplete`，而不是修改 Visibility 分母。
+
+Program 的测量窗口按其 IANA timezone 解释。StepFun 国内 Program 使用 `CN / zh-CN / Asia/Shanghai`，因此创建界面中的日期时间统一按北京时间解释，与管理员电脑所在时区无关。
+
+真实豆包执行还必须满足四个条件：Runner 位于经批准的中国网络节点；使用独立 profile；当前 DOM selector/fingerprint 已经人工 UAT；遇验证码或登录限制时不绕过平台控制。仅填写 `CN` 环境变量不能证明实际出口在中国，因此在接入可核验的出口证明前，记录必须保持 `executionMarketVerified=false`。
+
+Runner 必须部署在专用隔离主机或 VLAN，浏览器进程不能接触数据库、Redis、Docker socket、平台密钥或管理网络。网络出口层必须拒绝 RFC1918、loopback、link-local、云 metadata 以及 Yonaris 控制面的浏览器页面访问，只放行经批准的豆包网页资源；Runner 的 Node 控制进程再通过独立 HTTPS 通道访问 Yonaris Runner API。代码中的顶层豆包 URL 校验不是网络隔离，也不能阻止网页子资源探测内网。状态目录应位于加密卷；成功上传后的证据及时清理，保留的人工接管 profile 和异常材料按默认 7 天期限清理，并审计清理失败。
+
 ## 1. 能力边界
 
 Yonaris 当前会校验并保存：冻结的 scope、prompt 文本、目标平台、样本序号、会话/搜索要求、测量窗口和 evaluation role；任务 claim/lease；完整回答、页面 URL、引用、执行时间；证据文件类型、大小、SHA-256 及其与成功 observation 的关联；按冻结 manifest 计算的 coverage。

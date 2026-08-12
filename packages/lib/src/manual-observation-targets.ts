@@ -17,7 +17,11 @@ export const MANUAL_OBSERVATION_SURFACE_TARGET_KEYS = [
 	"google_search.ai_mode",
 ] as const;
 
-export const MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS = ["manual_import.generic", "assisted_browser.generic"] as const;
+export const MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS = [
+	"manual_import.generic",
+	"assisted_browser.generic",
+	"browser_runner.doubao",
+] as const;
 
 export type ManualObservationSurfaceTargetKey = (typeof MANUAL_OBSERVATION_SURFACE_TARGET_KEYS)[number];
 export type ManualObservationCaptureRouteKey = (typeof MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS)[number];
@@ -42,7 +46,7 @@ export interface ManualObservationTargetDescriptor extends ObservationTargetDesc
 	model: ManualObservationModelSlug;
 	surfaceTargetKey: ManualObservationSurfaceTargetKey;
 	captureRouteKey: ManualObservationCaptureRouteKey;
-	captureMode: "manual_import" | "assisted_browser";
+	captureMode: "manual_import" | "assisted_browser" | "browser_runner";
 }
 
 interface ManualSurfaceDescriptor {
@@ -71,6 +75,7 @@ const MANUAL_CAPTURE_MODES: Record<ManualObservationCaptureRouteKey, ManualObser
 	{
 		"manual_import.generic": "manual_import",
 		"assisted_browser.generic": "assisted_browser",
+		"browser_runner.doubao": "browser_runner",
 	};
 
 const SURFACE_HOSTS: Record<ManualObservationSurfaceTargetKey, readonly string[]> = {
@@ -144,6 +149,9 @@ export function resolveManualObservationTarget(input: {
 }): ManualObservationTargetDescriptor {
 	assertManualObservationSurfaceTargetKey(input.surfaceTargetKey);
 	assertManualObservationCaptureRouteKey(input.captureRouteKey);
+	if (input.captureRouteKey === "browser_runner.doubao" && input.surfaceTargetKey !== "doubao.consumer_web") {
+		throw new Error("The Doubao browser-runner route is restricted to doubao.consumer_web");
+	}
 
 	const surface = MANUAL_SURFACES[input.surfaceTargetKey];
 

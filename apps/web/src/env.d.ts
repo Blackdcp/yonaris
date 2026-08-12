@@ -76,6 +76,18 @@ declare global {
 			readonly AUTH0_CLIENT_SECRET?: string;
 			readonly ADMIN_AUTH0_SUB?: string;
 			readonly ADMIN_API_KEYS?: string;
+			readonly BROWSER_RUNNER_ENABLED?: string;
+			readonly BROWSER_RUNNER_API_TOKEN?: string;
+			readonly BROWSER_RUNNER_ID?: string;
+			readonly BROWSER_RUNNER_MARKET?: string;
+			readonly BROWSER_RUNNER_LOCALE?: string;
+			readonly BROWSER_RUNNER_TIMEZONE?: string;
+			readonly BROWSER_RUNNER_API_URL?: string;
+			readonly BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED?: string;
+			readonly BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR?: string;
+			readonly BROWSER_RUNNER_DOUBAO_COMPLETION_SELECTOR?: string;
+			readonly BROWSER_RUNNER_DOUBAO_DOM_FINGERPRINT?: string;
+			readonly BROWSER_RUNNER_DOUBAO_SEARCH_OFF_SELECTOR?: string;
 			readonly DEFAULT_BRAND_DOMAINS?: string;
 			readonly CLOUD_SIGNUP_ALLOWLIST?: string;
 			readonly ENVIRONMENT?: string;

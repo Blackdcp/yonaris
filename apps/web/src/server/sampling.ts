@@ -1,4 +1,19 @@
 import { createServerFn } from "@tanstack/react-start";
+import {
+	assertBrowserRunnerEvidenceProtocol,
+	assertPortalBrowserRunnerMutationAllowed,
+	browserRunnerHumanFinalization,
+	canCancelBrowserRunnerAfterStart,
+	deriveBrowserRunnerResultStatus,
+	isBrowserRunnerCnScope,
+} from "@workspace/lib/browser-runner-policy";
+import {
+	confirmBrowserRunnerTerminalFailure,
+	finalizeBrowserRunnerNeedsHuman,
+	getBrowserRunnerProgress,
+	reconcileExpiredBrowserRunnerBatches,
+	startBrowserRunnerBatch,
+} from "@workspace/lib/db/browser-runner";
 import { db } from "@workspace/lib/db/db";
 import {
 	addDeliveryTasks,
@@ -44,6 +59,7 @@ import {
 import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { browserRunnerEnabled } from "./browser-runner-auth";
 import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
 import { provisionManualSamplingScope, provisionSamplingScopeInputSchema } from "./sampling-scope-provisioning";
@@ -110,6 +126,7 @@ const createSamplingBatchInputSchema = z.object({
 	scopeId: guidSchema,
 	idempotencyKey: z.string().trim().min(1).max(200),
 	name: z.string().trim().min(1).max(120),
+	executionMode: z.enum(["manual", "browser_runner"]).default("manual"),
 	promptIds: z.array(guidSchema).min(1).max(500),
 	targets: z
 		.array(
@@ -190,7 +207,28 @@ function buildSamplingBatchSummary(
 	batch: typeof deliveryBatches.$inferSelect,
 	coverage: ReturnType<typeof summarizeDeliveryCoverage>,
 	claimableTaskCount = coverage.overall.available,
+	automationProgress: Awaited<ReturnType<typeof getBrowserRunnerProgress>> | null = null,
+	taskRows: readonly DeliveryTaskView[] = [],
 ) {
+	const isBrowserRunner = batch.executionMode === "browser_runner";
+	const isSettled = batch.automationStatus === "settled";
+	const resultStatus = isBrowserRunner
+		? deriveBrowserRunnerResultStatus({
+				isSettled,
+				total: coverage.overall.total,
+				succeeded: coverage.overall.succeeded,
+			})
+		: "final";
+	const canCancel =
+		batch.status !== "completed" &&
+		batch.status !== "cancelled" &&
+		(!isBrowserRunner || batch.automationStartedAt === null || canCancelBrowserRunnerAfterStart(taskRows));
+	const humanFinalization = browserRunnerHumanFinalization({
+		executionMode: batch.executionMode,
+		automationStartedAt: batch.automationStartedAt,
+		tasks: taskRows,
+		now: new Date(),
+	});
 	return {
 		id: batch.id,
 		brandId: batch.brandId,
@@ -208,6 +246,18 @@ function buildSamplingBatchSummary(
 		updatedAt: batch.updatedAt,
 		coverage,
 		claimableTaskCount,
+		executionMode: batch.executionMode,
+		automationStatus: batch.automationStatus,
+		automationProgress,
+		needsHumanCount: automationProgress?.needsHuman ?? 0,
+		finalizableNeedsHumanCount: humanFinalization.count,
+		canFinalizeNeedsHuman: humanFinalization.canFinalize,
+		needsHumanPreSubmitCount: automationProgress?.needsHumanPreSubmit ?? 0,
+		needsHumanPostSubmitCount: automationProgress?.needsHumanPostSubmit ?? 0,
+		isProvisional: resultStatus === "provisional",
+		resultStatus,
+		browserRunnerEnabled: browserRunnerEnabled(),
+		canCancel,
 	};
 }
 
@@ -246,6 +296,16 @@ export interface SamplingTaskDetail {
 	locale: string;
 	timezone: string;
 	status: "planned" | "available" | "claimed" | "succeeded" | "failed" | "cancelled";
+	automation: {
+		status: "queued" | "running" | "needs_human" | "completed" | null;
+		humanHandoffRequired: boolean;
+		attemptCount: number;
+		maxPreSubmitAttempts: 2;
+		submitIntentAt: Date | null;
+		submitConfirmedAt: Date | null;
+		needsHumanCode: string | null;
+		needsHumanReason: string | null;
+	};
 	promptId: string;
 	promptText: string;
 	surfaceTargetKey: string;
@@ -289,6 +349,16 @@ async function buildSamplingTaskDetail(task: DeliveryTaskView): Promise<Sampling
 		locale: manifest.scope.locale,
 		timezone: manifest.scope.timezone,
 		status: task.status,
+		automation: {
+			status: task.automationStatus,
+			humanHandoffRequired: task.needsHumanCode !== null,
+			attemptCount: task.automationAttemptCount,
+			maxPreSubmitAttempts: 2,
+			submitIntentAt: task.submitIntentAt,
+			submitConfirmedAt: task.submitConfirmedAt,
+			needsHumanCode: task.needsHumanCode,
+			needsHumanReason: task.needsHumanReason,
+		},
 		promptId: task.promptId,
 		promptText: task.promptText,
 		surfaceTargetKey: task.surfaceTargetKey,
@@ -326,7 +396,14 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 			.select({ id: brands.id, name: brands.name })
 			.from(brands)
 			.orderBy(asc(brands.name), asc(brands.id));
-		if (!data.brandId) return { brands: brandRows, selectedBrand: null, targets: SAMPLING_TARGETS };
+		if (!data.brandId) {
+			return {
+				brands: brandRows,
+				selectedBrand: null,
+				targets: SAMPLING_TARGETS,
+				browserRunnerEnabled: browserRunnerEnabled(),
+			};
+		}
 
 		const { brand } = await requireSamplingAdminBrand(data.brandId);
 		const [scopeRows, promptRows] = await Promise.all([
@@ -366,6 +443,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				prompts: promptRows,
 			},
 			targets: SAMPLING_TARGETS,
+			browserRunnerEnabled: browserRunnerEnabled(),
 		};
 	});
 
@@ -380,6 +458,7 @@ export const listSamplingBatchesFn = createServerFn({ method: "GET" })
 	.validator(listSamplingBatchesInputSchema)
 	.handler(async ({ data }) => {
 		await requireSamplingAdminBrand(data.brandId);
+		await reconcileExpiredBrowserRunnerBatches({ brandId: data.brandId });
 		const conditions = [eq(deliveryBatches.brandId, data.brandId)];
 		if (data.scopeId) conditions.push(eq(deliveryBatches.scopeId, data.scopeId));
 		if (data.status) conditions.push(eq(deliveryBatches.status, data.status));
@@ -401,11 +480,7 @@ export const listSamplingBatchesFn = createServerFn({ method: "GET" })
 		const batchesWithCoverage = await Promise.all(
 			batchesList.map(async (batch) => {
 				const taskRows = await db
-					.select({
-						status: deliveryTasks.status,
-						evaluationRole: deliveryTasks.evaluationRole,
-						leaseExpiresAt: deliveryTasks.leaseExpiresAt,
-					})
+					.select()
 					.from(deliveryTasks)
 					.where(and(eq(deliveryTasks.batchId, batch.id), eq(deliveryTasks.brandId, batch.brandId)));
 				const now = Date.now();
@@ -425,7 +500,15 @@ export const listSamplingBatchesFn = createServerFn({ method: "GET" })
 								status === "available" ||
 								(status === "claimed" && leaseExpiresAt !== null && leaseExpiresAt.getTime() <= now),
 						).length;
-				return buildSamplingBatchSummary(batch, summarizeDeliveryCoverage(taskRows), claimableTaskCount);
+				const automationProgress =
+					batch.executionMode === "browser_runner" ? await getBrowserRunnerProgress(batch.id) : null;
+				return buildSamplingBatchSummary(
+					batch,
+					summarizeDeliveryCoverage(taskRows),
+					claimableTaskCount,
+					automationProgress,
+					taskRows,
+				);
 			}),
 		);
 
@@ -478,12 +561,32 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 		if (new Set(targetKeys).size !== targetKeys.length) {
 			throw new Error("A sampling batch can include each surface target only once");
 		}
+		if (data.executionMode === "browser_runner") {
+			if (!browserRunnerEnabled()) throw new Error("Browser Runner is disabled");
+			assertBrowserRunnerEvidenceProtocol(data.protocol.evidence.minimumArtifacts);
+			if (
+				data.targets.length !== 1 ||
+				data.targets[0]?.surfaceTargetKey !== "doubao.consumer_web" ||
+				data.targets[0]?.captureRouteKey !== "browser_runner.doubao" ||
+				data.targets[0]?.sessionRequirement !== "anonymous_clean" ||
+				data.targets[0]?.searchRequirement !== "forbidden"
+			) {
+				throw new Error(
+					"Browser Runner batches require anonymous-clean Doubao sampling with search forbidden via browser_runner.doubao",
+				);
+			}
+		} else if (data.targets.some(({ captureRouteKey }) => captureRouteKey === "browser_runner.doubao")) {
+			throw new Error("The browser_runner.doubao route requires Browser Runner execution mode");
+		}
 
 		const scopeCandidate = await db.query.measurementScopes.findFirst({
 			where: and(eq(measurementScopes.id, data.scopeId), eq(measurementScopes.brandId, brand.id)),
 		});
 		if (!scopeCandidate) throw new Error(`Measurement scope "${data.scopeId}" was not found for this brand`);
 		if (!scopeCandidate.enabled) throw new Error(`Measurement scope "${scopeCandidate.name}" is disabled`);
+		if (data.executionMode === "browser_runner" && !isBrowserRunnerCnScope(scopeCandidate)) {
+			throw new Error("Browser Runner batches require a CN/zh-CN/Asia/Shanghai measurement scope");
+		}
 		if (scopeCandidate.market === "ZZ" || scopeCandidate.locale === "und") {
 			throw new Error("Sampling batches require an explicit market and locale");
 		}
@@ -594,6 +697,7 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 			name: data.name,
 			protocol: data.protocol,
 			createdBy: session.user.id,
+			executionMode: data.executionMode,
 		});
 		const existing = await getDeliveryBatch({ brandId: brand.id, batchId: batch.id });
 		if (!existing) throw new Error(`Delivery batch ${batch.id} could not be read after creation`);
@@ -607,7 +711,13 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 				throw new Error(`Delivery batch idempotency key ${data.idempotencyKey} is assigned to another manifest`);
 			}
 			if (batch.status !== "draft") {
-				return buildSamplingBatchSummary(batch, summarizeDeliveryCoverage(existing.tasks));
+				return buildSamplingBatchSummary(
+					batch,
+					summarizeDeliveryCoverage(existing.tasks),
+					undefined,
+					null,
+					existing.tasks,
+				);
 			}
 		} else if (batch.status !== "draft") {
 			throw new Error(`Frozen delivery batch ${batch.id} has no manifest tasks`);
@@ -619,7 +729,13 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 		const frozen = await freezeDeliveryBatch({ brandId: brand.id, batchId: batch.id, frozenBy: session.user.id });
 		const frozenBatch = await getDeliveryBatch({ brandId: brand.id, batchId: frozen.id });
 		if (!frozenBatch) throw new Error(`Frozen delivery batch ${frozen.id} could not be read`);
-		return buildSamplingBatchSummary(frozen, summarizeDeliveryCoverage(frozenBatch.tasks));
+		return buildSamplingBatchSummary(
+			frozen,
+			summarizeDeliveryCoverage(frozenBatch.tasks),
+			undefined,
+			null,
+			frozenBatch.tasks,
+		);
 	});
 
 export const cancelSamplingBatchFn = createServerFn({ method: "POST" })
@@ -628,7 +744,30 @@ export const cancelSamplingBatchFn = createServerFn({ method: "POST" })
 		const { session } = await requireSamplingAdminBrand(data.brandId);
 		const batch = await cancelDeliveryBatch({ ...data, cancelledBy: session.user.id });
 		const current = await getDeliveryBatch({ brandId: data.brandId, batchId: batch.id });
-		return buildSamplingBatchSummary(batch, summarizeDeliveryCoverage(current?.tasks ?? []));
+		return buildSamplingBatchSummary(
+			batch,
+			summarizeDeliveryCoverage(current?.tasks ?? []),
+			undefined,
+			null,
+			current?.tasks ?? [],
+		);
+	});
+
+export const startSamplingBatchAutomationFn = createServerFn({ method: "POST" })
+	.validator(z.object({ brandId: brandIdSchema, batchId: guidSchema }))
+	.handler(async ({ data }) => {
+		await requireSamplingAdminBrand(data.brandId);
+		if (!browserRunnerEnabled()) throw new Error("Browser Runner is disabled");
+		const batch = await startBrowserRunnerBatch(data);
+		const current = await getDeliveryBatch({ brandId: data.brandId, batchId: batch.id });
+		if (!current) throw new Error(`Delivery batch ${batch.id} could not be read after automation start`);
+		return buildSamplingBatchSummary(
+			batch,
+			summarizeDeliveryCoverage(current.tasks),
+			undefined,
+			await getBrowserRunnerProgress(batch.id),
+			current.tasks,
+		);
 	});
 
 export const claimSamplingTaskFn = createServerFn({ method: "POST" })
@@ -637,6 +776,7 @@ export const claimSamplingTaskFn = createServerFn({ method: "POST" })
 			brandId: brandIdSchema,
 			batchId: guidSchema.optional(),
 			surfaceTargetKeys: z.array(z.enum(MANUAL_OBSERVATION_SURFACE_TARGET_KEYS)).min(1).max(50).optional(),
+			queue: z.enum(["available", "needs_human"]).default("available"),
 		}),
 	)
 	.handler(async ({ data }) => {
@@ -671,6 +811,7 @@ export const releaseSamplingTaskFn = createServerFn({ method: "POST" })
 		const { session } = await requireSamplingAdminBrand(data.brandId);
 		const task = await getDeliveryTask({ brandId: data.brandId, taskId: data.taskId });
 		if (!task) throw new Error(`Sampling task "${data.taskId}" not found`);
+		assertPortalBrowserRunnerMutationAllowed(task, "release");
 		await releaseDeliveryTask({
 			taskId: task.id,
 			claimedBy: session.user.id,
@@ -705,12 +846,43 @@ export const failSamplingTaskFn = createServerFn({ method: "POST" })
 		return buildSamplingTaskDetail(updated);
 	});
 
+export const confirmSamplingTaskTerminalFailureFn = createServerFn({ method: "POST" })
+	.validator(
+		z.object({
+			brandId: brandIdSchema,
+			taskId: guidSchema,
+			reason: z.string().trim().min(1).max(1_000),
+		}),
+	)
+	.handler(async ({ data }) => {
+		const { session } = await requireSamplingAdminBrand(data.brandId);
+		const updated = await confirmBrowserRunnerTerminalFailure({
+			...data,
+			confirmedBy: session.user.id,
+		});
+		return buildSamplingTaskDetail(updated);
+	});
+
+export const finalizeSamplingBatchNeedsHumanFn = createServerFn({ method: "POST" })
+	.validator(
+		z.object({
+			brandId: brandIdSchema,
+			batchId: guidSchema,
+			reason: z.string().trim().min(1).max(1_000),
+		}),
+	)
+	.handler(async ({ data }) => {
+		const { session } = await requireSamplingAdminBrand(data.brandId);
+		return finalizeBrowserRunnerNeedsHuman({ ...data, confirmedBy: session.user.id });
+	});
+
 export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 	.validator(samplingTaskLeaseSchema.extend({ observation: samplingObservationInputSchema }))
 	.handler(async ({ data }) => {
 		const { session, brand } = await requireSamplingAdminBrand(data.brandId);
 		const task = await getDeliveryTask({ brandId: data.brandId, taskId: data.taskId });
 		if (!task) throw new Error(`Sampling task "${data.taskId}" not found`);
+		assertPortalBrowserRunnerMutationAllowed(task, "submit");
 		const deliveryClaim = {
 			taskId: task.id,
 			claimedBy: session.user.id,
@@ -734,7 +906,7 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 			task,
 			manifest,
 			observation: data.observation,
-			operatorUserId: session.user.id,
+			captureActor: { kind: "operator", id: session.user.id },
 			leaseGeneration: data.leaseGeneration,
 		});
 		const attempt = await claimImportedObservationAttempt({

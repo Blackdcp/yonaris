@@ -71,6 +71,13 @@ const task: DeliveryTaskView = {
 	...frozenTask,
 	batchId: manifest.batch.id,
 	status: "claimed",
+	automationStatus: null,
+	automationAttemptCount: 0,
+	runnerSessionId: null,
+	submitIntentAt: null,
+	submitConfirmedAt: null,
+	needsHumanCode: null,
+	needsHumanReason: null,
 	observationAttemptId: null,
 	claimedBy: "admin-1",
 	leaseGeneration: 1,
@@ -206,5 +213,51 @@ describe("prepareSamplingObservation", () => {
 		expect(prepare("50000000-0000-4000-8000-000000000001").sampleFingerprint).toBe(
 			prepare("50000000-0000-4000-8000-000000000002").sampleFingerprint,
 		);
+	});
+
+	it("does not claim that a registered CN runner verified its network egress", () => {
+		const runnerTask = {
+			...task,
+			surfaceTargetKey: "doubao.consumer_web",
+			captureRouteKey: "browser_runner.doubao",
+			automationStatus: "running" as const,
+			automationAttemptCount: 1,
+		};
+		const runnerFrozenTask = {
+			...frozenTask,
+			surfaceTargetKey: runnerTask.surfaceTargetKey,
+			captureRouteKey: runnerTask.captureRouteKey,
+		};
+		runnerFrozenTask.slotKey = buildDeliveryTaskSlotKey(runnerFrozenTask);
+		runnerTask.slotKey = runnerFrozenTask.slotKey;
+		const runnerManifest = { ...manifest, tasks: [runnerFrozenTask] };
+		const prepared = prepareSamplingObservation({
+			task: runnerTask,
+			manifest: runnerManifest,
+			observation: {
+				...observation,
+				pageUrl: "https://www.doubao.com/chat/sample",
+				operatorAttested: undefined,
+			},
+			captureActor: {
+				kind: "browser_runner",
+				id: "cn-runner-1",
+				adapterVersion: "doubao-v1",
+				browserVersion: "Chromium 140",
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+			},
+			leaseGeneration: 1,
+		});
+
+		expect(prepared.captureMetadata).toMatchObject({
+			executionMarketVerified: false,
+			localizationEvidence: "runner_registered_cn_unverified",
+			registeredMarket: "CN",
+			registeredLocale: "zh-CN",
+			registeredTimezone: "Asia/Shanghai",
+		});
+		expect(prepared.captureMetadata).not.toHaveProperty("operatorAttested");
 	});
 });

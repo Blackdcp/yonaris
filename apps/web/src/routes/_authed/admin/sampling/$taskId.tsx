@@ -228,6 +228,7 @@ function SamplingTaskPage() {
 		minimumEvidenceArtifacts: taskQuery.data.minimumEvidenceArtifacts,
 		requireEvidenceSha256: taskQuery.data.requireEvidenceSha256,
 		requirePageUrl: taskQuery.data.requirePageUrl,
+		automation: taskQuery.data.automation,
 	};
 
 	const returnToQueue = async () => {

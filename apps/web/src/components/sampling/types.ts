@@ -8,6 +8,19 @@ export type SamplingTaskStatus = "planned" | "available" | "claimed" | "succeede
 export type SamplingEvaluationRole = "scored" | "observation";
 export type SamplingSessionRequirement = "anonymous_clean" | "new_account_clean";
 export type SamplingSearchRequirement = "not_applicable" | "required" | "forbidden";
+export type SamplingExecutionMode = "manual" | "browser_runner";
+export type SamplingAutomationStatus = "not_started" | "running" | "needs_human" | "settled";
+export type SamplingHumanQueue = "needs_human";
+export type SamplingResultStatus = "provisional" | "final" | "incomplete";
+
+export interface SamplingAutomationProgress {
+	total: number;
+	completed: number;
+	running: number;
+	needsHuman: number;
+	needsHumanPreSubmit?: number;
+	needsHumanPostSubmit?: number;
+}
 
 export interface SamplingCoverageCounts {
 	planned: number;
@@ -33,6 +46,9 @@ export interface SamplingBatchView {
 	brandId: string;
 	scopeId: string;
 	scopeName: string;
+	scopeMarket?: string;
+	scopeLocale?: string;
+	scopeTimezone?: string;
 	name: string;
 	status: SamplingBatchStatus;
 	plannedTaskCount: number;
@@ -44,6 +60,19 @@ export interface SamplingBatchView {
 	completedAt: string | Date | null;
 	cancelledAt: string | Date | null;
 	coverage: SamplingCoverage;
+	/** Missing on pre-automation batches, which remain manual and unscheduled. */
+	executionMode?: SamplingExecutionMode;
+	browserRunnerEnabled?: boolean;
+	automationStatus?: SamplingAutomationStatus | null;
+	automationProgress?: SamplingAutomationProgress | null;
+	/** Explicit server-owned queues. Never infer these values from failed tasks. */
+	needsHumanCount?: number;
+	needsHumanPreSubmitCount?: number;
+	needsHumanPostSubmitCount?: number;
+	finalizableNeedsHumanCount?: number;
+	canFinalizeNeedsHuman?: boolean;
+	canCancel?: boolean;
+	resultStatus?: SamplingResultStatus;
 }
 
 export interface SamplingBrandOption {
@@ -84,6 +113,7 @@ export interface SamplingTargetOption {
 
 export interface SamplingContextView {
 	brands: SamplingBrandOption[];
+	browserRunnerEnabled?: boolean;
 	selectedBrand: {
 		id: string;
 		name: string;
@@ -96,6 +126,7 @@ export interface SamplingContextView {
 export interface CreateSamplingBatchInput {
 	brandId: string;
 	scopeId: string;
+	executionMode: SamplingExecutionMode;
 	idempotencyKey: string;
 	name: string;
 	promptIds: string[];
@@ -160,6 +191,16 @@ export interface SamplingTaskView {
 	minimumEvidenceArtifacts: number;
 	requireEvidenceSha256: boolean;
 	requirePageUrl: boolean;
+	automation?: {
+		status: "queued" | "running" | "needs_human" | "completed" | null;
+		humanHandoffRequired: boolean;
+		attemptCount: number;
+		maxPreSubmitAttempts: number;
+		submitIntentAt: string | Date | null;
+		submitConfirmedAt: string | Date | null;
+		needsHumanCode: string | null;
+		needsHumanReason: string | null;
+	} | null;
 }
 
 export interface SamplingLease {

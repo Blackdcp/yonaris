@@ -14,9 +14,12 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { minimumEvidenceArtifactsForExecutionMode } from "./sampling-execution";
+import { formatZonedDateTimeInput, parseZonedDateTimeInput } from "./sampling-timezone";
 import type {
 	CreateSamplingBatchInput,
 	SamplingContextView,
+	SamplingExecutionMode,
 	SamplingSearchRequirement,
 	SamplingSessionRequirement,
 	SamplingTargetOption,
@@ -45,9 +48,12 @@ function newIdempotencyKey(): string {
 	return `sampling-ui:${suffix}`;
 }
 
-function localDateTimeValue(date: Date): string {
-	const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-	return local.toISOString().slice(0, 16);
+function defaultMeasurementWindow(timezone: string): { startsAt: string; endsAt: string } {
+	const now = new Date();
+	return {
+		startsAt: formatZonedDateTimeInput(now, timezone),
+		endsAt: formatZonedDateTimeInput(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1_000), timezone),
+	};
 }
 
 export function SamplingBatchCreateDialog({
@@ -60,13 +66,12 @@ export function SamplingBatchCreateDialog({
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 	const [scopeId, setScopeId] = useState("");
+	const [executionMode, setExecutionMode] = useState<SamplingExecutionMode>("manual");
 	const [promptIds, setPromptIds] = useState<Set<string>>(new Set());
 	const [targetDrafts, setTargetDrafts] = useState<Record<string, TargetDraft>>({});
 	const [idempotencyKey, setIdempotencyKey] = useState(newIdempotencyKey);
-	const [windowStartsAt, setWindowStartsAt] = useState(() => localDateTimeValue(new Date()));
-	const [windowEndsAt, setWindowEndsAt] = useState(() =>
-		localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)),
-	);
+	const [windowStartsAt, setWindowStartsAt] = useState(() => defaultMeasurementWindow("UTC").startsAt);
+	const [windowEndsAt, setWindowEndsAt] = useState(() => defaultMeasurementWindow("UTC").endsAt);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +84,15 @@ export function SamplingBatchCreateDialog({
 		[brand],
 	);
 	const firstScopeId = scopes[0]?.id ?? "";
+	const firstScopeTimezone = scopes[0]?.timezone ?? "UTC";
 	const selectedScope = scopes.find((scope) => scope.id === scopeId);
+	const availableTargets = useMemo(
+		() =>
+			executionMode === "browser_runner"
+				? context.targets.filter((target) => target.surfaceTargetKey === "doubao.consumer_web")
+				: context.targets,
+		[context.targets, executionMode],
+	);
 	const prompts = useMemo(
 		() => brand?.prompts.filter((prompt) => prompt.enabled && prompt.scopeId === scopeId) ?? [],
 		[brand, scopeId],
@@ -87,14 +100,16 @@ export function SamplingBatchCreateDialog({
 
 	useEffect(() => {
 		setScopeId(firstScopeId);
+		setExecutionMode("manual");
 		setPromptIds(new Set());
 		setTargetDrafts({});
 		setIdempotencyKey(newIdempotencyKey());
 		setError(null);
 		setName(brandId ? `${brandName} sampling ${new Date().toLocaleDateString()}` : "");
-		setWindowStartsAt(localDateTimeValue(new Date()));
-		setWindowEndsAt(localDateTimeValue(new Date(Date.now() + 7 * 24 * 60 * 60 * 1_000)));
-	}, [brandId, brandName, firstScopeId]);
+		const defaults = defaultMeasurementWindow(firstScopeTimezone);
+		setWindowStartsAt(defaults.startsAt);
+		setWindowEndsAt(defaults.endsAt);
+	}, [brandId, brandName, firstScopeId, firstScopeTimezone]);
 
 	const togglePrompt = (promptId: string) => {
 		setPromptIds((previous) => {
@@ -131,7 +146,8 @@ export function SamplingBatchCreateDialog({
 	const handleSubmit = async () => {
 		if (!brand || !scopeId) return;
 		const evaluationRole = selectedScope?.samplingEvaluationRole;
-		if (!evaluationRole) {
+		const programTimezone = selectedScope?.timezone;
+		if (!evaluationRole || !programTimezone) {
 			setError("Select a provisioned sampling scope with a fixed evaluation pool.");
 			return;
 		}
@@ -143,14 +159,25 @@ export function SamplingBatchCreateDialog({
 			setError("Select at least one prompt.");
 			return;
 		}
-		const selectedTargets = context.targets.filter((target) => targetDrafts[target.surfaceTargetKey]);
+		if (executionMode === "browser_runner" && context.browserRunnerEnabled !== true) {
+			setError("Browser Runner is not enabled for this deployment.");
+			return;
+		}
+		const selectedTargets = availableTargets.filter((target) => targetDrafts[target.surfaceTargetKey]);
 		if (selectedTargets.length === 0) {
 			setError("Select at least one consumer surface.");
 			return;
 		}
-		const startsAt = new Date(windowStartsAt);
-		const endsAt = new Date(windowEndsAt);
-		if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+		let startsAt: Date;
+		let endsAt: Date;
+		try {
+			startsAt = parseZonedDateTimeInput(windowStartsAt, programTimezone);
+			endsAt = parseZonedDateTimeInput(windowEndsAt, programTimezone);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Enter a valid measurement window.");
+			return;
+		}
+		if (endsAt <= startsAt) {
 			setError("Measurement window end must be after its start.");
 			return;
 		}
@@ -161,6 +188,7 @@ export function SamplingBatchCreateDialog({
 			await onCreate({
 				brandId: brand.id,
 				scopeId,
+				executionMode,
 				idempotencyKey,
 				name: name.trim(),
 				promptIds: [...promptIds],
@@ -169,7 +197,8 @@ export function SamplingBatchCreateDialog({
 					if (!draft) throw new Error(`Target ${target.surfaceTargetKey} is no longer selected.`);
 					return {
 						surfaceTargetKey: target.surfaceTargetKey,
-						captureRouteKey: target.captureRouteKey,
+						captureRouteKey:
+							executionMode === "browser_runner" ? ("browser_runner.doubao" as const) : target.captureRouteKey,
 						evaluationRole,
 						...draft,
 					};
@@ -177,7 +206,7 @@ export function SamplingBatchCreateDialog({
 				protocol: {
 					measurementWindow: { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() },
 					evidence: {
-						minimumArtifacts: 1,
+						minimumArtifacts: minimumEvidenceArtifactsForExecutionMode(executionMode),
 						requireSha256: true,
 						requirePageUrl: true,
 						allowedUriSchemes: ["https", "http"],
@@ -227,6 +256,12 @@ export function SamplingBatchCreateDialog({
 								onValueChange={(nextScopeId) => {
 									setScopeId(nextScopeId);
 									setPromptIds(new Set());
+									const nextScope = scopes.find((scope) => scope.id === nextScopeId);
+									if (nextScope) {
+										const defaults = defaultMeasurementWindow(nextScope.timezone);
+										setWindowStartsAt(defaults.startsAt);
+										setWindowEndsAt(defaults.endsAt);
+									}
 								}}
 								disabled={submitting}
 							>
@@ -236,7 +271,7 @@ export function SamplingBatchCreateDialog({
 								<SelectContent>
 									{scopes.map((scope) => (
 										<SelectItem key={scope.id} value={scope.id}>
-											{scope.name} · {scope.market}/{scope.locale}
+											{scope.name} · {scope.market}/{scope.locale} · {scope.timezone}
 										</SelectItem>
 									))}
 								</SelectContent>
@@ -258,11 +293,38 @@ export function SamplingBatchCreateDialog({
 								copied between them.
 							</p>
 						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label>Execution</Label>
+							<Select
+								value={executionMode}
+								onValueChange={(value: SamplingExecutionMode) => {
+									setExecutionMode(value);
+									setTargetDrafts({});
+								}}
+								disabled={submitting}
+							>
+								<SelectTrigger className="w-full sm:w-72">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="manual">Manual workbench</SelectItem>
+									<SelectItem value="browser_runner" disabled={context.browserRunnerEnabled !== true}>
+										Browser Runner
+									</SelectItem>
+								</SelectContent>
+							</Select>
+							<p className="text-xs text-muted-foreground">
+								Creating the batch only freezes its denominator. Browser Runner starts only when an administrator
+								explicitly starts it from the queue; no scheduled run is created.
+							</p>
+						</div>
 					</div>
 
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
-							<Label htmlFor="sampling-window-start">Measurement window starts</Label>
+							<Label htmlFor="sampling-window-start">
+								Measurement window starts ({selectedScope?.timezone ?? "Program timezone"})
+							</Label>
 							<Input
 								id="sampling-window-start"
 								type="datetime-local"
@@ -272,7 +334,9 @@ export function SamplingBatchCreateDialog({
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor="sampling-window-end">Measurement window ends</Label>
+							<Label htmlFor="sampling-window-end">
+								Measurement window ends ({selectedScope?.timezone ?? "Program timezone"})
+							</Label>
 							<Input
 								id="sampling-window-end"
 								type="datetime-local"
@@ -282,7 +346,8 @@ export function SamplingBatchCreateDialog({
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground sm:col-span-2">
-							The frozen denominator and all scored observations are constrained to this delivery window.
+							The frozen denominator and all scored observations are constrained to this delivery window. Dates are
+							interpreted in the Program timezone, not the administrator's browser timezone.
 						</p>
 					</div>
 
@@ -325,7 +390,7 @@ export function SamplingBatchCreateDialog({
 					<div className="space-y-3">
 						<Label>Consumer surfaces ({Object.keys(targetDrafts).length} selected)</Label>
 						<div className="grid gap-2 sm:grid-cols-2">
-							{context.targets.map((target) => {
+							{availableTargets.map((target) => {
 								const checkboxId = `sampling-target-${target.surfaceTargetKey}`;
 								return (
 									<div
@@ -346,7 +411,7 @@ export function SamplingBatchCreateDialog({
 							})}
 						</div>
 
-						{context.targets
+						{availableTargets
 							.filter((target) => targetDrafts[target.surfaceTargetKey])
 							.map((target) => {
 								const draft = targetDrafts[target.surfaceTargetKey];

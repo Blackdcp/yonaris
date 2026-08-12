@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 type LedgerState = {
-	attemptStatus: "running" | "succeeded";
+	attemptStatus: "running" | "succeeded" | "failed";
 	attemptCaptureMetadata: Record<string, unknown>;
 	promptRuns: Array<Record<string, unknown>>;
 	citations: Array<Record<string, unknown>>;
@@ -39,6 +39,7 @@ const transactionExecutor = {
 	update: () => ({
 		set: (values: Record<string, unknown>) => {
 			if (values.status === "succeeded") harness.current.attemptStatus = "succeeded";
+			if (values.status === "failed") harness.current.attemptStatus = "failed";
 			if (values.captureMetadata !== undefined) {
 				harness.current.attemptCaptureMetadata = {
 					...harness.current.attemptCaptureMetadata,
@@ -71,6 +72,12 @@ const transactionExecutor = {
 
 vi.mock("./db", () => ({
 	db: {
+		update: () => ({
+			set: (values: Record<string, unknown>) => {
+				if (values.status === "failed") harness.current.attemptStatus = "failed";
+				return { where: () => ({ returning: async () => [{ id: "attempt-1" }] }) };
+			},
+		}),
 		transaction: async (callback: (executor: typeof transactionExecutor) => Promise<unknown>) => {
 			const snapshot = structuredClone(harness.current);
 			harness.transactionExecutors.push(transactionExecutor);
@@ -107,7 +114,7 @@ vi.mock("./delivery-batches", () => ({
 	failDeliveryTaskInTransaction: vi.fn(),
 }));
 
-import { persistSuccessfulObservation } from "./observations";
+import { markObservationFailed, persistSuccessfulObservation } from "./observations";
 
 const startedAt = new Date("2026-08-11T11:59:00.000Z");
 const observedAt = new Date("2026-08-11T12:00:00.000Z");
@@ -184,4 +191,29 @@ describe("successful observation transaction", () => {
 			expect(harness.transactionExecutors).toEqual([transactionExecutor, transactionExecutor]);
 		},
 	);
+
+	it("records a technical failure without generating a prompt run", async () => {
+		await markObservationFailed({
+			attemptId: "attempt-1",
+			startedAt,
+			error: new Error("browser navigation failed"),
+			stage: "provider",
+		});
+
+		expect(harness.current.attemptStatus).toBe("failed");
+		expect(harness.current.promptRuns).toHaveLength(0);
+	});
+
+	it("persists a successful non-mention as a false prompt run in the metric denominator", async () => {
+		await persistSuccessfulObservation({
+			...persistenceInput,
+			answerText: "The answer completed successfully without naming the monitored brand.",
+			brandMentioned: false,
+			extractedCitations: [],
+		} as never);
+
+		expect(harness.current.attemptStatus).toBe("succeeded");
+		expect(harness.current.promptRuns).toHaveLength(1);
+		expect(harness.current.promptRuns[0]).toMatchObject({ brandMentioned: false });
+	});
 });

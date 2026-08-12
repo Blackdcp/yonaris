@@ -4,7 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/al
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { AlertTriangle, CheckCircle2, ClipboardList, Clock3, XCircle } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, UserRoundCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ListPagination } from "@/components/list-pagination";
 import { SamplingBatchCreateDialog } from "@/components/sampling/sampling-batch-create-dialog";
@@ -17,15 +17,18 @@ import type {
 	SamplingBatchStatus,
 	SamplingBatchView,
 	SamplingContextView,
+	SamplingHumanQueue,
 } from "@/components/sampling/types";
 import { getAppName } from "@/lib/route-head";
 import {
 	cancelSamplingBatchFn,
 	claimSamplingTaskFn,
 	createSamplingBatchFn,
+	finalizeSamplingBatchNeedsHumanFn,
 	getSamplingContextFn,
 	listSamplingBatchesFn,
 	provisionSamplingScopeFn,
+	startSamplingBatchAutomationFn,
 } from "@/server/sampling";
 
 const PAGE_SIZE = 20;
@@ -108,42 +111,77 @@ function SamplingQueuePage() {
 		refetchInterval: 60_000,
 	});
 
-	const scopeNameById = useMemo(
-		() => new Map(context?.selectedBrand?.scopes.map((scope) => [scope.id, scope.name]) ?? []),
+	const scopeById = useMemo(
+		() => new Map(context?.selectedBrand?.scopes.map((scope) => [scope.id, scope]) ?? []),
 		[context?.selectedBrand?.scopes],
 	);
 	const batches: SamplingBatchView[] = useMemo(
 		() =>
-			(listQuery.data?.batches ?? []).map((batch) => ({
-				id: batch.id,
-				brandId: batch.brandId,
-				scopeId: batch.scopeId,
-				scopeName: scopeNameById.get(batch.scopeId) ?? batch.scopeId,
-				name: batch.name,
-				status: batch.status,
-				plannedTaskCount: batch.plannedTaskCount,
-				claimableTaskCount: batch.claimableTaskCount,
-				manifestHash: batch.manifestHash,
-				createdAt: batch.createdAt,
-				frozenAt: batch.frozenAt,
-				startedAt: batch.startedAt,
-				completedAt: batch.completedAt,
-				cancelledAt: batch.cancelledAt,
-				coverage: batch.coverage,
-			})),
-		[listQuery.data?.batches, scopeNameById],
+			(listQuery.data?.batches ?? []).map((batch) => {
+				const scope = scopeById.get(batch.scopeId);
+				const automation = batch as typeof batch &
+					Partial<
+						Pick<
+							SamplingBatchView,
+							| "executionMode"
+							| "browserRunnerEnabled"
+							| "automationStatus"
+							| "automationProgress"
+							| "needsHumanCount"
+							| "needsHumanPreSubmitCount"
+							| "needsHumanPostSubmitCount"
+							| "finalizableNeedsHumanCount"
+							| "canFinalizeNeedsHuman"
+							| "canCancel"
+							| "resultStatus"
+						>
+					>;
+				return {
+					id: batch.id,
+					brandId: batch.brandId,
+					scopeId: batch.scopeId,
+					scopeName: scope?.name ?? batch.scopeId,
+					scopeMarket: scope?.market,
+					scopeLocale: scope?.locale,
+					scopeTimezone: scope?.timezone,
+					name: batch.name,
+					status: batch.status,
+					plannedTaskCount: batch.plannedTaskCount,
+					claimableTaskCount: batch.claimableTaskCount,
+					manifestHash: batch.manifestHash,
+					createdAt: batch.createdAt,
+					frozenAt: batch.frozenAt,
+					startedAt: batch.startedAt,
+					completedAt: batch.completedAt,
+					cancelledAt: batch.cancelledAt,
+					coverage: batch.coverage,
+					executionMode: automation.executionMode,
+					browserRunnerEnabled: automation.browserRunnerEnabled,
+					automationStatus: automation.automationStatus,
+					automationProgress: automation.automationProgress,
+					needsHumanCount: automation.needsHumanCount,
+					needsHumanPreSubmitCount: automation.needsHumanPreSubmitCount,
+					needsHumanPostSubmitCount: automation.needsHumanPostSubmitCount,
+					finalizableNeedsHumanCount: automation.finalizableNeedsHumanCount,
+					canFinalizeNeedsHuman: automation.canFinalizeNeedsHuman,
+					canCancel: automation.canCancel,
+					resultStatus: automation.resultStatus,
+				};
+			}),
+		[listQuery.data?.batches, scopeById],
 	);
 
 	const visibleTotals = useMemo(
 		() =>
 			batches.reduce(
 				(totals, batch) => ({
-					claimable: totals.claimable + batch.claimableTaskCount,
-					claimed: totals.claimed + batch.coverage.overall.claimed,
+					automatedCompleted: totals.automatedCompleted + (batch.automationProgress?.completed ?? 0),
+					needsHuman: totals.needsHuman + (batch.needsHumanCount ?? 0),
 					succeeded: totals.succeeded + batch.coverage.overall.succeeded,
+					total: totals.total + batch.coverage.overall.total,
 					failed: totals.failed + batch.coverage.overall.failed,
 				}),
-				{ claimable: 0, claimed: 0, succeeded: 0, failed: 0 },
+				{ automatedCompleted: 0, needsHuman: 0, succeeded: 0, total: 0, failed: 0 },
 			),
 		[batches],
 	);
@@ -183,11 +221,13 @@ function SamplingQueuePage() {
 		}
 	};
 
-	const claimTask = async (batch: SamplingBatchView) => {
+	const claimTask = async (batch: SamplingBatchView, queue?: SamplingHumanQueue) => {
 		setActionError(null);
 		setActingBatchId(batch.id);
 		try {
-			const claimed = await claimSamplingTaskFn({ data: { brandId: batch.brandId, batchId: batch.id } });
+			const claimed = await claimSamplingTaskFn({
+				data: { brandId: batch.brandId, batchId: batch.id, ...(queue ? { queue } : {}) },
+			});
 			if (!claimed) {
 				setActionError("No available task remains in this batch. The queue may have changed since the last refresh.");
 				await listQuery.refetch();
@@ -207,6 +247,38 @@ function SamplingQueuePage() {
 			});
 		} catch (caught) {
 			setActionError(caught instanceof Error ? caught.message : "Failed to claim a sampling task.");
+		} finally {
+			setActingBatchId(null);
+		}
+	};
+
+	const startAutomation = async (batch: SamplingBatchView) => {
+		setActionError(null);
+		setActingBatchId(batch.id);
+		try {
+			await startSamplingBatchAutomationFn({ data: { brandId: batch.brandId, batchId: batch.id } });
+			await listQuery.refetch();
+		} catch (caught) {
+			setActionError(caught instanceof Error ? caught.message : "Failed to start Browser Runner for this batch.");
+		} finally {
+			setActingBatchId(null);
+		}
+	};
+
+	const finalizeNeedsHuman = async (batch: SamplingBatchView) => {
+		const reason = window.prompt(
+			"Explain why these unresolved Browser Runner tasks cannot be recovered. They will become technical failures: delivery coverage will decrease, but Elmo Visibility will not count them as brand-not-mentioned.",
+		);
+		if (!reason?.trim()) return;
+		setActionError(null);
+		setActingBatchId(batch.id);
+		try {
+			await finalizeSamplingBatchNeedsHumanFn({
+				data: { brandId: batch.brandId, batchId: batch.id, reason: reason.trim() },
+			});
+			await listQuery.refetch();
+		} catch (caught) {
+			setActionError(caught instanceof Error ? caught.message : "Failed to finalize unresolved Browser Runner tasks.");
 		} finally {
 			setActingBatchId(null);
 		}
@@ -243,11 +315,26 @@ function SamplingQueuePage() {
 				</Alert>
 			)}
 
+			{context?.browserRunnerEnabled && (
+				<Alert>
+					<Bot />
+					<AlertTitle>Browser Runner is administrator-started</AlertTitle>
+					<AlertDescription>
+						Creating and freezing a batch does not run it. Use Start automated run on that batch when you are ready; no
+						recurring or scheduled execution is created.
+					</AlertDescription>
+				</Alert>
+			)}
+
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				<SummaryCard title="Claimable (page)" value={visibleTotals.claimable} icon={<ClipboardList />} />
-				<SummaryCard title="Claimed (page)" value={visibleTotals.claimed} icon={<Clock3 />} />
-				<SummaryCard title="Succeeded (page)" value={visibleTotals.succeeded} icon={<CheckCircle2 />} />
-				<SummaryCard title="Failed (page)" value={visibleTotals.failed} icon={<XCircle />} />
+				<SummaryCard title="Automated completed (page)" value={visibleTotals.automatedCompleted} icon={<Bot />} />
+				<SummaryCard title="Needs human (page)" value={visibleTotals.needsHuman} icon={<UserRoundCheck />} />
+				<SummaryCard
+					title="Successful / frozen (page)"
+					value={`${visibleTotals.succeeded}/${visibleTotals.total}`}
+					icon={<CheckCircle2 />}
+				/>
+				<SummaryCard title="Terminal failures (page)" value={visibleTotals.failed} icon={<XCircle />} />
 			</div>
 
 			<Card>
@@ -326,7 +413,14 @@ function SamplingQueuePage() {
 					<AlertDescription>{String(contextQuery.error ?? listQuery.error)}</AlertDescription>
 				</Alert>
 			) : (
-				<SamplingBatchList batches={batches} actingBatchId={actingBatchId} onClaim={claimTask} onCancel={cancelBatch} />
+				<SamplingBatchList
+					batches={batches}
+					actingBatchId={actingBatchId}
+					onClaim={claimTask}
+					onStartAutomation={startAutomation}
+					onFinalizeNeedsHuman={finalizeNeedsHuman}
+					onCancel={cancelBatch}
+				/>
 			)}
 
 			<ListPagination
@@ -339,7 +433,7 @@ function SamplingQueuePage() {
 	);
 }
 
-function SummaryCard({ title, value, icon }: { title: string; value: number; icon: React.ReactNode }) {
+function SummaryCard({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {
 	return (
 		<Card className="gap-2">
 			<CardHeader className="flex flex-row items-center justify-between pb-0">
@@ -347,7 +441,9 @@ function SummaryCard({ title, value, icon }: { title: string; value: number; ico
 				<span className="text-muted-foreground [&>svg]:size-4">{icon}</span>
 			</CardHeader>
 			<CardContent>
-				<p className="text-2xl font-semibold tabular-nums">{value.toLocaleString()}</p>
+				<p className="text-2xl font-semibold tabular-nums">
+					{typeof value === "number" ? value.toLocaleString() : value}
+				</p>
 			</CardContent>
 		</Card>
 	);

@@ -77,6 +77,17 @@ jobs:
       - name: Unit tests
         run: pnpm turbo test
 
+      # This is a local fixture only. It proves the Browser Runner executes a
+      # complete batch and produces evidence without contacting Doubao or any
+      # other consumer surface.
+      - name: Run Browser Runner fixture smoke
+        run: |
+          state_dir="$(mktemp -d)"
+          trap 'rm -rf "$state_dir"' EXIT
+          pnpm --filter @workspace/browser-runner start -- run \
+            --fixture fixtures/doubao-smoke.json \
+            --state-dir "$state_dir"
+
       - name: Cache Playwright browsers
         uses: actions/cache@v6
         with:

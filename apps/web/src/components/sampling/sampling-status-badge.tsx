@@ -1,5 +1,5 @@
 import { Badge } from "@workspace/ui/components/badge";
-import type { SamplingBatchStatus, SamplingTaskStatus } from "./types";
+import type { SamplingBatchStatus, SamplingExecutionMode, SamplingResultStatus, SamplingTaskStatus } from "./types";
 
 const STATUS_LABELS: Record<SamplingBatchStatus | SamplingTaskStatus, string> = {
 	draft: "Draft",
@@ -27,6 +27,23 @@ export function SamplingStatusBadge({ status }: { status: SamplingBatchStatus | 
 			className={status === "claimed" || status === "in_progress" ? "bg-amber-100 text-amber-800" : undefined}
 		>
 			{STATUS_LABELS[status]}
+		</Badge>
+	);
+}
+
+export function SamplingResultBadge({
+	executionMode,
+	resultStatus,
+}: {
+	executionMode: SamplingExecutionMode;
+	resultStatus?: SamplingResultStatus;
+}) {
+	if (executionMode === "manual") return <span className="font-medium text-muted-foreground">Manual</span>;
+	if (!resultStatus) return <span className="font-medium text-muted-foreground">Not finalized</span>;
+
+	return (
+		<Badge variant={resultStatus === "final" ? "default" : resultStatus === "incomplete" ? "destructive" : "secondary"}>
+			{resultStatus === "final" ? "Final" : resultStatus === "incomplete" ? "Incomplete" : "Provisional"}
 		</Badge>
 	);
 }

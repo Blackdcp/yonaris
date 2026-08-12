@@ -1,0 +1,21 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { browserRunnerErrorResponse, parseBrowserRunnerJson, requireBrowserRunner } from "@/server/browser-runner-auth";
+import { browserRunnerLeaseSchema, heartbeatRunnerTask } from "@/server/browser-runner-service";
+
+export const Route = createFileRoute("/api/internal/browser-runner/v1/tasks/$taskId/heartbeat")({
+	server: {
+		handlers: {
+			POST: async ({ request, params }: { request: Request; params: { taskId: string } }) => {
+				try {
+					const principal = requireBrowserRunner(request);
+					const input = await parseBrowserRunnerJson(request, browserRunnerLeaseSchema);
+					return Response.json(await heartbeatRunnerTask(params.taskId, input, principal.id), {
+						headers: { "Cache-Control": "no-store" },
+					});
+				} catch (error) {
+					return browserRunnerErrorResponse(error);
+				}
+			},
+		},
+	},
+});

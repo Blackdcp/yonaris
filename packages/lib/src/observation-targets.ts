@@ -8,6 +8,7 @@ export type CaptureMode =
 	| "aggregated_api"
 	| "manual_import"
 	| "assisted_browser"
+	| "browser_runner"
 	| "test";
 export type ObservationCohort = "consumer_measurement" | "api_diagnostic";
 

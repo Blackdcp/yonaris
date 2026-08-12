@@ -1,0 +1,41 @@
+[
+	{
+		"id": "fixture-success",
+		"batchId": "fixture-batch",
+		"brandId": "stepfun",
+		"promptText": "阶跃星辰 StepFun 是一家什么公司？",
+		"surfaceTargetKey": "doubao.consumer_web",
+		"captureRouteKey": "browser_runner.doubao",
+		"sampleIndex": 1,
+		"sessionRequirement": "anonymous_clean",
+		"searchRequirement": "forbidden",
+		"evaluationRole": "observation",
+		"scenario": "success"
+	},
+	{
+		"id": "fixture-pre-submit-retry",
+		"batchId": "fixture-batch",
+		"brandId": "stepfun",
+		"promptText": "国内有哪些主流大模型公司？",
+		"surfaceTargetKey": "doubao.consumer_web",
+		"captureRouteKey": "browser_runner.doubao",
+		"sampleIndex": 1,
+		"sessionRequirement": "anonymous_clean",
+		"searchRequirement": "forbidden",
+		"evaluationRole": "observation",
+		"scenario": "pre_submit_transient_then_success"
+	},
+	{
+		"id": "fixture-needs-human",
+		"batchId": "fixture-batch",
+		"brandId": "stepfun",
+		"promptText": "如果我要选择国产大模型服务商，有哪些推荐？",
+		"surfaceTargetKey": "doubao.consumer_web",
+		"captureRouteKey": "browser_runner.doubao",
+		"sampleIndex": 1,
+		"sessionRequirement": "anonymous_clean",
+		"searchRequirement": "forbidden",
+		"evaluationRole": "observation",
+		"scenario": "captcha"
+	}
+]

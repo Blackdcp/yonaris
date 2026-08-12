@@ -38,6 +38,19 @@ describe("sampling evidence HTTP contract", () => {
 		});
 	});
 
+	it("accepts the Browser Runner HTML page-snapshot header contract", () => {
+		expect(
+			parseSamplingEvidenceUploadHeaders(
+				request({
+					...CLAIM_HEADERS,
+					[SAMPLING_EVIDENCE_HEADERS.kind]: "page_snapshot",
+					[SAMPLING_EVIDENCE_HEADERS.fileName]: encodeURIComponent("page.html"),
+					"Content-Type": "text/html; charset=utf-8",
+				}),
+			),
+		).toMatchObject({ kind: "page_snapshot", fileName: "page.html" });
+	});
+
 	it("requires an explicit configured same-origin request", () => {
 		const valid = request({ ...CLAIM_HEADERS, Origin: "https://portal.example.test", "Sec-Fetch-Site": "same-origin" });
 		expect(() => requireExplicitSameOrigin(valid, "https://portal.example.test")).not.toThrow();

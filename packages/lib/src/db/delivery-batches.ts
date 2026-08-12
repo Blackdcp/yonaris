@@ -1,5 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
-import { and, asc, eq, gt, inArray, lt, or } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import {
+	assertPortalBrowserRunnerMutationAllowed,
+	canCancelBrowserRunnerAfterStart,
+	deriveBrowserRunnerBatchStatus,
+} from "../browser-runner-policy";
 import {
 	buildDeliveryManifestHash,
 	buildDeliveryManifestSnapshot,
@@ -93,10 +98,12 @@ export async function createDraftDeliveryBatch(input: {
 	name: string;
 	protocol: DeliveryProtocol;
 	createdBy?: string;
+	executionMode?: "manual" | "browser_runner";
 }): Promise<DeliveryBatch> {
 	const idempotencyKey = requiredText(input.idempotencyKey, "idempotencyKey", 300);
 	const name = requiredText(input.name, "name", 300);
 	const protocol = normalizeDeliveryProtocol(input.protocol);
+	const executionMode = input.executionMode ?? "manual";
 
 	const [inserted] = await db
 		.insert(deliveryBatches)
@@ -107,6 +114,8 @@ export async function createDraftDeliveryBatch(input: {
 			name,
 			protocol,
 			createdBy: optionalText(input.createdBy, "createdBy", 300),
+			executionMode,
+			automationStatus: executionMode === "browser_runner" ? "not_started" : null,
 		})
 		.onConflictDoNothing({ target: [deliveryBatches.brandId, deliveryBatches.idempotencyKey] })
 		.returning();
@@ -119,6 +128,7 @@ export async function createDraftDeliveryBatch(input: {
 	if (
 		existing.scopeId !== input.scopeId ||
 		existing.name !== name ||
+		existing.executionMode !== executionMode ||
 		JSON.stringify(existing.protocol) !== JSON.stringify(protocol)
 	) {
 		throw new DeliveryBatchConflictError(idempotencyKey);
@@ -189,7 +199,13 @@ export async function addDeliveryTasks(input: {
 
 		const inserted = await tx
 			.insert(deliveryTasks)
-			.values(plans.map((plan) => ({ batchId: batch.id, ...plan })))
+			.values(
+				plans.map((plan) => ({
+					batchId: batch.id,
+					...plan,
+					automationStatus: batch.executionMode === "browser_runner" ? ("queued" as const) : null,
+				})),
+			)
 			.returning();
 		const insertedBySlot = new Map(inserted.map((task) => [task.slotKey, task]));
 		return plans.map(({ slotKey }) => redactDeliveryTask(requiredMapValue(insertedBySlot, slotKey)));
@@ -368,6 +384,7 @@ export async function claimNextDeliveryTask(input: {
 	leaseDurationMs?: number;
 	surfaceTargetKeys?: readonly string[];
 	evaluationRoles?: readonly DeliveryEvaluationRole[];
+	queue?: "available" | "needs_human";
 }): Promise<ClaimedDeliveryTask | null> {
 	const claimedBy = requiredText(input.claimedBy, "claimedBy", 300);
 	const leaseDurationMs = validLeaseDuration(input.leaseDurationMs);
@@ -378,6 +395,10 @@ export async function claimNextDeliveryTask(input: {
 			eq(deliveryBatches.brandId, input.brandId),
 			inArray(deliveryBatches.status, ["frozen", "in_progress"]),
 		];
+		if ((input.queue ?? "available") === "needs_human") {
+			batchConditions.push(eq(deliveryBatches.executionMode, "browser_runner"));
+			batchConditions.push(eq(deliveryBatches.automationStatus, "needs_human"));
+		}
 		if (input.batchId) batchConditions.push(eq(deliveryBatches.id, input.batchId));
 		const batches = await tx
 			.select({
@@ -385,6 +406,8 @@ export async function claimNextDeliveryTask(input: {
 				status: deliveryBatches.status,
 				startedAt: deliveryBatches.startedAt,
 				protocol: deliveryBatches.protocol,
+				executionMode: deliveryBatches.executionMode,
+				automationStatus: deliveryBatches.automationStatus,
 			})
 			.from(deliveryBatches)
 			.where(and(...batchConditions))
@@ -413,10 +436,31 @@ export async function claimNextDeliveryTask(input: {
 		}
 
 		for (const { batch, windowEndsAt } of eligibleBatches) {
-			const availabilityCondition = or(
-				eq(deliveryTasks.status, "available"),
-				and(eq(deliveryTasks.status, "claimed"), lt(deliveryTasks.leaseExpiresAt, now)),
-			);
+			const queue = input.queue ?? "available";
+			const availabilityCondition =
+				queue === "needs_human"
+					? or(
+							and(
+								eq(deliveryTasks.status, "available"),
+								eq(deliveryTasks.automationStatus, "needs_human"),
+								isNull(deliveryTasks.submitIntentAt),
+							),
+							and(
+								eq(deliveryTasks.status, "claimed"),
+								eq(deliveryTasks.automationStatus, "running"),
+								isNotNull(deliveryTasks.needsHumanCode),
+								isNull(deliveryTasks.submitIntentAt),
+								lt(deliveryTasks.leaseExpiresAt, now),
+							),
+						)
+					: or(
+							and(eq(deliveryTasks.status, "available"), isNull(deliveryTasks.automationStatus)),
+							and(
+								eq(deliveryTasks.status, "claimed"),
+								isNull(deliveryTasks.automationStatus),
+								lt(deliveryTasks.leaseExpiresAt, now),
+							),
+						);
 			if (!availabilityCondition) throw new Error("Failed to build delivery task availability condition");
 			const taskConditions = [eq(deliveryTasks.batchId, batch.id), availabilityCondition];
 			if (input.surfaceTargetKeys)
@@ -445,6 +489,7 @@ export async function claimNextDeliveryTask(input: {
 					leaseExpiresAt,
 					claimCount: candidate.claimCount + 1,
 					claimedAt: now,
+					...(queue === "needs_human" ? { automationStatus: "running" as const } : {}),
 				})
 				.where(
 					and(
@@ -571,21 +616,35 @@ export async function assertActiveDeliveryClaimInTransaction(
 }
 
 export async function releaseDeliveryTask(claim: DeliveryClaimProof & { error?: unknown }): Promise<DeliveryTaskView> {
-	const now = new Date();
-	const error = claim.error === undefined ? {} : describeError(claim.error);
-	const [released] = await db
-		.update(deliveryTasks)
-		.set({
-			status: "available",
-			leaseTokenHash: null,
-			leaseExpiresAt: null,
-			availableAt: now,
-			...error,
-		})
-		.where(activeLeaseCondition(claim, now))
-		.returning();
-	if (!released) throw new DeliveryTaskLeaseError(claim.taskId);
-	return redactDeliveryTask(released);
+	return db.transaction(async (tx) => {
+		const now = new Date();
+		const [lockedTask] = await tx
+			.select({
+				captureRouteKey: deliveryTasks.captureRouteKey,
+				submitIntentAt: deliveryTasks.submitIntentAt,
+			})
+			.from(deliveryTasks)
+			.where(activeLeaseCondition(claim, now))
+			.limit(1)
+			.for("update");
+		if (!lockedTask) throw new DeliveryTaskLeaseError(claim.taskId);
+		assertPortalBrowserRunnerMutationAllowed(lockedTask, "release");
+		const error = claim.error === undefined ? {} : describeError(claim.error);
+		const [released] = await tx
+			.update(deliveryTasks)
+			.set({
+				status: "available",
+				automationStatus: sql`CASE WHEN ${deliveryTasks.automationStatus} IS NULL THEN NULL ELSE 'needs_human'::browser_runner_task_status END`,
+				leaseTokenHash: null,
+				leaseExpiresAt: null,
+				availableAt: now,
+				...error,
+			})
+			.where(activeLeaseCondition(claim, now))
+			.returning();
+		if (!released) throw new DeliveryTaskLeaseError(claim.taskId);
+		return redactDeliveryTask(released);
+	});
 }
 
 export async function completeDeliveryTaskSuccess(
@@ -611,6 +670,7 @@ export async function completeDeliveryTaskInTransaction(
 		.update(deliveryTasks)
 		.set({
 			status: "succeeded",
+			automationStatus: sql`CASE WHEN ${deliveryTasks.automationStatus} IS NULL THEN NULL ELSE 'completed'::browser_runner_task_status END`,
 			observationAttemptId: claim.observationAttemptId,
 			leaseTokenHash: null,
 			leaseExpiresAt: null,
@@ -618,6 +678,8 @@ export async function completeDeliveryTaskInTransaction(
 			lastErrorClass: null,
 			lastErrorCode: null,
 			lastErrorMessage: null,
+			needsHumanCode: null,
+			needsHumanReason: null,
 		})
 		.where(activeLeaseCondition(claim, now))
 		.returning();
@@ -632,18 +694,44 @@ export async function failDeliveryTaskInTransaction(
 ): Promise<DeliveryTaskView> {
 	await lockDeliveryTaskBatch(executor, claim.taskId);
 	const now = new Date();
+	const [originalTask] = await executor
+		.select({
+			needsHumanCode: deliveryTasks.needsHumanCode,
+			needsHumanReason: deliveryTasks.needsHumanReason,
+		})
+		.from(deliveryTasks)
+		.where(eq(deliveryTasks.id, claim.taskId))
+		.limit(1)
+		.for("update");
+	if (!originalTask) throw new DeliveryTaskLeaseError(claim.taskId);
 	if (claim.observationAttemptId) {
 		await assertAttemptMatchesTask(executor, claim.taskId, claim.observationAttemptId, "failed");
 	}
+	const reportedError = describeError(claim.error);
+	const terminalFailure =
+		originalTask.needsHumanCode && originalTask.needsHumanReason
+			? {
+					lastErrorClass: "BrowserRunnerTerminalFailure",
+					lastErrorCode: originalTask.needsHumanCode,
+					lastErrorMessage:
+						`${sanitizeDiagnostic(originalTask.needsHumanReason)} | terminal disposition: ${sanitizeDiagnostic(reportedError.lastErrorMessage ?? "Terminal failure confirmed")} (confirmed by ${sanitizeDiagnostic(claim.claimedBy)})`.slice(
+							0,
+							2_000,
+						),
+				}
+			: reportedError;
 	const [failed] = await executor
 		.update(deliveryTasks)
 		.set({
 			status: "failed",
+			automationStatus: sql`CASE WHEN ${deliveryTasks.automationStatus} IS NULL THEN NULL ELSE 'completed'::browser_runner_task_status END`,
 			observationAttemptId: claim.observationAttemptId,
 			leaseTokenHash: null,
 			leaseExpiresAt: null,
 			failedAt: now,
-			...describeError(claim.error),
+			...terminalFailure,
+			needsHumanCode: null,
+			needsHumanReason: null,
 		})
 		.where(activeLeaseCondition(claim, now))
 		.returning();
@@ -669,12 +757,21 @@ export async function cancelDeliveryBatch(input: {
 		if (batch.status === "completed") {
 			throw new DeliveryBatchStateError(`Completed delivery batch ${batch.id} cannot be cancelled`);
 		}
+		if (batch.executionMode === "browser_runner" && batch.automationStartedAt !== null) {
+			const tasks = await tx.select().from(deliveryTasks).where(eq(deliveryTasks.batchId, batch.id)).for("update");
+			if (!canCancelBrowserRunnerAfterStart(tasks)) {
+				throw new DeliveryBatchStateError(
+					`Browser-runner batch ${batch.id} cannot be cancelled after any frozen slot was attempted`,
+				);
+			}
+		}
 
 		const cancelledAt = new Date();
 		await tx
 			.update(deliveryTasks)
 			.set({
 				status: "cancelled",
+				automationStatus: sql`CASE WHEN ${deliveryTasks.automationStatus} IS NULL THEN NULL ELSE 'completed'::browser_runner_task_status END`,
 				leaseTokenHash: null,
 				leaseExpiresAt: null,
 				cancelledAt,
@@ -686,6 +783,8 @@ export async function cancelDeliveryBatch(input: {
 			.update(deliveryBatches)
 			.set({
 				status: "cancelled",
+				automationStatus: batch.executionMode === "browser_runner" ? "settled" : batch.automationStatus,
+				automationSettledAt: batch.executionMode === "browser_runner" ? cancelledAt : batch.automationSettledAt,
 				cancelledAt,
 				cancelledBy: optionalText(input.cancelledBy, "cancelledBy", 300),
 			})
@@ -718,7 +817,7 @@ async function lockDeliveryTaskBatch(executor: DeliveryExecutor, taskId: string)
 		.limit(1);
 	if (!task) throw new Error(`Delivery task ${taskId} was not found`);
 	const [batch] = await executor
-		.select({ id: deliveryBatches.id })
+		.select({ id: deliveryBatches.id, executionMode: deliveryBatches.executionMode })
 		.from(deliveryBatches)
 		.where(eq(deliveryBatches.id, task.batchId))
 		.limit(1)
@@ -753,11 +852,15 @@ async function assertAttemptMatchesTask(
 	}
 }
 
-async function settleDeliveryBatch(executor: DeliveryExecutor, batchId: string, completedAt: Date): Promise<void> {
+export async function settleDeliveryBatch(
+	executor: DeliveryExecutor,
+	batchId: string,
+	completedAt: Date,
+): Promise<void> {
 	// Serialize the two possible "last task" transactions. Under READ COMMITTED,
 	// the waiter takes a fresh snapshot after the earlier holder commits.
 	const [batch] = await executor
-		.select({ id: deliveryBatches.id })
+		.select({ id: deliveryBatches.id, executionMode: deliveryBatches.executionMode })
 		.from(deliveryBatches)
 		.where(eq(deliveryBatches.id, batchId))
 		.limit(1)
@@ -768,10 +871,29 @@ async function settleDeliveryBatch(executor: DeliveryExecutor, batchId: string, 
 		.from(deliveryTasks)
 		.where(and(eq(deliveryTasks.batchId, batchId), inArray(deliveryTasks.status, ["planned", "available", "claimed"])))
 		.limit(1);
-	if (unresolved.length > 0) return;
+	if (unresolved.length > 0) {
+		if (batch.executionMode === "browser_runner") {
+			const states = await executor
+				.select({ automationStatus: deliveryTasks.automationStatus })
+				.from(deliveryTasks)
+				.where(eq(deliveryTasks.batchId, batchId));
+			await executor
+				.update(deliveryBatches)
+				.set({
+					automationStatus: deriveBrowserRunnerBatchStatus(states.map(({ automationStatus }) => automationStatus)),
+				})
+				.where(eq(deliveryBatches.id, batchId));
+		}
+		return;
+	}
 	await executor
 		.update(deliveryBatches)
-		.set({ status: "completed", completedAt })
+		.set({
+			status: "completed",
+			completedAt,
+			automationStatus: sql`CASE WHEN ${deliveryBatches.executionMode} = 'browser_runner' THEN 'settled'::browser_runner_batch_status ELSE ${deliveryBatches.automationStatus} END`,
+			automationSettledAt: sql`CASE WHEN ${deliveryBatches.executionMode} = 'browser_runner' THEN ${completedAt} ELSE ${deliveryBatches.automationSettledAt} END`,
+		})
 		.where(and(eq(deliveryBatches.id, batchId), eq(deliveryBatches.status, "in_progress")));
 }
 
@@ -832,4 +954,10 @@ function describeError(error: unknown): Pick<DeliveryTask, "lastErrorClass" | "l
 			? String((error as { code?: unknown }).code ?? "").slice(0, 100) || null
 			: null;
 	return { lastErrorClass: errorClass, lastErrorCode: code, lastErrorMessage: message };
+}
+
+function sanitizeDiagnostic(value: string): string {
+	return value
+		.replace(/Bearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
+		.replace(/(api[-_ ]?key|token|password)\s*[:=]\s*[^\s,;]+/gi, "$1=[REDACTED]");
 }

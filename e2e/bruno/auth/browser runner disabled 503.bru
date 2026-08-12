@@ -1,0 +1,23 @@
+meta {
+  name: browser runner is disabled by default
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/api/internal/browser-runner/v1/tasks/claim
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "brandId": "stepfun"
+  }
+}
+
+assert {
+  res.status: eq 503
+  res.body.error: eq BrowserRunnerHttpError
+  res.body.message: contains disabled
+}

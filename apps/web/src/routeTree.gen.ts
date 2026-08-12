@@ -71,6 +71,14 @@ import { Route as ApiAdminSamplingEvidenceIndexRouteImport } from './routes/api/
 import { Route as ApiAdminSamplingEvidenceArtifactIdRouteImport } from './routes/api/admin/sampling/evidence/$artifactId'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 import { Route as ApiV1PromptsPromptIdSnapshotRouteImport } from './routes/api/v1/prompts/$promptId/snapshot'
+import { Route as ApiInternalBrowserRunnerV1EvidenceIndexRouteImport } from './routes/api/internal/browser-runner/v1/evidence/index'
+import { Route as ApiInternalBrowserRunnerV1TasksClaimRouteImport } from './routes/api/internal/browser-runner/v1/tasks/claim'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/complete'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdFailureRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/failure'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdResumeRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/resume'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -405,6 +413,54 @@ const ApiV1PromptsPromptIdSnapshotRoute =
     path: '/snapshot',
     getParentRoute: () => ApiV1PromptsPromptIdRoute,
   } as any)
+const ApiInternalBrowserRunnerV1EvidenceIndexRoute =
+  ApiInternalBrowserRunnerV1EvidenceIndexRouteImport.update({
+    id: '/api/internal/browser-runner/v1/evidence/',
+    path: '/api/internal/browser-runner/v1/evidence/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksClaimRoute =
+  ApiInternalBrowserRunnerV1TasksClaimRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/claim',
+    path: '/api/internal/browser-runner/v1/tasks/claim',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/complete',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/complete',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdFailureRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/failure',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/failure',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdResumeRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/resume',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/resume',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -468,6 +524,14 @@ export interface FileRoutesByFullPath {
   '/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
+  '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -526,6 +590,14 @@ export interface FileRoutesByTo {
   '/app/$brand/settings': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
+  '/api/internal/browser-runner/v1/evidence': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -591,6 +663,14 @@ export interface FileRoutesById {
   '/_authed/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
+  '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -656,6 +736,14 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
+    | '/api/internal/browser-runner/v1/tasks/claim'
+    | '/api/internal/browser-runner/v1/evidence/'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -714,6 +802,14 @@ export interface FileRouteTypes {
     | '/app/$brand/settings'
     | '/api/admin/sampling/evidence'
     | '/api/plausible/js/script'
+    | '/api/internal/browser-runner/v1/tasks/claim'
+    | '/api/internal/browser-runner/v1/evidence'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
   id:
     | '__root__'
     | '/'
@@ -778,6 +874,14 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
+    | '/api/internal/browser-runner/v1/tasks/claim'
+    | '/api/internal/browser-runner/v1/evidence/'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -809,6 +913,14 @@ export interface RootRouteChildren {
   ApiAdminSamplingEvidenceArtifactIdRoute: typeof ApiAdminSamplingEvidenceArtifactIdRoute
   ApiAdminSamplingEvidenceIndexRoute: typeof ApiAdminSamplingEvidenceIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
+  ApiInternalBrowserRunnerV1TasksClaimRoute: typeof ApiInternalBrowserRunnerV1TasksClaimRoute
+  ApiInternalBrowserRunnerV1EvidenceIndexRoute: typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1247,6 +1359,62 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1PromptsPromptIdSnapshotRouteImport
       parentRoute: typeof ApiV1PromptsPromptIdRoute
     }
+    '/api/internal/browser-runner/v1/evidence/': {
+      id: '/api/internal/browser-runner/v1/evidence/'
+      path: '/api/internal/browser-runner/v1/evidence'
+      fullPath: '/api/internal/browser-runner/v1/evidence/'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1EvidenceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/claim': {
+      id: '/api/internal/browser-runner/v1/tasks/claim'
+      path: '/api/internal/browser-runner/v1/tasks/claim'
+      fullPath: '/api/internal/browser-runner/v1/tasks/claim'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksClaimRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/complete': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/complete'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/failure': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/failure'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/resume': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/resume'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -1420,6 +1588,22 @@ const rootRouteChildren: RootRouteChildren = {
     ApiAdminSamplingEvidenceArtifactIdRoute,
   ApiAdminSamplingEvidenceIndexRoute: ApiAdminSamplingEvidenceIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
+  ApiInternalBrowserRunnerV1TasksClaimRoute:
+    ApiInternalBrowserRunnerV1TasksClaimRoute,
+  ApiInternalBrowserRunnerV1EvidenceIndexRoute:
+    ApiInternalBrowserRunnerV1EvidenceIndexRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -58,6 +58,30 @@ describe("evidence artifact validation", () => {
 		);
 	});
 
+	it("accepts strict UTF-8 HTML only as an explicitly declared page snapshot", () => {
+		const html = Buffer.from("  <!doctype html><html><body>captured page</body></html>", "utf8");
+		const prepared = prepareEvidenceArtifact(html, "page_snapshot");
+
+		expect(prepared.kind).toBe("page_snapshot");
+		expect(prepared.mediaType).toBe("text/html");
+		expect(() => prepareEvidenceArtifact(html)).toThrowError(expect.objectContaining({ code: "unsupported_media" }));
+		expect(() => prepareEvidenceArtifact(html, "screenshot")).toThrowError(
+			expect.objectContaining({ code: "unsupported_media" }),
+		);
+	});
+
+	it("rejects malformed or binary HTML page snapshots", () => {
+		expect(() =>
+			prepareEvidenceArtifact(Buffer.from("<title>missing document root</title>"), "page_snapshot"),
+		).toThrowError(expect.objectContaining({ code: "unsupported_media" }));
+		expect(() =>
+			prepareEvidenceArtifact(Buffer.from([0x3c, 0x68, 0x74, 0x6d, 0x6c, 0x00]), "page_snapshot"),
+		).toThrowError(expect.objectContaining({ code: "unsupported_media" }));
+		expect(() =>
+			prepareEvidenceArtifact(Buffer.from([0x3c, 0x68, 0x74, 0x6d, 0x6c, 0xff]), "page_snapshot"),
+		).toThrowError(expect.objectContaining({ code: "unsupported_media" }));
+	});
+
 	it("rejects content above the artifact limit", () => {
 		const content = Buffer.alloc(EVIDENCE_ARTIFACT_MAX_BYTES + 1);
 		content.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);

@@ -417,7 +417,7 @@ export function prepareEvidenceArtifact(
 ): {
 	content: Buffer;
 	kind: EvidenceArtifactKind;
-	mediaType: "image/png" | "image/jpeg" | "image/webp" | "application/pdf";
+	mediaType: "image/png" | "image/jpeg" | "image/webp" | "application/pdf" | "text/html";
 	byteSize: number;
 	sha256: string;
 } {
@@ -429,7 +429,7 @@ export function prepareEvidenceArtifact(
 			"too_large",
 		);
 	}
-	const detected = detectEvidenceMedia(buffer);
+	const detected = detectEvidenceMedia(buffer, expectedKind);
 	if (expectedKind && expectedKind !== detected.kind) {
 		throw new EvidenceArtifactValidationError(
 			`Evidence artifact content is ${detected.kind}, not the requested ${expectedKind}`,
@@ -468,9 +468,12 @@ export function buildEvidenceArtifactReference(
 	};
 }
 
-function detectEvidenceMedia(content: Buffer): {
+function detectEvidenceMedia(
+	content: Buffer,
+	expectedKind?: EvidenceArtifactKind,
+): {
 	kind: EvidenceArtifactKind;
-	mediaType: "image/png" | "image/jpeg" | "image/webp" | "application/pdf";
+	mediaType: "image/png" | "image/jpeg" | "image/webp" | "application/pdf" | "text/html";
 } {
 	if (
 		content.byteLength >= 8 &&
@@ -499,8 +502,20 @@ function detectEvidenceMedia(content: Buffer): {
 		const tail = content.subarray(Math.max(0, content.byteLength - 1_024)).toString("latin1");
 		if (tail.includes("%%EOF")) return { kind: "page_snapshot", mediaType: "application/pdf" };
 	}
+	// HTML is accepted only when the caller explicitly declares a page snapshot.
+	// This avoids auto-classifying arbitrary uploaded text as trusted evidence.
+	if (expectedKind === "page_snapshot" && !content.includes(0)) {
+		try {
+			const html = new TextDecoder("utf-8", { fatal: true }).decode(content).trimStart().toLowerCase();
+			if (html.startsWith("<!doctype html") || html.startsWith("<html")) {
+				return { kind: "page_snapshot", mediaType: "text/html" };
+			}
+		} catch {
+			// Invalid UTF-8 is not an HTML snapshot.
+		}
+	}
 	throw new EvidenceArtifactValidationError(
-		"Evidence must be a valid PNG, JPEG, WebP, or PDF file",
+		"Evidence must be a valid PNG, JPEG, WebP, PDF, or explicitly declared HTML page snapshot",
 		"unsupported_media",
 	);
 }

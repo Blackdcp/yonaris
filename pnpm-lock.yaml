@@ -57,6 +57,22 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  apps/browser-runner:
+    dependencies:
+      playwright:
+        specifier: ^1.61.1
+        version: 1.61.1
+    devDependencies:
+      '@types/node':
+        specifier: ^26.1.1
+        version: 26.1.1
+      tsx:
+        specifier: ^4.23.1
+        version: 4.23.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   apps/cli:
     dependencies:
       '@clack/prompts':

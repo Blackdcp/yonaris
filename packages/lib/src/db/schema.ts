@@ -61,6 +61,19 @@ export const deliverySearchRequirementEnum = pgEnum("delivery_search_requirement
 	"forbidden",
 ]);
 export const deliveryEvaluationRoleEnum = pgEnum("delivery_evaluation_role", ["scored", "observation"]);
+export const deliveryExecutionModeEnum = pgEnum("delivery_execution_mode", ["manual", "browser_runner"]);
+export const browserRunnerBatchStatusEnum = pgEnum("browser_runner_batch_status", [
+	"not_started",
+	"running",
+	"needs_human",
+	"settled",
+]);
+export const browserRunnerTaskStatusEnum = pgEnum("browser_runner_task_status", [
+	"queued",
+	"running",
+	"needs_human",
+	"completed",
+]);
 export const evidenceArtifactStatusEnum = pgEnum("evidence_artifact_status", ["staged", "attached"]);
 export const evidenceArtifactKindEnum = pgEnum("evidence_artifact_kind", ["screenshot", "page_snapshot"]);
 
@@ -175,6 +188,10 @@ export const deliveryBatches = pgTable(
 		idempotencyKey: text("idempotency_key").notNull(),
 		name: text("name").notNull(),
 		status: deliveryBatchStatusEnum().notNull().default("draft"),
+		executionMode: deliveryExecutionModeEnum("execution_mode").notNull().default("manual"),
+		automationStatus: browserRunnerBatchStatusEnum("automation_status"),
+		automationStartedAt: timestamp("automation_started_at", { withTimezone: true }),
+		automationSettledAt: timestamp("automation_settled_at", { withTimezone: true }),
 		plannedTaskCount: integer("planned_task_count").notNull().default(0),
 		protocol: json("protocol").notNull().default({}),
 		manifestSnapshot: json("manifest_snapshot"),
@@ -200,6 +217,10 @@ export const deliveryBatches = pgTable(
 			table.scopeId,
 			table.status,
 			table.createdAt,
+		),
+		executionStateConsistent: check(
+			"delivery_batches_execution_state_consistent",
+			sql`(${table.executionMode} = 'manual' AND ${table.automationStatus} IS NULL AND ${table.automationStartedAt} IS NULL AND ${table.automationSettledAt} IS NULL) OR (${table.executionMode} = 'browser_runner' AND ${table.automationStatus} IS NOT NULL)`,
 		),
 		scopeBrandFk: foreignKey({
 			columns: [table.brandId, table.scopeId],
@@ -305,6 +326,13 @@ export const deliveryTasks = pgTable(
 		evaluationRole: deliveryEvaluationRoleEnum("evaluation_role").notNull().default("scored"),
 		slotKey: text("slot_key").notNull(),
 		status: deliveryTaskStatusEnum().notNull().default("planned"),
+		automationStatus: browserRunnerTaskStatusEnum("automation_status"),
+		automationAttemptCount: smallint("automation_attempt_count").notNull().default(0),
+		runnerSessionId: text("runner_session_id"),
+		submitIntentAt: timestamp("submit_intent_at", { withTimezone: true }),
+		submitConfirmedAt: timestamp("submit_confirmed_at", { withTimezone: true }),
+		needsHumanCode: text("needs_human_code"),
+		needsHumanReason: text("needs_human_reason"),
 		observationAttemptId: uuid("observation_attempt_id").references(() => observationAttempts.id),
 		claimedBy: text("claimed_by"),
 		leaseTokenHash: text("lease_token_hash"),
@@ -368,6 +396,18 @@ export const deliveryTasks = pgTable(
 		}),
 		positiveSampleIndex: check("delivery_tasks_positive_sample_index", sql`${table.sampleIndex} > 0`),
 		nonnegativeClaimCount: check("delivery_tasks_nonnegative_claim_count", sql`${table.claimCount} >= 0`),
+		nonnegativeAutomationAttemptCount: check(
+			"delivery_tasks_nonnegative_automation_attempt_count",
+			sql`${table.automationAttemptCount} >= 0`,
+		),
+		automationStateConsistent: check(
+			"delivery_tasks_automation_state_consistent",
+			sql`(${table.automationStatus} IS NULL AND ${table.automationAttemptCount} = 0 AND ${table.runnerSessionId} IS NULL AND ${table.submitIntentAt} IS NULL AND ${table.submitConfirmedAt} IS NULL AND ${table.needsHumanCode} IS NULL AND ${table.needsHumanReason} IS NULL) OR (${table.automationStatus} = 'queued' AND ${table.status} IN ('planned', 'available') AND ${table.leaseTokenHash} IS NULL AND ${table.leaseExpiresAt} IS NULL AND ${table.runnerSessionId} IS NULL AND ${table.submitIntentAt} IS NULL AND ${table.submitConfirmedAt} IS NULL AND ${table.needsHumanCode} IS NULL AND ${table.needsHumanReason} IS NULL) OR (${table.automationStatus} = 'running' AND ${table.status} = 'claimed' AND ${table.leaseTokenHash} IS NOT NULL AND ${table.leaseExpiresAt} IS NOT NULL) OR (${table.automationStatus} = 'needs_human' AND ${table.status} = 'available' AND ${table.leaseTokenHash} IS NULL AND ${table.leaseExpiresAt} IS NULL AND ${table.needsHumanCode} IS NOT NULL AND ${table.needsHumanReason} IS NOT NULL) OR (${table.automationStatus} = 'completed' AND ${table.status} IN ('succeeded', 'failed', 'cancelled'))`,
+		),
+		runnerSessionStateConsistent: check(
+			"delivery_tasks_runner_session_state_consistent",
+			sql`(${table.runnerSessionId} IS NULL AND ${table.submitIntentAt} IS NULL AND ${table.submitConfirmedAt} IS NULL) OR (${table.runnerSessionId} IS NOT NULL AND char_length(${table.runnerSessionId}) BETWEEN 1 AND 300 AND ${table.submitIntentAt} IS NOT NULL)`,
+		),
 		nonnegativeLeaseGeneration: check(
 			"delivery_tasks_nonnegative_lease_generation",
 			sql`${table.leaseGeneration} >= 0`,
@@ -438,7 +478,7 @@ export const evidenceArtifacts = pgTable(
 		),
 		validMediaType: check(
 			"evidence_artifacts_valid_media_type",
-			sql`(${table.kind} = 'screenshot' AND ${table.mediaType} IN ('image/png', 'image/jpeg', 'image/webp')) OR (${table.kind} = 'page_snapshot' AND ${table.mediaType} = 'application/pdf')`,
+			sql`(${table.kind} = 'screenshot' AND ${table.mediaType} IN ('image/png', 'image/jpeg', 'image/webp')) OR (${table.kind} = 'page_snapshot' AND ${table.mediaType} IN ('application/pdf', 'text/html'))`,
 		),
 		stateConsistent: check(
 			"evidence_artifacts_state_consistent",
