@@ -89,30 +89,10 @@ export default async function globalSetup(config: FullConfig) {
 			await client.end();
 		}
 
-		// Better Auth's session response may be cookie-cached with the user fields
-		// that existed when the session was created. Refresh the session after the
-		// database promotion so admin-only routes see the same role that the test
-		// database now stores.
-		const signOutResponse = await page.request.post("/api/auth/sign-out", {
-			data: {},
-			headers: { Origin: baseURL },
-		});
-		if (!signOutResponse.ok()) {
-			throw new Error(`Auth setup sign-out failed: ${signOutResponse.status()} ${await signOutResponse.text()}`);
-		}
-		const refreshedSignInResponse = await page.request.post("/api/auth/sign-in/email", {
-			headers: { Origin: baseURL },
-			data: {
-				email: TEST_USER.email,
-				password: TEST_USER.password,
-			},
-		});
-		if (!refreshedSignInResponse.ok()) {
-			throw new Error(
-				`Auth setup refreshed sign-in failed: ${refreshedSignInResponse.status()} ${await refreshedSignInResponse.text()}`,
-			);
-		}
-
+		// Cookie caching is disabled for stateful authorization, so the existing
+		// session reads the promoted role directly from the database. Avoiding a
+		// redundant sign-out/sign-in also keeps this multi-identity E2E flow within
+		// Better Auth's production sign-in rate limit (3 requests per 10 seconds).
 		const sessionResponse = await page.request.get("/api/auth/get-session");
 		const refreshedSession = (await sessionResponse.json()) as { user?: { role?: string } };
 		if (!sessionResponse.ok() || refreshedSession.user?.role !== "admin") {

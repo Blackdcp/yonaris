@@ -1,0 +1,24 @@
+meta {
+  name: create report rejects private URLs
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/reports
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "brandName": "Private Network Target",
+    "brandWebsite": "http://127.0.0.1:1515"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.error: eq Bad Request
+  res.body.message: contains URL safety policy
+}
