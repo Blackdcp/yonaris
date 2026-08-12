@@ -18,6 +18,10 @@ test("a platform operator can provision a ready customer workspace and ordinary 
 	await workspaceDialog.getByLabel("Website").fill("https://example.com");
 	await workspaceDialog.getByRole("button", { name: "Create workspace", exact: true }).click();
 	await workspaceDialog.waitFor({ state: "hidden", timeout: 30_000 });
+	// Wait for the newly-created workspace to become the selected tenant before
+	// opening the account dialog. This verifies the real UI handoff and avoids
+	// racing the React Query invalidation with the next mutation.
+	await expect(page.getByRole("combobox").first()).toContainText(workspaceName, { timeout: 30_000 });
 
 	await page.getByRole("button", { name: "Create customer account", exact: true }).click();
 	const accountDialog = page.getByRole("dialog", { name: "Create customer account" });

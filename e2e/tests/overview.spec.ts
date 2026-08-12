@@ -10,15 +10,15 @@ import { STEPFUN_BRAND_ID } from "../fixtures";
 const BRAND_ID = STEPFUN_BRAND_ID;
 
 test.describe("Overview Page", () => {
-  test("home page lands on the customer workspace switcher and StepFun is reachable", async ({ page }) => {
+  test("home page lands directly in the customer's only assigned workspace", async ({ page }) => {
     await page.goto("/");
-    // Local mode supports multiple brands, so / -> /app shows the switcher
-    // rather than auto-redirecting through to a brand.
-    await page.waitForURL(/\/app(?:\/)?$/, { timeout: 30_000 });
-    const brandLink = page.locator(`a[href="/app/${BRAND_ID}"]`).first();
-    await expect(brandLink).toBeVisible({ timeout: 15_000 });
-    await brandLink.click();
-    await page.waitForURL(new RegExp(`/app/${BRAND_ID}$`));
+    // An ordinary customer with one membership bypasses the workspace
+    // switcher and goes straight to that brand. Platform identities never
+    // share this shell.
+    await page.waitForURL(new RegExp(`/app/${BRAND_ID}/?$`), { timeout: 30_000 });
+    await expect(page.locator(`a[href="/app/${BRAND_ID}"][data-sidebar="menu-button"]`)).toBeVisible({
+      timeout: 15_000,
+    });
     expect(page.url()).toContain(`/app/${BRAND_ID}`);
   });
 
