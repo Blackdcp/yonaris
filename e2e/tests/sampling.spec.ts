@@ -11,7 +11,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import pg from "pg";
 import { CUSTOMER_AUTH_STATE_PATH } from "../customer-auth-setup";
-import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
+import { DATABASE_URL, STEPFUN_BRAND_ID, STEPFUN_BRAND_NAME, TEST_API_KEY } from "../fixtures";
 
 const TEST_BRAND_ID = STEPFUN_BRAND_ID;
 
@@ -78,7 +78,7 @@ test("freezes, executes, evidences, and accounts for one scored sample", async (
   await page.getByLabel("Result page URL").fill("https://www.doubao.com/chat/e2e-result");
   await page
     .getByLabel("Complete answer")
-    .fill("Test Organization is the organization represented in this complete consumer-surface answer.");
+    .fill(`${STEPFUN_BRAND_NAME} is the organization represented in this complete consumer-surface answer.`);
   await page.getByLabel("Citation URLs").fill("https://example.com/e2e-source");
   await page.getByLabel(/I confirm this run was executed/).check();
 
