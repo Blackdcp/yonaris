@@ -5,6 +5,7 @@ import path from "node:path";
 import { afterEach, test } from "node:test";
 import { DoubaoFixtureSessionFactory } from "./adapters/doubao-fixture.js";
 import type { FixtureScenario, FixtureTask, SurfaceSessionFactory } from "./contracts.js";
+import { saveEvidence } from "./evidence.js";
 import { RunJournal } from "./journal.js";
 import { runBatch } from "./run-batch.js";
 import { LocalObservationSink } from "./sink.js";
@@ -305,10 +306,43 @@ test("remote-style success deletes uploaded evidence and stores only a redacted 
 	assert.equal(success?.status, "succeeded");
 	if (success?.status !== "succeeded") throw new Error("Expected a successful fixture result");
 	for (const artifact of success.observation.evidence) assert.equal(await exists(artifact.path), false);
+	const taskEvidenceDirectory = path.dirname(path.dirname(success.observation.evidence[0]?.path ?? ""));
+	assert.equal(await exists(taskEvidenceDirectory), false);
 	const storedSummary = await readFile(journal.summaryPath, "utf8");
 	assert.doesNotMatch(storedSummary, /confidential customer prompt|confidential customer answer|doubao\.com|evidence/);
 	const journalText = await readFile(journal.eventsPath, "utf8");
+	assert.doesNotMatch(journalText, /local_cleanup_blocked/);
 	assert.doesNotMatch(journalText, new RegExp(directory.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+});
+
+test("evidence cleanup preserves a sibling attempt and removes the task directory only when empty", async () => {
+	const directory = await temporaryDirectory();
+	const journal = await RunJournal.create(directory, "evidence-sibling-run");
+	const capture = {
+		domSnapshot: "<!doctype html><html><body>fixture</body></html>",
+		screenshotPng: Buffer.from("fixture screenshot"),
+	};
+	const firstAttempt = await saveEvidence({
+		runDirectory: journal.runDirectory,
+		taskId: "same-task",
+		attempt: 1,
+		capture,
+	});
+	const secondAttempt = await saveEvidence({
+		runDirectory: journal.runDirectory,
+		taskId: "same-task",
+		attempt: 2,
+		capture,
+	});
+	const taskEvidenceDirectory = path.dirname(path.dirname(firstAttempt[0]?.path ?? ""));
+
+	await journal.removeUploadedEvidence(firstAttempt);
+	assert.equal(await exists(firstAttempt[0]?.path ?? ""), false);
+	assert.equal(await exists(secondAttempt[0]?.path ?? ""), true);
+	assert.equal(await exists(taskEvidenceDirectory), true);
+
+	await journal.removeUploadedEvidence(secondAttempt);
+	assert.equal(await exists(taskEvidenceDirectory), false);
 });
 
 test("state directories and sensitive files are private on POSIX", { skip: process.platform === "win32" }, async () => {

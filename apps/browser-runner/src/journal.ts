@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { appendFile, chmod, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { appendFile, chmod, mkdir, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { EvidenceArtifact, HandoffMetadata, RunnerJournalEvent, RunSummary } from "./contracts.js";
 
@@ -86,7 +86,14 @@ export class RunJournal {
 			await rm(attemptDirectory, { recursive: true, force: true });
 			const taskDirectory = path.dirname(attemptDirectory);
 			assertChild(evidenceRoot, taskDirectory);
-			if ((await readdir(taskDirectory).catch(() => [])).length === 0) await rm(taskDirectory, { force: true });
+			try {
+				// rmdir is intentionally used here: it removes only an empty directory atomically,
+				// so a concurrent attempt can never be deleted by cleanup from an earlier attempt.
+				await rmdir(taskDirectory);
+			} catch (error) {
+				const code = (error as NodeJS.ErrnoException).code;
+				if (code !== "ENOENT" && code !== "ENOTEMPTY" && code !== "EEXIST") throw error;
+			}
 		}
 	}
 
