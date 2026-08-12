@@ -1,5 +1,5 @@
 import { IconExternalLink, IconLogout, IconSelector, IconStatusChange, IconUser } from "@tabler/icons-react";
-import { Link, useRouteContext } from "@tanstack/react-router";
+import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
 import { authClient } from "@workspace/lib/auth/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@workspace/ui/components/avatar";
@@ -20,8 +20,10 @@ import { resetPostHog } from "@/lib/posthog";
 export function NavUser() {
 	const { user } = useAuth();
 	const { setOpenMobile } = useSidebar();
+	const { pathname } = useLocation();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const clientConfig = context.clientConfig;
+	const isPlatformPage = pathname.startsWith("/admin") || pathname.startsWith("/reports");
 
 	// NavUser only renders inside _authed routes, which redirect to /auth/login
 	// when there's no session — so `user` is always present at this point.
@@ -46,7 +48,9 @@ export function NavUser() {
 						</Avatar>
 						<div className="hidden min-w-0 text-left leading-tight sm:grid">
 							<span className="truncate text-xs font-semibold">{displayName}</span>
-							<span className="truncate text-[10px] font-normal text-muted-foreground">Signed in</span>
+							<span className="truncate text-[10px] font-normal text-muted-foreground">
+								{isPlatformPage ? "Platform account" : "Customer workspace"}
+							</span>
 						</div>
 						<IconSelector className="hidden size-3.5 text-muted-foreground sm:block" />
 					</Button>
@@ -68,12 +72,14 @@ export function NavUser() {
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuItem asChild className="cursor-pointer">
-							<Link to="/app" onClick={() => setOpenMobile(false)}>
-								<IconStatusChange />
-								Switch Brand
-							</Link>
-						</DropdownMenuItem>
+						{!isPlatformPage && (
+							<DropdownMenuItem asChild className="cursor-pointer">
+								<Link to="/app" onClick={() => setOpenMobile(false)}>
+									<IconStatusChange />
+									Switch customer workspace
+								</Link>
+							</DropdownMenuItem>
+						)}
 						{clientConfig?.branding.parentUrl && clientConfig?.branding.parentName && (
 							<DropdownMenuItem asChild className="cursor-pointer">
 								<a href={clientConfig.branding.parentUrl} target="_blank" rel="noreferrer">

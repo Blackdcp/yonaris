@@ -43,34 +43,23 @@ describe("resolveAuthSession", () => {
 		mocks.repairLocalDefaultOrgAdminSession.mockResolvedValue(session);
 	});
 
-	it("bypasses the signed cookie cache in local mode", async () => {
-		useDeploymentMode("local");
+	it.each(["local", "cloud", "whitelabel", "demo"] as const)(
+		"bypasses the signed cookie cache for authoritative RBAC in %s mode",
+		async (mode) => {
+			useDeploymentMode(mode);
 
-		await expect(resolveAuthSession(headers)).resolves.toBe(session);
+			await expect(resolveAuthSession(headers)).resolves.toBe(session);
 
-		expect(mocks.getSession).toHaveBeenCalledOnce();
-		expect(mocks.getSession).toHaveBeenCalledWith({
-			headers,
-			query: { disableCookieCache: true },
-		});
-		expect(mocks.repairLocalDefaultOrgAdminSession).toHaveBeenCalledWith({
-			session,
-			mode: "local",
-			promoteUniqueDefaultOrgAdmin: mocks.promoteUniqueDefaultOrgAdmin,
-		});
-	});
-
-	it.each(["cloud", "whitelabel", "demo"] as const)("keeps the signed cookie cache in %s mode", async (mode) => {
-		useDeploymentMode(mode);
-
-		await expect(resolveAuthSession(headers)).resolves.toBe(session);
-
-		expect(mocks.getSession).toHaveBeenCalledOnce();
-		expect(mocks.getSession).toHaveBeenCalledWith({ headers });
-		expect(mocks.repairLocalDefaultOrgAdminSession).toHaveBeenCalledWith({
-			session,
-			mode,
-			promoteUniqueDefaultOrgAdmin: mocks.promoteUniqueDefaultOrgAdmin,
-		});
-	});
+			expect(mocks.getSession).toHaveBeenCalledOnce();
+			expect(mocks.getSession).toHaveBeenCalledWith({
+				headers,
+				query: { disableCookieCache: true },
+			});
+			expect(mocks.repairLocalDefaultOrgAdminSession).toHaveBeenCalledWith({
+				session,
+				mode,
+				promoteUniqueDefaultOrgAdmin: mocks.promoteUniqueDefaultOrgAdmin,
+			});
+		},
+	);
 });

@@ -1,5 +1,6 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
+import { type SafeFetchDependencies, safeFetchPublicHttpUrl, validatePublicHttpUrl } from "./public-http-url";
 
 const MAX_EXCERPT_LINES = 200;
 const JINA_TIMEOUT_MS = 30_000;
@@ -30,18 +31,25 @@ const BROWSER_UA =
  * Returns "" when every source fails — callers treat an empty excerpt as a
  * best-effort miss rather than an error.
  */
-export async function getWebsiteExcerpt(url: string): Promise<string> {
+export async function getWebsiteExcerpt(url: string, dependencies: SafeFetchDependencies = {}): Promise<string> {
 	if (!url) {
 		return "";
 	}
 
 	// Ensure the URL has a scheme so the reader and our own fetch resolve it
 	// consistently.
-	const cleanUrl = url.startsWith("http") ? url : `https://${url}`;
+	const cleanUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+	let validatedUrl: string;
+	try {
+		validatedUrl = (await validatePublicHttpUrl(cleanUrl, dependencies.resolveHostname)).href;
+	} catch (error) {
+		console.warn("[website-excerpt] refused unsafe website URL:", error);
+		return "";
+	}
 
 	const sources = [
-		{ name: "jina", fetch: () => fromJina(cleanUrl) },
-		{ name: "readability", fetch: () => fromReadability(cleanUrl) },
+		{ name: "jina", fetch: () => fromJina(validatedUrl, dependencies) },
+		{ name: "readability", fetch: () => fromReadability(validatedUrl, dependencies) },
 	];
 
 	for (const source of sources) {
@@ -50,13 +58,13 @@ export async function getWebsiteExcerpt(url: string): Promise<string> {
 			if (content) {
 				return toExcerpt(content);
 			}
-			console.warn(`[website-excerpt] ${source.name} returned no content for ${cleanUrl}`);
+			console.warn(`[website-excerpt] ${source.name} returned no content for ${validatedUrl}`);
 		} catch (error) {
-			console.warn(`[website-excerpt] ${source.name} failed for ${cleanUrl}:`, error);
+			console.warn(`[website-excerpt] ${source.name} failed for ${validatedUrl}:`, error);
 		}
 	}
 
-	console.error(`[website-excerpt] all sources failed for ${cleanUrl}`);
+	console.error(`[website-excerpt] all sources failed for ${validatedUrl}`);
 	return "";
 }
 
@@ -65,16 +73,20 @@ export async function getWebsiteExcerpt(url: string): Promise<string> {
  * an Authorization header when JINA_API_KEY is set, which lifts Jina's
  * anonymous-IP rate limit / reputation block.
  */
-async function fromJina(url: string): Promise<string | null> {
+async function fromJina(url: string, dependencies: SafeFetchDependencies): Promise<string | null> {
 	const headers: Record<string, string> = { "User-Agent": BROWSER_UA };
 	const apiKey = process.env.JINA_API_KEY;
 	if (apiKey) {
 		headers.Authorization = `Bearer ${apiKey}`;
 	}
-	const response = await fetch(`https://r.jina.ai/${url}`, {
-		headers,
-		signal: AbortSignal.timeout(JINA_TIMEOUT_MS),
-	});
+	const response = await safeFetchPublicHttpUrl(
+		`https://r.jina.ai/${url}`,
+		{
+			headers,
+			signal: AbortSignal.timeout(JINA_TIMEOUT_MS),
+		},
+		dependencies,
+	);
 	if (!response.ok) {
 		return null;
 	}
@@ -88,14 +100,18 @@ async function fromJina(url: string): Promise<string | null> {
  * Only handles HTML responses; falls back to whole-body text when Readability
  * can't isolate an article.
  */
-async function fromReadability(url: string): Promise<string | null> {
-	const response = await fetch(url, {
-		headers: {
-			"User-Agent": BROWSER_UA,
-			Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+async function fromReadability(url: string, dependencies: SafeFetchDependencies): Promise<string | null> {
+	const response = await safeFetchPublicHttpUrl(
+		url,
+		{
+			headers: {
+				"User-Agent": BROWSER_UA,
+				Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			},
+			signal: AbortSignal.timeout(DIRECT_TIMEOUT_MS),
 		},
-		signal: AbortSignal.timeout(DIRECT_TIMEOUT_MS),
-	});
+		dependencies,
+	);
 	if (!response.ok) {
 		return null;
 	}

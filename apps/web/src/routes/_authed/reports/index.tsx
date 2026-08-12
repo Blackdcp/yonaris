@@ -4,24 +4,27 @@
  * Requires admin OR report generator access.
  * Replicates: apps/web/src/app/reports/page.tsx + reports-content.tsx
  */
-import { useState } from "react";
-import { createFileRoute, notFound, Link } from "@tanstack/react-router";
-import { getAppName } from "@/lib/route-head";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { SidebarProvider, SidebarInset } from "@workspace/ui/components/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
+import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent } from "@workspace/ui/components/card";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { Textarea } from "@workspace/ui/components/textarea";
-import { Card, CardContent } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
-import { trackEvent } from "@/lib/posthog";
 import { ExternalLink } from "lucide-react";
-import { requireAuthSession, isAdmin, hasReportAccess } from "@/lib/auth/helpers";
-import { getReportsFn, createReportFn } from "@/server/reports";
+import { useState } from "react";
+import { AppSidebar } from "@/components/app-sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { canAccessPlatformReports } from "@/lib/auth/execution-boundaries";
+import { hasReportAccess, isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { getDeployment } from "@/lib/config/server";
+import { trackEvent } from "@/lib/posthog";
+import { getAppName } from "@/lib/route-head";
+import { createReportFn, getReportsFn } from "@/server/reports";
 
 const checkReportAccess = createServerFn({ method: "GET" }).handler(
 	async (): Promise<{
@@ -33,7 +36,11 @@ const checkReportAccess = createServerFn({ method: "GET" }).handler(
 		const admin = isAdmin(session);
 		const reportAccess = hasReportAccess(session);
 		return {
-			hasAccess: admin || reportAccess,
+			hasAccess: canAccessPlatformReports({
+				reportGenerationEnabled: getDeployment().features.reportGeneration,
+				platformAdmin: admin,
+				explicitReportOperator: reportAccess,
+			}),
 			isAdmin: admin,
 			hasReportAccess: reportAccess,
 		};
@@ -126,7 +133,7 @@ function ReportsPage() {
 		<SidebarProvider>
 			<AppSidebar isAdmin={isAdmin} hasReportAccess={hasReportAccess} adminOnly />
 			<SidebarInset className="md:border md:border-border/60 md:rounded-xl overflow-hidden">
-				<SiteHeader />
+				<SiteHeader isPlatformAdmin={isAdmin} />
 				<div className="flex flex-1 flex-col">
 					<div className="@container/main flex flex-1 flex-col gap-2">
 						<div className="flex flex-col gap-4 p-4 md:gap-6 md:p-6">
@@ -245,7 +252,7 @@ function ReportsPage() {
 										) : (
 											!error && (
 												<div className="space-y-3">
-													{reports.map((report: any) => (
+													{reports.map((report) => (
 														<div key={report.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
 															<div className="flex items-center justify-between">
 																<div className="flex-1 min-w-0">

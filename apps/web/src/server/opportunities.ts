@@ -22,7 +22,8 @@ import { brandOpportunities, brands, competitors, measurementScopes } from "@wor
 import { runStructuredCompletionPrompt } from "@workspace/lib/onboarding";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { checkOrgWriteAccess, requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
+import { canGenerateOpportunities } from "@/lib/auth/execution-boundaries";
+import { isAdmin, requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
 import { extractDomain } from "@/lib/domain-categories";
 import { categorizeDomain } from "@/lib/domain-categories.server";
 import {
@@ -467,15 +468,14 @@ async function generateValidReport(prompt: string): Promise<{ report: RawReport;
 }
 
 // ============================================================================
-// Server function
+// Server functions
 // ============================================================================
 
 export const getOpportunitiesFn = createServerFn({ method: "GET" })
 	.validator(z.object({ brandId: z.string() }))
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
-		const canManageBrand = await checkOrgWriteAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 		const storedScopes = await db
 			.select({ id: measurementScopes.id, timezone: measurementScopes.timezone, enabled: measurementScopes.enabled })
 			.from(measurementScopes)
@@ -485,8 +485,42 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 			throw new Error("Opportunities are disabled until reports can be generated within one measurement scope.");
 		}
 
-		// Serve the most recent stored report while it's fresh. Every generation is
-		// kept (append-only); we regenerate only when the latest is stale.
+		// Customer reads are deliberately side-effect free. Generation is a paid
+		// platform operation exposed only by generateOpportunitiesFn below.
+		const [latest] = await db
+			.select()
+			.from(brandOpportunities)
+			.where(eq(brandOpportunities.brandId, data.brandId))
+			.orderBy(desc(brandOpportunities.createdAt))
+			.limit(1);
+		const lastEvaluatedAt = latest?.createdAt.toISOString() ?? null;
+		if (latest)
+			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
+		return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
+	});
+
+/**
+ * Explicitly generate and persist an opportunities report.
+ *
+ * This is intentionally a POST guarded by the platform execution role. It must
+ * never be called by the customer workspace page loader or query hook.
+ */
+export const generateOpportunitiesFn = createServerFn({ method: "POST" })
+	.validator(z.object({ brandId: z.string() }))
+	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
+		const session = await requireAuthSession();
+		if (!canGenerateOpportunities(isAdmin(session))) {
+			throw new Error("Access denied. Platform administrator access required.");
+		}
+		const storedScopes = await db
+			.select({ id: measurementScopes.id, timezone: measurementScopes.timezone, enabled: measurementScopes.enabled })
+			.from(measurementScopes)
+			.where(eq(measurementScopes.brandId, data.brandId))
+			.limit(2);
+		if (storedScopes.length !== 1 || !storedScopes[0]?.enabled) {
+			throw new Error("Opportunities are disabled until reports can be generated within one measurement scope.");
+		}
+
 		const [latest] = await db
 			.select()
 			.from(brandOpportunities)
@@ -497,13 +531,6 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 		const isFresh = latest && Date.now() - new Date(latest.createdAt).getTime() < REFRESH_AFTER_DAYS * 86_400_000;
 		if (latest && isFresh) {
 			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
-		}
-		// Client viewers may inspect the latest persisted recommendation set, but
-		// merely opening a page must never trigger a paid model call or a write.
-		if (!canManageBrand) {
-			if (latest)
-				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
-			return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
 		}
 
 		const digest = await buildDigest(data.brandId, storedScopes[0]?.timezone ?? "UTC");

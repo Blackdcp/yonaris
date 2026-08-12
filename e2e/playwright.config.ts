@@ -1,9 +1,14 @@
 import { defineConfig, devices } from "@playwright/test";
-import path from "node:path";
+import { ADMIN_AUTH_STATE_PATH } from "./auth-setup";
+import { CUSTOMER_AUTH_STATE_PATH } from "./customer-auth-setup";
 
 // Base URL can be overridden via environment variable.
 // Default: http://localhost:1515 (Docker Compose maps web:3000 → host:1515)
 const BASE_URL = process.env.BASE_URL || "http://localhost:1515";
+const parsedBaseUrl = new URL(BASE_URL);
+if (!["localhost", "127.0.0.1", "::1"].includes(parsedBaseUrl.hostname)) {
+  throw new Error(`E2E BASE_URL must use a loopback host; refusing ${parsedBaseUrl.hostname}`);
+}
 
 export default defineConfig({
   testDir: "./tests",
@@ -29,7 +34,7 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    storageState: path.join(import.meta.dirname, ".auth", "user.json"),
+    storageState: CUSTOMER_AUTH_STATE_PATH,
   },
 
   projects: [
@@ -47,7 +52,7 @@ export default defineConfig({
       testMatch: /sampling\.spec\.ts/,
       outputDir: "test-results-sampling",
       workers: 1,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], storageState: ADMIN_AUTH_STATE_PATH },
     },
     // Run explicitly by CI phase 2 (--project=worker) once the worker
     // container is up; `pnpm test:e2e` stays worker-free so a bare local run
@@ -61,7 +66,7 @@ export default defineConfig({
       testMatch: /worker\.spec\.ts/,
       outputDir: "test-results-worker",
       timeout: 150_000,
-      use: { ...devices["Desktop Chrome"] },
+      use: { ...devices["Desktop Chrome"], storageState: { cookies: [], origins: [] } },
     },
   ],
 });

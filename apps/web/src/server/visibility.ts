@@ -5,22 +5,22 @@
  *   - apps/web/src/app/api/brands/[id]/filtered-visibility/route.ts
  */
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
 import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors } from "@workspace/lib/db/schema";
+import { getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
 import { eq } from "drizzle-orm";
-import { type LookbackPeriod } from "@/lib/chart-utils";
-import { getTimezoneLookbackRange, resolveTimezone } from "@/lib/timezone-utils";
-import { resolveFilteredPrompts } from "@/server/prompt-resolution";
+import { z } from "zod";
+import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
+import type { LookbackPeriod } from "@/lib/chart-utils";
 import {
 	getBatchChartData,
-	getVisibilityDailyAggregate,
 	getCitationsTotalCount,
+	getVisibilityDailyAggregate,
 	type ProcessedBatchChartDataPoint,
 } from "@/lib/postgres-read";
-import { getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
+import { getTimezoneLookbackRange, resolveTimezone } from "@/lib/timezone-utils";
+import { resolveFilteredPrompts } from "@/server/prompt-resolution";
 
 // ============================================================================
 // Types
@@ -74,7 +74,7 @@ export const getBatchChartDataFn = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ data }): Promise<BatchChartDataResponse> => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
 		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 		const timezone = resolveTimezone(measurementScope.timezone);
@@ -159,7 +159,7 @@ export const getFilteredVisibilityFn = createServerFn({ method: "GET" })
 		const session = await requireAuthSession();
 		const lookbackParam = data.lookback as LookbackPeriod;
 
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 
 		// Resolve the in-scope prompts server-side from the filter criteria so

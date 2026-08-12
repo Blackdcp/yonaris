@@ -1,6 +1,11 @@
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import { buildPromoteUniqueDefaultOrgAdminQuery, hasOwnerOrAdminOrgRole, slugifyOrgName } from "./provisioning";
+import {
+	buildAdditionalLocalBrandValues,
+	buildPromoteUniqueDefaultOrgAdminQuery,
+	hasOwnerOrAdminOrgRole,
+	slugifyOrgName,
+} from "./provisioning";
 
 describe("hasOwnerOrAdminOrgRole", () => {
 	it.each(["owner", "admin", "member,admin", "viewer, owner", " member , admin "])(
@@ -63,5 +68,26 @@ describe("slugifyOrgName", () => {
 
 	it("preserves digits", () => {
 		expect(slugifyOrgName("Acme 2")).toBe("acme-2");
+	});
+});
+
+describe("buildAdditionalLocalBrandValues", () => {
+	it("creates a manual customer workspace that is immediately usable", () => {
+		expect(
+			buildAdditionalLocalBrandValues({
+				id: "stepfun",
+				name: "StepFun",
+				website: "https://www.stepfun.com",
+				additionalDomains: ["stepfun.com"],
+			}),
+		).toEqual({
+			id: "stepfun",
+			organizationId: "stepfun",
+			name: "StepFun",
+			website: "https://www.stepfun.com",
+			enabled: true,
+			onboarded: true,
+			additionalDomains: ["stepfun.com"],
+		});
 	});
 });

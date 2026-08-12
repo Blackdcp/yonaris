@@ -1,6 +1,4 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { parseScrapeTargets } from "@workspace/config/scrape-targets";
-import { getObservationTargetCohort, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
@@ -12,25 +10,16 @@ import {
 import { Globe2 } from "lucide-react";
 import { useBrand } from "@/hooks/use-brands";
 import { useFilterNavigate } from "@/hooks/use-list-filters";
+import type { CustomerMeasurementScopeDto } from "@/server/customer-data-dto";
 
-function scopeLaneLabel(
-	automaticTargetKeys: string[] | null,
-	samplingEvaluationRole: "scored" | "observation" | null,
-): string {
-	if (samplingEvaluationRole === "scored") return "Scored sampling";
-	if (samplingEvaluationRole === "observation") return "Observation pool";
-	if (automaticTargetKeys === null) return "Legacy / unspecified";
-	if (automaticTargetKeys.length === 0) return "Consumer / assisted";
-	try {
-		const cohorts = new Set(
-			parseScrapeTargets(automaticTargetKeys.join(",")).map((target) =>
-				getObservationTargetCohort(resolveObservationTarget(target)),
-			),
-		);
-		return cohorts.has("consumer_measurement") ? "Consumer / search" : "API diagnostic";
-	} catch {
-		return "Configuration unavailable";
-	}
+function scopeLaneLabel(scope: Pick<CustomerMeasurementScopeDto, "deliveryMode" | "lane">): string {
+	if (scope.lane === "scored") return "Scored sampling";
+	if (scope.lane === "observation") return "Observation pool";
+	if (scope.deliveryMode === "legacy") return "Legacy / unspecified";
+	if (scope.deliveryMode === "assisted") return "Consumer / assisted";
+	if (scope.lane === "consumer") return "Consumer / search";
+	if (scope.lane === "diagnostic") return "API diagnostic";
+	return "Configuration unavailable";
 }
 
 export function MeasurementScopeSwitcher() {
@@ -48,7 +37,7 @@ export function MeasurementScopeSwitcher() {
 
 	if (!selected) return null;
 
-	const label = `${selected.name} | ${selected.market}/${selected.locale} | ${scopeLaneLabel(selected.automaticTargetKeys, selected.samplingEvaluationRole)}`;
+	const label = `${selected.name} | ${selected.market}/${selected.locale} | ${scopeLaneLabel(selected)}`;
 	const switchScope = (scopeId: string) => {
 		const scope = scopeId === defaultScope?.id ? undefined : scopeId;
 		if (params.promptId && params.brand) {
@@ -81,8 +70,7 @@ export function MeasurementScopeSwitcher() {
 							<div className="min-w-0">
 								<div className="truncate text-sm">{scope.name}</div>
 								<div className="text-xs text-muted-foreground">
-									{scope.market} / {scope.locale} / {scope.timezone} /{" "}
-									{scopeLaneLabel(scope.automaticTargetKeys, scope.samplingEvaluationRole)}
+									{scope.market} / {scope.locale} / {scope.timezone} / {scopeLaneLabel(scope)}
 								</div>
 							</div>
 						</DropdownMenuRadioItem>

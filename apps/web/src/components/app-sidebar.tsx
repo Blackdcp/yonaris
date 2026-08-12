@@ -1,9 +1,9 @@
 import {
 	IconBuilding,
+	IconBuildingCommunity,
 	IconBuildings,
 	IconChartBar,
 	IconClipboardCheck,
-	IconCpu,
 	IconDashboard,
 	IconFolders,
 	IconLink,
@@ -19,7 +19,6 @@ import {
 } from "@tabler/icons-react";
 import { Link, useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
-import type { BrandWithPrompts } from "@workspace/lib/db/schema";
 
 import {
 	Sidebar,
@@ -42,7 +41,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	/** When true, only show admin section (no brand-specific nav) */
 	adminOnly?: boolean;
 	/** Brand data from route loader — avoids a separate client-side fetch */
-	brand?: BrandWithPrompts | null;
+	brand?: { id: string; name: string; onboarded: boolean } | null;
 }
 
 export function AppSidebar({
@@ -58,7 +57,7 @@ export function AppSidebar({
 	// Reports are disabled entirely in cloud; hide the nav entry there.
 	const reportsEnabled = context.clientConfig?.features.reportGeneration ?? true;
 
-	const showAdminSection = isAdmin || (hasReportAccess && reportsEnabled);
+	const showAdminSection = adminOnly && (isAdmin || (hasReportAccess && reportsEnabled));
 
 	const groups: NavGroup[] = [];
 
@@ -133,11 +132,6 @@ export function AppSidebar({
 						url: "/settings/prompts",
 						icon: IconListDetails,
 					},
-					{
-						title: "LLMs",
-						url: "/settings/llms",
-						icon: IconCpu,
-					},
 					...(context.clientConfig?.features.teamInvites
 						? [{ title: "Team", url: "/settings/members", icon: IconUsers }]
 						: []),
@@ -157,26 +151,32 @@ export function AppSidebar({
 		const adminItems = isAdmin
 			? [
 					{
-						title: "Brands",
+						title: "Customers",
 						url: "/admin",
 						icon: IconTable,
 						absolute: true,
 					},
+					{
+						title: "Customer access",
+						url: "/admin/access",
+						icon: IconBuildingCommunity,
+						absolute: true,
+					},
 					...(reportsEnabled ? [reportsItem] : []),
 					{
-						title: "Workflows",
+						title: "Automation",
 						url: "/admin/workflows",
 						icon: IconTimeline,
 						absolute: true,
 					},
 					{
-						title: "Sampling",
+						title: "Sampling operations",
 						url: "/admin/sampling",
 						icon: IconClipboardCheck,
 						absolute: true,
 					},
 					{
-						title: "Tools",
+						title: "Provider tools",
 						url: "/admin/tools",
 						icon: IconTool,
 						absolute: true,
@@ -185,7 +185,7 @@ export function AppSidebar({
 			: [reportsItem];
 
 		groups.push({
-			label: "Admin",
+			label: "Platform administration",
 			items: adminItems,
 		});
 	}
@@ -196,7 +196,7 @@ export function AppSidebar({
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild>
-							<Link to="/app" onClick={() => setOpenMobile(false)}>
+							<Link to={adminOnly ? (isAdmin ? "/admin" : "/reports") : "/app"} onClick={() => setOpenMobile(false)}>
 								<Logo iconClassName="!size-5" />
 							</Link>
 						</SidebarMenuButton>

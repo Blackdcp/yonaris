@@ -27,7 +27,6 @@ import { parseGeneratedReportOutput } from "@workspace/lib/report-output";
 import { BarChart3, Rocket, Target } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { PromptChartPrint } from "@/components/prompt-chart-print";
-import { hasReportAccess, requireAuthSession } from "@/lib/auth/helpers";
 import { getReportByIdFn } from "@/server/reports";
 
 // ---------- Types ----------
@@ -72,11 +71,7 @@ interface MockPrompt {
 
 const loadReportData = createServerFn({ method: "GET" })
 	.validator((d: string) => d)
-	.handler(async ({ data: reportId }) => {
-		const session = await requireAuthSession();
-		if (!hasReportAccess(session)) throw new Error("Not authorized");
-		return getReportByIdFn({ data: { reportId } });
-	});
+	.handler(async ({ data: reportId }) => getReportByIdFn({ data: { reportId } }));
 
 function isPromptBranded(promptValue: string, brandName: string, brandWebsite: string): boolean {
 	const promptLower = promptValue.toLowerCase();

@@ -1,6 +1,7 @@
+import { MAX_PROMPTS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { brands, measurementScopes, member, prompts } from "@workspace/lib/db/schema";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import { z } from "zod";
 import { evaluateCustomerProgramProvisionAccess } from "@/lib/auth/program-policies";
 
@@ -60,6 +61,8 @@ export const provisionSamplingScopeInputSchema = z.object({
 export type ProvisionSamplingScopeInput = z.infer<typeof provisionSamplingScopeInputSchema>;
 type MeasurementScope = typeof measurementScopes.$inferSelect;
 
+export const MAX_MEASUREMENT_SCOPES_PER_BRAND = 20;
+
 export interface SamplingScopeSourcePrompt {
 	brandId: string;
 	scopeId: string | null;
@@ -85,6 +88,7 @@ export interface ManualSamplingScopeInsert {
 export interface SamplingScopeProvisioningRepository {
 	lockBrand(brandId: string): Promise<{ organizationId: string } | null>;
 	listMembershipRolesForUpdate(userId: string, organizationId: string, limit: number): Promise<string[]>;
+	countScopesForBrand(brandId: string): Promise<number>;
 	findScopeIdByKey(brandId: string, key: string): Promise<string | null>;
 	sourceScopeBelongsToBrand(sourceScopeId: string, brandId: string): Promise<boolean>;
 	listSourcePrompts(brandId: string, sourceScopeId: string): Promise<SamplingScopeSourcePrompt[]>;
@@ -118,6 +122,13 @@ export async function provisionManualSamplingScopeWithRepository(
 		}
 	}
 
+	const scopeCount = await repository.countScopesForBrand(data.brandId);
+	if (scopeCount >= MAX_MEASUREMENT_SCOPES_PER_BRAND) {
+		throw new Error(
+			`A brand can have at most ${MAX_MEASUREMENT_SCOPES_PER_BRAND} measurement scopes, including its legacy scope`,
+		);
+	}
+
 	if (await repository.findScopeIdByKey(data.brandId, data.key)) {
 		throw new Error(`Measurement scope key "${data.key}" already exists for this brand`);
 	}
@@ -132,6 +143,9 @@ export async function provisionManualSamplingScopeWithRepository(
 		sourcePrompts = candidates.filter(
 			(prompt) => prompt.brandId === data.brandId && prompt.scopeId === data.sourceScopeId && prompt.enabled,
 		);
+		if (sourcePrompts.length > MAX_PROMPTS) {
+			throw new Error(`A program can copy at most ${MAX_PROMPTS} prompts from its source scope`);
+		}
 	}
 
 	const scope = await repository.insertManualScope({
@@ -191,6 +205,13 @@ export async function provisionManualSamplingScope(
 							.for("share");
 						return rows.map(({ role }) => role);
 					},
+					countScopesForBrand: async (brandId) => {
+						const [result] = await tx
+							.select({ value: count(measurementScopes.id) })
+							.from(measurementScopes)
+							.where(eq(measurementScopes.brandId, brandId));
+						return result?.value ?? 0;
+					},
 					findScopeIdByKey: async (brandId, key) => {
 						const existing = await tx.query.measurementScopes.findFirst({
 							where: and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, key)),
@@ -217,7 +238,8 @@ export async function provisionManualSamplingScope(
 							})
 							.from(prompts)
 							.where(and(eq(prompts.brandId, brandId), eq(prompts.scopeId, sourceScopeId), eq(prompts.enabled, true)))
-							.orderBy(asc(prompts.createdAt), asc(prompts.id)),
+							.orderBy(asc(prompts.createdAt), asc(prompts.id))
+							.limit(MAX_PROMPTS + 1),
 					insertManualScope: async (input) => {
 						const [scope] = await tx.insert(measurementScopes).values(input).returning();
 						return scope ?? null;

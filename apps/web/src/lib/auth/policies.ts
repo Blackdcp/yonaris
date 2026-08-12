@@ -83,6 +83,7 @@ export function evaluateDeploymentPolicy(
 	const isAllowedAuthWrite = DEMO_AUTH_WRITE_ALLOWLIST.has(pathname);
 	const isOrgPluginMutation = pathname.startsWith("/api/auth/organization/") && isWriteMethod;
 	const isSensitiveOrgRead = SENSITIVE_ORG_READ_ENDPOINTS.has(pathname);
+	const isRawAdminPluginEndpoint = pathname.startsWith("/api/auth/admin/");
 
 	// 0. Better-auth org plugin mutations and user-roster reads are blocked
 	// everywhere over HTTP.
@@ -90,12 +91,12 @@ export function evaluateDeploymentPolicy(
 	// (local/demo/cloud create-brand) or Auth0 sync (whitelabel) — and cloud
 	// team operations go through scoped server functions that call auth.api
 	// in-process. The browser never needs raw member or invitation rosters.
-	if (isOrgPluginMutation || isSensitiveOrgRead) {
+	if (isOrgPluginMutation || isSensitiveOrgRead || isRawAdminPluginEndpoint) {
 		return {
 			action: "block",
 			status: 403,
 			error: "Forbidden",
-			message: "This organization endpoint is not available via the API",
+			message: "This privileged authentication endpoint is not available via the API",
 		};
 	}
 
@@ -267,8 +268,10 @@ export function evaluateRequireOrgAccess(hasAccess: boolean): "allow" | "deny" {
 
 /**
  * The application-level `viewer` role is reserved for client-facing,
- * read-only access. Better Auth's built-in owner/admin/member roles keep their
- * normal collaborative write permissions.
+ * read-only access. `analyst` is the product-facing name for a customer
+ * collaborator who may configure measurement content, while Better Auth's
+ * legacy `member` role keeps the same collaborative write behavior for
+ * existing installations.
  * Better Auth can serialize multiple custom roles as a comma-separated value,
  * so evaluate every assigned role instead of comparing the raw string.
  */
@@ -278,7 +281,19 @@ export function evaluateOrgWriteAccess(role: string | null | undefined): "allow"
 		.split(",")
 		.map((value) => value.trim())
 		.filter(Boolean);
-	return roles.some((value) => value === "owner" || value === "admin" || value === "member") ? "allow" : "deny";
+	return roles.some((value) => value === "owner" || value === "admin" || value === "analyst" || value === "member")
+		? "allow"
+		: "deny";
+}
+
+/** Customer workspace administration (program creation and team access). */
+export function evaluateOrgAdminAccess(role: string | null | undefined): "allow" | "deny" {
+	if (!role) return "deny";
+	const roles = role
+		.split(",")
+		.map((value) => value.trim())
+		.filter(Boolean);
+	return roles.some((value) => value === "owner" || value === "admin") ? "allow" : "deny";
 }
 
 /**

@@ -6,34 +6,32 @@
  * demo are blocked at both the loader (redirect to /app) and the server
  * function (canCreateBrands policy).
  */
-import { useState } from "react";
+
 import { createFileRoute, redirect, useNavigate, useRouter } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
+import { useState } from "react";
 import FullPageCard from "@/components/full-page-card";
-import { checkAnyOrgWriteAccess, requireAuthSession } from "@/lib/auth/helpers";
+import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { getDeployment } from "@/lib/config/server";
 import { trackEvent } from "@/lib/posthog";
 import { createBrandWithOrgFn } from "@/server/brands";
-import { getDeployment } from "@/lib/config/server";
 
 const getCanCreateBrands = createServerFn({ method: "GET" }).handler(async () => {
 	const session = await requireAuthSession();
 	const deployment = getDeployment();
-	const canCreateBrands =
-		deployment.features.canCreateBrands &&
-		(deployment.mode !== "local" || (await checkAnyOrgWriteAccess(session.user.id)));
-	return { canCreateBrands };
+	return {
+		canCreateBrands: deployment.features.canCreateBrands && isAdmin(session),
+		platformIdentity: isAdmin(session),
+	};
 });
 
 export const Route = createFileRoute("/_authed/app/new")({
 	loader: async () => {
-		const { canCreateBrands } = await getCanCreateBrands();
-		if (!canCreateBrands) {
-			throw redirect({ to: "/app" });
-		}
-		return { canCreateBrands };
+		const { platformIdentity } = await getCanCreateBrands();
+		throw redirect({ to: platformIdentity ? "/admin/access" : "/app" });
 	},
 	component: NewBrandPage,
 });
@@ -67,7 +65,7 @@ function NewBrandPage() {
 	};
 
 	return (
-		<FullPageCard title="Create a new brand" subtitle="Set up a brand to start tracking" showBackButton>
+		<FullPageCard title="Create a customer workspace" subtitle="Set up one organization and one brand" showBackButton>
 			<form action={handleSubmit} className="space-y-4">
 				<div className="space-y-2">
 					<Label htmlFor="brandName">Brand name</Label>

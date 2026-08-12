@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PublicUrlResolver, SafeFetchDependencies } from "./public-http-url";
 import { getWebsiteExcerpt } from "./website-excerpt";
 
 type FakeResponse = {
@@ -32,8 +33,16 @@ function stubFetch(tiers: { jina?: FakeResponse; direct?: FakeResponse }) {
 		if (!tiers.direct) throw new Error("unexpected direct call");
 		return tiers.direct;
 	});
-	vi.stubGlobal("fetch", fetchMock);
 	return fetchMock;
+}
+
+const publicResolver: PublicUrlResolver = async () => [{ address: "93.184.216.34", family: 4 }];
+
+function dependencies(fetchMock: ReturnType<typeof stubFetch>): SafeFetchDependencies {
+	return {
+		resolveHostname: publicResolver,
+		fetch: fetchMock as unknown as NonNullable<SafeFetchDependencies["fetch"]>,
+	};
 }
 
 function headersOf(call: unknown[]): Record<string, string> {
@@ -70,18 +79,18 @@ describe("getWebsiteExcerpt", () => {
 			jina: response({ contentType: "text/plain", body: "# Acme\nFrom Jina reader" }),
 		});
 
-		const excerpt = await getWebsiteExcerpt("acme.com");
+		const excerpt = await getWebsiteExcerpt("acme.com", dependencies(fetchMock));
 
 		expect(excerpt).toContain("From Jina reader");
 		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(String(fetchMock.mock.calls[0][0])).toBe("https://r.jina.ai/https://acme.com");
+		expect(String(fetchMock.mock.calls[0][0])).toBe("https://r.jina.ai/https://acme.com/");
 	});
 
 	it("sends an Authorization header to Jina when JINA_API_KEY is set", async () => {
 		vi.stubEnv("JINA_API_KEY", "jina_test_key");
 		const fetchMock = stubFetch({ jina: response({ body: "content" }) });
 
-		await getWebsiteExcerpt("acme.com");
+		await getWebsiteExcerpt("acme.com", dependencies(fetchMock));
 
 		expect(headersOf(fetchMock.mock.calls[0]).Authorization).toBe("Bearer jina_test_key");
 	});
@@ -90,7 +99,7 @@ describe("getWebsiteExcerpt", () => {
 		vi.stubEnv("JINA_API_KEY", "");
 		const fetchMock = stubFetch({ jina: response({ body: "content" }) });
 
-		await getWebsiteExcerpt("acme.com");
+		await getWebsiteExcerpt("acme.com", dependencies(fetchMock));
 
 		expect(headersOf(fetchMock.mock.calls[0]).Authorization).toBeUndefined();
 	});
@@ -101,7 +110,7 @@ describe("getWebsiteExcerpt", () => {
 			direct: response({ contentType: "text/html; charset=utf-8", body: ARTICLE_HTML }),
 		});
 
-		const excerpt = await getWebsiteExcerpt("acme.com");
+		const excerpt = await getWebsiteExcerpt("acme.com", dependencies(fetchMock));
 
 		expect(excerpt).toContain("autonomous mobile robots");
 		// Readability strips chrome like the nav and returns clean text (no HTML tags).
@@ -116,26 +125,30 @@ describe("getWebsiteExcerpt", () => {
 			if (url.startsWith("https://r.jina.ai/")) throw new Error("network down");
 			return response({ contentType: "text/html", body: ARTICLE_HTML }) as unknown;
 		});
-		vi.stubGlobal("fetch", fetchMock);
 
-		expect(await getWebsiteExcerpt("acme.com")).toContain("autonomous mobile robots");
+		expect(
+			await getWebsiteExcerpt("acme.com", {
+				resolveHostname: publicResolver,
+				fetch: fetchMock as unknown as NonNullable<SafeFetchDependencies["fetch"]>,
+			}),
+		).toContain("autonomous mobile robots");
 		expect(fetchMock).toHaveBeenCalledTimes(2);
 	});
 
 	it("returns an empty string when both tiers fail", async () => {
-		stubFetch({
+		const fetchMock = stubFetch({
 			jina: response({ ok: false, status: 401 }),
 			direct: response({ ok: false, status: 500 }),
 		});
 
-		expect(await getWebsiteExcerpt("acme.com")).toBe("");
+		expect(await getWebsiteExcerpt("acme.com", dependencies(fetchMock))).toBe("");
 	});
 
 	it("caps the excerpt at 200 lines", async () => {
 		const body = Array.from({ length: 300 }, (_, i) => `line ${i}`).join("\n");
-		stubFetch({ jina: response({ body }) });
+		const fetchMock = stubFetch({ jina: response({ body }) });
 
-		const excerpt = await getWebsiteExcerpt("acme.com");
+		const excerpt = await getWebsiteExcerpt("acme.com", dependencies(fetchMock));
 
 		expect(excerpt.split("\n")).toHaveLength(200);
 		expect(excerpt).toContain("line 199");
@@ -144,7 +157,18 @@ describe("getWebsiteExcerpt", () => {
 
 	it("returns an empty string for an empty URL without fetching", async () => {
 		const fetchMock = stubFetch({});
-		expect(await getWebsiteExcerpt("")).toBe("");
+		expect(await getWebsiteExcerpt("", dependencies(fetchMock))).toBe("");
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	it("refuses a private DNS answer before sending the URL to Jina", async () => {
+		const fetchMock = stubFetch({});
+		expect(
+			await getWebsiteExcerpt("internal.example", {
+				resolveHostname: async () => [{ address: "169.254.169.254", family: 4 }],
+				fetch: fetchMock as unknown as NonNullable<SafeFetchDependencies["fetch"]>,
+			}),
+		).toBe("");
 		expect(fetchMock).not.toHaveBeenCalled();
 	});
 });

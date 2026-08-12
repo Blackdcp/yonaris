@@ -5,11 +5,11 @@
  * with tabs for Mentions, Web Queries, Citations, and LLM Responses.
  */
 import { test, expect } from "@playwright/test";
+import { STEPFUN_BRAND_ID, STEPFUN_PROMPT_ID } from "../fixtures";
 
-const BRAND_ID = "default";
-// This matches PROMPT_IDS.branded1 from seed.ts
-const PROMPT_ID = "00000000-0000-0000-0000-000000000001";
-const PROMPT_TEXT = "What is the best AI monitoring tool";
+const BRAND_ID = STEPFUN_BRAND_ID;
+const PROMPT_ID = STEPFUN_PROMPT_ID;
+const PROMPT_TEXT = "StepFun";
 
 test.describe("Prompt Details Page", () => {
   test.beforeEach(async ({ page }) => {
@@ -52,9 +52,7 @@ test.describe("Prompt Details Page", () => {
     // Our seed data includes runs with model names
     const pageContent = await page.textContent("body");
     const hasRunContent =
-      pageContent?.includes("gpt-4o") ||
-      pageContent?.includes("claude") ||
-      pageContent?.includes("gemini") ||
+      pageContent?.includes("deepseek") ||
       pageContent?.includes("Response") ||
       pageContent?.includes("response");
     expect(hasRunContent).toBeTruthy();
@@ -68,15 +66,14 @@ test.describe("Prompt Details Page", () => {
     // and system tag "branded", and the prompt text contains "monitoring"
     const pageContent = await page.textContent("body");
     const hasMetadata =
-      pageContent?.includes("monitoring") ||
-      pageContent?.includes("branded") ||
-      pageContent?.includes("AI monitoring");
+      pageContent?.includes("unbranded") ||
+      pageContent?.includes("StepFun");
     expect(hasMetadata).toBeTruthy();
   });
 
   test("has back navigation", async ({ page }) => {
     // There should be breadcrumb or link navigation back to the parent page
-    const backNav = page.locator("a[href*='/app/default']").first();
+    const backNav = page.locator(`a[href*='/app/${BRAND_ID}']`).first();
     await expect(backNav).toBeVisible();
   });
 });

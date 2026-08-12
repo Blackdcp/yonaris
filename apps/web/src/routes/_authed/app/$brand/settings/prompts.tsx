@@ -4,38 +4,36 @@
  * Editor to add/edit/remove prompts.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
 import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
 import { measurementScopes, prompts } from "@workspace/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
-import { PromptsEditor } from "@/components/prompts-editor";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { and, desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { PromptsEditor } from "@/components/prompts-editor";
+import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 const getPromptsForEditing = createServerFn({ method: "GET" })
 	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid().optional() }))
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
-		const requestedScope = data.scopeId
-			? await db.query.measurementScopes.findFirst({
-					where: and(
-						eq(measurementScopes.id, data.scopeId),
-						eq(measurementScopes.brandId, data.brandId),
-						eq(measurementScopes.enabled, true),
-					),
-				})
-			: undefined;
+		const scopes = await db.query.measurementScopes.findMany({
+			where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.enabled, true)),
+			orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
+		});
+		const requestedScope = data.scopeId ? scopes.find((scope) => scope.id === data.scopeId) : undefined;
+		if (data.scopeId && !requestedScope) {
+			throw new Error("Not Found: Measurement program is not accessible");
+		}
+		// Customer configuration starts in a manual Program. Legacy/automatic
+		// scopes remain visible in analytics, but execution configuration belongs
+		// to the platform console and must never be the accidental edit target.
 		const scope =
-			requestedScope ??
-			(await db.query.measurementScopes.findFirst({
-				where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.enabled, true)),
-				orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
-			}));
+			requestedScope ?? scopes.find((candidate) => candidate.automaticTargetKeys?.length === 0) ?? scopes[0];
 		const scopeId = scope?.id ?? (await ensureLegacyMeasurementScope(data.brandId));
 
 		// Fetch all prompts (including disabled) for this measurement scope.

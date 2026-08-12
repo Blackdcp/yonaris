@@ -3,17 +3,29 @@
  * Replaces apps/web/src/app/api/reports/route.ts
  */
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireAuthSession, hasReportAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
-import { reports, type NewReport } from "@workspace/lib/db/schema";
+import { type NewReport, reports } from "@workspace/lib/db/schema";
+import { validatePublicHttpUrl } from "@workspace/lib/public-http-url";
 import { parseGeneratedReportOutput } from "@workspace/lib/report-output";
 import { desc, eq } from "drizzle-orm";
+import { z } from "zod";
+import { canAccessPlatformReports } from "@/lib/auth/execution-boundaries";
+import { hasReportAccess, isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { getDeployment } from "@/lib/config/server";
 import { sendReportJob } from "@/lib/job-scheduler";
+import { normalizeManualPrompts, REPORT_REQUEST_LIMITS } from "@/lib/report-request-policy";
 
 async function requireReportAccess() {
 	const session = await requireAuthSession();
-	if (!hasReportAccess(session)) throw new Error("Access denied. Report generator access required.");
+	if (
+		!canAccessPlatformReports({
+			reportGenerationEnabled: getDeployment().features.reportGeneration,
+			platformAdmin: isAdmin(session),
+			explicitReportOperator: hasReportAccess(session),
+		})
+	) {
+		throw new Error("Access denied. Platform report operator access required.");
+	}
 }
 
 /**
@@ -59,29 +71,21 @@ export const getReportByIdFn = createServerFn({ method: "GET" })
 export const createReportFn = createServerFn({ method: "POST" })
 	.validator(
 		z.object({
-			brandName: z.string().min(1),
-			brandWebsite: z.string().url(),
-			manualPrompts: z.string().optional(),
+			brandName: z.string().trim().min(1).max(REPORT_REQUEST_LIMITS.brandNameCharacters),
+			brandWebsite: z.string().trim().url().max(REPORT_REQUEST_LIMITS.websiteCharacters),
+			manualPrompts: z.string().max(REPORT_REQUEST_LIMITS.manualPromptInputCharacters).optional(),
 		}),
 	)
 	.handler(async ({ data }) => {
 		await requireReportAccess();
+		const brandWebsite = (await validatePublicHttpUrl(data.brandWebsite.trim())).href;
 
-		// Parse manual prompts
-		const parsedManualPrompts: string[] = [];
-		if (data.manualPrompts?.trim()) {
-			parsedManualPrompts.push(
-				...data.manualPrompts
-					.split("\n")
-					.map((line) => line.trim())
-					.filter((line) => line.length > 0),
-			);
-		}
+		const parsedManualPrompts = normalizeManualPrompts(data.manualPrompts);
 
 		// Create report
 		const newReport: NewReport = {
 			brandName: data.brandName.trim(),
-			brandWebsite: data.brandWebsite.trim(),
+			brandWebsite,
 			status: "pending",
 		};
 
@@ -98,10 +102,10 @@ export const createReportFn = createServerFn({ method: "POST" })
 				parsedManualPrompts.length > 0 ? parsedManualPrompts : undefined,
 			);
 			if (!success) throw new Error("Failed to send report job");
-		} catch (error) {
+		} catch {
 			await db.update(reports).set({ status: "failed", updatedAt: new Date() }).where(eq(reports.id, createdReport.id));
 			throw new Error("Failed to queue report generation");
 		}
 
-		return { ...createdReport, rawOutput: createdReport.rawOutput as {} | null };
+		return { ...createdReport, rawOutput: null };
 	});

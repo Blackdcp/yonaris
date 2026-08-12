@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
 	requireAuthSession: vi.fn(),
+	isPlatformIdentity: vi.fn(),
 	resolveCustomerProgramAccess: vi.fn(),
 	provisionManualSamplingScope: vi.fn(),
 }));
@@ -21,7 +22,10 @@ vi.mock("@workspace/lib/db/schema", () => ({
 	member: {},
 	prompts: {},
 }));
-vi.mock("@/lib/auth/helpers", () => ({ requireAuthSession: mocks.requireAuthSession }));
+vi.mock("@/lib/auth/helpers", () => ({
+	requireAuthSession: mocks.requireAuthSession,
+	isPlatformIdentity: mocks.isPlatformIdentity,
+}));
 vi.mock("@/lib/auth/program-access", () => ({ resolveCustomerProgramAccess: mocks.resolveCustomerProgramAccess }));
 vi.mock("./sampling-scope-provisioning", () => ({
 	provisionManualSamplingScope: mocks.provisionManualSamplingScope,
@@ -43,23 +47,21 @@ const input = {
 describe("customer program provisioning handler", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mocks.requireAuthSession.mockResolvedValue({ user: { id: "user-1", role: "admin" } });
+		mocks.requireAuthSession.mockResolvedValue({ user: { id: "user-1", role: "user" } });
+		mocks.isPlatformIdentity.mockReturnValue(false);
 	});
 
 	it("does not grant a global platform admin a customer-tenant bypass", async () => {
-		mocks.resolveCustomerProgramAccess.mockRejectedValue(new Error("Not Found: Brand is not accessible"));
+		mocks.isPlatformIdentity.mockReturnValue(true);
 
 		await expect(provisionCustomerProgramScopeFn({ data: input })).rejects.toThrow(
-			"Not Found: Brand is not accessible",
+			"Not Found: Customer programs are not available to platform identities",
 		);
-		expect(mocks.resolveCustomerProgramAccess).toHaveBeenCalledWith(
-			{ userId: "user-1", brandId: "stepfun" },
-			expect.any(Object),
-		);
+		expect(mocks.resolveCustomerProgramAccess).not.toHaveBeenCalled();
 		expect(mocks.provisionManualSamplingScope).not.toHaveBeenCalled();
 	});
 
-	it.each(["member", "viewer"])("rejects a direct create call from a %s", async (membershipRole) => {
+	it.each(["analyst", "member", "viewer"])("rejects a direct create call from a %s", async (membershipRole) => {
 		mocks.resolveCustomerProgramAccess.mockResolvedValue({
 			brand: { id: "stepfun", name: "StepFun", organizationId: "stepfun-company" },
 			membershipRole,

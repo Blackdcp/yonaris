@@ -1,15 +1,12 @@
 /**
  * /admin - Admin dashboard with brand statistics and charts
  */
-import { useEffect, useState, type ReactNode } from "react";
-import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
+
+import { createFileRoute, useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
-import { getAppName } from "@/lib/route-head";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@workspace/ui/components/chart";
 import {
 	Dialog,
 	DialogContent,
@@ -19,10 +16,14 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@workspace/ui/components/dialog";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@workspace/ui/components/chart";
-import { Settings, TrendingUp, TrendingDown } from "lucide-react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
+import { Settings, TrendingDown, TrendingUp } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { getAppName } from "@/lib/route-head";
 import { getAdminStatsFn, updateDelayOverrideFn } from "@/server/admin";
 
 interface BrandStats {
@@ -360,8 +361,10 @@ function AdminDashboard() {
 		<div className="space-y-8">
 			<div className="flex items-center justify-between">
 				<div className="space-y-2">
-					<h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-					<p className="text-muted-foreground">Monitor and manage brands, prompts, and job scheduling</p>
+					<h1 className="text-3xl font-bold tracking-tight">Platform operations</h1>
+					<p className="text-muted-foreground">
+						Manage customer tenants, automation cadence, sampling delivery, and provider operations.
+					</p>
 				</div>
 			</div>
 
@@ -598,9 +601,7 @@ function AdminDashboard() {
 										<TableRow key={brand.id}>
 											<TableCell className="font-medium">
 												<div className="space-y-1">
-													<Link to="/app/$brand" params={{ brand: brand.id }} className="hover:underline text-primary">
-														{brand.name}
-													</Link>
+													<div>{brand.name}</div>
 													<div className="text-xs text-muted-foreground">{brand.website}</div>
 												</div>
 											</TableCell>

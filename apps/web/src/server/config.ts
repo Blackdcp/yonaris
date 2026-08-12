@@ -6,6 +6,8 @@ import { getEnvValidationState } from "@workspace/config/env";
 import type { ClientConfig } from "@workspace/config/types";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
 import { countUsers } from "@workspace/lib/db/provisioning";
+import { redactMissingEnvironmentDetails } from "@/lib/auth/execution-boundaries";
+import { getAuthSession, isAdmin } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
 
 export type PublicClientConfig = Omit<ClientConfig, "branding"> & {
@@ -56,9 +58,22 @@ export const getClientConfig = createServerFn({ method: "GET" }).handler(async (
 
 export const getEnvValidationStateFn = createServerFn({ method: "GET" }).handler(async () => {
 	const envState = getEnvValidationState();
+	let platformAdmin = false;
+	try {
+		const session = await getAuthSession();
+		platformAdmin = session ? isAdmin(session) : false;
+	} catch {
+		// Invalid boot configuration can make session storage unavailable. The
+		// public fallback must stay generic while still rendering recovery UI.
+	}
+	const missing = redactMissingEnvironmentDetails({
+		missing: envState.missing,
+		isValid: envState.isValid,
+		platformAdmin,
+	});
 	return {
 		mode: envState.mode,
-		missing: envState.missing,
+		missing,
 		isValid: envState.isValid,
 	};
 });

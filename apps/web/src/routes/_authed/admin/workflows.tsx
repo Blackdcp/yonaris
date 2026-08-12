@@ -1,15 +1,11 @@
 /**
  * /admin/workflows - Monitor prompt scheduling, job execution, and worker health
  */
-import { useEffect, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { getAppName } from "@/lib/route-head";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
+
+import { createFileRoute } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
-import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Progress } from "@workspace/ui/components/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import {
 	Dialog,
 	DialogContent,
@@ -18,20 +14,25 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@workspace/ui/components/dialog";
+import { Progress } from "@workspace/ui/components/progress";
+import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import {
-	CheckCircle2,
-	AlertTriangle,
-	XCircle,
-	Clock,
 	Activity,
-	Server,
-	RefreshCw,
+	AlertTriangle,
+	CheckCircle2,
 	ChevronDown,
 	ChevronRight,
-	Play,
+	Clock,
 	Loader2,
+	Play,
+	RefreshCw,
+	Server,
+	XCircle,
 } from "lucide-react";
-import { getWorkflowDataFn, retryJobFn, getJobLogsFn } from "@/server/admin";
+import { useEffect, useState } from "react";
+import { getAppName } from "@/lib/route-head";
+import { getJobLogsFn, getWorkflowDataFn, retryJobFn } from "@/server/admin";
 
 // ============================================================================
 // Types
@@ -443,14 +444,7 @@ function BrandRow({
 							<ChevronRight className="h-4 w-4 text-muted-foreground" />
 						)}
 						<div>
-							<Link
-								to="/app/$brand"
-								params={{ brand: brand.brandId }}
-								className="font-medium text-primary hover:underline"
-								onClick={(e) => e.stopPropagation()}
-							>
-								{brand.brandName}
-							</Link>
+							<div className="font-medium">{brand.brandName}</div>
 							<p className="text-xs text-muted-foreground">{brand.website}</p>
 						</div>
 					</div>

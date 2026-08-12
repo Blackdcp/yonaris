@@ -1,6 +1,15 @@
 import { validateWebsiteUrl } from "@/lib/brand-website";
 import { cleanAndValidateDomain } from "@/lib/domain-categories";
 
+export const MAX_BRAND_NAME_LENGTH = 200;
+export const MAX_WEBSITE_INPUT_LENGTH = 2_048;
+export const MAX_BRAND_DOMAINS = 50;
+export const MAX_COMPETITOR_DOMAINS = 20;
+export const MAX_RESOURCE_ALIASES = 50;
+export const MAX_ALIAS_LENGTH = 200;
+export const MAX_DOMAIN_INPUT_LENGTH = 253;
+export const MAX_COMPETITOR_NAME_LENGTH = 200;
+
 /**
  * Pure normalization/validation for the "edit brand settings" flow, extracted
  * from the updateBrand server function so the rules can be unit-tested without a

@@ -5,11 +5,12 @@
  * with sidebar navigation, and that basic navigation works.
  */
 import { test, expect } from "@playwright/test";
+import { STEPFUN_BRAND_ID } from "../fixtures";
 
-const BRAND_ID = "default";
+const BRAND_ID = STEPFUN_BRAND_ID;
 
 test.describe("Overview Page", () => {
-  test("home page lands on the brand switcher and the default brand is reachable", async ({ page }) => {
+  test("home page lands on the customer workspace switcher and StepFun is reachable", async ({ page }) => {
     await page.goto("/");
     // Local mode supports multiple brands, so / -> /app shows the switcher
     // rather than auto-redirecting through to a brand.
@@ -65,19 +66,15 @@ test.describe("Overview Page", () => {
     await page.waitForURL(new RegExp(`/app/${BRAND_ID}$`));
   });
 
-  test("admin section is accessible in local mode", async ({ page }) => {
+  test("customer shell never exposes the platform administration section", async ({ page }) => {
     await page.goto(`/app/${BRAND_ID}`);
 
     // Wait for route loader to complete (sidebar renders after loader finishes)
     await expect(page.locator(`a[href="/app/${BRAND_ID}"][data-sidebar="menu-button"]`)).toBeVisible({ timeout: 15_000 });
 
-    // In local mode, admin access is granted by default
-    const adminLink = page.locator('a[href*="/admin"]').first();
-    if (await adminLink.isVisible({ timeout: 5_000 }).catch(() => false)) {
-      await adminLink.click();
-      await page.waitForURL(/\/admin/);
-      expect(page.url()).toContain("/admin");
-    }
+    await expect(page.locator('a[href*="/admin"]')).toHaveCount(0);
+    const response = await page.goto("/admin");
+    expect(response?.status()).toBe(404);
   });
 
   test("settings pages are accessible", async ({ page }) => {

@@ -10,13 +10,16 @@
 import { createHash, randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { DATABASE_URL, TEST_API_KEY, TEST_BRAND_ID } from "../fixtures";
+import { CUSTOMER_AUTH_STATE_PATH } from "../customer-auth-setup";
+import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
+
+const TEST_BRAND_ID = STEPFUN_BRAND_ID;
 
 const AUTHORIZATION = { Authorization: `Bearer ${TEST_API_KEY}` };
 
 test.describe.configure({ mode: "serial" });
 
-test("freezes, executes, evidences, and accounts for one scored sample", async ({ page, request }) => {
+test("freezes, executes, evidences, and accounts for one scored sample", async ({ page, request, browser }) => {
   const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
   const scopeKey = `sampling-e2e-${suffix}`;
   const scopeName = `Sampling E2E ${suffix}`;
@@ -61,7 +64,7 @@ test("freezes, executes, evidences, and accounts for one scored sample", async (
   const batchRow = page.getByRole("row").filter({ hasText: batchName });
   await expect(batchRow).toBeVisible({ timeout: 20_000 });
   await batchRow.getByRole("button", { name: "Claim next" }).click();
-  await page.waitForURL(/\/admin\/sampling\/[0-9a-f-]+\?brand=default/, { timeout: 20_000 });
+  await page.waitForURL(new RegExp(`/admin/sampling/[0-9a-f-]+\\?brand=${TEST_BRAND_ID}`), { timeout: 20_000 });
   await expect(page.getByRole("heading", { name: "Sampling Workbench" })).toBeVisible();
 
   const taskId = new URL(page.url()).pathname.split("/").at(-1);
@@ -86,14 +89,14 @@ test("freezes, executes, evidences, and accounts for one scored sample", async (
   const expectedEvidenceSha256 = createHash("sha256").update(tinyPng).digest("hex");
 
   const rejectedStatuses = await page.evaluate(
-    async ({ currentGeneration, leaseToken, pngBytes, taskId: claimedTaskId }) => {
+    async ({ brandId, currentGeneration, leaseToken, pngBytes, taskId: claimedTaskId }) => {
       const upload = (token: string, generation: number, bytes: number[], filename: string) =>
         fetch("/api/admin/sampling/evidence", {
           method: "POST",
           credentials: "same-origin",
           headers: {
             "Content-Type": "application/octet-stream",
-            "X-Yonaris-Brand-Id": "default",
+            "X-Yonaris-Brand-Id": brandId,
             "X-Yonaris-Task-Id": claimedTaskId,
             "X-Yonaris-Lease-Token": token,
             "X-Yonaris-Lease-Generation": String(generation),
@@ -112,6 +115,7 @@ test("freezes, executes, evidences, and accounts for one scored sample", async (
       return [staleLease.status, invalidContent.status];
     },
     {
+      brandId: TEST_BRAND_ID,
       currentGeneration: parsedLease.leaseGeneration,
       leaseToken: parsedLease.leaseToken,
       pngBytes: [...tinyPng],
@@ -252,7 +256,16 @@ test("freezes, executes, evidences, and accounts for one scored sample", async (
   });
   expect(coverage.manifestHash).toMatch(/^[a-f0-9]{64}$/);
 
-  await page.goto(`/app/${TEST_BRAND_ID}/visibility?scope=${scope.id}&lookback=1w`);
-  await expect(page.getByRole("heading", { name: "Visibility" })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByText(promptValue)).toBeVisible({ timeout: 20_000 });
+  const customerContext = await browser.newContext({
+    baseURL: new URL(page.url()).origin,
+    storageState: CUSTOMER_AUTH_STATE_PATH,
+  });
+  try {
+    const customerPage = await customerContext.newPage();
+    await customerPage.goto(`/app/${TEST_BRAND_ID}/visibility?scope=${scope.id}&lookback=1w`);
+    await expect(customerPage.getByRole("heading", { name: "Visibility" })).toBeVisible({ timeout: 20_000 });
+    await expect(customerPage.getByText(promptValue)).toBeVisible({ timeout: 20_000 });
+  } finally {
+    await customerContext.close();
+  }
 });

@@ -8,8 +8,7 @@
 import { createFileRoute, notFound, Outlet, redirect, retainSearchParams } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
-import type { BrandWithPrompts } from "@workspace/lib/db/schema";
-import { brands, competitors, prompts } from "@workspace/lib/db/schema";
+import { brands } from "@workspace/lib/db/schema";
 import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { eq } from "drizzle-orm";
@@ -21,8 +20,7 @@ import { validateBrandFilterSearch } from "@/hooks/use-list-filters";
 import {
 	checkOrgAccess,
 	checkOrgWriteAccess,
-	hasReportAccess,
-	isAdmin,
+	isPlatformIdentity,
 	listUserOrganizations,
 	requireAuthSession,
 } from "@/lib/auth/helpers";
@@ -35,16 +33,23 @@ const getBrandData = createServerFn({ method: "GET" })
 		async ({
 			data,
 		}): Promise<{
-			brand: BrandWithPrompts | null;
+			brand: { id: string; name: string; website: string; onboarded: boolean } | null;
 			brandName: string | null;
 			canonicalBrandId: string;
-			isAdmin: boolean;
-			hasReportAccess: boolean;
 			canManageBrand: boolean;
 			hasAccess: boolean;
 		}> => {
 			const session = await requireAuthSession();
 			const canonicalBrandId = resolveBrandIdAlias(data.brandId, process.env.BRAND_ID_ALIASES);
+			if (isPlatformIdentity(session)) {
+				return {
+					brand: null,
+					brandName: null,
+					canonicalBrandId,
+					canManageBrand: false,
+					hasAccess: false,
+				};
+			}
 			const brand = await db.query.brands.findFirst({
 				where: eq(brands.id, canonicalBrandId),
 			});
@@ -57,8 +62,6 @@ const getBrandData = createServerFn({ method: "GET" })
 					brand: null,
 					brandName: null,
 					canonicalBrandId,
-					isAdmin: false,
-					hasReportAccess: false,
 					canManageBrand: false,
 					hasAccess: false,
 				};
@@ -69,8 +72,6 @@ const getBrandData = createServerFn({ method: "GET" })
 			const orgMeta = orgs.find((organization) => organization.id === tenantOrgId);
 			const brandName = brand?.name ?? orgMeta?.name ?? canonicalBrandId;
 
-			const admin = isAdmin(session);
-			const reportAccess = hasReportAccess(session);
 			const canManageBrand = await checkOrgWriteAccess(session.user.id, tenantOrgId);
 
 			// Get brand data from DB
@@ -79,31 +80,20 @@ const getBrandData = createServerFn({ method: "GET" })
 					brand: null,
 					brandName,
 					canonicalBrandId,
-					isAdmin: admin,
-					hasReportAccess: reportAccess,
 					canManageBrand,
 					hasAccess: true,
 				};
 			}
 
-			const brandPrompts = await db.query.prompts.findMany({
-				where: eq(prompts.brandId, canonicalBrandId),
-			});
-
-			const brandCompetitors = await db.query.competitors.findMany({
-				where: eq(competitors.brandId, canonicalBrandId),
-			});
-
 			return {
 				brand: {
-					...brand,
-					prompts: brandPrompts,
-					competitors: brandCompetitors,
+					id: brand.id,
+					name: brand.name,
+					website: brand.website,
+					onboarded: brand.onboarded,
 				},
 				brandName: brand.name,
 				canonicalBrandId,
-				isAdmin: admin,
-				hasReportAccess: reportAccess,
 				canManageBrand,
 				hasAccess: true,
 			};
@@ -176,8 +166,6 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 		return {
 			brand: result.brand,
 			brandName: result.brandName,
-			isAdmin: result.isAdmin,
-			hasReportAccess: result.hasReportAccess,
 			canManageBrand: result.canManageBrand,
 			needsOnboarding: result.hasAccess && !result.brand,
 		};
@@ -202,7 +190,7 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 });
 
 function BrandLayout() {
-	const { brand, brandName, isAdmin, hasReportAccess, canManageBrand, needsOnboarding } = Route.useLoaderData();
+	const { brand, brandName, canManageBrand, needsOnboarding } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
 
 	// Brand exists in auth but not in DB - show onboarding
@@ -212,7 +200,7 @@ function BrandLayout() {
 
 	return (
 		<SidebarProvider>
-			<AppSidebar isAdmin={isAdmin} hasReportAccess={hasReportAccess} canManageBrand={canManageBrand} brand={brand} />
+			<AppSidebar canManageBrand={canManageBrand} brand={brand} />
 			<SidebarInset className="md:border md:border-border/60 md:rounded-xl overflow-hidden">
 				<SiteHeader />
 				<div className="flex flex-1 flex-col">

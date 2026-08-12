@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { CustomerPromptRunDto } from "@/server/customer-data-dto";
 import { getPromptRunsFn } from "@/server/prompts";
 
 export const promptRunsKeys = {
@@ -25,7 +26,7 @@ export function usePromptRunsOnly(promptId?: string, options?: { page?: number; 
 	const totalPages = Math.ceil(total / limit) || 1;
 
 	return {
-		runs: query.data?.runs || [],
+		runs: (query.data?.runs || []) as CustomerPromptRunDto[],
 		total,
 		hasMore: query.data?.hasMore || false,
 		isLoading: query.isLoading,

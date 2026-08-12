@@ -8,6 +8,7 @@ import { formatScrapeTarget, parseScrapeTargets, selectTargetsForBrand } from "@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
+import { isAutomaticExecutionActivated } from "./schedule-maintenance-policy";
 
 export interface ScheduleMaintenanceData {
 	source?: string; // For logging - "scheduled" or "manual"
@@ -84,13 +85,11 @@ async function runMaintenanceCheck(): Promise<void> {
 	});
 	const scopeById = new Map(scopes.map((scope) => [scope.id, scope]));
 	const enabledPrompts = allEnabledPrompts.filter((prompt) => {
-		if (!prompt.scopeId) return true;
-		const scope = scopeById.get(prompt.scopeId);
-		return scope?.enabled === true && (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0);
+		return isAutomaticExecutionActivated(prompt.scopeId ? scopeById.get(prompt.scopeId) : undefined);
 	});
 
 	if (enabledPrompts.length === 0) {
-		console.log("[schedule-maintenance] No enabled prompts found");
+		console.log("[schedule-maintenance] No prompts have platform-managed automatic execution enabled");
 		return;
 	}
 

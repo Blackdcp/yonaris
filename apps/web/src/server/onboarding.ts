@@ -12,14 +12,16 @@
  * ./onboarding-core.ts, imported only by API routes (server-only).
  */
 import { createServerFn } from "@tanstack/react-start";
+import { validatePublicHttpUrl } from "@workspace/lib/public-http-url";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess, requireOrgWriteAccess } from "@/lib/auth/helpers";
 import {
+	type AnalyzeBrandStatus,
 	cancelAnalyzeBrand,
 	enqueueAnalyzeBrand,
 	getAnalyzeBrandStatus,
-	type AnalyzeBrandStatus,
 } from "@/lib/analyze-brand-job";
+import { canInitiatePlatformExecution } from "@/lib/auth/execution-boundaries";
+import { isAdmin, requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
 import { saveWizardOnboarding, wizardOnboardingInputSchema } from "@/server/onboarding-core";
 
 /**
@@ -44,8 +46,13 @@ export const startAnalyzeBrandFn = createServerFn({ method: "POST" })
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
-		await enqueueAnalyzeBrand(data);
+		if (!canInitiatePlatformExecution(isAdmin(session))) {
+			throw new Error("Forbidden: Platform administrator access required");
+		}
+		const website = (
+			await validatePublicHttpUrl(/^https?:\/\//i.test(data.website) ? data.website : `https://${data.website}`)
+		).href;
+		await enqueueAnalyzeBrand({ ...data, website });
 		return { ok: true };
 	});
 
@@ -60,7 +67,7 @@ export const getAnalyzeBrandStatusFn = createServerFn({ method: "POST" })
 	.validator(z.object({ brandId: z.string().min(1) }))
 	.handler(async ({ data }): Promise<AnalyzeBrandStatus> => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		if (!isAdmin(session)) await requireBrandAccess(session.user.id, data.brandId);
 		return getAnalyzeBrandStatus(data.brandId);
 	});
 
@@ -69,7 +76,9 @@ export const cancelAnalyzeBrandFn = createServerFn({ method: "POST" })
 	.validator(z.object({ brandId: z.string().min(1) }))
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		if (!canInitiatePlatformExecution(isAdmin(session))) {
+			throw new Error("Forbidden: Platform administrator access required");
+		}
 		await cancelAnalyzeBrand(data.brandId);
 		return { ok: true };
 	});
@@ -82,6 +91,8 @@ export const updateOnboardedBrandFn = createServerFn({ method: "POST" })
 	.validator(wizardOnboardingInputSchema)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		if (!canInitiatePlatformExecution(isAdmin(session))) {
+			throw new Error("Forbidden: Platform administrator access required");
+		}
 		return saveWizardOnboarding(data);
 	});

@@ -11,7 +11,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { syncAuth0UserById } from "@workspace/whitelabel/auth-hooks";
 import FullPageCard from "@/components/full-page-card";
-import { checkAnyOrgWriteAccess, listUserOrganizations, requireAuthSession } from "@/lib/auth/helpers";
+import { isAdmin, isPlatformIdentity, listUserCustomerWorkspaces, requireAuthSession } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
 
 const getOrganizations = createServerFn({ method: "GET" }).handler(
@@ -19,9 +19,19 @@ const getOrganizations = createServerFn({ method: "GET" }).handler(
 		organizations: { id: string; name: string }[];
 		supportsMultiOrg: boolean;
 		canCreateBrands: boolean;
+		platformDestination: "/admin" | "/reports" | null;
 	}> => {
 		const session = await requireAuthSession();
 		const deployment = getDeployment();
+		const platformDestination = isAdmin(session) ? "/admin" : isPlatformIdentity(session) ? "/reports" : null;
+		if (platformDestination) {
+			return {
+				organizations: [],
+				supportsMultiOrg: deployment.features.supportsMultiOrg,
+				canCreateBrands: false,
+				platformDestination,
+			};
+		}
 
 		if (deployment.mode === "whitelabel") {
 			// Keep /app usable during Auth0 Management API incidents; background sync will reconcile memberships later.
@@ -32,14 +42,16 @@ const getOrganizations = createServerFn({ method: "GET" }).handler(
 			}
 		}
 
-		const organizations = await listUserOrganizations(session.user.id);
-		const canCreateBrands =
-			deployment.features.canCreateBrands &&
-			(deployment.mode !== "local" || (await checkAnyOrgWriteAccess(session.user.id)));
+		// Customer links use brand ids. Organization ids are authorization
+		// boundaries and are only exposed as a pre-brand onboarding target.
+		const organizations = await listUserCustomerWorkspaces(session.user.id);
+		// Tenant creation is a platform operation. Customer workspace roles may
+		// configure an assigned brand, but never create another customer tenant.
 		return {
 			organizations,
 			supportsMultiOrg: deployment.features.supportsMultiOrg,
-			canCreateBrands,
+			canCreateBrands: false,
+			platformDestination: null,
 		};
 	},
 );
@@ -60,6 +72,9 @@ export const Route = createFileRoute("/_authed/app/")({
 	pendingComponent: OrgSwitcherSkeleton,
 	loader: async () => {
 		const result = await getOrganizations();
+		if (result.platformDestination) {
+			throw redirect({ to: result.platformDestination });
+		}
 
 		// Single-org mode: redirect to the user's one org (created on signup).
 		if (!result.supportsMultiOrg && result.organizations.length > 0) {
@@ -78,7 +93,7 @@ function BrandSwitcherPage() {
 	const { organizations, canCreateBrands } = Route.useLoaderData();
 
 	return (
-		<FullPageCard title="Brand Switcher" subtitle="Select a brand to get started">
+		<FullPageCard title="Customer workspaces" subtitle="Select an assigned customer workspace">
 			<div className="flex min-w-[200px] flex-col space-y-3">
 				{organizations.length > 0 ? (
 					organizations.map((org: { id: string; name: string }) => (

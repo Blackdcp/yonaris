@@ -95,9 +95,11 @@ export function createAuth(options?: CreateAuthOptions) {
 
 		session: {
 			cookieCache: {
-				enabled: true,
-				maxAge: 5 * 60,
-				strategy: "compact",
+				// Roles and customer memberships gate cross-tenant and paid
+				// operations. Keep every Better Auth endpoint database-authoritative
+				// so password reset, bans, role changes, and session revocation take
+				// effect immediately, including on the admin plugin's own routes.
+				enabled: false,
 			},
 		},
 

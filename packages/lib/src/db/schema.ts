@@ -97,7 +97,7 @@ export const brands = pgTable(
 			.notNull(),
 	},
 	(table) => ({
-		organizationIdIdx: index("brands_organization_id_idx").on(table.organizationId),
+		organizationIdIdx: uniqueIndex("brands_organization_id_uidx").on(table.organizationId),
 	}),
 ).enableRLS();
 

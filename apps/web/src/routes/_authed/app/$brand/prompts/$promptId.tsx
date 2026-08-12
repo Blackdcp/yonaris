@@ -3,38 +3,39 @@
  *
  * Shows prompt details with tabs: Mentions, Web Queries, Citations, LLM Responses.
  */
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Badge } from "@workspace/ui/components/badge";
-import { Skeleton } from "@workspace/ui/components/skeleton";
-import { Separator } from "@workspace/ui/components/separator";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
+
 import { IconInfoCircle } from "@tabler/icons-react";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { Badge } from "@workspace/ui/components/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Separator } from "@workspace/ui/components/separator";
+import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@workspace/ui/components/tabs";
-import { ProgressBarChart } from "@/components/progress-bar-chart";
-import { ListPagination } from "@/components/list-pagination";
-import { CitationsDisplay, type CitationData } from "@/components/citations-display";
-import { LookbackSelector, useLookbackPeriod } from "@/components/lookback-selector";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { type CitationData, CitationsDisplay } from "@/components/citations-display";
 import {
 	InfoTip,
 	QueryWordsSection,
 	UnknownQueriesNote,
-	VariationsList,
 	type VariationModelCount,
+	VariationsList,
 } from "@/components/fanout-sections";
-import { getDaysFromLookback } from "@/lib/chart-utils";
-import { getModelDisplayName } from "@/lib/utils";
-import { promptKeywords } from "@/lib/fanout-analysis";
-import { useBrand } from "@/hooks/use-brands";
+import { ListPagination } from "@/components/list-pagination";
+import { LookbackSelector, useLookbackPeriod } from "@/components/lookback-selector";
+import { ProgressBarChart } from "@/components/progress-bar-chart";
 import { useBrandAccess } from "@/hooks/use-brand-access";
-import { usePromptStats } from "@/hooks/use-prompt-stats";
+import { useBrand } from "@/hooks/use-brands";
 import { usePromptRunsOnly } from "@/hooks/use-prompt-runs-only";
+import { usePromptStats } from "@/hooks/use-prompt-stats";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
+import { getDaysFromLookback } from "@/lib/chart-utils";
+import { promptKeywords } from "@/lib/fanout-analysis";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
+import { getModelDisplayName } from "@/lib/utils";
+import type { CustomerPromptRunDto } from "@/server/customer-data-dto";
 import { getPromptMetadataFn } from "@/server/prompts";
-import { extractTextContent } from "@workspace/lib/text-extraction";
-import ReactMarkdown from "react-markdown";
 
 // -------------------------------------------------------------------
 // Types
@@ -595,7 +596,7 @@ function ResponsesTab({
 	onPageChange,
 	brandName,
 }: {
-	runs: any[];
+	runs: CustomerPromptRunDto[];
 	pagination: any;
 	isLoading: boolean;
 	currentPage: number;
@@ -603,9 +604,6 @@ function ResponsesTab({
 	brandName?: string;
 }) {
 	const formatDate = (dateString: string) => new Date(dateString).toLocaleString(undefined, { timeZoneName: "short" });
-
-	const formatRawOutput = (rawOutput: any) =>
-		typeof rawOutput === "string" ? rawOutput : JSON.stringify(rawOutput, null, 2);
 
 	if (isLoading && runs.length === 0) {
 		return (
@@ -648,8 +646,8 @@ function ResponsesTab({
 		<div className="space-y-4">
 			<h3 className="text-base font-medium">Individual Prompt Runs</h3>
 
-			{runs.map((run: any) => (
-				<Card key={run.id}>
+			{runs.map((run, runIndex) => (
+				<Card key={`${run.model}:${run.version}:${run.observedAt}:${runIndex}`}>
 					<CardHeader className="pb-0 gap-y-0">
 						<div className="grid grid-cols-3 gap-x-4 text-sm">
 							<div>
@@ -662,7 +660,7 @@ function ResponsesTab({
 							</div>
 							<div>
 								<span className="text-muted-foreground block text-xs mb-0.5">Evaluated</span>
-								<span>{formatDate(run.createdAt)}</span>
+								<span>{formatDate(run.observedAt)}</span>
 							</div>
 						</div>
 					</CardHeader>
@@ -699,16 +697,7 @@ function ResponsesTab({
 						<div>
 							<span className="text-xs text-muted-foreground block mb-1.5">LLM Response</span>
 							<div className="rounded-md border bg-muted/30 p-4 max-h-64 overflow-auto prose prose-sm max-w-none">
-								<ReactMarkdown>{extractTextContent(run.rawOutput, run.provider ?? run.model)}</ReactMarkdown>
-							</div>
-						</div>
-
-						<div>
-							<span className="text-xs text-muted-foreground block mb-1.5">Raw Output</span>
-							<div className="rounded-md border bg-muted/20 p-4 max-h-64 overflow-auto">
-								<pre className="text-xs font-mono leading-relaxed whitespace-pre-wrap">
-									{formatRawOutput(run.rawOutput)}
-								</pre>
+								<ReactMarkdown>{run.answerText || "No response text was recorded for this run."}</ReactMarkdown>
 							</div>
 						</div>
 					</CardContent>

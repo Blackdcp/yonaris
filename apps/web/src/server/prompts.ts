@@ -3,13 +3,15 @@
  * Replaces apps/web/src/app/api/prompts/* and brands/[id]/prompts-summary API routes.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { MAX_PROMPTS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { ensureLegacyMeasurementScope, resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors, promptRuns, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
 import { computeSystemTags, getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess, requireOrgWriteAccess } from "@/lib/auth/helpers";
+import { isManualOnlyScope } from "@/lib/auth/execution-boundaries";
+import { isAdmin, requireAuthSession, requireBrandAccess, requireBrandWriteAccess } from "@/lib/auth/helpers";
 import type { LookbackPeriod } from "@/lib/chart-utils";
 import { generateDateRange } from "@/lib/chart-utils";
 import {
@@ -34,6 +36,78 @@ import {
 	getPromptWebQueryCounts,
 } from "@/lib/postgres-read";
 import { getTimezoneLookbackRange, shiftDateStr } from "@/lib/timezone-utils";
+import { toCustomerPromptRunDto } from "./customer-data-dto";
+
+export const MAX_PROMPT_TEXT_LENGTH = 10_000;
+export const MAX_PROMPT_TAGS = 20;
+export const MAX_PROMPT_TAG_LENGTH = 100;
+export const MAX_PROMPT_TAG_CHARACTERS = 1_000;
+
+type PromptCitationStats = {
+	totalCitations: number;
+	uniqueDomains: number;
+	categoryCounts: ReturnType<typeof emptyCategoryCounts>;
+	domainDistribution: Array<{
+		domain: string;
+		count: number;
+		category: ReturnType<typeof classifyUrl>;
+		exampleTitle?: string;
+	}>;
+	specificUrls: Array<{
+		url: string;
+		title?: string;
+		domain: string;
+		count: number;
+		category: ReturnType<typeof classifyUrl>;
+		pageType: ReturnType<typeof resolvePageType>;
+		avgPosition: number | null;
+	}>;
+	pageTypeDistribution: Array<{
+		pageType: (typeof CITATION_PAGE_TYPES)[number];
+		count: number;
+	}>;
+	googleModule: ReturnType<typeof buildGoogleModule>;
+};
+
+const promptTagsSchema = z
+	.array(z.string().trim().min(1).max(MAX_PROMPT_TAG_LENGTH))
+	.max(MAX_PROMPT_TAGS)
+	.refine((tags) => tags.reduce((total, tag) => total + tag.length, 0) <= MAX_PROMPT_TAG_CHARACTERS, {
+		message: `Prompt tags may contain at most ${MAX_PROMPT_TAG_CHARACTERS} characters in total`,
+	})
+	.transform((tags) => [...new Set(tags)]);
+
+export const updatePromptsInputSchema = z.object({
+	brandId: z.string().min(1),
+	scopeId: z.string().uuid(),
+	prompts: z
+		.array(
+			z.object({
+				id: z.string().optional(),
+				value: z
+					.string()
+					.max(MAX_PROMPT_TEXT_LENGTH)
+					.refine((value) => value.trim().length > 0, { message: "Prompt text is required" }),
+				enabled: z.boolean().optional().default(true),
+				tags: promptTagsSchema.optional().default([]),
+			}),
+		)
+		.max(MAX_PROMPTS),
+});
+
+export function assertPromptCapacity(existingCount: number, insertCount: number): void {
+	if (
+		!Number.isSafeInteger(existingCount) ||
+		existingCount < 0 ||
+		!Number.isSafeInteger(insertCount) ||
+		insertCount < 0
+	) {
+		throw new Error("Prompt capacity counts are invalid");
+	}
+	if (existingCount + insertCount > MAX_PROMPTS) {
+		throw new Error(`A measurement scope can contain at most ${MAX_PROMPTS} prompts`);
+	}
+}
 // Server Functions
 // ============================================================================
 
@@ -44,7 +118,7 @@ export const getPromptMetadataFn = createServerFn({ method: "GET" })
 	.validator(z.object({ brandId: z.string(), promptId: z.string() }))
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
 		const prompt = await db.query.prompts.findFirst({
 			where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
@@ -102,7 +176,7 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
 		// Get all prompts for the brand from DB
 		const allPrompts = await db
@@ -140,6 +214,7 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 
 		const promptSummaries = allPrompts.map((p) => {
 			const stats = summaryMap.get(p.id);
+			const firstEvaluatedAt = firstEvalMap.get(p.id);
 			const userTags = p.tags || [];
 			const effectiveStatus = getEffectiveBrandedStatus(p.systemTags || [], userTags);
 			const systemTag = effectiveStatus.isBranded ? SYSTEM_TAGS.BRANDED : SYSTEM_TAGS.UNBRANDED;
@@ -168,7 +243,7 @@ export const getPromptsSummaryFn = createServerFn({ method: "GET" })
 					totalRuns > 0 &&
 					(Number(stats?.brand_mention_rate || 0) > 0 || Number(stats?.competitor_mention_rate || 0) > 0),
 				lastRunAt: stats?.last_run_date ? new Date(stats.last_run_date) : null,
-				firstEvaluatedAt: firstEvalMap.get(p.id) ? new Date(firstEvalMap.get(p.id)!) : null,
+				firstEvaluatedAt: firstEvaluatedAt ? new Date(firstEvaluatedAt) : null,
 				tags: effectiveTags,
 			};
 		});
@@ -224,7 +299,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			promptId: z.string(),
-			days: z.number().optional().default(7),
+			days: z.number().int().min(1).max(730).optional().default(7),
 		}),
 	)
 	.handler(async ({ data }) => {
@@ -237,7 +312,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 			.limit(1);
 
 		if (prompt.length === 0) throw new Error("Prompt not found");
-		await requireOrgAccess(session.user.id, prompt[0].brandId);
+		await requireBrandAccess(session.user.id, prompt[0].brandId);
 		const measurementScope = await resolveMeasurementScopeForBrand(prompt[0].brandId, prompt[0].scopeId ?? undefined);
 
 		const timezone = measurementScope.timezone;
@@ -293,7 +368,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 			});
 
 			// Tally competitor mentions
-			competitorMentionsResult.forEach((row: any) => {
+			competitorMentionsResult.forEach((row) => {
 				(row.competitorsMentioned || []).forEach((name: string) => {
 					if (name?.trim() && Object.hasOwn(competitorCounts, name)) {
 						competitorCounts[name] += 1;
@@ -332,7 +407,7 @@ export const getPromptStatsFn = createServerFn({ method: "GET" })
 		// prompt level: classify each citation at the URL level, pull Google AI Mode
 		// search/shopping surfaces OUT of the source mix into a dedicated Google
 		// Shopping module, and rebuild the domain distribution from the URL data.
-		let citationStats;
+		let citationStats: PromptCitationStats | undefined;
 		const [brandInfo, competitorsList] = await Promise.all([
 			db
 				.select({ name: brands.name, website: brands.website, additionalDomains: brands.additionalDomains })
@@ -470,9 +545,9 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 	.validator(
 		z.object({
 			promptId: z.string(),
-			page: z.number().optional().default(1),
-			limit: z.number().optional().default(10),
-			days: z.number().optional().default(7),
+			page: z.number().int().min(1).max(1_000_000).optional().default(1),
+			limit: z.number().int().min(1).max(100).optional().default(10),
+			days: z.number().int().min(1).max(730).optional().default(7),
 		}),
 	)
 	.handler(async ({ data }) => {
@@ -482,7 +557,7 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 		if (!prompt) throw new Error("Prompt not found");
 
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, prompt.brandId);
+		await requireBrandAccess(session.user.id, prompt.brandId);
 		const measurementScope = await resolveMeasurementScopeForBrand(prompt.brandId, prompt.scopeId ?? undefined);
 		const timezone = measurementScope.timezone;
 		const toDateStr = new Date().toLocaleDateString("en-CA", { timeZone: timezone });
@@ -493,12 +568,23 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 		const offset = (data.page - 1) * data.limit;
 
 		const [runs, totalResult] = await Promise.all([
-			db.query.promptRuns.findMany({
-				where: and(eq(promptRuns.promptId, data.promptId), timeCondition),
-				orderBy: desc(promptRuns.createdAt),
-				limit: data.limit,
-				offset,
-			}),
+			db
+				.select({
+					model: promptRuns.model,
+					version: promptRuns.version,
+					observedAt: promptRuns.observedAt,
+					createdAt: promptRuns.createdAt,
+					webSearchEnabled: promptRuns.webSearchEnabled,
+					answerText: promptRuns.answerText,
+					webQueries: promptRuns.webQueries,
+					brandMentioned: promptRuns.brandMentioned,
+					competitorsMentioned: promptRuns.competitorsMentioned,
+				})
+				.from(promptRuns)
+				.where(and(eq(promptRuns.promptId, data.promptId), timeCondition))
+				.orderBy(desc(promptRuns.createdAt))
+				.limit(data.limit)
+				.offset(offset),
 			db
 				.select({ count: count() })
 				.from(promptRuns)
@@ -506,7 +592,7 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 		]);
 
 		return {
-			runs: runs.map((r) => ({ ...r, rawOutput: r.rawOutput as {} })),
+			runs: runs.map(toCustomerPromptRunDto),
 			total: totalResult[0]?.count || 0,
 			page: data.page,
 			limit: data.limit,
@@ -518,52 +604,52 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
  * Update prompts for a brand (add/edit/delete)
  */
 export const updatePromptsFn = createServerFn({ method: "POST" })
-	.validator(
-		z.object({
-			brandId: z.string(),
-			scopeId: z.string().uuid(),
-			prompts: z.array(
-				z.object({
-					id: z.string().optional(),
-					value: z.string(),
-					enabled: z.boolean().optional().default(true),
-					tags: z.array(z.string()).optional(),
-				}),
-			),
-		}),
-	)
+	.validator(updatePromptsInputSchema)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		const platformAdmin = isAdmin(session);
+		if (!platformAdmin) {
+			await requireBrandWriteAccess(session.user.id, data.brandId);
+		}
 
-		const brand = await db.query.brands.findFirst({
-			where: eq(brands.id, data.brandId),
-		});
-		if (!brand) throw new Error("Brand not found");
 		const scope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
-
-		const existingRows = await db
-			.select({ id: prompts.id, value: prompts.value })
-			.from(prompts)
-			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
-		const existingIds = new Set(existingRows.map((prompt) => prompt.id));
-		const existingById = new Map(existingRows.map((prompt) => [prompt.id, prompt]));
-		const crossScopeId = data.prompts.find((prompt) => prompt.id && !existingIds.has(prompt.id))?.id;
-		if (crossScopeId) {
-			throw new Error(`Prompt ${crossScopeId} does not belong to measurement scope ${scope.id}`);
+		if (!platformAdmin && !isManualOnlyScope(scope.automaticTargetKeys)) {
+			throw new Error("Forbidden: Automatic prompt execution is managed by the platform");
 		}
-		const changedPromptIds = data.prompts
-			.filter((prompt) => prompt.id && existingById.get(prompt.id)?.value !== prompt.value)
-			.map((prompt) => prompt.id as string);
-		if (changedPromptIds.length > 0) {
-			throw new Error(
-				`Stored prompt ${changedPromptIds[0]} is immutable; create a new prompt and disable the old one instead.`,
+
+		const { existingIds, saved } = await db.transaction(async (tx) => {
+			const [brand] = await tx
+				.select({ id: brands.id, name: brands.name, website: brands.website })
+				.from(brands)
+				.where(eq(brands.id, data.brandId))
+				.limit(1)
+				.for("update");
+			if (!brand) throw new Error("Brand not found");
+
+			const existingRows = await tx
+				.select({ id: prompts.id, value: prompts.value })
+				.from(prompts)
+				.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
+			const existingIds = new Set(existingRows.map((prompt) => prompt.id));
+			const existingById = new Map(existingRows.map((prompt) => [prompt.id, prompt]));
+			const crossScopeId = data.prompts.find((prompt) => prompt.id && !existingIds.has(prompt.id))?.id;
+			if (crossScopeId) {
+				throw new Error(`Prompt ${crossScopeId} does not belong to measurement scope ${scope.id}`);
+			}
+			const changedPromptIds = data.prompts
+				.filter((prompt) => prompt.id && existingById.get(prompt.id)?.value !== prompt.value)
+				.map((prompt) => prompt.id as string);
+			if (changedPromptIds.length > 0) {
+				throw new Error(
+					`Stored prompt ${changedPromptIds[0]} is immutable; create a new prompt and disable the old one instead.`,
+				);
+			}
+
+			const toUpdate = data.prompts.filter(
+				(p): p is (typeof data.prompts)[number] & { id: string } => typeof p.id === "string",
 			);
-		}
-
-		const saved = await db.transaction(async (tx) => {
-			const toUpdate = data.prompts.filter((p) => p.id);
 			const toInsert = data.prompts.filter((p) => !p.id);
+			assertPromptCapacity(existingRows.length, toInsert.length);
 
 			for (const p of toUpdate) {
 				await tx
@@ -574,7 +660,7 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 						tags: p.tags || [],
 						systemTags: computeSystemTags(p.value, brand.name, brand.website),
 					})
-					.where(and(eq(prompts.id, p.id!), eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
+					.where(and(eq(prompts.id, p.id), eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)));
 			}
 
 			if (toInsert.length > 0) {
@@ -590,13 +676,18 @@ export const updatePromptsFn = createServerFn({ method: "POST" })
 				);
 			}
 
-			return tx.query.prompts.findMany({
+			const saved = await tx.query.prompts.findMany({
 				where: and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scope.id)),
 			});
+			return { existingIds, saved };
 		});
 
 		const newPromptIds = saved.filter((p) => !existingIds.has(p.id)).map((p) => p.id);
-		if (newPromptIds.length > 0 && (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0)) {
+		if (
+			platformAdmin &&
+			newPromptIds.length > 0 &&
+			(scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0)
+		) {
 			createMultiplePromptJobSchedulers(newPromptIds).catch((err) =>
 				console.error("Failed to create job schedulers for new prompts:", err),
 			);
@@ -622,7 +713,7 @@ export const getPromptChartDataFn = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
 		const prompt = await db.query.prompts.findFirst({
 			where: and(eq(prompts.id, data.promptId), eq(prompts.brandId, data.brandId)),
@@ -637,8 +728,11 @@ export const getPromptChartDataFn = createServerFn({ method: "GET" })
 		const endDate = new Date(toDateStr ?? new Date().toISOString().slice(0, 10));
 
 		const [brandData, competitorsData] = await Promise.all([
-			db.select().from(brands).where(eq(brands.id, data.brandId)).limit(1),
-			db.select().from(competitors).where(eq(competitors.brandId, data.brandId)),
+			db.select({ id: brands.id, name: brands.name }).from(brands).where(eq(brands.id, data.brandId)).limit(1),
+			db
+				.select({ id: competitors.id, name: competitors.name })
+				.from(competitors)
+				.where(eq(competitors.brandId, data.brandId)),
 		]);
 
 		if (brandData.length === 0) throw new Error("Brand not found");
@@ -673,8 +767,9 @@ export const getPromptChartDataFn = createServerFn({ method: "GET" })
 		const competitorStatsMap = new Map<string, Map<string, number>>();
 		for (const stat of competitorStats) {
 			const dateStr = String(stat.date);
-			if (!competitorStatsMap.has(dateStr)) competitorStatsMap.set(dateStr, new Map());
-			competitorStatsMap.get(dateStr)!.set(stat.competitor_name, Number(stat.mention_count));
+			const countsForDate = competitorStatsMap.get(dateStr) ?? new Map<string, number>();
+			countsForDate.set(stat.competitor_name, Number(stat.mention_count));
+			competitorStatsMap.set(dateStr, countsForDate);
 		}
 
 		const sortedCompetitors = [...brandCompetitors].sort((a, b) => a.name.localeCompare(b.name));
@@ -773,7 +868,7 @@ export const getPromptWebQueryFn = createServerFn({ method: "GET" })
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 
 		const prompt = await db.query.prompts.findFirst({
 			columns: { id: true, scopeId: true },

@@ -5,8 +5,9 @@
  * Tests that the citations page loads and displays citation data.
  */
 import { test, expect } from "@playwright/test";
+import { STEPFUN_BRAND_ID } from "../fixtures";
 
-const BRAND_ID = "default";
+const BRAND_ID = STEPFUN_BRAND_ID;
 
 test.describe("Citations Page", () => {
   test.beforeEach(async ({ page }) => {

@@ -16,7 +16,7 @@
  */
 import { count, eq, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import { member, organization, user } from "./schema";
+import { brands, member, organization, user } from "./schema";
 
 const DEFAULT_ORG_PRIVILEGED_ROLES = ["owner", "admin"] as const;
 const DEFAULT_ORG_PRIVILEGED_ROLE_SET = new Set<string>(DEFAULT_ORG_PRIVILEGED_ROLES);
@@ -154,6 +154,31 @@ export function slugifyOrgName(name: string): string {
 }
 
 /**
+ * Build the brand row for a platform-provisioned customer workspace.
+ *
+ * These workspaces intentionally start ready for the manual customer flow.
+ * The legacy onboarding wizard performs paid platform research and is not a
+ * customer capability, so leaving `onboarded` false would strand the customer
+ * on a screen they are not authorized to complete.
+ */
+export function buildAdditionalLocalBrandValues(input: {
+	id: string;
+	name: string;
+	website: string;
+	additionalDomains?: string[];
+}): typeof brands.$inferInsert {
+	return {
+		id: input.id,
+		organizationId: input.id,
+		name: input.name,
+		website: input.website,
+		enabled: true,
+		onboarded: true,
+		...(input.additionalDomains && { additionalDomains: input.additionalDomains }),
+	};
+}
+
+/**
  * Slugs that would collide with sibling routes under `/app/$brand`. A
  * user-named brand that slugifies to one of these gets a numeric suffix
  * instead so the URL stays unambiguous.
@@ -226,10 +251,15 @@ export async function ensureOrganization(input: { id: string; name: string }): P
  * `name`, with a numeric suffix on collision, and is reused as the org slug
  * so that URLs and the org row stay in sync.
  *
- * The brand row itself is the caller's responsibility; provisioning only
- * handles the auth-level (org + admin membership) bits.
+ * When `brand` is provided, the organization and its one customer brand are
+ * created atomically. Platform operators deliberately receive no membership
+ * unless an explicit `userId` is supplied.
  */
-export async function provisionAdditionalLocalOrg(input: { userId: string; name: string }): Promise<{ orgId: string }> {
+export async function provisionAdditionalLocalOrg(input: {
+	userId?: string;
+	name: string;
+	brand?: { website: string; additionalDomains?: string[] };
+}): Promise<{ orgId: string }> {
 	const baseSlug = slugifyOrgName(input.name);
 	const orgId = await findUniqueOrgId(baseSlug);
 
@@ -241,13 +271,28 @@ export async function provisionAdditionalLocalOrg(input: { userId: string; name:
 			createdAt: new Date(),
 		});
 
-		await tx.insert(member).values({
-			id: crypto.randomUUID(),
-			organizationId: orgId,
-			userId: input.userId,
-			role: "admin",
-			createdAt: new Date(),
-		});
+		if (input.brand) {
+			await tx.insert(brands).values(
+				buildAdditionalLocalBrandValues({
+					id: orgId,
+					name: input.name,
+					website: input.brand.website,
+					...(input.brand.additionalDomains && {
+						additionalDomains: input.brand.additionalDomains,
+					}),
+				}),
+			);
+		}
+
+		if (input.userId) {
+			await tx.insert(member).values({
+				id: crypto.randomUUID(),
+				organizationId: orgId,
+				userId: input.userId,
+				role: "admin",
+				createdAt: new Date(),
+			});
+		}
 	});
 
 	return { orgId };

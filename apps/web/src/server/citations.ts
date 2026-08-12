@@ -3,33 +3,33 @@
  * Replaces apps/web/src/app/api/brands/[id]/citations/route.ts
  */
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
 import { db } from "@workspace/lib/db/db";
 import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brands, competitors, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import { getCitationUrlStats, getPerPromptDailyCitationPages, getPerPromptCitationPages } from "@/lib/postgres-read";
 import { getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
-import { citationDateWindow, applyPerPromptKeyedLVCF } from "@/lib/chart-utils";
+import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
+import { applyPerPromptKeyedLVCF, citationDateWindow } from "@/lib/chart-utils";
 import {
-	type CitationCategory,
-	type CitationPageType,
 	CITATION_CATEGORIES,
 	CITATION_PAGE_TYPES,
+	type CitationCategory,
+	type CitationPageType,
 	emptyCategoryCounts,
 	emptyPageTypeCounts,
 	extractDomain,
-	normalizeUrl,
-	toRoundedPercentages,
-	resolvePageType,
 	isGoogleSurfaceUrl,
+	normalizeUrl,
+	resolvePageType,
+	toRoundedPercentages,
 } from "@/lib/domain-categories";
 import {
 	categorizeDomain as categorizeDomainShared,
 	classifyUrl as classifyUrlShared,
 } from "@/lib/domain-categories.server";
 import { buildGoogleModule, emptyGoogleModule } from "@/lib/google-module";
+import { getCitationUrlStats, getPerPromptCitationPages, getPerPromptDailyCitationPages } from "@/lib/postgres-read";
 
 /**
  * Get citation statistics for a brand
@@ -39,14 +39,14 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 		z.object({
 			brandId: z.string(),
 			scopeId: z.string().uuid(),
-			days: z.number().optional().default(7),
+			days: z.number().int().min(1).max(730).optional().default(7),
 			tags: z.string().optional(),
 			model: z.string().optional(),
 		}),
 	)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 		const measurementScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 
 		// Window: `data.days` calendar days ending today (inclusive), plus the

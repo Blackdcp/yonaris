@@ -8,9 +8,10 @@
 import { chromium, type FullConfig } from "@playwright/test";
 import path from "node:path";
 import pg from "pg";
+import { provisionCustomerTestIdentity } from "./customer-auth-setup";
 import { DATABASE_URL, TEST_USER, TEST_BRAND_ID, TEST_BRAND_NAME } from "./fixtures";
 
-const AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "user.json");
+export const ADMIN_AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "admin.json");
 
 export default async function globalSetup(config: FullConfig) {
 	const baseURL = config.projects[0]?.use?.baseURL || "http://localhost:1515";
@@ -118,8 +119,11 @@ export default async function globalSetup(config: FullConfig) {
 			throw new Error(`Auth setup did not refresh the admin role (status ${sessionResponse.status()})`);
 		}
 
-		await page.context().storageState({ path: AUTH_STATE_PATH });
+		await page.context().storageState({ path: ADMIN_AUTH_STATE_PATH });
 		console.log(`[auth-setup] Authenticated as admin ${TEST_USER.email}`);
+
+		await provisionCustomerTestIdentity({ adminPage: page, browser, baseURL });
+		console.log("[auth-setup] Provisioned and authenticated the StepFun customer analyst");
 	} finally {
 		await browser.close();
 	}

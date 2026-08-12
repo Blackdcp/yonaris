@@ -28,6 +28,7 @@
 		"./onboarding": "./src/onboarding/index.ts",
 		"./tag-utils": "./src/tag-utils.ts",
 		"./website-excerpt": "./src/website-excerpt.ts",
+		"./public-http-url": "./src/public-http-url.ts",
 		"./report-output": "./src/report-output.ts",
 		"./report-metrics": "./src/report-metrics.ts",
 		"./mention-analysis": "./src/mention-analysis.ts",

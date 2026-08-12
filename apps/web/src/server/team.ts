@@ -12,7 +12,7 @@ import { db } from "@workspace/lib/db/db";
 import { invitation, member, user } from "@workspace/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession, requireOrgWriteAccess } from "@/lib/auth/helpers";
+import { requireAuthSession, requireBrandAdminAccess } from "@/lib/auth/helpers";
 import { auth } from "@/lib/auth/server";
 import { getDeployment } from "@/lib/config/server";
 
@@ -36,7 +36,7 @@ export const listTeamFn = createServerFn({ method: "GET" })
 	.handler(async ({ data }): Promise<TeamData> => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		const access = await requireBrandAdminAccess(session.user.id, data.brandId);
 
 		const members = await db
 			.select({
@@ -49,7 +49,7 @@ export const listTeamFn = createServerFn({ method: "GET" })
 			})
 			.from(member)
 			.innerJoin(user, eq(member.userId, user.id))
-			.where(eq(member.organizationId, data.brandId));
+			.where(eq(member.organizationId, access.organizationId));
 
 		const invitations = await db
 			.select({
@@ -59,7 +59,7 @@ export const listTeamFn = createServerFn({ method: "GET" })
 				expiresAt: invitation.expiresAt,
 			})
 			.from(invitation)
-			.where(and(eq(invitation.organizationId, data.brandId), eq(invitation.status, "pending")));
+			.where(and(eq(invitation.organizationId, access.organizationId), eq(invitation.status, "pending")));
 
 		return { members, invitations, currentUserId: session.user.id };
 	});
@@ -75,10 +75,10 @@ export const inviteTeamMemberFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		const access = await requireBrandAdminAccess(session.user.id, data.brandId);
 
 		await auth.api.createInvitation({
-			body: { email: data.email, role: data.role, organizationId: data.brandId },
+			body: { email: data.email, role: data.role, organizationId: access.organizationId },
 			headers: getRequestHeaders(),
 		});
 
@@ -90,7 +90,7 @@ export const cancelInvitationFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		await requireBrandAdminAccess(session.user.id, data.brandId);
 
 		await auth.api.cancelInvitation({
 			body: { invitationId: data.invitationId },
@@ -105,19 +105,19 @@ export const removeTeamMemberFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }) => {
 		requireTeamInvites();
 		const session = await requireAuthSession();
-		await requireOrgWriteAccess(session.user.id, data.brandId);
+		const access = await requireBrandAdminAccess(session.user.id, data.brandId);
 
 		const [row] = await db
 			.select({ userId: member.userId })
 			.from(member)
-			.where(and(eq(member.id, data.memberId), eq(member.organizationId, data.brandId)))
+			.where(and(eq(member.id, data.memberId), eq(member.organizationId, access.organizationId)))
 			.limit(1);
 		if (row?.userId === session.user.id) {
 			throw new Error("You cannot remove yourself from the team");
 		}
 
 		await auth.api.removeMember({
-			body: { memberIdOrEmail: data.memberId, organizationId: data.brandId },
+			body: { memberIdOrEmail: data.memberId, organizationId: access.organizationId },
 			headers: getRequestHeaders(),
 		});
 

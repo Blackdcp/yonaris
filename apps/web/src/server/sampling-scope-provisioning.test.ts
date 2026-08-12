@@ -1,5 +1,7 @@
+import { MAX_PROMPTS } from "@workspace/lib/constants";
 import { describe, expect, it, vi } from "vitest";
 import {
+	MAX_MEASUREMENT_SCOPES_PER_BRAND,
 	type ProvisionSamplingScopeInput,
 	provisionManualSamplingScopeWithRepository,
 	provisionSamplingScopeInputSchema,
@@ -39,6 +41,7 @@ function makeRepository(
 	return {
 		lockBrand: vi.fn(async () => ({ organizationId: "customer-company" })),
 		listMembershipRolesForUpdate: vi.fn(async () => ["admin"]),
+		countScopesForBrand: vi.fn(async () => 1),
 		findScopeIdByKey: vi.fn(async () => null),
 		sourceScopeBelongsToBrand: vi.fn(async () => true),
 		listSourcePrompts: vi.fn(async () => []),
@@ -179,6 +182,65 @@ describe("manual sampling scope provisioning", () => {
 			"already exists for this brand",
 		);
 		expect(repository.insertManualScope).not.toHaveBeenCalled();
+	});
+
+	it("rejects a new scope at the per-brand limit before inserting", async () => {
+		const repository = makeRepository({
+			countScopesForBrand: vi.fn(async () => MAX_MEASUREMENT_SCOPES_PER_BRAND),
+		});
+
+		await expect(provisionManualSamplingScopeWithRepository(input, repository)).rejects.toThrow(
+			`at most ${MAX_MEASUREMENT_SCOPES_PER_BRAND} measurement scopes`,
+		);
+		expect(repository.findScopeIdByKey).not.toHaveBeenCalled();
+		expect(repository.insertManualScope).not.toHaveBeenCalled();
+	});
+
+	it("allows creation immediately below the per-brand scope limit", async () => {
+		const repository = makeRepository({
+			countScopesForBrand: vi.fn(async () => MAX_MEASUREMENT_SCOPES_PER_BRAND - 1),
+		});
+
+		await expect(
+			provisionManualSamplingScopeWithRepository({ ...input, sourceScopeId: undefined }, repository),
+		).resolves.toMatchObject({ scope: insertedScope, copiedPromptCount: 0 });
+		expect(repository.insertManualScope).toHaveBeenCalledOnce();
+	});
+
+	it("rejects copying more than the prompt limit before inserting the scope", async () => {
+		const sourcePrompts = Array.from({ length: MAX_PROMPTS + 1 }, (_, index) => ({
+			brandId: input.brandId,
+			scopeId: input.sourceScopeId ?? null,
+			value: `Prompt ${index + 1}`,
+			enabled: true,
+			tags: [],
+			systemTags: [],
+		}));
+		const repository = makeRepository({ listSourcePrompts: vi.fn(async () => sourcePrompts) });
+
+		await expect(provisionManualSamplingScopeWithRepository(input, repository)).rejects.toThrow(
+			`copy at most ${MAX_PROMPTS} prompts`,
+		);
+		expect(repository.insertManualScope).not.toHaveBeenCalled();
+		expect(repository.insertPromptCopies).not.toHaveBeenCalled();
+	});
+
+	it("copies exactly the maximum allowed prompt count", async () => {
+		const sourcePrompts = Array.from({ length: MAX_PROMPTS }, (_, index) => ({
+			brandId: input.brandId,
+			scopeId: input.sourceScopeId ?? null,
+			value: `Prompt ${index + 1}`,
+			enabled: true,
+			tags: [],
+			systemTags: [],
+		}));
+		const repository = makeRepository({ listSourcePrompts: vi.fn(async () => sourcePrompts) });
+
+		const result = await provisionManualSamplingScopeWithRepository(input, repository);
+
+		expect(result.copiedPromptCount).toBe(MAX_PROMPTS);
+		expect(repository.insertManualScope).toHaveBeenCalledOnce();
+		expect(repository.insertPromptCopies).toHaveBeenCalledWith(insertedScope.id, sourcePrompts);
 	});
 
 	it("does not copy prompts when scope insertion fails", async () => {

@@ -190,7 +190,7 @@ describe("evaluateDeploymentPolicy", () => {
 
 		it("blocks POST /api/auth/admin/create-user (admin plugin)", () => {
 			const result = evaluateDeploymentPolicy(features, req("POST", "/api/auth/admin/create-user"));
-			expect(result).toMatchObject({ action: "block", status: 403, error: "Demo Mode" });
+			expect(result).toMatchObject({ action: "block", status: 403, error: "Forbidden" });
 		});
 
 		it("still allows GET /api/auth/get-session (reads are unaffected)", () => {
@@ -364,6 +364,23 @@ describe("evaluateDeploymentPolicy", () => {
 					const result = evaluateDeploymentPolicy(features, req("GET", "/api/auth/organization/list"));
 					expect(result.action).toBe("allow");
 				});
+			});
+		}
+	});
+
+	describe("raw admin plugin endpoints", () => {
+		for (const [name, features] of [
+			["local", LOCAL_FEATURES],
+			["demo", DEMO_FEATURES],
+			["whitelabel", WHITELABEL_FEATURES],
+		] as const) {
+			it.each([
+				["POST", "/api/auth/admin/impersonate-user"],
+				["POST", "/api/auth/admin/set-role"],
+				["GET", "/api/auth/admin/list-users"],
+			])(`blocks ${name} %s %s`, (method, pathname) => {
+				const result = evaluateDeploymentPolicy(features, req(method, pathname));
+				expect(result).toMatchObject({ action: "block", status: 403, error: "Forbidden" });
 			});
 		}
 	});

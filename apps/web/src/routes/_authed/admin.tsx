@@ -4,12 +4,12 @@
  * Checks admin status; returns 404 if not admin.
  * Wraps admin routes with admin-specific sidebar.
  */
-import { createFileRoute, Outlet, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, Outlet } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { requireAuthSession, isAdmin, hasReportAccess } from "@/lib/auth/helpers";
 import { SidebarInset, SidebarProvider } from "@workspace/ui/components/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
+import { hasReportAccess, isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 
 const checkAdminAccess = createServerFn({ method: "GET" }).handler(
 	async (): Promise<{
@@ -44,7 +44,7 @@ function AdminLayout() {
 		<SidebarProvider>
 			<AppSidebar isAdmin={isAdmin} hasReportAccess={hasReportAccess} adminOnly />
 			<SidebarInset className="md:border md:border-border/60 md:rounded-xl overflow-hidden">
-				<SiteHeader />
+				<SiteHeader isPlatformAdmin={isAdmin} />
 				<div className="flex flex-1 flex-col">
 					<div className="@container/main flex flex-1 flex-col gap-2">
 						<div className="flex flex-col gap-4 p-4 md:gap-6 md:p-6">

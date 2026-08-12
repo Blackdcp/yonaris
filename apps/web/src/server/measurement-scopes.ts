@@ -5,13 +5,13 @@ import { brands, promptRuns } from "@workspace/lib/db/schema";
 import { parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession, requireOrgAccess } from "@/lib/auth/helpers";
+import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
 
 export const getScopeModelsFn = createServerFn({ method: "GET" })
 	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid() }))
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
-		await requireOrgAccess(session.user.id, data.brandId);
+		await requireBrandAccess(session.user.id, data.brandId);
 		const [scope, brand, observedModels] = await Promise.all([
 			resolveMeasurementScopeForBrand(data.brandId, data.scopeId),
 			db.query.brands.findFirst({

@@ -13,7 +13,12 @@
 import pg from "pg";
 import {
   COMPETITOR_IDS,
+  CUSTOMER_TEST_USER,
   DATABASE_URL,
+  MEMTENSOR_BRAND_ID,
+  MEMTENSOR_BRAND_NAME,
+  MEMTENSOR_ORG_ID,
+  MEMTENSOR_SCOPE_ID,
   NIKE_BRAND_ID,
   NIKE_COMPETITOR_IDS,
   NIKE_ORG_ID,
@@ -21,6 +26,12 @@ import {
   NIKE_SCOPE_ID,
   PROMPT_IDS,
   REPORT_IDS,
+  STEPFUN_BRAND_ID,
+  STEPFUN_BRAND_NAME,
+  STEPFUN_ORG_ID,
+  STEPFUN_PROMPT_ID,
+  STEPFUN_RUN_ID,
+  STEPFUN_SCOPE_ID,
   TEST_BRAND_ID,
   TEST_BRAND_NAME,
   TEST_BRAND_WEBSITE,
@@ -64,6 +75,84 @@ async function seed() {
         brands
       RESTART IDENTITY CASCADE
     `);
+
+    // The customer boundary suite provisions this identity through the real
+    // platform-admin UI on every run. Removing only its hardcoded localhost
+    // fixture account keeps that flow deterministic without disturbing the
+    // bootstrap platform administrator used by the rest of the suite.
+    await client.query(`DELETE FROM "user" WHERE lower(email) = lower($1)`, [
+      CUSTOMER_TEST_USER.email,
+    ]);
+
+    // -----------------------------------------------------------------------
+    // Dedicated customer workspaces used by the real-identity boundary E2E.
+    // StepFun has one manual scored program. MemTensor deliberately belongs to
+    // another organization so changed-URL tenant access can be proven closed.
+    // -----------------------------------------------------------------------
+    for (const workspace of [
+      {
+        organizationId: STEPFUN_ORG_ID,
+        brandId: STEPFUN_BRAND_ID,
+        name: STEPFUN_BRAND_NAME,
+        website: "https://stepfun.com",
+        scopeId: STEPFUN_SCOPE_ID,
+        scopeKey: "cn-zh-scored",
+        scopeName: "China - Simplified Chinese - Scored",
+      },
+      {
+        organizationId: MEMTENSOR_ORG_ID,
+        brandId: MEMTENSOR_BRAND_ID,
+        name: MEMTENSOR_BRAND_NAME,
+        website: "https://mentensor.com",
+        scopeId: MEMTENSOR_SCOPE_ID,
+        scopeKey: "cn-zh-scored",
+        scopeName: "China - Simplified Chinese - Scored",
+      },
+    ]) {
+      await client.query(
+        `INSERT INTO organization (id, name, slug, created_at)
+         VALUES ($1, $2, $1, NOW())
+         ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+        [workspace.organizationId, workspace.name],
+      );
+      await client.query(
+        `INSERT INTO brands
+           (id, organization_id, name, website, enabled, onboarded, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, true, NOW(), NOW())`,
+        [workspace.brandId, workspace.organizationId, workspace.name, workspace.website],
+      );
+      await client.query(
+        `INSERT INTO measurement_scopes
+           (id, brand_id, key, name, market, locale, timezone, automatic_target_keys,
+            sampling_evaluation_role, enabled, is_default, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, 'CN', 'zh-CN', 'Asia/Shanghai', '{}',
+                 'scored', true, false, NOW(), NOW())`,
+        [workspace.scopeId, workspace.brandId, workspace.scopeKey, workspace.scopeName],
+      );
+    }
+    await client.query(
+      `INSERT INTO prompts
+         (id, brand_id, scope_id, value, enabled, tags, system_tags, created_at, updated_at)
+       VALUES ($1, $2, $3, '国内有哪些主流大模型公司？', true,
+               ARRAY['结果监测'], ARRAY['unbranded'], NOW(), NOW())`,
+      [STEPFUN_PROMPT_ID, STEPFUN_BRAND_ID, STEPFUN_SCOPE_ID],
+    );
+    await client.query(
+      `INSERT INTO prompt_runs
+         (id, prompt_id, brand_id, scope_id, model, version, web_search_enabled,
+          raw_output, answer_text, web_queries, brand_mentioned,
+          competitors_mentioned, observed_at, created_at)
+       VALUES ($1, $2, $3, $4, 'deepseek', 'deepseek-chat', false,
+               $5, $6, '{}', true, '{}', NOW(), NOW())`,
+      [
+        STEPFUN_RUN_ID,
+        STEPFUN_PROMPT_ID,
+        STEPFUN_BRAND_ID,
+        STEPFUN_SCOPE_ID,
+        JSON.stringify({ response: "阶跃星辰是中国的大模型公司。" }),
+        "阶跃星辰是中国的大模型公司。",
+      ],
+    );
 
     // -----------------------------------------------------------------------
     // 1. Brand (scoped to an organization that shares its id)

@@ -1,12 +1,13 @@
 /**
  * Stories for <AppSidebar /> across deployment environments.
  *
- * Six stories matching the real deployment scenarios:
+ * Seven stories matching the real deployment scenarios:
  *  - Local (self-hosted, no auth)
  *  - Demo (read-only preview)
  *  - Whitelabel
- *  - Whitelabel Admin (admin section visible)
- *  - Whitelabel Report-only (limited admin access)
+ *  - Whitelabel Admin (platform admin viewing a customer workspace)
+ *  - Whitelabel Report-only (report operator viewing a customer workspace)
+ *  - Platform Administration (platform-only navigation)
  *  - Whitelabel Onboarding (brand not yet onboarded)
  */
 import type { Meta } from "@storybook/react";
@@ -188,12 +189,12 @@ export default {
 	title: "Dev Preview/Product Shell",
 } satisfies Meta;
 
-/** Local (self-hosted) — all nav visible, admin access, self-registered user */
+/** Local (self-hosted) — customer workspace viewed by the platform owner. */
 export const Local = () => {
 	configureMocks(localConfig, onboardedBrand, authedUser("Local Admin", "admin@localhost", "local-admin"));
 
 	return (
-		<SidebarFrame label="Local — Self-hosted, full admin">
+		<SidebarFrame label="Local — customer workspace">
 			<AppSidebar isAdmin={true} hasReportAccess={true} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
@@ -223,24 +224,35 @@ export const Whitelabel = () => {
 	);
 };
 
-/** Whitelabel (Admin) — admin section with Brands, Reports, Workflows, Tools */
+/** Whitelabel (Admin) — platform privileges do not mix platform navigation into a customer workspace. */
 export const WhitelabelAdmin = () => {
 	configureMocks(whitelabelAdminConfig, onboardedBrand, authedUser("Jane Admin", "jane@agency.com", "jane"));
 
 	return (
-		<SidebarFrame label="Whitelabel Admin — Full admin section visible">
+		<SidebarFrame label="Whitelabel Admin — customer workspace">
 			<AppSidebar isAdmin={true} hasReportAccess={true} brand={onboardedBrand} />
 		</SidebarFrame>
 	);
 };
 
-/** Whitelabel (Report-only) — limited admin access, only reports visible */
+/** Whitelabel (Report-only) — report privileges remain outside the customer workspace navigation. */
 export const WhitelabelReportOnly = () => {
 	configureMocks(whitelabelAdminConfig, onboardedBrand, authedUser("Report Viewer", "reports@client.com", "reports"));
 
 	return (
-		<SidebarFrame label="Whitelabel Report-only — Dashboard + Reports admin section">
+		<SidebarFrame label="Whitelabel Report-only — customer workspace">
 			<AppSidebar isAdmin={false} hasReportAccess={true} brand={onboardedBrand} />
+		</SidebarFrame>
+	);
+};
+
+/** Platform administration — platform tools are isolated from customer navigation. */
+export const PlatformAdministration = () => {
+	configureMocks(localConfig, onboardedBrand, authedUser("Platform Admin", "admin@yonaris.com", "platform-admin"));
+
+	return (
+		<SidebarFrame label="Platform administration">
+			<AppSidebar isAdmin={true} hasReportAccess={true} adminOnly />
 		</SidebarFrame>
 	);
 };

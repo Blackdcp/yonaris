@@ -3,7 +3,7 @@ import { db } from "@workspace/lib/db/db";
 import { brands, measurementScopes, member, prompts } from "@workspace/lib/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuthSession } from "@/lib/auth/helpers";
+import { isPlatformIdentity, requireAuthSession } from "@/lib/auth/helpers";
 import { type CustomerProgramAccessStore, resolveCustomerProgramAccess } from "@/lib/auth/program-access";
 import { provisionManualSamplingScope, provisionSamplingScopeInputSchema } from "./sampling-scope-provisioning";
 
@@ -35,6 +35,9 @@ export const getCustomerProgramContextFn = createServerFn({ method: "GET" })
 	.validator(customerProgramsInputSchema)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
+		if (isPlatformIdentity(session)) {
+			throw new Error("Not Found: Customer programs are not available to platform identities");
+		}
 		const access = await requireCustomerProgramAccess(session.user.id, data.brandId);
 		const [scopeRows, promptRows] = await Promise.all([
 			db
@@ -82,6 +85,9 @@ export const provisionCustomerProgramScopeFn = createServerFn({ method: "POST" }
 	.validator(provisionSamplingScopeInputSchema)
 	.handler(async ({ data }) => {
 		const session = await requireAuthSession();
+		if (isPlatformIdentity(session)) {
+			throw new Error("Not Found: Customer programs are not available to platform identities");
+		}
 		const access = await requireCustomerProgramAccess(session.user.id, data.brandId);
 		if (!access.canProvision) {
 			throw new Error("Forbidden: Only organization owners and admins can create programs");

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
+import { Badge } from "@workspace/ui/components/badge";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -25,9 +26,10 @@ const PAGE_NAMES: Record<string, string> = {
 	brand: "Brand",
 	competitors: "Competitors",
 	llms: "LLMs",
-	workflows: "Workflows",
-	sampling: "Sampling Tasks",
-	tools: "Tools",
+	workflows: "Automation",
+	sampling: "Sampling Operations",
+	tools: "Provider Tools",
+	access: "Customer Access",
 };
 
 function getPageDisplayName(segment: string): string {
@@ -62,7 +64,7 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 		return (
 			<>
 				<BreadcrumbItem className="hidden md:block">
-					<span className="text-muted-foreground">Admin</span>
+					<span className="text-muted-foreground">Platform</span>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator className="hidden md:block" />
 				<BreadcrumbItem>
@@ -72,16 +74,16 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 		);
 	}
 
-	// /admin - show Admin > Brands
+	// /admin - show Platform > Customers
 	if (segments.length === 1) {
 		return (
 			<>
 				<BreadcrumbItem className="hidden md:block">
-					<span className="text-muted-foreground">Admin</span>
+					<span className="text-muted-foreground">Platform</span>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator className="hidden md:block" />
 				<BreadcrumbItem>
-					<BreadcrumbPage>Brands</BreadcrumbPage>
+					<BreadcrumbPage>Customers</BreadcrumbPage>
 				</BreadcrumbItem>
 			</>
 		);
@@ -92,7 +94,7 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 	return (
 		<>
 			<BreadcrumbItem className="hidden md:block">
-				<span className="text-muted-foreground">Admin</span>
+				<span className="text-muted-foreground">Platform</span>
 			</BreadcrumbItem>
 			<BreadcrumbSeparator className="hidden md:block" />
 			<BreadcrumbItem>
@@ -196,11 +198,17 @@ function BrandBreadcrumbs({
 	);
 }
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+	isPlatformAdmin?: boolean;
+}
+
+export function SiteHeader({ isPlatformAdmin = false }: SiteHeaderProps) {
 	const { brandId, brand } = useBrand();
 	const { pathname } = useLocation();
 
 	const isAdminPage = pathname.startsWith("/admin") || pathname.startsWith("/reports");
+	const platformContextLabel =
+		pathname.startsWith("/reports") && !isPlatformAdmin ? "Report operations" : "Platform administration";
 
 	return (
 		<header
@@ -221,6 +229,9 @@ export function SiteHeader() {
 							)}
 						</BreadcrumbList>
 					</Breadcrumb>
+					<Badge variant="outline" className="ml-2 hidden shrink-0 lg:inline-flex">
+						{isAdminPage ? platformContextLabel : "Customer workspace"}
+					</Badge>
 				</div>
 				<div data-slot="site-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
 					{!isAdminPage && <MeasurementScopeSwitcher />}

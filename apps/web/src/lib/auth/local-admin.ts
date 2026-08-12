@@ -11,8 +11,7 @@ export type RoleSession = {
 
 /**
  * Repair installations created before local signup assigned a global role.
- * The returned session is patched immediately because Better Auth's signed
- * cookie cache can still contain the pre-repair role for a few minutes.
+ * The returned session is patched for the current bootstrap request.
  */
 export async function repairLocalDefaultOrgAdminSession<T extends RoleSession>(input: {
 	session: T | null;
@@ -20,7 +19,9 @@ export async function repairLocalDefaultOrgAdminSession<T extends RoleSession>(i
 	promoteUniqueDefaultOrgAdmin: (userId: string) => Promise<boolean>;
 }): Promise<T | null> {
 	const { session, mode, promoteUniqueDefaultOrgAdmin } = input;
-	if (!session || mode !== "local" || session.user.role === "admin") return session;
+	if (!session || mode !== "local" || session.user.role?.split(",").some((role) => role.trim() === "admin")) {
+		return session;
+	}
 	if (!(await promoteUniqueDefaultOrgAdmin(session.user.id))) return session;
 
 	return {
