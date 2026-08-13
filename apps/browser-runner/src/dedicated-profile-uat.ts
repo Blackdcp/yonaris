@@ -16,6 +16,7 @@ const UAT_PROMPT = "请仅回复：测试通过。";
 const MAXIMUM_CANDIDATES = 64;
 const MAXIMUM_RAW_CANDIDATES = 512;
 const MAXIMUM_NODE_COUNT = 10_000;
+const MAXIMUM_REVIEW_ARTIFACT_BYTES = 8 * 1024 * 1024;
 
 const SAFE_SELECTOR_TOKENS = new Set([
 	"account",
@@ -196,6 +197,40 @@ export async function runDedicatedDoubaoUatOnce(
 	}
 }
 
+async function captureAnonymousUatReviewArtifacts(
+	stateDirectory: string,
+	page: Page,
+): Promise<{ screenshotSha256: string; htmlSha256: string }> {
+	const reviewDirectory = path.join(stateDirectory, "anonymous-uat-review");
+	await mkdir(reviewDirectory, { recursive: true, mode: 0o700 });
+	await chmod(reviewDirectory, 0o700);
+	const screenshot = Buffer.from(await page.screenshot({ type: "png", fullPage: true }));
+	const html = Buffer.from(await page.content(), "utf8");
+	if (screenshot.length === 0 || screenshot.length > MAXIMUM_REVIEW_ARTIFACT_BYTES) {
+		throw new Error("The anonymous UAT screenshot is outside the review artifact limit");
+	}
+	if (html.length === 0 || html.length > MAXIMUM_REVIEW_ARTIFACT_BYTES) {
+		throw new Error("The anonymous UAT HTML is outside the review artifact limit");
+	}
+	await writeExclusiveReviewArtifact(path.join(reviewDirectory, "page.png"), screenshot);
+	await writeExclusiveReviewArtifact(path.join(reviewDirectory, "page.html"), html);
+	return {
+		screenshotSha256: createHash("sha256").update(screenshot).digest("hex"),
+		htmlSha256: createHash("sha256").update(html).digest("hex"),
+	};
+}
+
+async function writeExclusiveReviewArtifact(destination: string, content: Buffer): Promise<void> {
+	const handle = await open(destination, "wx", 0o600);
+	try {
+		await handle.writeFile(content);
+		await handle.chmod(0o600);
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
+}
+
 export async function runAnonymousDoubaoUatOnce(
 	stateDirectory: string,
 	options: UatBrowserOptions = {},
@@ -205,6 +240,7 @@ export async function runAnonymousDoubaoUatOnce(
 	userMessageCandidates: SanitizedSelectorCandidate[];
 	answerCandidates: SanitizedSelectorCandidate[];
 	completionCandidates: SanitizedSelectorCandidate[];
+	reviewArtifacts: { screenshotSha256: string; htmlSha256: string };
 }> {
 	await mkdir(stateDirectory, { recursive: true, mode: 0o700 });
 	await chmod(stateDirectory, 0o700);
@@ -258,6 +294,7 @@ export async function runAnonymousDoubaoUatOnce(
 		const userMessageCandidates = increasedCandidates(before, finalSnapshot, "user_message");
 		const answerCandidates = increasedCandidates(before, finalSnapshot, "answer");
 		const completionCandidates = transientCandidates(before, observations, finalSnapshot, "completion");
+		const reviewArtifacts = await captureAnonymousUatReviewArtifacts(stateDirectory, page);
 		const changed = userMessageCandidates.length + answerCandidates.length + completionCandidates.length > 0;
 		return {
 			status: changed ? "structural_change_observed" : "prompt_submitted_no_safe_candidates",
@@ -265,6 +302,7 @@ export async function runAnonymousDoubaoUatOnce(
 			userMessageCandidates,
 			answerCandidates,
 			completionCandidates,
+			reviewArtifacts,
 		};
 	} finally {
 		await context?.close().catch(() => undefined);

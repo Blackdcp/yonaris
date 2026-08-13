@@ -377,6 +377,12 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 			maximumPolls: 1,
 		});
 		assert.equal(result.promptSubmitted, true);
+		assert.match(result.reviewArtifacts.screenshotSha256, /^[a-f0-9]{64}$/);
+		assert.match(result.reviewArtifacts.htmlSha256, /^[a-f0-9]{64}$/);
+		assert.equal(
+			await readFile(path.join(stateDirectory, "anonymous-uat-review", "page.html"), "utf8"),
+			"<html><body>fixed non-sensitive UAT</body></html>",
+		);
 		assert.equal(fills, 1);
 		assert.equal(presses, 1);
 		assert.match(profileDirectory, /anonymous-uat-profiles/);
@@ -451,6 +457,12 @@ function pageDouble(options: {
 					return options.loginVisible;
 				},
 			} as unknown as Locator;
+		},
+		async screenshot() {
+			return Buffer.from("fixed-uat-png");
+		},
+		async content() {
+			return "<html><body>fixed non-sensitive UAT</body></html>";
 		},
 	} as unknown as Page;
 }
