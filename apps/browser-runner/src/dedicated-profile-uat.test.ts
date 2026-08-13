@@ -251,7 +251,7 @@ test("one-shot UAT durably records intent before one fixed prompt and reports on
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-uat-once-"));
 	const profileDirectory = dedicatedProfileDirectory(stateDirectory);
 	let fills = 0;
-	let presses = 0;
+	let clicks = 0;
 	const composer = {
 		async count() {
 			return 1;
@@ -268,12 +268,19 @@ test("one-shot UAT durably records intent before one fixed prompt and reports on
 			assert.match(intent.promptSha256, /^[a-f0-9]{64}$/);
 			assert.equal("promptText" in intent, false);
 		},
-		async press(key: string) {
-			presses += 1;
-			assert.equal(key, "Enter");
+	} as unknown as Locator;
+	const send = {
+		async count() {
+			return 1;
+		},
+		async isVisible() {
+			return true;
+		},
+		async click() {
+			clicks += 1;
 		},
 	} as unknown as Locator;
-	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false, composer });
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false, composer, send });
 	const context = contextDouble(page);
 	let snapshot = 0;
 	const collector = async () => {
@@ -304,7 +311,7 @@ test("one-shot UAT durably records intent before one fixed prompt and reports on
 		});
 
 		assert.equal(fills, 1);
-		assert.equal(presses, 1);
+		assert.equal(clicks, 1);
 		assert.deepEqual(result, {
 			status: "structural_change_observed",
 			promptSubmitted: true,
@@ -364,7 +371,7 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-anonymous-uat-"));
 	let profileDirectory = "";
 	let fills = 0;
-	let presses = 0;
+	let clicks = 0;
 	const composer = {
 		async count() {
 			return 1;
@@ -382,12 +389,19 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 			assert.match(intent.promptSha256, /^[a-f0-9]{64}$/);
 			assert.equal("promptText" in intent, false);
 		},
-		async press(key: string) {
-			presses += 1;
-			assert.equal(key, "Enter");
+	} as unknown as Locator;
+	const send = {
+		async count() {
+			return 1;
+		},
+		async isVisible() {
+			return true;
+		},
+		async click() {
+			clicks += 1;
 		},
 	} as unknown as Locator;
-	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: true, composer });
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: true, composer, send });
 	try {
 		const result = await runAnonymousDoubaoUatOnce(stateDirectory, {
 			launcher: async (launchedProfileDirectory, options) => {
@@ -398,7 +412,7 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 			},
 			collector: async () => [
 				{ selector: ".user-message", count: fills, visibleCount: fills },
-				{ selector: ".assistant-message", count: presses, visibleCount: presses },
+				{ selector: ".assistant-message", count: clicks, visibleCount: clicks },
 			],
 			sleep: async () => {},
 			maximumPolls: 1,
@@ -412,7 +426,7 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 			"<html><body>fixed non-sensitive UAT</body></html>",
 		);
 		assert.equal(fills, 1);
-		assert.equal(presses, 1);
+		assert.equal(clicks, 1);
 		assert.match(profileDirectory, /anonymous-uat-profiles/);
 		await assert.rejects(access(profileDirectory));
 		await assert.rejects(
@@ -480,6 +494,7 @@ function pageDouble(options: {
 	loginRoleVisible?: boolean;
 	loginWallVisible?: boolean;
 	composer?: Locator;
+	send?: Locator;
 	url?: string;
 }): Page {
 	const composer =
@@ -493,14 +508,15 @@ function pageDouble(options: {
 			},
 			async fill() {},
 			async press() {},
+			async click() {},
 		} as unknown as Locator);
 	return {
 		async goto() {},
 		url() {
 			return options.url ?? "https://www.doubao.com/chat/";
 		},
-		locator() {
-			return composer;
+		locator(selector: string) {
+			return selector.includes("button.bg-dbx-text-highlight") ? (options.send ?? composer) : composer;
 		},
 		getByRole() {
 			return {

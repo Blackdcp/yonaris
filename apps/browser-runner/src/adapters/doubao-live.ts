@@ -23,6 +23,7 @@ import { runnerSessionIdForTask } from "../session-identity.js";
 
 const DOUBAO_URL = "https://www.doubao.com/chat/";
 export const DOUBAO_COMPOSER_SELECTOR = 'textarea.semi-input-textarea[placeholder="发消息或按住空格说话..."]';
+export const DOUBAO_SEND_SELECTOR = "#input-engine-container button.bg-dbx-text-highlight";
 const MAX_ANSWER_CHARACTERS = 500_000;
 const MAX_PAGE_URL_CHARACTERS = 10_000;
 const MAX_DOM_CHARACTERS = Math.floor(RUNNER_EVIDENCE_MAX_BYTES / 4);
@@ -282,7 +283,16 @@ class DoubaoLiveSession implements SurfaceSession {
 			this.#assertCurrentDoubaoUrl("submit");
 			const composer = this.#page.locator(DOUBAO_COMPOSER_SELECTOR);
 			await composer.fill(promptText);
-			await composer.press("Enter");
+			const send = this.#page.locator(DOUBAO_SEND_SELECTOR);
+			if ((await send.count()) !== 1 || !(await send.isVisible())) {
+				throw new BrowserRunnerError(
+					"page_drift",
+					"submit",
+					"needs_human",
+					"The verified Doubao send control no longer matches",
+				);
+			}
+			await send.click();
 			this.#generationMarkerObserved = await this.#page
 				.locator(requiredCompletionSelector())
 				.isVisible()

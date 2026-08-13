@@ -13,6 +13,7 @@ import {
 	assertDoubaoUrl,
 	assertProfileIdentity,
 	DOUBAO_COMPOSER_SELECTOR,
+	DOUBAO_SEND_SELECTOR,
 	DoubaoLiveSessionFactory,
 	initializeProfileIdentity,
 	mapDoubaoAutomationError,
@@ -23,6 +24,7 @@ import {
 
 test("the approved Doubao composer matches the logged-in China host DOM", () => {
 	assert.equal(DOUBAO_COMPOSER_SELECTOR, 'textarea.semi-input-textarea[placeholder="发消息或按住空格说话..."]');
+	assert.equal(DOUBAO_SEND_SELECTOR, "#input-engine-container button.bg-dbx-text-highlight");
 });
 
 test("anonymous Doubao is fail-closed after the China UAT proved submission requires login", () => {

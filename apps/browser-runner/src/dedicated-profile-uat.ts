@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { chmod, mkdir, mkdtemp, open, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { BrowserContext, Page } from "playwright";
-import { DOUBAO_COMPOSER_SELECTOR } from "./adapters/doubao-live.js";
+import { DOUBAO_COMPOSER_SELECTOR, DOUBAO_SEND_SELECTOR } from "./adapters/doubao-live.js";
 import { dedicatedProfileDirectory } from "./dedicated-profile.js";
 import { BrowserRunnerError } from "./errors.js";
 import { type PersistentContextLauncher, sandboxedPersistentContext } from "./sandbox-preflight.js";
@@ -173,7 +173,7 @@ export async function runDedicatedDoubaoUatOnce(
 		await writeDurableUatIntent(profileDirectory);
 		const composer = page.locator(KNOWN_COMPOSER_SELECTOR);
 		await composer.fill(UAT_PROMPT);
-		await composer.press("Enter");
+		await clickVerifiedSend(page);
 
 		const observations: SanitizedSelectorCandidate[][] = [];
 		const maximumPolls = boundedPollCount(options.maximumPolls);
@@ -286,7 +286,7 @@ export async function runAnonymousDoubaoUatOnce(
 		await writeDurableAnonymousUatIntent(stateDirectory);
 		const composer = page.locator(KNOWN_COMPOSER_SELECTOR);
 		await composer.fill(ANONYMOUS_UAT_PROMPT);
-		await composer.press("Enter");
+		await clickVerifiedSend(page);
 
 		const observations: SanitizedSelectorCandidate[][] = [];
 		const maximumPolls = boundedPollCount(options.maximumPolls);
@@ -504,6 +504,19 @@ async function waitForKnownComposer(page: Page): Promise<void> {
 	};
 	if (typeof composer.waitFor !== "function") return;
 	await composer.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
+}
+
+async function clickVerifiedSend(page: Page): Promise<void> {
+	const send = page.locator(DOUBAO_SEND_SELECTOR);
+	if ((await send.count()) !== 1 || !(await send.isVisible().catch(() => false))) {
+		throw new BrowserRunnerError(
+			"adapter_unverified",
+			"pre_submit",
+			"needs_human",
+			"The non-scored UAT requires exactly one visible approved Doubao send control",
+		);
+	}
+	await send.click();
 }
 
 const BROWSER_CANDIDATE_SCRIPT = String.raw`(() => {
