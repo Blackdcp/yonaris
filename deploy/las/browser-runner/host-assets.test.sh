@@ -104,6 +104,11 @@ if grep -Eq '/opt/.+\*|chrome\*|chromium\*' "$apparmor_profile"; then
 fi
 
 egress_script="$SCRIPT_DIR/bin/apply-browser-egress.sh"
+grep -Fq 'nft_set dns_v6 ipv6_addr dns_v6' "$egress_script"
+grep -Fq 'echo "  set $set_name { type $address_type; flags interval; }"' "$egress_script"
+stub_dns_line="$(grep -nF 'ip daddr 127.0.0.53 meta l4proto { tcp, udp } th dport 53 accept' "$egress_script" | cut -d: -f1)"
+loopback_reject_line="$(grep -nF 'ip daddr { 0.0.0.0/8, 10.0.0.0/8' "$egress_script" | cut -d: -f1)"
+[[ -n "$stub_dns_line" && -n "$loopback_reject_line" && "$stub_dns_line" -lt "$loopback_reject_line" ]]
 for required_rule in \
 	'meta skuid $browser_uid' \
 	'10.0.0.0/8' \

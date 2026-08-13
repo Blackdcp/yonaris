@@ -130,6 +130,17 @@ nft_elements() {
 	done
 }
 
+nft_set() {
+	local set_name="$1"
+	local address_type="$2"
+	local -n values="$3"
+	if [[ ${#values[@]} -eq 0 ]]; then
+		echo "  set $set_name { type $address_type; flags interval; }"
+		return
+	fi
+	echo "  set $set_name { type $address_type; flags interval; elements = { $(nft_elements "$3") } }"
+}
+
 policy_file="$(mktemp /run/yonaris-browser-egress.XXXXXX.nft)"
 marker_candidate=''
 cleanup_candidates() {
@@ -139,17 +150,18 @@ cleanup_candidates() {
 trap cleanup_candidates EXIT
 {
 	echo "table $table_family $table_name {"
-	echo "  set approved_v4 { type ipv4_addr; flags interval; elements = { $(nft_elements approved_v4) } }"
-	echo "  set approved_v6 { type ipv6_addr; flags interval; elements = { $(nft_elements approved_v6) } }"
-	echo "  set control_plane_v4 { type ipv4_addr; flags interval; elements = { $(nft_elements control_plane_v4) } }"
-	echo "  set control_plane_v6 { type ipv6_addr; flags interval; elements = { $(nft_elements control_plane_v6) } }"
-	echo "  set dns_v4 { type ipv4_addr; flags interval; elements = { $(nft_elements dns_v4) } }"
-	echo "  set dns_v6 { type ipv6_addr; flags interval; elements = { $(nft_elements dns_v6) } }"
+	nft_set approved_v4 ipv4_addr approved_v4
+	nft_set approved_v6 ipv6_addr approved_v6
+	nft_set control_plane_v4 ipv4_addr control_plane_v4
+	nft_set control_plane_v6 ipv6_addr control_plane_v6
+	nft_set dns_v4 ipv4_addr dns_v4
+	nft_set dns_v6 ipv6_addr dns_v6
 	cat <<NFT
   chain output {
     type filter hook output priority -150; policy accept;
     meta skuid $browser_uid ip daddr @control_plane_v4 reject
     meta skuid $browser_uid ip6 daddr @control_plane_v6 reject
+    meta skuid $browser_uid ip daddr 127.0.0.53 meta l4proto { tcp, udp } th dport 53 accept
     meta skuid $browser_uid ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4 } reject
     meta skuid $browser_uid ip6 daddr { ::/128, ::1/128, ::ffff:0:0/96, 64:ff9b::/96, 100::/64, 2001:db8::/32, fd00::/8, fe80::/10, ff00::/8 } reject
     meta skuid $browser_uid ip daddr @dns_v4 meta l4proto { tcp, udp } th dport 53 accept
