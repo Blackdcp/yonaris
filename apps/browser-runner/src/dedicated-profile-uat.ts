@@ -419,35 +419,36 @@ async function coarsePageState(page: Page): Promise<{
 	};
 }
 
-const collectBrowserCandidates: SelectorSnapshotCollector = async (page) =>
-	page.evaluate(() => {
-		const candidates = new Map<string, { selector: string; count: number; visibleCount: number }>();
-		const add = (selector: string) => {
-			if (candidates.has(selector) || candidates.size >= 512) return;
-			let nodes: Element[];
-			try {
-				nodes = [...document.querySelectorAll(selector)];
-			} catch {
-				return;
-			}
-			const visibleCount = nodes.filter((node) => {
-				const rectangle = node.getBoundingClientRect();
-				const style = getComputedStyle(node);
-				return rectangle.width > 0 && rectangle.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-			}).length;
-			candidates.set(selector, { selector, count: nodes.length, visibleCount });
-		};
-		for (const element of document.querySelectorAll("[data-testid],[data-e2e],[data-qa],[role],[class]")) {
-			for (const attribute of ["data-testid", "data-e2e", "data-qa", "role"] as const) {
-				const value = element.getAttribute(attribute);
-				if (value && /^[a-z][a-z0-9_-]{1,63}$/.test(value)) add(`[${attribute}="${value}"]`);
-			}
-			for (const className of element.classList) {
-				if (/^[a-z][a-z0-9_-]{1,63}$/.test(className)) add(`.${className}`);
-			}
+const BROWSER_CANDIDATE_SCRIPT = String.raw`(() => {
+	const candidates = new Map();
+	const add = (selector) => {
+		if (candidates.has(selector) || candidates.size >= 512) return;
+		let nodes;
+		try {
+			nodes = Array.from(document.querySelectorAll(selector));
+		} catch {
+			return;
 		}
-		return [...candidates.values()];
-	});
+		const visibleCount = nodes.filter((node) => {
+			const rectangle = node.getBoundingClientRect();
+			const style = getComputedStyle(node);
+			return rectangle.width > 0 && rectangle.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+		}).length;
+		candidates.set(selector, { selector, count: nodes.length, visibleCount });
+	};
+	for (const element of document.querySelectorAll("[data-testid],[data-e2e],[data-qa],[role],[class]")) {
+		for (const attribute of ["data-testid", "data-e2e", "data-qa", "role"]) {
+			const value = element.getAttribute(attribute);
+			if (value && /^[a-z][a-z0-9_-]{1,63}$/.test(value)) add("[" + attribute + "=\"" + value + "\"]");
+		}
+		for (const className of element.classList) {
+			if (/^[a-z][a-z0-9_-]{1,63}$/.test(className)) add("." + className);
+		}
+	}
+	return Array.from(candidates.values());
+})()`;
+
+const collectBrowserCandidates: SelectorSnapshotCollector = async (page) => page.evaluate(BROWSER_CANDIDATE_SCRIPT);
 
 function safeSelector(selector: string): boolean {
 	if (selector.length < 3 || selector.length > 100) return false;

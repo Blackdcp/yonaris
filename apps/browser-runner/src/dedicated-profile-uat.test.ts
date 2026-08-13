@@ -131,6 +131,26 @@ test("the read-only probe never scans selector attributes after navigation leave
 	}
 });
 
+test("the default browser collector is a self-contained browser script without Node transform helpers", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-script-"));
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false }) as Page & {
+		evaluate: (expression: unknown) => Promise<unknown>;
+	};
+	page.evaluate = async (expression: unknown) => {
+		assert.equal(typeof expression, "string");
+		assert.equal(String(expression).includes("__name"), false);
+		return [{ selector: ".answer-content", count: 1, visibleCount: 1 }];
+	};
+	try {
+		const result = await collectDedicatedDoubaoSelectorProbe(stateDirectory, {
+			launcher: async () => contextDouble(page),
+		});
+		assert.deepEqual(result.candidates, [{ selector: ".answer-content", count: 1, visibleCount: 1 }]);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("candidate sanitization rejects PII-shaped, free-text, unbounded, and unknown fields", () => {
 	assert.deepEqual(
 		sanitizeSelectorCandidates([
