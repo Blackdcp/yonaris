@@ -55,14 +55,14 @@ network_unit="$SCRIPT_DIR/systemd/yonaris-browser-network.service"
 
 grep -Fqx 'User=yonaris-browser' "$broker_unit"
 grep -Fqx 'Group=yonaris-browser-rpc' "$broker_unit"
-grep -Fq 'broker -- serve' "$broker_unit"
+grep -Fq '@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/broker-cli.ts -- serve' "$broker_unit"
 grep -Fqx 'Restart=no' "$broker_unit"
 grep -Fqx 'Requires=yonaris-browser-network.service' "$broker_unit"
 grep -Fqx 'UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY' "$broker_unit"
 
 grep -Fqx 'User=yonaris-runner' "$control_unit"
 grep -Fqx 'SupplementaryGroups=yonaris-browser-rpc' "$control_unit"
-grep -Fq 'start -- poll --live --surface doubao' "$control_unit"
+grep -Fq '@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/cli.ts -- poll --live --surface doubao' "$control_unit"
 grep -Fqx 'Restart=no' "$control_unit"
 grep -Fqx 'UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY' "$control_unit"
 
@@ -93,6 +93,10 @@ grep -Fqx 'BROWSER_NETWORK_ACTIVE_MARKER=/run/yonaris-browser-runner/network-pol
 grep -Fqx 'BROWSER_NETWORK_PROBE_RECEIPT=/run/yonaris-browser-runner/network-negative-probes.json' "$network_env"
 grep -Fq 'network.env 0644' "$SCRIPT_DIR/install-host.sh"
 grep -Fq 'network configuration must be root-owned mode 0644' "$SCRIPT_DIR/bin/verify-host.sh"
+if grep -Fq '@@PNPM_EXECUTABLE@@' "$broker_unit" "$control_unit"; then
+	echo "Runtime services must not invoke Corepack or a package manager." >&2
+	exit 1
+fi
 
 apparmor_profile="$SCRIPT_DIR/apparmor/yonaris-browser-chromium.in"
 grep -Fqx '  userns,' "$apparmor_profile"

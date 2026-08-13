@@ -15,10 +15,11 @@ EnvironmentFile=/etc/yonaris-browser-runner/control.env
 Environment=HOME=/var/lib/yonaris-browser-runner
 Environment=XDG_DATA_HOME=/var/lib/yonaris-browser-runner/control
 Environment=PATH=@@NODE_BIN_DIRECTORY@@:/usr/sbin:/usr/bin:/sbin:/bin
+WorkingDirectory=@@SOURCE_DIRECTORY@@
 UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY
 StateDirectory=yonaris-browser-runner
 StateDirectoryMode=0700
-ExecStart=@@PNPM_EXECUTABLE@@ --dir @@SOURCE_DIRECTORY@@ --filter @workspace/browser-runner start -- poll --live --surface doubao --brand-id ${BROWSER_RUNNER_BRAND_ID} --state-dir /var/lib/yonaris-browser-runner/control
+ExecStart=@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/cli.ts -- poll --live --surface doubao --brand-id ${BROWSER_RUNNER_BRAND_ID} --state-dir /var/lib/yonaris-browser-runner/control
 Restart=no
 TimeoutStartSec=90
 TimeoutStopSec=45

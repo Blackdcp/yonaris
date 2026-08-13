@@ -32,10 +32,12 @@ node_bin_directory="$(canonical_path "$node_bin_directory")"
 playwright_browsers_path="$(canonical_path "$playwright_browsers_path")"
 chromium_executable="$(canonical_path "$chromium_executable")"
 chromium_headless_executable="$(canonical_path "$chromium_headless_executable")"
-pnpm_executable="$(canonical_path "$node_bin_directory/pnpm")"
+node_executable="$(canonical_path "$node_bin_directory/node")"
+tsx_executable="$(canonical_path "$source_directory/apps/browser-runner/node_modules/tsx/dist/cli.mjs")"
 
 [[ -f "$source_directory/apps/browser-runner/package.json" ]] || die "Browser Runner source tree is incomplete"
-[[ -x "$pnpm_executable" ]] || die "pinned pnpm executable is missing"
+[[ -x "$node_executable" ]] || die "pinned Node executable is missing"
+[[ -f "$tsx_executable" && "$tsx_executable" == "$source_directory/"* ]] || die "pinned tsx entry point is missing or escaped the source tree"
 [[ -x "$chromium_executable" && -x "$chromium_headless_executable" ]] || die "pinned Chromium executables are missing"
 [[ "$chromium_executable" == "$playwright_browsers_path/"* ]] || die "Chromium escaped the pinned browser root"
 [[ "$chromium_headless_executable" == "$playwright_browsers_path/"* ]] || die "headless Chromium escaped the pinned browser root"
@@ -89,7 +91,7 @@ render_template() {
 	local destination="$2"
 	local mode="$3"
 	TEMPLATE="$template" DESTINATION="$destination" \
-		SOURCE_DIRECTORY="$source_directory" NODE_BIN_DIRECTORY="$node_bin_directory" PNPM_EXECUTABLE="$pnpm_executable" \
+		SOURCE_DIRECTORY="$source_directory" NODE_BIN_DIRECTORY="$node_bin_directory" NODE_EXECUTABLE="$node_executable" TSX_EXECUTABLE="$tsx_executable" \
 		CHROMIUM_EXECUTABLE="$chromium_executable" CHROMIUM_HEADLESS_EXECUTABLE="$chromium_headless_executable" \
 		BROWSER_UID="$browser_uid" CONTROL_UID="$control_uid" RPC_GID="$rpc_gid" \
 		python3 - <<'PY'
@@ -100,7 +102,8 @@ source = Path(os.environ["TEMPLATE"]).read_text(encoding="utf-8")
 replacements = {
     "@@SOURCE_DIRECTORY@@": os.environ["SOURCE_DIRECTORY"],
     "@@NODE_BIN_DIRECTORY@@": os.environ["NODE_BIN_DIRECTORY"],
-    "@@PNPM_EXECUTABLE@@": os.environ["PNPM_EXECUTABLE"],
+    "@@NODE_EXECUTABLE@@": os.environ["NODE_EXECUTABLE"],
+    "@@TSX_EXECUTABLE@@": os.environ["TSX_EXECUTABLE"],
     "@@CHROMIUM_EXECUTABLE@@": os.environ["CHROMIUM_EXECUTABLE"],
     "@@CHROMIUM_HEADLESS_EXECUTABLE@@": os.environ["CHROMIUM_HEADLESS_EXECUTABLE"],
     "@@BROWSER_UID@@": os.environ["BROWSER_UID"],
