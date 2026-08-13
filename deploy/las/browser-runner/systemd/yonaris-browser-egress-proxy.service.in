@@ -31,7 +31,7 @@ ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes
 ProtectHostname=yes
-RestrictAddressFamilies=AF_INET AF_INET6
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 IPAddressAllow=127.0.0.0/8
 IPAddressAllow=::1/128
 IPAddressDeny=localhost
@@ -50,4 +50,3 @@ AmbientCapabilities=
 TasksMax=128
 LimitNOFILE=4096
 MemoryMax=256M
-

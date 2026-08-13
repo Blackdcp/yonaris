@@ -82,6 +82,7 @@ grep -Fqx 'Group=yonaris-browser-proxy' "$proxy_unit"
 grep -Fq 'egress-proxy-cli.ts' "$proxy_unit"
 grep -Fqx 'PartOf=yonaris-browser-network.service' "$proxy_unit"
 grep -Fqx 'Restart=no' "$proxy_unit"
+grep -Fqx 'RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6' "$proxy_unit"
 if grep -Eq '^WantedBy=|^RequiredBy=' "$broker_unit" "$control_unit" "$network_unit" "$proxy_unit"; then
 	echo "Browser runner units must remain static and manually started." >&2
 	exit 1
