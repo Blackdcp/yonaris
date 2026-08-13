@@ -267,14 +267,7 @@ class DoubaoLiveSession implements SurfaceSession {
 					.getByRole("button", { name: "\u767b\u5f55", exact: true })
 					.isVisible()
 					.catch(() => false);
-				if (!loginButtonVisible) {
-					throw new BrowserRunnerError(
-						"anonymous_session_unverified",
-						"pre_submit",
-						"needs_human",
-						"The Doubao page does not expose the expected anonymous-session marker",
-					);
-				}
+				throw anonymousDoubaoPreflightError(loginButtonVisible);
 			}
 			if (this.#task.searchRequirement === "forbidden") await this.#assertSearchOff("pre_submit");
 			this.#answerCountBeforeSubmit = await this.#answerLocator().count();
@@ -551,6 +544,22 @@ class DoubaoLiveSession implements SurfaceSession {
 			);
 		}
 	}
+}
+
+export function anonymousDoubaoPreflightError(loginActionVisible: boolean): BrowserRunnerError {
+	return loginActionVisible
+		? new BrowserRunnerError(
+				"login_required",
+				"pre_submit",
+				"needs_human",
+				"The verified anonymous Doubao page requires login before it accepts a prompt",
+			)
+		: new BrowserRunnerError(
+				"anonymous_session_unverified",
+				"pre_submit",
+				"needs_human",
+				"The Doubao page does not expose the expected anonymous-session marker",
+			);
 }
 
 export function assertDoubaoUrl(value: string): string {

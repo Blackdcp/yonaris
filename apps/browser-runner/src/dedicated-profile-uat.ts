@@ -235,8 +235,9 @@ export async function runAnonymousDoubaoUatOnce(
 	stateDirectory: string,
 	options: UatBrowserOptions = {},
 ): Promise<{
-	status: "structural_change_observed" | "prompt_submitted_no_safe_candidates";
-	promptSubmitted: true;
+	status: "structural_change_observed" | "prompt_submitted_no_safe_candidates" | "login_required";
+	submitAttempted: true;
+	promptSubmitted: boolean;
 	userMessageCandidates: SanitizedSelectorCandidate[];
 	answerCandidates: SanitizedSelectorCandidate[];
 	completionCandidates: SanitizedSelectorCandidate[];
@@ -288,6 +289,17 @@ export async function runAnonymousDoubaoUatOnce(
 		const maximumPolls = boundedPollCount(options.maximumPolls);
 		for (let poll = 0; poll < maximumPolls; poll += 1) {
 			await sleep(1_000);
+			if (await isSubmissionLoginWallVisible(page)) {
+				return {
+					status: "login_required",
+					submitAttempted: true,
+					promptSubmitted: false,
+					userMessageCandidates: [],
+					answerCandidates: [],
+					completionCandidates: [],
+					reviewArtifacts: await captureAnonymousUatReviewArtifacts(stateDirectory, page),
+				};
+			}
 			observations.push(sanitizeSelectorCandidates(await collector(page)));
 		}
 		const finalSnapshot = observations.at(-1) ?? before;
@@ -298,6 +310,7 @@ export async function runAnonymousDoubaoUatOnce(
 		const changed = userMessageCandidates.length + answerCandidates.length + completionCandidates.length > 0;
 		return {
 			status: changed ? "structural_change_observed" : "prompt_submitted_no_safe_candidates",
+			submitAttempted: true,
 			promptSubmitted: true,
 			userMessageCandidates,
 			answerCandidates,
@@ -308,6 +321,10 @@ export async function runAnonymousDoubaoUatOnce(
 		await context?.close().catch(() => undefined);
 		await rm(profileDirectory, { recursive: true, force: true });
 	}
+}
+
+async function isSubmissionLoginWallVisible(page: Page): Promise<boolean> {
+	return anyVisible(page.getByText("登录以解锁更多功能", { exact: true }));
 }
 
 export function sanitizeSelectorCandidates(input: unknown): SanitizedSelectorCandidate[] {

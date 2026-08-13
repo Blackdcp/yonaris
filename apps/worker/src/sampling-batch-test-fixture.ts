@@ -28,7 +28,7 @@ export const validSamplingBatchManifest = {
 		surfaceTargetKey: SAMPLING_BATCH_SURFACE_TARGET,
 		captureRouteKey: SAMPLING_BATCH_CAPTURE_ROUTE,
 		samplesPerPrompt: 6,
-		sessionRequirement: "anonymous_clean",
+		sessionRequirement: "dedicated_sampling_profile",
 		searchRequirement: "platform_default",
 	},
 	measurementWindow: {

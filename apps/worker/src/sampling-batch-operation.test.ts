@@ -255,7 +255,7 @@ describe("StepFun sampling task plan", () => {
 				(task) =>
 					task.surfaceTargetKey === "doubao.consumer_web" &&
 					task.captureRouteKey === "browser_runner.doubao" &&
-					task.sessionRequirement === "anonymous_clean" &&
+					task.sessionRequirement === "dedicated_sampling_profile" &&
 					task.searchRequirement === "platform_default" &&
 					task.evaluationRole === "scored",
 			),

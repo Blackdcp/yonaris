@@ -36,7 +36,7 @@ function defaultTargetDraft(target: SamplingTargetOption, executionMode: Samplin
 		samplesPerPrompt: 1,
 		sessionRequirement:
 			executionMode === "browser_runner"
-				? "anonymous_clean"
+				? "dedicated_sampling_profile"
 				: target.defaultSessionRequirement === "new_account_clean"
 					? "new_account_clean"
 					: "anonymous_clean",

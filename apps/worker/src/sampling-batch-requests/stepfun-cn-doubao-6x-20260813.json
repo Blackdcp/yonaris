@@ -28,7 +28,7 @@
 		"surfaceTargetKey": "doubao.consumer_web",
 		"captureRouteKey": "browser_runner.doubao",
 		"samplesPerPrompt": 6,
-		"sessionRequirement": "anonymous_clean",
+		"sessionRequirement": "dedicated_sampling_profile",
 		"searchRequirement": "platform_default"
 	},
 	"measurementWindow": {

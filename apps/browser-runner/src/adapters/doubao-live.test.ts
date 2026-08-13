@@ -9,6 +9,7 @@ import { dedicatedProfileDirectory, initializeDedicatedProfile } from "../dedica
 import type { PersistentContextLaunchOptions } from "../sandbox-preflight.js";
 import { runnerSessionIdForTask } from "../session-identity.js";
 import {
+	anonymousDoubaoPreflightError,
 	assertDoubaoUrl,
 	assertProfileIdentity,
 	DoubaoLiveSessionFactory,
@@ -18,6 +19,17 @@ import {
 	prepareDedicatedConversation,
 	safeChildDirectory,
 } from "./doubao-live.js";
+
+test("anonymous Doubao is fail-closed after the China UAT proved submission requires login", () => {
+	const loginRequired = anonymousDoubaoPreflightError(true);
+	assert.equal(loginRequired.code, "login_required");
+	assert.equal(loginRequired.phase, "pre_submit");
+	assert.equal(loginRequired.disposition, "needs_human");
+
+	const unverified = anonymousDoubaoPreflightError(false);
+	assert.equal(unverified.code, "anonymous_session_unverified");
+	assert.equal(unverified.disposition, "needs_human");
+});
 
 test("native-auto search distinguishes used, explicit-not-used, neither, and conflicting markers", () => {
 	assert.equal(observedWebSearchState(true, false), true);

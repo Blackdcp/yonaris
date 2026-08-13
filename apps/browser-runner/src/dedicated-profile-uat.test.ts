@@ -377,6 +377,7 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 			maximumPolls: 1,
 		});
 		assert.equal(result.promptSubmitted, true);
+		assert.equal(result.submitAttempted, true);
 		assert.match(result.reviewArtifacts.screenshotSha256, /^[a-f0-9]{64}$/);
 		assert.match(result.reviewArtifacts.htmlSha256, /^[a-f0-9]{64}$/);
 		assert.equal(
@@ -418,11 +419,39 @@ test("anonymous one-shot UAT stops before intent when the page is no longer visi
 	}
 });
 
+test("anonymous UAT records a rejected submit attempt when Doubao opens the login wall", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-anonymous-login-wall-"));
+	try {
+		const result = await runAnonymousDoubaoUatOnce(stateDirectory, {
+			launcher: async () =>
+				contextDouble(
+					pageDouble({
+						composerCount: 1,
+						composerVisible: true,
+						loginVisible: true,
+						loginWallVisible: true,
+					}),
+				),
+			collector: async () => [],
+			sleep: async () => {},
+			maximumPolls: 2,
+		});
+		assert.equal(result.status, "login_required");
+		assert.equal(result.submitAttempted, true);
+		assert.equal(result.promptSubmitted, false);
+		assert.deepEqual(result.answerCandidates, []);
+		assert.match(result.reviewArtifacts.screenshotSha256, /^[a-f0-9]{64}$/);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 function pageDouble(options: {
 	composerCount: number;
 	composerVisible: boolean;
 	loginVisible: boolean;
 	loginRoleVisible?: boolean;
+	loginWallVisible?: boolean;
 	composer?: Locator;
 	url?: string;
 }): Page {
@@ -435,6 +464,8 @@ function pageDouble(options: {
 			async isVisible() {
 				return options.composerVisible;
 			},
+			async fill() {},
+			async press() {},
 		} as unknown as Locator);
 	return {
 		async goto() {},
@@ -451,10 +482,10 @@ function pageDouble(options: {
 				},
 			} as unknown as Locator;
 		},
-		getByText() {
+		getByText(text: string) {
 			return {
 				async isVisible() {
-					return options.loginVisible;
+					return text === "登录以解锁更多功能" ? (options.loginWallVisible ?? false) : options.loginVisible;
 				},
 			} as unknown as Locator;
 		},

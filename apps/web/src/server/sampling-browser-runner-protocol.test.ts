@@ -8,22 +8,17 @@ const dedicatedNativeAuto = {
 	searchRequirement: "platform_default",
 };
 
-const anonymousNativeAuto = {
-	...dedicatedNativeAuto,
-	sessionRequirement: "anonymous_clean",
-};
-
 describe("sampling Browser Runner protocol", () => {
-	it("accepts both supported clean-session protocols with platform-default Doubao", () => {
+	it("accepts only the honest dedicated-account and platform-default Doubao contract", () => {
 		expect(() => assertSamplingBrowserRunnerProtocol("browser_runner", [dedicatedNativeAuto])).not.toThrow();
-		expect(() => assertSamplingBrowserRunnerProtocol("browser_runner", [anonymousNativeAuto])).not.toThrow();
 		for (const target of [
+			{ ...dedicatedNativeAuto, sessionRequirement: "anonymous_clean" },
 			{ ...dedicatedNativeAuto, sessionRequirement: "new_account_clean" },
 			{ ...dedicatedNativeAuto, searchRequirement: "forbidden" },
 			{ ...dedicatedNativeAuto, surfaceTargetKey: "deepseek.consumer_web" },
 		]) {
 			expect(() => assertSamplingBrowserRunnerProtocol("browser_runner", [target])).toThrow(
-				/supported clean session.*platform default/i,
+				/dedicated sampling profile.*platform default/i,
 			);
 		}
 	});

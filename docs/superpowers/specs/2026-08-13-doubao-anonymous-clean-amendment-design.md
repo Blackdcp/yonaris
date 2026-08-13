@@ -2,11 +2,11 @@
 
 Date: 2026-08-13
 
-## Decision
+## UAT outcome and decision
 
-The first StepFun Doubao delivery will use `anonymous_clean`, not a dedicated signed-in account. Every task launches in a new disposable browser profile. The page must visibly remain signed out before the frozen prompt is submitted.
+The China-host UAT rejected `anonymous_clean` for formal Doubao delivery. A fresh signed-out profile loaded the chat shell and composer, but pressing Enter opened the visible `登录以解锁更多功能` wall, left the prompt in the composer, and produced no answer. Screenshot and HTML review artifacts were retained with SHA-256 digests; no observation or metric row was created.
 
-The existing `dedicated_sampling_profile` capability remains available for a future, separately approved protocol. This amendment does not reinterpret any existing frozen batch.
+The formal StepFun batch therefore remains `dedicated_sampling_profile`. Anonymous Doubao tasks fail closed before formal submission. This amendment does not reinterpret any existing frozen batch, and the formal 18-task batch was not created during the UAT.
 
 ## Non-scored UAT gate
 
@@ -26,12 +26,12 @@ If anonymous submission triggers login, CAPTCHA, rate limiting, or page drift, t
 
 ## Formal delivery
 
-Only after the UAT passes, create and explicitly start one scored batch containing the three exact enabled StepFun prompts, six samples each, Doubao only, for 18 frozen tasks.
+Only after a human provisions the dedicated company sampling account and a dedicated-profile UAT passes, create and explicitly start one scored batch containing the three exact enabled StepFun prompts, six samples each, Doubao only, for 18 frozen tasks.
 
 The frozen protocol is:
 
 - market `CN`, locale `zh-CN`, timezone `Asia/Shanghai`;
-- session `anonymous_clean`;
+- session `dedicated_sampling_profile`;
 - search requirement `platform_default`, observed as `native_auto`;
 - exactly one PNG screenshot and one HTML page snapshot per successful task;
 - no cron, daily schedule, or automatic batch creation.
