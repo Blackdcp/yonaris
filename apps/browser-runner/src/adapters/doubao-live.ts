@@ -22,7 +22,7 @@ import { type PersistentContextLauncher, sandboxedPersistentContext } from "../s
 import { runnerSessionIdForTask } from "../session-identity.js";
 
 const DOUBAO_URL = "https://www.doubao.com/chat/";
-const COMPOSER_SELECTOR = 'textarea.semi-input-textarea[placeholder="\u53d1\u6d88\u606f..."]';
+export const DOUBAO_COMPOSER_SELECTOR = 'textarea.semi-input-textarea[placeholder="发消息或按住空格说话..."]';
 const MAX_ANSWER_CHARACTERS = 500_000;
 const MAX_PAGE_URL_CHARACTERS = 10_000;
 const MAX_DOM_CHARACTERS = Math.floor(RUNNER_EVIDENCE_MAX_BYTES / 4);
@@ -253,7 +253,7 @@ class DoubaoLiveSession implements SurfaceSession {
 			if (this.#task.sessionRequirement === "dedicated_sampling_profile") {
 				await prepareDedicatedConversation(this.#page);
 			}
-			const composer = this.#page.locator(COMPOSER_SELECTOR);
+			const composer = this.#page.locator(DOUBAO_COMPOSER_SELECTOR);
 			if ((await composer.count()) !== 1 || !(await composer.isVisible())) {
 				throw new BrowserRunnerError(
 					"page_drift",
@@ -280,7 +280,7 @@ class DoubaoLiveSession implements SurfaceSession {
 		this.#submitAttempted = true;
 		try {
 			this.#assertCurrentDoubaoUrl("submit");
-			const composer = this.#page.locator(COMPOSER_SELECTOR);
+			const composer = this.#page.locator(DOUBAO_COMPOSER_SELECTOR);
 			await composer.fill(promptText);
 			await composer.press("Enter");
 			this.#generationMarkerObserved = await this.#page
@@ -457,7 +457,7 @@ class DoubaoLiveSession implements SurfaceSession {
 		}
 		if (
 			/\u626b\u7801\u767b\u5f55|\u624b\u673a\u53f7\u767b\u5f55/i.test(pageText) &&
-			(await this.#page.locator(COMPOSER_SELECTOR).count()) === 0
+			(await this.#page.locator(DOUBAO_COMPOSER_SELECTOR).count()) === 0
 		) {
 			throw new BrowserRunnerError("login_required", "session_open", "needs_human", "Doubao requires a login");
 		}

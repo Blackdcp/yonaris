@@ -2,12 +2,13 @@ import { createHash } from "node:crypto";
 import { chmod, mkdir, mkdtemp, open, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { BrowserContext, Page } from "playwright";
+import { DOUBAO_COMPOSER_SELECTOR } from "./adapters/doubao-live.js";
 import { dedicatedProfileDirectory } from "./dedicated-profile.js";
 import { BrowserRunnerError } from "./errors.js";
 import { type PersistentContextLauncher, sandboxedPersistentContext } from "./sandbox-preflight.js";
 
 const DOUBAO_URL = "https://www.doubao.com/chat/";
-const KNOWN_COMPOSER_SELECTOR = 'textarea.semi-input-textarea[placeholder="发消息..."]';
+const KNOWN_COMPOSER_SELECTOR = DOUBAO_COMPOSER_SELECTOR;
 const READY_MARKER = ".yonaris-dedicated-profile.json";
 const UAT_INTENT_MARKER = ".yonaris-uat-once.intent.json";
 const ANONYMOUS_UAT_INTENT_MARKER = ".yonaris-anonymous-uat-once.intent.json";

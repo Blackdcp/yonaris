@@ -12,6 +12,7 @@ import {
 	anonymousDoubaoPreflightError,
 	assertDoubaoUrl,
 	assertProfileIdentity,
+	DOUBAO_COMPOSER_SELECTOR,
 	DoubaoLiveSessionFactory,
 	initializeProfileIdentity,
 	mapDoubaoAutomationError,
@@ -19,6 +20,10 @@ import {
 	prepareDedicatedConversation,
 	safeChildDirectory,
 } from "./doubao-live.js";
+
+test("the approved Doubao composer matches the logged-in China host DOM", () => {
+	assert.equal(DOUBAO_COMPOSER_SELECTOR, 'textarea.semi-input-textarea[placeholder="发消息或按住空格说话..."]');
+});
 
 test("anonymous Doubao is fail-closed after the China UAT proved submission requires login", () => {
 	const loginRequired = anonymousDoubaoPreflightError(true);
