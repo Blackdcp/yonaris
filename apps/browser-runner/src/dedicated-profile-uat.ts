@@ -408,10 +408,16 @@ async function coarsePageState(page: Page): Promise<{
 	const composer = page.locator(KNOWN_COMPOSER_SELECTOR);
 	const knownComposerCount = boundedNodeCount(await composer.count());
 	const knownComposerVisibleCount = knownComposerCount === 1 && (await composer.isVisible().catch(() => false)) ? 1 : 0;
-	const loginActionVisible = await page
+	const loginButtonVisible = await page
 		.getByRole("button", { name: "登录", exact: true })
 		.isVisible()
 		.catch(() => false);
+	const loginActionVisible =
+		loginButtonVisible ||
+		(await page
+			.getByText("登录", { exact: true })
+			.isVisible()
+			.catch(() => false));
 	return {
 		allowedHost: allowedDoubaoUrl(page.url()),
 		loginActionVisible,

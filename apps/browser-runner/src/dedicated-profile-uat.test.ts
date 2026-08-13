@@ -131,6 +131,28 @@ test("the read-only probe never scans selector attributes after navigation leave
 	}
 });
 
+test("the signed-out marker accepts exact visible login text when Doubao does not expose a button role", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-login-text-"));
+	try {
+		const result = await collectDedicatedDoubaoSelectorProbe(stateDirectory, {
+			launcher: async () =>
+				contextDouble(
+					pageDouble({
+						composerCount: 1,
+						composerVisible: true,
+						loginVisible: true,
+						loginRoleVisible: false,
+					}),
+				),
+			collector: async () => [],
+		});
+		assert.equal(result.loginActionVisible, true);
+		assert.equal(result.status, "login_required");
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("the default browser collector is a self-contained browser script without Node transform helpers", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-script-"));
 	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false }) as Page & {
@@ -364,6 +386,7 @@ function pageDouble(options: {
 	composerCount: number;
 	composerVisible: boolean;
 	loginVisible: boolean;
+	loginRoleVisible?: boolean;
 	composer?: Locator;
 	url?: string;
 }): Page {
@@ -386,6 +409,13 @@ function pageDouble(options: {
 			return composer;
 		},
 		getByRole() {
+			return {
+				async isVisible() {
+					return options.loginRoleVisible ?? options.loginVisible;
+				},
+			} as unknown as Locator;
+		},
+		getByText() {
 			return {
 				async isVisible() {
 					return options.loginVisible;
