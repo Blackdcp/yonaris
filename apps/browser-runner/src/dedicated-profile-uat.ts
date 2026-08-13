@@ -220,6 +220,9 @@ export async function runAnonymousDoubaoUatOnce(
 		const page = context.pages()[0] ?? (await context.newPage());
 		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
 		await waitForKnownComposer(page);
+		const sleep =
+			options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+		await sleep(8_000);
 		const pageState = await coarsePageState(page);
 		if (!pageState.loginActionVisible) {
 			throw new BrowserRunnerError(
@@ -247,8 +250,6 @@ export async function runAnonymousDoubaoUatOnce(
 
 		const observations: SanitizedSelectorCandidate[][] = [];
 		const maximumPolls = boundedPollCount(options.maximumPolls);
-		const sleep =
-			options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
 		for (let poll = 0; poll < maximumPolls; poll += 1) {
 			await sleep(1_000);
 			observations.push(sanitizeSelectorCandidates(await collector(page)));

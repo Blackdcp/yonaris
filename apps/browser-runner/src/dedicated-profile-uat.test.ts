@@ -402,6 +402,7 @@ test("anonymous one-shot UAT stops before intent when the page is no longer visi
 				launcher: async () =>
 					contextDouble(pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false })),
 				collector: async () => [],
+				sleep: async () => {},
 			}),
 			/anonymous|signed.out/i,
 		);
