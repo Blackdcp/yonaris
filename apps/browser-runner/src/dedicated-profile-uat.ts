@@ -216,9 +216,10 @@ export async function runAnonymousDoubaoUatOnce(
 	await chmod(profileDirectory, 0o700);
 	let context: BrowserContext | undefined;
 	try {
-		context = await launchProfile(profileDirectory, true, options.launcher);
+		context = await launchProfile(profileDirectory, false, options.launcher);
 		const page = context.pages()[0] ?? (await context.newPage());
 		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
+		await waitForKnownComposer(page);
 		const pageState = await coarsePageState(page);
 		if (!pageState.loginActionVisible) {
 			throw new BrowserRunnerError(
@@ -417,6 +418,14 @@ async function coarsePageState(page: Page): Promise<{
 		knownComposerCount,
 		knownComposerVisibleCount,
 	};
+}
+
+async function waitForKnownComposer(page: Page): Promise<void> {
+	const composer = page.locator(KNOWN_COMPOSER_SELECTOR) as ReturnType<Page["locator"]> & {
+		waitFor?: (options: { state: "visible"; timeout: number }) => Promise<void>;
+	};
+	if (typeof composer.waitFor !== "function") return;
+	await composer.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
 }
 
 const BROWSER_CANDIDATE_SCRIPT = String.raw`(() => {

@@ -314,7 +314,7 @@ test("anonymous one-shot UAT requires the signed-out marker and uses a disposabl
 		const result = await runAnonymousDoubaoUatOnce(stateDirectory, {
 			launcher: async (launchedProfileDirectory, options) => {
 				profileDirectory = launchedProfileDirectory;
-				assert.equal(options.headless, true);
+				assert.equal(options.headless, false);
 				assert.equal(options.chromiumSandbox, true);
 				return contextDouble(page);
 			},
