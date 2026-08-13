@@ -156,6 +156,8 @@ grep -Fq 'negativeProbesPassed' "$probe_script"
 grep -Fq 'policySha256' "$probe_script"
 grep -Fq -- '--proxy "$BROWSER_EGRESS_PROXY_URL"' "$probe_script"
 grep -Fq -- "--noproxy '*'" "$probe_script"
+grep -Fq 'for attempt in {1..10}; do' "$probe_script"
+grep -Fq -- '--fail --silent --show-error --insecure' "$probe_script"
 grep -Fq 'chmod 0644 -- "$receipt_candidate"' "$probe_script"
 
 clear_script="$SCRIPT_DIR/bin/clear-browser-egress.sh"
