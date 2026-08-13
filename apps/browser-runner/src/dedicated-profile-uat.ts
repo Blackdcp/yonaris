@@ -114,6 +114,7 @@ export async function collectDedicatedDoubaoSelectorProbe(
 	try {
 		const page = context.pages()[0] ?? (await context.newPage());
 		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
+		await waitForKnownComposer(page);
 		const state = await coarsePageState(page);
 		const candidates = state.allowedHost
 			? sanitizeSelectorCandidates(await (options.collector ?? collectBrowserCandidates)(page))
@@ -148,6 +149,7 @@ export async function runDedicatedDoubaoUatOnce(
 	try {
 		const page = context.pages()[0] ?? (await context.newPage());
 		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
+		await waitForKnownComposer(page);
 		const pageState = await coarsePageState(page);
 		if (pageState.loginActionVisible) {
 			throw new BrowserRunnerError(

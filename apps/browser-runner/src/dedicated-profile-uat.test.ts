@@ -100,6 +100,33 @@ test("the read-only probe returns only bounded neutral selector candidates and c
 	}
 });
 
+test("the logged-in probe waits for the approved composer before classifying the page", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-probe-wait-"));
+	let waited = false;
+	const composer = {
+		async count() {
+			return 1;
+		},
+		async isVisible() {
+			return true;
+		},
+		async waitFor(options: { state: "visible"; timeout: number }) {
+			assert.deepEqual(options, { state: "visible", timeout: 30_000 });
+			waited = true;
+		},
+	} as unknown as Locator;
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false, composer });
+	try {
+		await collectDedicatedDoubaoSelectorProbe(stateDirectory, {
+			launcher: async () => contextDouble(page),
+			collector: async () => [],
+		});
+		assert.equal(waited, true);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("the read-only probe never scans selector attributes after navigation leaves Doubao", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-probe-host-"));
 	const page = pageDouble({
