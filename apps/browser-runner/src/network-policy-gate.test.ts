@@ -14,7 +14,13 @@ const APPROVED_PATH = "/etc/yonaris-browser-runner/approved-browser-domains";
 const CONTROL_PATH = "/etc/yonaris-browser-runner/control-plane-hosts";
 const ACTIVE_MARKER_PATH = "/run/yonaris-browser-runner/network-policy-active.json";
 const PROBE_RECEIPT_PATH = "/run/yonaris-browser-runner/network-negative-probes.json";
-const MANUAL_COMMANDS = ["login-window", "probe-selectors", "uat-once", "provision-dedicated-profile"] as const;
+const MANUAL_COMMANDS = [
+	"login-window",
+	"probe-selectors",
+	"uat-once",
+	"anonymous-uat-once",
+	"provision-dedicated-profile",
+] as const;
 
 test("all manual browser commands require the same valid root-owned live network proof", async () => {
 	for (const command of MANUAL_COMMANDS) {

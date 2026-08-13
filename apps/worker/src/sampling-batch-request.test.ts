@@ -36,7 +36,7 @@ describe("StepFun sampling batch request manifest", () => {
 	it("fails closed when the execution budget or browser protocol changes", () => {
 		for (const execution of [
 			{ ...validSamplingBatchManifest.execution, samplesPerPrompt: 5 },
-			{ ...validSamplingBatchManifest.execution, sessionRequirement: "anonymous_clean" },
+			{ ...validSamplingBatchManifest.execution, sessionRequirement: "dedicated_sampling_profile" },
 			{ ...validSamplingBatchManifest.execution, searchRequirement: "forbidden" },
 			{ ...validSamplingBatchManifest.execution, surfaceTargetKey: "deepseek.consumer_web" },
 		]) {

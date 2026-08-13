@@ -37,6 +37,8 @@ The command opens a sandboxed headed browser and waits up to ten minutes. Before
 
 For first-time selector discovery, the broker exposes three deliberately separate operator commands. `login-window` opens the same sandboxed headed profile without requiring selectors and without writing the ready marker. `probe-selectors` performs a read-only scan and prints only bounded neutral selector candidates plus coarse login/composer state; it never prints page text, HTML, cookies, storage, URLs with query data, or account identifiers. `uat-once` records an exclusive, fsynced local intent before it sends one fixed non-sensitive prompt, can run at most once for that unapproved profile, never contacts the Portal, and reports only structural candidate changes. None of these commands marks the profile ready or contributes an observation. The formal `provision-dedicated-profile` command remains the only path that can write the ready marker and still requires an explicitly approved authenticated selector.
 
+For an anonymous-first rollout, use `broker anonymous-uat-once`. It requires the visible signed-out Doubao marker and a unique composer, writes one state-wide durable intent before sending the same fixed non-sensitive prompt exactly once, and uses a disposable profile that is deleted when the command exits. It never contacts the Portal, never creates a `prompt_run`, and cannot be rerun against the same state directory. Only after this non-scored UAT proves the selector/completion contract may a formal `anonymous_clean` batch be frozen and explicitly started.
+
 ## Local fixture smoke run
 
 ```sh

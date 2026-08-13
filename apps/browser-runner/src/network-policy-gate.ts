@@ -9,7 +9,13 @@ const NETWORK_SERVICE = "yonaris-browser-network.service";
 const EGRESS_PROXY_SERVICE = "yonaris-browser-egress-proxy.service";
 const EXPECTED_NFT_CHAIN = "inet yonaris_browser_egress output";
 const DEFAULT_CONFIG_PATH = "/etc/yonaris-browser-runner/network.env";
-const MANUAL_BROWSER_COMMANDS = new Set(["login-window", "probe-selectors", "uat-once", "provision-dedicated-profile"]);
+const MANUAL_BROWSER_COMMANDS = new Set([
+	"login-window",
+	"probe-selectors",
+	"uat-once",
+	"anonymous-uat-once",
+	"provision-dedicated-profile",
+]);
 
 export type NetworkGateFile = {
 	uid: number;

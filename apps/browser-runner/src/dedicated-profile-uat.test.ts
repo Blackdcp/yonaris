@@ -8,6 +8,7 @@ import { dedicatedProfileDirectory } from "./dedicated-profile.js";
 import {
 	collectDedicatedDoubaoSelectorProbe,
 	openDedicatedDoubaoLoginWindow,
+	runAnonymousDoubaoUatOnce,
 	runDedicatedDoubaoUatOnce,
 	sanitizeSelectorCandidates,
 } from "./dedicated-profile-uat.js";
@@ -256,6 +257,84 @@ test("one-shot UAT stops before durable intent or submission while a login actio
 		);
 		assert.equal(fills, 0);
 		await assert.rejects(access(path.join(dedicatedProfileDirectory(stateDirectory), ".yonaris-uat-once.intent.json")));
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
+test("anonymous one-shot UAT requires the signed-out marker and uses a disposable profile exactly once", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-anonymous-uat-"));
+	let profileDirectory = "";
+	let fills = 0;
+	let presses = 0;
+	const composer = {
+		async count() {
+			return 1;
+		},
+		async isVisible() {
+			return true;
+		},
+		async fill(value: string) {
+			fills += 1;
+			assert.equal(value, "请仅回复：测试通过。");
+			const intent = JSON.parse(
+				await readFile(path.join(stateDirectory, ".yonaris-anonymous-uat-once.intent.json"), "utf8"),
+			);
+			assert.equal(intent.sessionRequirement, "anonymous_clean");
+			assert.match(intent.promptSha256, /^[a-f0-9]{64}$/);
+			assert.equal("promptText" in intent, false);
+		},
+		async press(key: string) {
+			presses += 1;
+			assert.equal(key, "Enter");
+		},
+	} as unknown as Locator;
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: true, composer });
+	try {
+		const result = await runAnonymousDoubaoUatOnce(stateDirectory, {
+			launcher: async (launchedProfileDirectory, options) => {
+				profileDirectory = launchedProfileDirectory;
+				assert.equal(options.headless, true);
+				assert.equal(options.chromiumSandbox, true);
+				return contextDouble(page);
+			},
+			collector: async () => [
+				{ selector: ".user-message", count: fills, visibleCount: fills },
+				{ selector: ".assistant-message", count: presses, visibleCount: presses },
+			],
+			sleep: async () => {},
+			maximumPolls: 1,
+		});
+		assert.equal(result.promptSubmitted, true);
+		assert.equal(fills, 1);
+		assert.equal(presses, 1);
+		assert.match(profileDirectory, /anonymous-uat-profiles/);
+		await assert.rejects(access(profileDirectory));
+		await assert.rejects(
+			runAnonymousDoubaoUatOnce(stateDirectory, {
+				launcher: async () => contextDouble(page),
+				collector: async () => [],
+			}),
+			/once|already/i,
+		);
+		assert.equal(fills, 1);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
+test("anonymous one-shot UAT stops before intent when the page is no longer visibly signed out", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-anonymous-uat-auth-"));
+	try {
+		await assert.rejects(
+			runAnonymousDoubaoUatOnce(stateDirectory, {
+				launcher: async () =>
+					contextDouble(pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false })),
+				collector: async () => [],
+			}),
+			/anonymous|signed.out/i,
+		);
+		await assert.rejects(access(path.join(stateDirectory, ".yonaris-anonymous-uat-once.intent.json")));
 	} finally {
 		await rm(stateDirectory, { recursive: true, force: true });
 	}

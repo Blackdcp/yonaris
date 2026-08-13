@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { chmod, mkdir, open, stat } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, open, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import type { BrowserContext, Page } from "playwright";
 import { dedicatedProfileDirectory } from "./dedicated-profile.js";
@@ -10,6 +10,8 @@ const DOUBAO_URL = "https://www.doubao.com/chat/";
 const KNOWN_COMPOSER_SELECTOR = 'textarea.semi-input-textarea[placeholder="发消息..."]';
 const READY_MARKER = ".yonaris-dedicated-profile.json";
 const UAT_INTENT_MARKER = ".yonaris-uat-once.intent.json";
+const ANONYMOUS_UAT_INTENT_MARKER = ".yonaris-anonymous-uat-once.intent.json";
+const ANONYMOUS_UAT_PROMPT = "\u8bf7\u4ec5\u56de\u590d\uff1a\u6d4b\u8bd5\u901a\u8fc7\u3002";
 const UAT_PROMPT = "请仅回复：测试通过。";
 const MAXIMUM_CANDIDATES = 64;
 const MAXIMUM_RAW_CANDIDATES = 512;
@@ -194,6 +196,80 @@ export async function runDedicatedDoubaoUatOnce(
 	}
 }
 
+export async function runAnonymousDoubaoUatOnce(
+	stateDirectory: string,
+	options: UatBrowserOptions = {},
+): Promise<{
+	status: "structural_change_observed" | "prompt_submitted_no_safe_candidates";
+	promptSubmitted: true;
+	userMessageCandidates: SanitizedSelectorCandidate[];
+	answerCandidates: SanitizedSelectorCandidate[];
+	completionCandidates: SanitizedSelectorCandidate[];
+}> {
+	await mkdir(stateDirectory, { recursive: true, mode: 0o700 });
+	await chmod(stateDirectory, 0o700);
+	await assertNoPriorMarker(path.join(stateDirectory, ANONYMOUS_UAT_INTENT_MARKER));
+	const profileRoot = path.join(stateDirectory, "anonymous-uat-profiles");
+	await mkdir(profileRoot, { recursive: true, mode: 0o700 });
+	await chmod(profileRoot, 0o700);
+	const profileDirectory = await mkdtemp(path.join(profileRoot, "attempt-"));
+	await chmod(profileDirectory, 0o700);
+	let context: BrowserContext | undefined;
+	try {
+		context = await launchProfile(profileDirectory, true, options.launcher);
+		const page = context.pages()[0] ?? (await context.newPage());
+		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
+		const pageState = await coarsePageState(page);
+		if (!pageState.loginActionVisible) {
+			throw new BrowserRunnerError(
+				"anonymous_session_not_verified",
+				"pre_submit",
+				"needs_human",
+				"The anonymous UAT requires a visible signed-out Doubao login action",
+			);
+		}
+		if (!pageState.allowedHost || pageState.knownComposerCount !== 1 || pageState.knownComposerVisibleCount !== 1) {
+			throw new BrowserRunnerError(
+				"adapter_unverified",
+				"pre_submit",
+				"needs_human",
+				"The anonymous UAT requires exactly one visible known Doubao composer",
+			);
+		}
+
+		const collector = options.collector ?? collectBrowserCandidates;
+		const before = sanitizeSelectorCandidates(await collector(page));
+		await writeDurableAnonymousUatIntent(stateDirectory);
+		const composer = page.locator(KNOWN_COMPOSER_SELECTOR);
+		await composer.fill(ANONYMOUS_UAT_PROMPT);
+		await composer.press("Enter");
+
+		const observations: SanitizedSelectorCandidate[][] = [];
+		const maximumPolls = boundedPollCount(options.maximumPolls);
+		const sleep =
+			options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+		for (let poll = 0; poll < maximumPolls; poll += 1) {
+			await sleep(1_000);
+			observations.push(sanitizeSelectorCandidates(await collector(page)));
+		}
+		const finalSnapshot = observations.at(-1) ?? before;
+		const userMessageCandidates = increasedCandidates(before, finalSnapshot, "user_message");
+		const answerCandidates = increasedCandidates(before, finalSnapshot, "answer");
+		const completionCandidates = transientCandidates(before, observations, finalSnapshot, "completion");
+		const changed = userMessageCandidates.length + answerCandidates.length + completionCandidates.length > 0;
+		return {
+			status: changed ? "structural_change_observed" : "prompt_submitted_no_safe_candidates",
+			promptSubmitted: true,
+			userMessageCandidates,
+			answerCandidates,
+			completionCandidates,
+		};
+	} finally {
+		await context?.close().catch(() => undefined);
+		await rm(profileDirectory, { recursive: true, force: true });
+	}
+}
+
 export function sanitizeSelectorCandidates(input: unknown): SanitizedSelectorCandidate[] {
 	if (!Array.isArray(input)) return [];
 	const unique = new Map<string, SanitizedSelectorCandidate>();
@@ -246,13 +322,17 @@ async function prepareUnapprovedProfileDirectory(stateDirectory: string): Promis
 }
 
 async function assertNoPriorUatIntent(profileDirectory: string): Promise<void> {
+	await assertNoPriorMarker(path.join(profileDirectory, UAT_INTENT_MARKER));
+}
+
+async function assertNoPriorMarker(markerPath: string): Promise<void> {
 	try {
-		await stat(path.join(profileDirectory, UAT_INTENT_MARKER));
+		await stat(markerPath);
 	} catch (error) {
 		if (isMissingFile(error)) return;
 		throw error;
 	}
-	throw new Error("The non-scored selector UAT is one-shot and was already attempted for this profile");
+	throw new Error("The non-scored selector UAT is one-shot and was already attempted");
 }
 
 async function writeDurableUatIntent(profileDirectory: string): Promise<void> {
@@ -278,6 +358,38 @@ async function writeDurableUatIntent(profileDirectory: string): Promise<void> {
 	}
 	if (process.platform !== "win32") {
 		const directory = await open(profileDirectory, "r");
+		try {
+			await directory.sync();
+		} finally {
+			await directory.close();
+		}
+	}
+}
+
+async function writeDurableAnonymousUatIntent(stateDirectory: string): Promise<void> {
+	const markerPath = path.join(stateDirectory, ANONYMOUS_UAT_INTENT_MARKER);
+	const handle = await open(markerPath, "wx", 0o600).catch((error) => {
+		if (isFileExists(error)) throw new Error("The anonymous non-scored UAT is one-shot and was already attempted");
+		throw error;
+	});
+	try {
+		await handle.writeFile(
+			`${JSON.stringify({
+				schemaVersion: 1,
+				purpose: "selector_discovery_non_scored",
+				sessionRequirement: "anonymous_clean",
+				promptSha256: createHash("sha256").update(ANONYMOUS_UAT_PROMPT).digest("hex"),
+				createdAt: new Date().toISOString(),
+			})}\n`,
+			"utf8",
+		);
+		await handle.chmod(0o600);
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
+	if (process.platform !== "win32") {
+		const directory = await open(stateDirectory, "r");
 		try {
 			await directory.sync();
 		} finally {

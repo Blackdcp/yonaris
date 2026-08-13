@@ -44,6 +44,12 @@ async function main(): Promise<void> {
 		process.stdout.write(`${JSON.stringify(result)}\n`);
 		return;
 	}
+	if (command === "anonymous-uat-once") {
+		const { runAnonymousDoubaoUatOnce } = await import("./dedicated-profile-uat.js");
+		const result = await runAnonymousDoubaoUatOnce(configuration.stateDirectory);
+		process.stdout.write(`${JSON.stringify(result)}\n`);
+		return;
+	}
 	if (command === "provision-dedicated-profile") {
 		const { provisionDedicatedDoubaoProfile } = await import("./dedicated-profile-provision.js");
 		const profileDirectory = await provisionDedicatedDoubaoProfile(configuration.stateDirectory);
@@ -81,7 +87,7 @@ async function main(): Promise<void> {
 		return;
 	}
 	throw new Error(
-		"Usage: browser-runner broker <serve|preflight|login-window|probe-selectors|uat-once|provision-dedicated-profile>",
+		"Usage: browser-runner broker <serve|preflight|login-window|probe-selectors|uat-once|anonymous-uat-once|provision-dedicated-profile>",
 	);
 }
 

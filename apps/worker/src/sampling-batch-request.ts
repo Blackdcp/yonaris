@@ -46,7 +46,7 @@ export type SamplingBatchRequest = {
 		surfaceTargetKey: typeof SAMPLING_BATCH_SURFACE_TARGET;
 		captureRouteKey: typeof SAMPLING_BATCH_CAPTURE_ROUTE;
 		samplesPerPrompt: 6;
-		sessionRequirement: "dedicated_sampling_profile";
+		sessionRequirement: "anonymous_clean";
 		searchRequirement: "platform_default";
 	};
 	measurementWindow: {
@@ -197,7 +197,7 @@ export function parseSamplingBatchRequest(value: unknown): SamplingBatchRequest 
 		value.execution.surfaceTargetKey !== SAMPLING_BATCH_SURFACE_TARGET ||
 		value.execution.captureRouteKey !== SAMPLING_BATCH_CAPTURE_ROUTE ||
 		value.execution.samplesPerPrompt !== 6 ||
-		value.execution.sessionRequirement !== "dedicated_sampling_profile" ||
+		value.execution.sessionRequirement !== "anonymous_clean" ||
 		value.execution.searchRequirement !== "platform_default"
 	) {
 		throw new SamplingBatchRequestError(
@@ -236,7 +236,7 @@ export function parseSamplingBatchRequest(value: unknown): SamplingBatchRequest 
 			surfaceTargetKey: SAMPLING_BATCH_SURFACE_TARGET,
 			captureRouteKey: SAMPLING_BATCH_CAPTURE_ROUTE,
 			samplesPerPrompt: 6,
-			sessionRequirement: "dedicated_sampling_profile",
+			sessionRequirement: "anonymous_clean",
 			searchRequirement: "platform_default",
 		},
 		measurementWindow: {

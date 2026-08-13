@@ -13,15 +13,17 @@ export function assertSamplingBrowserRunnerProtocol(
 ): void {
 	if (executionMode === "browser_runner") {
 		const target = targets[0];
+		const supportedCleanSession =
+			target?.sessionRequirement === "anonymous_clean" || target?.sessionRequirement === "dedicated_sampling_profile";
 		if (
 			targets.length !== 1 ||
 			target?.surfaceTargetKey !== "doubao.consumer_web" ||
 			target.captureRouteKey !== "browser_runner.doubao" ||
-			target.sessionRequirement !== "dedicated_sampling_profile" ||
+			!supportedCleanSession ||
 			target.searchRequirement !== "platform_default"
 		) {
 			throw new Error(
-				"Browser Runner batches require a dedicated sampling profile with platform default search on Doubao via browser_runner.doubao",
+				"Browser Runner batches require a supported clean session with platform default search on Doubao via browser_runner.doubao",
 			);
 		}
 		return;
