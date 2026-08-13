@@ -160,6 +160,7 @@ trap cleanup_candidates EXIT
     type filter hook output priority -150; policy accept;
     meta skuid $browser_uid ip daddr @control_plane_v4 reject
     meta skuid $browser_uid ip6 daddr @control_plane_v6 reject
+    meta skuid $browser_uid ct state established,related accept
     meta skuid $browser_uid ip daddr 127.0.0.1 tcp dport 17777 accept
     meta skuid $browser_uid ip daddr 127.0.0.53 meta l4proto { tcp, udp } th dport 53 accept
     meta skuid $browser_uid ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4 } reject
