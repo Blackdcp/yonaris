@@ -3,8 +3,8 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
 import { DoubaoFixtureSessionFactory } from "./adapters/doubao-fixture.js";
-import { DoubaoLiveSessionFactory } from "./adapters/doubao-live.js";
 import { resumePostSubmitTask } from "./assist.js";
+import { BrokeredSurfaceSessionFactory, brokeredFactoryOptionsFromEnvironment } from "./broker-client.js";
 import type { HandoffMetadata } from "./contracts.js";
 import { sanitizeDiagnostic } from "./errors.js";
 import { readFixtureTasks } from "./fixture-file.js";
@@ -59,7 +59,7 @@ async function runCommand(arguments_: string[]): Promise<void> {
 	const remote = createRemoteClient(flags, batchId);
 	const summary = await runBatch({
 		taskSource: remote,
-		sessionFactory: new DoubaoLiveSessionFactory(stateDirectory),
+		sessionFactory: liveSessionFactory(),
 		journal,
 		sink: remote,
 		batchId,
@@ -86,7 +86,7 @@ async function pollCommand(arguments_: string[]): Promise<void> {
 			const journal = await RunJournal.create(stateDirectory);
 			return {
 				taskSource: remote,
-				sessionFactory: new DoubaoLiveSessionFactory(stateDirectory),
+				sessionFactory: liveSessionFactory(),
 				journal,
 				sink: remote,
 			};
@@ -121,7 +121,7 @@ async function assistCommand(arguments_: string[]): Promise<void> {
 	await resumePostSubmitTask({
 		handoff,
 		remote,
-		sessionFactory: new DoubaoLiveSessionFactory(stateDirectory),
+		sessionFactory: liveSessionFactory(),
 		journal,
 	});
 	process.stdout.write(`${JSON.stringify({ taskId, status: "completed" })}\n`);
@@ -136,16 +136,14 @@ function assertLiveEnabled(flags: Record<string, string | boolean>): void {
 	if (!process.env.BROWSER_RUNNER_API_TOKEN) {
 		throw new Error("BROWSER_RUNNER_API_TOKEN is required for live task claiming");
 	}
+	brokeredFactoryOptionsFromEnvironment();
 	if (process.env.BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED !== "true") {
 		throw new Error("Live Doubao execution requires BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED=true after selector UAT");
 	}
-	if (
-		!process.env.BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR ||
-		!process.env.BROWSER_RUNNER_DOUBAO_COMPLETION_SELECTOR ||
-		!process.env.BROWSER_RUNNER_DOUBAO_SEARCH_OFF_SELECTOR
-	) {
-		throw new Error("Live Doubao execution requires approved answer, completion, and explicit search-off selectors");
-	}
+}
+
+function liveSessionFactory(): BrokeredSurfaceSessionFactory {
+	return new BrokeredSurfaceSessionFactory(brokeredFactoryOptionsFromEnvironment());
 }
 
 function createRemoteClient(flags: Record<string, string | boolean>, batchId?: string) {
@@ -206,6 +204,7 @@ function usage(): string {
 		"  browser-runner run --live --surface doubao --brand-id <id> --batch-id <id> [--state-dir <dir>]",
 		"  browser-runner poll --live --surface doubao --brand-id <id> [--state-dir <dir>]",
 		"  browser-runner assist --brand-id <id> --task-id <id> [--state-dir <dir>]",
+		"  Browser-only service commands are provided by: browser-runner broker <serve|preflight|provision-dedicated-profile>",
 	].join("\n");
 }
 

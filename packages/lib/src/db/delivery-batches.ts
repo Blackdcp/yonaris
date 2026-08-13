@@ -70,6 +70,17 @@ export interface DeliveryTaskPlanInput {
 	evaluationRole?: DeliveryEvaluationRole;
 }
 
+export function buildDeliveryBatchFreezeWindowCondition(measurementWindow: DeliveryProtocol["measurementWindow"]) {
+	const startsAt = new Date(measurementWindow.startsAt);
+	const endsAt = new Date(measurementWindow.endsAt);
+	if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime()) || endsAt <= startsAt) {
+		throw new Error("Delivery batch freeze measurement window is invalid");
+	}
+	const condition = and(sql`statement_timestamp() >= ${startsAt}`, sql`statement_timestamp() < ${endsAt}`);
+	if (!condition) throw new Error("Failed to build delivery batch freeze measurement window condition");
+	return condition;
+}
+
 export interface DeliveryClaimProof {
 	taskId: string;
 	claimedBy: string;
@@ -216,6 +227,7 @@ export async function freezeDeliveryBatch(input: {
 	brandId: string;
 	batchId: string;
 	frozenBy?: string;
+	measurementWindow?: DeliveryProtocol["measurementWindow"];
 }): Promise<DeliveryBatch> {
 	return db.transaction(async (tx) => {
 		const [batch] = await tx
@@ -236,6 +248,14 @@ export async function freezeDeliveryBatch(input: {
 		if (tasks.length === 0) throw new DeliveryBatchStateError("A delivery batch cannot be frozen without tasks");
 		if (tasks.some(({ status }) => status !== "planned")) {
 			throw new DeliveryBatchStateError("A draft delivery batch contains a non-planned task");
+		}
+		const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+		if (
+			input.measurementWindow &&
+			(new Date(input.measurementWindow.startsAt).toISOString() !== protocol.measurementWindow.startsAt ||
+				new Date(input.measurementWindow.endsAt).toISOString() !== protocol.measurementWindow.endsAt)
+		) {
+			throw new DeliveryBatchConflictError(batch.idempotencyKey);
 		}
 
 		const [[brand], [scope], competitorRows] = await Promise.all([
@@ -293,11 +313,10 @@ export async function freezeDeliveryBatch(input: {
 					domains: competitor.domains,
 					aliases: competitor.aliases,
 				})),
-				protocol: normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol),
+				protocol,
 			},
 			manifestTasks,
 		);
-		const frozenAt = new Date();
 		const [frozen] = await tx
 			.update(deliveryBatches)
 			.set({
@@ -306,11 +325,24 @@ export async function freezeDeliveryBatch(input: {
 				manifestSnapshot,
 				manifestHash: buildDeliveryManifestHash(manifestSnapshot),
 				frozenBy: optionalText(input.frozenBy, "frozenBy", 300),
-				frozenAt,
+				frozenAt: sql`statement_timestamp()`,
 			})
-			.where(and(eq(deliveryBatches.id, batch.id), eq(deliveryBatches.status, "draft")))
+			.where(
+				and(
+					eq(deliveryBatches.id, batch.id),
+					eq(deliveryBatches.status, "draft"),
+					input.measurementWindow ? buildDeliveryBatchFreezeWindowCondition(input.measurementWindow) : undefined,
+				),
+			)
 			.returning();
-		if (!frozen) throw new DeliveryBatchStateError(`Delivery batch ${batch.id} was concurrently frozen`);
+		if (!frozen) {
+			throw new DeliveryBatchStateError(
+				input.measurementWindow
+					? `Delivery batch ${batch.id} measurement window is not open at freeze`
+					: `Delivery batch ${batch.id} was concurrently frozen`,
+			);
+		}
+		const frozenAt = requiredDate(frozen.frozenAt);
 
 		await tx
 			.update(deliveryTasks)

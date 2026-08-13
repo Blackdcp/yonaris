@@ -31,12 +31,16 @@ interface TargetDraft {
 	searchRequirement: SamplingSearchRequirement;
 }
 
-function defaultTargetDraft(target: SamplingTargetOption): TargetDraft {
+function defaultTargetDraft(target: SamplingTargetOption, executionMode: SamplingExecutionMode): TargetDraft {
 	return {
 		samplesPerPrompt: 1,
 		sessionRequirement:
-			target.defaultSessionRequirement === "new_account_clean" ? "new_account_clean" : "anonymous_clean",
-		searchRequirement: target.defaultSearchRequirement,
+			executionMode === "browser_runner"
+				? "dedicated_sampling_profile"
+				: target.defaultSessionRequirement === "new_account_clean"
+					? "new_account_clean"
+					: "anonymous_clean",
+		searchRequirement: executionMode === "browser_runner" ? "platform_default" : target.defaultSearchRequirement,
 	};
 }
 
@@ -130,7 +134,7 @@ export function SamplingBatchCreateDialog({
 		setTargetDrafts((previous) => {
 			const next = { ...previous };
 			if (next[target.surfaceTargetKey]) delete next[target.surfaceTargetKey];
-			else next[target.surfaceTargetKey] = defaultTargetDraft(target);
+			else next[target.surfaceTargetKey] = defaultTargetDraft(target, executionMode);
 			return next;
 		});
 	};
@@ -445,13 +449,20 @@ export function SamplingBatchCreateDialog({
 												onValueChange={(value: SamplingSessionRequirement) =>
 													updateTarget(target.surfaceTargetKey, { sessionRequirement: value })
 												}
+												disabled={executionMode === "browser_runner"}
 											>
 												<SelectTrigger className="w-full">
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="anonymous_clean">Anonymous clean</SelectItem>
-													<SelectItem value="new_account_clean">New account</SelectItem>
+													{executionMode === "browser_runner" ? (
+														<SelectItem value="dedicated_sampling_profile">Dedicated sampling profile</SelectItem>
+													) : (
+														<>
+															<SelectItem value="anonymous_clean">Anonymous clean</SelectItem>
+															<SelectItem value="new_account_clean">New account</SelectItem>
+														</>
+													)}
 												</SelectContent>
 											</Select>
 										</div>
@@ -462,14 +473,17 @@ export function SamplingBatchCreateDialog({
 												onValueChange={(value: SamplingSearchRequirement) =>
 													updateTarget(target.surfaceTargetKey, { searchRequirement: value })
 												}
-												disabled={target.surfaceKind === "search_surface"}
+												disabled={target.surfaceKind === "search_surface" || executionMode === "browser_runner"}
 											>
 												<SelectTrigger className="w-full">
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="required">Required</SelectItem>
-													{target.surfaceKind !== "search_surface" && (
+													{executionMode === "browser_runner" && (
+														<SelectItem value="platform_default">Platform default (native auto)</SelectItem>
+													)}
+													{executionMode !== "browser_runner" && <SelectItem value="required">Required</SelectItem>}
+													{executionMode !== "browser_runner" && target.surfaceKind !== "search_surface" && (
 														<>
 															<SelectItem value="forbidden">Forbidden</SelectItem>
 															<SelectItem value="not_applicable">Not applicable</SelectItem>

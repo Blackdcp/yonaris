@@ -86,7 +86,31 @@ test("claim exposes a drained automatic lane without treating it as an unknown w
 	assert.equal(remote.queueState(), "drained");
 });
 
-function claimResponse(input: { runnerSessionId: string | undefined; postSubmitAssist: boolean }) {
+test("claim accepts a frozen platform-default search task", async () => {
+	const remote = new BrowserRunnerRemoteClient({
+		baseUrl: "http://127.0.0.1:3000",
+		apiToken: "token-that-is-long-enough-for-the-test-client",
+		brandId: "stepfun",
+		fetchImplementation: (async () =>
+			jsonResponse({
+				claim: claimResponse({
+					runnerSessionId: undefined,
+					postSubmitAssist: false,
+					searchRequirement: "platform_default",
+				}),
+				queueState: "waiting",
+			})) as typeof fetch,
+	});
+
+	const claimed = await remote.claimNext("batch-1");
+	assert.equal(claimed?.task.searchRequirement, "platform_default");
+});
+
+function claimResponse(input: {
+	runnerSessionId: string | undefined;
+	postSubmitAssist: boolean;
+	searchRequirement?: "forbidden" | "platform_default";
+}) {
 	return {
 		task: {
 			id: "task-1",
@@ -97,7 +121,7 @@ function claimResponse(input: { runnerSessionId: string | undefined; postSubmitA
 			captureRouteKey: "browser_runner.doubao",
 			sampleIndex: 1,
 			sessionRequirement: "anonymous_clean",
-			searchRequirement: "forbidden",
+			searchRequirement: input.searchRequirement ?? "forbidden",
 			evaluationRole: "scored",
 			minimumEvidenceArtifacts: 2,
 			automationAttemptCount: 3,

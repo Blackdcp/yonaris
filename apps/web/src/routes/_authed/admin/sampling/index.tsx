@@ -88,7 +88,7 @@ function SamplingQueuePage() {
 		if (selectedBrandId || !firstBrandId) return;
 		navigate({
 			to: ".",
-			search: (previous) => ({ ...previous, brand: firstBrandId, scope: undefined, page: undefined }),
+			search: (previous: SamplingSearch) => ({ ...previous, brand: firstBrandId, scope: undefined, page: undefined }),
 			replace: true,
 		});
 	}, [firstBrandId, navigate, selectedBrandId]);
@@ -189,7 +189,7 @@ function SamplingQueuePage() {
 	const setSearch = (updates: Partial<SamplingSearch>) => {
 		navigate({
 			to: ".",
-			search: (previous) => ({ ...previous, ...updates }),
+			search: (previous: SamplingSearch) => ({ ...previous, ...updates }),
 			replace: true,
 			resetScroll: false,
 		});

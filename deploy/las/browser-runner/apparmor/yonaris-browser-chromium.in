@@ -1,0 +1,12 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+profile yonaris-browser-chromium "@@CHROMIUM_EXECUTABLE@@" flags=(unconfined) {
+  userns,
+  include if exists <local/yonaris-browser-chromium>
+}
+
+profile yonaris-browser-chromium-headless "@@CHROMIUM_HEADLESS_EXECUTABLE@@" flags=(unconfined) {
+  userns,
+  include if exists <local/yonaris-browser-chromium-headless>
+}

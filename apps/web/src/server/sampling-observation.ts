@@ -29,8 +29,9 @@ export const samplingObservationBaseSchema = z
 		answerText: z.string().trim().min(1).max(500_000),
 		observedAt: z.string().datetime({ offset: true }),
 		pageUrl: httpUrl,
-		sessionMode: z.enum(["anonymous_clean", "new_account_clean"]),
-		searchMode: z.enum(["on", "off"]),
+		sessionMode: z.enum(["anonymous_clean", "new_account_clean", "dedicated_sampling_profile"]),
+		searchMode: z.enum(["on", "off", "native_auto"]),
+		webSearchObserved: z.boolean().nullable().optional(),
 		modelVersion: z.string().trim().min(1).max(200).optional(),
 		evidenceArtifactIds: z.array(z.guid()).min(1).max(20),
 		citations: z.array(citationSchema).max(200).default([]),
@@ -129,11 +130,17 @@ export function prepareSamplingObservation(input: {
 	if (input.task.searchRequirement === "required" && input.observation.searchMode !== "on") {
 		throw new Error("This task requires search mode to be on");
 	}
+	if (input.task.searchRequirement === "platform_default" && input.observation.searchMode !== "native_auto") {
+		throw new Error("This task requires platform-default native-auto search mode");
+	}
 	if (
 		(input.task.searchRequirement === "forbidden" || input.task.searchRequirement === "not_applicable") &&
 		input.observation.searchMode !== "off"
 	) {
 		throw new Error("This task requires search mode to be off");
+	}
+	if (input.observation.searchMode === "off" && input.observation.webSearchObserved === true) {
+		throw new Error("Search cannot be observed when search mode is off");
 	}
 
 	const target = resolveManualObservationTarget({
@@ -144,6 +151,12 @@ export function prepareSamplingObservation(input: {
 
 	const citations = normalizeCitations(input.observation.citations);
 	const mentionResult = analyzeMentions(input.observation.answerText, input.manifest.brand, input.manifest.competitors);
+	const webSearchObserved =
+		input.observation.searchMode === "native_auto"
+			? (input.observation.webSearchObserved ?? null)
+			: input.observation.searchMode === "on"
+				? (input.observation.webSearchObserved ?? true)
+				: false;
 	const config = {
 		model: target.model,
 		provider:
@@ -153,7 +166,7 @@ export function prepareSamplingObservation(input: {
 					? "browser-runner"
 					: "assisted-browser",
 		version: input.observation.modelVersion,
-		webSearch: input.observation.searchMode === "on",
+		webSearch: input.observation.searchMode !== "off",
 	};
 	const captureMetadata = {
 		measurementEligibility:
@@ -163,6 +176,7 @@ export function prepareSamplingObservation(input: {
 		leaseGeneration: input.leaseGeneration,
 		sessionMode: input.observation.sessionMode,
 		searchMode: input.observation.searchMode,
+		webSearchObserved,
 		pageUrl: input.observation.pageUrl,
 		reportedMarket: input.manifest.scope.market,
 		reportedLocale: input.manifest.scope.locale,
@@ -198,6 +212,7 @@ export function prepareSamplingObservation(input: {
 		observedAt,
 		target,
 		config,
+		webSearchObserved,
 		captureMetadata,
 		sampleFingerprint,
 		citations,
@@ -207,6 +222,7 @@ export function prepareSamplingObservation(input: {
 			captureMode: target.captureMode,
 			answerText: input.observation.answerText,
 			pageUrl: input.observation.pageUrl,
+			webSearchObserved,
 			citations,
 			deliveryBatchId: input.task.batchId,
 			deliveryTaskId: input.task.id,

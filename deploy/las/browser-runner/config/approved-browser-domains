@@ -1,0 +1,4 @@
+# Exact public hostnames the browser identity may reach over HTTP(S).
+# Add every response/CDN hostname observed in a non-scored UAT before enabling.
+doubao.com
+www.doubao.com

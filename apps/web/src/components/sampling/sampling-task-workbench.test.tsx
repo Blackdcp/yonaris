@@ -78,4 +78,27 @@ describe("SamplingTaskWorkbench Browser Runner handoff", () => {
 		expect(markup).not.toContain("Open 豆包");
 		expect(markup).not.toContain(">Copy<");
 	});
+
+	it("labels platform-default search as native auto in the frozen protocol", () => {
+		const markup = renderToStaticMarkup(
+			<SamplingTaskWorkbench
+				task={task({
+					searchRequirement: "platform_default",
+					automation: null,
+					captureRouteKey: "assisted_browser.generic",
+				})}
+				lease={{ leaseToken: "lease-token", leaseGeneration: 2, leaseExpiresAt: null }}
+				heartbeatError={null}
+				initialEvidenceArtifacts={[]}
+				evidenceArtifactsLoading={false}
+				evidenceArtifactsError={null}
+				onRelease={vi.fn(async () => undefined)}
+				onSubmit={vi.fn(async () => undefined)}
+				onFail={vi.fn(async () => undefined)}
+			/>,
+		);
+
+		expect(markup).toContain("platform default (native auto)");
+		expect(markup).toContain("Observed web search");
+	});
 });

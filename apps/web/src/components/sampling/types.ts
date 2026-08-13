@@ -6,8 +6,8 @@ import type {
 export type SamplingBatchStatus = "draft" | "frozen" | "in_progress" | "completed" | "cancelled";
 export type SamplingTaskStatus = "planned" | "available" | "claimed" | "succeeded" | "failed" | "cancelled";
 export type SamplingEvaluationRole = "scored" | "observation";
-export type SamplingSessionRequirement = "anonymous_clean" | "new_account_clean";
-export type SamplingSearchRequirement = "not_applicable" | "required" | "forbidden";
+export type SamplingSessionRequirement = "anonymous_clean" | "new_account_clean" | "dedicated_sampling_profile";
+export type SamplingSearchRequirement = "not_applicable" | "required" | "forbidden" | "platform_default";
 export type SamplingExecutionMode = "manual" | "browser_runner";
 export type SamplingAutomationStatus = "not_started" | "running" | "needs_human" | "settled";
 export type SamplingHumanQueue = "needs_human";
@@ -228,7 +228,8 @@ export interface SamplingObservationInput {
 	observedAt: string;
 	pageUrl: string;
 	sessionMode: SamplingSessionRequirement;
-	searchMode: "on" | "off";
+	searchMode: "on" | "off" | "native_auto";
+	webSearchObserved?: boolean | null;
 	operatorAttested: true;
 	modelVersion?: string;
 	evidenceArtifactIds: string[];

@@ -15,6 +15,7 @@ import {
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Progress } from "@workspace/ui/components/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Separator } from "@workspace/ui/components/separator";
 import { Textarea } from "@workspace/ui/components/textarea";
 import {
@@ -78,6 +79,7 @@ function lines(value: string): string[] {
 }
 
 function formatRequirement(value: string): string {
+	if (value === "platform_default") return "platform default (native auto)";
 	return value.replaceAll("_", " ");
 }
 
@@ -109,6 +111,7 @@ export function SamplingTaskWorkbench({
 	const [modelVersion, setModelVersion] = useState("");
 	const [citationUrls, setCitationUrls] = useState("");
 	const [webQueries, setWebQueries] = useState("");
+	const [webSearchObserved, setWebSearchObserved] = useState<"unknown" | "yes" | "no">("unknown");
 	const [operatorAttested, setOperatorAttested] = useState(false);
 	const [evidence, setEvidence] = useState<EvidenceDraft[]>([]);
 	const [copied, setCopied] = useState(false);
@@ -122,7 +125,12 @@ export function SamplingTaskWorkbench({
 	const uploadAborters = useRef(new Map<string, () => void>());
 
 	const sessionMode = task.sessionRequirement;
-	const searchMode = task.searchRequirement === "required" ? "on" : "off";
+	const searchMode =
+		task.searchRequirement === "required"
+			? "on"
+			: task.searchRequirement === "platform_default"
+				? "native_auto"
+				: "off";
 	const isHumanTakeover = task.automation?.humanHandoffRequired === true;
 	const requiresSameSessionRecovery = Boolean(isHumanTakeover && task.automation?.submitIntentAt);
 	const submitMayHaveOccurred = Boolean(task.automation?.submitIntentAt && !task.automation.submitConfirmedAt);
@@ -341,6 +349,14 @@ export function SamplingTaskWorkbench({
 				pageUrl: pageUrl.trim(),
 				sessionMode,
 				searchMode,
+				webSearchObserved:
+					task.searchRequirement === "platform_default"
+						? webSearchObserved === "yes"
+							? true
+							: webSearchObserved === "no"
+								? false
+								: null
+						: searchMode === "on",
 				operatorAttested: true,
 				...(modelVersion.trim() ? { modelVersion: modelVersion.trim() } : {}),
 				evidenceArtifactIds,
@@ -548,6 +564,24 @@ export function SamplingTaskWorkbench({
 											placeholder="Optional"
 										/>
 									</div>
+									{task.searchRequirement === "platform_default" && (
+										<div className="space-y-2">
+											<Label>Observed web search</Label>
+											<Select
+												value={webSearchObserved}
+												onValueChange={(value: "unknown" | "yes" | "no") => setWebSearchObserved(value)}
+											>
+												<SelectTrigger className="w-full">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="unknown">Unknown / no verified marker</SelectItem>
+													<SelectItem value="yes">Yes, verified</SelectItem>
+													<SelectItem value="no">No, explicitly verified</SelectItem>
+												</SelectContent>
+											</Select>
+										</div>
+									)}
 								</div>
 
 								<div className="space-y-2">
@@ -669,7 +703,7 @@ export function SamplingTaskWorkbench({
 												<div className="min-w-0">
 													<p className="truncate text-sm font-medium">{item.fileName}</p>
 													<p className="text-xs text-muted-foreground">
-														{item.kind === "screenshot" ? "Screenshot" : "PDF page snapshot"} ·{" "}
+														{item.kind === "screenshot" ? "Screenshot" : "Page snapshot"} ·{" "}
 														{formatEvidenceBytes(item.sizeBytes)}
 													</p>
 												</div>

@@ -95,7 +95,9 @@ export async function resumePostSubmitTask(input: {
 			response,
 			evidence,
 			sessionMode: claimed.task.sessionRequirement,
-			searchMode: "off",
+			searchMode: claimed.task.searchRequirement === "platform_default" ? "native_auto" : "off",
+			webSearchObserved:
+				claimed.task.searchRequirement === "platform_default" ? (response.webSearchObserved ?? null) : false,
 		});
 		await input.journal.removeUploadedEvidence(evidence).catch(async (cleanupError) => {
 			await input.journal.append({

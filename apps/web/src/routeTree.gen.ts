@@ -69,8 +69,10 @@ import { Route as AuthedAppBrandSettingsMembersRouteImport } from './routes/_aut
 import { Route as AuthedAppBrandSettingsPromptsRouteImport } from './routes/_authed/app/$brand/settings/prompts'
 import { Route as ApiAdminSamplingEvidenceIndexRouteImport } from './routes/api/admin/sampling/evidence/index'
 import { Route as ApiAdminSamplingEvidenceArtifactIdRouteImport } from './routes/api/admin/sampling/evidence/$artifactId'
+import { Route as ApiInternalBrowserRunnerV1BootstrapRouteImport } from './routes/api/internal/browser-runner/v1/bootstrap'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 import { Route as ApiV1PromptsPromptIdSnapshotRouteImport } from './routes/api/v1/prompts/$promptId/snapshot'
+import { Route as ApiInternalBrowserRunnerV1BootstrapStatusRouteImport } from './routes/api/internal/browser-runner/v1/bootstrap/status'
 import { Route as ApiInternalBrowserRunnerV1EvidenceIndexRouteImport } from './routes/api/internal/browser-runner/v1/evidence/index'
 import { Route as ApiInternalBrowserRunnerV1TasksClaimRouteImport } from './routes/api/internal/browser-runner/v1/tasks/claim'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -401,6 +403,12 @@ const ApiAdminSamplingEvidenceArtifactIdRoute =
     path: '/api/admin/sampling/evidence/$artifactId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalBrowserRunnerV1BootstrapRoute =
+  ApiInternalBrowserRunnerV1BootstrapRouteImport.update({
+    id: '/api/internal/browser-runner/v1/bootstrap',
+    path: '/api/internal/browser-runner/v1/bootstrap',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPlausibleJsScriptIndexRoute =
   ApiPlausibleJsScriptIndexRouteImport.update({
     id: '/api/plausible/js/script/',
@@ -412,6 +420,12 @@ const ApiV1PromptsPromptIdSnapshotRoute =
     id: '/snapshot',
     path: '/snapshot',
     getParentRoute: () => ApiV1PromptsPromptIdRoute,
+  } as any)
+const ApiInternalBrowserRunnerV1BootstrapStatusRoute =
+  ApiInternalBrowserRunnerV1BootstrapStatusRouteImport.update({
+    id: '/status',
+    path: '/status',
+    getParentRoute: () => ApiInternalBrowserRunnerV1BootstrapRoute,
   } as any)
 const ApiInternalBrowserRunnerV1EvidenceIndexRoute =
   ApiInternalBrowserRunnerV1EvidenceIndexRouteImport.update({
@@ -519,11 +533,13 @@ export interface FileRoutesByFullPath {
   '/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
+  '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -585,11 +601,13 @@ export interface FileRoutesByTo {
   '/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
+  '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -658,11 +676,13 @@ export interface FileRoutesById {
   '/_authed/app/$brand/settings/members': typeof AuthedAppBrandSettingsMembersRoute
   '/_authed/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
+  '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/_authed/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/_authed/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
+  '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -731,11 +751,13 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/members'
     | '/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
+    | '/api/internal/browser-runner/v1/bootstrap'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts/'
     | '/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
+    | '/api/internal/browser-runner/v1/bootstrap/status'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence/'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -797,11 +819,13 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/members'
     | '/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
+    | '/api/internal/browser-runner/v1/bootstrap'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts'
     | '/app/$brand/settings'
     | '/api/admin/sampling/evidence'
     | '/api/plausible/js/script'
+    | '/api/internal/browser-runner/v1/bootstrap/status'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -869,11 +893,13 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/settings/members'
     | '/_authed/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
+    | '/api/internal/browser-runner/v1/bootstrap'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/_authed/app/$brand/prompts/'
     | '/_authed/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
+    | '/api/internal/browser-runner/v1/bootstrap/status'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence/'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -911,6 +937,7 @@ export interface RootRouteChildren {
   ApiV1PromptsIndexRoute: typeof ApiV1PromptsIndexRoute
   ApiV1ReportsIndexRoute: typeof ApiV1ReportsIndexRoute
   ApiAdminSamplingEvidenceArtifactIdRoute: typeof ApiAdminSamplingEvidenceArtifactIdRoute
+  ApiInternalBrowserRunnerV1BootstrapRoute: typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
   ApiAdminSamplingEvidenceIndexRoute: typeof ApiAdminSamplingEvidenceIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
   ApiInternalBrowserRunnerV1TasksClaimRoute: typeof ApiInternalBrowserRunnerV1TasksClaimRoute
@@ -1345,6 +1372,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdminSamplingEvidenceArtifactIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/browser-runner/v1/bootstrap': {
+      id: '/api/internal/browser-runner/v1/bootstrap'
+      path: '/api/internal/browser-runner/v1/bootstrap'
+      fullPath: '/api/internal/browser-runner/v1/bootstrap'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1BootstrapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/plausible/js/script/': {
       id: '/api/plausible/js/script/'
       path: '/api/plausible/js/script'
@@ -1358,6 +1392,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/v1/prompts/$promptId/snapshot'
       preLoaderRoute: typeof ApiV1PromptsPromptIdSnapshotRouteImport
       parentRoute: typeof ApiV1PromptsPromptIdRoute
+    }
+    '/api/internal/browser-runner/v1/bootstrap/status': {
+      id: '/api/internal/browser-runner/v1/bootstrap/status'
+      path: '/status'
+      fullPath: '/api/internal/browser-runner/v1/bootstrap/status'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1BootstrapStatusRouteImport
+      parentRoute: typeof ApiInternalBrowserRunnerV1BootstrapRoute
     }
     '/api/internal/browser-runner/v1/evidence/': {
       id: '/api/internal/browser-runner/v1/evidence/'
@@ -1558,6 +1599,21 @@ const ApiV1PromptsPromptIdRouteChildren: ApiV1PromptsPromptIdRouteChildren = {
 const ApiV1PromptsPromptIdRouteWithChildren =
   ApiV1PromptsPromptIdRoute._addFileChildren(ApiV1PromptsPromptIdRouteChildren)
 
+interface ApiInternalBrowserRunnerV1BootstrapRouteChildren {
+  ApiInternalBrowserRunnerV1BootstrapStatusRoute: typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
+}
+
+const ApiInternalBrowserRunnerV1BootstrapRouteChildren: ApiInternalBrowserRunnerV1BootstrapRouteChildren =
+  {
+    ApiInternalBrowserRunnerV1BootstrapStatusRoute:
+      ApiInternalBrowserRunnerV1BootstrapStatusRoute,
+  }
+
+const ApiInternalBrowserRunnerV1BootstrapRouteWithChildren =
+  ApiInternalBrowserRunnerV1BootstrapRoute._addFileChildren(
+    ApiInternalBrowserRunnerV1BootstrapRouteChildren,
+  )
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthedRoute: AuthedRouteWithChildren,
@@ -1586,6 +1642,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiV1ReportsIndexRoute: ApiV1ReportsIndexRoute,
   ApiAdminSamplingEvidenceArtifactIdRoute:
     ApiAdminSamplingEvidenceArtifactIdRoute,
+  ApiInternalBrowserRunnerV1BootstrapRoute:
+    ApiInternalBrowserRunnerV1BootstrapRouteWithChildren,
   ApiAdminSamplingEvidenceIndexRoute: ApiAdminSamplingEvidenceIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
   ApiInternalBrowserRunnerV1TasksClaimRoute:

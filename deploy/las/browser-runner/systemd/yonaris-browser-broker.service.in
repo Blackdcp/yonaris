@@ -1,0 +1,61 @@
+[Unit]
+Description=Yonaris isolated browser broker
+Documentation=file:/etc/yonaris-browser-runner/README.md
+Requires=yonaris-browser-network.service
+After=yonaris-browser-network.service
+ConditionPathExists=/etc/yonaris-browser-runner/browser.env
+
+[Service]
+Type=simple
+User=yonaris-browser
+Group=yonaris-browser-rpc
+UMask=0027
+EnvironmentFile=/etc/yonaris-browser-runner/browser.env
+EnvironmentFile=/etc/yonaris-browser-runner/network.env
+Environment=HOME=/var/lib/yonaris-browser-broker/home
+Environment=XDG_CACHE_HOME=/var/lib/yonaris-browser-broker/home/.cache
+Environment=XDG_CONFIG_HOME=/var/lib/yonaris-browser-broker/home/.config
+Environment=XDG_DATA_HOME=/var/lib/yonaris-browser-broker/home/.local/share
+Environment=PATH=@@NODE_BIN_DIRECTORY@@:/usr/sbin:/usr/bin:/sbin:/bin
+UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY
+RuntimeDirectory=yonaris-browser-broker
+RuntimeDirectoryMode=0750
+StateDirectory=yonaris-browser-broker
+StateDirectoryMode=0700
+ExecStart=@@PNPM_EXECUTABLE@@ --dir @@SOURCE_DIRECTORY@@ --filter @workspace/browser-runner broker -- serve
+Restart=no
+TimeoutStartSec=90
+TimeoutStopSec=45
+KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/yonaris-browser-broker /var/lib/yonaris-browser-evidence
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+IPAddressDeny=localhost
+IPAddressDeny=link-local
+IPAddressDeny=multicast
+IPAddressDeny=10.0.0.0/8
+IPAddressDeny=100.64.0.0/10
+IPAddressDeny=172.16.0.0/12
+IPAddressDeny=192.168.0.0/16
+IPAddressDeny=149.71.241.139/32
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+TasksMax=512
+LimitNOFILE=65536
+MemoryMax=3G

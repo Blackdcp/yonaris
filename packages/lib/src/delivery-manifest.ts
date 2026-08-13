@@ -4,8 +4,12 @@ import type { DeliveryTask } from "./db/schema";
 export type DeliveryBatchStatus = "draft" | "frozen" | "in_progress" | "completed" | "cancelled";
 export type DeliveryTaskStatus = "planned" | "available" | "claimed" | "succeeded" | "failed" | "cancelled";
 export type DeliveryEvaluationRole = "scored" | "observation";
-export type DeliverySessionRequirement = "none" | "anonymous_clean" | "new_account_clean";
-export type DeliverySearchRequirement = "not_applicable" | "required" | "forbidden";
+export type DeliverySessionRequirement =
+	| "none"
+	| "anonymous_clean"
+	| "new_account_clean"
+	| "dedicated_sampling_profile";
+export type DeliverySearchRequirement = "not_applicable" | "required" | "forbidden" | "platform_default";
 
 export interface DeliveryEvidencePolicy {
 	minimumArtifacts: number;

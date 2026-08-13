@@ -25,7 +25,7 @@ import { InfoTip, QueryWordsSection, VariationLine } from "@/components/fanout-s
 import { ALL_MODELS_VALUE, FilterBar, getAvailableModels } from "@/components/filter-bar";
 import { HistoryButton } from "@/components/history-button";
 import { FilterSection, PageHeader } from "@/components/page-header";
-import { useListFilters } from "@/hooks/use-list-filters";
+import { type BrandFilterSearch, useListFilters } from "@/hooks/use-list-filters";
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
 import { useScopeModels } from "@/hooks/use-scope-models";
@@ -36,6 +36,7 @@ import { getModelDisplayName } from "@/lib/utils";
 /** The active tab lives in `?tab=` so each tab is directly linkable. */
 const FANOUT_TABS = ["fanout", "top-queries", "words"] as const;
 type FanoutTab = (typeof FANOUT_TABS)[number];
+type FanoutRouteSearch = BrandFilterSearch & { tab?: FanoutTab };
 
 export const Route = createFileRoute("/_authed/app/$brand/query-fan-out")({
 	validateSearch: (search: Record<string, unknown>): { tab?: FanoutTab } => ({
@@ -65,7 +66,7 @@ function QueryFanoutPage() {
 	const navigate = Route.useNavigate();
 	const setTab = (next: FanoutTab) =>
 		navigate({
-			search: (prev) => ({ ...prev, tab: next === "fanout" ? undefined : next }),
+			search: (prev: FanoutRouteSearch) => ({ ...prev, tab: next === "fanout" ? undefined : next }),
 			replace: true,
 			resetScroll: false,
 		});

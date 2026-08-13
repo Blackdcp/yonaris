@@ -148,6 +148,13 @@
 			"when": 1786540800000,
 			"tag": "0020_browser_runner_state",
 			"breakpoints": true
+		},
+		{
+			"idx": 21,
+			"version": "7",
+			"when": 1786563946341,
+			"tag": "0021_native_auto_search_observation",
+			"breakpoints": true
 		}
 	]
 }

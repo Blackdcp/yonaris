@@ -1,0 +1,49 @@
+[Unit]
+Description=Yonaris Browser Runner control process
+Documentation=file:/etc/yonaris-browser-runner/README.md
+Requires=yonaris-browser-broker.service
+After=yonaris-browser-broker.service
+ConditionPathExists=/etc/yonaris-browser-runner/control.env
+
+[Service]
+Type=simple
+User=yonaris-runner
+Group=yonaris-runner
+SupplementaryGroups=yonaris-browser-rpc
+UMask=0077
+EnvironmentFile=/etc/yonaris-browser-runner/control.env
+Environment=HOME=/var/lib/yonaris-browser-runner
+Environment=XDG_DATA_HOME=/var/lib/yonaris-browser-runner/control
+Environment=PATH=@@NODE_BIN_DIRECTORY@@:/usr/sbin:/usr/bin:/sbin:/bin
+UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY
+StateDirectory=yonaris-browser-runner
+StateDirectoryMode=0700
+ExecStart=@@PNPM_EXECUTABLE@@ --dir @@SOURCE_DIRECTORY@@ --filter @workspace/browser-runner start -- poll --live --surface doubao --brand-id ${BROWSER_RUNNER_BRAND_ID} --state-dir /var/lib/yonaris-browser-runner/control
+Restart=no
+TimeoutStartSec=90
+TimeoutStopSec=45
+KillMode=mixed
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/yonaris-browser-runner /var/lib/yonaris-browser-evidence
+ProtectProc=invisible
+ProcSubset=pid
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+TasksMax=128
+LimitNOFILE=8192
+MemoryMax=768M

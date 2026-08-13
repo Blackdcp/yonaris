@@ -4,10 +4,10 @@ import {
 	buildDeliveryManifestHash,
 	buildDeliveryManifestSnapshot,
 	buildDeliveryTaskSlotKey,
-	normalizeDeliveryTaskPlan,
-	summarizeDeliveryCoverage,
 	type DeliveryManifestContext,
 	type DeliveryManifestTaskSnapshot,
+	normalizeDeliveryTaskPlan,
+	summarizeDeliveryCoverage,
 } from "./delivery-manifest";
 
 const context: DeliveryManifestContext = {
@@ -110,6 +110,13 @@ describe("delivery manifest", () => {
 
 	it("defaults new tasks to the scored evaluation pool", () => {
 		expect(normalizeDeliveryTaskPlan(task()).evaluationRole).toBe("scored");
+	});
+
+	it("freezes platform-default search as part of the task identity", () => {
+		const nativeSearch = task({ searchRequirement: "platform_default" });
+
+		expect(nativeSearch.searchRequirement).toBe("platform_default");
+		expect(buildDeliveryTaskSlotKey(nativeSearch)).not.toBe(buildDeliveryTaskSlotKey(task()));
 	});
 
 	it("rejects an empty manifest and invalid sample indexes", () => {

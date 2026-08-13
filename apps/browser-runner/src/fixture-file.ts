@@ -54,6 +54,10 @@ function parseFixtureTask(value: unknown, index: number): FixtureTask {
 	if (evaluationRole !== "scored" && evaluationRole !== "observation") {
 		throw new Error(`Fixture task ${index}.evaluationRole is unsupported`);
 	}
+	const searchRequirement = row.searchRequirement;
+	if (searchRequirement !== "forbidden" && searchRequirement !== "platform_default") {
+		throw new Error(`Fixture task ${index}.searchRequirement is unsupported`);
+	}
 	return {
 		id: requiredText("id"),
 		batchId: requiredText("batchId"),
@@ -63,7 +67,7 @@ function parseFixtureTask(value: unknown, index: number): FixtureTask {
 		captureRouteKey: "browser_runner.doubao",
 		sampleIndex: sampleIndex as number,
 		sessionRequirement,
-		searchRequirement: "forbidden",
+		searchRequirement,
 		evaluationRole,
 		automationAttemptCount: 1,
 		leaseGeneration: 1,

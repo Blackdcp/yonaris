@@ -217,7 +217,9 @@ async function executeClaimedTask(initialClaim: ClaimedRunnerTask, options: RunB
 				response,
 				evidence,
 				sessionMode: claimed.task.sessionRequirement,
-				searchMode: "off" as const,
+				searchMode: claimed.task.searchRequirement === "platform_default" ? ("native_auto" as const) : ("off" as const),
+				webSearchObserved:
+					claimed.task.searchRequirement === "platform_default" ? (response.webSearchObserved ?? null) : false,
 			};
 			await options.sink.submit(observation);
 			if (options.sink.retainLocalArtifacts === false) {

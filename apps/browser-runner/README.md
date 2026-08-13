@@ -7,11 +7,35 @@ The package is intentionally source-run with `tsx`. Its `build` and `check-types
 ## Safety boundary
 
 - Fixture mode is the only mode enabled by default. Remote execution additionally requires the dedicated Runner API endpoint and credentials; the current production configuration keeps that API disabled.
-- Live Doubao requires `--live --surface doubao`, `BROWSER_RUNNER_LIVE_ENABLED=true`, an API token, and `BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED=true`. The verification flag must remain false until a CN-host UAT records `BROWSER_RUNNER_DOUBAO_DOM_FINGERPRINT` and approves `BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR`, the in-progress/stop-generation `BROWSER_RUNNER_DOUBAO_COMPLETION_SELECTOR`, and `BROWSER_RUNNER_DOUBAO_SEARCH_OFF_SELECTOR`. The last selector must match one unique visible element whose DOM state itself proves search is off (for example, `data-state="off"` or `aria-checked="false"`), not merely the presence of a generic search control.
+- Live Doubao requires `--live --surface doubao`, `BROWSER_RUNNER_LIVE_ENABLED=true`, an API token, and `BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED=true`. The verification flag must remain false until a CN-host UAT records `BROWSER_RUNNER_DOUBAO_DOM_FINGERPRINT` and approves the answer, completion, authenticated-account, new-conversation, and user-message selectors. `BROWSER_RUNNER_DOUBAO_SEARCH_OFF_SELECTOR` remains mandatory only for a frozen `forbidden` search contract. A `platform_default` task uses native-auto search: `BROWSER_RUNNER_DOUBAO_SEARCH_USED_SELECTOR` and `BROWSER_RUNNER_DOUBAO_SEARCH_NOT_USED_SELECTOR` may establish `true` or `false`; neither or conflicting visible markers records `null`.
 - There is no cron or daily schedule. `run` executes one explicitly selected batch. `poll` only claims batches explicitly started in Yonaris, and remains fail-closed while the dedicated Runner API or live-adapter gates are disabled.
-- The runner never logs in automatically and never bypasses a CAPTCHA. Login, verification and selector drift produce `needs_human` while the rest of the batch continues.
+- The runner never logs in automatically and never bypasses a CAPTCHA. A human must provision a separate sampling-only account profile before execution. Login, verification and selector drift produce `needs_human` while the rest of the batch continues.
 - A transient failure before submit may use one centrally accounted retry. Once durable submit intent exists, the runner never sends the prompt again. It may only confirm or collect from the same browser session.
-- Production must run on a dedicated, isolated CN host. The adapter validates the top-level Doubao URL, but application code cannot prove that every browser subresource avoids internal networks. Host/network egress policy must deny RFC1918, link-local/cloud metadata and control-plane destinations, then allow only the approved Doubao and Yonaris API endpoints.
+- Production must run on a dedicated, isolated CN host. The adapter validates the top-level Doubao URL, but application code cannot prove that every browser subresource avoids internal networks. Host/network egress policy must deny RFC1918, link-local/cloud metadata and control-plane destinations, then allow only the approved Doubao and Yonaris API endpoints. The current single-process runner gives Node and Chromium the same host identity, so it cannot express “Node may call Yonaris while Chromium may not” by UID rules alone; use separate cgroups, network namespaces, or split process identities if that distinction is required.
+
+## Host and Chromium sandbox preflight
+
+Playwright's Chromium sandbox defaults to off, so every runner launch explicitly sets `chromiumSandbox: true`. A host is not eligible for live execution until this command exits successfully:
+
+```sh
+pnpm --filter @workspace/browser-runner start -- preflight --state-dir /var/lib/yonaris-browser-runner
+```
+
+On Ubuntu 24.04, keep `kernel.apparmor_restrict_unprivileged_userns=1`. Do not use `--no-sandbox`, do not set the restriction to `0`, and do not use a broad wildcard profile. Install Chromium in a root-owned fixed path whose parent directories are not writable by the runner, pin and verify its SHA-256, and attach an AppArmor profile to that exact executable path containing `userns,`. Load it with `apparmor_parser -r`, confirm the profile is enforced with `aa-status`, then run the preflight as the unprivileged runner account. A Playwright cache under the runner's writable home is not an acceptable AppArmor attachment path for production.
+
+Ubuntu documents that 24.04 restricts unprivileged user namespaces by default and that applications needing them must be explicitly allowed by an AppArmor profile. Playwright documents that `chromiumSandbox` defaults to false. These host steps preserve both controls rather than disabling either one.
+
+## Dedicated sampling account provisioning
+
+Use an account reserved for sampling, with no personal history or unrelated activity. After the approved positive account selector has been recorded in `BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR`, an operator with access to the host desktop runs:
+
+```sh
+pnpm --filter @workspace/browser-runner broker -- provision-dedicated-profile
+```
+
+The command opens a sandboxed headed browser and waits up to ten minutes. Before launch, the broker CLI verifies the live root-owned network-service marker and fresh negative-probe receipt; it does not run privileged probes itself. The operator performs the normal Doubao login or challenge directly. The runner does not type credentials, click login, scan a QR code, or bypass verification. It marks the profile ready only when one approved authenticated-account marker is visible and the login button is absent. Runtime tasks use the honest `dedicated_sampling_profile` session requirement, open a verified blank new conversation for every task, and reuse the account only sequentially. An active-task marker binds the profile to the central task/session identity; a missing, stale, or concurrent marker fails closed.
+
+For first-time selector discovery, the broker exposes three deliberately separate operator commands. `login-window` opens the same sandboxed headed profile without requiring selectors and without writing the ready marker. `probe-selectors` performs a read-only scan and prints only bounded neutral selector candidates plus coarse login/composer state; it never prints page text, HTML, cookies, storage, URLs with query data, or account identifiers. `uat-once` records an exclusive, fsynced local intent before it sends one fixed non-sensitive prompt, can run at most once for that unapproved profile, never contacts the Portal, and reports only structural candidate changes. None of these commands marks the profile ready or contributes an observation. The formal `provision-dedicated-profile` command remains the only path that can write the ready marker and still requires an explicitly approved authenticated selector.
 
 ## Local fixture smoke run
 
@@ -25,7 +49,7 @@ Production evidence files are removed locally after both artifacts are durably u
 
 ## Human handoff
 
-Live tasks use a dedicated persistent browser profile per task. On `needs_human`, the profile, last Doubao URL and handoff metadata are retained. On a machine with a desktop session:
+Anonymous live tasks use a persistent browser profile per task. Dedicated-account tasks share the separately provisioned sampling profile sequentially and retain an active-session marker on `needs_human`. On a machine with a desktop session:
 
 ```sh
 pnpm --filter @workspace/browser-runner start -- assist --task-id <task-id>

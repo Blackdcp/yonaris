@@ -60,6 +60,7 @@ import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm"
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { browserRunnerEnabled } from "./browser-runner-auth";
+import { assertSamplingBrowserRunnerProtocol } from "./sampling-browser-runner-protocol";
 import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
 import { provisionManualSamplingScope, provisionSamplingScopeInputSchema } from "./sampling-scope-provisioning";
@@ -135,8 +136,8 @@ const createSamplingBatchInputSchema = z.object({
 				captureRouteKey: z.enum(MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS).default("assisted_browser.generic"),
 				samplesPerPrompt: z.number().int().min(1).max(20),
 				evaluationRole: z.enum(["scored", "observation"]),
-				sessionRequirement: z.enum(["anonymous_clean", "new_account_clean"]),
-				searchRequirement: z.enum(["not_applicable", "required", "forbidden"]),
+				sessionRequirement: z.enum(["anonymous_clean", "new_account_clean", "dedicated_sampling_profile"]),
+				searchRequirement: z.enum(["not_applicable", "required", "forbidden", "platform_default"]),
 			}),
 		)
 		.min(1)
@@ -315,8 +316,8 @@ export interface SamplingTaskDetail {
 	launchUrl: string;
 	evaluationRole: "scored" | "observation";
 	sampleIndex: number;
-	sessionRequirement: "none" | "anonymous_clean" | "new_account_clean";
-	searchRequirement: "not_applicable" | "required" | "forbidden";
+	sessionRequirement: "none" | "anonymous_clean" | "new_account_clean" | "dedicated_sampling_profile";
+	searchRequirement: "not_applicable" | "required" | "forbidden" | "platform_default";
 	claimCount: number;
 	leaseGeneration: number;
 	leaseExpiresAt: Date | null;
@@ -564,20 +565,8 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 		if (data.executionMode === "browser_runner") {
 			if (!browserRunnerEnabled()) throw new Error("Browser Runner is disabled");
 			assertBrowserRunnerEvidenceProtocol(data.protocol.evidence.minimumArtifacts);
-			if (
-				data.targets.length !== 1 ||
-				data.targets[0]?.surfaceTargetKey !== "doubao.consumer_web" ||
-				data.targets[0]?.captureRouteKey !== "browser_runner.doubao" ||
-				data.targets[0]?.sessionRequirement !== "anonymous_clean" ||
-				data.targets[0]?.searchRequirement !== "forbidden"
-			) {
-				throw new Error(
-					"Browser Runner batches require anonymous-clean Doubao sampling with search forbidden via browser_runner.doubao",
-				);
-			}
-		} else if (data.targets.some(({ captureRouteKey }) => captureRouteKey === "browser_runner.doubao")) {
-			throw new Error("The browser_runner.doubao route requires Browser Runner execution mode");
 		}
+		assertSamplingBrowserRunnerProtocol(data.executionMode, data.targets);
 
 		const scopeCandidate = await db.query.measurementScopes.findFirst({
 			where: and(eq(measurementScopes.id, data.scopeId), eq(measurementScopes.brandId, brand.id)),
@@ -917,6 +906,7 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 			scope,
 			target: prepared.target,
 			config: prepared.config,
+			webSearchObserved: prepared.webSearchObserved,
 			sampleIndex: task.sampleIndex,
 			captureMetadata: prepared.captureMetadata,
 			sampleFingerprint: prepared.sampleFingerprint,
@@ -960,6 +950,7 @@ export const submitSamplingTaskFn = createServerFn({ method: "POST" })
 				scope,
 				target: prepared.target,
 				config: prepared.config,
+				webSearchObserved: prepared.webSearchObserved,
 				recordedVersion: data.observation.modelVersion ?? "consumer-surface-unspecified",
 				answerText: data.observation.answerText,
 				rawOutput: prepared.rawOutput,

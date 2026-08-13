@@ -27,6 +27,7 @@ import { LookbackSelector, useLookbackPeriod } from "@/components/lookback-selec
 import { ProgressBarChart } from "@/components/progress-bar-chart";
 import { useBrandAccess } from "@/hooks/use-brand-access";
 import { useBrand } from "@/hooks/use-brands";
+import type { BrandFilterSearch } from "@/hooks/use-list-filters";
 import { usePromptRunsOnly } from "@/hooks/use-prompt-runs-only";
 import { usePromptStats } from "@/hooks/use-prompt-stats";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
@@ -54,6 +55,7 @@ type PromptMetadata = {
 
 const TAB_KEYS = ["mentions", "web-queries", "citations", "responses"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
+type PromptRouteSearch = BrandFilterSearch & { tab?: TabKey };
 
 const TABS: { key: TabKey; label: string }[] = [
 	{ key: "mentions", label: "Mentions" },
@@ -94,7 +96,7 @@ function PromptHistoryPage() {
 	const setActiveTab = useCallback(
 		(tab: TabKey) =>
 			navigate({
-				search: (prev) => ({ ...prev, tab: tab === "mentions" ? undefined : tab }),
+				search: (prev: PromptRouteSearch) => ({ ...prev, tab: tab === "mentions" ? undefined : tab }),
 				replace: true,
 				resetScroll: false,
 			}),
@@ -138,7 +140,10 @@ function PromptHistoryPage() {
 				if (!cancelled && data) {
 					setPromptMeta(data);
 					if (data.scopeId !== urlScope) {
-						navigate({ search: (previous) => ({ ...previous, scope: data.scopeId }), replace: true });
+						navigate({
+							search: (previous: PromptRouteSearch) => ({ ...previous, scope: data.scopeId }),
+							replace: true,
+						});
 					}
 				}
 			})

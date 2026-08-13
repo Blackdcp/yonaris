@@ -9,8 +9,8 @@ export type RunnerTask = {
 	surfaceTargetKey: "doubao.consumer_web";
 	captureRouteKey: "browser_runner.doubao";
 	sampleIndex: number;
-	sessionRequirement: "anonymous_clean" | "new_account_clean";
-	searchRequirement: "forbidden";
+	sessionRequirement: "anonymous_clean" | "new_account_clean" | "dedicated_sampling_profile";
+	searchRequirement: "forbidden" | "platform_default";
 	evaluationRole: "scored" | "observation";
 	minimumEvidenceArtifacts?: number;
 	automationAttemptCount: number;
@@ -51,6 +51,7 @@ export type SurfaceResponse = {
 	browserVersion?: string;
 	citations: Array<{ url: string; title?: string; citationIndex?: number }>;
 	webQueries: string[];
+	webSearchObserved?: boolean | null;
 };
 
 export type EvidenceCapture = {
@@ -72,8 +73,9 @@ export type SuccessfulRunnerObservation = {
 	task: RunnerTask;
 	response: SurfaceResponse;
 	evidence: EvidenceArtifact[];
-	sessionMode: "anonymous_clean" | "new_account_clean";
-	searchMode: "off";
+	sessionMode: "anonymous_clean" | "new_account_clean" | "dedicated_sampling_profile";
+	searchMode: "off" | "native_auto";
+	webSearchObserved: boolean | null;
 };
 
 export type TaskResult =

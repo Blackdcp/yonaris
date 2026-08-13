@@ -54,11 +54,13 @@ export const deliverySessionRequirementEnum = pgEnum("delivery_session_requireme
 	"none",
 	"anonymous_clean",
 	"new_account_clean",
+	"dedicated_sampling_profile",
 ]);
 export const deliverySearchRequirementEnum = pgEnum("delivery_search_requirement", [
 	"not_applicable",
 	"required",
 	"forbidden",
+	"platform_default",
 ]);
 export const deliveryEvaluationRoleEnum = pgEnum("delivery_evaluation_role", ["scored", "observation"]);
 export const deliveryExecutionModeEnum = pgEnum("delivery_execution_mode", ["manual", "browser_runner"]);
@@ -273,6 +275,7 @@ export const observationAttempts = pgTable(
 		provider: text("provider").notNull(),
 		requestedVersion: text("requested_version"),
 		webSearchEnabled: boolean("web_search_enabled").notNull(),
+		webSearchObserved: boolean("web_search_observed"),
 		sampleIndex: smallint("sample_index").notNull(),
 		executionCount: smallint("execution_count").notNull().default(1),
 		status: observationStatusEnum().notNull().default("pending"),
@@ -505,6 +508,7 @@ export const promptRuns = pgTable(
 		provider: text("provider"),
 		version: text("version").notNull(),
 		webSearchEnabled: boolean("web_search_enabled").notNull(),
+		webSearchObserved: boolean("web_search_observed"),
 		rawOutput: json("raw_output").notNull(),
 		answerText: text("answer_text"),
 		webQueries: text("web_queries").array().notNull().default([]),

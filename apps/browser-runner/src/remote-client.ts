@@ -168,6 +168,7 @@ export class BrowserRunnerRemoteClient implements ClaimedTaskSource, Observation
 				pageUrl: observation.response.pageUrl,
 				sessionMode: observation.sessionMode,
 				searchMode: observation.searchMode,
+				webSearchObserved: observation.webSearchObserved,
 				...(observation.response.modelVersion ? { modelVersion: observation.response.modelVersion } : {}),
 				evidenceArtifactIds: evidence.map(({ id }) => id),
 				citations: observation.response.citations,
@@ -310,9 +311,13 @@ function parseClaim(value: unknown): ActiveClaim {
 	if (task.surfaceTargetKey !== "doubao.consumer_web" || task.captureRouteKey !== "browser_runner.doubao") {
 		throw new Error("Claim API returned a task outside the Doubao Browser Runner route");
 	}
-	if (task.searchRequirement !== "forbidden")
-		throw new Error("Doubao Browser Runner requires searchRequirement=forbidden");
-	if (task.sessionRequirement !== "anonymous_clean" && task.sessionRequirement !== "new_account_clean") {
+	if (task.searchRequirement !== "forbidden" && task.searchRequirement !== "platform_default")
+		throw new Error("Doubao Browser Runner requires searchRequirement=forbidden or platform_default");
+	if (
+		task.sessionRequirement !== "anonymous_clean" &&
+		task.sessionRequirement !== "new_account_clean" &&
+		task.sessionRequirement !== "dedicated_sampling_profile"
+	) {
 		throw new Error("Claim API returned an unsupported session requirement");
 	}
 	if (task.evaluationRole !== "scored" && task.evaluationRole !== "observation") {
@@ -327,7 +332,7 @@ function parseClaim(value: unknown): ActiveClaim {
 		captureRouteKey: "browser_runner.doubao",
 		sampleIndex: readPositiveInteger(task.sampleIndex, "task.sampleIndex"),
 		sessionRequirement: task.sessionRequirement,
-		searchRequirement: "forbidden",
+		searchRequirement: task.searchRequirement,
 		evaluationRole: task.evaluationRole,
 		minimumEvidenceArtifacts: readPositiveInteger(task.minimumEvidenceArtifacts, "task.minimumEvidenceArtifacts"),
 		automationAttemptCount: readPositiveInteger(task.automationAttemptCount, "task.automationAttemptCount"),

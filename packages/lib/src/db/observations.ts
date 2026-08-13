@@ -42,6 +42,7 @@ interface ClaimObservationInput {
 	scope: MeasurementScope;
 	target: ObservationTargetDescriptor;
 	config: ModelConfig;
+	webSearchObserved?: boolean | null;
 	sampleIndex: number;
 	captureMetadata?: Record<string, unknown>;
 	sampleFingerprint?: string;
@@ -83,6 +84,7 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 			provider: input.config.provider,
 			requestedVersion: input.config.version,
 			webSearchEnabled: input.config.webSearch,
+			webSearchObserved: resolveWebSearchObserved(input.webSearchObserved),
 			sampleIndex: input.sampleIndex,
 			status: "running",
 			startedAt,
@@ -108,6 +110,7 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 			provider: true,
 			requestedVersion: true,
 			webSearchEnabled: true,
+			webSearchObserved: true,
 			sampleIndex: true,
 			captureMetadata: true,
 		},
@@ -164,6 +167,7 @@ async function claimObservationAttemptBySource(input: ClaimObservationInput): Pr
 			errorCode: null,
 			errorMessage: null,
 			failureStage: null,
+			webSearchObserved: resolveWebSearchObserved(input.webSearchObserved),
 			captureMetadata,
 		})
 		.where(
@@ -207,6 +211,7 @@ export async function claimImportedObservationAttempt(input: {
 	scope: MeasurementScope;
 	target: ObservationTargetDescriptor;
 	config: ModelConfig;
+	webSearchObserved?: boolean | null;
 	sampleIndex: number;
 	captureMetadata: Record<string, unknown>;
 	sampleFingerprint: string;
@@ -284,6 +289,7 @@ export async function persistSuccessfulObservation(input: {
 	scope: MeasurementScope;
 	target: ObservationTargetDescriptor;
 	config: ModelConfig;
+	webSearchObserved?: boolean | null;
 	recordedVersion: string;
 	answerText: string;
 	rawOutput: unknown;
@@ -354,6 +360,7 @@ export async function persistSuccessfulObservation(input: {
 				provider: input.config.provider,
 				version: input.recordedVersion,
 				webSearchEnabled: input.config.webSearch,
+				webSearchObserved: resolveWebSearchObserved(input.webSearchObserved),
 				rawOutput: mergeEvidenceRefs(input.rawOutput, evidenceRefs),
 				answerText: input.answerText,
 				webQueries: input.webQueries,
@@ -399,6 +406,10 @@ export async function persistSuccessfulObservation(input: {
 
 		return { ...promptRun, evidenceRefs };
 	});
+}
+
+function resolveWebSearchObserved(observed: boolean | null | undefined): boolean | null {
+	return observed === undefined ? null : observed;
 }
 
 function mergeEvidenceRefs(rawOutput: unknown, evidenceRefs: EvidenceArtifactReference[]): unknown {

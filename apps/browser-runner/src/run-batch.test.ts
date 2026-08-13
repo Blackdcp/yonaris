@@ -36,6 +36,42 @@ test("a pre-submit transient failure is centrally accounted and retried once", a
 	assert.equal(events.filter(({ type }) => type === "pre_submit_retry_scheduled").length, 1);
 });
 
+test("platform-default tasks persist native-auto search with unknown evidence", async () => {
+	const task = {
+		...fixtureTask("native-auto", "success"),
+		searchRequirement: "platform_default" as const,
+	};
+	const { summary } = await execute([task]);
+
+	assert.equal(summary.succeeded, 1);
+	const result = summary.results[0];
+	assert.equal(result?.status, "succeeded");
+	if (result?.status !== "succeeded") throw new Error("Expected a successful native-auto observation");
+	assert.equal(result.observation.searchMode, "native_auto");
+	assert.equal(result.observation.webSearchObserved, null);
+});
+
+test("legacy forbidden tasks keep the frozen off contract", async () => {
+	const { summary } = await execute([fixtureTask("legacy-forbidden", "success")]);
+
+	const result = summary.results[0];
+	assert.equal(result?.status, "succeeded");
+	if (result?.status !== "succeeded") throw new Error("Expected a successful forbidden-search observation");
+	assert.equal(result.observation.searchMode, "off");
+	assert.equal(result.observation.webSearchObserved, false);
+});
+
+test("a native-auto technical failure never fabricates a false search observation", async () => {
+	const task = {
+		...fixtureTask("native-auto-captcha", "captcha"),
+		searchRequirement: "platform_default" as const,
+	};
+	const { summary, journal } = await execute([task]);
+
+	assert.equal(summary.results[0]?.status, "needs_human");
+	assert.equal(await exists(path.join(journal.runDirectory, "observations", `${task.id}.json`)), false);
+});
+
 test("a post-submit timeout recovers in the same session and never resubmits", async () => {
 	const task = fixtureTask("post-submit", "post_submit_transient_then_success");
 	const { summary, factory, events } = await execute([task]);

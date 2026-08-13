@@ -46,7 +46,8 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/members")({
 
 function TeamSettingsPage() {
 	const { brand: brandId } = Route.useParams();
-	const { members, invitations, currentUserId } = Route.useLoaderData();
+	const team: TeamData = Route.useLoaderData();
+	const { members, invitations, currentUserId } = team;
 	const router = useRouter();
 	const [inviteEmail, setInviteEmail] = useState("");
 	const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");

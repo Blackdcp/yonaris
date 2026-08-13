@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { chmod, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { type BrowserContext, chromium, type Page } from "playwright";
+import type { BrowserContext, Page } from "playwright";
 import type {
 	EvidenceCapture,
 	RunnerPhase,
@@ -10,8 +10,15 @@ import type {
 	SurfaceSession,
 	SurfaceSessionFactory,
 } from "../contracts.js";
+import {
+	acquireDedicatedProfileSession,
+	assertDedicatedProfileSession,
+	dedicatedProfileDirectory,
+	releaseDedicatedProfileSession,
+} from "../dedicated-profile.js";
 import { BrowserRunnerError } from "../errors.js";
 import { RUNNER_EVIDENCE_MAX_BYTES } from "../evidence.js";
+import { type PersistentContextLauncher, sandboxedPersistentContext } from "../sandbox-preflight.js";
 import { runnerSessionIdForTask } from "../session-identity.js";
 
 const DOUBAO_URL = "https://www.doubao.com/chat/";
@@ -23,32 +30,48 @@ const PROFILE_IDENTITY_FILE = ".yonaris-browser-session.json";
 
 export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 	readonly #profilesDirectory: string;
+	readonly #dedicatedProfileDirectory: string;
+	readonly #launcher?: PersistentContextLauncher;
 
-	constructor(stateDirectory: string) {
+	constructor(stateDirectory: string, launcher?: PersistentContextLauncher) {
 		this.#profilesDirectory = path.resolve(stateDirectory, "profiles");
+		this.#dedicatedProfileDirectory = dedicatedProfileDirectory(stateDirectory);
+		this.#launcher = launcher;
 	}
 
 	async create(task: RunnerTask, attempt: number): Promise<SurfaceSession> {
 		void attempt;
 		await mkdir(this.#profilesDirectory, { recursive: true, mode: 0o700 });
 		await chmod(this.#profilesDirectory, 0o700);
-		const profileDirectory = safeChildDirectory(
-			this.#profilesDirectory,
-			`${task.id}:automation-attempt:${task.automationAttemptCount}:lease:${task.leaseGeneration}`,
-		);
+		const dedicated = task.sessionRequirement === "dedicated_sampling_profile";
+		const profileDirectory = dedicated
+			? this.#dedicatedProfileDirectory
+			: safeChildDirectory(
+					this.#profilesDirectory,
+					`${task.id}:automation-attempt:${task.automationAttemptCount}:lease:${task.leaseGeneration}`,
+				);
 		const sessionId = runnerSessionIdForTask(task);
-		await initializeProfileIdentity(profileDirectory, task, sessionId);
+		if (dedicated) await acquireDedicatedProfileSession(profileDirectory, task, sessionId);
+		else await initializeProfileIdentity(profileDirectory, task, sessionId);
 		try {
-			const context = await chromium.launchPersistentContext(profileDirectory, {
-				headless: true,
-				locale: "zh-CN",
-				timezoneId: "Asia/Shanghai",
-				viewport: { width: 1_440, height: 900 },
-			});
+			const context = await sandboxedPersistentContext(
+				profileDirectory,
+				{
+					headless: true,
+					locale: "zh-CN",
+					timezoneId: "Asia/Shanghai",
+					viewport: { width: 1_440, height: 900 },
+				},
+				this.#launcher,
+			);
 			const page = context.pages()[0] ?? (await context.newPage());
 			return new DoubaoLiveSession(task, sessionId, profileDirectory, context, page);
 		} catch (error) {
-			await rm(profileDirectory, { recursive: true, force: true }).catch(() => undefined);
+			if (dedicated) {
+				await releaseDedicatedProfileSession(profileDirectory, task, sessionId).catch(() => undefined);
+			} else {
+				await rm(profileDirectory, { recursive: true, force: true }).catch(() => undefined);
+			}
 			throw mapDoubaoAutomationError(error, "session_open", false);
 		}
 	}
@@ -59,7 +82,19 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 		lastPageUrl: string,
 		expectedSessionId: string,
 	): Promise<SurfaceSession> {
-		assertSafeChild(this.#profilesDirectory, profileDirectory);
+		const dedicated = task.sessionRequirement === "dedicated_sampling_profile";
+		if (dedicated) {
+			if (path.resolve(profileDirectory) !== this.#dedicatedProfileDirectory) {
+				throw new BrowserRunnerError(
+					"dedicated_session_mismatch",
+					"post_submit",
+					"needs_human",
+					"The handoff did not reference the configured dedicated Doubao profile",
+				);
+			}
+		} else {
+			assertSafeChild(this.#profilesDirectory, profileDirectory);
+		}
 		if (!expectedSessionId.trim() || expectedSessionId.length > 300) {
 			throw new BrowserRunnerError(
 				"assist_session_mismatch",
@@ -68,15 +103,20 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 				"The server did not provide a valid durable Browser Runner session",
 			);
 		}
-		await assertProfileIdentity(profileDirectory, task, expectedSessionId);
+		if (dedicated) await assertDedicatedProfileSession(profileDirectory, task, expectedSessionId);
+		else await assertProfileIdentity(profileDirectory, task, expectedSessionId);
 		let context: BrowserContext | undefined;
 		try {
-			context = await chromium.launchPersistentContext(profileDirectory, {
-				headless: false,
-				locale: "zh-CN",
-				timezoneId: "Asia/Shanghai",
-				viewport: { width: 1_440, height: 900 },
-			});
+			context = await sandboxedPersistentContext(
+				profileDirectory,
+				{
+					headless: false,
+					locale: "zh-CN",
+					timezoneId: "Asia/Shanghai",
+					viewport: { width: 1_440, height: 900 },
+				},
+				this.#launcher,
+			);
 			const page = context.pages()[0] ?? (await context.newPage());
 			await page.goto(assertDoubaoUrl(lastPageUrl), { waitUntil: "domcontentloaded" });
 			assertDoubaoUrl(page.url());
@@ -167,6 +207,7 @@ class DoubaoLiveSession implements SurfaceSession {
 	#lastPageUrl = DOUBAO_URL;
 	#answerCountBeforeSubmit = 0;
 	#generationMarkerObserved = false;
+	#submitAttempted = false;
 
 	constructor(task: RunnerTask, sessionId: string, profileDirectory: string, context: BrowserContext, page: Page) {
 		this.#task = task;
@@ -198,13 +239,19 @@ class DoubaoLiveSession implements SurfaceSession {
 					"The production Doubao contract is disabled until its selector fingerprint is verified on a CN runner",
 				);
 			}
-			if (this.#task.sessionRequirement !== "anonymous_clean") {
+			if (
+				this.#task.sessionRequirement !== "anonymous_clean" &&
+				this.#task.sessionRequirement !== "dedicated_sampling_profile"
+			) {
 				throw new BrowserRunnerError(
 					"session_mode_unsupported",
 					"pre_submit",
 					"needs_human",
-					"The verified Doubao adapter currently supports only anonymous-clean tasks",
+					"The verified Doubao adapter does not support this frozen session requirement",
 				);
+			}
+			if (this.#task.sessionRequirement === "dedicated_sampling_profile") {
+				await prepareDedicatedConversation(this.#page);
 			}
 			const composer = this.#page.locator(COMPOSER_SELECTOR);
 			if ((await composer.count()) !== 1 || !(await composer.isVisible())) {
@@ -215,19 +262,21 @@ class DoubaoLiveSession implements SurfaceSession {
 					"The verified Doubao composer fingerprint no longer matches",
 				);
 			}
-			const loginButtonVisible = await this.#page
-				.getByRole("button", { name: "\u767b\u5f55", exact: true })
-				.isVisible()
-				.catch(() => false);
-			if (!loginButtonVisible) {
-				throw new BrowserRunnerError(
-					"anonymous_session_unverified",
-					"pre_submit",
-					"needs_human",
-					"The Doubao page does not expose the expected anonymous-session marker",
-				);
+			if (this.#task.sessionRequirement === "anonymous_clean") {
+				const loginButtonVisible = await this.#page
+					.getByRole("button", { name: "\u767b\u5f55", exact: true })
+					.isVisible()
+					.catch(() => false);
+				if (!loginButtonVisible) {
+					throw new BrowserRunnerError(
+						"anonymous_session_unverified",
+						"pre_submit",
+						"needs_human",
+						"The Doubao page does not expose the expected anonymous-session marker",
+					);
+				}
 			}
-			await this.#assertSearchOff("pre_submit");
+			if (this.#task.searchRequirement === "forbidden") await this.#assertSearchOff("pre_submit");
 			this.#answerCountBeforeSubmit = await this.#answerLocator().count();
 		} catch (error) {
 			throw mapDoubaoAutomationError(error, "pre_submit", false);
@@ -235,6 +284,7 @@ class DoubaoLiveSession implements SurfaceSession {
 	}
 
 	async submit(promptText: string): Promise<void> {
+		this.#submitAttempted = true;
 		try {
 			this.#assertCurrentDoubaoUrl("submit");
 			const composer = this.#page.locator(COMPOSER_SELECTOR);
@@ -336,6 +386,7 @@ class DoubaoLiveSession implements SurfaceSession {
 				)
 				.slice(0, 200),
 		);
+		const webSearchObserved = await this.#observeVerifiedWebSearch(answer);
 		this.#lastPageUrl = this.#assertCurrentDoubaoUrl("post_submit");
 		return {
 			answerText,
@@ -344,13 +395,14 @@ class DoubaoLiveSession implements SurfaceSession {
 			browserVersion: (await this.#page.evaluate(() => navigator.userAgent)).slice(0, 200),
 			citations,
 			webQueries: [],
+			webSearchObserved,
 		};
 	}
 
 	async captureEvidence(): Promise<EvidenceCapture> {
 		try {
 			this.#assertCurrentDoubaoUrl("evidence");
-			await this.#assertSearchOff("evidence");
+			if (this.#task.searchRequirement === "forbidden") await this.#assertSearchOff("evidence");
 			const capture = {
 				domSnapshot: await this.#boundedPageSnapshot(),
 				screenshotPng: await this.#page.screenshot({ fullPage: false }),
@@ -386,9 +438,13 @@ class DoubaoLiveSession implements SurfaceSession {
 
 	async close(outcome: "succeeded" | "retrying" | "needs_human"): Promise<void> {
 		await this.#context.close();
-		if (outcome === "succeeded" || outcome === "retrying") {
-			assertSafeChild(this.#profilesRoot(), this.#profileDirectory);
-			await rm(this.#profileDirectory, { recursive: true, force: true });
+		if (outcome === "succeeded" || outcome === "retrying" || !this.#submitAttempted) {
+			if (this.#task.sessionRequirement === "dedicated_sampling_profile") {
+				await releaseDedicatedProfileSession(this.#profileDirectory, this.#task, this.id);
+			} else {
+				assertSafeChild(this.#profilesRoot(), this.#profileDirectory);
+				await rm(this.#profileDirectory, { recursive: true, force: true });
+			}
 		}
 	}
 
@@ -473,6 +529,15 @@ class DoubaoLiveSession implements SurfaceSession {
 		}
 	}
 
+	async #observeVerifiedWebSearch(answer: import("playwright").Locator): Promise<boolean | null> {
+		if (this.#task.searchRequirement !== "platform_default") return false;
+		const [usedMarkerVisible, explicitNotUsedMarkerVisible] = await Promise.all([
+			verifiedMarkerVisible(answer, configuredSearchObservationSelector("USED")),
+			verifiedMarkerVisible(answer, configuredSearchObservationSelector("NOT_USED")),
+		]);
+		return observedWebSearchState(usedMarkerVisible, explicitNotUsedMarkerVisible);
+	}
+
 	#assertCurrentDoubaoUrl(phase: "session_open" | "pre_submit" | "submit" | "post_submit" | "evidence"): string {
 		try {
 			return assertDoubaoUrl(this.#page.url());
@@ -504,6 +569,71 @@ export function assertDoubaoUrl(value: string): string {
 	return url.toString();
 }
 
+export async function prepareDedicatedConversation(page: Page): Promise<void> {
+	const authenticatedSelector = requiredDedicatedSelector(
+		"BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR",
+		"the approved positive authenticated-account marker",
+	);
+	const authenticated = page.locator(authenticatedSelector);
+	const loginButtonVisible = await page
+		.getByRole("button", { name: "\u767b\u5f55", exact: true })
+		.isVisible()
+		.catch(() => false);
+	if ((await authenticated.count()) !== 1 || !(await authenticated.isVisible()) || loginButtonVisible) {
+		throw new BrowserRunnerError(
+			"dedicated_profile_not_authenticated",
+			"pre_submit",
+			"needs_human",
+			"The dedicated Doubao profile is not positively verified as the preconfigured sampling account",
+		);
+	}
+
+	const newConversationSelector = requiredDedicatedSelector(
+		"BROWSER_RUNNER_DOUBAO_NEW_CONVERSATION_SELECTOR",
+		"the approved new-conversation action",
+	);
+	const newConversation = page.locator(newConversationSelector);
+	if ((await newConversation.count()) !== 1 || !(await newConversation.isVisible())) {
+		throw new BrowserRunnerError(
+			"new_conversation_action_unverified",
+			"pre_submit",
+			"needs_human",
+			"The dedicated Doubao profile does not expose one verified new-conversation action",
+		);
+	}
+	await newConversation.click();
+
+	const answerSelector = requiredAnswerSelector();
+	const userMessageSelector = requiredDedicatedSelector(
+		"BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR",
+		"the approved user-message nodes",
+	);
+	try {
+		await page.waitForFunction(
+			({ answer, userMessage }) =>
+				document.querySelectorAll(answer).length === 0 && document.querySelectorAll(userMessage).length === 0,
+			{ answer: answerSelector, userMessage: userMessageSelector },
+			{ timeout: 15_000 },
+		);
+	} catch (cause) {
+		throw new BrowserRunnerError(
+			"fresh_conversation_unverified",
+			"pre_submit",
+			"needs_human",
+			"A blank dedicated-account conversation could not be verified before prompt submission",
+			{ cause },
+		);
+	}
+	if ((await page.locator(answerSelector).count()) !== 0 || (await page.locator(userMessageSelector).count()) !== 0) {
+		throw new BrowserRunnerError(
+			"fresh_conversation_unverified",
+			"pre_submit",
+			"needs_human",
+			"The dedicated-account conversation contains prior user or answer content",
+		);
+	}
+}
+
 function requiredAnswerSelector(): string {
 	const selector = process.env.BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR?.trim();
 	if (!selector || selector.length > 500) {
@@ -530,6 +660,19 @@ function requiredCompletionSelector(): string {
 	return selector;
 }
 
+function requiredDedicatedSelector(environmentKey: string, description: string): string {
+	const selector = process.env[environmentKey]?.trim();
+	if (!selector || selector.length > 500) {
+		throw new BrowserRunnerError(
+			"adapter_unverified",
+			"pre_submit",
+			"needs_human",
+			`${environmentKey} must identify ${description}`,
+		);
+	}
+	return selector;
+}
+
 function requiredSearchOffSelector(): string {
 	const selector = process.env.BROWSER_RUNNER_DOUBAO_SEARCH_OFF_SELECTOR?.trim();
 	if (!selector || selector.length > 500) {
@@ -541,6 +684,35 @@ function requiredSearchOffSelector(): string {
 		);
 	}
 	return selector;
+}
+
+function configuredSearchObservationSelector(kind: "USED" | "NOT_USED"): string | null {
+	const selector = process.env[`BROWSER_RUNNER_DOUBAO_SEARCH_${kind}_SELECTOR`]?.trim();
+	return selector && selector.length <= 500 ? selector : null;
+}
+
+async function verifiedMarkerVisible(answer: import("playwright").Locator, selector: string | null): Promise<boolean> {
+	if (!selector) return false;
+	const markers = answer.locator(selector);
+	const count = await markers.count();
+	for (let index = 0; index < count; index += 1) {
+		if (
+			await markers
+				.nth(index)
+				.isVisible()
+				.catch(() => false)
+		)
+			return true;
+	}
+	return false;
+}
+
+export function observedWebSearchState(
+	verifiedUsedMarkerVisible: boolean,
+	verifiedNotUsedMarkerVisible: boolean,
+): boolean | null {
+	if (verifiedUsedMarkerVisible === verifiedNotUsedMarkerVisible) return null;
+	return verifiedUsedMarkerVisible;
 }
 
 async function stableText(

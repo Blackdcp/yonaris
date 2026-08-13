@@ -309,6 +309,7 @@ export const Route = createFileRoute("/api/v1/observations/import")({
 							scope,
 							target: item.target,
 							config,
+							webSearchObserved: item.observation.searchMode === "on",
 							sampleIndex: item.observation.sampleIndex,
 							captureMetadata,
 							sampleFingerprint: item.sampleFingerprint,
@@ -343,6 +344,7 @@ export const Route = createFileRoute("/api/v1/observations/import")({
 								scope,
 								target: item.target,
 								config,
+								webSearchObserved: item.observation.searchMode === "on",
 								recordedVersion: item.observation.modelVersion ?? "consumer-surface-unspecified",
 								answerText: item.observation.answerText,
 								rawOutput: {

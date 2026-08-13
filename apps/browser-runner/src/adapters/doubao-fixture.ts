@@ -128,6 +128,7 @@ class DoubaoFixtureSession implements SurfaceSession {
 			modelVersion: "doubao-fixture-v1",
 			citations: [],
 			webQueries: [],
+			webSearchObserved: this.#task.searchRequirement === "platform_default" ? null : false,
 		};
 	}
 

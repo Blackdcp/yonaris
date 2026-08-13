@@ -61,6 +61,35 @@ describe("Browser Runner service contracts", () => {
 		).toBe(false);
 	});
 
+	it("accepts native-auto search with an explicitly unknown observation", () => {
+		const input = observationInput();
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...input,
+				observation: {
+					...input.observation,
+					searchMode: "native_auto",
+					webSearchObserved: null,
+				},
+			}).success,
+		).toBe(true);
+	});
+
+	it("accepts the honest dedicated sampling profile session mode", () => {
+		const input = observationInput();
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...input,
+				observation: {
+					...input.observation,
+					sessionMode: "dedicated_sampling_profile",
+					searchMode: "native_auto",
+					webSearchObserved: null,
+				},
+			}).success,
+		).toBe(true);
+	});
+
 	it("accepts exactly one staged screenshot and one staged page snapshot", () => {
 		expect(() =>
 			assertBrowserRunnerEvidenceSelection(

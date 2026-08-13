@@ -1,0 +1,3 @@
+# The browser identity must never reach these hosts, even if another list includes them.
+portal.yonaris.com
+149.71.241.139

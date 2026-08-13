@@ -260,4 +260,47 @@ describe("prepareSamplingObservation", () => {
 		});
 		expect(prepared.captureMetadata).not.toHaveProperty("operatorAttested");
 	});
+
+	it("preserves unknown native-auto search instead of converting it to false", () => {
+		const nativeTask = { ...task, searchRequirement: "platform_default" as const };
+		const nativeFrozenTask = { ...frozenTask, searchRequirement: "platform_default" as const };
+		nativeFrozenTask.slotKey = buildDeliveryTaskSlotKey(nativeFrozenTask);
+		nativeTask.slotKey = nativeFrozenTask.slotKey;
+
+		const prepared = prepareSamplingObservation({
+			task: nativeTask,
+			manifest: { ...manifest, tasks: [nativeFrozenTask] },
+			observation: {
+				...observation,
+				searchMode: "native_auto",
+				webSearchObserved: null,
+			},
+			operatorUserId: "admin-1",
+			leaseGeneration: 1,
+		});
+
+		expect(prepared.config.webSearch).toBe(true);
+		expect(prepared.webSearchObserved).toBeNull();
+		expect(prepared.captureMetadata).toMatchObject({
+			searchMode: "native_auto",
+			webSearchObserved: null,
+		});
+		expect(prepared.rawOutput).toMatchObject({ webSearchObserved: null });
+	});
+
+	it("rejects native-auto search on a frozen forbidden task", () => {
+		expect(() =>
+			prepareSamplingObservation({
+				task,
+				manifest,
+				observation: {
+					...observation,
+					searchMode: "native_auto",
+					webSearchObserved: null,
+				},
+				operatorUserId: "admin-1",
+				leaseGeneration: 1,
+			}),
+		).toThrow("requires search mode to be off");
+	});
 });

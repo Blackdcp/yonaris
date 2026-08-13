@@ -1,0 +1,10 @@
+{
+	"schemaVersion": 1,
+	"operation": "enable-browser-runner",
+	"runnerId": "yonaris-cn-doubao-01",
+	"market": "CN",
+	"locale": "zh-CN",
+	"timezone": "Asia/Shanghai",
+	"bootstrapTtlSeconds": 1800,
+	"recipientKeyFingerprint": "fbee6383aa7952fc55c5da059ecf59ee8e469644781a34ecf40c4a408ec5b75c"
+}
