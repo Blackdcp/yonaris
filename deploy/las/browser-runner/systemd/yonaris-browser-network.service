@@ -1,7 +1,8 @@
 [Unit]
 Description=Yonaris browser-identity egress policy
 Documentation=file:/etc/yonaris-browser-runner/README.md
-After=network-online.target ufw.service
+Requires=yonaris-browser-egress-proxy.service
+After=network-online.target ufw.service yonaris-browser-egress-proxy.service
 Wants=network-online.target
 Before=yonaris-browser-broker.service
 

@@ -63,20 +63,26 @@ fi
 
 getent group yonaris-browser-rpc >/dev/null || groupadd --system yonaris-browser-rpc
 getent group yonaris-runner >/dev/null || groupadd --system yonaris-runner
+getent group yonaris-browser-proxy >/dev/null || groupadd --system yonaris-browser-proxy
 if ! id yonaris-runner >/dev/null 2>&1; then
 	useradd --system --gid yonaris-runner --home-dir /var/lib/yonaris-browser-runner --create-home --shell /usr/sbin/nologin yonaris-runner
 fi
 if ! id yonaris-browser >/dev/null 2>&1; then
 	useradd --system --gid yonaris-browser-rpc --home-dir /var/lib/yonaris-browser-broker --no-create-home --shell /usr/sbin/nologin yonaris-browser
 fi
+if ! id yonaris-browser-proxy >/dev/null 2>&1; then
+	useradd --system --gid yonaris-browser-proxy --home-dir /nonexistent --no-create-home --shell /usr/sbin/nologin yonaris-browser-proxy
+fi
 usermod -aG yonaris-browser-rpc yonaris-runner
 
 control_uid="$(id -u yonaris-runner)"
 browser_uid="$(id -u yonaris-browser)"
+proxy_uid="$(id -u yonaris-browser-proxy)"
 rpc_gid="$(getent group yonaris-browser-rpc | cut -d: -f3)"
-[[ "$control_uid" =~ ^[1-9][0-9]*$ && "$browser_uid" =~ ^[1-9][0-9]*$ && "$rpc_gid" =~ ^[1-9][0-9]*$ ]] ||
+[[ "$control_uid" =~ ^[1-9][0-9]*$ && "$browser_uid" =~ ^[1-9][0-9]*$ && "$proxy_uid" =~ ^[1-9][0-9]*$ && "$rpc_gid" =~ ^[1-9][0-9]*$ ]] ||
 	die "service identities are invalid"
-[[ "$control_uid" != "$browser_uid" ]] || die "control and browser services require separate UIDs"
+[[ "$control_uid" != "$browser_uid" && "$control_uid" != "$proxy_uid" && "$browser_uid" != "$proxy_uid" ]] ||
+	die "control, browser, and proxy services require separate UIDs"
 
 install -d -o root -g root -m 0755 /etc/yonaris-browser-runner
 install -d -o root -g root -m 0755 /usr/local/libexec /usr/local/sbin
@@ -93,7 +99,7 @@ render_template() {
 	TEMPLATE="$template" DESTINATION="$destination" \
 		SOURCE_DIRECTORY="$source_directory" NODE_BIN_DIRECTORY="$node_bin_directory" NODE_EXECUTABLE="$node_executable" TSX_EXECUTABLE="$tsx_executable" \
 		CHROMIUM_EXECUTABLE="$chromium_executable" CHROMIUM_HEADLESS_EXECUTABLE="$chromium_headless_executable" \
-		BROWSER_UID="$browser_uid" CONTROL_UID="$control_uid" RPC_GID="$rpc_gid" \
+		BROWSER_UID="$browser_uid" PROXY_UID="$proxy_uid" CONTROL_UID="$control_uid" RPC_GID="$rpc_gid" \
 		python3 - <<'PY'
 import os
 from pathlib import Path
@@ -107,6 +113,7 @@ replacements = {
     "@@CHROMIUM_EXECUTABLE@@": os.environ["CHROMIUM_EXECUTABLE"],
     "@@CHROMIUM_HEADLESS_EXECUTABLE@@": os.environ["CHROMIUM_HEADLESS_EXECUTABLE"],
     "@@BROWSER_UID@@": os.environ["BROWSER_UID"],
+    "@@PROXY_UID@@": os.environ["PROXY_UID"],
     "@@CONTROL_UID@@": os.environ["CONTROL_UID"],
     "@@RPC_GID@@": os.environ["RPC_GID"],
 }
@@ -140,6 +147,20 @@ install_config_once "$script_dir/config/network.env.example" /etc/yonaris-browse
 install_config_once "$script_dir/config/approved-browser-domains" /etc/yonaris-browser-runner/approved-browser-domains 0644
 install_config_once "$script_dir/config/control-plane-hosts" /etc/yonaris-browser-runner/control-plane-hosts 0644
 
+ensure_fixed_assignment() {
+	local file="$1" key="$2" value="$3"
+	local existing
+	existing="$(sed -n "s/^${key}=//p" "$file" | tail -n 1)"
+	if [[ -n "$existing" ]]; then
+		[[ "$existing" == "$value" ]] || die "$file contains an unexpected $key value"
+		return
+	fi
+	printf '%s=%s\n' "$key" "$value" >>"$file"
+}
+ensure_fixed_assignment /etc/yonaris-browser-runner/browser.env BROWSER_EGRESS_PROXY_URL http://127.0.0.1:17777
+ensure_fixed_assignment /etc/yonaris-browser-runner/network.env BROWSER_EGRESS_PROXY_URL http://127.0.0.1:17777
+ensure_fixed_assignment /etc/yonaris-browser-runner/network.env BROWSER_EGRESS_PROXY_UID "$proxy_uid"
+
 if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|ELMO_ENCRYPTION_KEY' \
 	/etc/yonaris-browser-runner/browser.env; then
 	die "browser environment contains a control-plane secret name"
@@ -158,6 +179,7 @@ apparmor_parser -r /etc/apparmor.d/yonaris-browser-chromium
 
 render_template "$script_dir/systemd/yonaris-browser-broker.service.in" /etc/systemd/system/yonaris-browser-broker.service 0644
 render_template "$script_dir/systemd/yonaris-browser-runner.service.in" /etc/systemd/system/yonaris-browser-runner.service 0644
+render_template "$script_dir/systemd/yonaris-browser-egress-proxy.service.in" /etc/systemd/system/yonaris-browser-egress-proxy.service 0644
 install -o root -g root -m 0644 "$script_dir/systemd/yonaris-browser-network.service" \
 	/etc/systemd/system/yonaris-browser-network.service
 
@@ -173,6 +195,7 @@ sysctl -q -w kernel.unprivileged_userns_clone=1
 systemctl daemon-reload
 systemd-analyze verify \
 	/etc/systemd/system/yonaris-browser-network.service \
+	/etc/systemd/system/yonaris-browser-egress-proxy.service \
 	/etc/systemd/system/yonaris-browser-broker.service \
 	/etc/systemd/system/yonaris-browser-runner.service
 

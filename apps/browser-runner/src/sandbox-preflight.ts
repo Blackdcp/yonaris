@@ -16,8 +16,21 @@ export function sandboxedPersistentContext(
 	profileDirectory: string,
 	options: Omit<PersistentContextLaunchOptions, "chromiumSandbox">,
 	launcher: PersistentContextLauncher = defaultLauncher,
+	environment: NodeJS.ProcessEnv | Record<string, string | undefined> = process.env,
 ): Promise<BrowserContext> {
-	return launcher(profileDirectory, { ...options, chromiumSandbox: true });
+	const proxy = browserProxyFromEnvironment(environment);
+	return launcher(profileDirectory, { ...options, ...(proxy ? { proxy } : {}), chromiumSandbox: true });
+}
+
+function browserProxyFromEnvironment(
+	environment: NodeJS.ProcessEnv | Record<string, string | undefined>,
+): { server: string } | undefined {
+	const value = environment.BROWSER_EGRESS_PROXY_URL?.trim();
+	if (!value) return undefined;
+	if (value !== "http://127.0.0.1:17777") {
+		throw new Error("Browser Runner requires the fixed local egress proxy http://127.0.0.1:17777");
+	}
+	return { server: value };
 }
 
 export async function runChromiumSandboxPreflight(

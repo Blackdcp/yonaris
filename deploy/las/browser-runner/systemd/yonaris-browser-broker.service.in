@@ -43,7 +43,6 @@ ProtectControlGroups=yes
 ProtectClock=yes
 ProtectHostname=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-IPAddressDeny=localhost
 IPAddressDeny=link-local
 IPAddressDeny=multicast
 IPAddressDeny=10.0.0.0/8

@@ -34,6 +34,11 @@ set +a
 [[ "${BROWSER_BROKER_RPC_GID:-}" == "$(getent group yonaris-browser-rpc | cut -d: -f3)" ]] ||
 	die "RPC GID does not match browser.env"
 [[ "$BROWSER_BROKER_UID" != "$BROWSER_BROKER_ALLOWED_CONTROL_UID" ]] || die "control and browser identities are not separated"
+[[ "${BROWSER_EGRESS_PROXY_URL:-}" == "http://127.0.0.1:17777" ]] || die "browser proxy URL is invalid"
+proxy_uid="$(sed -n 's/^BROWSER_EGRESS_PROXY_UID=//p' "$network_env" | tail -n 1)"
+[[ "$proxy_uid" == "$(id -u yonaris-browser-proxy)" ]] || die "proxy UID does not match network.env"
+[[ "$proxy_uid" != "$BROWSER_BROKER_UID" && "$proxy_uid" != "$BROWSER_BROKER_ALLOWED_CONTROL_UID" ]] ||
+	die "proxy identity is not separated"
 id -nG yonaris-runner | tr ' ' '\n' | grep -Fxq yonaris-browser-rpc || die "control identity lacks the RPC group"
 
 [[ "$(stat -c %U:%G:%a -- "$BROWSER_BROKER_STATE_DIR")" == "yonaris-browser:yonaris-browser-rpc:700" ]] ||
@@ -59,12 +64,13 @@ if find "$PLAYWRIGHT_BROWSERS_PATH" -xdev -type f -perm /6000 -print -quit | gre
 fi
 (cd -- "$PLAYWRIGHT_BROWSERS_PATH" && sha256sum -c --quiet SHA256SUMS) || die "pinned browser digest verification failed"
 
-for unit in yonaris-browser-network.service yonaris-browser-broker.service yonaris-browser-runner.service; do
+for unit in yonaris-browser-network.service yonaris-browser-egress-proxy.service yonaris-browser-broker.service yonaris-browser-runner.service; do
 	unit_state="$(systemctl is-enabled "$unit" 2>/dev/null || true)"
 	[[ "$unit_state" == "static" || "$unit_state" == "disabled" ]] || die "$unit has an unexpected activation state: $unit_state"
 done
 systemd-analyze verify \
 	/etc/systemd/system/yonaris-browser-network.service \
+	/etc/systemd/system/yonaris-browser-egress-proxy.service \
 	/etc/systemd/system/yonaris-browser-broker.service \
 	/etc/systemd/system/yonaris-browser-runner.service
 

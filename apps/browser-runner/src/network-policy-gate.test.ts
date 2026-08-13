@@ -27,7 +27,21 @@ test("all manual browser commands require the same valid root-owned live network
 			),
 		);
 		assert.equal(fixture.serviceChecks(), 1, `${command} did not check the active network service`);
+		assert.equal(fixture.proxyServiceChecks(), 1, `${command} did not check the active egress proxy`);
 	}
+});
+
+test("the manual browser gate rejects an inactive egress proxy before Chromium starts", async () => {
+	const fixture = validFixture();
+	fixture.dependencies.isProxyServiceActive = async () => false;
+	await assert.rejects(
+		assertManualBrowserCommandNetworkGate(
+			"login-window",
+			{ browserUid: BROWSER_UID, environment: fixture.environment },
+			fixture.dependencies,
+		),
+		/egress proxy/i,
+	);
 });
 
 test("the manual browser gate rejects a disabled policy before trusting proof files", async () => {
@@ -129,6 +143,7 @@ function validFixture(options: FixtureOptions = {}) {
 		[PROBE_RECEIPT_PATH, rootFile(JSON.stringify({ ...proof, negativeProbesPassed: true }), 0o644)],
 	]);
 	let serviceChecks = 0;
+	let proxyServiceChecks = 0;
 	const dependencies: NetworkGateDependencies = {
 		platform: "linux",
 		now: () => NOW,
@@ -141,6 +156,10 @@ function validFixture(options: FixtureOptions = {}) {
 			serviceChecks += 1;
 			return true;
 		},
+		isProxyServiceActive: async () => {
+			proxyServiceChecks += 1;
+			return true;
+		},
 	};
 	return {
 		dependencies,
@@ -150,6 +169,7 @@ function validFixture(options: FixtureOptions = {}) {
 		},
 		files,
 		serviceChecks: () => serviceChecks,
+		proxyServiceChecks: () => proxyServiceChecks,
 	};
 }
 

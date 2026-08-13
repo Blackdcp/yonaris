@@ -103,6 +103,8 @@ declare global {
 			readonly BROWSER_BROKER_ALLOWED_CONTROL_UID?: string;
 			readonly BROWSER_NETWORK_POLICY_ENABLED?: string;
 			readonly BROWSER_NETWORK_CONFIG?: string;
+			readonly BROWSER_EGRESS_PROXY_URL?: string;
+			readonly BROWSER_EGRESS_PROXY_UID?: string;
 			readonly DEFAULT_BRAND_DOMAINS?: string;
 			readonly CLOUD_SIGNUP_ALLOWLIST?: string;
 			readonly ENVIRONMENT?: string;

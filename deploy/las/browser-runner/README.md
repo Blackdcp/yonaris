@@ -1,14 +1,15 @@
 # Laoxu Browser Runner host assets
 
-These files install the two-identity boundary for the China-host Doubao runner. They do not create a sampling batch, schedule work, enable a unit, start a unit, log in to Doubao, or place a Portal credential into the browser process.
+These files install the separated control, browser, and egress-proxy identities for the China-host Doubao runner. They do not create a sampling batch, schedule work, enable a unit, start a unit, log in to Doubao, or place a Portal credential into the browser process.
 
 ## Security boundary
 
 - `yonaris-runner` is the control identity. Only its root-readable environment file contains the dedicated Runner API credential. It claims frozen tasks, records durable submit intent, uploads evidence, and completes observations.
 - `yonaris-browser` is the browser-broker identity. It owns the Playwright profile and Chromium processes, has no database or Portal secrets, and cannot connect to the Yonaris control plane or private/metadata networks.
+- `yonaris-browser-proxy` is a secret-free local CONNECT proxy. It accepts only exact approved hostnames on port 443, resolves them for each connection, rejects mixed or non-public answers and pins the upstream socket to the verified address.
 - `yonaris-browser-rpc` grants the control identity access only to the broker Unix socket and sealed evidence handoff directory. The broker additionally verifies Linux peer credentials.
 - Both unprivileged-user-namespace sysctls retain the Ubuntu 24.04 secure values. AppArmor grants `userns` only to the two exact, root-owned, digest-pinned Chromium executables. Chromium's own namespace/seccomp sandbox remains explicitly enabled by the application.
-- The browser UID firewall is a final allowlist: public DNS resolvers, then exact IPs resolved from the approved hostname file over TCP 80/443. Control-plane, loopback, private, link-local, metadata, multicast, documentation, and all unlisted destinations are rejected.
+- The browser UID firewall permits only the fixed loopback proxy and DNS. Direct public, control-plane, loopback, private, link-local, metadata, multicast, documentation, and all other destinations are rejected. This keeps the hostname allowlist current when Doubao's CDN rotates addresses without broadening browser egress.
 - No timer or recurring schedule is installed. Every run begins with an explicit operator action against an already frozen batch.
 
 ## Install in disabled state
@@ -36,8 +37,8 @@ sudo /usr/local/sbin/yonaris-verify-browser-runner-host
 1. Keep `/etc/yonaris-browser-runner/control.env` mode `0600 root:root`. Set its API URL, dedicated runner token, brand ID and DOM fingerprint only after the production Runner API is ready. Never copy that file into the browser account or its environment.
 2. Record the approved Doubao selectors in `/etc/yonaris-browser-runner/browser.env`. Keep both adapter verification flags false until a non-scored China-host UAT proves account identity, blank-conversation creation, one prompt submission, response completion, evidence capture and three-state native-search observation.
 3. Add every exact Doubao response/CDN hostname observed during UAT to `approved-browser-domains`. Add every Portal/control hostname or fixed origin address to `control-plane-hosts`. Entries are comments, exact hostnames, IPv4 addresses, or IPv6 addresses; wildcard domains are rejected.
-4. Review the public DNS resolver addresses in `network.env`, then set `BROWSER_NETWORK_POLICY_ENABLED=true`. Stop both runner processes before reloading the policy because address-set replacement is intentionally not live.
-5. Start `yonaris-browser-network.service` manually. Its post-start hook runs the negative probes and atomically writes a short-lived root-owned proof bound to the browser UID, current policy hash, and nft chain. A failed probe prevents the service from becoming active; stopping the service removes both proof files and the nft table. It performs connectivity checks only; it does not authenticate or send a prompt.
+4. Review the public DNS resolver addresses and fixed proxy identity in `network.env`, then set `BROWSER_NETWORK_POLICY_ENABLED=true`. Stop both runner processes before reloading the policy.
+5. Start `yonaris-browser-network.service` manually. It starts the static exact-host proxy first; its post-start hook proves direct browser egress is blocked, approved Doubao HTTPS works through the proxy, and private/metadata/control-plane targets remain blocked. It then atomically writes a short-lived root-owned proof bound to the browser UID, current policy hash, and nft chain. A failed probe prevents the service from becoming active; stopping the service removes proof, firewall, and proxy. It does not authenticate or send a prompt.
 6. Run the broker preflight as `yonaris-browser`, using only `browser.env`, before any profile login. It must open a sandboxed disposable `about:blank` page successfully.
 7. Provision the dedicated profile in an approved headed desktop session before the proof TTL expires. Every manual login/probe/UAT/provision command independently refuses to launch Chromium unless the root-owned policy is enabled, the network service is active, and the negative-probe proof still matches. A human completes the ordinary Doubao login or challenge. The provisioning command only observes the approved authenticated marker; it never handles credentials, QR codes or challenges.
 8. After the non-scored UAT is reviewed, set the matching adapter verification flags and fingerprint, start the broker manually, and finally set `BROWSER_RUNNER_LIVE_ENABLED=true` before manually starting the control unit.

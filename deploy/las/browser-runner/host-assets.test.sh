@@ -19,6 +19,7 @@ required_files=(
 	"$SCRIPT_DIR/config/control-plane-hosts"
 	"$SCRIPT_DIR/apparmor/yonaris-browser-chromium.in"
 	"$SCRIPT_DIR/systemd/yonaris-browser-network.service"
+	"$SCRIPT_DIR/systemd/yonaris-browser-egress-proxy.service.in"
 	"$SCRIPT_DIR/systemd/yonaris-browser-broker.service.in"
 	"$SCRIPT_DIR/systemd/yonaris-browser-runner.service.in"
 )
@@ -52,6 +53,7 @@ fi
 broker_unit="$SCRIPT_DIR/systemd/yonaris-browser-broker.service.in"
 control_unit="$SCRIPT_DIR/systemd/yonaris-browser-runner.service.in"
 network_unit="$SCRIPT_DIR/systemd/yonaris-browser-network.service"
+proxy_unit="$SCRIPT_DIR/systemd/yonaris-browser-egress-proxy.service.in"
 
 grep -Fqx 'User=yonaris-browser' "$broker_unit"
 grep -Fqx 'Group=yonaris-browser-rpc' "$broker_unit"
@@ -67,13 +69,20 @@ grep -Fqx 'Restart=no' "$control_unit"
 grep -Fqx 'UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY' "$control_unit"
 
 grep -Fqx 'Type=oneshot' "$network_unit"
+grep -Fqx 'Requires=yonaris-browser-egress-proxy.service' "$network_unit"
+grep -Fqx 'After=network-online.target ufw.service yonaris-browser-egress-proxy.service' "$network_unit"
 grep -Fqx 'RemainAfterExit=yes' "$network_unit"
 grep -Fqx 'RuntimeDirectory=yonaris-browser-runner' "$network_unit"
 grep -Fqx 'ExecStartPost=/usr/local/sbin/yonaris-browser-egress-negative-probes' "$network_unit"
 grep -Fqx 'ExecStop=/usr/local/sbin/yonaris-clear-browser-egress' "$network_unit"
 grep -Fqx 'ExecStopPost=/usr/local/sbin/yonaris-clear-browser-egress' "$network_unit"
 grep -Fqx 'EnvironmentFile=/etc/yonaris-browser-runner/network.env' "$broker_unit"
-if grep -Eq '^WantedBy=|^RequiredBy=' "$broker_unit" "$control_unit" "$network_unit"; then
+grep -Fqx 'User=yonaris-browser-proxy' "$proxy_unit"
+grep -Fqx 'Group=yonaris-browser-proxy' "$proxy_unit"
+grep -Fq 'egress-proxy-cli.ts' "$proxy_unit"
+grep -Fqx 'PartOf=yonaris-browser-network.service' "$proxy_unit"
+grep -Fqx 'Restart=no' "$proxy_unit"
+if grep -Eq '^WantedBy=|^RequiredBy=' "$broker_unit" "$control_unit" "$network_unit" "$proxy_unit"; then
 	echo "Browser runner units must remain static and manually started." >&2
 	exit 1
 fi
@@ -82,12 +91,15 @@ browser_env="$SCRIPT_DIR/config/browser.env.example"
 control_env="$SCRIPT_DIR/config/control.env.example"
 network_env="$SCRIPT_DIR/config/network.env.example"
 grep -Fqx 'BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED=false' "$browser_env"
+grep -Fqx 'BROWSER_EGRESS_PROXY_URL=http://127.0.0.1:17777' "$browser_env"
 if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|ELMO_ENCRYPTION_KEY' "$browser_env"; then
 	echo "Browser environment template contains a control-plane secret name." >&2
 	exit 1
 fi
 grep -Fqx 'BROWSER_RUNNER_LIVE_ENABLED=false' "$control_env"
 grep -Fqx 'BROWSER_NETWORK_POLICY_ENABLED=false' "$network_env"
+grep -Fqx 'BROWSER_EGRESS_PROXY_URL=http://127.0.0.1:17777' "$network_env"
+grep -Fq 'BROWSER_EGRESS_PROXY_UID=@@PROXY_UID@@' "$network_env"
 grep -Fqx 'BROWSER_NETWORK_PROOF_TTL_SECONDS=1800' "$network_env"
 grep -Fqx 'BROWSER_NETWORK_ACTIVE_MARKER=/run/yonaris-browser-runner/network-policy-active.json' "$network_env"
 grep -Fqx 'BROWSER_NETWORK_PROBE_RECEIPT=/run/yonaris-browser-runner/network-negative-probes.json' "$network_env"
@@ -124,12 +136,16 @@ for required_rule in \
 	'fd00::/8' \
 	'fe80::/10' \
 	'@control_plane_v4 reject' \
-	'@approved_v4 tcp dport { 80, 443 } accept'; do
+	'ip daddr 127.0.0.1 tcp dport 17777 accept'; do
 	if ! grep -Fq -- "$required_rule" "$egress_script"; then
 		echo "Missing browser egress rule: $required_rule" >&2
 		exit 1
 	fi
 done
+if grep -Fq '@approved_v4 tcp dport' "$egress_script"; then
+	echo "Browser identity must not bypass the exact-host proxy through frozen CDN addresses." >&2
+	exit 1
+fi
 grep -Fq 'network-policy-active.json' "$egress_script"
 grep -Fq 'policySha256' "$egress_script"
 
@@ -137,6 +153,8 @@ probe_script="$SCRIPT_DIR/bin/browser-egress-negative-probes.sh"
 grep -Fq 'network-negative-probes.json' "$probe_script"
 grep -Fq 'negativeProbesPassed' "$probe_script"
 grep -Fq 'policySha256' "$probe_script"
+grep -Fq -- '--proxy "$BROWSER_EGRESS_PROXY_URL"' "$probe_script"
+grep -Fq -- "--noproxy '*'" "$probe_script"
 grep -Fq 'chmod 0644 -- "$receipt_candidate"' "$probe_script"
 
 clear_script="$SCRIPT_DIR/bin/clear-browser-egress.sh"
@@ -152,6 +170,8 @@ fi
 grep -Fq 'kernel.apparmor_restrict_unprivileged_userns' "$install_script"
 grep -Fq 'kernel.unprivileged_userns_clone' "$install_script"
 grep -Fq 'apparmor_parser -r' "$install_script"
+grep -Fq 'yonaris-browser-proxy' "$install_script"
+grep -Fq '@@PROXY_UID@@' "$SCRIPT_DIR/config/network.env.example"
 
 if python3 --version >/dev/null 2>&1; then
 	python3 -m py_compile "$SCRIPT_DIR/bin/yonaris-browser-peercred"

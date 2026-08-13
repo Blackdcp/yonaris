@@ -13,6 +13,8 @@ readonly config_file="${BROWSER_NETWORK_CONFIG:-/etc/yonaris-browser-runner/netw
 # shellcheck disable=SC1090
 source "$config_file"
 [[ "${BROWSER_NETWORK_POLICY_ENABLED:-false}" == "true" ]] || die "policy remains disabled"
+[[ "${BROWSER_EGRESS_PROXY_URL:-}" == "http://127.0.0.1:17777" ]] || die "browser proxy URL is invalid"
+systemctl is-active --quiet yonaris-browser-egress-proxy.service || die "browser egress proxy is not active"
 nft list chain inet yonaris_browser_egress output >/dev/null || die "nft output chain is absent"
 
 browser_uid="$(id -u yonaris-browser)"
@@ -56,8 +58,13 @@ if any(proof.get(key) != value for key, value in expected.items()):
     raise SystemExit("network active marker does not match the loaded policy")
 PY
 
+if runuser -u yonaris-browser -- curl --fail --silent --show-error --location --max-time 8 \
+	--noproxy '*' --output /dev/null https://www.doubao.com/chat/; then
+	die "browser identity bypassed the exact-host egress proxy"
+fi
 runuser -u yonaris-browser -- curl --fail --silent --show-error --location --max-time 20 \
-	--output /dev/null https://www.doubao.com/chat/ || die "approved Doubao endpoint is unreachable"
+	--proxy "$BROWSER_EGRESS_PROXY_URL" --output /dev/null https://www.doubao.com/chat/ ||
+	die "approved Doubao endpoint is unreachable through the exact-host proxy"
 
 blocked_urls=(
 	"http://127.0.0.1:22/"
@@ -67,7 +74,8 @@ blocked_urls=(
 	"https://portal.yonaris.com/"
 )
 for url in "${blocked_urls[@]}"; do
-	if runuser -u yonaris-browser -- curl --silent --show-error --insecure --max-time 4 --output /dev/null "$url"; then
+	if runuser -u yonaris-browser -- curl --silent --show-error --insecure --max-time 4 \
+		--proxy "$BROWSER_EGRESS_PROXY_URL" --output /dev/null "$url"; then
 		die "browser identity reached forbidden endpoint $url"
 	fi
 done

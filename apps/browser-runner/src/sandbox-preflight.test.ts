@@ -22,6 +22,39 @@ test("every persistent Chromium launch explicitly enables the Chromium sandbox",
 	assert.equal(actualOptions?.chromiumSandbox, true);
 });
 
+test("every persistent Chromium launch uses the fixed local egress proxy when configured", async () => {
+	let actualOptions: PersistentContextLaunchOptions | undefined;
+	const context = { pages: () => [{} as Page] } as BrowserContext;
+	await sandboxedPersistentContext(
+		"profile",
+		{ headless: true },
+		async (_profileDirectory, options) => {
+			actualOptions = options;
+			return context;
+		},
+		{ BROWSER_EGRESS_PROXY_URL: "http://127.0.0.1:17777" },
+	);
+	assert.deepEqual(actualOptions?.proxy, { server: "http://127.0.0.1:17777" });
+});
+
+test("rejects a non-fixed browser proxy before Chromium launches", () => {
+	let launched = false;
+	assert.throws(
+		() =>
+			sandboxedPersistentContext(
+				"profile",
+				{ headless: true },
+				async () => {
+					launched = true;
+					return { pages: () => [] } as unknown as BrowserContext;
+				},
+				{ BROWSER_EGRESS_PROXY_URL: "http://example.com:17777" },
+			),
+		/fixed local/i,
+	);
+	assert.equal(launched, false);
+});
+
 test("host sandbox preflight opens about:blank and closes its disposable profile", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-sandbox-preflight-"));
 	let navigatedTo = "";

@@ -20,6 +20,11 @@ source "$config_file"
 [[ "${BROWSER_NETWORK_POLICY_ENABLED:-false}" == "true" ]] || die "policy remains disabled"
 browser_uid="$(id -u yonaris-browser)"
 [[ "$browser_uid" =~ ^[1-9][0-9]*$ ]] || die "browser service UID is invalid"
+proxy_uid="$(id -u yonaris-browser-proxy)"
+[[ "$proxy_uid" =~ ^[1-9][0-9]*$ && "${BROWSER_EGRESS_PROXY_UID:-}" == "$proxy_uid" ]] ||
+	die "browser proxy service UID is invalid"
+[[ "${BROWSER_EGRESS_PROXY_URL:-}" == "http://127.0.0.1:17777" ]] || die "browser proxy URL is invalid"
+systemctl is-active --quiet yonaris-browser-egress-proxy.service || die "browser egress proxy is not active"
 
 approved_file="${BROWSER_NETWORK_APPROVED_DOMAINS:-/etc/yonaris-browser-runner/approved-browser-domains}"
 control_file="${BROWSER_NETWORK_CONTROL_PLANE_HOSTS:-/etc/yonaris-browser-runner/control-plane-hosts}"
@@ -36,7 +41,7 @@ if systemctl is-active --quiet yonaris-browser-broker.service ||
 	die "stop the runner and broker before replacing their egress policy"
 fi
 
-declare -a approved_v4=() approved_v6=() control_plane_v4=() control_plane_v6=()
+declare -a control_plane_v4=() control_plane_v6=()
 declare -a dns_v4=() dns_v6=()
 
 normalize_input_file() {
@@ -76,7 +81,6 @@ PY
 	done <<<"$resolved"
 }
 
-while IFS= read -r host; do resolve_entry "$host" approved_v4 approved_v6; done < <(normalize_input_file "$approved_file")
 while IFS= read -r host; do resolve_entry "$host" control_plane_v4 control_plane_v6; done < <(normalize_input_file "$control_file")
 
 for address in ${BROWSER_NETWORK_DNS_V4:-}; do
@@ -88,7 +92,6 @@ for address in ${BROWSER_NETWORK_DNS_V6:-}; do
 	dns_v6+=("$address")
 done
 [[ ${#dns_v4[@]} -gt 0 || ${#dns_v6[@]} -gt 0 ]] || die "at least one public DNS resolver is required"
-[[ ${#approved_v4[@]} -gt 0 || ${#approved_v6[@]} -gt 0 ]] || die "the browser allowlist resolved to no addresses"
 
 validate_sets() {
 	python3 - "$@" <<'PY'
@@ -106,12 +109,10 @@ for item in sys.argv[1:]:
         if not address.is_global:
             raise SystemExit(f"{name} contains non-global address {address}")
         groups[name].add(address)
-if groups.get("approved", set()) & groups.get("control", set()):
-    raise SystemExit("approved and control-plane address sets overlap")
 PY
 }
 
-validate_sets @approved "${approved_v4[@]}" "${approved_v6[@]}" @control "${control_plane_v4[@]}" "${control_plane_v6[@]}" @dns "${dns_v4[@]}" "${dns_v6[@]}" || die "resolved network sets are unsafe"
+validate_sets @control "${control_plane_v4[@]}" "${control_plane_v6[@]}" @dns "${dns_v4[@]}" "${dns_v6[@]}" || die "resolved network sets are unsafe"
 
 deduplicate() {
 	local -n values="$1"
@@ -119,7 +120,7 @@ deduplicate() {
 		mapfile -t values < <(printf '%s\n' "${values[@]}" | LC_ALL=C sort -u)
 	fi
 }
-for array_name in approved_v4 approved_v6 control_plane_v4 control_plane_v6 dns_v4 dns_v6; do deduplicate "$array_name"; done
+for array_name in control_plane_v4 control_plane_v6 dns_v4 dns_v6; do deduplicate "$array_name"; done
 
 nft_elements() {
 	local -n values="$1"
@@ -150,8 +151,6 @@ cleanup_candidates() {
 trap cleanup_candidates EXIT
 {
 	echo "table $table_family $table_name {"
-	nft_set approved_v4 ipv4_addr approved_v4
-	nft_set approved_v6 ipv6_addr approved_v6
 	nft_set control_plane_v4 ipv4_addr control_plane_v4
 	nft_set control_plane_v6 ipv6_addr control_plane_v6
 	nft_set dns_v4 ipv4_addr dns_v4
@@ -161,13 +160,12 @@ trap cleanup_candidates EXIT
     type filter hook output priority -150; policy accept;
     meta skuid $browser_uid ip daddr @control_plane_v4 reject
     meta skuid $browser_uid ip6 daddr @control_plane_v6 reject
+    meta skuid $browser_uid ip daddr 127.0.0.1 tcp dport 17777 accept
     meta skuid $browser_uid ip daddr 127.0.0.53 meta l4proto { tcp, udp } th dport 53 accept
     meta skuid $browser_uid ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4 } reject
     meta skuid $browser_uid ip6 daddr { ::/128, ::1/128, ::ffff:0:0/96, 64:ff9b::/96, 100::/64, 2001:db8::/32, fd00::/8, fe80::/10, ff00::/8 } reject
     meta skuid $browser_uid ip daddr @dns_v4 meta l4proto { tcp, udp } th dport 53 accept
     meta skuid $browser_uid ip6 daddr @dns_v6 meta l4proto { tcp, udp } th dport 53 accept
-    meta skuid $browser_uid ip daddr @approved_v4 tcp dport { 80, 443 } accept
-    meta skuid $browser_uid ip6 daddr @approved_v6 tcp dport { 80, 443 } accept
     meta skuid $browser_uid reject
   }
 }

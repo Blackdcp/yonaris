@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 const NETWORK_SERVICE = "yonaris-browser-network.service";
+const EGRESS_PROXY_SERVICE = "yonaris-browser-egress-proxy.service";
 const EXPECTED_NFT_CHAIN = "inet yonaris_browser_egress output";
 const DEFAULT_CONFIG_PATH = "/etc/yonaris-browser-runner/network.env";
 const MANUAL_BROWSER_COMMANDS = new Set(["login-window", "probe-selectors", "uat-once", "provision-dedicated-profile"]);
@@ -23,6 +24,7 @@ export type NetworkGateDependencies = {
 	now: () => Date;
 	inspectFile: (filePath: string) => Promise<NetworkGateFile>;
 	isNetworkServiceActive: () => Promise<boolean>;
+	isProxyServiceActive: () => Promise<boolean>;
 };
 
 export type NetworkGateContext = {
@@ -42,6 +44,9 @@ export async function assertManualBrowserCommandNetworkGate(
 	}
 	if (!(await dependencies.isNetworkServiceActive())) {
 		throw new Error("Manual browser commands require an active browser network policy service");
+	}
+	if (!(await dependencies.isProxyServiceActive())) {
+		throw new Error("Manual browser commands require an active browser egress proxy service");
 	}
 
 	const configPath = absolutePath(context.environment.BROWSER_NETWORK_CONFIG ?? DEFAULT_CONFIG_PATH, "network config");
@@ -200,6 +205,14 @@ const productionNetworkGateDependencies: NetworkGateDependencies = {
 	isNetworkServiceActive: async () => {
 		try {
 			await execFileAsync("systemctl", ["is-active", "--quiet", NETWORK_SERVICE], { timeout: 5_000 });
+			return true;
+		} catch {
+			return false;
+		}
+	},
+	isProxyServiceActive: async () => {
+		try {
+			await execFileAsync("systemctl", ["is-active", "--quiet", EGRESS_PROXY_SERVICE], { timeout: 5_000 });
 			return true;
 		} catch {
 			return false;

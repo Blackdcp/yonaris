@@ -598,6 +598,18 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "Absolute path to the root-owned Browser Runner network policy configuration.",
 	},
 	{
+		name: "BROWSER_EGRESS_PROXY_URL",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Fixed loopback URL for the exact-host Browser Runner CONNECT proxy.",
+	},
+	{
+		name: "BROWSER_EGRESS_PROXY_UID",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Dedicated service UID for the secret-free exact-host browser egress proxy.",
+	},
+	{
 		name: "VITE_FOUNDER_CONTACT_EMAIL",
 		scope: "client",
 		requiredBy: "optional",
