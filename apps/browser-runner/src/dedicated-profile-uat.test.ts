@@ -153,6 +153,35 @@ test("the signed-out marker accepts exact visible login text when Doubao does no
 	}
 });
 
+test("the signed-out marker accepts one visible login node when duplicate text nodes exist", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-login-duplicates-"));
+	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false }) as Page & {
+		getByText: () => Locator;
+	};
+	page.getByText = () =>
+		({
+			async count() {
+				return 2;
+			},
+			nth(index: number) {
+				return {
+					async isVisible() {
+						return index === 1;
+					},
+				} as unknown as Locator;
+			},
+		}) as unknown as Locator;
+	try {
+		const result = await collectDedicatedDoubaoSelectorProbe(stateDirectory, {
+			launcher: async () => contextDouble(page),
+			collector: async () => [],
+		});
+		assert.equal(result.loginActionVisible, true);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("the default browser collector is a self-contained browser script without Node transform helpers", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-selector-script-"));
 	const page = pageDouble({ composerCount: 1, composerVisible: true, loginVisible: false }) as Page & {

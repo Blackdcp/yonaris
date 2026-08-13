@@ -408,22 +408,35 @@ async function coarsePageState(page: Page): Promise<{
 	const composer = page.locator(KNOWN_COMPOSER_SELECTOR);
 	const knownComposerCount = boundedNodeCount(await composer.count());
 	const knownComposerVisibleCount = knownComposerCount === 1 && (await composer.isVisible().catch(() => false)) ? 1 : 0;
-	const loginButtonVisible = await page
-		.getByRole("button", { name: "登录", exact: true })
-		.isVisible()
-		.catch(() => false);
-	const loginActionVisible =
-		loginButtonVisible ||
-		(await page
-			.getByText("登录", { exact: true })
-			.isVisible()
-			.catch(() => false));
+	const loginButtonVisible = await anyVisible(page.getByRole("button", { name: "登录", exact: true }));
+	const loginActionVisible = loginButtonVisible || (await anyVisible(page.getByText("登录", { exact: true })));
 	return {
 		allowedHost: allowedDoubaoUrl(page.url()),
 		loginActionVisible,
 		knownComposerCount,
 		knownComposerVisibleCount,
 	};
+}
+
+async function anyVisible(locator: ReturnType<Page["locator"]>): Promise<boolean> {
+	const candidate = locator as ReturnType<Page["locator"]> & {
+		count?: () => Promise<number>;
+		nth?: (index: number) => ReturnType<Page["locator"]>;
+	};
+	if (typeof candidate.count !== "function" || typeof candidate.nth !== "function") {
+		return candidate.isVisible().catch(() => false);
+	}
+	const count = Math.min(32, boundedNodeCount(await candidate.count().catch(() => 0)));
+	for (let index = 0; index < count; index += 1) {
+		if (
+			await candidate
+				.nth(index)
+				.isVisible()
+				.catch(() => false)
+		)
+			return true;
+	}
+	return false;
 }
 
 async function waitForKnownComposer(page: Page): Promise<void> {
