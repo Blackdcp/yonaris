@@ -24,9 +24,10 @@ export function usePromptRunsOnly(promptId?: string, options?: { page?: number; 
 
 	const total = Number(query.data?.total || 0);
 	const totalPages = Math.ceil(total / limit) || 1;
+	const runs: CustomerPromptRunDto[] = query.data?.runs ?? [];
 
 	return {
-		runs: (query.data?.runs || []) as CustomerPromptRunDto[],
+		runs,
 		total,
 		hasMore: query.data?.hasMore || false,
 		isLoading: query.isLoading,

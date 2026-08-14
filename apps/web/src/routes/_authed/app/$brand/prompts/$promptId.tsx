@@ -25,6 +25,7 @@ import {
 import { ListPagination } from "@/components/list-pagination";
 import { LookbackSelector, useLookbackPeriod } from "@/components/lookback-selector";
 import { ProgressBarChart } from "@/components/progress-bar-chart";
+import { ResponseSnapshotPanel } from "@/components/response-snapshot-panel";
 import { useBrandAccess } from "@/hooks/use-brand-access";
 import { useBrand } from "@/hooks/use-brands";
 import type { BrandFilterSearch } from "@/hooks/use-list-filters";
@@ -63,6 +64,7 @@ const TABS: { key: TabKey; label: string }[] = [
 	{ key: "citations", label: "Citations" },
 	{ key: "responses", label: "LLM Responses" },
 ];
+const SKELETON_KEYS = ["first", "second", "third", "fourth", "fifth", "sixth"] as const;
 
 export const Route = createFileRoute("/_authed/app/$brand/prompts/$promptId")({
 	// `tab` is part of the route's search schema so links can target a specific
@@ -391,8 +393,8 @@ function TabLoadingSkeleton({ lines = 3 }: { lines?: number }) {
 			</CardHeader>
 			<Separator />
 			<CardContent className="space-y-4 pt-6">
-				{Array.from({ length: lines }).map((_, i) => (
-					<Skeleton key={i} className="h-8 w-full" />
+				{SKELETON_KEYS.slice(0, lines).map((key) => (
+					<Skeleton key={key} className="h-8 w-full" />
 				))}
 			</CardContent>
 		</Card>
@@ -602,7 +604,7 @@ function ResponsesTab({
 	brandName,
 }: {
 	runs: CustomerPromptRunDto[];
-	pagination: any;
+	pagination: ReturnType<typeof usePromptRunsOnly>["pagination"];
 	isLoading: boolean;
 	currentPage: number;
 	onPageChange: (page: number) => void;
@@ -613,8 +615,8 @@ function ResponsesTab({
 	if (isLoading && runs.length === 0) {
 		return (
 			<div className="space-y-4">
-				{Array.from({ length: 3 }).map((_, i) => (
-					<Card key={i}>
+				{SKELETON_KEYS.slice(0, 3).map((key) => (
+					<Card key={key}>
 						<CardHeader className="pb-0 gap-y-0">
 							<div className="grid grid-cols-3 gap-x-4">
 								<div>
@@ -651,8 +653,8 @@ function ResponsesTab({
 		<div className="space-y-4">
 			<h3 className="text-base font-medium">Individual Prompt Runs</h3>
 
-			{runs.map((run, runIndex) => (
-				<Card key={`${run.model}:${run.version}:${run.observedAt}:${runIndex}`}>
+			{runs.map((run) => (
+				<Card key={run.id}>
 					<CardHeader className="pb-0 gap-y-0">
 						<div className="grid grid-cols-3 gap-x-4 text-sm">
 							<div>
@@ -675,8 +677,8 @@ function ResponsesTab({
 							<div>
 								<span className="text-xs text-muted-foreground block mb-1.5">Web Queries</span>
 								<div className="flex flex-wrap gap-1.5">
-									{run.webQueries.map((query: string, qIndex: number) => (
-										<Badge key={qIndex} variant="outline" className="text-xs font-normal">
+									{run.webQueries.map((query: string) => (
+										<Badge key={query} variant="outline" className="text-xs font-normal">
 											{query}
 										</Badge>
 									))}
@@ -688,8 +690,8 @@ function ResponsesTab({
 							<span className="text-xs text-muted-foreground block mb-1.5">Brands Mentioned</span>
 							<div className="flex flex-wrap gap-1.5">
 								{run.brandMentioned && brandName && <Badge className="text-xs font-normal">{brandName}</Badge>}
-								{run.competitorsMentioned?.map((competitor: string, cIndex: number) => (
-									<Badge key={cIndex} variant="outline" className="text-xs font-normal">
+								{run.competitorsMentioned?.map((competitor: string) => (
+									<Badge key={competitor} variant="outline" className="text-xs font-normal">
 										{competitor}
 									</Badge>
 								))}
@@ -705,6 +707,8 @@ function ResponsesTab({
 								<ReactMarkdown>{run.answerText || "No response text was recorded for this run."}</ReactMarkdown>
 							</div>
 						</div>
+
+						{run.snapshot && <ResponseSnapshotPanel snapshot={run.snapshot} channel={run.model} />}
 					</CardContent>
 				</Card>
 			))}
