@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Brand is exactly `stepfun`; scope is exactly `cn-zh-scored` with `CN`, `zh-CN`, `Asia/Shanghai`, and `scored` lane.
-- Prompts are verbatim: `国内有哪些主流大模型公司？`, `国内有哪些大模型服务商？`, `阶跃星辰 StepFun 是一家什么公司？`.
+- Prompts are verbatim: `国内有哪些主流大模型公司?`, `如果我要选择国产大模型服务商,有哪些推荐?`, `阶跃星辰 StepFun 是一家什么公司?`.
 - The cohort contains exactly six independent new conversations per prompt and exactly 18 valid completed observations.
 - Public channel is `deepseek`; target is `deepseek.consumer_web`; capture route is `assisted_browser.generic`.
 - Authentication, if required, uses a dedicated local DeepSeek sampling profile; credentials, cookies, storage state, QR codes, and phone numbers never enter manifests, logs, screenshots, Git, or production.
@@ -78,7 +78,7 @@ test("freezes the exact StepFun 3 by 6 DeepSeek matrix", () => {
   assert.equal(slots.length, 18);
   assert.deepEqual(STEPFUN_DEEPSEEK_PROMPTS, [
     "国内有哪些主流大模型公司？",
-    "国内有哪些大模型服务商？",
+    "如果我要选择国产大模型服务商,有哪些推荐?",
     "阶跃星辰 StepFun 是一家什么公司？",
   ]);
   assert.deepEqual(new Set(slots.map(({ promptIndex, sampleIndex }) => `${promptIndex}:${sampleIndex}`)).size, 18);
@@ -100,7 +100,7 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `deepseek-capture-contract.js`.
 ```ts
 export const STEPFUN_DEEPSEEK_PROMPTS = [
   "国内有哪些主流大模型公司？",
-  "国内有哪些大模型服务商？",
+  "如果我要选择国产大模型服务商,有哪些推荐?",
   "阶跃星辰 StepFun 是一家什么公司？",
 ] as const;
 

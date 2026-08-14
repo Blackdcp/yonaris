@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 const PROMPTS = [
 	"国内有哪些主流大模型公司？",
-	"国内有哪些大模型服务商？",
+	"如果我要选择国产大模型服务商,有哪些推荐?",
 	"阶跃星辰 StepFun 是一家什么公司？",
 ] as const;
 

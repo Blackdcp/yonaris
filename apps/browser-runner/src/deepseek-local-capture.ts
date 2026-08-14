@@ -155,7 +155,7 @@ export async function runDeepSeekCohort(options: RunOptions): Promise<DeepSeekCo
 	let needsHuman = 0;
 	for (const slot of buildDeepSeekSlots()) {
 		const statePath = containedPath(slotsDirectory, `${slot.externalId}.json`);
-		const state = await readSlotState(statePath, slot.externalId, options.selectorFingerprint);
+		const state = await readSlotState(statePath, slot.externalId, slot.promptText, options.selectorFingerprint);
 		if (state?.phase === "captured" && state.observation) {
 			observations.push(state.observation);
 			continue;
@@ -376,6 +376,7 @@ function validateUatApproval(approval: DeepSeekUatApproval): void {
 async function readSlotState(
 	statePath: string,
 	externalId: string,
+	promptText: string,
 	selectorFingerprint: string,
 ): Promise<SlotState | null> {
 	try {
@@ -387,6 +388,9 @@ async function readSlotState(
 			(state.phase === "captured" && !state.observation)
 		) {
 			throw new Error("DeepSeek slot state does not match the frozen capture contract");
+		}
+		if (state.promptSha256 !== sha256(promptText)) {
+			throw new Error("DeepSeek slot prompt hash does not match the frozen capture contract");
 		}
 		return state;
 	} catch (error) {

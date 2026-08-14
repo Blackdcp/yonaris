@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -180,6 +180,30 @@ test("the public receipt contains no prompts, answers, profile paths or secret l
 	for (const forbidden of ["国内有哪些", "有效回答", "profile", "password", "token", "cookie", "storage"]) {
 		assert.equal(serialized.toLocaleLowerCase().includes(forbidden.toLocaleLowerCase()), false);
 	}
+});
+
+test("rejects a captured slot whose prompt hash no longer matches the frozen contract", async () => {
+	const stateDirectory = await approvedState();
+	const outputPath = path.join(stateDirectory, "reviewed.json");
+	await runDeepSeekCohort({
+		stateDirectory,
+		outputPath,
+		selectorFingerprint: "deepseek-selector-contract-20260814",
+		sessionFactory: new RecordingFactory(),
+	});
+	const statePath = path.join(stateDirectory, "slots", "stepfun-local-pc-deepseek-20260814-01-p1-s1.json");
+	const state = JSON.parse(await readFile(statePath, "utf8")) as Record<string, unknown>;
+	await writeFile(statePath, `${JSON.stringify({ ...state, promptSha256: "0".repeat(64) })}\n`, "utf8");
+	await assert.rejects(
+		() =>
+			runDeepSeekCohort({
+				stateDirectory,
+				outputPath,
+				selectorFingerprint: "deepseek-selector-contract-20260814",
+				sessionFactory: new RecordingFactory(),
+			}),
+		/prompt hash does not match the frozen capture contract/,
+	);
 });
 
 test("one-prompt UAT records intent before one submit and approves the exact selector fingerprint", async () => {

@@ -15,7 +15,7 @@ Collect a directly comparable DeepSeek consumer-web cohort for StepFun using the
 - Search behavior: DeepSeek platform default (`native_auto`)
 - Prompts, verbatim:
   1. `国内有哪些主流大模型公司？`
-  2. `国内有哪些大模型服务商？`
+  2. `如果我要选择国产大模型服务商,有哪些推荐?`
   3. `阶跃星辰 StepFun 是一家什么公司？`
 - Samples: six independent new conversations per prompt, for exactly 18 planned observations
 - Schedule: one explicit run only; no cron, timer, daily batch creation, or long-running poller

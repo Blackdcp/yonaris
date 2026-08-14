@@ -34,7 +34,7 @@ REQUEST_DIR="$SOURCE_ROOT/deploy/las/reviewed-consumer-cohort-imports/requests"
 MANIFEST_PATH="apps/worker/src/reviewed-consumer-cohorts/stepfun-local-pc-deepseek-18-20260814.json"
 MANIFEST_FILE="$SOURCE_ROOT/$MANIFEST_PATH"
 REQUEST_ID="stepfun-local-pc-deepseek-18-20260814"
-MANIFEST_FINGERPRINT="413d278402848c4bb0d569d4a1a2291a220d43fe755b6be81d5e82f6aaa1eeda"
+MANIFEST_FINGERPRINT="6864b6ac382b53d5b174d8860bd50b1a31e2ffc5ee9589e9564e2ab5afc6663f"
 
 for required_file in "$COMPOSE_FILE" "$ENV_FILE" "$RELEASE_FILE" "$MANIFEST_FILE" "$request_file"; do
 	if [[ ! -f "$required_file" || ! -r "$required_file" || -L "$required_file" ]]; then
