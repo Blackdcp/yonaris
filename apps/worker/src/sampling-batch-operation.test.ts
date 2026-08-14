@@ -272,6 +272,22 @@ describe("StepFun sampling task plan", () => {
 			(error: unknown) => error instanceof SamplingBatchRequestError && error.code === "prompt_snapshot_mismatch",
 		);
 	});
+
+	it("accepts the reviewed prompt texts when only the question mark width differs", () => {
+		const fullWidthSnapshot = {
+			...snapshot,
+			prompts: [
+				{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", value: "国内有哪些主流大模型公司？" },
+				{ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", value: "如果我要选择国产大模型服务商,有哪些推荐？" },
+				{ id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", value: "阶跃星辰 StepFun 是一家什么公司？" },
+			],
+		};
+
+		const tasks = buildSamplingTaskPlans(validSamplingBatchManifest, fullWidthSnapshot);
+
+		assert.equal(tasks.length, 18);
+		assert.ok(tasks.every((task) => task.expectedPromptText?.endsWith("？")));
+	});
 });
 
 describe("StepFun sampling existing batch identity", () => {

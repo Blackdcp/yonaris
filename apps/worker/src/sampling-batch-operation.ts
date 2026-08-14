@@ -141,8 +141,8 @@ export function assertResolvedSamplingBatchSnapshot(
 			"The enabled prompt count or identity does not match the reviewed manifest",
 		);
 	}
-	const actualTexts = snapshot.prompts.map(({ value }) => value).sort();
-	const expectedTexts = [...EXPECTED_STEPFUN_PROMPTS].sort();
+	const actualTexts = snapshot.prompts.map(({ value }) => canonicalReviewedPromptText(value)).sort();
+	const expectedTexts = [...EXPECTED_STEPFUN_PROMPTS].map((value) => canonicalReviewedPromptText(value)).sort();
 	if (!actualTexts.every((value, index) => value === expectedTexts[index])) {
 		throw new SamplingBatchRequestError(
 			"prompt_snapshot_mismatch",
@@ -156,10 +156,10 @@ export function buildSamplingTaskPlans(
 	snapshot: ResolvedSamplingBatchSnapshot,
 ): DeliveryTaskPlanInput[] {
 	assertResolvedSamplingBatchSnapshot(request, snapshot);
-	const promptByText = new Map(snapshot.prompts.map((prompt) => [prompt.value, prompt]));
+	const promptByText = new Map(snapshot.prompts.map((prompt) => [canonicalReviewedPromptText(prompt.value), prompt]));
 	const tasks: DeliveryTaskPlanInput[] = [];
 	for (const promptText of EXPECTED_STEPFUN_PROMPTS) {
-		const prompt = promptByText.get(promptText);
+		const prompt = promptByText.get(canonicalReviewedPromptText(promptText));
 		if (!prompt) {
 			throw new SamplingBatchRequestError("prompt_snapshot_mismatch", "A reviewed prompt could not be resolved");
 		}
@@ -192,6 +192,10 @@ function canonicalTask(task: Omit<SamplingBatchTaskState, "id" | "status" | "aut
 		searchRequirement: task.searchRequirement,
 		evaluationRole: task.evaluationRole,
 	});
+}
+
+function canonicalReviewedPromptText(value: string): string {
+	return value.endsWith("？") ? `${value.slice(0, -1)}?` : value;
 }
 
 type SamplingBatchRecoveryStep = "add_tasks" | "freeze" | "start" | "none";
