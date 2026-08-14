@@ -97,5 +97,51 @@ jobs:
       - name: Seed an existing local install
         run: pnpm -C e2e exec tsx seed.ts
 
-      - name: Re-apply migrations against seeded data
-        run: pnpm -C packages/lib exec drizzle-kit migrate
+      - name: Rewind seeded database to 0021
+        run: |
+          psql "$DATABASE_URL" --no-psqlrc --set ON_ERROR_STOP=1 <<'SQL'
+          DROP TABLE public.response_snapshot_access_events;
+          DROP TABLE public.response_snapshot_outbox;
+          DROP TABLE public.response_snapshots;
+          DROP TYPE public.response_snapshot_access_action;
+          DROP TYPE public.response_snapshot_capture_method;
+          DROP TYPE public.response_snapshot_content_source;
+          DROP TYPE public.response_snapshot_status;
+          DROP TYPE public.response_snapshot_storage_backend;
+          DELETE FROM drizzle.__drizzle_migrations
+          WHERE created_at = 1786726866790;
+          SQL
+          test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
+            'select count(*) from drizzle.__drizzle_migrations;')" = "22"
+
+      - name: Upgrade seeded 0021 data to 0022 without changing Elmo inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          hash_table() {
+            local table_name="$1"
+            psql "$DATABASE_URL" --no-psqlrc --quiet \
+              --command "\\copy (select * from public.${table_name} order by 1) to stdout with (format binary)" \
+              | sha256sum \
+              | cut -d' ' -f1
+          }
+
+          tables=(brands measurement_scopes prompts competitors prompt_runs citations)
+          declare -A before
+          for table_name in "${tables[@]}"; do
+            before["$table_name"]="$(hash_table "$table_name")"
+          done
+
+          pnpm -C packages/lib exec drizzle-kit migrate
+
+          for table_name in "${tables[@]}"; do
+            after="$(hash_table "$table_name")"
+            test "$after" = "${before[$table_name]}" || {
+              echo "Migration 0022 changed seeded Elmo input table: $table_name" >&2
+              exit 1
+            }
+          done
+
+          test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
+            'select count(*) from drizzle.__drizzle_migrations;')" = "23"

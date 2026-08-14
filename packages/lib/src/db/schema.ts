@@ -78,6 +78,27 @@ export const browserRunnerTaskStatusEnum = pgEnum("browser_runner_task_status", 
 ]);
 export const evidenceArtifactStatusEnum = pgEnum("evidence_artifact_status", ["staged", "attached"]);
 export const evidenceArtifactKindEnum = pgEnum("evidence_artifact_kind", ["screenshot", "page_snapshot"]);
+export const responseSnapshotStatusEnum = pgEnum("response_snapshot_status", ["pending", "ready", "failed", "expired"]);
+export const responseSnapshotStorageBackendEnum = pgEnum("response_snapshot_storage_backend", ["filesystem", "kodo"]);
+export const responseSnapshotContentSourceEnum = pgEnum("response_snapshot_content_source", [
+	"native_answer_html",
+	"browser_answer_html",
+	"rendered_from_structured_response",
+	"reconstructed_from_historical_run",
+]);
+export const responseSnapshotCaptureMethodEnum = pgEnum("response_snapshot_capture_method", [
+	"brightdata_dataset",
+	"brightdata_serp",
+	"consumer_web_browser",
+	"historical_reconstruction",
+]);
+export const responseSnapshotAccessActionEnum = pgEnum("response_snapshot_access_action", [
+	"view_html",
+	"download_html",
+	"download_json",
+	"download_manifest",
+	"export",
+]);
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 	dataType() {
@@ -578,6 +599,127 @@ export const citations = pgTable(
 	}),
 ).enableRLS();
 
+export const responseSnapshots = pgTable(
+	"response_snapshots",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		promptRunId: uuid("prompt_run_id")
+			.references(() => promptRuns.id)
+			.notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		scopeId: uuid("scope_id"),
+		promptId: uuid("prompt_id")
+			.references(() => prompts.id)
+			.notNull(),
+		revision: smallint("revision").notNull().default(1),
+		isCurrent: boolean("is_current").notNull().default(true),
+		status: responseSnapshotStatusEnum().notNull().default("pending"),
+		storageBackend: responseSnapshotStorageBackendEnum("storage_backend"),
+		storageKey: text("storage_key"),
+		contentSource: responseSnapshotContentSourceEnum("content_source"),
+		captureMethod: responseSnapshotCaptureMethodEnum("capture_method"),
+		schemaVersion: text("schema_version"),
+		templateVersion: text("template_version"),
+		htmlSha256: text("html_sha256"),
+		jsonSha256: text("json_sha256"),
+		manifestSha256: text("manifest_sha256"),
+		sourcePayloadSha256: text("source_payload_sha256"),
+		htmlBytes: integer("html_bytes"),
+		jsonBytes: integer("json_bytes"),
+		manifestBytes: integer("manifest_bytes"),
+		htmlGzipBytes: integer("html_gzip_bytes"),
+		jsonGzipBytes: integer("json_gzip_bytes"),
+		failureCode: text("failure_code"),
+		observedAt: timestamp("observed_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		readyAt: timestamp("ready_at", { withTimezone: true }),
+		failedAt: timestamp("failed_at", { withTimezone: true }),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+	},
+	(table) => ({
+		promptRunRevisionIdx: uniqueIndex("response_snapshots_prompt_run_revision_uidx").on(
+			table.promptRunId,
+			table.revision,
+		),
+		promptRunCurrentIdx: uniqueIndex("response_snapshots_prompt_run_current_uidx")
+			.on(table.promptRunId)
+			.where(sql`${table.isCurrent}`),
+		brandCreatedIdx: index("response_snapshots_brand_created_idx").on(table.brandId, table.createdAt),
+		statusExpiresIdx: index("response_snapshots_status_expires_idx").on(table.status, table.expiresAt),
+		positiveRevision: check("response_snapshots_positive_revision", sql`${table.revision} > 0`),
+		validRetention: check("response_snapshots_valid_retention", sql`${table.expiresAt} > ${table.observedAt}`),
+		storagePairConsistent: check(
+			"response_snapshots_storage_pair_consistent",
+			sql`(${table.storageBackend} IS NULL AND ${table.storageKey} IS NULL) OR (${table.storageBackend} IS NOT NULL AND ${table.storageKey} IS NOT NULL AND char_length(${table.storageKey}) BETWEEN 1 AND 1000 AND ${table.storageKey} !~ '(^/|(^|/)[.][.](/|$))')`,
+		),
+		artifactMetadataConsistent: check(
+			"response_snapshots_artifact_metadata_consistent",
+			sql`(${table.contentSource} IS NULL AND ${table.captureMethod} IS NULL AND ${table.schemaVersion} IS NULL AND ${table.templateVersion} IS NULL AND ${table.htmlSha256} IS NULL AND ${table.jsonSha256} IS NULL AND ${table.manifestSha256} IS NULL AND ${table.htmlBytes} IS NULL AND ${table.jsonBytes} IS NULL AND ${table.manifestBytes} IS NULL AND ${table.htmlGzipBytes} IS NULL AND ${table.jsonGzipBytes} IS NULL) OR (${table.contentSource} IS NOT NULL AND ${table.captureMethod} IS NOT NULL AND char_length(${table.schemaVersion}) BETWEEN 1 AND 100 AND char_length(${table.templateVersion}) BETWEEN 1 AND 100 AND ${table.htmlSha256} ~ '^[0-9a-f]{64}$' AND ${table.jsonSha256} ~ '^[0-9a-f]{64}$' AND ${table.manifestSha256} ~ '^[0-9a-f]{64}$' AND (${table.sourcePayloadSha256} IS NULL OR ${table.sourcePayloadSha256} ~ '^[0-9a-f]{64}$') AND ${table.htmlBytes} > 0 AND ${table.jsonBytes} > 0 AND ${table.manifestBytes} > 0 AND ${table.htmlGzipBytes} > 0 AND ${table.jsonGzipBytes} > 0)`,
+		),
+		stateConsistent: check(
+			"response_snapshots_state_consistent",
+			sql`(${table.status} = 'pending' AND ${table.readyAt} IS NULL AND ${table.failedAt} IS NULL AND ${table.failureCode} IS NULL AND ${table.storageBackend} IS NULL AND ${table.storageKey} IS NULL) OR (${table.status} = 'ready' AND ${table.readyAt} IS NOT NULL AND ${table.failedAt} IS NULL AND ${table.failureCode} IS NULL AND ${table.storageBackend} IS NOT NULL AND ${table.storageKey} IS NOT NULL AND ${table.contentSource} IS NOT NULL) OR (${table.status} = 'failed' AND ${table.readyAt} IS NULL AND ${table.failedAt} IS NOT NULL AND char_length(${table.failureCode}) BETWEEN 1 AND 100 AND ${table.storageBackend} IS NULL AND ${table.storageKey} IS NULL) OR (${table.status} = 'expired' AND ${table.readyAt} IS NOT NULL AND ${table.failedAt} IS NULL AND ${table.failureCode} IS NULL AND ${table.storageBackend} IS NULL AND ${table.storageKey} IS NULL AND ${table.contentSource} IS NOT NULL)`,
+		),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "response_snapshots_brand_scope_fk",
+		}),
+	}),
+).enableRLS();
+
+export const responseSnapshotOutbox = pgTable(
+	"response_snapshot_outbox",
+	{
+		snapshotId: uuid("snapshot_id")
+			.primaryKey()
+			.references(() => responseSnapshots.id, { onDelete: "cascade" })
+			.notNull(),
+		htmlGzip: bytea("html_gzip").notNull(),
+		jsonGzip: bytea("json_gzip").notNull(),
+		manifestJson: bytea("manifest_json").notNull(),
+		attemptCount: integer("attempt_count").notNull().default(0),
+		nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).defaultNow().notNull(),
+		lastErrorCode: text("last_error_code"),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+	},
+	(table) => ({
+		nextAttemptIdx: index("response_snapshot_outbox_next_attempt_idx").on(table.nextAttemptAt),
+		boundedPayload: check(
+			"response_snapshot_outbox_bounded_payload",
+			sql`octet_length(${table.htmlGzip}) > 0 AND octet_length(${table.jsonGzip}) > 0 AND octet_length(${table.manifestJson}) > 0 AND octet_length(${table.htmlGzip}) + octet_length(${table.jsonGzip}) + octet_length(${table.manifestJson}) <= 8388608`,
+		),
+		validExpiry: check("response_snapshot_outbox_valid_expiry", sql`${table.expiresAt} > ${table.createdAt}`),
+		nonnegativeAttempts: check("response_snapshot_outbox_nonnegative_attempts", sql`${table.attemptCount} >= 0`),
+	}),
+).enableRLS();
+
+export const responseSnapshotAccessEvents = pgTable(
+	"response_snapshot_access_events",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		snapshotId: uuid("snapshot_id")
+			.references(() => responseSnapshots.id)
+			.notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		actorUserId: text("actor_user_id").notNull(),
+		action: responseSnapshotAccessActionEnum().notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => ({
+		brandCreatedIdx: index("response_snapshot_access_events_brand_created_idx").on(table.brandId, table.createdAt),
+		snapshotCreatedIdx: index("response_snapshot_access_events_snapshot_created_idx").on(
+			table.snapshotId,
+			table.createdAt,
+		),
+	}),
+).enableRLS();
+
 export const reports = pgTable(
 	"reports",
 	{
@@ -649,6 +791,15 @@ export type NewDeliveryTask = typeof deliveryTasks.$inferInsert;
 
 export type EvidenceArtifact = typeof evidenceArtifacts.$inferSelect;
 export type NewEvidenceArtifact = typeof evidenceArtifacts.$inferInsert;
+
+export type ResponseSnapshot = typeof responseSnapshots.$inferSelect;
+export type NewResponseSnapshot = typeof responseSnapshots.$inferInsert;
+
+export type ResponseSnapshotOutbox = typeof responseSnapshotOutbox.$inferSelect;
+export type NewResponseSnapshotOutbox = typeof responseSnapshotOutbox.$inferInsert;
+
+export type ResponseSnapshotAccessEvent = typeof responseSnapshotAccessEvents.$inferSelect;
+export type NewResponseSnapshotAccessEvent = typeof responseSnapshotAccessEvents.$inferInsert;
 
 export type BrandWithPrompts = Brand & {
 	prompts: Prompt[];
