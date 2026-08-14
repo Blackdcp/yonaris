@@ -30,8 +30,18 @@ import {
 import type { DeliveryManifestSnapshot } from "@workspace/lib/delivery-manifest";
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { z } from "zod";
-import type { BrowserRunnerPrincipal } from "./browser-runner-auth";
-import { prepareSamplingObservation, samplingObservationBaseSchema } from "./sampling-observation";
+import { BrowserRunnerHttpError, type BrowserRunnerPrincipal } from "./browser-runner-auth";
+import {
+	archiveBrowserRunnerResponseSnapshotBestEffort,
+	assertBrowserRunnerSnapshotClaimCapacity,
+	BrowserRunnerSnapshotCapacityError,
+	buildBrowserRunnerResponseSnapshotDraft,
+} from "./browser-runner-snapshot-policy";
+import {
+	browserAnswerHtmlSchema,
+	prepareSamplingObservation,
+	samplingObservationBaseSchema,
+} from "./sampling-observation";
 
 export const browserRunnerClaimSchema = z
 	.object({
@@ -69,7 +79,7 @@ export const browserRunnerObservationSchema = browserRunnerLeaseSchema.extend({
 	runnerSessionId: z.string().trim().min(1).max(300),
 	adapterVersion: z.string().trim().min(1).max(100),
 	browserVersion: z.string().trim().min(1).max(200),
-	observation: samplingObservationBaseSchema,
+	observation: samplingObservationBaseSchema.extend({ answerHtml: browserAnswerHtmlSchema }),
 });
 
 export function assertBrowserRunnerEvidenceSelection(
@@ -94,8 +104,27 @@ const RUNNER_LEASE_MS = 15 * 60 * 1_000;
 export async function claimRunnerTask(
 	input: z.infer<typeof browserRunnerClaimSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertCapacity?: typeof assertBrowserRunnerSnapshotClaimCapacity;
+		claim?: typeof claimBrowserRunnerTask;
+	} = {},
 ) {
-	const claim = await claimBrowserRunnerTask({ ...input, runnerId: principal.id, leaseDurationMs: RUNNER_LEASE_MS });
+	try {
+		await (dependencies.assertCapacity ?? assertBrowserRunnerSnapshotClaimCapacity)({
+			enabled: process.env.RESPONSE_SNAPSHOT_ENABLED === "true",
+			storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
+		});
+	} catch (error) {
+		if (error instanceof BrowserRunnerSnapshotCapacityError) {
+			throw new BrowserRunnerHttpError(503, "Response snapshot storage is unavailable; Browser Runner queue is paused");
+		}
+		throw error;
+	}
+	const claim = await (dependencies.claim ?? claimBrowserRunnerTask)({
+		...input,
+		runnerId: principal.id,
+		leaseDurationMs: RUNNER_LEASE_MS,
+	});
 	if (!claim) return null;
 	return buildRunnerClaimResponse(claim, principal, false);
 }
@@ -275,6 +304,7 @@ export async function completeRunnerTask(
 	input: z.infer<typeof browserRunnerObservationSchema>,
 	runnerId: string,
 ) {
+	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
 	const task = await assertRunnerTask(taskId, input.brandId, runnerId);
 	if (task.status === "succeeded" && task.observationAttemptId) {
 		const existingRun = await db.query.promptRuns.findFirst({
@@ -353,8 +383,9 @@ export async function completeRunnerTask(
 			)?.id;
 		return { duplicate: true, attemptId: attempt.id, promptRunId: promptRunId ?? null };
 	}
+	let promptRun: Awaited<ReturnType<typeof persistSuccessfulObservation>>;
 	try {
-		const promptRun = await persistSuccessfulObservation({
+		promptRun = await persistSuccessfulObservation({
 			attemptId: attempt.id,
 			startedAt: attempt.startedAt,
 			observedAt: prepared.observedAt,
@@ -376,8 +407,8 @@ export async function completeRunnerTask(
 				artifactIds: observation.evidenceArtifactIds,
 				uriForArtifact: (artifactId) => runnerEvidenceUrl(task.brandId, artifactId),
 			},
+			reserveResponseSnapshot: snapshotCaptureEnabled,
 		});
-		return { duplicate: false, attemptId: attempt.id, promptRunId: promptRun.id };
 	} catch (error) {
 		const current = await db.query.observationAttempts.findFirst({
 			where: eq(observationAttempts.id, attempt.id),
@@ -398,6 +429,48 @@ export async function completeRunnerTask(
 		});
 		throw error;
 	}
+
+	if (snapshotCaptureEnabled && promptRun.snapshotReservation) {
+		const recordedVersion = observation.modelVersion ?? "consumer-surface-unspecified";
+		const snapshot = await archiveBrowserRunnerResponseSnapshotBestEffort({
+			reservation: promptRun.snapshotReservation,
+			storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT ?? "",
+			draft: () =>
+				buildBrowserRunnerResponseSnapshotDraft({
+					promptRunId: promptRun.id,
+					brandId: brand.id,
+					scopeId: scope.id,
+					promptId: task.promptId,
+					promptText: task.promptText,
+					answerText: observation.answerText,
+					answerHtml: observation.answerHtml,
+					citations: prepared.citations.map((citation) => ({
+						url: citation.url,
+						title: citation.title ?? null,
+						domain: citation.domain,
+						citationIndex: citation.citationIndex,
+					})),
+					webQueries: observation.webQueries,
+					webSearchEnabled: prepared.config.webSearch,
+					brandMentioned: prepared.mentionResult.brandMentioned,
+					competitorsMentioned: prepared.mentionResult.competitorsMentioned,
+					channel: prepared.target.surfaceTargetKey,
+					modelVersion: recordedVersion,
+					market: scope.market,
+					locale: scope.locale,
+					timezone: scope.timezone,
+					observedAt: prepared.observedAt,
+				}),
+		});
+		return {
+			duplicate: false,
+			attemptId: attempt.id,
+			promptRunId: promptRun.id,
+			snapshot: { id: snapshot.snapshotId, status: snapshot.status },
+		};
+	}
+
+	return { duplicate: false, attemptId: attempt.id, promptRunId: promptRun.id, snapshot: null };
 }
 
 export async function assertRunnerTask(taskId: string, brandId: string, runnerId: string) {

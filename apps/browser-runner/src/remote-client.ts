@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { ANSWER_CONTAINER_HTML_MAX_BYTES } from "./answer-container-snapshot.js";
 import type {
 	ClaimedRunnerTask,
 	ClaimedTaskSource,
@@ -12,9 +13,9 @@ import type {
 import { BrowserRunnerError, sanitizeDiagnostic } from "./errors.js";
 import { RUNNER_EVIDENCE_MAX_BYTES } from "./evidence.js";
 
-// The completion endpoint alone accepts 2 MiB; all other internal JSON
+// The completion endpoint alone accepts 6 MiB; all other internal JSON
 // endpoints retain the server's 1 MiB default.
-export const RUNNER_INTERNAL_JSON_MAX_BYTES = 2 * 1024 * 1024;
+export const RUNNER_INTERNAL_JSON_MAX_BYTES = 6 * 1024 * 1024;
 
 type RemoteClientOptions = {
 	baseUrl: string;
@@ -129,6 +130,17 @@ export class BrowserRunnerRemoteClient implements ClaimedTaskSource, Observation
 	async submit(observation: SuccessfulRunnerObservation): Promise<void> {
 		const claimed = this.#activeClaims.get(observation.task.id);
 		if (!claimed?.claim) throw new Error(`No active remote claim exists for task ${observation.task.id}`);
+		if (
+			!observation.response.answerHtml.trim() ||
+			Buffer.byteLength(observation.response.answerHtml, "utf8") > ANSWER_CONTAINER_HTML_MAX_BYTES
+		) {
+			throw new BrowserRunnerError(
+				"answer_html_invalid",
+				"post_submit",
+				"needs_human",
+				"The answer-container HTML is empty or exceeds the archive limit",
+			);
+		}
 		const screenshot = observation.evidence.find(({ kind }) => kind === "screenshot");
 		const pageSnapshot = observation.evidence.find(({ kind }) => kind === "page_snapshot");
 		if (!screenshot || !pageSnapshot) {
@@ -164,6 +176,7 @@ export class BrowserRunnerRemoteClient implements ClaimedTaskSource, Observation
 			browserVersion: observation.response.browserVersion ?? "playwright-chromium-unreported",
 			observation: {
 				answerText: observation.response.answerText,
+				answerHtml: observation.response.answerHtml,
 				observedAt: observation.response.observedAt,
 				pageUrl: observation.response.pageUrl,
 				sessionMode: observation.sessionMode,

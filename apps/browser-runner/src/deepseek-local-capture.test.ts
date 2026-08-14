@@ -55,6 +55,7 @@ class RecordingFactory implements DeepSeekCaptureSessionFactory {
 			confirmSubmission: async (actualPrompt) => assert.equal(actualPrompt, promptText),
 			collectResponse: async (): Promise<SurfaceResponse> => ({
 				answerText: `有效回答 ${externalId}`,
+				answerHtml: `<section>有效回答 ${externalId}</section>`,
 				pageUrl: `https://chat.deepseek.com/a/chat/s/${externalId}`,
 				observedAt: "2026-08-14T08:00:00.000Z",
 				webSearchObserved: null,

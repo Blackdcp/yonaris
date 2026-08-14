@@ -24,6 +24,13 @@ const citationSchema = z.object({
 	citationIndex: z.number().int().min(0).max(32_767).optional(),
 });
 
+export const browserAnswerHtmlSchema = z
+	.string()
+	.trim()
+	.min(1)
+	.max(2 * 1024 * 1024)
+	.refine((value) => Buffer.byteLength(value, "utf8") <= 2 * 1024 * 1024, "Answer HTML exceeds 2 MiB");
+
 export const samplingObservationBaseSchema = z
 	.object({
 		answerText: z.string().trim().min(1).max(500_000),
@@ -94,7 +101,7 @@ function assertFrozenTask(snapshot: DeliveryManifestSnapshot, task: DeliveryTask
 export function prepareSamplingObservation(input: {
 	task: DeliveryTaskView;
 	manifest: DeliveryManifestSnapshot;
-	observation: SamplingObservationBase & { operatorAttested?: true };
+	observation: SamplingObservationBase & { operatorAttested?: true; answerHtml?: string };
 	captureActor?:
 		| { kind: "operator"; id: string }
 		| {
@@ -198,11 +205,12 @@ export function prepareSamplingObservation(input: {
 				}
 			: {}),
 	};
-	// Artifact IDs are lease-generation-local handles. A failed submission can be
-	// retried only after a new claim uploads fresh artifacts, so including those
-	// ephemeral IDs would turn a valid retry into a source-key conflict. The
-	// artifact transaction independently verifies their content and ownership.
-	const { evidenceArtifactIds, ...fingerprintedObservation } = input.observation;
+	// Artifact IDs are lease-generation-local handles, while answer HTML is an
+	// archive representation that can contain harmless renderer attributes. Neither
+	// changes metric identity; evidence ownership and HTML integrity are validated
+	// independently before persistence.
+	const { answerHtml, evidenceArtifactIds, ...fingerprintedObservation } = input.observation;
+	void answerHtml;
 	void evidenceArtifactIds;
 	const sampleFingerprint = createHash("sha256")
 		.update(JSON.stringify({ taskId: input.task.id, observation: fingerprintedObservation }))

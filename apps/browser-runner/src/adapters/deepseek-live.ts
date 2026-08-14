@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { chmod, mkdir, open, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import type { BrowserContext, Locator, Page } from "playwright";
+import { assertExactlyOneNewAnswer, validateAnswerContainerSnapshot } from "../answer-container-snapshot.js";
 import type { SurfaceResponse } from "../contracts.js";
 import type { DeepSeekCaptureSession, DeepSeekCaptureSessionFactory } from "../deepseek-local-capture.js";
 import { type PersistentContextLauncher, sandboxedPersistentContext } from "../sandbox-preflight.js";
@@ -42,6 +43,8 @@ type DeepSeekResponseInput = {
 	pageUrl: string;
 	observedAt: string;
 	answers: readonly string[];
+	answerContainerText: string;
+	answerHtml: string;
 	usedCount: number;
 	notUsedCount: number;
 	webQueries: readonly string[];
@@ -279,6 +282,11 @@ class DeepSeekPlaywrightSession implements DeepSeekCaptureSession {
 
 	async #buildCurrentResponse(answers: string[]): Promise<SurfaceResponse> {
 		const answer = this.#page.locator(this.#selectors.answer).last();
+		assertExactlyOneNewAnswer(this.#answerCountBeforeSubmit, answers.length);
+		const answerContainer = await answer.evaluate((element) => ({
+			answerContainerText: (element as HTMLElement).innerText,
+			answerHtml: (element as HTMLElement).outerHTML,
+		}));
 		const usedCount = await optionalScopedCount(answer, this.#selectors.searchUsed);
 		const notUsedCount = await optionalScopedCount(answer, this.#selectors.searchNotUsed);
 		const webQueries = this.#selectors.queryItem
@@ -300,6 +308,7 @@ class DeepSeekPlaywrightSession implements DeepSeekCaptureSession {
 			pageUrl: this.#page.url(),
 			observedAt: new Date().toISOString(),
 			answers,
+			...answerContainer,
 			usedCount,
 			notUsedCount,
 			webQueries,
@@ -383,6 +392,11 @@ export function buildDeepSeekSurfaceResponse(input: DeepSeekResponseInput): Surf
 	if (Number.isNaN(new Date(input.observedAt).getTime())) throw new Error("Invalid DeepSeek observedAt");
 	const answerText = input.answers.at(-1)?.trim();
 	if (!answerText || answerText.length > 500_000) throw new Error("DeepSeek response is missing or oversized");
+	const answerHtml = validateAnswerContainerSnapshot({
+		answerText,
+		containerText: input.answerContainerText,
+		answerHtml: input.answerHtml,
+	});
 	const webQueries = uniqueNonemptyStrings(input.webQueries, 32, 2_000, "DeepSeek web query");
 	const citations: SurfaceResponse["citations"] = [];
 	const citationUrls = new Set<string>();
@@ -397,6 +411,7 @@ export function buildDeepSeekSurfaceResponse(input: DeepSeekResponseInput): Surf
 	}
 	return {
 		answerText,
+		answerHtml,
 		pageUrl,
 		observedAt: input.observedAt,
 		webSearchObserved: classifyDeepSeekSearch({ usedCount: input.usedCount, notUsedCount: input.notUsedCount }),

@@ -107,6 +107,7 @@ test("broker response boundary carries a valid multibyte answer up to the Portal
 			kind: "response",
 			response: {
 				answerText: "中".repeat(400_000),
+				answerHtml: "<div>archived answer container</div>",
 				pageUrl: "https://www.doubao.com/chat/",
 				observedAt: "2026-08-13T00:00:00.000Z",
 				citations: [],
@@ -121,6 +122,35 @@ test("broker response boundary carries a valid multibyte answer up to the Portal
 	stream.end(encoded);
 	const parsed = parseBrokerResponse(await readBrokerFrame(stream, BROKER_RESPONSE_MAX_BYTES));
 	assert.equal(parsed.ok && parsed.result.kind === "response" && parsed.result.response.answerText.length, 400_000);
+});
+
+test("broker response requires bounded answer-container HTML", () => {
+	const response = {
+		answerText: "current answer",
+		answerHtml: "<div>current answer</div>",
+		pageUrl: "https://www.doubao.com/chat/",
+		observedAt: "2026-08-13T00:00:00.000Z",
+		citations: [],
+		webQueries: [],
+	};
+	const envelope = (value: unknown) => ({
+		version: 1,
+		requestId: "request-answer-html",
+		ok: true,
+		result: { kind: "response", response: value },
+	});
+
+	const parsed = parseBrokerResponse(envelope(response));
+	assert.equal(
+		parsed.ok && parsed.result.kind === "response" && parsed.result.response.answerHtml,
+		response.answerHtml,
+	);
+	const { answerHtml: _answerHtml, ...missingHtml } = response;
+	assert.throws(() => parseBrokerResponse(envelope(missingHtml)), /answerHtml/i);
+	assert.throws(
+		() => parseBrokerResponse(envelope({ ...response, answerHtml: "x".repeat(2 * 1024 * 1024 + 1) })),
+		/answerHtml/i,
+	);
 });
 
 test("broker response parser rejects undeclared data and preserves a typed error", () => {

@@ -1,10 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
 	browserRunnerGlobalQueueState,
 	browserRunnerObservationSchema,
 	browserRunnerSessionLeaseSchema,
+	claimRunnerTask,
 } from "./browser-runner-service";
+import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-policy";
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
@@ -19,6 +21,7 @@ function observationInput() {
 		browserVersion: "Chromium 140",
 		observation: {
 			answerText: "阶跃星辰是一家人工智能公司。",
+			answerHtml: '<section data-testid="answer">阶跃星辰是一家人工智能公司。</section>',
 			observedAt: "2026-08-12T12:00:00.000+08:00",
 			pageUrl: "https://www.doubao.com/chat/abc",
 			sessionMode: "anonymous_clean" as const,
@@ -31,6 +34,23 @@ function observationInput() {
 }
 
 describe("Browser Runner service contracts", () => {
+	it("checks snapshot capacity before allocating a task lease", async () => {
+		const claim = vi.fn();
+		await expect(
+			claimRunnerTask(
+				{ brandId: "stepfun", surfaceTargetKeys: ["doubao.consumer_web"] },
+				{ id: "runner-cn-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" },
+				{
+					assertCapacity: async () => {
+						throw new BrowserRunnerSnapshotCapacityError("full");
+					},
+					claim,
+				},
+			),
+		).rejects.toMatchObject({ status: 503 });
+		expect(claim).not.toHaveBeenCalled();
+	});
+
 	it("distinguishes pending work, a drained human queue, and a fully idle global poll", () => {
 		expect(browserRunnerGlobalQueueState(true, false)).toBe("waiting");
 		expect(browserRunnerGlobalQueueState(false, true)).toBe("drained");
@@ -57,6 +77,18 @@ describe("Browser Runner service contracts", () => {
 			browserRunnerObservationSchema.safeParse({
 				...input,
 				observation: { ...input.observation, operatorAttested: true },
+			}).success,
+		).toBe(false);
+	});
+
+	it("requires bounded answer-container HTML for every machine-authored completion", () => {
+		const input = observationInput();
+		const { answerHtml: _answerHtml, ...withoutAnswerHtml } = input.observation;
+		expect(browserRunnerObservationSchema.safeParse({ ...input, observation: withoutAnswerHtml }).success).toBe(false);
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...input,
+				observation: { ...input.observation, answerHtml: "中".repeat(2 * 1024 * 1024) },
 			}).success,
 		).toBe(false);
 	});

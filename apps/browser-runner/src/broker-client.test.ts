@@ -167,6 +167,7 @@ class ScriptedTransport implements BrokerTransport {
 					kind: "response",
 					response: {
 						answerText: "answer",
+						answerHtml: "<section>answer</section>",
 						pageUrl: "https://www.doubao.com/chat/1",
 						observedAt: "2026-08-13T00:00:00.000Z",
 						citations: [],

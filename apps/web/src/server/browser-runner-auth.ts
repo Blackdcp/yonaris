@@ -68,8 +68,8 @@ export async function parseBrowserRunnerJson<T>(
 	options: { maxBytes?: number } = {},
 ): Promise<T> {
 	const maxBytes = options.maxBytes ?? 1024 * 1024;
-	if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 2 * 1024 * 1024) {
-		throw new Error("Browser Runner JSON maxBytes must be between 1 byte and 2 MiB");
+	if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 6 * 1024 * 1024) {
+		throw new Error("Browser Runner JSON maxBytes must be between 1 byte and 6 MiB");
 	}
 	const rawLength = request.headers.get("Content-Length");
 	if (rawLength && (!/^\d+$/.test(rawLength) || Number(rawLength) > maxBytes)) {

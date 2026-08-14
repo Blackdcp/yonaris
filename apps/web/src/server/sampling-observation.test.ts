@@ -215,6 +215,21 @@ describe("prepareSamplingObservation", () => {
 		);
 	});
 
+	it("keeps answer-container HTML outside the metric idempotency identity", () => {
+		const prepare = (answerHtml: string) =>
+			prepareSamplingObservation({
+				task,
+				manifest,
+				observation: { ...observation, answerHtml },
+				operatorUserId: "admin-1",
+				leaseGeneration: 1,
+			});
+
+		expect(prepare("<section>first rendering</section>").sampleFingerprint).toBe(
+			prepare('<section data-render-id="second">first rendering</section>').sampleFingerprint,
+		);
+	});
+
 	it("does not claim that a registered CN runner verified its network egress", () => {
 		const runnerTask = {
 			...task,

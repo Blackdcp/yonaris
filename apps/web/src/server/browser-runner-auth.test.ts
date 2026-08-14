@@ -82,7 +82,7 @@ describe("Browser Runner machine authentication", () => {
 		).rejects.toMatchObject({ status: 400 } satisfies Partial<BrowserRunnerHttpError>);
 	});
 
-	it("allows a complete-only 2 MiB ceiling without widening the 1 MiB default", async () => {
+	it("allows a complete-only 6 MiB ceiling without widening the 1 MiB default", async () => {
 		const schema = z.object({ answer: z.string() }).strict();
 		const answer = "阶".repeat(400_000);
 		const body = JSON.stringify({ answer });
@@ -92,8 +92,28 @@ describe("Browser Runner machine authentication", () => {
 		).rejects.toMatchObject({ status: 413 });
 		await expect(
 			parseBrowserRunnerJson(new Request("https://portal.example/internal", { method: "POST", body }), schema, {
-				maxBytes: 2 * 1024 * 1024,
+				maxBytes: 6 * 1024 * 1024,
 			}),
 		).resolves.toEqual({ answer });
+
+		const envelopeBytes = new TextEncoder().encode('{"answer":""}').byteLength;
+		const exactBody = JSON.stringify({ answer: "x".repeat(6 * 1024 * 1024 - envelopeBytes) });
+		await expect(
+			parseBrowserRunnerJson(
+				new Request("https://portal.example/internal", { method: "POST", body: exactBody }),
+				schema,
+				{
+					maxBytes: 6 * 1024 * 1024,
+				},
+			),
+		).resolves.toHaveProperty("answer");
+		const oversizedBody = JSON.stringify({ answer: "x".repeat(6 * 1024 * 1024 - envelopeBytes + 1) });
+		await expect(
+			parseBrowserRunnerJson(
+				new Request("https://portal.example/internal", { method: "POST", body: oversizedBody }),
+				schema,
+				{ maxBytes: 6 * 1024 * 1024 },
+			),
+		).rejects.toMatchObject({ status: 413 });
 	});
 });

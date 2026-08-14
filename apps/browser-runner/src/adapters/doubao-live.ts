@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { chmod, lstat, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { BrowserContext, Page } from "playwright";
+import { assertExactlyOneNewAnswer, validateAnswerContainerSnapshot } from "../answer-container-snapshot.js";
 import type {
 	EvidenceCapture,
 	RunnerPhase,
@@ -368,6 +369,7 @@ class DoubaoLiveSession implements SurfaceSession {
 				"The approved Doubao stop-generation marker is still visible; a partial answer will not be persisted",
 			);
 		}
+		assertExactlyOneNewAnswer(this.#answerCountBeforeSubmit, await answers.count());
 		if (!answerText || answerText.length > MAX_ANSWER_CHARACTERS) {
 			throw new BrowserRunnerError(
 				"invalid_answer",
@@ -376,6 +378,11 @@ class DoubaoLiveSession implements SurfaceSession {
 				"The Doubao answer is empty or exceeds the persistence limit",
 			);
 		}
+		const answerContainer = await answer.evaluate((element) => ({
+			containerText: (element as HTMLElement).innerText,
+			answerHtml: (element as HTMLElement).outerHTML,
+		}));
+		const answerHtml = validateAnswerContainerSnapshot({ answerText, ...answerContainer });
 		const citations = await answer.locator("a[href]").evaluateAll((links) =>
 			links
 				.map((link, citationIndex) => ({
@@ -393,6 +400,7 @@ class DoubaoLiveSession implements SurfaceSession {
 		this.#lastPageUrl = this.#assertCurrentDoubaoUrl("post_submit");
 		return {
 			answerText,
+			answerHtml,
 			pageUrl: this.#lastPageUrl,
 			observedAt: new Date().toISOString(),
 			browserVersion: (await this.#page.evaluate(() => navigator.userAgent)).slice(0, 200),

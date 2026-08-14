@@ -45,6 +45,7 @@ export type ClaimedRunnerTask = {
 
 export type SurfaceResponse = {
 	answerText: string;
+	answerHtml: string;
 	pageUrl: string;
 	observedAt: string;
 	modelVersion?: string;

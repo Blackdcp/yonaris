@@ -123,6 +123,7 @@ class DoubaoFixtureSession implements SurfaceSession {
 		}
 		return {
 			answerText: this.#answerText(),
+			answerHtml: `<section data-role="answer">${escapeHtml(this.#answerText())}</section>`,
 			pageUrl: `https://www.doubao.com/chat/fixture-${encodeURIComponent(this.#task.id)}`,
 			observedAt: new Date().toISOString(),
 			modelVersion: "doubao-fixture-v1",

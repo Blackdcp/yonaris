@@ -50,6 +50,7 @@ test("post-submit assist confirms and extracts without invoking submit", async (
 		async collectResponse() {
 			return {
 				answerText: "StepFun answer",
+				answerHtml: "<section>StepFun answer</section>",
 				pageUrl: "https://www.doubao.com/chat/task-1",
 				observedAt: new Date().toISOString(),
 				citations: [],

@@ -86,6 +86,21 @@ test("claim exposes a drained automatic lane without treating it as an unknown w
 	assert.equal(remote.queueState(), "drained");
 });
 
+test("completion JSON accepts exactly six MiB and rejects one extra byte", () => {
+	assert.equal(RUNNER_INTERNAL_JSON_MAX_BYTES, 6 * 1024 * 1024);
+	const envelopeBytes = Buffer.byteLength('{"padding":""}', "utf8");
+	assert.doesNotThrow(() =>
+		assertRunnerCompletePayloadWithinLimit({ padding: "a".repeat(RUNNER_INTERNAL_JSON_MAX_BYTES - envelopeBytes) }),
+	);
+	assert.throws(
+		() =>
+			assertRunnerCompletePayloadWithinLimit({
+				padding: "a".repeat(RUNNER_INTERNAL_JSON_MAX_BYTES - envelopeBytes + 1),
+			}),
+		/answer_payload_too_large|completion payload exceeds/i,
+	);
+});
+
 test("claim accepts a frozen platform-default search task", async () => {
 	const remote = new BrowserRunnerRemoteClient({
 		baseUrl: "http://127.0.0.1:3000",

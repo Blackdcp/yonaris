@@ -121,6 +121,8 @@ test("extracts only the newest completed answer and current-answer source detail
 		pageUrl: "https://chat.deepseek.com/a/chat/s/abcd1234",
 		observedAt: "2026-08-14T08:00:00.000Z",
 		answers: ["旧回答", "当前完整回答"],
+		answerContainerText: "当前完整回答",
+		answerHtml: '<section data-testid="assistant-message">当前完整回答</section>',
 		usedCount: 1,
 		notUsedCount: 0,
 		webQueries: ["主流大模型公司", "阶跃星辰 StepFun"],
@@ -131,6 +133,7 @@ test("extracts only the newest completed answer and current-answer source detail
 		],
 	});
 	assert.equal(response.answerText, "当前完整回答");
+	assert.equal(response.answerHtml, '<section data-testid="assistant-message">当前完整回答</section>');
 	assert.equal(response.webSearchObserved, true);
 	assert.deepEqual(response.webQueries, ["主流大模型公司", "阶跃星辰 StepFun"]);
 	assert.deepEqual(response.citations, [
@@ -144,6 +147,8 @@ test("allows a valid answer without citations and preserves unknown search", () 
 		pageUrl: "https://chat.deepseek.com/a/chat/s/abcd1234",
 		observedAt: "2026-08-14T08:00:00.000Z",
 		answers: ["这是一个没有引用的有效回答。"],
+		answerContainerText: "这是一个没有引用的有效回答。",
+		answerHtml: '<section data-testid="assistant-message">这是一个没有引用的有效回答。</section>',
 		usedCount: 0,
 		notUsedCount: 0,
 		webQueries: [],

@@ -1,11 +1,12 @@
 import type { Readable } from "node:stream";
+import { ANSWER_CONTAINER_HTML_MAX_BYTES } from "./answer-container-snapshot.js";
 import type { EvidenceArtifact, RunnerTask, SurfaceResponse } from "./contracts.js";
 
 export const BROKER_PROTOCOL_VERSION = 1 as const;
 export const BROKER_REQUEST_MAX_BYTES = 1_048_576;
 // Match the Portal completion endpoint so a valid UTF-8 answer can cross the
 // local broker boundary without becoming an artificial post-submit failure.
-export const BROKER_RESPONSE_MAX_BYTES = 2 * 1_048_576;
+export const BROKER_RESPONSE_MAX_BYTES = 6 * 1_048_576;
 
 export type BrokerEvidenceDescriptor = EvidenceArtifact & { artifactId: string };
 
@@ -332,7 +333,7 @@ function parseSurfaceResponse(value: unknown): SurfaceResponse {
 	const record = objectValue(value, "surface response");
 	assertExactKeys(
 		record,
-		["answerText", "pageUrl", "observedAt", "citations", "webQueries"],
+		["answerText", "answerHtml", "pageUrl", "observedAt", "citations", "webQueries"],
 		["modelVersion", "browserVersion", "webSearchObserved"],
 	);
 	if (!Array.isArray(record.citations) || record.citations.length > 200) {
@@ -356,8 +357,13 @@ function parseSurfaceResponse(value: unknown): SurfaceResponse {
 	if (webSearchObserved !== undefined && webSearchObserved !== null && typeof webSearchObserved !== "boolean") {
 		throw new Error("response.webSearchObserved is invalid");
 	}
+	const answerHtml = textValue(record.answerHtml, "response.answerHtml", 1, ANSWER_CONTAINER_HTML_MAX_BYTES);
+	if (Buffer.byteLength(answerHtml, "utf8") > ANSWER_CONTAINER_HTML_MAX_BYTES) {
+		throw new Error("response.answerHtml is invalid");
+	}
 	return {
 		answerText: textValue(record.answerText, "response.answerText", 1, 500_000),
+		answerHtml,
 		pageUrl: textValue(record.pageUrl, "response.pageUrl", 1, 10_000),
 		observedAt: textValue(record.observedAt, "response.observedAt", 1, 100),
 		...(record.modelVersion === undefined

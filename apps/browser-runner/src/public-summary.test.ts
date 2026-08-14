@@ -37,6 +37,7 @@ test("public summaries never expose prompts, answers, URLs, or evidence paths", 
 					},
 					response: {
 						answerText: "customer answer",
+						answerHtml: "<section>customer answer</section>",
 						pageUrl: "https://www.doubao.com/chat/secret",
 						observedAt: "2026-08-13T00:00:30.000Z",
 						citations: [],
