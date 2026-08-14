@@ -129,9 +129,10 @@ mode, command_status, output_path, request_id, idempotency_key = sys.argv[1:]
 try:
     command_status = int(command_status)
     lines = pathlib.Path(output_path).read_text(encoding="utf-8").splitlines()
-    if len(lines) != 1:
-        raise ValueError("unexpected output")
-    payload = json.loads(lines[0])
+    json_lines = [line for line in lines if line.lstrip().startswith("{") and line.rstrip().endswith("}")]
+    if not json_lines:
+        raise ValueError("missing json output")
+    payload = json.loads(json_lines[-1])
     if not isinstance(payload, dict):
         raise ValueError("non-object output")
 except Exception:

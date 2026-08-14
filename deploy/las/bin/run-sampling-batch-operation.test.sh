@@ -65,6 +65,10 @@ else
 	mode="dry-run"
 fi
 printf '%s\n' "$mode" >>"$MOCK_EVENT_LOG"
+if [[ "${MOCK_DOCKER_NOISE:-false}" == "true" ]]; then
+	printf '%s\n' " Container yonaris-db-1 Running"
+	printf '%s\n' " account-ops Pulling"
+fi
 if [[ "$mode" == "status-only" && "${MOCK_BATCH_EXISTS:-false}" != "true" ]]; then
 	printf '%s\n' '{"ok":false,"code":"batch_not_found","message":"The fixed batch is absent; status-only mode will not create it"}'
 	exit 1
@@ -109,6 +113,15 @@ grep -Fq 'sampling batch dry-run:' <<<"$first_output"
 grep -Fq 'sampling batch apply:' <<<"$first_output"
 if grep -Fq 'The fixed batch is absent' <<<"$first_output"; then
 	echo "The operation leaked raw account-ops output." >&2
+	exit 1
+fi
+
+: >"$EVENT_LOG"
+noisy_output="$(MOCK_DOCKER_NOISE=true MOCK_BATCH_EXISTS=true run_operation)"
+[[ "$(tr '\n' ' ' <"$EVENT_LOG")" == "status-only dry-run apply " ]]
+grep -Fq 'sampling batch status: existing' <<<"$noisy_output"
+if grep -Fq 'account-ops Pulling' <<<"$noisy_output"; then
+	echo "The operation leaked docker progress output." >&2
 	exit 1
 fi
 
