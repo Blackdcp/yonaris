@@ -64,3 +64,17 @@ For an `anonymous_clean` task, a login wall is terminal: logging in changes the 
 There is no daemon scheduler. For an explicitly operator-started production session, run the foreground `poll` process on the CN host, then click **Start** for the already frozen browser-runner batch in Yonaris. The poller consumes only started batches and stops on SIGINT/SIGTERM; it never creates or schedules a batch.
 
 The production answer extractor is fail-closed until its selectors are verified on that runner host. The verified adapter proves search-off before submit and again before evidence, records a durable server-side submit intent before it types or sends anything, counts existing answer nodes before submission, rejects answers while the approved stop-generation marker remains visible, and accepts only a new answer that remains stable for at least eight seconds. Tokens remain in the Node process and are never injected into page JavaScript.
+
+## One-shot local DeepSeek cohort
+
+The StepFun DeepSeek comparison is a separate local-PC workflow. It does not use the Doubao service principal, does not claim Sampling batches, and never starts a poller or recurring schedule. It uses one dedicated local DeepSeek profile and writes a reviewed production manifest only after all three frozen prompts complete six independent conversations each.
+
+```powershell
+pnpm --filter @workspace/browser-runner deepseek -- login-window --state-dir C:\Users\operator\AppData\Local\Yonaris\DeepSeekSampling
+pnpm --filter @workspace/browser-runner deepseek -- probe-selectors --state-dir C:\Users\operator\AppData\Local\Yonaris\DeepSeekSampling
+pnpm --filter @workspace/browser-runner deepseek -- uat-once --state-dir C:\Users\operator\AppData\Local\Yonaris\DeepSeekSampling --selectors apps\browser-runner\src\deepseek-selector-contracts\deepseek-web-20260814-uat1.json
+pnpm --filter @workspace/browser-runner deepseek -- run-cohort --state-dir C:\Users\operator\AppData\Local\Yonaris\DeepSeekSampling --selectors apps\browser-runner\src\deepseek-selector-contracts\deepseek-web-20260814-uat1.json --output C:\reviewed\stepfun-local-pc-deepseek-18-20260814.json
+pnpm --filter @workspace/browser-runner deepseek -- review-evidence --file C:\reviewed\stepfun-local-pc-deepseek-18-20260814.json --evidence-dir C:\Users\operator\AppData\Local\Yonaris\DeepSeekSampling\evidence --output C:\reviewed\stepfun-local-pc-deepseek-18-20260814-reviewed.json
+```
+
+`login-window` performs no automatic input and waits until the operator closes the browser. `probe-selectors` is read-only and prints no page text, cookies, storage, phone number, or login data. `uat-once` durably records intent before one fixed non-scored prompt and cannot be repeated in the same state directory. `run-cohort` refuses a missing or mismatched UAT approval, retries only one clearly pre-submit navigation failure, never resends after intent, and withholds the import manifest until all 18 observations are complete. `review-evidence` re-hashes every saved screenshot and HTML page, requires positive DeepSeek read-webpages evidence before recording observed search, and never invents hidden query strings. Search remains `native_auto`; missing search evidence is stored as unknown rather than false.

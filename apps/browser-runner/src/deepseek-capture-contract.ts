@@ -145,7 +145,7 @@ export function deepSeekManifestFingerprint(manifest: DeepSeekReviewedManifest):
 	return createHash("sha256").update(canonical, "utf8").digest("hex");
 }
 
-function parseObservation(value: unknown): DeepSeekCapturedObservation {
+export function parseDeepSeekCapturedObservation(value: unknown): DeepSeekCapturedObservation {
 	const record = recordValue(value, "DeepSeek observation must be an object");
 	assertExactKeys(record, OBSERVATION_KEYS, "DeepSeek observation");
 	const promptIndex = integer(record.promptIndex, 1, 3, "promptIndex") as PromptIndex;
@@ -185,6 +185,8 @@ function parseObservation(value: unknown): DeepSeekCapturedObservation {
 		evidence: { screenshotSha256, pageSnapshotSha256 },
 	};
 }
+
+const parseObservation = parseDeepSeekCapturedObservation;
 
 function assertExactObservationSet(observations: DeepSeekCapturedObservation[]): void {
 	const expected = buildDeepSeekSlots();

@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
+import type { BrowserContext, Page } from "playwright";
+import type { PersistentContextLaunchOptions } from "../sandbox-preflight.js";
 import {
 	assertDeepSeekConversationUrl,
 	buildDeepSeekSurfaceResponse,
 	classifyDeepSeekPage,
 	classifyDeepSeekSearch,
+	DeepSeekPlaywrightSessionFactory,
 	DeepSeekSubmissionGuard,
+	openDeepSeekLoginWindow,
 	validateDeepSeekSelectorContract,
 } from "./deepseek-live.js";
 
@@ -160,5 +167,72 @@ test("accepts only clean durable DeepSeek conversation URLs", () => {
 		"https://chat.deepseek.com/a/chat/s/abcd1234?share=1",
 	]) {
 		assert.throws(() => assertDeepSeekConversationUrl(url), /DeepSeek conversation URL/);
+	}
+});
+
+test("the login window uses one private persistent sandboxed profile without automated input", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "yonaris-deepseek-login-"));
+	const events: string[] = [];
+	const closeWaitOptions: unknown[] = [];
+	const launches: Array<{ profileDirectory: string; options: PersistentContextLaunchOptions }> = [];
+	const page = {
+		async goto(url: string) {
+			events.push(`goto:${url}`);
+		},
+		async fill() {
+			events.push("fill");
+		},
+		async click() {
+			events.push("click");
+		},
+	} as unknown as Page;
+	const launcher = async (profileDirectory: string, options: PersistentContextLaunchOptions) => {
+		launches.push({ profileDirectory, options });
+		return {
+			pages: () => [page],
+			async waitForEvent(event: string, options: unknown) {
+				assert.equal(event, "close");
+				closeWaitOptions.push(options);
+			},
+			async close() {},
+		} as unknown as BrowserContext;
+	};
+	try {
+		const result = await openDeepSeekLoginWindow(stateDirectory, launcher);
+		assert.equal(result.status, "closed");
+		assert.match(result.profileIdentityHash, /^[0-9a-f]{64}$/);
+		assert.deepEqual(events, ["goto:https://chat.deepseek.com/sign_in"]);
+		assert.equal(launches.length, 1);
+		assert.equal(launches[0]?.options.headless, false);
+		assert.equal(launches[0]?.options.chromiumSandbox, true);
+		assert.match(launches[0]?.profileDirectory ?? "", /deepseek-profile$/);
+		assert.deepEqual(closeWaitOptions, [{ timeout: 0 }]);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
+test("the live factory reuses the dedicated profile sequentially and always launches sandboxed", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "yonaris-deepseek-factory-"));
+	const launches: PersistentContextLaunchOptions[] = [];
+	const launcher = async (_profileDirectory: string, options: PersistentContextLaunchOptions) => {
+		launches.push(options);
+		return {
+			pages: () => [{} as Page],
+			async close() {},
+		} as unknown as BrowserContext;
+	};
+	try {
+		const factory = new DeepSeekPlaywrightSessionFactory(stateDirectory, SELECTORS, launcher);
+		const first = await factory.create("slot-1", "prompt-1");
+		await first.close();
+		const second = await factory.create("slot-2", "prompt-2");
+		await second.close();
+		assert.equal(launches.length, 2);
+		assert.ok(launches.every((options) => options.chromiumSandbox === true));
+		assert.ok(launches.every((options) => options.locale === "zh-CN"));
+		assert.ok(launches.every((options) => options.timezoneId === "Asia/Shanghai"));
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
 	}
 });

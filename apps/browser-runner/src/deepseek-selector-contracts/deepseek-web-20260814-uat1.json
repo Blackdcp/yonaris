@@ -1,0 +1,16 @@
+{
+	"version": "deepseek-web-20260814-uat1",
+	"composer": "textarea._27c9245",
+	"send": "div[role=\"button\"].ds-button--primary.ds-button--circle",
+	"newConversation": "._5a8ac7a.a084f19e",
+	"userMessage": ".d29f3d7d.ds-message",
+	"answer": ".ds-assistant-message-main-content",
+	"generating": "div[role=\"button\"].ds-button--primary.ds-button--circle:not(.ds-button--disabled)",
+	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
+	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"]",
+	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"]",
+	"searchUsed": null,
+	"searchNotUsed": null,
+	"citationLink": "a[href^=\"http\"]",
+	"queryItem": null
+}

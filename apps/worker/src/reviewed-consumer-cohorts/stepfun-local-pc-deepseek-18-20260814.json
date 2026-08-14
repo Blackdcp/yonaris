@@ -1,0 +1,998 @@
+{
+  "schemaVersion": 1,
+  "importId": "stepfun-local-pc-deepseek-18-20260814",
+  "brandId": "stepfun",
+  "scopeKey": "cn-zh-scored",
+  "market": "CN",
+  "locale": "zh-CN",
+  "timezone": "Asia/Shanghai",
+  "evaluationRole": "scored",
+  "model": "deepseek",
+  "surfaceTargetKey": "deepseek.consumer_web",
+  "captureRouteKey": "assisted_browser.generic",
+  "sessionMode": "dedicated_sampling_profile",
+  "searchMode": "native_auto",
+  "observations": [
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-01-p1-s1",
+      "promptIndex": 1,
+      "sampleIndex": 1,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "国内主流大模型公司已从早期的\"百模大战\"进入更加聚焦的竞争阶段，目前没有一家独大，而是形成了由互联网巨头、AI原生新势力和垂直领域专家共同构成的多元竞争格局-1-3-8。以下是目前国内AI大模型领域的核心公司及其代表性产品：主要玩家代表性大模型核心竞争力与特点字节跳动豆包 (Doubao)用户规模领跑：依托抖音等流量池，C端日活用户已突破1亿，位居行业第一-1-6。阿里巴巴通义千问 (Qwen)商业与开源双强：拥有强大的云基础设施和开源生态，是IDC评估中唯一入选全球\"领导者\"象限的中国厂商-1-7-8。深度求索 (DeepSeek)DeepSeek系列开源技术标杆：以极致的工程优化和成本控制闻名，凭借强大的推理和代码能力成为全球现象级开源模型-1-3-8。智谱AI (Zhipu AI)GLM系列技术均衡派：模型性能曾登顶全球榜单，同时通过高性价比的API和商业化探索（已启动IPO），在市场中占据重要位置-1-8-11。百度 (Baidu)文心一言 (ERNIE)搜索与知识增强：深耕中文理解，其千帆平台已支持构建超过130万个智能体（Agent），侧重企业服务和行业应用-3-8-9。腾讯 (Tencent)混元 (Hunyuan)生态场景融合：深度集成微信、腾讯文档等产品，在社交、办公和游戏场景中应用广泛-1-8。华为 (Huawei)盘古 (Pangu)国产全栈方案：拥有从昇腾芯片到AI框架的自主技术栈，在制造、能源等政企和工业场景落地深入-3-8。MiniMaxMiniMax系列多模态与API生态：API调用规模突出，在AI生成和智能体（Agent）技术上有深厚积累-2-6-11。月之暗面 (Moonshot AI)Kimi长文本能力突出：以支持超长上下文和复杂文档分析的功能著称，主打知识工作者场景-1-2-9。阶跃星辰 (StepFun)Step系列多模态技术先锋：聚焦智能终端Agent，在多模态推理榜单中表现优异-2-8-11。以上列举为主要代表，此外，科大讯飞（讯飞星火）、商汤科技（商量）、360（360智脑）、小米（MiMo）等也是主流参与者，分别在语音、政企、安全、智能设备等领域拥有独特优势-1-2-3。当前行业的竞争焦点，已经从比拼参数规模和价格，转向了比拼智能体（Agent）能力、商业落地效率和真实场景的回报-1-3-9。可以说，现在每家公司的核心命题，是证明自己的大模型在真实世界中能真正\"干成事\"。如果想深入了解其中某一家公司，比如它最擅长做什么，或是当前有什么代表性的应用，可以随时告诉我，我再为你详细介绍。",
+      "observedAt": "2026-08-14T07:30:05.169Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/849d4cb3-fa56-4c4d-b84d-cbbc8a400925",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://cloud.tencent.com.cn/developer/article/2699618?policyId=1004",
+          "title": "cloud.tencent.com.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://www.163.com/dy/article/L3IPB6DB05568W0A.html",
+          "title": "163.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://www.thepaper.cn/newsdetail_forward_33291314",
+          "title": "thepaper.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://epaper.tkww.hk/a/202605/10/AP69ff97b5e4b04773b06d7bac.html",
+          "title": "epaper.tkww.hk",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 7
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "390d3c642d946ac1b629ed6a98adda7043d7b2c580b57f1775ae3aaca973e5a4",
+        "pageSnapshotSha256": "a8177fe38cb282dc45b95f0f25aec2e936f077f79e5dabc3989290b991318ace"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-02-p2-s1",
+      "promptIndex": 2,
+      "sampleIndex": 1,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "国内大模型服务商已经形成了“多强并立、路径分化”的格局，主要可以分为互联网平台巨头、AI原生技术新锐、深耕特定领域的专家这三大阵营。我整理了一份当前主流的服务商及特点，供你参考：阵营代表服务商核心模型/平台特点与优势互联网平台巨头字节跳动豆包大模型、火山方舟平台用户规模巨大，日均调用量领先，商业化落地快-1-5-8。阿里巴巴通义千问、百炼平台开源生态强大，云基础设施完善，API调用量高-1-5-8。百度文心一言、千帆平台中文理解能力强，知识图谱深厚，行业深耕经验丰富-1-2。腾讯混元大模型、腾讯云TI平台深度整合微信、腾讯文档等生态，多模态和实时推理能力强-1-2。华为盘古大模型、昇腾AI国产全栈方案（芯片+平台），在政企、工业制造等场景深度落地-1-2-4。AI原生技术新锐深度求索(DeepSeek)DeepSeek系列技术标杆与开源先锋，以高性价比和卓越的数学、代码能力著称-1-2-5。智谱AIGLM系列技术性能与成本平衡出色，商业化进展快，已启动IPO-1-5。月之暗面(Kimi)Kimi系列以长文本处理能力突围，在C端用户中知名度高-3-5。阶跃星辰Step系列多模态能力突出，聚焦智能终端Agent场景-1-5。MiniMaxMiniMax系列在AI原生公司中技术实力领先，产品创新能力强-2-4-5。垂直领域专家科大讯飞讯飞星火在教育、医疗等行业积累深厚，市场项目经验丰富-2-5-6。商汤科技商量(SenseChat)计算机视觉技术领先，在视频生成、医疗影像等领域有创新应用-2-5-6。京东科技言犀深度结合零售、物流等自身业务场景-2-5。此外，通信运营商（如中国移动、中国电信）、硬件厂商（如小米的MiMo）等也在积极布局-2-4-5。目前市场正从技术比拼转向技术与商业落地、生态建设的综合较量。不同服务商在通用能力、行业专长、部署方式（公有云/私有化）上各有侧重。如果你想进一步了解某个特定领域的服务商，比如在金融、医疗行业有优势的，可以随时告诉我。",
+      "observedAt": "2026-08-14T07:30:23.828Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/18eb5e32-af19-4298-a680-3a76c01da86a",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.thepaper.cn/newsdetail_forward_31802232",
+          "title": "m.thepaper.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://static.weeklyonstock.com/25/0820/qdy171404.html",
+          "title": "static.weeklyonstock.com",
+          "citationIndex": 6
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "eae2915e863b5fca0bacc3022039bdbc4f74d0a5aceb2a5bb39c46ae7e7233ef",
+        "pageSnapshotSha256": "d82455066bb6c9771255f641a7895e2b59a1d662c2319ff879ab7f3e6e5f7371"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-03-p3-s1",
+      "promptIndex": 3,
+      "sampleIndex": 1,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是一家专注于通用人工智能（AGI）研发的中国头部大模型创业公司，成立于2023年4月，总部位于上海-1-4。它被称为“国产大模型六小虎”之一，与智谱AI、月之暗面等公司齐名，其最新一笔超50亿元的B+轮融资，创下了中国大模型赛道近12个月的单笔最高融资纪录-1-2-5。它的核心特点可以概括为以下几点：明星创始与研发团队：由前微软全球副总裁姜大昕创立。核心团队还包括ResNet作者之一的90后首席科学家张祥雨，以及前微软亚洲研究院研究员朱亦博等人-1-9。近期，AI领域资深创业者印奇（旷视科技联合创始人）也出任了公司董事长-2-4。强大的模型技术实力：阶跃星辰坚持自研基座模型，已发布超22款模型，形成了以语言大模型、多模态模型、端云协同模型为核心的“1+2”技术矩阵-1-2。其Step系列模型以多模态能力见长，被业内称为“多模态卷王”-9。清晰的“AI+终端”战略：与其他大模型公司路线不同，阶跃星辰非常明确地聚焦于“AI+终端” 的商业化落地，致力于将大模型能力装入手机、汽车等实际硬件中-2-5。在手机上：已与国内60%的头部手机品牌（如OPPO、荣耀、中兴）达成合作，模型装机量超4200万台，日均服务近2000万人次-2-3-4。在汽车上：与吉利、千里科技合作，推出了搭载其端到端语音模型的智能座舱，已应用于吉利银河M9等量产车型-2-4。如果你想了解它具体的某款模型，或者它与手机厂商合作的功能细节，可以随时告诉我。",
+      "observedAt": "2026-08-14T07:30:40.351Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/2cd72b34-3ae6-4bff-8315-801fa4e907a6",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://www.cnfin.com/gs-lb/detail/20260126/4371193_1.html",
+          "title": "cnfin.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://36kr.com/p/3656177726824835",
+          "title": "36kr.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "http://sh.people.com.cn/BIG5/n2/2026/0126/c134768-41483624.html",
+          "title": "sh.people.com.cn",
+          "citationIndex": 5
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "5c9e0ef00cd3c166ddee8c7be3625fda9f567630dfa5b59f06bd7921490b0060",
+        "pageSnapshotSha256": "da2d9e05f9eaae78a8e527b910515c80117f7979afaf4befb56a844d7c55cbd8"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-04-p1-s2",
+      "promptIndex": 1,
+      "sampleIndex": 2,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "国内的大模型行业已形成“多强并立、分层竞争”的格局。既有深耕多年的科技巨头，也有依靠技术创新迅速崛起的AI原生公司-3-4。如果按照它们的背景和特点，可以分为以下几个梯队来看：梯队 / 分类代表公司及模型核心特点与优势综合实力头部字节跳动 (豆包)、阿里巴巴 (通义千问)、深度求索 (DeepSeek)综合实力位列前三甲-2。- 字节跳动：C端用户规模领先，豆包DAU超1亿，流量生态强大-2。- 阿里巴巴：云与开源生态强大，是全球最大的开源模型家族之一-2-9-7。- 深度求索：开源与技术标杆，以极高性价比著称，V4版本在开发者中声誉极高-2-9。科技大厂与平台腾讯 (混元)、百度 (文心一言)、华为 (盘古)、小米 (MiMo)各自拥有独特的护城河-4-9-7。- 腾讯：与微信、腾讯文档等生态深度融合-9。- 百度：在中文理解、知识图谱和行业解决方案上积累深厚-9。- 华为：提供从昇腾芯片到云平台的全栈国产化方案，深耕政企与工业场景-3-9。- 小米：主打“极致性价比”和端云协同，面向个人开发者和中小厂商，近期模型调用量增长迅猛-7-11。AI原生创新力量智谱AI (GLM)、月之暗面 (Kimi)、MiniMax、阶跃星辰 (Step)在特定技术或产品上实现突围-2-4-9。- 智谱AI：技术和商业化并进，其GLM模型曾登顶全球榜单-9。- 月之暗面：以长文本处理能力出圈的Kimi模型广受关注，并开源了全球最大参数模型之一-2-11。- MiniMax：在多模态视频生成领域表现突出，其模型在全球榜单中排名靠前-1-5。- 阶跃星辰：聚焦多模态和智能终端Agent，商业化路径清晰-4-9。其他重要玩家科大讯飞 (讯飞星火)、商汤科技 (商量)、百川智能、零一万物 (Yi) 等覆盖了垂直行业应用、企业服务等细分领域，同样是市场的重要参与者-2-3-5。例如科大讯飞在教育、医疗等行业有深度布局，商汤科技则在视觉AI领域全球领先-3-8。这些公司也代表了不同的竞争路径：一些依托于庞大的生态和流量，一些通过技术创新和开源生态建立壁垒，还有一些则深耕垂直行业，竞争焦点已从单纯的模型参数转向了商业落地效率和真实应用反馈-2-4。",
+      "observedAt": "2026-08-14T07:30:59.492Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/b7f05ce3-f34b-485c-b258-3f6f3060f257",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.gmw.cn/2026-08/02/content_1304541842.htm",
+          "title": "m.gmw.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://news.cctv.cn/2026/08/02/ARTI6RnsxvJ5IArL2JxUJViG260802.shtml",
+          "title": "news.cctv.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://m.chinatimes.net.cn/article/154777.html",
+          "title": "m.chinatimes.net.cn",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://www.100ec.cn/detail--6662185.html",
+          "title": "100ec.cn",
+          "citationIndex": 7
+        },
+        {
+          "url": "http://www.iheima.com/article-400137.html",
+          "title": "iheima.com",
+          "citationIndex": 8
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "e99e9dc1fd859f2a6301ac9c9978bc6f3fdfa13a95929fc1bde73a9e09f72c28",
+        "pageSnapshotSha256": "72a955335a60d03c256b7f79b416a97d8f80d4da507e10ac50a054eac4fc37ad"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-05-p2-s2",
+      "promptIndex": 2,
+      "sampleIndex": 2,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "国内的大模型服务商格局已经比较清晰，主要可以分为互联网巨头、AI原生公司、垂直领域专家和通信运营商这四大阵营-2-4。根据多家行业研究机构发布的榜单和报告，目前主要的服务商及代表模型如下-1-5-7：阵营主要服务商代表模型/平台核心特点互联网巨头字节跳动 (火山引擎)豆包大模型、火山方舟平台商业规模领先，日均调用量巨大，C端用户过亿-1-5-8。阿里巴巴 (阿里云)通义千问系列、百炼平台开源生态强大，云基础设施完善，MaaS平台市场领先-1-5-8。百度 (百度智能云)文心一言系列、千帆平台中文理解能力深厚，行业解决方案积累丰富-1-2-6。腾讯 (腾讯云)混元大模型与微信、腾讯文档等生态场景深度融合-1-4-5。华为 (华为云)盘古大模型、昇腾AI国产全栈式方案（芯片+框架+平台），深耕工业、政企等领域-1-2-4。AI原生公司深度求索 (DeepSeek)DeepSeek系列技术标杆与开源先锋，在数学、代码等硬核能力上达到国际前沿，成本控制极佳-1-2-5。智谱AI (GLM)GLM系列技术实力雄厚，商业化进展快，已启动IPO流程-1-5-6。月之暗面 (Moonshot)Kimi K系列以长文本处理能力著称，深受用户欢迎-3-4-5。阶跃星辰 (StepFun)Step系列多模态能力突出，在相关评测中表现领先-1-3-5。MiniMaxMiniMax系列产品（如海螺AI）在海外市场也有较强影响力-2-3-4。商汤科技商量 (SenseChat)在计算机视觉和多模态领域有深厚积累-2-3-5。垂直领域专家科大讯飞讯飞星火在语音技术和教育、医疗等行业应用见长-2-4-5。通信运营商中国移动、中国电信-依托通信数据和政企服务渠道，定位为“数据基建”服务商-2-6。此外，像京东（言犀）、360（360智脑）、百川智能、零一万物、面壁智能（端侧模型）等也是市场上活跃的玩家-2-4-5。目前，“第一梯队”的竞争主要围绕用户规模、技术实力、商业化落地和生态构建几个维度展开-1-5。例如，字节跳动的豆包在C端用户规模上领先，而阿里云在B端MaaS（模型即服务）平台的调用量上占据优势-5-8。如果你对其中某一家，或是某个特定领域（比如视频生成、代码能力）的模型感兴趣，可以再告诉我，我帮你细看～",
+      "observedAt": "2026-08-14T07:31:18.956Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/33dadbfb-dca0-49b1-84b5-ec800aba2309",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://finance.sina.com.cn/jjxw/2026-08-06/doc-inimkskz4538626.shtml",
+          "title": "finance.sina.com.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://m.thepaper.cn/newsdetail_forward_31802232",
+          "title": "m.thepaper.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://static.weeklyonstock.com/25/0820/qdy171404.html",
+          "title": "static.weeklyonstock.com",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 7
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "be2cc24c04b6d0a2d38aa009a8d4b3fc5bb3a02cc92ba906bc858f6fbbbecb65",
+        "pageSnapshotSha256": "b3e55cb0e24ac8828b28ed5d088a9de20cc5a66eeb2683ea495ba6ee7c4d8625"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-06-p3-s2",
+      "promptIndex": 3,
+      "sampleIndex": 2,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是一家专注于通用人工智能（AGI）的中国大模型创业公司，被业界视为“国产大模型六小虎”之一-1。它的核心信息如下：创立与团队：2023年4月成立于上海，由前微软全球副总裁姜大昕创立-1-8。核心团队还有前旷视研究院院长张祥雨（首席科学家）、前微软亚洲研究院研究员朱亦博（CTO）等AI领域顶尖专家，阵容强大-1-8。技术实力：公司坚定投入基础模型研发，已发布22款自研模型，包括万亿参数的MoE语言大模型Step-2和性能领先的多模态推理大模型Step 3-1-2-8。因其模型迭代快、多模态性能强，被业内称为“多模态卷王”-8。战略方向：阶跃星辰的长期战略是“基础大模型”与“AI+终端”-2。其模型已在OPPO、荣耀等头部手机品牌中装机超4200万台，并与吉利等车企合作推出智能座舱，商业化进展迅速-2-4-8。最新融资与人事：2026年1月，公司完成超50亿元B+轮融资，刷新国内大模型赛道单笔融资纪录，投资方包括多地国资和腾讯等-1-2-4。同时，AI领域资深专家、旷视科技创始人印奇正式出任公司董事长-2-8。如果你想了解它发布的某个具体模型（如语音或视频生成模型）的技术细节，也可以告诉我。",
+      "observedAt": "2026-08-14T07:31:34.979Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/6c22b8e8-8fb9-4564-b660-ffc59d0565dd",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://www.cnfin.com/gs-lb/detail/20260126/4371193_1.html",
+          "title": "cnfin.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 3
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "3c0a0684bbaf194df068ccc3736ef7fa6c42948971826417f4baa99b41e08ba2",
+        "pageSnapshotSha256": "6c73c915e169b717fffdecfed0525ece33c08db1a5a452fabe748892060a073d"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-07-p1-s3",
+      "promptIndex": 1,
+      "sampleIndex": 3,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "国内大模型公司已形成一个多梯队竞争的格局，大致可以分为几类：互联网巨头、技术领先的AI原生公司，以及深耕特定行业的专家。综合2026年的行业报告和榜单，下面这张表可以帮你快速了解其中的主流公司-1-2-6。公司代表模型/产品主要特点与定位字节跳动豆包拥有超1亿日活，依托抖音等生态，C端用户规模领先，主打“全民AI助手”-1-6。阿里巴巴通义千问 (Qwen)模型与云服务结合紧密，开源生态强大，在商业化和企业级市场表现突出，被IDC评为全球基础模型软件“领导者”-1-7-9。深度求索 (DeepSeek)DeepSeek系列以技术见长的开源标杆，在数学推理、代码生成等硬核能力上国际领先，被誉为“成本屠夫”-1-9。智谱AI (GLM)GLM系列AI原生公司代表，技术上与成本控制平衡得较好，商业化进展快，已启动IPO流程-1-9。百度文心一言中文理解能力强，知识图谱庞大，致力于将AI应用于搜索、政务和企业服务，构建了全链路平台-1-6-9。腾讯腾讯混元深度融入微信、腾讯文档等社交与办公生态，在多模态和实时推理方面有优势-1-4-9。月之暗面 (Moonshot AI)Kimi以“长文本”能力突围的AI原生公司，在文档分析等场景很受欢迎，定位为“技术尖兵”-1-6-8。MiniMaxMiniMax系列多模态和AI生成能力突出，API调用量规模巨大，开发者生态活跃-1-4-6。华为盘古大模型提供从昇腾芯片到训练框架的全栈国产方案，在政企、制造、能源等工业场景落地很深-1-3-9。阶跃星辰Step系列多模态能力突出，商业化路径清晰，聚焦智能终端Agent-1-9。科大讯飞讯飞星火深耕语音AI，在教育、医疗等垂直领域有深厚积累，市场竞争能力强-1-3-6。商汤科技商汤商量 (SenseChat)作为“AI四小龙”之一，在计算机视觉和政企服务领域有优势-1-3-6。小米MiMo从芯片、设备及OS出发，探索端云协同能力，与小米生态深度融合-1-4-11。🏆 行业竞争新趋势目前，行业的竞争重心正在从“参数规模”和“技术跑分”，转向更实际的商业效率和场景应用-1-11。效率为王：头部公司开始追求“极致性价比”，通过MoE（混合专家）架构等技术降低推理成本。例如，中国头部模型的算力效率比美国同类产品平均高出30.4%，Token均价仅为美国的1/4-1。智能体（Agent）成焦点：企业需求从简单的“问答”升级为能完成端到端任务的“智能体”，能否在实际场景中“干得久、干得好”成为新的评价标准-11-8。如果想了解某家公司的具体情况，或是想看看它们在特定领域的表现，可以随时告诉我，我再帮你细查。",
+      "observedAt": "2026-08-14T07:31:54.903Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/aaf23063-9c59-493e-876b-09b31e60d161",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://cloud.tencent.com.cn/developer/article/2699618?policyId=1004",
+          "title": "cloud.tencent.com.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://www.163.com/dy/article/L3IPB6DB05568W0A.html",
+          "title": "163.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://epaper.tkww.hk/a/202605/10/AP69ff97b5e4b04773b06d7bac.html",
+          "title": "epaper.tkww.hk",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 7
+        },
+        {
+          "url": "https://www.thepaper.cn/newsdetail_forward_33291314",
+          "title": "thepaper.cn",
+          "citationIndex": 8
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "124288e3444b75becf863f1f1a9e0fc0adc43c9b68d9009dbb6b0f2827efcbd2",
+        "pageSnapshotSha256": "bc02ee9bed5cef8cc9b8cbb1770a03df0fbc6104da8a1f4256734b6e2962e416"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-08-p2-s3",
+      "promptIndex": 2,
+      "sampleIndex": 3,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "国内大模型服务商已经形成了一个多元化的格局。根据2026年最新的行业报告，主要可以分为几类核心玩家-5-4。我把目前市场上的主要服务商整理成了下面的表格，方便你快速了解：服务商代表模型核心特点字节跳动豆包大模型用户规模与日均调用量领先，依托抖音等生态，主打商业化规模应用-1-5-8。阿里巴巴通义千问开源生态强大，云基础设施完善，在API调用量和MaaS平台方面表现突出-1-5-8。深度求索 (DeepSeek)DeepSeek系列技术标杆与开源先锋，以工程化创新大幅降低模型成本，被誉为“成本屠夫”-1-2。百度文心一言中文理解与行业深耕能力强，拥有全链路的大模型平台服务-1-5。腾讯混元大模型深度整合微信、腾讯文档等生态场景，在多模态与实时推理上有优势-1-4-5。华为盘古大模型提供从昇腾芯片、训练框架到云平台的全栈国产方案，在政企和工业场景落地深-1-2-4。智谱AIGLM系列AI原生公司代表，在技术性能与成本间取得了良好平衡，商业化进展快-1-2-5。阶跃星辰Step系列多模态能力突出，聚焦智能终端Agent，商业化路径清晰-1-5。月之暗面Kimi模型原生前沿派代表，以长文本处理能力著称-3-4-5。MiniMaxMiniMax系列同样属于模型原生前沿派，在AI应用领域有独特布局-3-4-5。科大讯飞讯飞星火行业大模型专家，深耕教育、医疗等领域，市场份额与项目经验丰富-2-4-5。小米MiMo从芯片、设备与操作系统出发，探索端侧AI，与小米生态深度融合-4-5。商汤科技商量计算机视觉起家，在视频生成和多模态技术上有成本优势-2-5。运营商-中国电信、中国移动等被视为“数据基建隐形冠军”，依托通信数据和政企服务能力形成独特优势-2-6。📊 玩家格局解析根据各家禀赋和打法，这些服务商大致可分为以下几派-4-5：平台生态巨头：以阿里、字节、百度、腾讯为代表。它们手握海量用户数据、雄厚的云计算资源和强大的资金实力，走的是“应用倒逼模型”或“云智一体”的路线，追求技术与商业生态的闭环-4-5。模型原生新锐：以DeepSeek、智谱AI、月之暗面(Kimi)、MiniMax为代表。它们是技术驱动的创新者，在模型架构、训练效率或特定能力（如长文本、多模态）上寻求突破，通过开源、极致性价比等策略迅速崛起-4-5。垂直行业专家：以华为、科大讯飞、商汤为代表。它们深耕特定行业（如政企、制造、教育、医疗），通过“硬件+软件”协同、场景化模型等方式，在产业端建立深厚壁垒-2-4。终端生态玩家：以小米为代表，其核心优势在于巨大的智能设备保有量，探索将大模型能力与手机、汽车、智能家居等终端深度结合-4-5。你是想用大模型来做应用开发（关注API调用），还是想在具体业务场景里落地（关注行业解决方案）？告诉我你的具体需求，我可以帮你针对性地推荐合适的服务商。",
+      "observedAt": "2026-08-14T07:32:15.585Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/d702e707-362a-4873-b3f8-71989a8ad246",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.thepaper.cn/newsdetail_forward_31802232",
+          "title": "m.thepaper.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://static.weeklyonstock.com/25/0820/qdy171404.html",
+          "title": "static.weeklyonstock.com",
+          "citationIndex": 6
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "1c9db1536e3cbe0ae04be8ed5882e522e359dd46e31c26f7d429826d4d7c19ec",
+        "pageSnapshotSha256": "7edb8f190adc19ef49c7cd99fb178c1576284fdbfbdde9fd0bc88b095e367c00"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-09-p3-s3",
+      "promptIndex": 3,
+      "sampleIndex": 3,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是中国人工智能大模型领域的头部创业公司，因其技术实力和市场地位，与智谱AI、MiniMax等并称为“国产大模型六小虎”-1-6。它的核心特点和最新动态如下：🏢 公司概况成立与创始人：2023年4月成立于上海，由前微软全球副总裁姜大昕创立。核心团队还包括首席科学家张祥雨（前旷视研究院院长）等AI领域顶尖专家-1-10。“AI+终端”战略：公司致力于实现通用人工智能（AGI），但与众不同的是，它非常聚焦于让大模型在真实的物理设备上落地，即“AI+终端”战略-2-6。简单说，就是让大模型“上车”、“进手机”。🚀 最新进展（截至2026年8月）创纪录融资：在2026年1月，阶跃星辰宣布完成超50亿元人民币的B+轮融资，创下当时中国大模型赛道单笔最高融资纪录-1-2。投资方包括上海国投先导基金、腾讯等。新任董事长：同一时间，AI领域知名创业者、印奇（旷视科技联合创始人）出任公司董事长，负责战略方向制定-2-4。商业化落地：公司技术已进入量产应用，据公司透露：手机领域：已与国内60%的头部手机品牌合作（如OPPO、荣耀），模型装机量超过4200万台-2-8。汽车领域：与吉利等车企合作推出智能座舱方案，量产车型销量已近4万辆，预计大模型将“上车”超百万辆-2-4。",
+      "observedAt": "2026-08-14T07:32:31.011Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/96a9df7b-bae1-42f1-8fd7-9932107f8d09",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://36kr.com/p/3656177726824835",
+          "title": "36kr.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://www.cnfin.com/gs-lb/detail/20260126/4371193_1.html",
+          "title": "cnfin.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://fund.eastmoney.com/a/202601263630446520.html",
+          "title": "fund.eastmoney.com",
+          "citationIndex": 5
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "e603ee3b4809bc7e66ae802d936a0b504325f802e8c097df182430603179ea64",
+        "pageSnapshotSha256": "095bf8870920edf1c142720c15548b9fa25c9c03c5c23693d68cae34405722dd"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-10-p1-s4",
+      "promptIndex": 1,
+      "sampleIndex": 4,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "根据2026年最新的行业报告和竞争格局分析，国内AI大模型市场已形成“三超多强”的稳定格局-1。综合评估公司在C端用户规模、B端API调用量、技术实力及生态建设等多个维度的表现，主流公司主要可以分为以下三个梯队：🏆 第一梯队：市场领跑者 (三强)这三家公司凭借在用户规模、API调用量或开源生态上的卓越表现，稳居行业前列，构成了稳固的头部阵营-1-8-10：公司核心大模型核心竞争力字节跳动豆包 (Doubao)用户规模断层领先，日活跃用户已突破1亿，借助抖音等超级App构建了“流量-数据-迭代”的生态闭环-1-5-8。阿里巴巴通义千问 (Qwen)商业化和云生态强大，在模型服务和API调用量上表现突出，是国内首个入选IDC全球基础模型软件“领导者”象限的厂商-1-9-11。深度求索DeepSeek开源和技术标杆，凭借极高的模型性能和全球领先的API调用量闻名。其开源战略在开发者中拥有极高声誉，并证明了开源的商业可行性-1-4。🚀 第二梯队：关键挑战者这些公司是市场上的重要力量，在特定技术领域或应用场景拥有显著优势-1-3-5：智谱AI (GLM)：以强大的推理模型和企业级部署能力见长，在B端市场有深厚积累-1-5。百度 (文心一言)：依托其搜索生态和“千帆”企业服务平台，已支持构建了超过130万个AI智能体(Agents)，注重一站式企业服务-1-5-11。腾讯 (混元)：深度整合微信、办公等社交与办公生态，拥有庞大的潜在用户基础-1-3-5。月之暗面 (Kimi)：以长文本处理能力著称，在需要深度文档分析和复杂推理的场景中优势明显-1-5-11。MiniMax：在多模态生成领域表现突出，其视频生成模型在国际评测中名列前茅-1-4-5。🌱 第三梯队：重要参与者与新兴力量这个梯队包括在各细分领域或垂直行业深耕的公司，同样值得关注：华为 (盘古)：主打行业应用，尤其在政企、制造等领域有深厚积累-1-3。科大讯飞 (讯飞星火)：核心优势在于语音AI技术，在教育、医疗等场景应用广泛-1-3-5。其他：如小米(MiMo)、阶跃星辰(Step)、面壁智能、商汤科技(商量)、百川智能、零一万物(Yi)、360(智脑)、京东(言犀)等，均在特定技术路线或行业场景中扮演着重要角色-1-3-5。可以看到，当下的竞争焦点已从单纯的“参数规模”比拼，转向了效率、商业化落地和构建生态闭环的综合实力较量-1-3-11。你是想深入了解其中某家公司的最新动态，还是想对比它们在某个特定能力（比如编程或长文本处理）上的表现？",
+      "observedAt": "2026-08-14T07:32:51.228Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/f04c4822-a247-4436-965c-9878ff54f10c",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://m.163.com/dy/article/L21F71V105199NHJ.html?spss=adap_pc",
+          "title": "m.163.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "http://www.iheima.com/article-400137.html",
+          "title": "iheima.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://cloud.tencent.cn/developer/article/2699618?policyId=1003",
+          "title": "cloud.tencent.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://www.163.com/dy/article/L3IPB6DB05568W0A.html",
+          "title": "163.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://epaper.tkww.hk/a/202605/10/AP69ff97b5e4b04773b06d7bac.html",
+          "title": "epaper.tkww.hk",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://m.chinatimes.net.cn/article/154777.html",
+          "title": "m.chinatimes.net.cn",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 7
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "9b8a9fba99f8b0c266bb6d9f18df734fc1c6028ba9501434048e27f661ba78f3",
+        "pageSnapshotSha256": "b714ad982349284320162f5b57b55637264812ca26e4690e5b7b5d3de4b7748b"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-11-p2-s4",
+      "promptIndex": 2,
+      "sampleIndex": 4,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "目前国内的大模型服务商已经形成了几大阵营，既有互联网巨头，也有技术驱动的原生创业公司，在商业化应用上各有侧重-1-4。📈 当前市场的主要玩家当前行业呈现出“三超多强”的格局，其中字节跳动（豆包）、阿里巴巴（通义千问）和深度求索（DeepSeek） 凭借巨大的用户规模或调用量，稳居第一梯队-4。我将主要的头部服务商和它们的特点整理在了下面的表格里：阵营/梯队代表厂商核心模型/平台核心优势与特色第一梯队字节跳动豆包 (Doubao)用户规模与生态闭环：日活跃用户数已超1亿。背靠抖音等超级App，获客成本低，并且火山引擎的MaaS平台大模型调用量市场份额领先-1-4-11。阿里巴巴通义千问 (Qwen)云生态与商业落地：在企业级市场优势明显，市场份额达32%，排名第一。Qwen是全球下载量最高的开源模型之一，阿里云百炼平台是一站式MaaS分发平台-4-10-1。深度求索DeepSeek开源与技术标杆：以“成本屠夫”模式著称，训练和使用成本极低。其V4-Flash模型版本在全球开发者中声誉极高，是开源商业化的标杆-1-4。互联网平台百度文心一言 / 千帆平台行业应用与工具链：中文理解能力强，深耕产业应用。千帆平台已支持企业构建了超过130万个Agents，覆盖制造、能源等行业-1-5。腾讯混元大模型场景融合：与微信、腾讯文档等社交与办公生态无缝集成，在实时推理和多模态生成方面能力突出-1-3。华为盘古大模型 / 昇腾AI国产全栈方案：从昇腾芯片、训练框架到云平台全栈自主可控，深度适配政企和工业场景（如制造、能源）-1-3。AI原生技术派智谱AIGLM系列技术性能与成本平衡：模型曾登顶全球榜单，API定价极具竞争力，商业化进展迅速，已启动IPO流程-1-4。月之暗面Kimi长文本与复杂任务：以超长文本处理能力闻名，Kimi K2.5模型可协调多达100个子代理并行处理复杂任务，在专业研究、自动化分析场景表现出色-4-5。MiniMaxMiniMax全模态与高性价比：仅用OpenAI不到1%的成本就实现了语音、视频、文本全模态布局，并于近期上市，市值表现亮眼-3-12。阶跃星辰Step系列多模态与端侧AI：在多模态推理榜单表现领先，聚焦智能终端Agent，已与国内60% 的头部手机品牌达成合作，装机量超4200万台-1-12。其他重要玩家科大讯飞星火大模型特定场景应用：在央国企、教育、医疗等垂直领域应用广泛，行业大模型项目数量领先-8-9。商汤科技、百川智能、零一万物等日日新 (SenseNova) / 百川 (Baichuan) / Yi技术与细分市场：商汤在多模态评测中表现突出；百川、零一万物等则在开源社区和特定技术方向上持续探索-9-12。💡 如何选择？你可以根据自己的主要需求来考虑：开发者和企业用户：如果追求强大的开源模型、云端部署和基础设施，可以重点关注阿里（通义千问）-10-1；如果追求极致的成本效益和开源技术，则深度求索（DeepSeek） 是很好的选择-1-4。普通用户和内容创作者：如果想体验用户量大、场景丰富、日常对话流畅的C端产品，可以试试字节跳动（豆包）-1-4；如果需要处理长篇文档或进行深度研究，月之暗面（Kimi） 可能更合适-5。政企和工业客户：需要国产化、自主可控、软硬件一体方案的，可以考察华为（盘古）-1-3；在金融、能源等垂直行业有特定需求的，可以了解科大讯飞（星火） 等厂商-8-9。如果你想深入了解某个特定厂商，或者想针对你的具体使用场景寻找推荐，可以随时告诉我。",
+      "observedAt": "2026-08-14T07:33:14.994Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/279d617a-f61a-489a-bc83-53764732568e",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.thepaper.cn/newsdetail_forward_31802232",
+          "title": "m.thepaper.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.haiwainet.cn/middle/3541089/2026/0224/content_32933217_1.html",
+          "title": "m.haiwainet.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://epaper.tkww.hk/a/202605/10/AP69ff97b5e4b04773b06d7bac.html",
+          "title": "epaper.tkww.hk",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://www.jfdaily.com/staticsg/res/html/journal/detail.html?code=jfrb&date=2026-02-07&id=491994&page=01",
+          "title": "jfdaily.com",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://my.idc.com/getdoc.jsp?containerId=prCHC53567325&utm_medium=rss_feed&utm_source=alert&utm_campaign=rss_syndication",
+          "title": "my.idc.com",
+          "citationIndex": 7
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 8
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "2a3b80a89a28cfe594a6f8380dcda0c7fac6a3a34ca56c95cb2324fbfafa5831",
+        "pageSnapshotSha256": "c6fe250ff9558a7051a24b8e517abc72ed0e8059dc1d9257865be18a7ad91d4e"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-12-p3-s4",
+      "promptIndex": 3,
+      "sampleIndex": 4,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是中国一家头部的人工智能（AI）大模型创业公司，因其技术实力和市场地位，常与智谱AI、MiniMax等并称为“国产大模型六小虎”-1-5。它的核心特点和发展情况可以从以下几个方面来了解：🏢 公司定位与团队定位：成立于2023年4月，总部位于上海，专注于实现通用人工智能（AGI），并推动大模型在各类智能终端上的应用落地-1-4-7。团队：由前微软全球副总裁姜大昕创立并担任CEO-1-10。核心团队还包括前旷视研究院院长张祥雨（首席科学家）等AI领域专家-1-3。值得一提的是，AI领域知名创业者印奇（旷视科技联合创始人）于2026年1月正式出任公司董事长-2-3-10。🚀 核心技术与模型阶跃星辰已发布超过22款自研基座模型，产品覆盖了语言、多模态理解、图像视频生成和语音交互等多个领域-1-9。其中一些代表性的模型包括：Step-1 / Step-2：千亿/万亿参数的语言大模型，其中Step-2采用MoE（混合专家）架构-1-9。Step-3：多模态推理大模型，已落地于汽车和手机等终端-2-9。Step-Audio：端到端语音模型，相关版本曾在一项国际权威测评中取得全球第一的成绩-4-7-10。📱 主要应用与商业落地阶跃星辰的核心战略是“AI+终端”，目前已在手机和汽车两大场景跑通了商业化模式-2-3-6。手机领域：已与国内60%的头部手机品牌（如OPPO、荣耀、中兴等）达成合作，模型装机量超过4200万台，日均服务近2000万人次-2-4-7。汽车领域：与吉利、千里科技等合作，推出了搭载其端到端语音模型（Step-Audio 2）的智能座舱AgentOS，并已在吉利银河M9等量产车型上落地-2-3-10。💰 融资与最新动态公司备受资本关注，在2026年1月完成了超50亿元人民币的B+轮融资，创下了当时中国大模型赛道近一年的单笔最高融资纪录-1-4-5。投资方包括多家国有资本和头部基金-1-7。近期市场消息称，公司已完成股份制改造，可能在为赴港IPO做准备-11。",
+      "observedAt": "2026-08-14T07:33:32.822Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/a1d31af5-e192-43e6-a485-47625ff64544",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://36kr.com/p/3656177726824835",
+          "title": "36kr.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://fund.eastmoney.com/a/202601263630446520.html",
+          "title": "fund.eastmoney.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://www.cnfin.com/gs-lb/detail/20260126/4371193_1.html",
+          "title": "cnfin.com",
+          "citationIndex": 5
+        },
+        {
+          "url": "http://sh.people.com.cn/BIG5/n2/2026/0126/c134768-41483624.html",
+          "title": "sh.people.com.cn",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://zh.wikipedia.org/wiki/%E9%98%B6%E8%B7%83%E6%98%9F%E8%BE%B0",
+          "title": "zh.wikipedia.org",
+          "citationIndex": 7
+        },
+        {
+          "url": "https://export.shobserver.com/toutiao/html/1057589.html",
+          "title": "export.shobserver.com",
+          "citationIndex": 8
+        },
+        {
+          "url": "https://finance.eastmoney.com/a/202604153706392143.html",
+          "title": "finance.eastmoney.com",
+          "citationIndex": 9
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "67c36e47e72b630e6a68cf41299099f2108ae910c79bb9bf49508f9d6b8428e8",
+        "pageSnapshotSha256": "c3f10d2bb77d2d36b0283635ebfe86d923fe0f6ee57a0369ff660087b626ca90"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-13-p1-s5",
+      "promptIndex": 1,
+      "sampleIndex": 5,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "当前国内主流大模型公司已形成清晰梯队，主要由互联网巨头、AI原生独角兽、垂直领域玩家和运营商构成。如果你想快速了解全貌，可以参考这份主流公司分类概览：类别代表公司/模型核心特点互联网与云巨头字节跳动(豆包)、阿里巴巴(通义千问)、百度(文心一言)、腾讯(混元)背靠庞大的C端流量和云计算生态，在用户规模、API调用量和商业化落地方面优势显著-1-2-3。AI原生独角兽DeepSeek、智谱AI(GL M)、月之暗面(Kimi)、MiniMax、阶跃星辰、百川智能等技术驱动，以模型创新能力为核心竞争力，部分已成为市场瞩目的“明星”公司-1-2-11。垂直与终端玩家华为(盘古)、科大讯飞(星火)、小米(MiMo)依托硬件、芯片、行业数据或特定场景，深耕行业大模型或端侧AI-1-2-10。运营商与科研机构中国移动、中国电信、上海AI实验室、北京智源凭借通信数据、算力基础设施或科研开源能力，扮演“隐形冠军”角色-1-10。值得关注的重点玩家市场引领者：根据2026年中的行业报告，字节跳动（豆包）、阿里巴巴（通义千问）、深度求索（DeepSeek） 凭借用户规模、商业生态和技术影响力，常占据各类榜单前三甲-2。例如，在企业级大模型调用市场中，这三家的市场份额合计已超过七成-3。“大模型六小虎”：这是市场对一批头部AI创业公司的称呼。在2026年，被市场视为“六小虎”的公司包括智谱AI、MiniMax、百川智能、月之暗面、阶跃星辰和零一万物-11。这些公司多由技术精英创立，是推动技术创新的重要力量。这些公司的发展路径和核心竞争力各有不同，从流量生态、商业闭环到开源技术，各有其独特的市场定位-1-2。",
+      "observedAt": "2026-08-14T07:33:49.368Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/08ce8abb-9008-4aec-8ae3-b9ccdad816f9",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 0
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://jg-static.eeo.com.cn/article/info?channelUuid=undefined&id=c1f5dff9aaf441a7826fc255bf9564d6",
+          "title": "jg-static.eeo.com.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://deepview.caixin.com/event/EVENT.000000348.html",
+          "title": "deepview.caixin.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 4
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "969d806b94e517fa5a363aae4532ef0291b45ddb53b55b1d3d79e5b1f3c156dd",
+        "pageSnapshotSha256": "c94c8d29c6ffb42133db12f1d5493632c4a2ea5b0b0823a248b022481bf5660f"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-14-p2-s5",
+      "promptIndex": 2,
+      "sampleIndex": 5,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "国内的大模型服务商已经形成了一个多元化的竞争格局。既有大家熟悉的互联网巨头，也有技术实力突出的创业新星。根据多家机构的研究报告，目前市场上的主要玩家大致可以分为以下几类-2-4-5：🏢 互联网与云巨头这类公司依托强大的云基础设施、海量数据资源和丰富的应用场景，在C端和B端市场都拥有强大的影响力，是通用大模型领域的主力军-2。字节跳动：代表模型是豆包，依托抖音等庞大的流量池，其C端用户规模非常突出，日活跃用户已超1亿-5。同时，其火山方舟平台也在企业服务上发力。阿里巴巴：代表模型是通义千问，不仅开源生态强大，其阿里云百炼平台也是国内重要的模型即服务平台（MaaS），日均API调用量巨大-1-5。百度：代表模型是文心一言，在中文理解和知识图谱方面有深厚积累，千帆大模型平台提供全链路服务-1-2。腾讯：代表模型是混元，优势在于能与微信、腾讯文档等社交与办公生态无缝结合-1-4。华为：代表模型是盘古，主打国产全栈式方案（从昇腾芯片到平台），在政企和工业（如制造、能源）等垂直领域落地很深-1-2。🚀 新锐AI创业公司这些公司也被称为“大模型五虎”或“六小虎”，多由顶尖AI科学家创办，是技术突破和创新的重要力量-1-8。深度求索 (DeepSeek)：以“技术标杆”和“开源先锋”闻名，在数学推理、代码生成等硬核能力上达到国际前沿，也因其极致的成本控制被称为“成本屠夫”-1-5。智谱AI (Zhipu AI)：源自清华技术团队，其GLM系列模型技术实力雄厚，商业化进展迅速，是“大模型第一股”-1-8。月之暗面 (Moonshot AI)：代表作是Kimi，以超长上下文处理能力出圈，在C端用户中很受欢迎-5。MiniMax：少有的具备文本、语音、视频全模态能力的公司之一，已于近期上市-8。阶跃星辰 (StepFun)：在多模态能力上表现突出，聚焦智能终端Agent的路径商业化清晰-1-4。百川智能 (Baichuan AI)、零一万物 (01.AI)：也是“六小虎”成员，在特定领域有深入布局-2-8。🎯 垂直领域与行业专家这类公司凭借在特定行业（如政企、医疗、教育）的深厚积累，提供高度定制化的行业大模型解决方案-2。科大讯飞：代表模型是讯飞星火，在语音技术和教育、医疗等政企市场有领先优势-2-6。商汤科技：代表模型是商量，在计算机视觉和视频生成领域有技术创新，服务多个行业-2-5。京东：代表模型是言犀，专注于零售、物流等电商供应链场景-5。此外，中国电信、中国移动等通信运营商也凭借其数据与政企服务优势，成为这一领域的重要玩家-2-6。在应用端，像金山办公、用友、金蝶这类深耕办公和企业服务的公司，也基于大模型推出了各自的AI功能，是生态中重要的一环-3-7。目前各家竞争焦点，已从单纯的技术比拼，转向商业落地、开源生态与国产算力的综合较量-1。如果你有具体的应用场景（比如开发应用、企业内部使用，或是个人创作），可以告诉我，我再帮你看看哪家服务商更契合你的需求。",
+      "observedAt": "2026-08-14T07:34:09.850Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/53dd3bb5-4e71-4182-9b9d-e68adf4282d4",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://www.zaobao.com/finance/china/story20260111-8084822",
+          "title": "zaobao.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://01.ai/",
+          "title": "01.AI",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://static.weeklyonstock.com/25/0820/qdy171404.html",
+          "title": "static.weeklyonstock.com",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 7
+        },
+        {
+          "url": "https://finance.sina.com.cn/jjxw/2026-08-06/doc-inimkskz4538626.shtml",
+          "title": "finance.sina.com.cn",
+          "citationIndex": 8
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "a6ebc6abb09401f601335170edba69dceb5009dd80210ac04738e0fd8ba0f748",
+        "pageSnapshotSha256": "c6e920f3a266899d0451fcbae15a57f11ee88493207250d4f885611634102f72"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-15-p3-s5",
+      "promptIndex": 3,
+      "sampleIndex": 5,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是一家专注通用人工智能（AGI）研发的中国大模型创业公司，被业界认为是“国产大模型六小虎”之一，其核心战略是“基础大模型”与“AI+终端”相结合-1-2-6。它的几个关键特点如下：强大的“全明星”创始团队：由前微软全球副总裁姜大昕创立并担任CEO，核心成员还包括前旷视研究院院长张祥雨（首席科学家）等AI领域顶尖专家-1-10。近期，知名AI创业者印奇也出任公司董事长，负责战略方向-2-4-10。过硬的技术实力：公司已发布超过20款自研基座模型，形成了“语言大模型+全模态模型+端云协同”的核心技术矩阵-1-2-4。其Step-3大模型推理效率创下行业新高，语音模型Step Audio R1.1也曾在权威榜单上登顶-2-10。专注的商业化路径：其“AI+终端”战略已在手机和汽车领域快速落地-3-8。手机领域：已与国内60%的头部手机品牌（如OPPO、荣耀、中兴）合作，模型装机量超过4200万台，日均服务近2000万人次-2-4-10。汽车领域：与吉利等车企合作推出智能座舱方案，搭载在银河M9等量产车型上，预计今年将“上车”超百万辆-2-4-8。此外，阶跃星辰近期完成了超50亿元人民币的B+轮融资，创下大模型赛道单笔融资纪录，投资方包括多地国资和腾讯等机构，发展势头强劲-1-2-4。",
+      "observedAt": "2026-08-14T07:34:25.895Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/398d22bd-310f-4c92-845f-6851c6019160",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://www.cnfin.com/gs-lb/detail/20260126/4371193_1.html",
+          "title": "cnfin.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://36kr.com/p/3656177726824835",
+          "title": "36kr.com",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "http://sh.people.com.cn/BIG5/n2/2026/0126/c134768-41483624.html",
+          "title": "sh.people.com.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://fund.eastmoney.com/a/202601263630446520.html",
+          "title": "fund.eastmoney.com",
+          "citationIndex": 6
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "7acba3a30cd18c6ebe76360f5579f4bbf2132a146a6ba7a6ce2b2ab01bdcaa7a",
+        "pageSnapshotSha256": "2215b268fbb895d21149af3a428e3b5124e43740e94a1f61d6232d95319666ab"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-16-p1-s6",
+      "promptIndex": 1,
+      "sampleIndex": 6,
+      "promptText": "国内有哪些主流大模型公司？",
+      "answerText": "国内大模型市场已经从早期的“百模大战”，进入到由几个主要流派构成的清晰格局中。根据2026年多家机构的市场分析，主要可以分为以下几类-1-2-10：公司代表模型核心优势与特点阿里巴巴通义千问(Qwen)开源生态全球领先，云基础设施强大，在企业级API调用市场份额第一-2-3-11。字节跳动豆包(Seed)依托抖音等超级App的流量，C端用户规模（日活过亿）遥遥领先，获客成本极低-2-11。深度求索(DeepSeek)DeepSeek开源技术标杆，以极致工程优化和低成本闻名，在开发者中口碑极高-2-11。腾讯混元大模型深度融入微信、腾讯文档等社交与办公生态，场景结合紧密-11。百度文心一言深耕中文理解与知识图谱，行业应用经验丰富-7-11。华为盘古大模型提供从昇腾芯片到云服务的全栈国产化方案，在政企和工业场景落地深入-10-11。智谱AIGLM系列AI原生公司代表，技术性能与成本平衡，商业化进展快-2-11。月之暗面(Kimi)Kimi以长文本处理能力突围，拥有大量忠实用户，技术创新型企业代表-2-6。MiniMaxMiniMax多模态能力突出，产品（如海螺AI）在海外市场也有较强影响力-1-2-5。阶跃星辰Step系列推理速度全球领先，聚焦智能终端Agent，多模态能力是强项-8-11。科大讯飞讯飞星火深耕教育、医疗等垂直领域，在央国企项目中应用广泛-2-7-10。💡 格局速览除了上面这些，这个市场还呈现出几个有趣的特点：“新五强”格局初现：有机构认为，字节跳动、阿里巴巴、阶跃星辰、智谱AI和DeepSeek已形成新的第一梯队，竞争焦点转向了技术、商业和生态的综合较量-11。技术路线分化：各家公司的路径很不一样。有的侧重流量生态（如字节），有的侧重云和商业（如阿里），还有的从自身硬件生态出发（如华为、小米）-1-11。你是主要关注C端日常使用，还是想寻找企业级的API合作？告诉我你的具体用途，我可以帮你做更有针对性的推荐。",
+      "observedAt": "2026-08-14T07:34:44.002Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/e170ef37-eeb6-4735-9052-08261d67f6c5",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://hub.baai.ac.cn/view/56839",
+          "title": "hub.baai.ac.cn",
+          "citationIndex": 0
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://jg-static.eeo.com.cn/article/info?channelUuid=undefined&id=c1f5dff9aaf441a7826fc255bf9564d6",
+          "title": "jg-static.eeo.com.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://my.idc.com/getdoc.jsp?containerId=prCHC53567325&utm_medium=rss_feed&utm_source=alert&utm_campaign=rss_syndication",
+          "title": "my.idc.com",
+          "citationIndex": 5
+        },
+        {
+          "url": "https://m.haiwainet.cn/middle/3541089/2026/0320/content_32939344_1.html",
+          "title": "m.haiwainet.cn",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://finance.sina.com.cn/jjxw/2026-08-06/doc-inimkskz4538626.shtml",
+          "title": "finance.sina.com.cn",
+          "citationIndex": 7
+        },
+        {
+          "url": "https://www.tmtpost.com/baidu/7928697.html",
+          "title": "tmtpost.com",
+          "citationIndex": 8
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "29d1f84b8f7d6924f2fe32909ffee34606aef37898caa906a72b39c1868c8572",
+        "pageSnapshotSha256": "c2d0611514c510acba4a9a48e43276d0ae1908a47299f09bda6d37e5f1550316"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-17-p2-s6",
+      "promptIndex": 2,
+      "sampleIndex": 6,
+      "promptText": "国内有哪些大模型服务商？",
+      "answerText": "国内大模型服务商市场已形成清晰的梯队和格局，主要可以分为几类：综合实力强劲的头部科技巨头、专注技术突破的AI原生公司，以及深耕特定行业的垂直服务商。这里整理了一份主要的市场参与者概览：🏢 主要大模型服务商概览分类服务商代表模型/平台核心特点头部科技巨头阿里巴巴通义千问 (Qwen) / 百炼平台开源生态全球领先，云基础设施强大，在国内企业级市场调用量份额第一-1-12。字节跳动豆包 (Doubao) / 火山方舟C端用户规模巨大，产品生态闭环强大，商业化规模领先，推理成本有优势-1-4。百度文心一言 / 千帆平台中文理解能力深厚，知识图谱庞大，提供从模型到工具链的全链路服务-1-4。腾讯混元大模型 / 腾讯云TI平台与微信、腾讯文档等生态深度融合，在多模态和实时推理场景有优势-1-4。华为盘古大模型 / 昇腾AI提供从芯片到云平台的国产全栈式方案，在工业、政企等垂直领域落地深入-1-11。AI原生公司深度求索 (DeepSeek)DeepSeek系列技术硬核，以高性价比著称，是开源领域的技术标杆，在数学、代码等能力上达国际前沿-1-4。智谱AI (Zhipu AI)GLM系列技术实力雄厚，模型曾登顶全球榜单，API定价有竞争力，商业化进程快-1-4。月之暗面 (Moonshot AI)Kimi以长文本处理能力突围，在C端和开发者中拥有较高人气-2-4。阶跃星辰 (StepFun)Step系列多模态能力突出，在特定推理榜单表现领先，聚焦智能终端Agent等商业化场景-1-4。MiniMaxMiniMax系列较早出海的AI公司之一，产品和技术具备国际视野-2-4。其他重要玩家科大讯飞讯飞星火依托语音技术和行业know-how，在教育、医疗等领域有深厚积累-3-11。商汤科技商量 (SenseChat)计算机视觉起家，在AI视觉和多模态领域有技术优势-4-11。360、百川智能、零一万物等360智脑、Baichuan、Yi等由互联网老兵或顶尖技术团队创立，各具技术特色和生态布局-4-11。🏆 当前市场格局速览根据多家机构的评估，当前市场呈现出几个特点：头部效应明显：在技术实力、用户规模和商业落地等综合维度上，阿里巴巴、字节跳动和深度求索（DeepSeek）常被列入第一梯队，形成了“三超多强”的竞争局面-1-4。差异化竞争：不同服务商走了不同的路。有的靠庞大的C端流量形成生态闭环（如字节），有的靠强大的云服务和开源生态吸引B端客户（如阿里），有的则以极致的工程优化和成本控制作为杀手锏（如DeepSeek）-1-4。行业应用加速落地：大模型竞争已从单纯的技术参数比拼，转向与具体行业场景和商业回报深度结合的阶段，像华为盘古、科大讯飞等在工业、政企、教育等垂直领域优势明显-1-11。你主要想用大模型做什么呢？比如是侧重日常聊天、辅助编程，还是进行行业研究？告诉我你的具体场景，我可以帮你推荐更合适的服务商。",
+      "observedAt": "2026-08-14T07:35:04.311Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/fbd6a3f1-deef-43fd-9e3d-0fa313ab85e2",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.askci.com/news/20251204/160228276483534630782270.shtml",
+          "title": "m.askci.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://m.haiwainet.cn/middle/3541089/2026/0224/content_32933217_1.html",
+          "title": "m.haiwainet.cn",
+          "citationIndex": 1
+        },
+        {
+          "url": "http://dongshihui.net/news/china/2026-07-28/23532.html",
+          "title": "dongshihui.net",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://m.chinastarmarket.cn/detail/2015667",
+          "title": "m.chinastarmarket.cn",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://k.sina.cn/article_6115560351_m16c840b9f033019fwi.html?from=tech",
+          "title": "k.sina.cn",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://www.sohu.com/a/1046702717_122014422?scm=10001.7746_13-119000.0.0-0-0-0-0.0",
+          "title": "sohu.com",
+          "citationIndex": 5
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "ab0eb48de58271260c00cfc039fff8c4b71934bab2cac036c3b92414413a5964",
+        "pageSnapshotSha256": "db5976bf378993fd55cc0258909677acd541fb0f36e8c309beec9a115ea04092"
+      }
+    },
+    {
+      "externalId": "stepfun-local-pc-deepseek-20260814-18-p3-s6",
+      "promptIndex": 3,
+      "sampleIndex": 6,
+      "promptText": "阶跃星辰 StepFun 是一家什么公司？",
+      "answerText": "阶跃星辰（StepFun）是一家专注于通用人工智能（AGI）研发的中国大模型创业公司，也是市场公认的“国产大模型六小虎”之一-1-6-9。它的核心信息可以这样理解：明星团队，技术扎实：公司成立于2023年4月，总部在上海-1-4-8。由前微软全球副总裁姜大昕创立，核心团队还包括曾参与设计著名算法ResNet的“90后”首席科学家张祥雨等AI领域顶尖专家-1-10，技术背景非常深厚。技术领先，模型矩阵强大：它已发布22款自研基座模型，包括千亿参数的Step-1、万亿参数MoE架构的Step-2等，其语音模型Step Audio R1.1曾登顶权威榜单全球第一，因此也被业内称为“多模态卷王”-1-4-10。商业化明确，主攻“AI+终端”：公司战略很清晰，就是让AI在真实硬件上落地-3-6。手机领域：已与OPPO、荣耀、中兴等国内60%的头部手机品牌合作，模型装机量超4200万台-3-4-8。汽车领域：与吉利等合作推出了搭载其智能座舱AgentOS的量产车型，比如吉利银河M9，上市3个月销量近4万辆-3-4-10。备受资本青睐：公司在2026年1月完成了超50亿元的B+轮融资，创下了当时大模型赛道单笔最高融资纪录，投资方包括多地国资和腾讯等老股东-1-4-8。知名AI创业者印奇（旷视科技联合创始人）也在同期出任公司董事长，进一步强化商业化落地能力-3-4-10。近期，公司已完成股改，为上市做准备-2-9。",
+      "observedAt": "2026-08-14T07:35:20.592Z",
+      "pageUrl": "https://chat.deepseek.com/a/chat/s/11137fd9-ef47-4b8e-96b4-dbafaec9b177",
+      "webSearchObserved": true,
+      "webQueries": [],
+      "citations": [
+        {
+          "url": "https://m.163.com/dy/article/KK6N8GPO051481US.html?spss=adap_pc&referFrom=",
+          "title": "m.163.com",
+          "citationIndex": 0
+        },
+        {
+          "url": "https://36kr.com/p/3656177726824835",
+          "title": "36kr.com",
+          "citationIndex": 1
+        },
+        {
+          "url": "https://epaper.tkww.hk/a/202605/09/AP69fe46e9e4b04773b06d6835.html",
+          "title": "epaper.tkww.hk",
+          "citationIndex": 2
+        },
+        {
+          "url": "https://app.dahecube.com/nweb/wap/article.html?artid=260938?chname=%e5%ae%89%e9%98%b3?qtype=0",
+          "title": "app.dahecube.com",
+          "citationIndex": 3
+        },
+        {
+          "url": "https://fund.eastmoney.com/a/202601263630446520.html",
+          "title": "fund.eastmoney.com",
+          "citationIndex": 4
+        },
+        {
+          "url": "https://m.thepaper.cn/newsDetail_forward_32463044",
+          "title": "m.thepaper.cn",
+          "citationIndex": 5
+        },
+        {
+          "url": "http://sh.people.com.cn/BIG5/n2/2026/0126/c134768-41483624.html",
+          "title": "sh.people.com.cn",
+          "citationIndex": 6
+        },
+        {
+          "url": "https://stcn.com/article/detail/3726156.html",
+          "title": "stcn.com",
+          "citationIndex": 7
+        }
+      ],
+      "evidence": {
+        "screenshotSha256": "496ac106ab8610e95bfcb3c7ebc7b280de9de6e223c7068e068178264ce36ed9",
+        "pageSnapshotSha256": "8d4f190fbade262b610cce579d081d61f55baecee443a7bcb66603ffe0665c8c"
+      }
+    }
+  ]
+}

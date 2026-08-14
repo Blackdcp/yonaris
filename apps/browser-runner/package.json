@@ -6,11 +6,12 @@
 	"type": "module",
 	"scripts": {
 		"start": "tsx src/cli.ts",
+		"deepseek": "tsx src/deepseek-cli.ts",
 		"broker": "tsx src/broker-cli.ts",
 		"egress-proxy": "tsx src/egress-proxy-cli.ts",
 		"build": "tsc -p tsconfig.json",
 		"check-types": "tsc --noEmit",
-		"test": "tsx --test src/run-batch.test.ts src/public-summary.test.ts src/assist.test.ts src/remote-client.test.ts src/retention.test.ts src/poll.test.ts src/dedicated-profile.test.ts src/dedicated-profile-provision.test.ts src/dedicated-profile-uat.test.ts src/deepseek-capture-contract.test.ts src/sandbox-preflight.test.ts src/adapters/doubao-live.test.ts src/adapters/deepseek-live.test.ts src/broker-protocol.test.ts src/broker-evidence.test.ts src/broker-client.test.ts src/broker-server.test.ts src/broker-socket.test.ts src/broker-runtime.test.ts src/network-policy-gate.test.ts src/egress-proxy.test.ts"
+		"test": "tsx --test src/run-batch.test.ts src/public-summary.test.ts src/assist.test.ts src/remote-client.test.ts src/retention.test.ts src/poll.test.ts src/dedicated-profile.test.ts src/dedicated-profile-provision.test.ts src/dedicated-profile-uat.test.ts src/deepseek-capture-contract.test.ts src/deepseek-local-capture.test.ts src/deepseek-cli.test.ts src/deepseek-evidence-review.test.ts src/sandbox-preflight.test.ts src/adapters/doubao-live.test.ts src/adapters/deepseek-live.test.ts src/broker-protocol.test.ts src/broker-evidence.test.ts src/broker-client.test.ts src/broker-server.test.ts src/broker-socket.test.ts src/broker-runtime.test.ts src/network-policy-gate.test.ts src/egress-proxy.test.ts"
 	},
 	"dependencies": {
 		"playwright": "^1.61.1"
