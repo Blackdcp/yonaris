@@ -1,0 +1,263 @@
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
+import { renderResponseSnapshotHtml } from "./html";
+
+const MAX_ANSWER_CHARACTERS = 500_000;
+const MAX_HTML_BYTES = 4 * 1024 * 1024;
+const MAX_JSON_BYTES = 4 * 1024 * 1024;
+const MAX_COMPRESSED_BUNDLE_BYTES = 8 * 1024 * 1024;
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+
+export type ResponseSnapshotContentSource =
+	| "native_answer_html"
+	| "browser_answer_html"
+	| "rendered_from_structured_response"
+	| "reconstructed_from_historical_run";
+
+export type ResponseSnapshotCaptureMethod =
+	| "brightdata_dataset"
+	| "brightdata_serp"
+	| "consumer_web_browser"
+	| "historical_reconstruction";
+
+export type ResponseSnapshotDraft = {
+	runId: string;
+	brandId: string;
+	scopeId: string | null;
+	promptId: string;
+	promptText: string;
+	answerText: string;
+	answerHtml?: string;
+	citations: Array<{ url: string; title: string | null; domain: string; citationIndex: number }>;
+	webQueries: string[];
+	queryAvailability: "available" | "unavailable" | "not_applicable";
+	brandMentioned: boolean;
+	competitorsMentioned: string[];
+	channel: string;
+	modelVersion: string;
+	market: string;
+	locale: string;
+	timezone: string;
+	observedAt: string;
+	captureMethod: ResponseSnapshotCaptureMethod;
+	contentSource: ResponseSnapshotContentSource;
+	sourcePayloadSha256?: string;
+};
+
+export type PreparedResponseSnapshotBundle = {
+	schemaVersion: "response-snapshot.v1";
+	templateVersion: "response-snapshot-html.v1";
+	runId: string;
+	brandId: string;
+	observedAt: string;
+	contentSource: ResponseSnapshotContentSource;
+	captureMethod: ResponseSnapshotCaptureMethod;
+	htmlGzip: Uint8Array;
+	jsonGzip: Uint8Array;
+	manifestJson: Uint8Array;
+	htmlSha256: string;
+	jsonSha256: string;
+	manifestSha256: string;
+	htmlBytes: number;
+	jsonBytes: number;
+	manifestBytes: number;
+	htmlGzipBytes: number;
+	jsonGzipBytes: number;
+};
+
+export class ResponseSnapshotValidationError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = "ResponseSnapshotValidationError";
+	}
+}
+
+export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): PreparedResponseSnapshotBundle {
+	const normalized = normalizeDraft(draft);
+	const snapshotJson = {
+		schemaVersion: "response-snapshot.v1",
+		runId: normalized.runId,
+		brandId: normalized.brandId,
+		scopeId: normalized.scopeId,
+		promptId: normalized.promptId,
+		promptText: normalized.promptText,
+		answerText: normalized.answerText,
+		answerHtml: normalized.answerHtml,
+		citations: normalized.citations,
+		queryFanout: {
+			availability: normalized.queryAvailability,
+			queries: normalized.webQueries,
+		},
+		mentions: {
+			brandMentioned: normalized.brandMentioned,
+			competitorsMentioned: normalized.competitorsMentioned,
+		},
+		channel: normalized.channel,
+		modelVersion: normalized.modelVersion,
+		localization: {
+			market: normalized.market,
+			locale: normalized.locale,
+			timezone: normalized.timezone,
+		},
+		observedAt: normalized.observedAt,
+		captureMethod: normalized.captureMethod,
+		contentSource: normalized.contentSource,
+		sourcePayloadSha256: normalized.sourcePayloadSha256 ?? null,
+	} as const;
+	const jsonBytes = utf8(`${JSON.stringify(snapshotJson)}\n`);
+	if (jsonBytes.byteLength > MAX_JSON_BYTES) {
+		throw new ResponseSnapshotValidationError(`Snapshot JSON exceeds the ${MAX_JSON_BYTES} byte limit`);
+	}
+	const htmlBytes = utf8(
+		renderResponseSnapshotHtml({
+			answerHtml: normalized.answerHtml,
+			answerText: normalized.answerText,
+			channel: normalized.channel,
+			observedAt: normalized.observedAt,
+			citations: normalized.citations,
+		}),
+	);
+	if (htmlBytes.byteLength > MAX_HTML_BYTES) {
+		throw new ResponseSnapshotValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
+	}
+
+	const htmlSha256 = sha256(htmlBytes);
+	const jsonSha256 = sha256(jsonBytes);
+	const htmlGzip = gzipSync(htmlBytes, { level: 9 });
+	const jsonGzip = gzipSync(jsonBytes, { level: 9 });
+	if (htmlGzip.byteLength + jsonGzip.byteLength > MAX_COMPRESSED_BUNDLE_BYTES) {
+		throw new ResponseSnapshotValidationError(
+			`Compressed snapshot exceeds the ${MAX_COMPRESSED_BUNDLE_BYTES} byte limit`,
+		);
+	}
+	const manifest = {
+		schemaVersion: "response-snapshot-manifest.v1",
+		runId: normalized.runId,
+		artifacts: {
+			html: {
+				fileName: "snapshot.html.gz",
+				sha256: htmlSha256,
+				bytes: htmlBytes.byteLength,
+				gzipBytes: htmlGzip.byteLength,
+			},
+			json: {
+				fileName: "snapshot.json.gz",
+				sha256: jsonSha256,
+				bytes: jsonBytes.byteLength,
+				gzipBytes: jsonGzip.byteLength,
+			},
+		},
+	} as const;
+	const manifestJson = utf8(`${JSON.stringify(manifest)}\n`);
+
+	return {
+		schemaVersion: "response-snapshot.v1",
+		templateVersion: "response-snapshot-html.v1",
+		runId: normalized.runId,
+		brandId: normalized.brandId,
+		observedAt: normalized.observedAt,
+		contentSource: normalized.contentSource,
+		captureMethod: normalized.captureMethod,
+		htmlGzip,
+		jsonGzip,
+		manifestJson,
+		htmlSha256,
+		jsonSha256,
+		manifestSha256: sha256(manifestJson),
+		htmlBytes: htmlBytes.byteLength,
+		jsonBytes: jsonBytes.byteLength,
+		manifestBytes: manifestJson.byteLength,
+		htmlGzipBytes: htmlGzip.byteLength,
+		jsonGzipBytes: jsonGzip.byteLength,
+	};
+}
+
+function normalizeDraft(draft: ResponseSnapshotDraft): ResponseSnapshotDraft {
+	const runId = requiredText(draft.runId, "runId", 100);
+	const brandId = requiredText(draft.brandId, "brandId", 300);
+	const promptId = requiredText(draft.promptId, "promptId", 100);
+	const promptText = requiredText(draft.promptText, "promptText", 20_000);
+	if (typeof draft.answerText !== "string" || !draft.answerText.trim()) {
+		throw new ResponseSnapshotValidationError("answerText must not be empty");
+	}
+	if (draft.answerText.length > MAX_ANSWER_CHARACTERS) {
+		throw new ResponseSnapshotValidationError(`answerText exceeds ${MAX_ANSWER_CHARACTERS} characters`);
+	}
+	const answerHtml = draft.answerHtml === undefined ? undefined : String(draft.answerHtml);
+	if (
+		(draft.contentSource === "native_answer_html" || draft.contentSource === "browser_answer_html") &&
+		!answerHtml?.trim()
+	) {
+		throw new ResponseSnapshotValidationError(`${draft.contentSource} requires answer HTML`);
+	}
+	if (answerHtml && utf8(answerHtml).byteLength > MAX_HTML_BYTES) {
+		throw new ResponseSnapshotValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
+	}
+	if (draft.sourcePayloadSha256 !== undefined && !SHA256_PATTERN.test(draft.sourcePayloadSha256)) {
+		throw new ResponseSnapshotValidationError("sourcePayloadSha256 must be a lowercase SHA-256 digest");
+	}
+	if (draft.queryAvailability !== "available" && draft.webQueries.length > 0) {
+		throw new ResponseSnapshotValidationError("Unavailable query fan-out cannot contain query strings");
+	}
+	const observedAt = new Date(draft.observedAt);
+	if (Number.isNaN(observedAt.getTime()))
+		throw new ResponseSnapshotValidationError("observedAt must be a valid timestamp");
+
+	const citationIndexes = new Set<number>();
+	const citations = draft.citations
+		.map((citation) => {
+			if (!Number.isInteger(citation.citationIndex) || citation.citationIndex < 0) {
+				throw new ResponseSnapshotValidationError("citationIndex must be a non-negative integer");
+			}
+			if (citationIndexes.has(citation.citationIndex)) {
+				throw new ResponseSnapshotValidationError("citationIndex must be unique");
+			}
+			citationIndexes.add(citation.citationIndex);
+			const url = requiredText(citation.url, "citation.url", 4_096);
+			const parsed = new URL(url);
+			if ((parsed.protocol !== "https:" && parsed.protocol !== "http:") || parsed.username || parsed.password) {
+				throw new ResponseSnapshotValidationError("citation.url must be an HTTP(S) URL without credentials");
+			}
+			return {
+				url: parsed.href,
+				title: citation.title === null ? null : requiredText(citation.title, "citation.title", 1_000),
+				domain: requiredText(citation.domain, "citation.domain", 255),
+				citationIndex: citation.citationIndex,
+			};
+		})
+		.sort((left, right) => left.citationIndex - right.citationIndex);
+
+	return {
+		...draft,
+		runId,
+		brandId,
+		scopeId: draft.scopeId === null ? null : requiredText(draft.scopeId, "scopeId", 100),
+		promptId,
+		promptText,
+		answerHtml,
+		citations,
+		webQueries: draft.webQueries.map((query) => requiredText(query, "webQueries", 2_000)),
+		competitorsMentioned: [...new Set(draft.competitorsMentioned.map((name) => requiredText(name, "competitor", 300)))],
+		channel: requiredText(draft.channel, "channel", 100),
+		modelVersion: requiredText(draft.modelVersion, "modelVersion", 200),
+		market: requiredText(draft.market, "market", 20),
+		locale: requiredText(draft.locale, "locale", 50),
+		timezone: requiredText(draft.timezone, "timezone", 100),
+		observedAt: observedAt.toISOString(),
+	};
+}
+
+function requiredText(value: string, name: string, maxLength: number): string {
+	if (typeof value !== "string" || !value.trim() || value.length > maxLength) {
+		throw new ResponseSnapshotValidationError(`${name} must contain between 1 and ${maxLength} characters`);
+	}
+	return value;
+}
+
+function utf8(value: string): Uint8Array {
+	return Buffer.from(value, "utf8");
+}
+
+function sha256(value: Uint8Array): string {
+	return createHash("sha256").update(value).digest("hex");
+}
