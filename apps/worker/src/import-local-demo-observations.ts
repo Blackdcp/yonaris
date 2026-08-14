@@ -2,26 +2,30 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { db } from "@workspace/lib/db/db";
-import { claimImportedObservationAttempt, persistSuccessfulObservation } from "@workspace/lib/db/observations";
-import { brands, competitors, measurementScopes, promptRuns, prompts } from "@workspace/lib/db/schema";
+import {
+	brands,
+	citations as citationRows,
+	competitors,
+	measurementScopes,
+	observationAttempts,
+	promptRuns,
+	prompts,
+} from "@workspace/lib/db/schema";
 import { resolveManualObservationTarget } from "@workspace/lib/manual-observation-targets";
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
-import { and, eq, sql } from "drizzle-orm";
-import { buildLocalDemoDefaultScopePromotion } from "./local-demo-import-policy";
-
-type ImportObservation = {
-	externalId: string;
-	promptIndex: 1 | 2 | 3;
-	sampleIndex: number;
-	promptText: string;
-	answerText: string;
-	observedAt: string;
-	pageUrl: string;
-	answerCharacters: number;
-};
+import { and, eq, inArray, like, sql } from "drizzle-orm";
+import { assertLocalDemoAtomicPostcondition, buildLocalDemoAtomicRepairPlan } from "./local-demo-atomic-import-policy";
+import {
+	assertLocalDemoExistingObservationIdentity,
+	assertLocalDemoImportObservationSet,
+	buildLocalDemoDefaultScopePromotion,
+	type LocalDemoImportObservation,
+	parseLocalDemoImportObservation,
+	toLocalDemoCitations,
+} from "./local-demo-import-policy";
 
 type ImportFile = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	importId: "stepfun-local-pc-doubao-demo-20260814";
 	brandNameExact: "StepFun";
 	scopeKeyExact: "cn-zh-scored";
@@ -30,11 +34,14 @@ type ImportFile = {
 	sessionMode: "dedicated_sampling_profile";
 	searchMode: "native_auto";
 	source: "local_pc_demo";
-	observations: ImportObservation[];
+	observations: LocalDemoImportObservation[];
 };
 
 class ImportError extends Error {
-	constructor(readonly code: string, message: string) {
+	constructor(
+		readonly code: string,
+		message: string,
+	) {
 		super(message);
 		this.name = "ImportError";
 	}
@@ -42,7 +49,9 @@ class ImportError extends Error {
 
 async function main(): Promise<void> {
 	const options = parseArgs(process.argv.slice(2));
-	const request = parseImportFile(JSON.parse((await readFile(resolve(options.requestFile), "utf8")).replace(/^\uFEFF/, "")));
+	const request = parseImportFile(
+		JSON.parse((await readFile(resolve(options.requestFile), "utf8")).replace(/^\uFEFF/, "")),
+	);
 	const receipt = await runImport(request, options.apply);
 	process.stdout.write(`${JSON.stringify(receipt)}\n`);
 }
@@ -58,7 +67,8 @@ function parseArgs(args: string[]): { requestFile: string; apply: boolean } {
 		}
 		if (arg !== "--request-file") throw new ImportError("unknown_option", "Unknown option");
 		const value = args[index + 1];
-		if (!value || value.startsWith("--")) throw new ImportError("missing_request_file", "--request-file requires a value");
+		if (!value || value.startsWith("--"))
+			throw new ImportError("missing_request_file", "--request-file requires a value");
 		requestFile = value;
 		index += 1;
 	}
@@ -73,7 +83,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseImportFile(value: unknown): ImportFile {
 	if (!isRecord(value)) throw new ImportError("invalid_request", "Import request must be an object");
 	const expected: Omit<ImportFile, "observations"> = {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		importId: "stepfun-local-pc-doubao-demo-20260814",
 		brandNameExact: "StepFun",
 		scopeKeyExact: "cn-zh-scored",
@@ -89,53 +99,14 @@ function parseImportFile(value: unknown): ImportFile {
 	if (!Array.isArray(value.observations) || value.observations.length !== 18) {
 		throw new ImportError("invalid_request", "Import request must contain exactly 18 observations");
 	}
-	const observations = value.observations.map(parseImportObservation);
-	const counts = new Map<number, number>();
-	for (const observation of observations) {
-		counts.set(observation.promptIndex, (counts.get(observation.promptIndex) ?? 0) + 1);
-	}
-	if (counts.get(1) !== 6 || counts.get(2) !== 6 || counts.get(3) !== 6) {
-		throw new ImportError("invalid_request", "Import request must contain six observations per prompt");
+	let observations: LocalDemoImportObservation[];
+	try {
+		observations = value.observations.map(parseLocalDemoImportObservation);
+		assertLocalDemoImportObservationSet(observations);
+	} catch (error) {
+		throw new ImportError("invalid_request", error instanceof Error ? error.message : "Invalid observation");
 	}
 	return { ...expected, observations };
-}
-
-function parseImportObservation(value: unknown): ImportObservation {
-	if (!isRecord(value)) throw new ImportError("invalid_request", "Observation must be an object");
-	const externalId = stringField(value, "externalId", 1, 200);
-	if (!externalId.startsWith("stepfun-local-pc-demo-20260814-")) {
-		throw new ImportError("invalid_request", "Unexpected external id");
-	}
-	const promptIndex = numberField(value, "promptIndex", 1, 3) as 1 | 2 | 3;
-	const sampleIndex = numberField(value, "sampleIndex", 1, 32_767);
-	const promptText = stringField(value, "promptText", 1, 50_000);
-	const answerText = stringField(value, "answerText", 1, 500_000);
-	const observedAt = stringField(value, "observedAt", 1, 100);
-	if (Number.isNaN(new Date(observedAt).getTime())) throw new ImportError("invalid_request", "Invalid observedAt");
-	const pageUrl = stringField(value, "pageUrl", 1, 10_000);
-	const url = new URL(pageUrl);
-	if (url.protocol !== "https:" || !url.hostname.endsWith("doubao.com")) {
-		throw new ImportError("invalid_request", "Page URL must be an HTTPS Doubao URL");
-	}
-	const answerCharacters = numberField(value, "answerCharacters", 1, 500_000);
-	if (answerCharacters !== answerText.length) throw new ImportError("invalid_request", "Answer character count mismatch");
-	return { externalId, promptIndex, sampleIndex, promptText, answerText, observedAt, pageUrl, answerCharacters };
-}
-
-function stringField(record: Record<string, unknown>, key: string, min: number, max: number): string {
-	const value = record[key];
-	if (typeof value !== "string" || value.length < min || value.length > max) {
-		throw new ImportError("invalid_request", `Invalid ${key}`);
-	}
-	return value;
-}
-
-function numberField(record: Record<string, unknown>, key: string, min: number, max: number): number {
-	const value = record[key];
-	if (typeof value !== "number" || !Number.isInteger(value) || value < min || value > max) {
-		throw new ImportError("invalid_request", `Invalid ${key}`);
-	}
-	return value;
 }
 
 function canonical(value: string): string {
@@ -144,6 +115,14 @@ function canonical(value: string): string {
 
 function fingerprint(value: unknown): string {
 	return createHash("sha256").update(JSON.stringify(value)).digest("hex");
+}
+
+function sameStringArray(left: readonly string[], right: readonly string[]): boolean {
+	return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function sameInstant(value: Date | null, expected: Date): boolean {
+	return value !== null && value.getTime() === expected.getTime();
 }
 
 async function runImport(request: ImportFile, apply: boolean) {
@@ -212,8 +191,20 @@ async function runImport(request: ImportFile, apply: boolean) {
 			brandMentioned: mentionResult.brandMentioned,
 			competitorsMentioned: mentionResult.competitorsMentioned,
 			answerCharacters: observation.answerText.length,
+			webQueryCount: observation.webQueries.length,
+			citationCount: observation.citations.length,
 		};
 	});
+	const expectedDiagnostic = {
+		totalRuns: preview.length,
+		brandMentionedRuns: preview.filter((item) => item.brandMentioned).length,
+		distinctPrompts: promptIds.size,
+		webSearchObservedRuns: request.observations.filter((item) => item.webSearchObserved).length,
+		queryBearingRuns: request.observations.filter((item) => item.webQueries.length > 0).length,
+		totalQueries: request.observations.reduce((total, item) => total + item.webQueries.length, 0),
+		citationBearingRuns: request.observations.filter((item) => item.citations.length > 0).length,
+		totalCitations: request.observations.reduce((total, item) => total + item.citations.length, 0),
+	};
 
 	if (!apply) {
 		return {
@@ -223,99 +214,284 @@ async function runImport(request: ImportFile, apply: boolean) {
 			scopeId: scope.id,
 			total: preview.length,
 			wouldSetDefaultScope: true,
+			expectedDiagnostic,
 			preview,
 		};
 	}
 
-	const results = [];
-	for (const observation of request.observations) {
+	const preparedObservations = request.observations.map((observation) => {
 		const prompt = promptByText.get(canonical(observation.promptText));
 		if (!prompt) throw new ImportError("prompt_not_found", `Reviewed prompt ${observation.promptIndex} not found`);
 		const mentionResult = analyzeMentions(observation.answerText, brand, competitorRows);
 		const sourceKey = `local-demo:${request.importId}:${observation.externalId}`;
-		const captureMetadata = {
-			source: request.source,
-			importId: request.importId,
-			sessionMode: request.sessionMode,
-			searchMode: request.searchMode,
-			pageUrl: observation.pageUrl,
-			actualMarket: "CN",
-			actualLocale: "zh-CN",
-			measurementEligibility: "local_pc_demo",
-			note: "Local PC demonstration import requested by operator; not a frozen delivery batch.",
-		};
-		const attempt = await claimImportedObservationAttempt({
+		const sampleFingerprint = fingerprint(observation);
+		return {
+			observation,
+			prompt,
+			mentionResult,
 			sourceKey,
-			promptId: prompt.id,
-			promptText: prompt.value,
-			brandId: brand.id,
-			scope,
-			target,
-			config,
-			webSearchObserved: null,
-			sampleIndex: observation.sampleIndex,
-			captureMetadata,
-			sampleFingerprint: fingerprint(observation),
-		});
-		if (attempt.state === "completed") {
-			results.push({
-				externalId: observation.externalId,
-				status: "duplicate",
-				attemptId: attempt.id,
-				promptRunId: attempt.promptRunId ?? null,
-			});
-			continue;
-		}
-		if (attempt.state === "in_progress") {
-			results.push({ externalId: observation.externalId, status: "in_progress", attemptId: attempt.id, promptRunId: null });
-			continue;
-		}
-		const promptRun = await persistSuccessfulObservation({
-			attemptId: attempt.id,
-			startedAt: attempt.startedAt,
-			observedAt: new Date(observation.observedAt),
-			promptId: prompt.id,
-			brand,
-			scope,
-			target,
-			config,
-			webSearchObserved: null,
-			recordedVersion: "local-pc-doubao-demo-20260814",
-			answerText: observation.answerText,
+			sampleFingerprint,
+			extractedCitations: toLocalDemoCitations(observation.citations),
+			captureMetadata: {
+				source: request.source,
+				importId: request.importId,
+				sessionMode: request.sessionMode,
+				searchMode: request.searchMode,
+				pageUrl: observation.pageUrl,
+				actualMarket: "CN",
+				actualLocale: "zh-CN",
+				measurementEligibility: "local_pc_demo",
+				note: "Local PC demonstration import requested by operator; not a frozen delivery batch.",
+			},
 			rawOutput: {
-				schemaVersion: 1,
+				schemaVersion: 2,
 				captureMode: "local_pc_demo",
 				answerText: observation.answerText,
 				pageUrl: observation.pageUrl,
 				source: request.source,
 				importId: request.importId,
-				webSearchObserved: null,
+				webSearchObserved: observation.webSearchObserved,
+				webQueries: observation.webQueries,
+				citations: observation.citations,
 			},
-			webQueries: [],
-			brandMentioned: mentionResult.brandMentioned,
-			competitorsMentioned: mentionResult.competitorsMentioned,
-			extractedCitations: [],
-		});
-		results.push({
-			externalId: observation.externalId,
-			status: "imported",
-			attemptId: attempt.id,
-			promptRunId: promptRun.id,
-		});
-	}
-
+		};
+	});
 	const defaultScopePromotion = buildLocalDemoDefaultScopePromotion({
 		brandId: brand.id,
 		scopeId: scope.id,
 		importId: request.importId,
 		source: request.source,
 	});
-	await db.transaction(async (tx) => {
+
+	const atomicResult = await db.transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${request.importId}, 0))`);
+		const sourceKeyPrefix = `local-demo:${request.importId}:`;
+		const existingAttempts = await tx
+			.select()
+			.from(observationAttempts)
+			.where(and(eq(observationAttempts.brandId, brand.id), like(observationAttempts.sourceKey, `${sourceKeyPrefix}%`)))
+			.for("update");
+		const existingRuns = await tx
+			.select()
+			.from(promptRuns)
+			.where(
+				and(
+					eq(promptRuns.brandId, brand.id),
+					eq(promptRuns.scopeId, scope.id),
+					eq(promptRuns.provider, config.provider),
+					eq(promptRuns.version, config.version),
+				),
+			)
+			.for("update");
+		const existingCitations =
+			existingRuns.length === 0
+				? []
+				: await tx
+						.select()
+						.from(citationRows)
+						.where(
+							inArray(
+								citationRows.promptRunId,
+								existingRuns.map((run) => run.id),
+							),
+						)
+						.for("update");
+
+		let repairPlan: ReturnType<typeof buildLocalDemoAtomicRepairPlan>;
+		try {
+			repairPlan = buildLocalDemoAtomicRepairPlan({
+				expected: preparedObservations.map((item) => ({
+					sourceKey: item.sourceKey,
+					sampleFingerprint: item.sampleFingerprint,
+				})),
+				attempts: existingAttempts,
+				runs: existingRuns,
+			});
+		} catch (error) {
+			throw new ImportError(
+				"existing_observation_mismatch",
+				error instanceof Error ? error.message : "Existing local demo cohort mismatch",
+			);
+		}
+
+		const attemptsById = new Map(existingAttempts.map((attempt) => [attempt.id, attempt]));
+		const runsById = new Map(existingRuns.map((run) => [run.id, run]));
+		const planBySourceKey = new Map(repairPlan.map((item) => [item.sourceKey, item]));
+		const citationsByRunId = new Map<string, typeof existingCitations>();
+		for (const citation of existingCitations) {
+			const current = citationsByRunId.get(citation.promptRunId) ?? [];
+			current.push(citation);
+			citationsByRunId.set(citation.promptRunId, current);
+		}
+		const validated = preparedObservations.map((item) => {
+			const plan = planBySourceKey.get(item.sourceKey);
+			const attempt = plan ? attemptsById.get(plan.attemptId) : undefined;
+			const existingRun = plan ? runsById.get(plan.promptRunId) : undefined;
+			if (!plan || !attempt || !existingRun) {
+				throw new ImportError("existing_observation_mismatch", "Existing local demo cohort mapping is incomplete");
+			}
+			const existingMetadata = isRecord(attempt.captureMetadata) ? attempt.captureMetadata : {};
+			const expectedIdentity = {
+				promptId: item.prompt.id,
+				brandId: brand.id,
+				scopeId: scope.id,
+				surfaceTargetKey: target.surfaceTargetKey,
+				captureRouteKey: target.captureRouteKey,
+				model: config.model,
+				provider: config.provider,
+				version: config.version,
+				webSearchEnabled: config.webSearch,
+				sampleIndex: item.observation.sampleIndex,
+				importId: request.importId,
+				source: request.source,
+			};
+			try {
+				if (attempt.sourceKey !== item.sourceKey || canonical(attempt.promptText) !== canonical(item.prompt.value)) {
+					throw new Error("Existing local demo source or prompt text mismatch");
+				}
+				assertLocalDemoExistingObservationIdentity(
+					{
+						promptId: attempt.promptId,
+						brandId: attempt.brandId,
+						scopeId: attempt.scopeId,
+						surfaceTargetKey: attempt.surfaceTargetKey,
+						captureRouteKey: attempt.captureRouteKey,
+						model: attempt.model,
+						provider: attempt.provider,
+						version: attempt.requestedVersion,
+						webSearchEnabled: attempt.webSearchEnabled,
+						sampleIndex: attempt.sampleIndex,
+						importId: existingMetadata.importId,
+						source: existingMetadata.source,
+					},
+					expectedIdentity,
+				);
+				assertLocalDemoExistingObservationIdentity(
+					{
+						promptId: existingRun.promptId,
+						brandId: existingRun.brandId,
+						scopeId: existingRun.scopeId,
+						surfaceTargetKey: existingRun.surfaceTargetKey,
+						captureRouteKey: existingRun.captureRouteKey,
+						model: existingRun.model,
+						provider: existingRun.provider,
+						version: existingRun.version,
+						webSearchEnabled: existingRun.webSearchEnabled,
+						sampleIndex: attempt.sampleIndex,
+						importId: existingMetadata.importId,
+						source: existingMetadata.source,
+					},
+					expectedIdentity,
+				);
+			} catch (error) {
+				throw new ImportError(
+					"existing_observation_mismatch",
+					error instanceof Error ? error.message : "Existing local demo identity mismatch",
+				);
+			}
+			const expectedObservedAt = new Date(item.observation.observedAt);
+			const storedCitations = [...(citationsByRunId.get(existingRun.id) ?? [])].sort(
+				(left, right) => left.citationIndex - right.citationIndex,
+			);
+			const citationsCurrent =
+				storedCitations.length === item.extractedCitations.length &&
+				item.extractedCitations.every((citation, index) => {
+					const stored = storedCitations[index];
+					return (
+						stored !== undefined &&
+						stored.promptRunId === existingRun.id &&
+						stored.promptId === item.prompt.id &&
+						stored.brandId === brand.id &&
+						stored.model === config.model &&
+						stored.url === citation.url &&
+						stored.domain === citation.domain &&
+						stored.title === citation.title &&
+						stored.citationIndex === citation.citationIndex &&
+						stored.createdAt.getTime() === expectedObservedAt.getTime()
+					);
+				});
+			const structuredDetailCurrent =
+				plan.structuredDetailCurrent &&
+				attempt.webSearchObserved === item.observation.webSearchObserved &&
+				existingRun.webSearchObserved === item.observation.webSearchObserved &&
+				existingRun.answerText === item.observation.answerText &&
+				sameStringArray(existingRun.webQueries, item.observation.webQueries) &&
+				existingRun.brandMentioned === item.mentionResult.brandMentioned &&
+				sameStringArray(existingRun.competitorsMentioned, item.mentionResult.competitorsMentioned) &&
+				sameInstant(existingRun.observedAt, expectedObservedAt) &&
+				existingRun.createdAt.getTime() === expectedObservedAt.getTime() &&
+				citationsCurrent;
+			return { ...item, ...plan, attempt, existingRun, existingMetadata, structuredDetailCurrent };
+		});
+
+		const results = [];
+		for (const item of validated) {
+			if (item.structuredDetailCurrent) {
+				results.push({
+					externalId: item.observation.externalId,
+					status: "unchanged",
+					attemptId: item.attempt.id,
+					promptRunId: item.existingRun.id,
+				});
+				continue;
+			}
+			const updatedAttempts = await tx
+				.update(observationAttempts)
+				.set({
+					webSearchObserved: item.observation.webSearchObserved,
+					captureMetadata: {
+						...item.existingMetadata,
+						...item.captureMetadata,
+						sampleFingerprint: item.sampleFingerprint,
+						structuredDetailRevision: 1,
+					},
+				})
+				.where(and(eq(observationAttempts.id, item.attempt.id), eq(observationAttempts.status, "succeeded")))
+				.returning({ id: observationAttempts.id });
+			const updatedRuns = await tx
+				.update(promptRuns)
+				.set({
+					webSearchObserved: item.observation.webSearchObserved,
+					rawOutput: item.rawOutput,
+					answerText: item.observation.answerText,
+					webQueries: item.observation.webQueries,
+					brandMentioned: item.mentionResult.brandMentioned,
+					competitorsMentioned: item.mentionResult.competitorsMentioned,
+					observedAt: new Date(item.observation.observedAt),
+					createdAt: new Date(item.observation.observedAt),
+				})
+				.where(and(eq(promptRuns.id, item.existingRun.id), eq(promptRuns.observationAttemptId, item.attempt.id)))
+				.returning({ id: promptRuns.id });
+			if (updatedAttempts.length !== 1 || updatedRuns.length !== 1) {
+				throw new ImportError("atomic_repair_conflict", "A locked local demo row changed during atomic repair");
+			}
+			await tx.delete(citationRows).where(eq(citationRows.promptRunId, item.existingRun.id));
+			await tx.insert(citationRows).values(
+				item.extractedCitations.map((citation) => ({
+					promptRunId: item.existingRun.id,
+					promptId: item.prompt.id,
+					brandId: brand.id,
+					model: config.model,
+					url: citation.url,
+					domain: citation.domain,
+					title: citation.title,
+					citationIndex: citation.citationIndex,
+					createdAt: new Date(item.observation.observedAt),
+				})),
+			);
+			results.push({
+				externalId: item.observation.externalId,
+				status: "repaired",
+				attemptId: item.attempt.id,
+				promptRunId: item.existingRun.id,
+			});
+		}
+
 		await tx
 			.update(measurementScopes)
 			.set({ isDefault: false })
 			.where(eq(measurementScopes.brandId, defaultScopePromotion.brandId));
-		await tx
+		const promotedScopes = await tx
 			.update(measurementScopes)
 			.set({ isDefault: true })
 			.where(
@@ -323,26 +499,74 @@ async function runImport(request: ImportFile, apply: boolean) {
 					eq(measurementScopes.brandId, defaultScopePromotion.brandId),
 					eq(measurementScopes.id, defaultScopePromotion.scopeId),
 				),
+			)
+			.returning({ id: measurementScopes.id });
+		if (promotedScopes.length !== 1) {
+			throw new ImportError("default_scope_mismatch", "Expected StepFun default scope could not be promoted");
+		}
+
+		const [visibilityDiagnostic] = await tx
+			.select({
+				totalRuns: sql<number>`count(*)::int`,
+				brandMentionedRuns: sql<number>`count(*) FILTER (WHERE ${promptRuns.brandMentioned})::int`,
+				distinctPrompts: sql<number>`count(DISTINCT ${promptRuns.promptId})::int`,
+				webSearchObservedRuns: sql<number>`count(*) FILTER (WHERE ${promptRuns.webSearchObserved})::int`,
+				queryBearingRuns: sql<number>`count(*) FILTER (WHERE cardinality(${promptRuns.webQueries}) > 0)::int`,
+				totalQueries: sql<number>`coalesce(sum(cardinality(${promptRuns.webQueries})), 0)::int`,
+			})
+			.from(promptRuns)
+			.where(
+				and(
+					eq(promptRuns.brandId, brand.id),
+					eq(promptRuns.scopeId, scope.id),
+					eq(promptRuns.provider, config.provider),
+					eq(promptRuns.version, config.version),
+				),
 			);
-	});
-	const [visibilityDiagnostic] = await db
-		.select({
-			totalRuns: sql<number>`count(*)::int`,
-			brandMentionedRuns: sql<number>`count(*) FILTER (WHERE ${promptRuns.brandMentioned})::int`,
-			distinctPrompts: sql<number>`count(DISTINCT ${promptRuns.promptId})::int`,
-		})
-		.from(promptRuns)
-		.where(
-			and(
-				eq(promptRuns.brandId, brand.id),
-				eq(promptRuns.scopeId, scope.id),
-				eq(promptRuns.provider, "local-pc-demo"),
-				eq(promptRuns.version, "local-pc-doubao-demo-20260814"),
-			),
-		);
-	const defaultScope = await db.query.measurementScopes.findFirst({
-		where: and(eq(measurementScopes.brandId, brand.id), eq(measurementScopes.isDefault, true)),
-		columns: { id: true, key: true, name: true },
+		const [citationDiagnostic] = await tx
+			.select({
+				citationBearingRuns: sql<number>`count(DISTINCT ${citationRows.promptRunId})::int`,
+				totalCitations: sql<number>`count(*)::int`,
+				distinctCitationUrls: sql<number>`count(DISTINCT ${citationRows.url})::int`,
+				distinctCitationDomains: sql<number>`count(DISTINCT ${citationRows.domain})::int`,
+			})
+			.from(citationRows)
+			.innerJoin(promptRuns, eq(promptRuns.id, citationRows.promptRunId))
+			.where(
+				and(
+					eq(promptRuns.brandId, brand.id),
+					eq(promptRuns.scopeId, scope.id),
+					eq(promptRuns.provider, config.provider),
+					eq(promptRuns.version, config.version),
+				),
+			);
+		if (!visibilityDiagnostic || !citationDiagnostic) {
+			throw new ImportError("atomic_postcondition_failed", "Local demo diagnostic row is missing");
+		}
+		const defaultScopes = await tx
+			.select({ id: measurementScopes.id, key: measurementScopes.key, name: measurementScopes.name })
+			.from(measurementScopes)
+			.where(and(eq(measurementScopes.brandId, brand.id), eq(measurementScopes.isDefault, true)));
+		try {
+			assertLocalDemoAtomicPostcondition({
+				actualDiagnostic: { ...visibilityDiagnostic, ...citationDiagnostic },
+				expectedDiagnostic,
+				actualDefaultScopeIds: defaultScopes.map((item) => item.id),
+				expectedDefaultScopeId: scope.id,
+			});
+		} catch (error) {
+			throw new ImportError(
+				"atomic_postcondition_failed",
+				error instanceof Error ? error.message : "Local demo atomic postcondition failed",
+			);
+		}
+
+		return {
+			results,
+			visibilityDiagnostic,
+			citationDiagnostic,
+			defaultScope: defaultScopes[0],
+		};
 	});
 
 	return {
@@ -350,14 +574,18 @@ async function runImport(request: ImportFile, apply: boolean) {
 		importId: request.importId,
 		brandId: brand.id,
 		scopeId: scope.id,
-		total: results.length,
-		imported: results.filter((result) => result.status === "imported").length,
-		duplicates: results.filter((result) => result.status === "duplicate").length,
-		inProgress: results.filter((result) => result.status === "in_progress").length,
+		total: atomicResult.results.length,
+		imported: 0,
+		repaired: atomicResult.results.filter((result) => result.status === "repaired").length,
+		duplicates: atomicResult.results.filter((result) => result.status === "unchanged").length,
+		inProgress: 0,
 		defaultScopeSet: true,
-		defaultScope,
-		visibilityDiagnostic,
-		results,
+		defaultScope: atomicResult.defaultScope,
+		visibilityDiagnostic: atomicResult.visibilityDiagnostic,
+		citationDiagnostic: atomicResult.citationDiagnostic,
+		expectedDiagnostic,
+		structuredDetailsComplete: true,
+		results: atomicResult.results,
 	};
 }
 

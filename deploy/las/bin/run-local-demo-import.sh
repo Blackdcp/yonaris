@@ -42,7 +42,7 @@ import sys
 
 payload = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
 expected = {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "importId": "stepfun-local-pc-doubao-demo-20260814",
     "brandNameExact": "StepFun",
     "scopeKeyExact": "cn-zh-scored",
@@ -59,12 +59,26 @@ observations = payload.get("observations")
 if not isinstance(observations, list) or len(observations) != 18:
     raise SystemExit("Local demo import must contain exactly 18 observations.")
 by_prompt = {1: 0, 2: 0, 3: 0}
+total_queries = 0
+total_citations = 0
 for item in observations:
     by_prompt[item.get("promptIndex")] = by_prompt.get(item.get("promptIndex"), 0) + 1
     if not str(item.get("externalId", "")).startswith("stepfun-local-pc-demo-20260814-"):
         raise SystemExit("Local demo import contains an unexpected external id.")
+    if item.get("webSearchObserved") is not True:
+        raise SystemExit("Local demo import must preserve the observed native search state.")
+    queries = item.get("webQueries")
+    citations = item.get("citations")
+    if not isinstance(queries, list) or not queries or not all(isinstance(value, str) and value.strip() for value in queries):
+        raise SystemExit("Local demo import contains incomplete web query details.")
+    if not isinstance(citations, list) or not citations:
+        raise SystemExit("Local demo import contains incomplete citation details.")
+    total_queries += len(queries)
+    total_citations += len(citations)
 if by_prompt != {1: 6, 2: 6, 3: 6}:
     raise SystemExit("Local demo import must contain six observations per prompt.")
+if total_queries < 18 or total_citations < 18:
+    raise SystemExit("Local demo import structured details are unexpectedly sparse.")
 PY
 
 exec 8>"$DEPLOY_ROOT/.local-demo-import.lock"
@@ -122,26 +136,37 @@ else:
     if payload.get("status") != "applied" or payload.get("total") != 18:
         raise SystemExit("Local demo import apply did not confirm 18 observations.")
     imported = payload.get("imported")
+    repaired = payload.get("repaired")
     duplicates = payload.get("duplicates")
     in_progress = payload.get("inProgress")
-    if in_progress != 0 or (imported + duplicates) != 18:
+    if not all(isinstance(value, int) for value in (imported, repaired, duplicates, in_progress)):
+        raise SystemExit("Local demo import returned invalid lifecycle counters.")
+    if in_progress != 0 or (imported + repaired + duplicates) != 18:
         raise SystemExit("Local demo import did not reach a terminal state for all 18 observations.")
-    print(f"local demo import apply: imported={imported} duplicates={duplicates}")
+    print(f"local demo import apply: imported={imported} repaired={repaired} duplicates={duplicates}")
     default_scope = payload.get("defaultScope")
     diagnostic = payload.get("visibilityDiagnostic")
+    citation_diagnostic = payload.get("citationDiagnostic")
+    expected_diagnostic = payload.get("expectedDiagnostic")
     if not isinstance(default_scope, dict) or default_scope.get("key") != "cn-zh-scored":
         raise SystemExit("Local demo import did not promote the expected default scope.")
-    if not isinstance(diagnostic, dict):
-        raise SystemExit("Local demo import did not return visibility diagnostics.")
+    if not all(isinstance(value, dict) for value in (diagnostic, citation_diagnostic, expected_diagnostic)):
+        raise SystemExit("Local demo import did not return complete diagnostics.")
+    if payload.get("structuredDetailsComplete") is not True:
+        raise SystemExit("Local demo import did not populate every reviewed structured detail.")
     total_runs = diagnostic.get("totalRuns")
     brand_mentions = diagnostic.get("brandMentionedRuns")
     distinct_prompts = diagnostic.get("distinctPrompts")
-    if total_runs != 18 or brand_mentions != 12 or distinct_prompts != 3:
+    if total_runs != 18 or distinct_prompts != 3:
         raise SystemExit("Local demo import visibility diagnostics did not match the reviewed 18-run dataset.")
+    if brand_mentions != expected_diagnostic.get("brandMentionedRuns"):
+        raise SystemExit("Local demo import brand mention diagnostics do not match the repaired answers.")
     print(
-        "local demo import visibility: "
+        "local demo import complete: "
         f"defaultScope={default_scope.get('key')} totalRuns={total_runs} "
-        f"brandMentionedRuns={brand_mentions} distinctPrompts={distinct_prompts}"
+        f"brandMentionedRuns={brand_mentions} distinctPrompts={distinct_prompts} "
+        f"totalQueries={diagnostic.get('totalQueries')} "
+        f"totalCitations={citation_diagnostic.get('totalCitations')}"
     )
 PY
 }
