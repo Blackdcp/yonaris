@@ -10,9 +10,9 @@ export const SAMPLING_BATCH_WINDOW_STARTS_AT = "2026-08-13T00:00:00+08:00";
 export const SAMPLING_BATCH_WINDOW_ENDS_AT = "2026-08-20T23:59:59+08:00";
 
 export const EXPECTED_STEPFUN_PROMPTS = [
-	"国内有哪些主流大模型公司？",
-	"如果我要选择国产大模型服务商,有哪些推荐？",
-	"阶跃星辰 StepFun 是一家什么公司？",
+	"国内有哪些主流大模型公司?",
+	"如果我要选择国产大模型服务商,有哪些推荐?",
+	"阶跃星辰 StepFun 是一家什么公司?",
 ] as const;
 
 export type SamplingBatchCliMode = "dry-run" | "apply" | "status-only";

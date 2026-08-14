@@ -30,9 +30,9 @@ describe("StepFun sampling batch CLI input", () => {
 describe("StepFun sampling batch request manifest", () => {
 	it("keeps the reviewed Chinese prompt texts as valid UTF-8", () => {
 		assert.deepEqual(EXPECTED_STEPFUN_PROMPTS, [
-			"国内有哪些主流大模型公司？",
-			"如果我要选择国产大模型服务商,有哪些推荐？",
-			"阶跃星辰 StepFun 是一家什么公司？",
+			"国内有哪些主流大模型公司?",
+			"如果我要选择国产大模型服务商,有哪些推荐?",
+			"阶跃星辰 StepFun 是一家什么公司?",
 		]);
 		for (const prompt of EXPECTED_STEPFUN_PROMPTS) {
 			assert.equal(prompt.includes("\uFFFD"), false);

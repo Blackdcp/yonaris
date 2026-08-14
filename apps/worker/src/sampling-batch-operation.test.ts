@@ -24,9 +24,9 @@ const snapshot: ResolvedSamplingBatchSnapshot = {
 		automaticTargetKeys: [],
 	},
 	prompts: [
-		{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", value: "国内有哪些主流大模型公司？" },
-		{ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", value: "如果我要选择国产大模型服务商,有哪些推荐？" },
-		{ id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", value: "阶跃星辰 StepFun 是一家什么公司？" },
+		{ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", value: "国内有哪些主流大模型公司?" },
+		{ id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", value: "如果我要选择国产大模型服务商,有哪些推荐?" },
+		{ id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", value: "阶跃星辰 StepFun 是一家什么公司?" },
 	],
 };
 
