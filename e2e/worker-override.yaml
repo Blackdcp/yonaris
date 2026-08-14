@@ -4,6 +4,16 @@
 # reaching out to any LLM API. Worker-only — the web service keeps the real
 # SCRAPE_TARGETS from .env.
 services:
+  web:
+    environment:
+      RESPONSE_SNAPSHOT_ENABLED: "true"
+      RESPONSE_SNAPSHOT_ROOT: /var/lib/yonaris/response-snapshots/v1
+    volumes:
+      - ../.snapshot-fixtures:/var/lib/yonaris/response-snapshots/v1
   worker:
     environment:
       SCRAPE_TARGETS: stub:stub
+      RESPONSE_SNAPSHOT_ENABLED: "true"
+      RESPONSE_SNAPSHOT_ROOT: /var/lib/yonaris/response-snapshots/v1
+    volumes:
+      - ../.snapshot-fixtures:/var/lib/yonaris/response-snapshots/v1

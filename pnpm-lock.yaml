@@ -475,6 +475,12 @@ importers:
       '@usebruno/cli':
         specifier: 3.5.2
         version: 3.5.2
+      '@workspace/lib':
+        specifier: workspace:*
+        version: link:../packages/lib
+      fflate:
+        specifier: ^0.7.4
+        version: 0.7.4
       pg:
         specifier: ^8.22.0
         version: 8.22.0

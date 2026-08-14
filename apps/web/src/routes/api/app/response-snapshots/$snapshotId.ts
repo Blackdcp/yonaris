@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { isAbsolute } from "node:path";
+import { gunzipSync } from "node:zlib";
 import { createFileRoute } from "@tanstack/react-router";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import type { ResponseSnapshotAsset } from "@workspace/lib/response-snapshots/storage";
@@ -46,19 +48,20 @@ export const Route = createFileRoute("/api/app/response-snapshots/$snapshotId")(
 					if (asset.sha256 !== expectedSha256) {
 						throw new ResponseSnapshotHttpError(500, "Response snapshot integrity check failed");
 					}
+					const responseBody = decodeResponseSnapshotAsset(asset);
 					await recordResponseSnapshotAccess({
 						snapshotId: snapshot.id,
 						brandId: snapshot.brandId,
 						actorUserId: snapshot.actorUserId,
 						...selector,
 					});
-					return new Response(new Uint8Array(asset.body), {
+					return new Response(new Uint8Array(responseBody), {
 						headers: buildResponseSnapshotAssetHeaders({
 							...selector,
 							contentType: asset.contentType,
-							contentEncoding: asset.contentEncoding,
+							contentEncoding: null,
 							sha256: asset.sha256,
-							storedBytes: asset.storedBytes,
+							storedBytes: responseBody.byteLength,
 							...(fileName ? { fileName } : {}),
 						}),
 					});
@@ -69,3 +72,16 @@ export const Route = createFileRoute("/api/app/response-snapshots/$snapshotId")(
 		},
 	},
 });
+
+function decodeResponseSnapshotAsset(asset: ResponseSnapshotAsset): Uint8Array {
+	let body: Uint8Array;
+	try {
+		body = asset.contentEncoding === "gzip" ? gunzipSync(asset.body, { maxOutputLength: asset.bytes }) : asset.body;
+	} catch {
+		throw new ResponseSnapshotHttpError(500, "Response snapshot integrity check failed");
+	}
+	if (body.byteLength !== asset.bytes || createHash("sha256").update(body).digest("hex") !== asset.sha256) {
+		throw new ResponseSnapshotHttpError(500, "Response snapshot integrity check failed");
+	}
+	return body;
+}

@@ -137,7 +137,10 @@ jobs:
       # Start web only (with its deps db-migrate + postgres). The worker stays
       # down for now — it comes up in phase 2, after the fixture suites run.
       - name: Start web
-        run: docker compose up -d --no-build web
+        run: |
+          mkdir -p e2e/.snapshot-fixtures
+          chmod 0777 e2e/.snapshot-fixtures
+          docker compose up -d --no-build web
 
       - name: Wait for web
         run: |

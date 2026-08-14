@@ -14,6 +14,19 @@ Yonaris response snapshots are immutable HTML and JSON answer records. They are 
 
 Snapshot failure never changes `prompt_runs`, visibility, share of voice, citations or query fan-out. A successful AI observation remains successful while its archive is shown as pending/failed when storage is unavailable.
 
+## Staged release order
+
+Use this order for every production rollout:
+
+1. deploy migration `0022_response_snapshot_archive` plus compatible Web/Worker code with `RESPONSE_SNAPSHOT_ENABLED=false`;
+2. require empty-database and seeded-database migration replay, production backup/rehearsal, Web health and Worker stability to pass;
+3. prepare the persistent host directory and pass the read-only plus candidate-image round-trip checks below;
+4. set the fixed v1 environment values and redeploy Web/Worker;
+5. verify one non-paid fixture snapshot end to end before allowing Bright Data or an explicitly started Browser Runner batch to reserve snapshots;
+6. run any historical StepFun backfill only through a separate reviewed one-shot request.
+
+The E2E fixture suite never calls Bright Data, Doubao, DeepSeek or another paid provider. It builds local deterministic bundles and proves that provider-native HTML, structured fallback HTML and domestic browser-answer HTML use the same customer component, authorization and export path.
+
 ## Prepare and enable
 
 Keep `RESPONSE_SNAPSHOT_ENABLED=false` until all checks pass.
@@ -30,11 +43,31 @@ env DEPLOY_ROOT=/opt/yonaris \
 
 Set the exact six response snapshot variables shown in `env.example`, restart Web and Worker through the immutable deployment, and require the deployment's `--round-trip` probe to pass. The probe writes through the candidate Web image, reads and deletes through the candidate Worker image, and never creates a database record.
 
+After enablement, verify a fixture or already-saved run from an ordinary customer account:
+
+- the LLM response card shows one read-only `Response snapshot` panel;
+- the inline HTML loads inside the sandboxed same-origin iframe and makes no external request;
+- downloaded HTML, JSON and manifest values match the SHA-256 values shown in the panel;
+- a second tenant and an anonymous request cannot read the object;
+- pending, failed and expired archive states do not change the response text or any Elmo metric input.
+
 ## Operations
 
 The `response-snapshot-maintenance` queue runs every five minutes. It retries bounded outbox work, reconstructs bounded stale reservations from already-saved runs without calling AI, deletes expired objects, and removes only verified unreferenced revision directories older than 24 hours. Its advisory lock prevents concurrent maintenance.
 
 At 70% disk usage, investigate growth and export/archive older customer ranges. At 80%, new snapshot-enabled claims fail closed before a provider request; existing dashboard data remains readable.
+
+## Historical StepFun backfill
+
+Backfill is disabled unless a reviewed commit adds exactly one request under `response-snapshot-backfills/requests/`. Follow `response-snapshot-backfills/README.md`: enumerate the exact sorted run IDs, channels, end-exclusive UTC range, count, run fingerprint and reviewed source SHA. The production operation always executes dry-run before apply and writes only snapshot metadata/outbox/files; it never changes `prompt_runs`, citations, mentions, prompts, scopes or metric formulas.
+
+After apply, sign in as the real StepFun customer and verify:
+
+- legacy Doubao and DeepSeek runs are labelled `Historical reconstruction`, never native provider HTML;
+- channel/model filters and all existing visibility, share-of-voice, citation and query values are unchanged;
+- HTML/JSON/manifest downloads match their displayed hashes;
+- expiry timestamps are stored in UTC and displayed in `Asia/Shanghai`;
+- the durable redacted operation receipt exists before removing the one-shot request in a follow-up commit.
 
 ## External export
 

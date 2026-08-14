@@ -2,6 +2,7 @@ import "../instrument.server.mjs";
 import { wrapFetchWithSentry } from "@sentry/tanstackstart-react";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { startCredentialRefresh } from "@workspace/lib/secrets";
+import { applySecurityHeaders } from "./server-security-headers";
 
 // Not awaited: the app has to serve sign-in and settings whether or not the
 // credential store is reachable.
@@ -27,41 +28,11 @@ function configuredPosthogOrigin(): string | undefined {
 
 const posthogOrigin = configuredPosthogOrigin();
 
-const SECURITY_HEADERS: Record<string, string> = {
-	"Content-Security-Policy": [
-		"default-src 'self'",
-		`script-src 'self' 'unsafe-inline' https://*.clarity.ms${posthogOrigin ? ` ${posthogOrigin}` : ""}`,
-		"style-src 'self' 'unsafe-inline'",
-		"img-src 'self' data: https: https://c.bing.com",
-		"font-src 'self' data:",
-		`connect-src 'self'${posthogOrigin ? ` ${posthogOrigin}` : ""} https://*.sentry.io https://*.clarity.ms https://c.bing.com`,
-		"object-src 'none'",
-		"frame-ancestors 'none'",
-		"base-uri 'self'",
-		"form-action 'self'",
-	].join("; "),
-	"Strict-Transport-Security": strictTransportSecurity,
-	"X-Frame-Options": "DENY",
-	"X-Content-Type-Options": "nosniff",
-	"Referrer-Policy": "strict-origin-when-cross-origin",
-	// same-origin-allow-popups (not same-origin) keeps OAuth/SSO popups that rely on
-	// window.opener working while still isolating us from cross-origin openers.
-	"Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-	"Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
-};
-
-function addSecurityHeaders(response: Response): Response {
-	for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-		response.headers.set(key, value);
-	}
-	return response;
-}
-
 export default createServerEntry(
 	wrapFetchWithSentry({
 		async fetch(request: Request) {
 			const response = await handler.fetch(request);
-			return addSecurityHeaders(response);
+			return applySecurityHeaders(request, response, { strictTransportSecurity, posthogOrigin });
 		},
 	}),
 );

@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
+import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResponseSnapshotAccessError } from "@/server/response-snapshots";
 
@@ -35,7 +37,9 @@ type GetHandler = (input: { request: Request; params: { snapshotId: string } }) 
 type MockRoute = { server: { handlers: { GET: GetHandler } } };
 
 const snapshotId = "11111111-1111-4111-8111-111111111111";
-const sha256 = "a".repeat(64);
+const htmlBody = "<section>archived answer</section>";
+const htmlBytes = Buffer.from(htmlBody, "utf8");
+const sha256 = createHash("sha256").update(htmlBytes).digest("hex");
 
 describe("customer response snapshot asset route", () => {
 	beforeEach(() => {
@@ -54,12 +58,12 @@ describe("customer response snapshot asset route", () => {
 		});
 		mocks.get.mockResolvedValue({
 			asset: "html",
-			body: new TextEncoder().encode("<section>archived answer</section>"),
+			body: htmlBytes,
 			contentType: "text/html; charset=utf-8",
 			contentEncoding: null,
 			sha256,
-			bytes: 34,
-			storedBytes: 34,
+			bytes: htmlBytes.byteLength,
+			storedBytes: htmlBytes.byteLength,
 		});
 	});
 
@@ -69,7 +73,7 @@ describe("customer response snapshot asset route", () => {
 		const response = await get(`asset=html&download=0`);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("<section>archived answer</section>");
+		expect(await response.text()).toBe(htmlBody);
 		expect(response.headers.get("Content-Security-Policy")).toContain("sandbox");
 		expect(mocks.recordResponseSnapshotAccess).toHaveBeenCalledWith({
 			snapshotId,
@@ -78,6 +82,37 @@ describe("customer response snapshot asset route", () => {
 			asset: "html",
 			download: false,
 		});
+	});
+
+	it("decodes stored gzip bytes before sending an HTML preview", async () => {
+		const body = Buffer.from("<section>compressed archived answer</section>", "utf8");
+		const compressed = gzipSync(body);
+		const bodySha256 = createHash("sha256").update(body).digest("hex");
+		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
+			id: snapshotId,
+			brandId: "stepfun",
+			storageKey: "2026/08/15/stepfun/run-1/r1",
+			htmlSha256: bodySha256,
+			jsonSha256: "b".repeat(64),
+			manifestSha256: "c".repeat(64),
+			actorUserId: "customer-1",
+			actorKind: "customer",
+		});
+		mocks.get.mockResolvedValue({
+			asset: "html",
+			body: compressed,
+			contentType: "text/html; charset=utf-8",
+			contentEncoding: "gzip",
+			sha256: bodySha256,
+			bytes: body.byteLength,
+			storedBytes: compressed.byteLength,
+		});
+
+		const response = await get("asset=html&download=0");
+
+		expect(response.headers.get("content-encoding")).toBeNull();
+		expect(response.headers.get("content-length")).toBe(String(body.byteLength));
+		expect(Buffer.from(await response.arrayBuffer())).toEqual(body);
 	});
 
 	it("returns 401 without touching storage for an anonymous request", async () => {

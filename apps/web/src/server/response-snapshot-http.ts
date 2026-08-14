@@ -1,4 +1,5 @@
 import type { ResponseSnapshotAssetName } from "@workspace/lib/response-snapshots/storage";
+import { RESPONSE_SNAPSHOT_PREVIEW_CSP } from "../server-security-headers";
 import { ResponseSnapshotAccessError } from "./response-snapshots";
 
 const SAFE_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,299}$/u;
@@ -63,10 +64,7 @@ export function buildResponseSnapshotAssetHeaders(input: {
 	});
 	if (input.contentEncoding) headers.set("Content-Encoding", input.contentEncoding);
 	if (input.asset === "html" && !input.download) {
-		headers.set(
-			"Content-Security-Policy",
-			"sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; frame-ancestors 'self'",
-		);
+		headers.set("Content-Security-Policy", RESPONSE_SNAPSHOT_PREVIEW_CSP);
 	}
 	if (input.download) {
 		if (!input.fileName) throw new ResponseSnapshotHttpError(500, "Response snapshot filename is required");

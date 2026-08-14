@@ -10,6 +10,10 @@
  *
  * Usage: tsx seed.ts
  */
+import { mkdir, rm } from "node:fs/promises";
+import { relative, resolve } from "node:path";
+import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import pg from "pg";
 import {
   COMPETITOR_IDS,
@@ -18,7 +22,10 @@ import {
   MEMTENSOR_BRAND_ID,
   MEMTENSOR_BRAND_NAME,
   MEMTENSOR_ORG_ID,
+  MEMTENSOR_PROMPT_ID,
+  MEMTENSOR_RUN_ID,
   MEMTENSOR_SCOPE_ID,
+  MEMTENSOR_SNAPSHOT_ID,
   NIKE_BRAND_ID,
   NIKE_COMPETITOR_IDS,
   NIKE_ORG_ID,
@@ -30,8 +37,9 @@ import {
   STEPFUN_BRAND_NAME,
   STEPFUN_ORG_ID,
   STEPFUN_PROMPT_ID,
-  STEPFUN_RUN_ID,
   STEPFUN_SCOPE_ID,
+  STEPFUN_SNAPSHOT_IDS,
+  STEPFUN_SNAPSHOT_RUN_IDS,
   TEST_BRAND_ID,
   TEST_BRAND_NAME,
   TEST_BRAND_WEBSITE,
@@ -62,6 +70,9 @@ async function seed() {
     // the ordinary DELETE sequence used before scoped observations existed.
     await client.query(`
       TRUNCATE TABLE
+        response_snapshot_access_events,
+        response_snapshot_outbox,
+        response_snapshots,
         evidence_artifacts,
         citations,
         prompt_runs,
@@ -133,26 +144,21 @@ async function seed() {
     await client.query(
       `INSERT INTO prompts
          (id, brand_id, scope_id, value, enabled, tags, system_tags, created_at, updated_at)
-       VALUES ($1, $2, $3, '国内有哪些主流大模型公司？', true,
-               ARRAY['结果监测'], ARRAY['unbranded'], NOW(), NOW())`,
-      [STEPFUN_PROMPT_ID, STEPFUN_BRAND_ID, STEPFUN_SCOPE_ID],
-    );
-    await client.query(
-      `INSERT INTO prompt_runs
-         (id, prompt_id, brand_id, scope_id, model, version, web_search_enabled,
-          raw_output, answer_text, web_queries, brand_mentioned,
-          competitors_mentioned, observed_at, created_at)
-       VALUES ($1, $2, $3, $4, 'deepseek', 'deepseek-chat', false,
-               $5, $6, '{}', true, '{}', NOW(), NOW())`,
+       VALUES
+         ($1, $2, $3, '国内有哪些主流大模型公司？', true,
+          ARRAY['结果监测'], ARRAY['unbranded'], NOW(), NOW()),
+         ($4, $5, $6, 'MemTensor 是什么？', true,
+          ARRAY['结果监测'], ARRAY['branded'], NOW(), NOW())`,
       [
-        STEPFUN_RUN_ID,
         STEPFUN_PROMPT_ID,
         STEPFUN_BRAND_ID,
         STEPFUN_SCOPE_ID,
-        JSON.stringify({ response: "阶跃星辰是中国的大模型公司。" }),
-        "阶跃星辰是中国的大模型公司。",
+        MEMTENSOR_PROMPT_ID,
+        MEMTENSOR_BRAND_ID,
+        MEMTENSOR_SCOPE_ID,
       ],
     );
+    await seedResponseSnapshotFixtures(client);
 
     // -----------------------------------------------------------------------
     // 1. Brand (scoped to an organization that shares its id)
@@ -594,6 +600,339 @@ async function seed() {
   } finally {
     await client.end();
   }
+}
+
+async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
+  const now = new Date();
+  const hour = 60 * 60 * 1_000;
+  const day = 24 * hour;
+  const retention = 90 * day;
+  const stepfunRuns = [
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.nativeHtml,
+      model: "chatgpt",
+      provider: "brightdata",
+      version: "gpt-5",
+      answerText: "StepFun appears in this overseas native HTML answer.",
+      observedAt: new Date(now.getTime() - 6 * hour),
+      brandMentioned: true,
+      webQueries: ["StepFun AI company"],
+    },
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.renderedFallback,
+      model: "perplexity",
+      provider: "brightdata",
+      version: "sonar",
+      answerText: "This overseas structured response is archived with deterministic fallback HTML.",
+      observedAt: new Date(now.getTime() - 5 * hour),
+      brandMentioned: false,
+      webQueries: ["Chinese foundation model companies"],
+    },
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.domesticBrowser,
+      model: "doubao",
+      provider: "browser-runner",
+      version: "consumer-web",
+      answerText: "豆包回答：阶跃星辰（StepFun）是一家人工智能公司。",
+      observedAt: new Date(now.getTime() - 4 * hour),
+      brandMentioned: true,
+      webQueries: [],
+    },
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.pending,
+      model: "deepseek",
+      provider: "browser-runner",
+      version: "consumer-web",
+      answerText: "The metric run succeeded while its archive is still pending.",
+      observedAt: new Date(now.getTime() - 3 * hour),
+      brandMentioned: false,
+      webQueries: [],
+    },
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.failed,
+      model: "deepseek",
+      provider: "browser-runner",
+      version: "consumer-web",
+      answerText: "StepFun remains a valid metric observation even though snapshot storage failed.",
+      observedAt: new Date(now.getTime() - 2 * hour),
+      brandMentioned: true,
+      webQueries: [],
+    },
+    {
+      id: STEPFUN_SNAPSHOT_RUN_IDS.expired,
+      model: "deepseek",
+      provider: "browser-runner",
+      version: "consumer-web",
+      answerText: "This archived response is represented as expired.",
+      observedAt: new Date(now.getTime() - 2 * day),
+      brandMentioned: false,
+      webQueries: [],
+    },
+  ] as const;
+
+  for (const run of stepfunRuns) {
+    await client.query(
+      `INSERT INTO prompt_runs
+         (id, prompt_id, brand_id, scope_id, model, provider, version,
+          surface_target_key, capture_route_key, web_search_enabled,
+          raw_output, answer_text, web_queries, brand_mentioned,
+          competitors_mentioned, observed_at, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true,
+               $10, $11, $12, $13, '{}', $14, $14)`,
+      [
+        run.id,
+        STEPFUN_PROMPT_ID,
+        STEPFUN_BRAND_ID,
+        STEPFUN_SCOPE_ID,
+        run.model,
+        run.provider,
+        run.version,
+        `${run.model}.consumer_web`,
+        run.provider === "brightdata" ? "brightdata.dataset" : "browser_runner.consumer_web",
+        JSON.stringify({ response: run.answerText }),
+        run.answerText,
+        run.webQueries,
+        run.brandMentioned,
+        run.observedAt,
+      ],
+    );
+  }
+
+  const memtensorObservedAt = new Date(now.getTime() - hour);
+  await client.query(
+    `INSERT INTO prompt_runs
+       (id, prompt_id, brand_id, scope_id, model, provider, version,
+        surface_target_key, capture_route_key, web_search_enabled,
+        raw_output, answer_text, web_queries, brand_mentioned,
+        competitors_mentioned, observed_at, created_at)
+     VALUES ($1, $2, $3, $4, 'chatgpt', 'brightdata', 'gpt-5',
+             'chatgpt.consumer_web', 'brightdata.dataset', true,
+             $5, $6, '{}', true, '{}', $7, $7)`,
+    [
+      MEMTENSOR_RUN_ID,
+      MEMTENSOR_PROMPT_ID,
+      MEMTENSOR_BRAND_ID,
+      MEMTENSOR_SCOPE_ID,
+      JSON.stringify({ response: "MemTensor belongs to another tenant." }),
+      "MemTensor belongs to another tenant.",
+      memtensorObservedAt,
+    ],
+  );
+
+  const storageRoot = resolve(process.cwd(), ".snapshot-fixtures");
+  await mkdir(storageRoot, { recursive: true });
+  for (const brandId of [STEPFUN_BRAND_ID, MEMTENSOR_BRAND_ID]) {
+    const brandRoot = resolve(storageRoot, brandId);
+    const pathFromRoot = relative(storageRoot, brandRoot);
+    if (!pathFromRoot || pathFromRoot.startsWith("..")) {
+      throw new Error("Unsafe E2E response snapshot fixture path");
+    }
+    await rm(brandRoot, { recursive: true, force: true });
+  }
+  const storage = new FilesystemResponseSnapshotStorage(storageRoot);
+
+  await seedReadyResponseSnapshot(client, storage, {
+    snapshotId: STEPFUN_SNAPSHOT_IDS.nativeHtml,
+    runId: STEPFUN_SNAPSHOT_RUN_IDS.nativeHtml,
+    brandId: STEPFUN_BRAND_ID,
+    scopeId: STEPFUN_SCOPE_ID,
+    promptId: STEPFUN_PROMPT_ID,
+    promptText: "国内有哪些主流大模型公司？",
+    answerText: stepfunRuns[0].answerText,
+    answerHtml:
+      '<article onclick="fetch(\'https://attacker.invalid/click\')"><h2>StepFun archive</h2><script>fetch("https://attacker.invalid/script")</script><img src="https://attacker.invalid/pixel"><p>Sanitized native answer.</p></article>',
+    citations: [
+      { url: "https://www.stepfun.com/", title: "StepFun", domain: "stepfun.com", citationIndex: 0 },
+    ],
+    webQueries: [...stepfunRuns[0].webQueries],
+    queryAvailability: "available",
+    brandMentioned: true,
+    competitorsMentioned: [],
+    channel: "chatgpt",
+    modelVersion: "gpt-5",
+    market: "US",
+    locale: "en-US",
+    timezone: "America/New_York",
+    observedAt: stepfunRuns[0].observedAt.toISOString(),
+    captureMethod: "brightdata_dataset",
+    contentSource: "native_answer_html",
+  });
+  await seedReadyResponseSnapshot(client, storage, {
+    snapshotId: STEPFUN_SNAPSHOT_IDS.renderedFallback,
+    runId: STEPFUN_SNAPSHOT_RUN_IDS.renderedFallback,
+    brandId: STEPFUN_BRAND_ID,
+    scopeId: STEPFUN_SCOPE_ID,
+    promptId: STEPFUN_PROMPT_ID,
+    promptText: "国内有哪些主流大模型公司？",
+    answerText: stepfunRuns[1].answerText,
+    citations: [
+      { url: "https://example.com/fallback", title: "Structured source", domain: "example.com", citationIndex: 0 },
+    ],
+    webQueries: [...stepfunRuns[1].webQueries],
+    queryAvailability: "available",
+    brandMentioned: false,
+    competitorsMentioned: [],
+    channel: "perplexity",
+    modelVersion: "sonar",
+    market: "US",
+    locale: "en-US",
+    timezone: "America/New_York",
+    observedAt: stepfunRuns[1].observedAt.toISOString(),
+    captureMethod: "brightdata_dataset",
+    contentSource: "rendered_from_structured_response",
+  });
+  await seedReadyResponseSnapshot(client, storage, {
+    snapshotId: STEPFUN_SNAPSHOT_IDS.domesticBrowser,
+    runId: STEPFUN_SNAPSHOT_RUN_IDS.domesticBrowser,
+    brandId: STEPFUN_BRAND_ID,
+    scopeId: STEPFUN_SCOPE_ID,
+    promptId: STEPFUN_PROMPT_ID,
+    promptText: "国内有哪些主流大模型公司？",
+    answerText: stepfunRuns[2].answerText,
+    answerHtml: "<section><h2>豆包回答</h2><p>阶跃星辰（StepFun）是一家人工智能公司。</p></section>",
+    citations: [],
+    webQueries: [],
+    queryAvailability: "unavailable",
+    brandMentioned: true,
+    competitorsMentioned: [],
+    channel: "doubao",
+    modelVersion: "consumer-web",
+    market: "CN",
+    locale: "zh-CN",
+    timezone: "Asia/Shanghai",
+    observedAt: stepfunRuns[2].observedAt.toISOString(),
+    captureMethod: "consumer_web_browser",
+    contentSource: "browser_answer_html",
+  });
+  await seedReadyResponseSnapshot(client, storage, {
+    snapshotId: STEPFUN_SNAPSHOT_IDS.expired,
+    runId: STEPFUN_SNAPSHOT_RUN_IDS.expired,
+    brandId: STEPFUN_BRAND_ID,
+    scopeId: STEPFUN_SCOPE_ID,
+    promptId: STEPFUN_PROMPT_ID,
+    promptText: "国内有哪些主流大模型公司？",
+    answerText: stepfunRuns[5].answerText,
+    citations: [],
+    webQueries: [],
+    queryAvailability: "unavailable",
+    brandMentioned: false,
+    competitorsMentioned: [],
+    channel: "deepseek",
+    modelVersion: "consumer-web",
+    market: "CN",
+    locale: "zh-CN",
+    timezone: "Asia/Shanghai",
+    observedAt: stepfunRuns[5].observedAt.toISOString(),
+    captureMethod: "consumer_web_browser",
+    contentSource: "rendered_from_structured_response",
+  }, "expired", new Date(now.getTime() - day));
+  await seedReadyResponseSnapshot(client, storage, {
+    snapshotId: MEMTENSOR_SNAPSHOT_ID,
+    runId: MEMTENSOR_RUN_ID,
+    brandId: MEMTENSOR_BRAND_ID,
+    scopeId: MEMTENSOR_SCOPE_ID,
+    promptId: MEMTENSOR_PROMPT_ID,
+    promptText: "MemTensor 是什么？",
+    answerText: "MemTensor belongs to another tenant.",
+    citations: [],
+    webQueries: [],
+    queryAvailability: "unavailable",
+    brandMentioned: true,
+    competitorsMentioned: [],
+    channel: "chatgpt",
+    modelVersion: "gpt-5",
+    market: "CN",
+    locale: "zh-CN",
+    timezone: "Asia/Shanghai",
+    observedAt: memtensorObservedAt.toISOString(),
+    captureMethod: "brightdata_dataset",
+    contentSource: "rendered_from_structured_response",
+  });
+
+  await client.query(
+    `INSERT INTO response_snapshots
+       (id, prompt_run_id, brand_id, scope_id, prompt_id, status,
+        observed_at, created_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'pending', $6, $6, $7)`,
+    [
+      STEPFUN_SNAPSHOT_IDS.pending,
+      STEPFUN_SNAPSHOT_RUN_IDS.pending,
+      STEPFUN_BRAND_ID,
+      STEPFUN_SCOPE_ID,
+      STEPFUN_PROMPT_ID,
+      stepfunRuns[3].observedAt,
+      new Date(stepfunRuns[3].observedAt.getTime() + retention),
+    ],
+  );
+  await client.query(
+    `INSERT INTO response_snapshots
+       (id, prompt_run_id, brand_id, scope_id, prompt_id, status,
+        failure_code, observed_at, created_at, failed_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 'failed', 'fixture_storage_failure',
+             $6, $6, $7, $8)`,
+    [
+      STEPFUN_SNAPSHOT_IDS.failed,
+      STEPFUN_SNAPSHOT_RUN_IDS.failed,
+      STEPFUN_BRAND_ID,
+      STEPFUN_SCOPE_ID,
+      STEPFUN_PROMPT_ID,
+      stepfunRuns[4].observedAt,
+      now,
+      new Date(stepfunRuns[4].observedAt.getTime() + retention),
+    ],
+  );
+  console.log("  Created response snapshot fixtures: 4 ready, 1 pending, 1 failed, 1 expired");
+}
+
+async function seedReadyResponseSnapshot(
+  client: pg.Client,
+  storage: FilesystemResponseSnapshotStorage,
+  draft: ResponseSnapshotDraft & { snapshotId: string },
+  status: "ready" | "expired" = "ready",
+  expiresAt = new Date(new Date(draft.observedAt).getTime() + 90 * 24 * 60 * 60 * 1_000),
+): Promise<void> {
+  const { snapshotId, ...snapshotDraft } = draft;
+  const bundle = prepareResponseSnapshotBundle(snapshotDraft);
+  const stored = await storage.put(bundle, 1);
+  const readyAt = new Date();
+  await client.query(
+    `INSERT INTO response_snapshots
+       (id, prompt_run_id, brand_id, scope_id, prompt_id, revision, is_current,
+        status, storage_backend, storage_key, content_source, capture_method,
+        schema_version, template_version, html_sha256, json_sha256,
+        manifest_sha256, source_payload_sha256, html_bytes, json_bytes,
+        manifest_bytes, html_gzip_bytes, json_gzip_bytes, observed_at,
+        created_at, ready_at, expires_at)
+     VALUES ($1, $2, $3, $4, $5, 1, true, $6, $7, $8, $9, $10,
+             $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+             $22, $22, $23, $24)`,
+    [
+      snapshotId,
+      snapshotDraft.runId,
+      snapshotDraft.brandId,
+      snapshotDraft.scopeId,
+      snapshotDraft.promptId,
+      status,
+      stored.storageBackend,
+      stored.storageKey,
+      bundle.contentSource,
+      bundle.captureMethod,
+      bundle.schemaVersion,
+      bundle.templateVersion,
+      stored.htmlSha256,
+      stored.jsonSha256,
+      stored.manifestSha256,
+      bundle.sourcePayloadSha256,
+      stored.htmlBytes,
+      stored.jsonBytes,
+      stored.manifestBytes,
+      stored.htmlGzipBytes,
+      stored.jsonGzipBytes,
+      new Date(bundle.observedAt),
+      readyAt,
+      expiresAt,
+    ],
+  );
 }
 
 seed().catch((err) => {
