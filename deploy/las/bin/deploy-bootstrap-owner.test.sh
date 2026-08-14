@@ -44,6 +44,16 @@ else
 fi
 EOF
 
+cat >"$MOCK_SCRIPT_DIR/check-response-snapshot-storage.sh" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+if [[ " $* " == *" --round-trip "* ]]; then
+  printf 'snapshot-storage:round-trip\n' >>"$MOCK_EVENT_LOG"
+else
+  printf 'snapshot-storage:preflight\n' >>"$MOCK_EVENT_LOG"
+fi
+EOF
+
 cat >"$MOCK_SCRIPT_DIR/prune-superseded-images.sh" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -141,6 +151,7 @@ chmod +x \
   "$MOCK_SCRIPT_DIR/deploy.sh" \
   "$MOCK_SCRIPT_DIR/backup.sh" \
   "$MOCK_SCRIPT_DIR/check-sampling-storage.sh" \
+  "$MOCK_SCRIPT_DIR/check-response-snapshot-storage.sh" \
   "$MOCK_SCRIPT_DIR/prune-superseded-images.sh" \
   "$MOCK_SCRIPT_DIR/rehearse-db-upgrade.sh" \
   "$MOCK_BIN/docker" \
@@ -186,7 +197,10 @@ if grep -Eq 'account-ops (pnpm|npx)' "$EVENT_LOG"; then
 fi
 assert_order 'migration' 'preflight:post-migration'
 assert_order 'images:prune:' 'preflight:pre-migration'
+assert_order 'snapshot-storage:preflight' 'backup'
 assert_order 'preflight:post-migration' 'bootstrap:'
+assert_order 'preflight:post-migration' 'snapshot-storage:round-trip'
+assert_order 'snapshot-storage:round-trip' 'bootstrap:'
 assert_order 'bootstrap:' 'runtime:start'
 if [[ "$(tr -d '[:space:]' <"$DEPLOY_ROOT/.release")" != "$NEW_RELEASE" ]]; then
   echo "Successful deployment did not update the immutable release marker." >&2

@@ -217,6 +217,27 @@ jobs:
       contents: read
     uses: ./.github/workflows/mode-compat.yaml
 
+  response-snapshot-storage-contract:
+    name: Response snapshot storage contract
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Verify response snapshot host assets
+        shell: bash
+        run: |
+          bash deploy/las/bin/prepare-response-snapshot-storage.test.sh
+          bash deploy/las/bin/check-response-snapshot-storage.test.sh
+          bash deploy/las/bin/export-response-snapshots.test.sh
+          bash -n \
+            deploy/las/bin/prepare-response-snapshot-storage.sh \
+            deploy/las/bin/check-response-snapshot-storage.sh \
+            deploy/las/bin/export-response-snapshots.sh \
+            deploy/las/bin/deploy.sh
+
   build-images:
     name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -268,6 +289,7 @@ jobs:
       - build-images
       - e2e-gate
       - mode-compat-gate
+      - response-snapshot-storage-contract
     if: vars.LAS_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:

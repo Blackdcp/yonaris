@@ -35,6 +35,7 @@ fi
 
 for required_script in \
   "$SCRIPT_DIR/backup.sh" \
+	"$SCRIPT_DIR/check-response-snapshot-storage.sh" \
   "$SCRIPT_DIR/check-sampling-storage.sh" \
   "$SCRIPT_DIR/prune-superseded-images.sh" \
   "$SCRIPT_DIR/rehearse-db-upgrade.sh"; do
@@ -166,6 +167,10 @@ echo "Running the pre-migration Sampling storage preflight"
 DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
   bash "$SCRIPT_DIR/check-sampling-storage.sh" --allow-missing-evidence-schema
 
+echo "Running the pre-migration response snapshot storage preflight"
+DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" IMAGE_TAG="$release_tag" \
+	bash "$SCRIPT_DIR/check-response-snapshot-storage.sh"
+
 echo "Creating a pre-migration backup"
 backup_file="$(
   DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
@@ -190,6 +195,10 @@ IMAGE_TAG="$release_tag" "${compose[@]}" --profile operations run --rm --no-deps
 echo "Running the post-migration strict Sampling storage preflight"
 DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
   bash "$SCRIPT_DIR/check-sampling-storage.sh"
+
+echo "Verifying candidate Web and Worker access to response snapshot storage"
+DEPLOY_ROOT="$DEPLOY_ROOT" COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" IMAGE_TAG="$release_tag" \
+	bash "$SCRIPT_DIR/check-response-snapshot-storage.sh" --round-trip
 
 if [[ "${DEPLOYMENT_MODE:-}" == local ]]; then
   echo "Ensuring the local bootstrap owner has global admin access"
