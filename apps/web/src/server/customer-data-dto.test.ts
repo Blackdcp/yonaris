@@ -107,6 +107,7 @@ describe("customer brand DTO", () => {
 describe("customer prompt-run DTO", () => {
 	it("keeps the answer and public observation metadata without execution internals", () => {
 		const dto = toCustomerPromptRunDto({
+			id: "run-1",
 			model: "doubao",
 			version: "displayed-version",
 			observedAt: new Date("2026-08-12T11:00:00.000Z"),
@@ -116,6 +117,17 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
+			snapshot: {
+				id: "snapshot-1",
+				status: "ready",
+				contentSource: "browser_answer_html",
+				createdAt: new Date("2026-08-12T11:01:30.000Z"),
+				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
+				htmlSha256: "a".repeat(64),
+				jsonSha256: "b".repeat(64),
+				storageBackend: "filesystem",
+				storageKey: "private/key",
+			},
 			provider: "internal-provider",
 			captureRouteKey: "assisted_browser.generic",
 			rawOutput: { secret: true },
@@ -123,6 +135,7 @@ describe("customer prompt-run DTO", () => {
 		} as never);
 
 		expect(dto).toEqual({
+			id: "run-1",
 			model: "doubao",
 			version: "displayed-version",
 			observedAt: "2026-08-12T11:00:00.000Z",
@@ -131,11 +144,22 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
+			snapshot: {
+				id: "snapshot-1",
+				status: "ready",
+				contentSource: "browser_answer_html",
+				createdAt: "2026-08-12T11:01:30.000Z",
+				expiresAt: "2026-11-10T11:00:00.000Z",
+				htmlSha256: "a".repeat(64),
+				jsonSha256: "b".repeat(64),
+			},
 		});
 		expect(dto).not.toHaveProperty("rawOutput");
 		expect(dto).not.toHaveProperty("provider");
 		expect(dto).not.toHaveProperty("captureRouteKey");
 		expect(dto).not.toHaveProperty("observationAttemptId");
+		expect(dto.snapshot).not.toHaveProperty("storageBackend");
+		expect(dto.snapshot).not.toHaveProperty("storageKey");
 	});
 
 	it("pins the prompt-runs handler to an explicit safe projection", () => {
@@ -146,10 +170,14 @@ describe("customer prompt-run DTO", () => {
 		);
 
 		expect(handler).toContain("answerText: promptRuns.answerText");
+		expect(handler).toContain("responseSnapshots.isCurrent");
+		expect(handler).toContain("status: responseSnapshots.status");
 		expect(handler).toContain("runs.map(toCustomerPromptRunDto)");
 		expect(handler).not.toContain("promptRuns.rawOutput");
 		expect(handler).not.toContain("promptRuns.provider");
 		expect(handler).not.toContain("promptRuns.captureRouteKey");
 		expect(handler).not.toContain("promptRuns.observationAttemptId");
+		expect(handler).not.toContain("responseSnapshots.storageBackend");
+		expect(handler).not.toContain("responseSnapshots.storageKey");
 	});
 });

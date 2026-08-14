@@ -6,7 +6,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { MAX_PROMPTS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { ensureLegacyMeasurementScope, resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
-import { brands, competitors, promptRuns, prompts, SYSTEM_TAGS } from "@workspace/lib/db/schema";
+import { brands, competitors, promptRuns, prompts, responseSnapshots, SYSTEM_TAGS } from "@workspace/lib/db/schema";
 import { computeSystemTags, getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -570,6 +570,7 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 		const [runs, totalResult] = await Promise.all([
 			db
 				.select({
+					id: promptRuns.id,
 					model: promptRuns.model,
 					version: promptRuns.version,
 					observedAt: promptRuns.observedAt,
@@ -579,8 +580,21 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 					webQueries: promptRuns.webQueries,
 					brandMentioned: promptRuns.brandMentioned,
 					competitorsMentioned: promptRuns.competitorsMentioned,
+					snapshot: {
+						id: responseSnapshots.id,
+						status: responseSnapshots.status,
+						contentSource: responseSnapshots.contentSource,
+						createdAt: responseSnapshots.createdAt,
+						expiresAt: responseSnapshots.expiresAt,
+						htmlSha256: responseSnapshots.htmlSha256,
+						jsonSha256: responseSnapshots.jsonSha256,
+					},
 				})
 				.from(promptRuns)
+				.leftJoin(
+					responseSnapshots,
+					and(eq(responseSnapshots.promptRunId, promptRuns.id), eq(responseSnapshots.isCurrent, true)),
+				)
 				.where(and(eq(promptRuns.promptId, data.promptId), timeCondition))
 				.orderBy(desc(promptRuns.createdAt))
 				.limit(data.limit)

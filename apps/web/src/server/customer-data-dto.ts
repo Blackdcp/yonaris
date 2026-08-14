@@ -1,5 +1,6 @@
 import { parseScrapeTargets } from "@workspace/config/scrape-targets";
 import { getObservationTargetCohort, resolveObservationTarget } from "@workspace/lib/observation-targets";
+import type { ResponseSnapshotContentSource } from "@workspace/lib/response-snapshots/contract";
 
 export type CustomerDeliveryMode = "legacy" | "assisted" | "automatic";
 export type CustomerMeasurementLane = "scored" | "observation" | "consumer" | "diagnostic" | "unspecified";
@@ -142,6 +143,7 @@ export function toCustomerBrandDto(source: CustomerBrandSource, effectiveModels:
 }
 
 export interface CustomerPromptRunDto {
+	id: string;
 	model: string;
 	version: string;
 	observedAt: string;
@@ -150,9 +152,19 @@ export interface CustomerPromptRunDto {
 	webQueries: string[];
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
+	snapshot: null | {
+		id: string;
+		status: "pending" | "ready" | "failed" | "expired";
+		contentSource: ResponseSnapshotContentSource | null;
+		createdAt: string;
+		expiresAt: string;
+		htmlSha256: string | null;
+		jsonSha256: string | null;
+	};
 }
 
 export function toCustomerPromptRunDto(input: {
+	id: string;
 	model: string;
 	version: string;
 	observedAt: Date | null;
@@ -162,8 +174,18 @@ export function toCustomerPromptRunDto(input: {
 	webQueries: string[];
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
+	snapshot: null | {
+		id: string;
+		status: "pending" | "ready" | "failed" | "expired";
+		contentSource: ResponseSnapshotContentSource | null;
+		createdAt: Date;
+		expiresAt: Date;
+		htmlSha256: string | null;
+		jsonSha256: string | null;
+	};
 }): CustomerPromptRunDto {
 	return {
+		id: input.id,
 		model: input.model,
 		version: input.version,
 		observedAt: (input.observedAt ?? input.createdAt).toISOString(),
@@ -172,5 +194,16 @@ export function toCustomerPromptRunDto(input: {
 		webQueries: [...input.webQueries],
 		brandMentioned: input.brandMentioned,
 		competitorsMentioned: [...input.competitorsMentioned],
+		snapshot: input.snapshot
+			? {
+					id: input.snapshot.id,
+					status: input.snapshot.status,
+					contentSource: input.snapshot.contentSource,
+					createdAt: input.snapshot.createdAt.toISOString(),
+					expiresAt: input.snapshot.expiresAt.toISOString(),
+					htmlSha256: input.snapshot.htmlSha256,
+					jsonSha256: input.snapshot.jsonSha256,
+				}
+			: null,
 	};
 }
