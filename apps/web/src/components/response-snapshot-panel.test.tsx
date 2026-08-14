@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { CustomerPromptRunDto } from "@/server/customer-data-dto";
-import { ResponseSnapshotPanel } from "./response-snapshot-panel";
+import { ResponseSnapshotExportControls, ResponseSnapshotPanel } from "./response-snapshot-panel";
 
 const readySnapshot = {
 	id: "11111111-1111-4111-8111-111111111111",
@@ -55,5 +55,18 @@ describe("ResponseSnapshotPanel", () => {
 
 		expect(markup).toContain(message);
 		expect(markup).not.toContain("<iframe");
+	});
+});
+
+describe("ResponseSnapshotExportControls", () => {
+	it("offers a bounded read-only date range export", () => {
+		const markup = renderToStaticMarkup(<ResponseSnapshotExportControls brandId="stepfun" initialDate="2026-08-15" />);
+
+		expect(markup).toContain("Export response snapshots");
+		expect(markup).toContain('type="date"');
+		expect(markup).toContain("Estimate export");
+		expect(markup).toContain("Up to 31 days");
+		expect(markup).toContain("HTML, JSON and manifest");
+		expect(markup).not.toMatch(/delete|edit|extend retention/i);
 	});
 });

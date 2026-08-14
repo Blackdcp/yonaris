@@ -25,7 +25,7 @@ import {
 import { ListPagination } from "@/components/list-pagination";
 import { LookbackSelector, useLookbackPeriod } from "@/components/lookback-selector";
 import { ProgressBarChart } from "@/components/progress-bar-chart";
-import { ResponseSnapshotPanel } from "@/components/response-snapshot-panel";
+import { ResponseSnapshotExportControls, ResponseSnapshotPanel } from "@/components/response-snapshot-panel";
 import { useBrandAccess } from "@/hooks/use-brand-access";
 import { useBrand } from "@/hooks/use-brands";
 import type { BrandFilterSearch } from "@/hooks/use-list-filters";
@@ -367,6 +367,7 @@ function PromptHistoryPage() {
 
 				{activeTab === "responses" && (
 					<ResponsesTab
+						brandId={brandId}
 						runs={runs}
 						pagination={pagination}
 						isLoading={isRunsLoading}
@@ -596,6 +597,7 @@ function CitationsTab({
 }
 
 function ResponsesTab({
+	brandId,
 	runs,
 	pagination,
 	isLoading,
@@ -603,6 +605,7 @@ function ResponsesTab({
 	onPageChange,
 	brandName,
 }: {
+	brandId: string;
 	runs: CustomerPromptRunDto[];
 	pagination: ReturnType<typeof usePromptRunsOnly>["pagination"];
 	isLoading: boolean;
@@ -651,6 +654,7 @@ function ResponsesTab({
 
 	return (
 		<div className="space-y-4">
+			<ResponseSnapshotExportControls brandId={brandId} />
 			<h3 className="text-base font-medium">Individual Prompt Runs</h3>
 
 			{runs.map((run) => (

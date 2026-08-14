@@ -45,6 +45,7 @@ import { Route as AuthedAppBrandShareOfVoiceRouteImport } from './routes/_authed
 import { Route as AuthedAppBrandVisibilityRouteImport } from './routes/_authed/app/$brand/visibility'
 import { Route as AuthedReportsRenderReportIdRouteImport } from './routes/_authed/reports/render/$reportId'
 import { Route as ApiAppResponseSnapshotsSnapshotIdRouteImport } from './routes/api/app/response-snapshots/$snapshotId'
+import { Route as ApiAppResponseSnapshotsExportRouteImport } from './routes/api/app/response-snapshots/export'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiV1BrandsIndexRouteImport } from './routes/api/v1/brands/index'
 import { Route as ApiV1BrandsBrandIdRouteImport } from './routes/api/v1/brands/$brandId'
@@ -269,6 +270,12 @@ const ApiAppResponseSnapshotsSnapshotIdRoute =
   ApiAppResponseSnapshotsSnapshotIdRouteImport.update({
     id: '/api/app/response-snapshots/$snapshotId',
     path: '/api/app/response-snapshots/$snapshotId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiAppResponseSnapshotsExportRoute =
+  ApiAppResponseSnapshotsExportRouteImport.update({
+    id: '/api/app/response-snapshots/export',
+    path: '/api/app/response-snapshots/export',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPlausibleEventIndexRoute = ApiPlausibleEventIndexRouteImport.update({
@@ -517,6 +524,7 @@ export interface FileRoutesByFullPath {
   '/app/$brand/visibility': typeof AuthedAppBrandVisibilityRoute
   '/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/app/response-snapshots/$snapshotId': typeof ApiAppResponseSnapshotsSnapshotIdRoute
+  '/api/app/response-snapshots/export': typeof ApiAppResponseSnapshotsExportRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
   '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
@@ -586,6 +594,7 @@ export interface FileRoutesByTo {
   '/app/$brand/visibility': typeof AuthedAppBrandVisibilityRoute
   '/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/app/response-snapshots/$snapshotId': typeof ApiAppResponseSnapshotsSnapshotIdRoute
+  '/api/app/response-snapshots/export': typeof ApiAppResponseSnapshotsExportRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
   '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
@@ -662,6 +671,7 @@ export interface FileRoutesById {
   '/_authed/app/$brand/visibility': typeof AuthedAppBrandVisibilityRoute
   '/_authed/reports/render/$reportId': typeof AuthedReportsRenderReportIdRoute
   '/api/app/response-snapshots/$snapshotId': typeof ApiAppResponseSnapshotsSnapshotIdRoute
+  '/api/app/response-snapshots/export': typeof ApiAppResponseSnapshotsExportRoute
   '/api/v1/brands/$brandId': typeof ApiV1BrandsBrandIdRoute
   '/api/v1/competitors/$competitorId': typeof ApiV1CompetitorsCompetitorIdRoute
   '/api/v1/observations/coverage': typeof ApiV1ObservationsCoverageRoute
@@ -738,6 +748,7 @@ export interface FileRouteTypes {
     | '/app/$brand/visibility'
     | '/reports/render/$reportId'
     | '/api/app/response-snapshots/$snapshotId'
+    | '/api/app/response-snapshots/export'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
     | '/api/v1/observations/coverage'
@@ -807,6 +818,7 @@ export interface FileRouteTypes {
     | '/app/$brand/visibility'
     | '/reports/render/$reportId'
     | '/api/app/response-snapshots/$snapshotId'
+    | '/api/app/response-snapshots/export'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
     | '/api/v1/observations/coverage'
@@ -882,6 +894,7 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/visibility'
     | '/_authed/reports/render/$reportId'
     | '/api/app/response-snapshots/$snapshotId'
+    | '/api/app/response-snapshots/export'
     | '/api/v1/brands/$brandId'
     | '/api/v1/competitors/$competitorId'
     | '/api/v1/observations/coverage'
@@ -936,6 +949,7 @@ export interface RootRouteChildren {
   ApiOgIndexRoute: typeof ApiOgIndexRoute
   ApiSetupStatusIndexRoute: typeof ApiSetupStatusIndexRoute
   ApiAppResponseSnapshotsSnapshotIdRoute: typeof ApiAppResponseSnapshotsSnapshotIdRoute
+  ApiAppResponseSnapshotsExportRoute: typeof ApiAppResponseSnapshotsExportRoute
   ApiV1BrandsBrandIdRoute: typeof ApiV1BrandsBrandIdRoute
   ApiV1CompetitorsCompetitorIdRoute: typeof ApiV1CompetitorsCompetitorIdRoute
   ApiV1ObservationsCoverageRoute: typeof ApiV1ObservationsCoverageRoute
@@ -1216,6 +1230,13 @@ declare module '@tanstack/react-router' {
       path: '/api/app/response-snapshots/$snapshotId'
       fullPath: '/api/app/response-snapshots/$snapshotId'
       preLoaderRoute: typeof ApiAppResponseSnapshotsSnapshotIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/app/response-snapshots/export': {
+      id: '/api/app/response-snapshots/export'
+      path: '/api/app/response-snapshots/export'
+      fullPath: '/api/app/response-snapshots/export'
+      preLoaderRoute: typeof ApiAppResponseSnapshotsExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/plausible/event/': {
@@ -1649,6 +1670,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupStatusIndexRoute: ApiSetupStatusIndexRoute,
   ApiAppResponseSnapshotsSnapshotIdRoute:
     ApiAppResponseSnapshotsSnapshotIdRoute,
+  ApiAppResponseSnapshotsExportRoute: ApiAppResponseSnapshotsExportRoute,
   ApiV1BrandsBrandIdRoute: ApiV1BrandsBrandIdRoute,
   ApiV1CompetitorsCompetitorIdRoute: ApiV1CompetitorsCompetitorIdRoute,
   ApiV1ObservationsCoverageRoute: ApiV1ObservationsCoverageRoute,

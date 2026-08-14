@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { CustomerPromptRunDto } from "@/server/customer-data-dto";
 
 type ResponseSnapshot = NonNullable<CustomerPromptRunDto["snapshot"]>;
@@ -25,6 +26,104 @@ function formatBeijingDate(value: string) {
 
 function assetUrl(snapshotId: string, asset: "html" | "json" | "manifest", download: boolean) {
 	return `/api/app/response-snapshots/${encodeURIComponent(snapshotId)}?asset=${asset}&download=${download ? 1 : 0}`;
+}
+
+type ExportEstimate = {
+	count: number;
+	uncompressedBytes: number;
+	startDate: string;
+	endDate: string;
+};
+
+export function ResponseSnapshotExportControls({ brandId, initialDate }: { brandId: string; initialDate?: string }) {
+	const endDefault = initialDate ?? beijingToday();
+	const [startDate, setStartDate] = useState(() => shiftIsoDate(endDefault, -30));
+	const [endDate, setEndDate] = useState(endDefault);
+	const [estimate, setEstimate] = useState<ExportEstimate | null>(null);
+	const [error, setError] = useState<string | null>(null);
+	const [loading, setLoading] = useState(false);
+
+	const url = (mode: "estimate" | "download") => {
+		const params = new URLSearchParams({ brandId, start: startDate, end: endDate, mode });
+		return `/api/app/response-snapshots/export?${params.toString()}`;
+	};
+	const estimateExport = async () => {
+		setLoading(true);
+		setError(null);
+		setEstimate(null);
+		try {
+			const response = await fetch(url("estimate"), { headers: { Accept: "application/json" } });
+			const payload = (await response.json()) as ExportEstimate & { message?: string };
+			if (!response.ok) throw new Error(payload.message ?? "Could not estimate the export");
+			setEstimate(payload);
+		} catch (caught) {
+			setError(caught instanceof Error ? caught.message : "Could not estimate the export");
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<section className="space-y-3 rounded-lg border bg-muted/20 p-4" aria-label="Export response snapshots">
+			<div>
+				<h3 className="text-sm font-medium">Export response snapshots</h3>
+				<p className="text-xs text-muted-foreground">
+					Download the archived HTML, JSON and manifest files. Up to 31 days and 2 GiB per ZIP.
+				</p>
+			</div>
+			<div className="flex flex-wrap items-end gap-3">
+				<label className="grid gap-1 text-xs text-muted-foreground">
+					Start date (Beijing)
+					<input
+						type="date"
+						value={startDate}
+						max={endDefault}
+						onChange={(event) => {
+							setStartDate(event.currentTarget.value);
+							setEstimate(null);
+						}}
+						className="rounded-md border bg-background px-3 py-2 text-sm text-foreground"
+					/>
+				</label>
+				<label className="grid gap-1 text-xs text-muted-foreground">
+					End date (Beijing)
+					<input
+						type="date"
+						value={endDate}
+						max={endDefault}
+						onChange={(event) => {
+							setEndDate(event.currentTarget.value);
+							setEstimate(null);
+						}}
+						className="rounded-md border bg-background px-3 py-2 text-sm text-foreground"
+					/>
+				</label>
+				<button
+					type="button"
+					onClick={() => void estimateExport()}
+					disabled={loading}
+					className="rounded-md border bg-background px-3 py-2 text-sm font-medium disabled:opacity-50"
+				>
+					{loading ? "Estimating…" : "Estimate export"}
+				</button>
+				{estimate && estimate.count > 0 && (
+					<a
+						className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+						href={url("download")}
+					>
+						Download ZIP
+					</a>
+				)}
+			</div>
+			<div className="text-xs text-muted-foreground" aria-live="polite">
+				{error && <span className="text-destructive">{error}</span>}
+				{estimate &&
+					(estimate.count > 0
+						? `${estimate.count.toLocaleString()} snapshots · ${formatBytes(estimate.uncompressedBytes)} before ZIP compression`
+						: "No ready snapshots are available in this date range.")}
+			</div>
+		</section>
+	);
 }
 
 export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: ResponseSnapshot; channel: string }) {
@@ -81,4 +180,21 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 			)}
 		</section>
 	);
+}
+
+function beijingToday(): string {
+	return new Date(Date.now() + 8 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+}
+
+function shiftIsoDate(value: string, days: number): string {
+	const date = new Date(`${value}T00:00:00.000Z`);
+	date.setUTCDate(date.getUTCDate() + days);
+	return date.toISOString().slice(0, 10);
+}
+
+function formatBytes(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
+	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
 }
