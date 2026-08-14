@@ -1,7 +1,0 @@
-{
-  "schemaVersion": 1,
-  "operation": "import-reviewed-consumer-cohort",
-  "requestId": "stepfun-local-pc-deepseek-18-20260814",
-  "manifestPath": "apps/worker/src/reviewed-consumer-cohorts/stepfun-local-pc-deepseek-18-20260814.json",
-  "manifestFingerprint": "6864b6ac382b53d5b174d8860bd50b1a31e2ffc5ee9589e9564e2ab5afc6663f"
-}
