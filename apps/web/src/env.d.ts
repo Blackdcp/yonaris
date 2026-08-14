@@ -76,6 +76,12 @@ declare global {
 			readonly AUTH0_CLIENT_SECRET?: string;
 			readonly ADMIN_AUTH0_SUB?: string;
 			readonly ADMIN_API_KEYS?: string;
+			readonly RESPONSE_SNAPSHOT_ENABLED?: string;
+			readonly RESPONSE_SNAPSHOT_ROOT?: string;
+			readonly RESPONSE_SNAPSHOT_RETENTION_DAYS?: string;
+			readonly RESPONSE_SNAPSHOT_WARN_USED_PERCENT?: string;
+			readonly RESPONSE_SNAPSHOT_STOP_USED_PERCENT?: string;
+			readonly RESPONSE_SNAPSHOT_OUTBOX_TTL_HOURS?: string;
 			readonly BROWSER_RUNNER_ENABLED?: string;
 			readonly BROWSER_RUNNER_API_TOKEN?: string;
 			readonly BROWSER_RUNNER_ID?: string;

@@ -5,6 +5,10 @@ import type { Job, PgBoss } from "pg-boss";
 import { type AnalyzeBrandData, analyzeBrandJob } from "./jobs/analyze-brand";
 import { type GenerateReportData, generateReportJob } from "./jobs/generate-report";
 import { type ProcessPromptData, processPromptJob } from "./jobs/process-prompt";
+import {
+	type ResponseSnapshotMaintenanceData,
+	responseSnapshotMaintenanceJob,
+} from "./jobs/response-snapshot-maintenance";
 import { type ScheduleMaintenanceData, scheduleMaintenanceJob } from "./jobs/schedule-maintenance";
 import { type SyncAuth0MembershipsData, syncAuth0MembershipsJob } from "./jobs/sync-auth0-memberships";
 
@@ -66,6 +70,13 @@ export async function registerHandlers(boss: PgBoss, scope: WorkerQueueScope = "
 			withSentry("schedule-maintenance", scheduleMaintenanceJob),
 		);
 		console.log("Registered handler: schedule-maintenance");
+
+		await boss.work<ResponseSnapshotMaintenanceData>(
+			"response-snapshot-maintenance",
+			{ localConcurrency: 1 },
+			withSentry("response-snapshot-maintenance", responseSnapshotMaintenanceJob),
+		);
+		console.log("Registered handler: response-snapshot-maintenance");
 
 		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
 			await boss.work<SyncAuth0MembershipsData>(

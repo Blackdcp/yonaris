@@ -28,6 +28,7 @@ import {
 	buildPromptResponseSnapshotDraft,
 	resolvePromptSnapshotCapturePolicy,
 } from "./process-prompt-snapshot-policy";
+import { assertResponseSnapshotCapacity } from "./response-snapshot-maintenance-policy";
 
 export interface ProcessPromptData {
 	promptId: string;
@@ -146,6 +147,13 @@ async function runModelIteration({
 		provider: config.provider,
 		storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
 	});
+	const capacity = await assertResponseSnapshotCapacity({
+		enabled: snapshotCaptureEnabled && config.provider === "brightdata",
+		storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
+	});
+	if (capacity?.state === "warn") {
+		console.warn(`[response-snapshots] capacity warning (${capacity.usedPercent.toFixed(1)}% used)`);
+	}
 	const attempt = await claimObservationAttempt({
 		sourceJobId,
 		promptId,

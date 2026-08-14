@@ -442,6 +442,42 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "Explicit feature switch for manually started browser-runner batches; defaults to disabled.",
 	},
 	{
+		name: "RESPONSE_SNAPSHOT_ENABLED",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Enables the fixed-v1 response snapshot archive and maintenance flow.",
+	},
+	{
+		name: "RESPONSE_SNAPSHOT_ROOT",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Absolute filesystem root for immutable response snapshot bundles.",
+	},
+	{
+		name: "RESPONSE_SNAPSHOT_RETENTION_DAYS",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Response snapshot v1 retention contract; when present it must be 90.",
+	},
+	{
+		name: "RESPONSE_SNAPSHOT_WARN_USED_PERCENT",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Response snapshot v1 disk warning threshold; when present it must be 70.",
+	},
+	{
+		name: "RESPONSE_SNAPSHOT_STOP_USED_PERCENT",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Response snapshot v1 fail-closed disk threshold; when present it must be 80.",
+	},
+	{
+		name: "RESPONSE_SNAPSHOT_OUTBOX_TTL_HOURS",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Response snapshot v1 durable outbox TTL; when present it must be 24.",
+	},
+	{
 		name: "BROWSER_RUNNER_API_TOKEN",
 		scope: "server",
 		requiredBy: "optional",
