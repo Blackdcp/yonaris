@@ -15,6 +15,7 @@ import {
 	EvidenceArtifactValidationError,
 	resolveEvidenceArtifactsForSubmission,
 } from "./evidence-artifacts";
+import { reserveResponseSnapshotInTransaction, type SnapshotReservation } from "./response-snapshots";
 import { type Brand, citations, type MeasurementScope, observationAttempts, promptRuns } from "./schema";
 
 export class ObservationSourceConflictError extends Error {
@@ -302,7 +303,13 @@ export async function persistSuccessfulObservation(input: {
 		artifactIds: readonly string[];
 		uriForArtifact: (artifactId: string) => string;
 	};
-}): Promise<{ id: string; createdAt: Date; evidenceRefs: EvidenceArtifactReference[] }> {
+	reserveResponseSnapshot?: boolean;
+}): Promise<{
+	id: string;
+	createdAt: Date;
+	evidenceRefs: EvidenceArtifactReference[];
+	snapshotReservation: SnapshotReservation | null;
+}> {
 	return db.transaction(async (tx) => {
 		const completedAt = new Date();
 		const [completed] = await tx
@@ -388,6 +395,16 @@ export async function persistSuccessfulObservation(input: {
 			);
 		}
 
+		const snapshotReservation = input.reserveResponseSnapshot
+			? await reserveResponseSnapshotInTransaction(tx, {
+					promptRunId: promptRun.id,
+					brandId: input.brand.id,
+					scopeId: input.scope.id,
+					promptId: input.promptId,
+					observedAt: input.observedAt,
+				})
+			: null;
+
 		if (input.deliveryClaim) {
 			if (input.evidenceArtifacts) {
 				await attachEvidenceArtifactsInTransaction(tx, {
@@ -404,7 +421,7 @@ export async function persistSuccessfulObservation(input: {
 			});
 		}
 
-		return { ...promptRun, evidenceRefs };
+		return { ...promptRun, evidenceRefs, snapshotReservation };
 	});
 }
 

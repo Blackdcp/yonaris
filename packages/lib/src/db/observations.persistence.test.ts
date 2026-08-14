@@ -5,6 +5,7 @@ type LedgerState = {
 	attemptCaptureMetadata: Record<string, unknown>;
 	promptRuns: Array<Record<string, unknown>>;
 	citations: Array<Record<string, unknown>>;
+	snapshotReservations: Array<Record<string, unknown>>;
 	taskStatus: "claimed" | "completed";
 	artifactStatus: "staged" | "attached";
 };
@@ -15,13 +16,14 @@ const harness = vi.hoisted(() => {
 		attemptCaptureMetadata: { cleanSession: true },
 		promptRuns: [],
 		citations: [],
+		snapshotReservations: [],
 		taskStatus: "claimed",
 		artifactStatus: "staged",
 	});
 	return {
 		current: initialState(),
 		initialState,
-		failurePoint: null as "resolve" | "attach" | null,
+		failurePoint: null as "resolve" | "attach" | "snapshot" | null,
 		transactionExecutors: [] as unknown[],
 	};
 });
@@ -112,6 +114,21 @@ vi.mock("./delivery-batches", () => ({
 		harness.current.taskStatus = "completed";
 	}),
 	failDeliveryTaskInTransaction: vi.fn(),
+}));
+
+vi.mock("./response-snapshots", () => ({
+	reserveResponseSnapshotInTransaction: vi.fn(async (executor: unknown, input: Record<string, unknown>) => {
+		expect(executor).toBe(transactionExecutor);
+		if (harness.failurePoint === "snapshot") throw new Error("injected snapshot reservation failure");
+		const value = {
+			snapshotId: "10000000-0000-4000-8000-000000000099",
+			revision: 1,
+			expiresAt: new Date("2026-11-09T12:00:00.000Z"),
+			...input,
+		};
+		harness.current.snapshotReservations.push(value);
+		return value;
+	}),
 }));
 
 import { markObservationFailed, persistSuccessfulObservation } from "./observations";
@@ -215,5 +232,28 @@ describe("successful observation transaction", () => {
 		expect(harness.current.attemptStatus).toBe("succeeded");
 		expect(harness.current.promptRuns).toHaveLength(1);
 		expect(harness.current.promptRuns[0]).toMatchObject({ brandMentioned: false });
+	});
+
+	it("reserves exactly one pending snapshot inside the successful-answer transaction", async () => {
+		await expect(
+			persistSuccessfulObservation({ ...persistenceInput, reserveResponseSnapshot: true } as never),
+		).resolves.toMatchObject({
+			id: "run-1",
+			snapshotReservation: {
+				snapshotId: "10000000-0000-4000-8000-000000000099",
+				revision: 1,
+			},
+		});
+		expect(harness.current.promptRuns).toHaveLength(1);
+		expect(harness.current.snapshotReservations).toHaveLength(1);
+	});
+
+	it("rolls back the prompt run when snapshot reservation fails", async () => {
+		harness.failurePoint = "snapshot";
+
+		await expect(
+			persistSuccessfulObservation({ ...persistenceInput, reserveResponseSnapshot: true } as never),
+		).rejects.toThrow("injected snapshot reservation failure");
+		expect(harness.current).toEqual(harness.initialState());
 	});
 });

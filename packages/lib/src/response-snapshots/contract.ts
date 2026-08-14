@@ -52,6 +52,7 @@ export type PreparedResponseSnapshotBundle = {
 	observedAt: string;
 	contentSource: ResponseSnapshotContentSource;
 	captureMethod: ResponseSnapshotCaptureMethod;
+	sourcePayloadSha256: string | null;
 	htmlGzip: Uint8Array;
 	jsonGzip: Uint8Array;
 	manifestJson: Uint8Array;
@@ -158,6 +159,7 @@ export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): Pre
 		observedAt: normalized.observedAt,
 		contentSource: normalized.contentSource,
 		captureMethod: normalized.captureMethod,
+		sourcePayloadSha256: normalized.sourcePayloadSha256 ?? null,
 		htmlGzip,
 		jsonGzip,
 		manifestJson,
