@@ -7,6 +7,7 @@ import { brands, competitors, measurementScopes, prompts } from "@workspace/lib/
 import { resolveManualObservationTarget } from "@workspace/lib/manual-observation-targets";
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import { and, eq, inArray } from "drizzle-orm";
+import { buildLocalDemoDefaultScopePromotion } from "./local-demo-import-policy";
 
 type ImportObservation = {
 	externalId: string;
@@ -221,6 +222,7 @@ async function runImport(request: ImportFile, apply: boolean) {
 			brandId: brand.id,
 			scopeId: scope.id,
 			total: preview.length,
+			wouldSetDefaultScope: true,
 			preview,
 		};
 	}
@@ -302,6 +304,28 @@ async function runImport(request: ImportFile, apply: boolean) {
 		});
 	}
 
+	const defaultScopePromotion = buildLocalDemoDefaultScopePromotion({
+		brandId: brand.id,
+		scopeId: scope.id,
+		importId: request.importId,
+		source: request.source,
+	});
+	await db.transaction(async (tx) => {
+		await tx
+			.update(measurementScopes)
+			.set({ isDefault: false })
+			.where(eq(measurementScopes.brandId, defaultScopePromotion.brandId));
+		await tx
+			.update(measurementScopes)
+			.set({ isDefault: true })
+			.where(
+				and(
+					eq(measurementScopes.brandId, defaultScopePromotion.brandId),
+					eq(measurementScopes.id, defaultScopePromotion.scopeId),
+				),
+			);
+	});
+
 	return {
 		status: "applied",
 		importId: request.importId,
@@ -311,6 +335,7 @@ async function runImport(request: ImportFile, apply: boolean) {
 		imported: results.filter((result) => result.status === "imported").length,
 		duplicates: results.filter((result) => result.status === "duplicate").length,
 		inProgress: results.filter((result) => result.status === "in_progress").length,
+		defaultScopeSet: true,
 		results,
 	};
 }
