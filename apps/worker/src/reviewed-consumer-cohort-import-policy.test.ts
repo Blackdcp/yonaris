@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { decideReviewedConsumerCohortImport } from "./reviewed-consumer-cohort-import-policy";
+import {
+	decideReviewedConsumerCohortImport,
+	reviewedConsumerCitationIdentityMatches,
+	reviewedConsumerCohortIdentityMatches,
+} from "./reviewed-consumer-cohort-import-policy";
 
 const expected = Array.from({ length: 18 }, (_, index) => ({
 	sourceKey: `reviewed-consumer-cohort:fixed:slot-${index + 1}`,
@@ -10,6 +14,37 @@ const expected = Array.from({ length: 18 }, (_, index) => ({
 
 test("plans one atomic insert only when the cohort is entirely absent", () => {
 	assert.deepEqual(decideReviewedConsumerCohortImport(expected, [], []), { action: "insert" });
+});
+
+test("requires stored citations to retain their DeepSeek channel identity", () => {
+	const expected = {
+		promptId: "prompt-1",
+		brandId: "stepfun",
+		model: "deepseek",
+		url: "https://example.com/article",
+		domain: "example.com",
+		title: "Example",
+		citationIndex: 0,
+		createdAt: new Date("2026-08-14T00:00:00.000Z"),
+	};
+	assert.equal(reviewedConsumerCitationIdentityMatches(expected, expected), true);
+	for (const field of [
+		"promptId",
+		"brandId",
+		"model",
+		"url",
+		"domain",
+		"title",
+		"citationIndex",
+		"createdAt",
+	] as const) {
+		const wrongValue = field === "citationIndex" ? 1 : field === "createdAt" ? new Date(0) : "wrong";
+		assert.equal(
+			reviewedConsumerCitationIdentityMatches({ ...expected, [field]: wrongValue }, expected),
+			false,
+			`citation ${field} drift must fail closed`,
+		);
+	}
 });
 
 test("returns unchanged only for the exact one-to-one terminal cohort", () => {
@@ -51,4 +86,66 @@ test("rejects partial, extra, nonterminal and broken one-to-one state", () => {
 			]),
 		/conflict/,
 	);
+});
+
+test("requires every persisted channel identity field to match the reviewed DeepSeek cohort", () => {
+	const expectedIdentity = {
+		promptId: "prompt-1",
+		brandId: "stepfun",
+		scopeId: "scope-cn",
+		surfaceTargetKey: "deepseek.consumer_web",
+		captureRouteKey: "assisted_browser.generic",
+		model: "deepseek",
+		provider: "local-pc-reviewed",
+		version: "deepseek-web-20260814",
+		webSearchEnabled: true,
+		webSearchObserved: true,
+	};
+	const attempt = { ...expectedIdentity, requestedVersion: expectedIdentity.version };
+	const run = { ...expectedIdentity };
+	assert.equal(reviewedConsumerCohortIdentityMatches(attempt, run, expectedIdentity), true);
+	for (const field of [
+		"promptId",
+		"brandId",
+		"scopeId",
+		"surfaceTargetKey",
+		"captureRouteKey",
+		"model",
+		"provider",
+		"requestedVersion",
+		"webSearchEnabled",
+		"webSearchObserved",
+	] as const) {
+		assert.equal(
+			reviewedConsumerCohortIdentityMatches(
+				{ ...attempt, [field]: field === "webSearchEnabled" ? false : "wrong" },
+				run,
+				expectedIdentity,
+			),
+			false,
+			`attempt ${field} drift must fail closed`,
+		);
+	}
+	for (const field of [
+		"promptId",
+		"brandId",
+		"scopeId",
+		"surfaceTargetKey",
+		"captureRouteKey",
+		"model",
+		"provider",
+		"version",
+		"webSearchEnabled",
+		"webSearchObserved",
+	] as const) {
+		assert.equal(
+			reviewedConsumerCohortIdentityMatches(
+				attempt,
+				{ ...run, [field]: field === "webSearchEnabled" ? false : "wrong" },
+				expectedIdentity,
+			),
+			false,
+			`run ${field} drift must fail closed`,
+		);
+	}
 });

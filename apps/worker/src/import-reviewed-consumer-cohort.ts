@@ -14,7 +14,11 @@ import {
 import { resolveManualObservationTarget } from "@workspace/lib/manual-observation-targets";
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import { and, eq, inArray, like, sql } from "drizzle-orm";
-import { decideReviewedConsumerCohortImport } from "./reviewed-consumer-cohort-import-policy";
+import {
+	decideReviewedConsumerCohortImport,
+	reviewedConsumerCitationIdentityMatches,
+	reviewedConsumerCohortIdentityMatches,
+} from "./reviewed-consumer-cohort-import-policy";
 import {
 	buildReviewedConsumerSourceKey,
 	parseReviewedConsumerCohort,
@@ -174,14 +178,24 @@ async function importReviewedConsumerCohort(request: ReturnType<typeof parseRevi
 				existingRuns,
 				brandId: brand.id,
 				scopeId: scope.id,
+				surfaceTargetKey: target.surfaceTargetKey,
+				captureRouteKey: target.captureRouteKey,
+				model: target.model,
 				manifestFingerprint,
 			});
+			const diagnostic = await readDiagnostic(tx, brand.id, scope.id);
+			if (JSON.stringify(diagnostic) !== JSON.stringify(expectedDiagnostic)) {
+				throw new ImportError(
+					"existing_cohort_conflict",
+					"Existing DeepSeek cohort diagnostic does not match the reviewed manifest",
+				);
+			}
 			return {
 				status: "applied",
 				lifecycle: "unchanged",
 				total: 18,
 				manifestFingerprint,
-				diagnostic: expectedDiagnostic,
+				diagnostic,
 			};
 		}
 
@@ -307,6 +321,9 @@ async function assertExactExistingCohort(input: {
 	existingRuns: Array<typeof promptRuns.$inferSelect>;
 	brandId: string;
 	scopeId: string;
+	surfaceTargetKey: string;
+	captureRouteKey: string;
+	model: string;
 	manifestFingerprint: string;
 }) {
 	const attemptsBySourceKey = new Map(input.existingAttempts.map((item) => [item.sourceKey, item]));
@@ -332,16 +349,30 @@ async function assertExactExistingCohort(input: {
 		const run = attempt ? runsByAttemptId.get(attempt.id) : undefined;
 		const metadata = isRecord(attempt?.captureMetadata) ? attempt.captureMetadata : {};
 		const expectedObservedAt = new Date(item.observation.observedAt).getTime();
+		const expectedCreatedAt = new Date(item.observation.observedAt);
 		const expectedCitations = item.observation.citations;
 		const actualCitations = [...(run ? (citationsByRunId.get(run.id) ?? []) : [])].sort(
 			(left, right) => left.citationIndex - right.citationIndex,
 		);
+		const identityMatches =
+			attempt &&
+			run &&
+			reviewedConsumerCohortIdentityMatches(attempt, run, {
+				promptId: item.prompt.id,
+				brandId: input.brandId,
+				scopeId: input.scopeId,
+				surfaceTargetKey: input.surfaceTargetKey,
+				captureRouteKey: input.captureRouteKey,
+				model: input.model,
+				provider: PROVIDER,
+				version: VERSION,
+				webSearchEnabled: true,
+				webSearchObserved: item.observation.webSearchObserved,
+			});
 		if (
 			!attempt ||
 			!run ||
-			attempt.promptId !== item.prompt.id ||
-			attempt.brandId !== input.brandId ||
-			attempt.scopeId !== input.scopeId ||
+			!identityMatches ||
 			attempt.sampleIndex !== item.observation.sampleIndex ||
 			attempt.webSearchObserved !== item.observation.webSearchObserved ||
 			metadata.manifestFingerprint !== input.manifestFingerprint ||
@@ -358,9 +389,16 @@ async function assertExactExistingCohort(input: {
 				const actual = actualCitations[index];
 				return (
 					!actual ||
-					actual.url !== citation.url ||
-					actual.title !== citation.title ||
-					actual.citationIndex !== citation.citationIndex
+					!reviewedConsumerCitationIdentityMatches(actual, {
+						promptId: item.prompt.id,
+						brandId: input.brandId,
+						model: input.model,
+						url: citation.url,
+						domain: new URL(citation.url).hostname.replace(/^www\./, "").toLowerCase(),
+						title: citation.title,
+						citationIndex: citation.citationIndex,
+						createdAt: expectedCreatedAt,
+					})
 				);
 			})
 		) {
