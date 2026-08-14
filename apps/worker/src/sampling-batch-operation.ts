@@ -195,7 +195,7 @@ function canonicalTask(task: Omit<SamplingBatchTaskState, "id" | "status" | "aut
 }
 
 function canonicalReviewedPromptText(value: string): string {
-	return value.endsWith("？") ? `${value.slice(0, -1)}?` : value;
+	return value.normalize("NFKC");
 }
 
 type SamplingBatchRecoveryStep = "add_tasks" | "freeze" | "start" | "none";
