@@ -20,6 +20,7 @@ on:
       - deploy/las/bin/**
       - deploy/las/browser-runner/**
       - deploy/las/browser-runner-activation/**
+      - deploy/las/response-snapshot-backfills/**
       - deploy/las/reviewed-consumer-cohort-imports/**
       - deploy/las/sampling-batch-operations/**
       - package.json
@@ -205,6 +206,83 @@ jobs:
             echo "request_name=" >> "$GITHUB_OUTPUT"
           fi
 
+  response_snapshot_backfill_plan:
+    name: Plan reviewed response snapshot backfill
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_request: ${{ steps.plan.outputs.has_request }}
+      request_name: ${{ steps.plan.outputs.request_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Detect and validate reviewed snapshot backfill request
+        id: plan
+        shell: bash
+        run: |
+          shopt -s nullglob
+          requests=(deploy/las/response-snapshot-backfills/requests/*.json)
+          if (( ${#requests[@]} > 1 )); then
+            echo "Only one reviewed response snapshot backfill request is allowed per release." >&2
+            exit 1
+          elif (( ${#requests[@]} == 1 )); then
+            request_name="$(basename -- "${requests[0]}")"
+            if [[ ! "$request_name" =~ ^[a-z0-9][a-z0-9._-]{0,95}\.json$ ]]; then
+              echo "Invalid response snapshot backfill request filename." >&2
+              exit 1
+            fi
+            python3 - "${requests[0]}" <<'PY'
+          import datetime
+          import json
+          import pathlib
+          import re
+          import sys
+
+          request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          required = {
+              "schemaVersion", "operation", "requestId", "brandId", "fromObservedAt",
+              "toObservedAtExclusive", "channelsExact", "runIds", "expectedRunCount",
+              "expectedRunFingerprint", "sourceCommitSha",
+          }
+          if set(request) != required:
+              raise SystemExit("Snapshot backfill request contains unexpected fields.")
+          if request["schemaVersion"] != 1 or request["operation"] != "backfill-response-snapshots" or request["brandId"] != "stepfun":
+              raise SystemExit("Snapshot backfill request does not match the reviewed fixed contract.")
+          if not isinstance(request["requestId"], str) or not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,99}", request["requestId"]):
+              raise SystemExit("Snapshot backfill requestId is invalid.")
+          run_ids = request["runIds"]
+          channels = request["channelsExact"]
+          if not isinstance(run_ids, list) or not run_ids or run_ids != sorted(set(run_ids)):
+              raise SystemExit("Snapshot backfill runIds must be a non-empty sorted unique list.")
+          uuid = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
+          if not all(isinstance(run_id, str) and uuid.fullmatch(run_id) for run_id in run_ids):
+              raise SystemExit("Snapshot backfill runIds are invalid.")
+          if request["expectedRunCount"] != len(run_ids):
+              raise SystemExit("Snapshot backfill expectedRunCount does not match runIds.")
+          if not isinstance(channels, list) or not 1 <= len(channels) <= 20 or channels != sorted(set(channels)) or not all(isinstance(channel, str) and re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,99}", channel) for channel in channels):
+              raise SystemExit("Snapshot backfill channelsExact must be a non-empty sorted unique list.")
+          if not re.fullmatch(r"[0-9a-f]{64}", request["expectedRunFingerprint"]):
+              raise SystemExit("Snapshot backfill fingerprint is invalid.")
+          if not re.fullmatch(r"[0-9a-f]{40}", request["sourceCommitSha"]):
+              raise SystemExit("Snapshot backfill source SHA is invalid.")
+          try:
+              start = datetime.datetime.fromisoformat(request["fromObservedAt"].replace("Z", "+00:00"))
+              end = datetime.datetime.fromisoformat(request["toObservedAtExclusive"].replace("Z", "+00:00"))
+          except (AttributeError, ValueError) as exc:
+              raise SystemExit(f"Snapshot backfill observation window is invalid: {exc}")
+          canonical = lambda value: value.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+          if start.tzinfo is None or end.tzinfo is None or canonical(start) != request["fromObservedAt"] or canonical(end) != request["toObservedAtExclusive"] or start >= end:
+              raise SystemExit("Snapshot backfill observation window is invalid.")
+          PY
+            echo "has_request=true" >> "$GITHUB_OUTPUT"
+            echo "request_name=$request_name" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_request=false" >> "$GITHUB_OUTPUT"
+            echo "request_name=" >> "$GITHUB_OUTPUT"
+          fi
+
   e2e-gate:
     name: E2E gate
     permissions:
@@ -232,10 +310,12 @@ jobs:
           bash deploy/las/bin/prepare-response-snapshot-storage.test.sh
           bash deploy/las/bin/check-response-snapshot-storage.test.sh
           bash deploy/las/bin/export-response-snapshots.test.sh
+          bash deploy/las/bin/run-response-snapshot-backfill.test.sh
           bash -n \
             deploy/las/bin/prepare-response-snapshot-storage.sh \
             deploy/las/bin/check-response-snapshot-storage.sh \
             deploy/las/bin/export-response-snapshots.sh \
+            deploy/las/bin/run-response-snapshot-backfill.sh \
             deploy/las/bin/deploy.sh
 
   build-images:
@@ -470,6 +550,44 @@ jobs:
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-reviewed-consumer-cohort-import.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/reviewed-consumer-cohort-imports/requests/$REQUEST_NAME'"
+
+  response-snapshot-backfill:
+    name: Backfill reviewed StepFun response snapshots
+    needs:
+      - deploy
+      - response_snapshot_backfill_plan
+    if: needs.deploy.result == 'success' && needs.response_snapshot_backfill_plan.outputs.has_request == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: https://portal.yonaris.com/app/stepfun
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Execute reviewed response snapshot backfill
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+          REQUEST_NAME: ${{ needs.response_snapshot_backfill_plan.outputs.request_name }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-response-snapshot-backfill.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/response-snapshot-backfills/requests/$REQUEST_NAME'"
 
   browser-runner-activation:
     name: Activate the approved Browser Runner principal

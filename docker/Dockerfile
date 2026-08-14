@@ -118,6 +118,7 @@ RUN test -r ./node_modules/tsx/dist/cli.mjs \
   && test -r ./src/run-sampling-batch.ts \
   && test -r ./src/sampling-batch-requests/stepfun-cn-doubao-6x-20260813.json \
   && test -r ./src/import-reviewed-consumer-cohort.ts \
+  && test -r ./src/backfill-response-snapshots.ts \
   && test -r ./src/reviewed-consumer-cohorts/stepfun-local-pc-deepseek-18-20260814.json
 
 USER worker
