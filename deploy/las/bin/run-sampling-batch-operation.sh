@@ -146,6 +146,9 @@ if mode == "status-only" and command_status != 0:
     }:
         print("sampling batch status: absent")
         raise SystemExit(0)
+    code = payload.get("code")
+    if isinstance(code, str) and code.replace("_", "").replace("-", "").isalnum() and len(code) <= 80:
+        raise SystemExit(f"Sampling batch status check failed: code={code}")
     raise SystemExit("Sampling batch status check failed; raw output was withheld.")
 
 if command_status != 0 or payload.get("ok") is not True:

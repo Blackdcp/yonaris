@@ -70,6 +70,10 @@ if [[ "${MOCK_DOCKER_NOISE:-false}" == "true" ]]; then
 	printf '%s\n' " account-ops Pulling"
 fi
 if [[ "$mode" == "status-only" && "${MOCK_BATCH_EXISTS:-false}" != "true" ]]; then
+	if [[ -n "${MOCK_STATUS_ERROR_CODE:-}" ]]; then
+		printf '{"ok":false,"code":"%s","message":"withheld"}\n' "$MOCK_STATUS_ERROR_CODE"
+		exit 1
+	fi
 	printf '%s\n' '{"ok":false,"code":"batch_not_found","message":"The fixed batch is absent; status-only mode will not create it"}'
 	exit 1
 fi
@@ -122,6 +126,18 @@ noisy_output="$(MOCK_DOCKER_NOISE=true MOCK_BATCH_EXISTS=true run_operation)"
 grep -Fq 'sampling batch status: existing' <<<"$noisy_output"
 if grep -Fq 'account-ops Pulling' <<<"$noisy_output"; then
 	echo "The operation leaked docker progress output." >&2
+	exit 1
+fi
+
+: >"$EVENT_LOG"
+status_error_output=''
+if status_error_output="$(MOCK_STATUS_ERROR_CODE=existing_batch_conflict run_operation 2>&1)"; then
+	echo "A status-only operation error unexpectedly succeeded." >&2
+	exit 1
+fi
+grep -Fq 'Sampling batch status check failed: code=existing_batch_conflict' <<<"$status_error_output"
+if grep -Fq 'withheld' <<<"$status_error_output"; then
+	echo "The operation leaked the raw status error message." >&2
 	exit 1
 fi
 
