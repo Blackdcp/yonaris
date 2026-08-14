@@ -12,7 +12,7 @@
 		"run:database-report": "tsx src/run-database-report.ts",
 		"run:sampling-batch": "tsx src/run-sampling-batch.ts",
 		"import:reviewed-consumer-cohort": "tsx src/import-reviewed-consumer-cohort.ts",
-		"test": "tsx --test src/local-admin-repair.test.ts src/database-report-request.test.ts src/customer-account-ops.test.ts src/local-demo-import-policy.test.ts src/local-demo-atomic-import-policy.test.ts src/reviewed-consumer-cohort-policy.test.ts src/reviewed-consumer-cohort-import-policy.test.ts src/sampling-batch-request.test.ts src/sampling-batch-operation.test.ts src/jobs/schedule-maintenance-policy.test.ts",
+		"test": "tsx --test src/local-admin-repair.test.ts src/database-report-request.test.ts src/customer-account-ops.test.ts src/local-demo-import-policy.test.ts src/local-demo-atomic-import-policy.test.ts src/reviewed-consumer-cohort-policy.test.ts src/reviewed-consumer-cohort-import-policy.test.ts src/sampling-batch-request.test.ts src/sampling-batch-operation.test.ts src/jobs/schedule-maintenance-policy.test.ts src/jobs/process-prompt-snapshot-policy.test.ts",
 		"build": "tsc -p tsconfig.json",
 		"check-types": "tsc --noEmit"
 	},

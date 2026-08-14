@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { bdclient } from "@brightdata/sdk";
-import type { Provider, ScrapeResult, ProviderOptions, ModelConfig } from "../types";
-import { extractCitationsFromBrightdata, extractTextFromBrightdata, type Citation } from "../../text-extraction";
 import { WEB_QUERIES_UNAVAILABLE } from "../../constants";
 import { getCredential } from "../../secrets";
+import { type Citation, extractCitationsFromBrightdata, extractTextFromBrightdata } from "../../text-extraction";
+import type { ModelConfig, Provider, ProviderOptions, ScrapeResult } from "../types";
 
 // Google AI Overview isn't a Web Scraper dataset — it's the AI summary block on
 // a normal Google results page, fetched through BrightData's SERP API instead of
@@ -70,16 +71,11 @@ async function runGoogleAiOverview(prompt: string): Promise<ScrapeResult> {
 		}
 
 		if (parsed !== undefined) {
-			const citations = extractCitationsFromBrightdata(parsed);
-			return {
-				rawOutput: parsed,
-				textContent: extractTextFromBrightdata(parsed),
-				// The SERP API doesn't expose the query expansion behind the overview;
-				// mark it unavailable when sources prove a live result, else empty.
-				webQueries: citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
-				citations,
+			return toBrightDataScrapeResult(parsed, {
+				captureMethod: "brightdata_serp",
+				webSearch: true,
 				modelVersion: "brightdata-serp",
-			};
+			});
 		}
 
 		lastError = `${res.status} ${text.slice(0, 200)}`.trim();
@@ -138,6 +134,56 @@ function extractWebQueries(record: Record<string, any>): string[] {
 		return smq.filter((q: any) => typeof q === "string" && q.trim());
 	}
 	return [];
+}
+
+export function toBrightDataScrapeResult(
+	payload: unknown,
+	options: {
+		captureMethod: "brightdata_dataset" | "brightdata_serp";
+		webSearch: boolean;
+		modelVersion?: string;
+	},
+): ScrapeResult {
+	const record = ((Array.isArray(payload) ? payload[0] : payload) ?? {}) as Record<string, any>;
+	const citations =
+		options.captureMethod === "brightdata_serp" ? extractCitationsFromBrightdata(payload) : extractSources(record);
+	const extractedQueries = options.captureMethod === "brightdata_serp" ? [] : extractWebQueries(record);
+	const textContent =
+		options.captureMethod === "brightdata_serp" ? extractTextFromBrightdata(payload) : normalizeAnswer(record);
+	const nativeHtml = firstNonemptyString(record.answer_html, record.answer_section_html);
+	const {
+		answer_html: _answerHtml,
+		response_raw: _responseRaw,
+		answer_section_html: _answerSectionHtml,
+		...trimmed
+	} = record;
+
+	return {
+		rawOutput: Array.isArray(payload) ? [trimmed] : trimmed,
+		textContent,
+		webQueries: options.webSearch
+			? extractedQueries.length > 0
+				? extractedQueries
+				: citations.length > 0
+					? [WEB_QUERIES_UNAVAILABLE]
+					: []
+			: [],
+		citations,
+		modelVersion: options.modelVersion ?? (typeof record.model === "string" ? record.model : undefined),
+		snapshotSource: {
+			captureMethod: options.captureMethod,
+			contentSource: nativeHtml ? "native_answer_html" : "rendered_from_structured_response",
+			...(nativeHtml ? { answerHtml: nativeHtml } : {}),
+			sourcePayloadSha256: createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
+		},
+	};
+}
+
+function firstNonemptyString(...values: unknown[]): string | undefined {
+	for (const value of values) {
+		if (typeof value === "string" && value.trim()) return value;
+	}
+	return undefined;
 }
 
 export const brightdata: Provider = {
@@ -213,33 +259,10 @@ export const brightdata: Provider = {
 			const payload = await client.scrape.snapshot.fetch(snapshotId, { format: "json" });
 			consumed = true;
 
-			const record = (Array.isArray(payload) ? payload[0] : payload) ?? {};
-			const answer = normalizeAnswer(record);
-
-			const webQueries = extractWebQueries(record);
-			const citations = extractSources(record);
-
-			// Drop large HTML fields that aren't used for extraction.
-			// Keeps all structured data (shopping, recommendations, citations, etc.)
-			const { answer_html, response_raw, answer_section_html, ...trimmed } = record;
-			const rawOutput = Array.isArray(payload) ? [trimmed] : trimmed;
-
-			return {
-				rawOutput,
-				textContent: answer,
-				// Only mark web queries as "unavailable" when web search was enabled
-				// and citations exist but no query strings were exposed.
-				// When web search is disabled, webQueries is always empty.
-				webQueries: options?.webSearch
-					? webQueries.length > 0
-						? webQueries
-						: citations.length > 0
-							? [WEB_QUERIES_UNAVAILABLE]
-							: []
-					: [],
-				citations,
-				modelVersion: record?.model ?? undefined,
-			};
+			return toBrightDataScrapeResult(payload, {
+				captureMethod: "brightdata_dataset",
+				webSearch: options?.webSearch ?? false,
+			});
 		} finally {
 			// A triggered snapshot we never consumed (timeout, terminal failure, an
 			// unknown status we gave up on, or any thrown error) keeps running on
@@ -271,7 +294,7 @@ async function pollUntilReady(snapshotId: string): Promise<void> {
 			throw new Error(`BrightData snapshot ${snapshotId} ${status}`);
 		}
 
-		const delay = Math.min(BASE_DELAY * Math.pow(2, Math.floor(attempt / 5)), MAX_DELAY);
+		const delay = Math.min(BASE_DELAY * 2 ** Math.floor(attempt / 5), MAX_DELAY);
 		await new Promise((resolve) => setTimeout(resolve, delay));
 	}
 

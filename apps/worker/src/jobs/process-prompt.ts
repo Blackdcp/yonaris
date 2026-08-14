@@ -11,10 +11,10 @@ import { type Brand, brands, type Competitor, competitors, prompts } from "@work
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import { assertObservationRouteSupportsScope, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import {
+	formatScrapeTarget,
 	getProvider,
 	type ModelConfig,
 	type Provider,
-	formatScrapeTarget,
 	parseScrapeTargets,
 	selectTargetsForBrand,
 } from "@workspace/lib/providers";
@@ -22,6 +22,12 @@ import { eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
 import { trackWorkerEvent } from "../telemetry";
+import {
+	archivePromptResponseSnapshotBestEffort,
+	assertPromptSnapshotCaptureConfiguration,
+	buildPromptResponseSnapshotDraft,
+	resolvePromptSnapshotCapturePolicy,
+} from "./process-prompt-snapshot-policy";
 
 export interface ProcessPromptData {
 	promptId: string;
@@ -134,6 +140,12 @@ async function runModelIteration({
 }): Promise<void> {
 	const logPrefix = `[${config.model}_${runIndex}]`;
 	const target = resolveObservationTarget(config);
+	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
+	assertPromptSnapshotCaptureConfiguration({
+		enabled: snapshotCaptureEnabled,
+		provider: config.provider,
+		storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
+	});
 	const attempt = await claimObservationAttempt({
 		sourceJobId,
 		promptId,
@@ -170,6 +182,11 @@ async function runModelIteration({
 		// `unavailable` sentinel in their own extractor instead.
 		const { rawOutput, textContent, webQueries, citations: extractedCitations, modelVersion } = result;
 		console.log(`${logPrefix} AI call completed, textContent length: ${textContent?.length ?? "null"}`);
+		const snapshotCapture = resolvePromptSnapshotCapturePolicy({
+			enabled: snapshotCaptureEnabled,
+			storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
+			snapshotSource: result.snapshotSource,
+		});
 
 		const safeTextContent = typeof textContent === "string" ? textContent : "";
 
@@ -177,7 +194,7 @@ async function runModelIteration({
 
 		const recordedVersion = modelVersion ?? config.version ?? config.provider;
 
-		const { id: promptRunId } = await persistSuccessfulObservation({
+		const { id: promptRunId, snapshotReservation } = await persistSuccessfulObservation({
 			attemptId: attempt.id,
 			startedAt: attempt.startedAt,
 			observedAt,
@@ -193,8 +210,43 @@ async function runModelIteration({
 			brandMentioned,
 			competitorsMentioned,
 			extractedCitations,
+			reserveResponseSnapshot: snapshotCapture !== null,
 		});
 		console.log(`${logPrefix} Saved prompt run ${promptRunId}`);
+
+		const snapshotSource = result.snapshotSource;
+		if (snapshotCapture && snapshotReservation && snapshotSource) {
+			const snapshotResult = await archivePromptResponseSnapshotBestEffort({
+				reservation: snapshotReservation,
+				storageRoot: snapshotCapture.storageRoot,
+				draft: () =>
+					buildPromptResponseSnapshotDraft({
+						promptRunId,
+						brandId: brand.id,
+						scopeId: scope.id,
+						promptId,
+						promptText: promptValue,
+						answerText: safeTextContent,
+						citations: extractedCitations,
+						webQueries,
+						webSearchEnabled: config.webSearch,
+						brandMentioned,
+						competitorsMentioned,
+						channel: target.surfaceTargetKey,
+						modelVersion: recordedVersion,
+						market: scope.market,
+						locale: scope.locale,
+						timezone: scope.timezone,
+						observedAt,
+						snapshotSource,
+					}),
+			});
+			if (snapshotResult.status !== "ready" && snapshotResult.status !== "already_ready") {
+				console.warn(
+					`${logPrefix} Response snapshot ${snapshotResult.snapshotId} queued for recovery (${snapshotResult.status})`,
+				);
+			}
+		}
 	} catch (error) {
 		try {
 			await markObservationFailed({
