@@ -3,10 +3,10 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { db } from "@workspace/lib/db/db";
 import { claimImportedObservationAttempt, persistSuccessfulObservation } from "@workspace/lib/db/observations";
-import { brands, competitors, measurementScopes, prompts } from "@workspace/lib/db/schema";
+import { brands, competitors, measurementScopes, promptRuns, prompts } from "@workspace/lib/db/schema";
 import { resolveManualObservationTarget } from "@workspace/lib/manual-observation-targets";
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { buildLocalDemoDefaultScopePromotion } from "./local-demo-import-policy";
 
 type ImportObservation = {
@@ -325,6 +325,25 @@ async function runImport(request: ImportFile, apply: boolean) {
 				),
 			);
 	});
+	const [visibilityDiagnostic] = await db
+		.select({
+			totalRuns: sql<number>`count(*)::int`,
+			brandMentionedRuns: sql<number>`count(*) FILTER (WHERE ${promptRuns.brandMentioned})::int`,
+			distinctPrompts: sql<number>`count(DISTINCT ${promptRuns.promptId})::int`,
+		})
+		.from(promptRuns)
+		.where(
+			and(
+				eq(promptRuns.brandId, brand.id),
+				eq(promptRuns.scopeId, scope.id),
+				eq(promptRuns.provider, "local-pc-demo"),
+				eq(promptRuns.version, "local-pc-doubao-demo-20260814"),
+			),
+		);
+	const defaultScope = await db.query.measurementScopes.findFirst({
+		where: and(eq(measurementScopes.brandId, brand.id), eq(measurementScopes.isDefault, true)),
+		columns: { id: true, key: true, name: true },
+	});
 
 	return {
 		status: "applied",
@@ -336,6 +355,8 @@ async function runImport(request: ImportFile, apply: boolean) {
 		duplicates: results.filter((result) => result.status === "duplicate").length,
 		inProgress: results.filter((result) => result.status === "in_progress").length,
 		defaultScopeSet: true,
+		defaultScope,
+		visibilityDiagnostic,
 		results,
 	};
 }

@@ -127,6 +127,22 @@ else:
     if in_progress != 0 or (imported + duplicates) != 18:
         raise SystemExit("Local demo import did not reach a terminal state for all 18 observations.")
     print(f"local demo import apply: imported={imported} duplicates={duplicates}")
+    default_scope = payload.get("defaultScope")
+    diagnostic = payload.get("visibilityDiagnostic")
+    if not isinstance(default_scope, dict) or default_scope.get("key") != "cn-zh-scored":
+        raise SystemExit("Local demo import did not promote the expected default scope.")
+    if not isinstance(diagnostic, dict):
+        raise SystemExit("Local demo import did not return visibility diagnostics.")
+    total_runs = diagnostic.get("totalRuns")
+    brand_mentions = diagnostic.get("brandMentionedRuns")
+    distinct_prompts = diagnostic.get("distinctPrompts")
+    if total_runs != 18 or brand_mentions != 12 or distinct_prompts != 3:
+        raise SystemExit("Local demo import visibility diagnostics did not match the reviewed 18-run dataset.")
+    print(
+        "local demo import visibility: "
+        f"defaultScope={default_scope.get('key')} totalRuns={total_runs} "
+        f"brandMentionedRuns={brand_mentions} distinctPrompts={distinct_prompts}"
+    )
 PY
 }
 
