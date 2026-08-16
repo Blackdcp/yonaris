@@ -107,14 +107,36 @@ try:
     payload = candidates[-1]
 except Exception:
     raise SystemExit("Overseas formal account operation returned unexpected output; raw output was withheld.")
-if status != 0 or payload.get("ok") is not True:
-    raise SystemExit("Overseas formal account operation failed; raw output was withheld.")
 if payload.get("operation") != "overseas_formal_one_shot" or payload.get("requestId") != request_id:
     raise SystemExit("Overseas formal account operation returned an unexpected identity.")
 if payload.get("scopeKey") != "us-en-chatgpt-one-shot-20260816" or payload.get("channel") != "chatgpt.consumer_web":
     raise SystemExit("Overseas formal account operation returned an unexpected measurement identity.")
 if payload.get("plannedCalls") != 3 or payload.get("dailyAutomationEnabled") is not False:
     raise SystemExit("Overseas formal account operation exceeded the approved one-shot budget.")
+if status != 0 or payload.get("ok") is not True:
+    fields = [
+        "completedCalls",
+        "failedCalls",
+        "runningCalls",
+        "promptRunCount",
+        "readySnapshots",
+        "pendingSnapshots",
+        "failedSnapshots",
+        "executionFailures",
+    ]
+    if payload.get("action") != "incomplete" or payload.get("code") != "overseas_formal_one_shot_incomplete":
+        raise SystemExit("Overseas formal account operation failed; raw output was withheld.")
+    if any(not isinstance(payload.get(field), int) or payload[field] < 0 or payload[field] > 3 for field in fields):
+        raise SystemExit("Overseas formal account operation returned an invalid failure diagnostic.")
+    print(
+        "overseas formal apply incomplete: "
+        f"completed_calls={payload['completedCalls']} failed_calls={payload['failedCalls']} "
+        f"running_calls={payload['runningCalls']} prompt_runs={payload['promptRunCount']} "
+        f"ready_snapshots={payload['readySnapshots']} pending_snapshots={payload['pendingSnapshots']} "
+        f"failed_snapshots={payload['failedSnapshots']} execution_failures={payload['executionFailures']} daily=false",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 action = payload.get("action")
 if mode in {"status-only", "dry-run"}:
     if action not in {"absent_read_only", "existing_read_only", "would_create_and_run"}:

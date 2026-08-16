@@ -68,11 +68,11 @@ export class BrowserRunnerRemoteClient implements ClaimedTaskSource, Observation
 	}
 
 	async resume(taskId: string): Promise<ClaimedRunnerTask> {
-		const response = await this.#json<{ claim: unknown }>(`tasks/${encodeURIComponent(taskId)}/resume`, {
+		const response = await this.#json<unknown>(`tasks/${encodeURIComponent(taskId)}/resume`, {
 			method: "POST",
 			body: { brandId: this.#brandId },
 		});
-		const claimed = parseClaim(response.claim);
+		const claimed = parseClaim(response);
 		if (claimed.task.id !== taskId) throw new Error("Resume API returned a different task");
 		if (!claimed.postSubmitAssist || !claimed.runnerSessionId) {
 			throw new Error("Resume API did not return a durable post-submit session");

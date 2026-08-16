@@ -19,6 +19,7 @@ import {
 	mapDoubaoAutomationError,
 	observedWebSearchState,
 	prepareDedicatedConversation,
+	recoveredCompletionIsAcceptable,
 	safeChildDirectory,
 } from "./doubao-live.js";
 
@@ -43,6 +44,21 @@ test("native-auto search distinguishes used, explicit-not-used, neither, and con
 	assert.equal(observedWebSearchState(false, true), false);
 	assert.equal(observedWebSearchState(false, false), null);
 	assert.equal(observedWebSearchState(true, true), null);
+});
+
+test("a resumed same-session answer may finish before the new process observes its generation marker", () => {
+	assert.equal(
+		recoveredCompletionIsAcceptable({ resumedSession: true, generationMarkerObserved: false, markerVisible: false }),
+		true,
+	);
+	assert.equal(
+		recoveredCompletionIsAcceptable({ resumedSession: false, generationMarkerObserved: false, markerVisible: false }),
+		false,
+	);
+	assert.equal(
+		recoveredCompletionIsAcceptable({ resumedSession: true, generationMarkerObserved: true, markerVisible: true }),
+		false,
+	);
 });
 
 function runnerTask(overrides: Partial<RunnerTask> = {}): RunnerTask {

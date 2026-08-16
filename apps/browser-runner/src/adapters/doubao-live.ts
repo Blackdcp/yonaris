@@ -67,7 +67,7 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 				this.#launcher,
 			);
 			const page = context.pages()[0] ?? (await context.newPage());
-			return new DoubaoLiveSession(task, sessionId, profileDirectory, context, page);
+			return new DoubaoLiveSession(task, sessionId, profileDirectory, context, page, false);
 		} catch (error) {
 			if (dedicated) {
 				await releaseDedicatedProfileSession(profileDirectory, task, sessionId).catch(() => undefined);
@@ -122,7 +122,7 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 			const page = context.pages()[0] ?? (await context.newPage());
 			await page.goto(assertDoubaoUrl(lastPageUrl), { waitUntil: "domcontentloaded" });
 			assertDoubaoUrl(page.url());
-			return new DoubaoLiveSession(task, expectedSessionId, profileDirectory, context, page);
+			return new DoubaoLiveSession(task, expectedSessionId, profileDirectory, context, page, true);
 		} catch (error) {
 			await context?.close().catch(() => undefined);
 			throw mapDoubaoAutomationError(error, "post_submit", true);
@@ -206,16 +206,25 @@ class DoubaoLiveSession implements SurfaceSession {
 	readonly #profileDirectory: string;
 	readonly #context: BrowserContext;
 	readonly #page: Page;
+	readonly #resumedSession: boolean;
 	#lastPageUrl = DOUBAO_URL;
 	#answerCountBeforeSubmit = 0;
 	#generationMarkerObserved = false;
 	#submitAttempted = false;
 
-	constructor(task: RunnerTask, sessionId: string, profileDirectory: string, context: BrowserContext, page: Page) {
+	constructor(
+		task: RunnerTask,
+		sessionId: string,
+		profileDirectory: string,
+		context: BrowserContext,
+		page: Page,
+		resumedSession: boolean,
+	) {
 		this.#task = task;
 		this.#profileDirectory = profileDirectory;
 		this.#context = context;
 		this.#page = page;
+		this.#resumedSession = resumedSession;
 		this.id = sessionId;
 	}
 
@@ -353,7 +362,15 @@ class DoubaoLiveSession implements SurfaceSession {
 		const answerText = await stableText(answer, 90_000, 8, async () => {
 			if (await completionMarker.isVisible().catch(() => false)) this.#generationMarkerObserved = true;
 		});
-		if (!this.#generationMarkerObserved) {
+		const completionMarkerVisible = await completionMarker.isVisible().catch(() => false);
+		if (
+			!recoveredCompletionIsAcceptable({
+				resumedSession: this.#resumedSession,
+				generationMarkerObserved: this.#generationMarkerObserved,
+				markerVisible: completionMarkerVisible,
+			}) &&
+			!completionMarkerVisible
+		) {
 			throw new BrowserRunnerError(
 				"completion_state_unverified",
 				"post_submit",
@@ -361,7 +378,7 @@ class DoubaoLiveSession implements SurfaceSession {
 				"The approved Doubao generation marker was never observed; response completion cannot be proven",
 			);
 		}
-		if (await completionMarker.isVisible().catch(() => false)) {
+		if (completionMarkerVisible) {
 			throw new BrowserRunnerError(
 				"generation_still_active",
 				"post_submit",
@@ -562,6 +579,14 @@ class DoubaoLiveSession implements SurfaceSession {
 			);
 		}
 	}
+}
+
+export function recoveredCompletionIsAcceptable(input: {
+	resumedSession: boolean;
+	generationMarkerObserved: boolean;
+	markerVisible: boolean;
+}): boolean {
+	return !input.markerVisible && (input.generationMarkerObserved || input.resumedSession);
 }
 
 export function anonymousDoubaoPreflightError(loginActionVisible: boolean): BrowserRunnerError {

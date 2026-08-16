@@ -45,6 +45,10 @@ if [[ "$joined" == *" --status-only "* ]]; then mode=status-only; elif [[ "$join
 printf '%s\n' "$mode" >>"$MOCK_EVENT_LOG"
 printf '%s\n' 'provider raw response must stay private'
 if [[ "$mode" == "apply" ]]; then
+  if [[ "${MOCK_FAIL_APPLY:-false}" == true ]]; then
+    printf '%s\n' '{"ok":false,"operation":"overseas_formal_one_shot","requestId":"stepfun-us-chatgpt-1x-20260816","action":"incomplete","scopeKey":"us-en-chatgpt-one-shot-20260816","channel":"chatgpt.consumer_web","plannedCalls":3,"completedCalls":0,"failedCalls":3,"runningCalls":0,"promptRunCount":0,"readySnapshots":0,"pendingSnapshots":0,"failedSnapshots":0,"executionFailures":3,"dailyAutomationEnabled":false,"code":"overseas_formal_one_shot_incomplete"}'
+    exit 1
+  fi
   printf '%s\n' '{"ok":true,"operation":"overseas_formal_one_shot","requestId":"stepfun-us-chatgpt-1x-20260816","action":"completed","scopeKey":"us-en-chatgpt-one-shot-20260816","channel":"chatgpt.consumer_web","plannedCalls":3,"completedCalls":3,"promptRunCount":3,"citationCount":7,"readySnapshots":3,"pendingSnapshots":0,"dailyAutomationEnabled":false}'
 else
   printf '%s\n' "{\"ok\":true,\"operation\":\"overseas_formal_one_shot\",\"requestId\":\"stepfun-us-chatgpt-1x-20260816\",\"action\":\"$([[ \"$mode\" == status-only ]] && echo absent_read_only || echo would_create_and_run)\",\"scopeKey\":\"us-en-chatgpt-one-shot-20260816\",\"channel\":\"chatgpt.consumer_web\",\"plannedCalls\":3,\"dailyAutomationEnabled\":false}"
@@ -61,6 +65,17 @@ output="$(env PATH="$mock_bin:$PATH" MOCK_EVENT_LOG="$event_log" DEPLOY_ROOT="$d
 grep -Fq 'overseas formal apply: completed_calls=3 prompt_runs=3 ready_snapshots=3 citations=7 daily=false' <<<"$output"
 if grep -Fq 'provider raw response' <<<"$output"; then
 	echo "Overseas formal wrapper leaked raw provider output." >&2
+	exit 1
+fi
+
+set +e
+failed_output="$(env PATH="$mock_bin:$PATH" MOCK_EVENT_LOG="$event_log" MOCK_FAIL_APPLY=true DEPLOY_ROOT="$deploy_root" COMPOSE_FILE="$source_root/deploy/las/compose.yaml" ENV_FILE="$deploy_root/.env" bash "$source_root/deploy/las/bin/run-overseas-formal-one-shot.sh" "$release_tag" "$request_file" 2>&1)"
+failed_status=$?
+set -e
+[[ "$failed_status" -ne 0 ]]
+grep -Fq 'overseas formal apply incomplete: completed_calls=0 failed_calls=3 running_calls=0 prompt_runs=0 ready_snapshots=0 pending_snapshots=0 failed_snapshots=0 execution_failures=3 daily=false' <<<"$failed_output"
+if grep -Fq 'provider raw response' <<<"$failed_output"; then
+	echo "Overseas formal failure receipt leaked raw provider output." >&2
 	exit 1
 fi
 echo "overseas formal one-shot mock tests passed"

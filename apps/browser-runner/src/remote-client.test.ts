@@ -46,9 +46,7 @@ test("resume accepts only a server-declared post-submit assist session", async (
 	const fetchImplementation = (async (input: string | URL | Request) => {
 		const url = new URL(input instanceof Request ? input.url : input.toString());
 		assert.ok(url.pathname.endsWith("/tasks/task-1/resume"));
-		return jsonResponse({
-			claim: claimResponse({ runnerSessionId: "original-durable-session", postSubmitAssist: true }),
-		});
+		return jsonResponse(claimResponse({ runnerSessionId: "original-durable-session", postSubmitAssist: true }));
 	}) as typeof fetch;
 	const remote = new BrowserRunnerRemoteClient({
 		baseUrl: "http://127.0.0.1:3000",

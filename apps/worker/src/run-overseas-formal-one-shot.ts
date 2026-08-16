@@ -180,10 +180,13 @@ async function diagnostic(
 	sourceKeys: string[],
 ): Promise<{
 	completedCalls: number;
+	failedCalls: number;
+	runningCalls: number;
 	promptRunCount: number;
 	citationCount: number;
 	readySnapshots: number;
 	pendingSnapshots: number;
+	failedSnapshots: number;
 }> {
 	const attempts = await db
 		.select({ id: observationAttempts.id, status: observationAttempts.status })
@@ -218,10 +221,13 @@ async function diagnostic(
 		: [];
 	return {
 		completedCalls: completedAttempts.length,
+		failedCalls: attempts.filter(({ status }) => status === "failed").length,
+		runningCalls: attempts.filter(({ status }) => status === "running" || status === "pending").length,
 		promptRunCount: runs.length,
 		citationCount: citationRow?.value ?? 0,
 		readySnapshots: snapshots.filter(({ status }) => status === "ready").length,
 		pendingSnapshots: snapshots.filter(({ status }) => status === "pending").length,
+		failedSnapshots: snapshots.filter(({ status }) => status === "failed" || status === "expired").length,
 	};
 }
 
@@ -230,7 +236,15 @@ async function main(): Promise<void> {
 	const request = await readOverseasFormalRunRequestFile(cli.requestFile);
 	const prerequisites = await resolvePrerequisites(request);
 	const existing = await readDestination(prerequisites.brand.id, request);
+	const sourceKeys = prerequisites.sourcePlan.calls.map((call) =>
+		buildObservationSourceKey({
+			sourceJobId: call.sourceJobId,
+			config: prerequisites.config,
+			sampleIndex: call.sampleIndex,
+		}),
+	);
 	if (cli.mode !== "apply") {
+		const state = existing ? await diagnostic(prerequisites.brand.id, existing.scope.id, sourceKeys) : null;
 		process.stdout.write(
 			`${JSON.stringify({
 				ok: true,
@@ -245,6 +259,17 @@ async function main(): Promise<void> {
 				channel: request.target.surfaceTargetKey,
 				plannedCalls: prerequisites.sourcePlan.calls.length,
 				dailyAutomationEnabled: false,
+				...(state
+					? {
+							completedCalls: state.completedCalls,
+							failedCalls: state.failedCalls,
+							runningCalls: state.runningCalls,
+							promptRunCount: state.promptRunCount,
+							readySnapshots: state.readySnapshots,
+							pendingSnapshots: state.pendingSnapshots,
+							failedSnapshots: state.failedSnapshots,
+						}
+					: {}),
 			})}\n`,
 		);
 		return;
@@ -281,13 +306,6 @@ async function main(): Promise<void> {
 			failures.push(error);
 		}
 	}
-	const sourceKeys = plan.calls.map((call) =>
-		buildObservationSourceKey({
-			sourceJobId: call.sourceJobId,
-			config: prerequisites.config,
-			sampleIndex: call.sampleIndex,
-		}),
-	);
 	const state = await diagnostic(prerequisites.brand.id, destination.scope.id, sourceKeys);
 	if (
 		failures.length > 0 ||
@@ -296,7 +314,29 @@ async function main(): Promise<void> {
 		state.readySnapshots !== 3 ||
 		state.pendingSnapshots !== 0
 	) {
-		throw new Error("Overseas formal one-shot did not complete its exact three-call cohort");
+		process.stderr.write(
+			`${JSON.stringify({
+				ok: false,
+				operation: "overseas_formal_one_shot",
+				requestId: request.requestId,
+				action: "incomplete",
+				scopeKey: request.destinationScope.keyExact,
+				channel: request.target.surfaceTargetKey,
+				plannedCalls: 3,
+				completedCalls: state.completedCalls,
+				failedCalls: state.failedCalls,
+				runningCalls: state.runningCalls,
+				promptRunCount: state.promptRunCount,
+				readySnapshots: state.readySnapshots,
+				pendingSnapshots: state.pendingSnapshots,
+				failedSnapshots: state.failedSnapshots,
+				executionFailures: failures.length,
+				dailyAutomationEnabled: false,
+				code: "overseas_formal_one_shot_incomplete",
+			})}\n`,
+		);
+		process.exitCode = 1;
+		return;
 	}
 	process.stdout.write(
 		`${JSON.stringify({
