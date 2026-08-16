@@ -1,25 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
+import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { AlertTriangle, Bot, CheckCircle2, UserRoundCheck, XCircle } from "lucide-react";
+import { AlertTriangle, Bot, CheckCircle2, Laptop, UserRoundCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ListPagination } from "@/components/list-pagination";
 import { SamplingBatchCreateDialog } from "@/components/sampling/sampling-batch-create-dialog";
 import { SamplingBatchList } from "@/components/sampling/sampling-batch-list";
 import { storeSamplingLease } from "@/components/sampling/sampling-lease-storage";
+import { SamplingRunNowDialog } from "@/components/sampling/sampling-run-now-dialog";
 import { SamplingScopeProvisionDialog } from "@/components/sampling/sampling-scope-provision-dialog";
 import type {
+	BrowserRunnerDeviceView,
 	CreateSamplingBatchInput,
 	ProvisionSamplingScopeInput,
 	SamplingBatchStatus,
 	SamplingBatchView,
 	SamplingContextView,
 	SamplingHumanQueue,
+	SamplingRunNowInput,
 } from "@/components/sampling/types";
 import { getAppName } from "@/lib/route-head";
+import { listBrowserRunnerDevicesFn } from "@/server/browser-runner-devices";
 import {
 	cancelSamplingBatchFn,
 	claimSamplingTaskFn,
@@ -28,6 +33,7 @@ import {
 	getSamplingContextFn,
 	listSamplingBatchesFn,
 	provisionSamplingScopeFn,
+	runSamplingNowFn,
 	startSamplingBatchAutomationFn,
 } from "@/server/sampling";
 
@@ -108,6 +114,11 @@ function SamplingQueuePage() {
 			});
 		},
 		enabled: Boolean(selectedBrandId),
+		refetchInterval: 60_000,
+	});
+	const devicesQuery = useQuery({
+		queryKey: ["admin", "sampling", "browser-runner-devices"],
+		queryFn: () => listBrowserRunnerDevicesFn(),
 		refetchInterval: 60_000,
 	});
 
@@ -206,6 +217,11 @@ function SamplingQueuePage() {
 		return { copiedPromptCount: result.copiedPromptCount };
 	};
 
+	const runNow = async (input: SamplingRunNowInput) => {
+		await runSamplingNowFn({ data: input });
+		await listQuery.refetch();
+	};
+
 	const cancelBatch = async (batch: SamplingBatchView) => {
 		if (!window.confirm(`Cancel sampling batch “${batch.name}”? Claimed and unfinished tasks will be cancelled.`))
 			return;
@@ -286,6 +302,22 @@ function SamplingQueuePage() {
 
 	const manualScopes = context?.selectedBrand?.scopes.filter((scope) => scope.enabled && scope.manualOnly) ?? [];
 	const samplingScopes = manualScopes.filter((scope) => scope.samplingEvaluationRole !== null);
+	const runNowPrograms = samplingScopes
+		.filter(
+			(scope) =>
+				scope.samplingEvaluationRole === "scored" &&
+				scope.market === "CN" &&
+				scope.locale === "zh-CN" &&
+				scope.timezone === "Asia/Shanghai",
+		)
+		.map((scope) => ({
+			id: scope.id,
+			name: scope.name,
+			timezone: scope.timezone,
+			promptCount:
+				context?.selectedBrand?.prompts.filter((prompt) => prompt.enabled && prompt.scopeId === scope.id).length ?? 0,
+		}));
+	const browserRunnerDevices = (devicesQuery.data ?? []) as BrowserRunnerDeviceView[];
 
 	return (
 		<div className="space-y-6">
@@ -298,11 +330,25 @@ function SamplingQueuePage() {
 				</div>
 				{context && (
 					<div className="flex flex-wrap gap-2">
+						<Button asChild variant="outline">
+							<Link to="/admin/sampling/devices">
+								<Laptop /> Local devices
+							</Link>
+						</Button>
 						<SamplingScopeProvisionDialog context={context} onProvision={provisionScope} />
 						<SamplingBatchCreateDialog context={context} onCreate={createBatch} />
 					</div>
 				)}
 			</div>
+
+			{context?.browserRunnerEnabled && context.selectedBrand && (
+				<SamplingRunNowDialog
+					brandId={context.selectedBrand.id}
+					programs={runNowPrograms}
+					devices={browserRunnerDevices}
+					onRun={runNow}
+				/>
+			)}
 
 			{context?.selectedBrand && samplingScopes.length === 0 && (
 				<Alert>
@@ -318,9 +364,9 @@ function SamplingQueuePage() {
 			{context?.browserRunnerEnabled && (
 				<Alert>
 					<Bot />
-					<AlertTitle>Browser Runner is administrator-started</AlertTitle>
+					<AlertTitle>Local Browser Runner is administrator-started</AlertTitle>
 					<AlertDescription>
-						Creating and freezing a batch does not run it. Use Start automated run on that batch when you are ready; no
+						Run now creates and starts one batch. Paired Windows or macOS Chrome devices pick it up when online; no
 						recurring or scheduled execution is created.
 					</AlertDescription>
 				</Alert>

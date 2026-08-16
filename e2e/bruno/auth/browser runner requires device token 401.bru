@@ -1,5 +1,5 @@
 meta {
-  name: browser runner is disabled by default
+  name: browser runner requires a paired device token
   type: http
   seq: 20
 }
@@ -17,7 +17,7 @@ body:json {
 }
 
 assert {
-  res.status: eq 503
+  res.status: eq 401
   res.body.error: eq BrowserRunnerHttpError
-  res.body.message: contains disabled
+  res.body.message: contains Valid Browser Runner bearer token required
 }

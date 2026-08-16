@@ -1,3 +1,4 @@
+import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import type {
 	ManualObservationCaptureRouteKey,
 	ManualObservationSurfaceTargetKey,
@@ -121,6 +122,39 @@ export interface SamplingContextView {
 		prompts: SamplingPromptOption[];
 	} | null;
 	targets: SamplingTargetOption[];
+}
+
+export interface SamplingRunNowProgram {
+	id: string;
+	name: string;
+	promptCount: number;
+	timezone: string;
+}
+
+export interface SamplingRunNowInput {
+	brandId: string;
+	scopeId: string;
+	surfaces: BrowserExtensionSurface[];
+	idempotencyKey: string;
+}
+
+export interface BrowserRunnerDeviceView {
+	id: string;
+	displayName: string;
+	extensionVersion: string;
+	browserFamily: "chrome";
+	browserVersion: string;
+	platform: "windows" | "macos";
+	supportedSurfaces: BrowserExtensionSurface[];
+	readiness: BrowserExtensionReadiness;
+	lastSeenAt: string | null;
+	revokedAt: string | null;
+	allowedBrandIds: string[];
+}
+
+export interface BrowserRunnerPairingView {
+	code: string;
+	expiresAt: string;
 }
 
 export interface CreateSamplingBatchInput {

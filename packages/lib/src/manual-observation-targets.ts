@@ -21,6 +21,8 @@ export const MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS = [
 	"manual_import.generic",
 	"assisted_browser.generic",
 	"browser_runner.doubao",
+	"browser_extension.doubao",
+	"browser_extension.deepseek",
 ] as const;
 
 export type ManualObservationSurfaceTargetKey = (typeof MANUAL_OBSERVATION_SURFACE_TARGET_KEYS)[number];
@@ -76,6 +78,15 @@ const MANUAL_CAPTURE_MODES: Record<ManualObservationCaptureRouteKey, ManualObser
 		"manual_import.generic": "manual_import",
 		"assisted_browser.generic": "assisted_browser",
 		"browser_runner.doubao": "browser_runner",
+		"browser_extension.doubao": "browser_runner",
+		"browser_extension.deepseek": "browser_runner",
+	};
+
+const ROUTE_SURFACE_RESTRICTIONS: Partial<Record<ManualObservationCaptureRouteKey, ManualObservationSurfaceTargetKey>> =
+	{
+		"browser_runner.doubao": "doubao.consumer_web",
+		"browser_extension.doubao": "doubao.consumer_web",
+		"browser_extension.deepseek": "deepseek.consumer_web",
 	};
 
 const SURFACE_HOSTS: Record<ManualObservationSurfaceTargetKey, readonly string[]> = {
@@ -149,8 +160,9 @@ export function resolveManualObservationTarget(input: {
 }): ManualObservationTargetDescriptor {
 	assertManualObservationSurfaceTargetKey(input.surfaceTargetKey);
 	assertManualObservationCaptureRouteKey(input.captureRouteKey);
-	if (input.captureRouteKey === "browser_runner.doubao" && input.surfaceTargetKey !== "doubao.consumer_web") {
-		throw new Error("The Doubao browser-runner route is restricted to doubao.consumer_web");
+	const restrictedSurface = ROUTE_SURFACE_RESTRICTIONS[input.captureRouteKey];
+	if (restrictedSurface !== undefined && input.surfaceTargetKey !== restrictedSurface) {
+		throw new Error(`The ${input.captureRouteKey} route is restricted to ${restrictedSurface}`);
 	}
 
 	const surface = MANUAL_SURFACES[input.surfaceTargetKey];

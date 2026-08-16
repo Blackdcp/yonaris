@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
 	getRunnerQueueState: vi.fn(),
 	resumeRunnerTask: vi.fn(),
 	completeRunnerTask: vi.fn(),
+	authenticateBrowserRunnerDevice: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -19,6 +20,10 @@ vi.mock("@/server/browser-runner-service", () => ({
 	getRunnerQueueState: mocks.getRunnerQueueState,
 	resumeRunnerTask: mocks.resumeRunnerTask,
 	completeRunnerTask: mocks.completeRunnerTask,
+}));
+
+vi.mock("@workspace/lib/db/browser-runner-devices", () => ({
+	authenticateBrowserRunnerDevice: mocks.authenticateBrowserRunnerDevice,
 }));
 
 import { Route as CompleteRoute } from "./$taskId/complete";
@@ -54,7 +59,10 @@ describe("Browser Runner internal HTTP task contract", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.json()).toEqual({ claim: null, queueState });
-			expect(mocks.getRunnerQueueState).toHaveBeenCalledWith({ brandId: "stepfun", batchId: "batch-1" });
+			expect(mocks.getRunnerQueueState).toHaveBeenCalledWith(
+				{ brandId: "stepfun", batchId: "batch-1" },
+				expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+			);
 		},
 	);
 
@@ -78,7 +86,10 @@ describe("Browser Runner internal HTTP task contract", () => {
 		mocks.getRunnerQueueState.mockResolvedValue("drained");
 		const response = await post(ClaimRoute, "/tasks/claim", { brandId: "stepfun" });
 		expect(await response.json()).toEqual({ claim: null, queueState: "drained" });
-		expect(mocks.getRunnerQueueState).toHaveBeenCalledWith({ brandId: "stepfun" });
+		expect(mocks.getRunnerQueueState).toHaveBeenCalledWith(
+			{ brandId: "stepfun" },
+			expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+		);
 	});
 
 	it("fails with 503 before invoking any service when the runner is disabled", async () => {
@@ -87,6 +98,22 @@ describe("Browser Runner internal HTTP task contract", () => {
 		const response = await post(ClaimRoute, "/tasks/claim", { brandId: "stepfun" });
 
 		expect(response.status).toBe(503);
+		expect(mocks.claimRunnerTask).not.toHaveBeenCalled();
+		expect(mocks.getRunnerQueueState).not.toHaveBeenCalled();
+	});
+
+	it("rejects a revoked paired device before invoking the task service", async () => {
+		mocks.authenticateBrowserRunnerDevice.mockResolvedValue(null);
+
+		const response = await post(
+			ClaimRoute,
+			"/tasks/claim",
+			{ brandId: "stepfun", runnerId: "spoofed" },
+			"ignored",
+			`yrd_${"a".repeat(43)}`,
+		);
+
+		expect(response.status).toBe(401);
 		expect(mocks.claimRunnerTask).not.toHaveBeenCalled();
 		expect(mocks.getRunnerQueueState).not.toHaveBeenCalled();
 	});
@@ -109,16 +136,26 @@ describe("Browser Runner internal HTTP task contract", () => {
 		const completion = { brandId: "stepfun", runnerSessionId: "durable-session-1", observation: {} };
 		const completed = await post(CompleteRoute, "/tasks/task-1/complete", completion, "task-1");
 		expect(await completed.json()).toEqual({ promptRunId: "run-1" });
-		expect(mocks.completeRunnerTask).toHaveBeenCalledWith("task-1", completion, "cn-runner-1");
+		expect(mocks.completeRunnerTask).toHaveBeenCalledWith(
+			"task-1",
+			completion,
+			expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+		);
 	});
 });
 
-async function post(route: unknown, pathname: string, body: unknown, taskId = "ignored"): Promise<Response> {
+async function post(
+	route: unknown,
+	pathname: string,
+	body: unknown,
+	taskId = "ignored",
+	bearer = token,
+): Promise<Response> {
 	const handler = (route as MockRoute).server.handlers.POST;
 	return handler({
 		request: new Request(`https://portal.example.test${pathname}`, {
 			method: "POST",
-			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+			headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 		}),
 		params: { taskId },

@@ -34,6 +34,7 @@ import { Route as ApiOgIndexRouteImport } from './routes/api/og/index'
 import { Route as ApiSetupStatusIndexRouteImport } from './routes/api/setup-status/index'
 import { Route as AuthedAdminSamplingIndexRouteImport } from './routes/_authed/admin/sampling/index'
 import { Route as AuthedAdminSamplingTaskIdRouteImport } from './routes/_authed/admin/sampling/$taskId'
+import { Route as AuthedAdminSamplingDevicesRouteImport } from './routes/_authed/admin/sampling/devices'
 import { Route as AuthedAppBrandIndexRouteImport } from './routes/_authed/app/$brand/index'
 import { Route as AuthedAppBrandSplatRouteImport } from './routes/_authed/app/$brand/$'
 import { Route as AuthedAppBrandCitationsRouteImport } from './routes/_authed/app/$brand/citations'
@@ -72,9 +73,11 @@ import { Route as AuthedAppBrandSettingsPromptsRouteImport } from './routes/_aut
 import { Route as ApiAdminSamplingEvidenceIndexRouteImport } from './routes/api/admin/sampling/evidence/index'
 import { Route as ApiAdminSamplingEvidenceArtifactIdRouteImport } from './routes/api/admin/sampling/evidence/$artifactId'
 import { Route as ApiInternalBrowserRunnerV1BootstrapRouteImport } from './routes/api/internal/browser-runner/v1/bootstrap'
+import { Route as ApiInternalBrowserRunnerV1PairRouteImport } from './routes/api/internal/browser-runner/v1/pair'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 import { Route as ApiV1PromptsPromptIdSnapshotRouteImport } from './routes/api/v1/prompts/$promptId/snapshot'
 import { Route as ApiInternalBrowserRunnerV1BootstrapStatusRouteImport } from './routes/api/internal/browser-runner/v1/bootstrap/status'
+import { Route as ApiInternalBrowserRunnerV1DeviceHeartbeatRouteImport } from './routes/api/internal/browser-runner/v1/device/heartbeat'
 import { Route as ApiInternalBrowserRunnerV1EvidenceIndexRouteImport } from './routes/api/internal/browser-runner/v1/evidence/index'
 import { Route as ApiInternalBrowserRunnerV1TasksClaimRouteImport } from './routes/api/internal/browser-runner/v1/tasks/claim'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -209,6 +212,12 @@ const AuthedAdminSamplingTaskIdRoute =
   AuthedAdminSamplingTaskIdRouteImport.update({
     id: '/sampling/$taskId',
     path: '/sampling/$taskId',
+    getParentRoute: () => AuthedAdminRoute,
+  } as any)
+const AuthedAdminSamplingDevicesRoute =
+  AuthedAdminSamplingDevicesRouteImport.update({
+    id: '/sampling/devices',
+    path: '/sampling/devices',
     getParentRoute: () => AuthedAdminRoute,
   } as any)
 const AuthedAppBrandIndexRoute = AuthedAppBrandIndexRouteImport.update({
@@ -423,6 +432,12 @@ const ApiInternalBrowserRunnerV1BootstrapRoute =
     path: '/api/internal/browser-runner/v1/bootstrap',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalBrowserRunnerV1PairRoute =
+  ApiInternalBrowserRunnerV1PairRouteImport.update({
+    id: '/api/internal/browser-runner/v1/pair',
+    path: '/api/internal/browser-runner/v1/pair',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPlausibleJsScriptIndexRoute =
   ApiPlausibleJsScriptIndexRouteImport.update({
     id: '/api/plausible/js/script/',
@@ -440,6 +455,12 @@ const ApiInternalBrowserRunnerV1BootstrapStatusRoute =
     id: '/status',
     path: '/status',
     getParentRoute: () => ApiInternalBrowserRunnerV1BootstrapRoute,
+  } as any)
+const ApiInternalBrowserRunnerV1DeviceHeartbeatRoute =
+  ApiInternalBrowserRunnerV1DeviceHeartbeatRouteImport.update({
+    id: '/api/internal/browser-runner/v1/device/heartbeat',
+    path: '/api/internal/browser-runner/v1/device/heartbeat',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const ApiInternalBrowserRunnerV1EvidenceIndexRoute =
   ApiInternalBrowserRunnerV1EvidenceIndexRouteImport.update({
@@ -514,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/api/og/': typeof ApiOgIndexRoute
   '/api/setup-status/': typeof ApiSetupStatusIndexRoute
   '/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
+  '/admin/sampling/devices': typeof AuthedAdminSamplingDevicesRoute
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -550,12 +572,14 @@ export interface FileRoutesByFullPath {
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
+  '/api/internal/browser-runner/v1/pair': typeof ApiInternalBrowserRunnerV1PairRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
   '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
+  '/api/internal/browser-runner/v1/device/heartbeat': typeof ApiInternalBrowserRunnerV1DeviceHeartbeatRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -585,6 +609,7 @@ export interface FileRoutesByTo {
   '/api/og': typeof ApiOgIndexRoute
   '/api/setup-status': typeof ApiSetupStatusIndexRoute
   '/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
+  '/admin/sampling/devices': typeof AuthedAdminSamplingDevicesRoute
   '/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -620,12 +645,14 @@ export interface FileRoutesByTo {
   '/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
+  '/api/internal/browser-runner/v1/pair': typeof ApiInternalBrowserRunnerV1PairRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/app/$brand/prompts': typeof AuthedAppBrandPromptsIndexRoute
   '/app/$brand/settings': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
   '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
+  '/api/internal/browser-runner/v1/device/heartbeat': typeof ApiInternalBrowserRunnerV1DeviceHeartbeatRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -661,6 +688,7 @@ export interface FileRoutesById {
   '/api/og/': typeof ApiOgIndexRoute
   '/api/setup-status/': typeof ApiSetupStatusIndexRoute
   '/_authed/admin/sampling/$taskId': typeof AuthedAdminSamplingTaskIdRoute
+  '/_authed/admin/sampling/devices': typeof AuthedAdminSamplingDevicesRoute
   '/_authed/app/$brand/$': typeof AuthedAppBrandSplatRoute
   '/_authed/app/$brand/citations': typeof AuthedAppBrandCitationsRoute
   '/_authed/app/$brand/opportunities': typeof AuthedAppBrandOpportunitiesRoute
@@ -697,12 +725,14 @@ export interface FileRoutesById {
   '/_authed/app/$brand/settings/prompts': typeof AuthedAppBrandSettingsPromptsRoute
   '/api/admin/sampling/evidence/$artifactId': typeof ApiAdminSamplingEvidenceArtifactIdRoute
   '/api/internal/browser-runner/v1/bootstrap': typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
+  '/api/internal/browser-runner/v1/pair': typeof ApiInternalBrowserRunnerV1PairRoute
   '/api/v1/prompts/$promptId/snapshot': typeof ApiV1PromptsPromptIdSnapshotRoute
   '/_authed/app/$brand/prompts/': typeof AuthedAppBrandPromptsIndexRoute
   '/_authed/app/$brand/settings/': typeof AuthedAppBrandSettingsIndexRoute
   '/api/admin/sampling/evidence/': typeof ApiAdminSamplingEvidenceIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
   '/api/internal/browser-runner/v1/bootstrap/status': typeof ApiInternalBrowserRunnerV1BootstrapStatusRoute
+  '/api/internal/browser-runner/v1/device/heartbeat': typeof ApiInternalBrowserRunnerV1DeviceHeartbeatRoute
   '/api/internal/browser-runner/v1/tasks/claim': typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   '/api/internal/browser-runner/v1/evidence/': typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -738,6 +768,7 @@ export interface FileRouteTypes {
     | '/api/og/'
     | '/api/setup-status/'
     | '/admin/sampling/$taskId'
+    | '/admin/sampling/devices'
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
@@ -774,12 +805,14 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
     | '/api/internal/browser-runner/v1/bootstrap'
+    | '/api/internal/browser-runner/v1/pair'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts/'
     | '/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
     | '/api/internal/browser-runner/v1/bootstrap/status'
+    | '/api/internal/browser-runner/v1/device/heartbeat'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence/'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -809,6 +842,7 @@ export interface FileRouteTypes {
     | '/api/og'
     | '/api/setup-status'
     | '/admin/sampling/$taskId'
+    | '/admin/sampling/devices'
     | '/app/$brand/$'
     | '/app/$brand/citations'
     | '/app/$brand/opportunities'
@@ -844,12 +878,14 @@ export interface FileRouteTypes {
     | '/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
     | '/api/internal/browser-runner/v1/bootstrap'
+    | '/api/internal/browser-runner/v1/pair'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/app/$brand/prompts'
     | '/app/$brand/settings'
     | '/api/admin/sampling/evidence'
     | '/api/plausible/js/script'
     | '/api/internal/browser-runner/v1/bootstrap/status'
+    | '/api/internal/browser-runner/v1/device/heartbeat'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -884,6 +920,7 @@ export interface FileRouteTypes {
     | '/api/og/'
     | '/api/setup-status/'
     | '/_authed/admin/sampling/$taskId'
+    | '/_authed/admin/sampling/devices'
     | '/_authed/app/$brand/$'
     | '/_authed/app/$brand/citations'
     | '/_authed/app/$brand/opportunities'
@@ -920,12 +957,14 @@ export interface FileRouteTypes {
     | '/_authed/app/$brand/settings/prompts'
     | '/api/admin/sampling/evidence/$artifactId'
     | '/api/internal/browser-runner/v1/bootstrap'
+    | '/api/internal/browser-runner/v1/pair'
     | '/api/v1/prompts/$promptId/snapshot'
     | '/_authed/app/$brand/prompts/'
     | '/_authed/app/$brand/settings/'
     | '/api/admin/sampling/evidence/'
     | '/api/plausible/js/script/'
     | '/api/internal/browser-runner/v1/bootstrap/status'
+    | '/api/internal/browser-runner/v1/device/heartbeat'
     | '/api/internal/browser-runner/v1/tasks/claim'
     | '/api/internal/browser-runner/v1/evidence/'
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
@@ -966,8 +1005,10 @@ export interface RootRouteChildren {
   ApiV1ReportsIndexRoute: typeof ApiV1ReportsIndexRoute
   ApiAdminSamplingEvidenceArtifactIdRoute: typeof ApiAdminSamplingEvidenceArtifactIdRoute
   ApiInternalBrowserRunnerV1BootstrapRoute: typeof ApiInternalBrowserRunnerV1BootstrapRouteWithChildren
+  ApiInternalBrowserRunnerV1PairRoute: typeof ApiInternalBrowserRunnerV1PairRoute
   ApiAdminSamplingEvidenceIndexRoute: typeof ApiAdminSamplingEvidenceIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
+  ApiInternalBrowserRunnerV1DeviceHeartbeatRoute: typeof ApiInternalBrowserRunnerV1DeviceHeartbeatRoute
   ApiInternalBrowserRunnerV1TasksClaimRoute: typeof ApiInternalBrowserRunnerV1TasksClaimRoute
   ApiInternalBrowserRunnerV1EvidenceIndexRoute: typeof ApiInternalBrowserRunnerV1EvidenceIndexRoute
   ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
@@ -1153,6 +1194,13 @@ declare module '@tanstack/react-router' {
       path: '/sampling/$taskId'
       fullPath: '/admin/sampling/$taskId'
       preLoaderRoute: typeof AuthedAdminSamplingTaskIdRouteImport
+      parentRoute: typeof AuthedAdminRoute
+    }
+    '/_authed/admin/sampling/devices': {
+      id: '/_authed/admin/sampling/devices'
+      path: '/sampling/devices'
+      fullPath: '/admin/sampling/devices'
+      preLoaderRoute: typeof AuthedAdminSamplingDevicesRouteImport
       parentRoute: typeof AuthedAdminRoute
     }
     '/_authed/app/$brand/': {
@@ -1421,6 +1469,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBrowserRunnerV1BootstrapRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/browser-runner/v1/pair': {
+      id: '/api/internal/browser-runner/v1/pair'
+      path: '/api/internal/browser-runner/v1/pair'
+      fullPath: '/api/internal/browser-runner/v1/pair'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1PairRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/plausible/js/script/': {
       id: '/api/plausible/js/script/'
       path: '/api/plausible/js/script'
@@ -1441,6 +1496,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/internal/browser-runner/v1/bootstrap/status'
       preLoaderRoute: typeof ApiInternalBrowserRunnerV1BootstrapStatusRouteImport
       parentRoute: typeof ApiInternalBrowserRunnerV1BootstrapRoute
+    }
+    '/api/internal/browser-runner/v1/device/heartbeat': {
+      id: '/api/internal/browser-runner/v1/device/heartbeat'
+      path: '/api/internal/browser-runner/v1/device/heartbeat'
+      fullPath: '/api/internal/browser-runner/v1/device/heartbeat'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1DeviceHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/internal/browser-runner/v1/evidence/': {
       id: '/api/internal/browser-runner/v1/evidence/'
@@ -1507,6 +1569,7 @@ interface AuthedAdminRouteChildren {
   AuthedAdminWorkflowsRoute: typeof AuthedAdminWorkflowsRoute
   AuthedAdminIndexRoute: typeof AuthedAdminIndexRoute
   AuthedAdminSamplingTaskIdRoute: typeof AuthedAdminSamplingTaskIdRoute
+  AuthedAdminSamplingDevicesRoute: typeof AuthedAdminSamplingDevicesRoute
   AuthedAdminSamplingIndexRoute: typeof AuthedAdminSamplingIndexRoute
 }
 
@@ -1516,6 +1579,7 @@ const AuthedAdminRouteChildren: AuthedAdminRouteChildren = {
   AuthedAdminWorkflowsRoute: AuthedAdminWorkflowsRoute,
   AuthedAdminIndexRoute: AuthedAdminIndexRoute,
   AuthedAdminSamplingTaskIdRoute: AuthedAdminSamplingTaskIdRoute,
+  AuthedAdminSamplingDevicesRoute: AuthedAdminSamplingDevicesRoute,
   AuthedAdminSamplingIndexRoute: AuthedAdminSamplingIndexRoute,
 }
 
@@ -1689,8 +1753,11 @@ const rootRouteChildren: RootRouteChildren = {
     ApiAdminSamplingEvidenceArtifactIdRoute,
   ApiInternalBrowserRunnerV1BootstrapRoute:
     ApiInternalBrowserRunnerV1BootstrapRouteWithChildren,
+  ApiInternalBrowserRunnerV1PairRoute: ApiInternalBrowserRunnerV1PairRoute,
   ApiAdminSamplingEvidenceIndexRoute: ApiAdminSamplingEvidenceIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
+  ApiInternalBrowserRunnerV1DeviceHeartbeatRoute:
+    ApiInternalBrowserRunnerV1DeviceHeartbeatRoute,
   ApiInternalBrowserRunnerV1TasksClaimRoute:
     ApiInternalBrowserRunnerV1TasksClaimRoute,
   ApiInternalBrowserRunnerV1EvidenceIndexRoute:

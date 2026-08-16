@@ -162,6 +162,13 @@
 			"when": 1786726866790,
 			"tag": "0022_response_snapshot_archive",
 			"breakpoints": true
+		},
+		{
+			"idx": 23,
+			"version": "7",
+			"when": 1786893768101,
+			"tag": "0023_browser_extension_devices",
+			"breakpoints": true
 		}
 	]
 }

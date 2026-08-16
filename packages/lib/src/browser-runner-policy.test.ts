@@ -78,12 +78,32 @@ describe("Browser Runner retry policy", () => {
 		expect(() => assertBrowserRunnerEvidenceProtocol(3)).toThrow(/exactly two/);
 	});
 
-	it("blocks portal submit and release after durable Browser Runner submit intent", () => {
-		const postSubmit = { captureRouteKey: "browser_runner.doubao", submitIntentAt: new Date() };
-		expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "submit")).toThrow(/cannot be submitted/);
-		expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "release")).toThrow(/cannot be released/);
+	it("freezes extension batches at exactly one page snapshot", () => {
 		expect(() =>
-			assertPortalBrowserRunnerMutationAllowed({ ...postSubmit, submitIntentAt: null }, "submit"),
+			assertBrowserRunnerEvidenceProtocol(1, ["browser_extension.doubao", "browser_extension.deepseek"]),
+		).not.toThrow();
+		expect(() => assertBrowserRunnerEvidenceProtocol(2, ["browser_extension.deepseek"])).toThrow(
+			/exactly one page snapshot/i,
+		);
+		expect(() =>
+			assertBrowserRunnerEvidenceProtocol(1, ["browser_runner.doubao", "browser_extension.deepseek"]),
+		).toThrow(/cannot mix legacy and extension/i);
+	});
+
+	it("blocks portal submit and release after durable Browser Runner submit intent", () => {
+		for (const captureRouteKey of ["browser_runner.doubao", "browser_extension.doubao", "browser_extension.deepseek"]) {
+			const postSubmit = { captureRouteKey, submitIntentAt: new Date() };
+			expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "submit")).toThrow(/cannot be submitted/);
+			expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "release")).toThrow(/cannot be released/);
+			expect(() =>
+				assertPortalBrowserRunnerMutationAllowed({ ...postSubmit, submitIntentAt: null }, "submit"),
+			).not.toThrow();
+		}
+		expect(() =>
+			assertPortalBrowserRunnerMutationAllowed(
+				{ captureRouteKey: "manual_import.generic", submitIntentAt: new Date() },
+				"submit",
+			),
 		).not.toThrow();
 	});
 

@@ -7,11 +7,11 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/tasks/clai
 		handlers: {
 			POST: async ({ request }: { request: Request }) => {
 				try {
-					const principal = requireBrowserRunner(request);
+					const principal = await requireBrowserRunner(request);
 					const input = await parseBrowserRunnerJson(request, browserRunnerClaimSchema);
 					const claim = await claimRunnerTask(input, principal);
 					return Response.json(
-						{ claim, ...(claim === null ? { queueState: await getRunnerQueueState(input) } : {}) },
+						{ claim, ...(claim === null ? { queueState: await getRunnerQueueState(input, principal) } : {}) },
 						{ headers: { "Cache-Control": "no-store" } },
 					);
 				} catch (error) {

@@ -99,7 +99,7 @@ test.describe("real StepFun customer identity boundary", () => {
       await expect(page.getByRole("heading", { name: "Opportunities" })).toBeVisible({
         timeout: 30_000,
       });
-      await expect(page.getByText(/need a bit more tracking data/i).first()).toBeVisible({
+      await expect(page.getByText(/scoped opportunities are not available yet/i).first()).toBeVisible({
         timeout: 30_000,
       });
 

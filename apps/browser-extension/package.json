@@ -1,0 +1,20 @@
+{
+	"name": "@workspace/browser-extension",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "vitest run",
+		"check-types": "tsc --noEmit",
+		"build": "tsx scripts/build.ts"
+	},
+	"devDependencies": {
+		"@types/chrome": "^0.1.31",
+		"@types/node": "^26.0.0",
+		"esbuild": "^0.28.1",
+		"linkedom": "0.18.13",
+		"tsx": "^4.23.1",
+		"typescript": "^7.0.2",
+		"vitest": "^4.1.10"
+	}
+}

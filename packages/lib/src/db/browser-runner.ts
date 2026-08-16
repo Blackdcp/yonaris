@@ -1,6 +1,11 @@
 import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
+	BROWSER_EXTENSION_SURFACES,
+	type BrowserExtensionSurface,
+	browserExtensionCaptureRoute,
+} from "../browser-extension-contract";
+import {
 	BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
@@ -24,6 +29,30 @@ export interface BrowserRunnerClaim {
 	leaseToken: string;
 	leaseGeneration: number;
 	leaseExpiresAt: Date;
+}
+
+export type BrowserRunnerClaimTarget =
+	| { surfaceTargetKey: "doubao.consumer_web"; captureRouteKey: "browser_runner.doubao" }
+	| {
+			surfaceTargetKey: BrowserExtensionSurface;
+			captureRouteKey: "browser_extension.doubao" | "browser_extension.deepseek";
+	  };
+
+export function resolveBrowserRunnerClaimTargets(input: {
+	principalKind: "legacy_host" | "browser_extension";
+	requestedSurfaceTargetKeys?: readonly string[];
+	supportedSurfaces?: readonly BrowserExtensionSurface[];
+}): BrowserRunnerClaimTarget[] {
+	const requested = input.requestedSurfaceTargetKeys ? new Set(input.requestedSurfaceTargetKeys) : null;
+	if (input.principalKind === "legacy_host") {
+		return !requested || requested.has("doubao.consumer_web")
+			? [{ surfaceTargetKey: "doubao.consumer_web", captureRouteKey: "browser_runner.doubao" }]
+			: [];
+	}
+	const supported = new Set(input.supportedSurfaces ?? []);
+	return BROWSER_EXTENSION_SURFACES.filter(
+		(surface) => supported.has(surface) && (!requested || requested.has(surface)),
+	).map((surface) => ({ surfaceTargetKey: surface, captureRouteKey: browserExtensionCaptureRoute(surface) }));
 }
 
 export class BrowserRunnerStateError extends Error {
@@ -103,11 +132,14 @@ export async function claimBrowserRunnerTask(input: {
 	batchId?: string;
 	runnerId: string;
 	leaseDurationMs?: number;
-	surfaceTargetKeys?: readonly string[];
+	captureTargets?: readonly BrowserRunnerClaimTarget[];
 }): Promise<BrowserRunnerClaim | null> {
 	const runnerId = requiredText(input.runnerId, "runnerId", 200);
 	const leaseDurationMs = validLeaseDuration(input.leaseDurationMs);
-	if (input.surfaceTargetKeys?.length === 0) return null;
+	const captureTargets = input.captureTargets ?? [
+		{ surfaceTargetKey: "doubao.consumer_web", captureRouteKey: "browser_runner.doubao" } as const,
+	];
+	if (captureTargets.length === 0) return null;
 	await reconcileExpiredBrowserRunnerBatches({ brandId: input.brandId });
 	return db.transaction(async (tx) => {
 		const conditions = [
@@ -138,15 +170,16 @@ export async function claimBrowserRunnerTask(input: {
 					),
 				);
 				if (!availability) throw new Error("Failed to build browser-runner availability condition");
-				const taskConditions = [
-					eq(deliveryTasks.batchId, batch.id),
-					eq(deliveryTasks.surfaceTargetKey, "doubao.consumer_web"),
-					eq(deliveryTasks.captureRouteKey, "browser_runner.doubao"),
-					availability,
-				];
-				if (input.surfaceTargetKeys) {
-					taskConditions.push(inArray(deliveryTasks.surfaceTargetKey, input.surfaceTargetKeys));
-				}
+				const targetCondition = or(
+					...captureTargets.map((target) =>
+						and(
+							eq(deliveryTasks.surfaceTargetKey, target.surfaceTargetKey),
+							eq(deliveryTasks.captureRouteKey, target.captureRouteKey),
+						),
+					),
+				);
+				if (!targetCondition) return null;
+				const taskConditions = [eq(deliveryTasks.batchId, batch.id), targetCondition, availability];
 				const [candidate] = await tx
 					.select()
 					.from(deliveryTasks)

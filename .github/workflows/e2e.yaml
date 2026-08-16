@@ -77,6 +77,39 @@ jobs:
       - name: Unit tests
         run: pnpm turbo test
 
+      - name: Build and verify Browser Runner extension
+        run: |
+          pnpm --filter @workspace/browser-extension check-types
+          pnpm --filter @workspace/browser-extension build
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+          const manifest = JSON.parse(readFileSync("apps/browser-extension/dist/manifest.json", "utf8"));
+          const expectedHosts = [
+            "https://portal.yonaris.com/*",
+            "https://*.doubao.com/*",
+            "https://chat.deepseek.com/*",
+          ];
+          const expectedPermissions = ["storage", "alarms", "tabs", "scripting", "notifications"];
+          if (JSON.stringify(manifest.host_permissions) !== JSON.stringify(expectedHosts)) {
+            throw new Error("Browser extension host permissions exceed the approved v1 allowlist");
+          }
+          if (JSON.stringify(manifest.permissions) !== JSON.stringify(expectedPermissions)) {
+            throw new Error("Browser extension permissions exceed the approved v1 allowlist");
+          }
+          if (JSON.stringify(manifest).includes("<all_urls>") || JSON.stringify(manifest).includes("*://*/*")) {
+            throw new Error("Browser extension contains a forbidden wildcard permission");
+          }
+          NODE
+          mkdir -p artifacts
+          (cd apps/browser-extension/dist && zip -qr "$GITHUB_WORKSPACE/artifacts/yonaris-browser-extension-${GITHUB_SHA}.zip" .)
+
+      - name: Upload Browser Runner extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: yonaris-browser-extension-${{ github.sha }}
+          path: artifacts/yonaris-browser-extension-${{ github.sha }}.zip
+          retention-days: 30
+
       # This is a local fixture only. It proves the Browser Runner executes a
       # complete batch and produces evidence without contacting Doubao or any
       # other consumer surface.
@@ -116,6 +149,7 @@ jobs:
           # E2E test overrides
           ADMIN_API_KEYS=test-api-key-e2e
           ONBOARDING_LLM_TARGET=stub:stub
+          BROWSER_RUNNER_ENABLED=true
           SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
           PATCH
 

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
 	browserRunnerGlobalQueueState,
+	browserRunnerLaunchUrl,
 	browserRunnerObservationSchema,
 	browserRunnerSessionLeaseSchema,
 	claimRunnerTask,
@@ -39,7 +40,7 @@ describe("Browser Runner service contracts", () => {
 		await expect(
 			claimRunnerTask(
 				{ brandId: "stepfun", surfaceTargetKeys: ["doubao.consumer_web"] },
-				{ id: "runner-cn-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" },
+				{ kind: "legacy_host", id: "runner-cn-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" },
 				{
 					assertCapacity: async () => {
 						throw new BrowserRunnerSnapshotCapacityError("full");
@@ -51,10 +52,57 @@ describe("Browser Runner service contracts", () => {
 		expect(claim).not.toHaveBeenCalled();
 	});
 
+	it("limits paired-device claims to assigned brands and declared surface capabilities", async () => {
+		const claim = vi.fn(async () => null);
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["deepseek.consumer_web" as const],
+		};
+
+		await claimRunnerTask(
+			{
+				brandId: "stepfun",
+				surfaceTargetKeys: ["doubao.consumer_web", "deepseek.consumer_web"],
+			},
+			principal,
+			{ assertCapacity: async () => null, claim },
+		);
+
+		expect(claim).toHaveBeenCalledWith(
+			expect.objectContaining({
+				captureTargets: [
+					{
+						surfaceTargetKey: "deepseek.consumer_web",
+						captureRouteKey: "browser_extension.deepseek",
+					},
+				],
+			}),
+		);
+		claim.mockClear();
+		await expect(
+			claimRunnerTask({ brandId: "another-brand" }, principal, {
+				assertCapacity: async () => null,
+				claim,
+			}),
+		).rejects.toMatchObject({ status: 403 });
+		expect(claim).not.toHaveBeenCalled();
+	});
+
 	it("distinguishes pending work, a drained human queue, and a fully idle global poll", () => {
 		expect(browserRunnerGlobalQueueState(true, false)).toBe("waiting");
 		expect(browserRunnerGlobalQueueState(false, true)).toBe("drained");
 		expect(browserRunnerGlobalQueueState(false, false)).toBe("settled");
+	});
+
+	it("returns the exact launch URL for each approved extension surface", () => {
+		expect(browserRunnerLaunchUrl("doubao.consumer_web")).toBe("https://www.doubao.com/chat/");
+		expect(browserRunnerLaunchUrl("deepseek.consumer_web")).toBe("https://chat.deepseek.com/");
+		expect(() => browserRunnerLaunchUrl("unknown.consumer_web")).toThrow(/unsupported launch surface/i);
 	});
 
 	it("requires a durable runner session on intent, confirmation, and completion payloads", () => {
@@ -122,9 +170,10 @@ describe("Browser Runner service contracts", () => {
 		).toBe(true);
 	});
 
-	it("accepts exactly one staged screenshot and one staged page snapshot", () => {
+	it("keeps the legacy host screenshot plus page-snapshot evidence contract", () => {
 		expect(() =>
 			assertBrowserRunnerEvidenceSelection(
+				"browser_runner.doubao",
 				[
 					{ id: guid1, kind: "screenshot" },
 					{ id: guid2, kind: "page_snapshot" },
@@ -139,10 +188,13 @@ describe("Browser Runner service contracts", () => {
 			],
 			[{ id: guid1, kind: "screenshot" as const }],
 		]) {
-			expect(() => assertBrowserRunnerEvidenceSelection(artifacts, [guid1, guid2])).toThrow(/exactly one staged/);
+			expect(() => assertBrowserRunnerEvidenceSelection("browser_runner.doubao", artifacts, [guid1, guid2])).toThrow(
+				/exactly one staged/,
+			);
 		}
 		expect(() =>
 			assertBrowserRunnerEvidenceSelection(
+				"browser_runner.doubao",
 				[
 					{ id: guid1, kind: "screenshot" },
 					{ id: guid2, kind: "page_snapshot" },
@@ -151,5 +203,18 @@ describe("Browser Runner service contracts", () => {
 				[guid1, guid2, "33333333-3333-4333-8333-333333333333"],
 			),
 		).toThrow(/exactly one staged/);
+	});
+
+	it("requires one page snapshot and no screenshot for extension completion", () => {
+		expect(() =>
+			assertBrowserRunnerEvidenceSelection(
+				"browser_extension.deepseek",
+				[{ id: guid1, kind: "page_snapshot" }],
+				[guid1],
+			),
+		).not.toThrow();
+		expect(() =>
+			assertBrowserRunnerEvidenceSelection("browser_extension.doubao", [{ id: guid1, kind: "screenshot" }], [guid1]),
+		).toThrow(/exactly one page snapshot/i);
 	});
 });

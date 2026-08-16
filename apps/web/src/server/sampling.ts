@@ -1,4 +1,5 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
+import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import {
 	assertBrowserRunnerEvidenceProtocol,
 	assertPortalBrowserRunnerMutationAllowed,
@@ -59,10 +60,11 @@ import {
 import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
-import { browserRunnerEnabled } from "./browser-runner-auth";
+import { browserRunnerEnabled, browserRunnerFeatureEnabled } from "./browser-runner-auth";
 import { assertSamplingBrowserRunnerProtocol } from "./sampling-browser-runner-protocol";
 import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
+import { planSamplingRunNow } from "./sampling-run-now-policy";
 import { provisionManualSamplingScope, provisionSamplingScopeInputSchema } from "./sampling-scope-provisioning";
 
 const SAMPLING_TARGET_PRESENTATION = {
@@ -162,9 +164,22 @@ const samplingTaskLeaseSchema = samplingTaskSelectorSchema.extend({
 const SAMPLING_LEASE_MS = 15 * 60 * 1_000;
 const MAX_SAMPLING_TASKS_PER_BATCH = 10_000;
 
+const runSamplingNowInputSchema = z
+	.object({
+		brandId: brandIdSchema,
+		scopeId: guidSchema,
+		surfaces: z
+			.array(z.enum(BROWSER_EXTENSION_SURFACES))
+			.min(1)
+			.max(2)
+			.refine((surfaces) => new Set(surfaces).size === surfaces.length, "Channels must be unique"),
+		idempotencyKey: z.string().trim().min(1).max(200),
+	})
+	.strict();
+
 async function requireSamplingAdmin() {
 	const session = await requireAuthSession();
-	if (!isAdmin(session)) throw new Error("Forbidden: Admin access required");
+	if (!isAdmin(session)) throw new Error("Forbidden: Platform administrator access required");
 	return session;
 }
 
@@ -176,6 +191,246 @@ async function requireSamplingAdminBrand(brandId: string) {
 	const brand = await db.query.brands.findFirst({ where: eq(brands.id, brandId) });
 	if (!brand) throw new Error(`Brand "${brandId}" not found`);
 	return { session, brand };
+}
+
+type SamplingRunNowScope = {
+	id: string;
+	brandId: string;
+	name: string;
+	market: string;
+	locale: string;
+	timezone: string;
+	enabled: boolean;
+	automaticTargetKeys: string[] | null;
+	samplingEvaluationRole: string | null;
+};
+
+type SamplingRunNowBatchState = {
+	batch: {
+		id: string;
+		brandId: string;
+		scopeId: string;
+		idempotencyKey: string;
+		name: string;
+		protocol: unknown;
+		executionMode: string;
+		status: string;
+		automationStatus: string | null;
+	};
+	tasks: Array<{
+		id: string;
+		promptId: string;
+		promptText: string;
+		surfaceTargetKey: string;
+		captureRouteKey: string;
+		sampleIndex: number;
+		sessionRequirement: string;
+		searchRequirement: string;
+		evaluationRole: string;
+	}>;
+};
+
+export type SamplingRunNowDependencies = {
+	requirePlatformAdminBrand: (brandId: string) => Promise<{ userId: string; brandId: string }>;
+	assertFeatureEnabled: () => void;
+	readScope: (input: { brandId: string; scopeId: string }) => Promise<SamplingRunNowScope | null>;
+	listEnabledPrompts: (input: { brandId: string; scopeId: string }) => Promise<Array<{ id: string; value: string }>>;
+	findExisting: (input: { brandId: string; idempotencyKey: string }) => Promise<SamplingRunNowBatchState | null>;
+	createDraft: (input: {
+		brandId: string;
+		scopeId: string;
+		idempotencyKey: string;
+		name: string;
+		protocol: DeliveryProtocol;
+		createdBy: string;
+		executionMode: "browser_runner";
+	}) => Promise<{ id: string }>;
+	readBatch: (input: { brandId: string; batchId: string }) => Promise<SamplingRunNowBatchState | null>;
+	addTasks: (input: { brandId: string; batchId: string; tasks: readonly DeliveryTaskPlanInput[] }) => Promise<unknown>;
+	freeze: (input: { brandId: string; batchId: string; frozenBy: string }) => Promise<unknown>;
+	start: (input: { brandId: string; batchId: string }) => Promise<unknown>;
+	now: () => Date;
+};
+
+export const executeSamplingRunNow = createServerOnlyFn(async function executeSamplingRunNow(
+	input: {
+		brandId: string;
+		scopeId: string;
+		surfaces: readonly BrowserExtensionSurface[];
+		idempotencyKey: string;
+	},
+	overrides: Partial<SamplingRunNowDependencies> = {},
+): Promise<SamplingRunNowBatchState> {
+	const dependencies = { ...defaultSamplingRunNowDependencies(), ...overrides };
+	const actor = await dependencies.requirePlatformAdminBrand(input.brandId);
+	if (actor.brandId !== input.brandId) throw new Error("Platform administrator brand resolution failed");
+	dependencies.assertFeatureEnabled();
+	const scope = await dependencies.readScope({ brandId: input.brandId, scopeId: input.scopeId });
+	if (!scope || scope.brandId !== input.brandId) throw new Error("Run now Program was not found for this brand");
+	if (!scope.enabled) throw new Error(`Run now Program "${scope.name}" is disabled`);
+	if (!isBrowserRunnerCnScope(scope)) {
+		throw new Error("Run now requires a CN/zh-CN/Asia/Shanghai Program");
+	}
+	if (scope.automaticTargetKeys === null || scope.automaticTargetKeys.length > 0) {
+		throw new Error("Run now requires a manual-only Program");
+	}
+	if (scope.samplingEvaluationRole !== "scored") {
+		throw new Error("Run now requires a scored Program");
+	}
+	const promptRows = await dependencies.listEnabledPrompts({ brandId: input.brandId, scopeId: input.scopeId });
+	const plan = planSamplingRunNow({ prompts: promptRows, surfaces: input.surfaces, now: dependencies.now() });
+
+	let current = await dependencies.findExisting({ brandId: input.brandId, idempotencyKey: input.idempotencyKey });
+	if (!current) {
+		let batchId: string | undefined;
+		try {
+			batchId = (
+				await dependencies.createDraft({
+					brandId: input.brandId,
+					scopeId: input.scopeId,
+					idempotencyKey: input.idempotencyKey,
+					name: plan.name,
+					protocol: plan.protocol,
+					createdBy: actor.userId,
+					executionMode: "browser_runner",
+				})
+			).id;
+		} catch (error) {
+			current = await dependencies.findExisting({ brandId: input.brandId, idempotencyKey: input.idempotencyKey });
+			if (!current) throw error;
+		}
+		if (!current && batchId) current = await dependencies.readBatch({ brandId: input.brandId, batchId });
+	}
+	if (!current) throw new Error("Run now batch could not be read after creation");
+	assertSamplingRunNowBatchIdentity(current, input, plan);
+
+	if (current.batch.status === "draft") {
+		if (current.tasks.length === 0) {
+			try {
+				await dependencies.addTasks({ brandId: input.brandId, batchId: current.batch.id, tasks: plan.tasks });
+			} catch (error) {
+				const concurrent = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+				assertSamplingRunNowBatchIdentity(concurrent, input, plan);
+				if (concurrent.tasks.length === 0) throw error;
+				current = concurrent;
+			}
+			current = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+			assertSamplingRunNowBatchIdentity(current, input, plan);
+		}
+		if (current.batch.status === "draft") {
+			try {
+				await dependencies.freeze({ brandId: input.brandId, batchId: current.batch.id, frozenBy: actor.userId });
+			} catch (error) {
+				const concurrent = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+				assertSamplingRunNowBatchIdentity(concurrent, input, plan);
+				if (concurrent.batch.status === "draft") throw error;
+				current = concurrent;
+			}
+			current = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+			assertSamplingRunNowBatchIdentity(current, input, plan);
+		}
+	}
+
+	if (current.batch.status === "frozen" && current.batch.automationStatus === "not_started") {
+		try {
+			await dependencies.start({ brandId: input.brandId, batchId: current.batch.id });
+		} catch (error) {
+			const concurrent = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+			assertSamplingRunNowBatchIdentity(concurrent, input, plan);
+			if (concurrent.batch.status !== "in_progress" || concurrent.batch.automationStatus !== "running") throw error;
+			current = concurrent;
+		}
+		if (current.batch.status === "frozen") {
+			current = await requireSamplingRunNowBatch(dependencies, input.brandId, current.batch.id);
+			assertSamplingRunNowBatchIdentity(current, input, plan);
+		}
+	}
+
+	if (
+		(current.batch.status === "in_progress" &&
+			(current.batch.automationStatus === "running" || current.batch.automationStatus === "needs_human")) ||
+		(current.batch.status === "completed" && current.batch.automationStatus === "settled") ||
+		current.batch.status === "cancelled"
+	) {
+		return current;
+	}
+	throw new Error("Run now batch is in an inconsistent lifecycle state");
+});
+
+function defaultSamplingRunNowDependencies(): SamplingRunNowDependencies {
+	return {
+		requirePlatformAdminBrand: async (brandId) => {
+			const { session, brand } = await requireSamplingAdminBrand(brandId);
+			return { userId: session.user.id, brandId: brand.id };
+		},
+		assertFeatureEnabled: () => {
+			if (!browserRunnerFeatureEnabled()) throw new Error("Browser Runner is disabled");
+		},
+		readScope: async ({ brandId, scopeId }) =>
+			(await db.query.measurementScopes.findFirst({
+				where: and(eq(measurementScopes.id, scopeId), eq(measurementScopes.brandId, brandId)),
+			})) ?? null,
+		listEnabledPrompts: ({ brandId, scopeId }) =>
+			db
+				.select({ id: prompts.id, value: prompts.value })
+				.from(prompts)
+				.where(and(eq(prompts.brandId, brandId), eq(prompts.scopeId, scopeId), eq(prompts.enabled, true)))
+				.orderBy(asc(prompts.id)),
+		findExisting: async ({ brandId, idempotencyKey }) => {
+			const batch = await db.query.deliveryBatches.findFirst({
+				where: and(eq(deliveryBatches.brandId, brandId), eq(deliveryBatches.idempotencyKey, idempotencyKey)),
+				columns: { id: true },
+			});
+			return batch ? getDeliveryBatch({ brandId, batchId: batch.id }) : null;
+		},
+		createDraft: createDraftDeliveryBatch,
+		readBatch: getDeliveryBatch,
+		addTasks: addDeliveryTasks,
+		freeze: freezeDeliveryBatch,
+		start: startBrowserRunnerBatch,
+		now: () => new Date(),
+	};
+}
+
+async function requireSamplingRunNowBatch(
+	dependencies: SamplingRunNowDependencies,
+	brandId: string,
+	batchId: string,
+): Promise<SamplingRunNowBatchState> {
+	const current = await dependencies.readBatch({ brandId, batchId });
+	if (!current) throw new Error("Run now batch no longer exists");
+	return current;
+}
+
+function assertSamplingRunNowBatchIdentity(
+	current: SamplingRunNowBatchState,
+	input: { brandId: string; scopeId: string; idempotencyKey: string },
+	plan: ReturnType<typeof planSamplingRunNow>,
+): void {
+	const protocol = normalizeDeliveryProtocol(current.batch.protocol as DeliveryProtocol);
+	const windowStartsAt = new Date(protocol.measurementWindow.startsAt).getTime();
+	const windowEndsAt = new Date(protocol.measurementWindow.endsAt).getTime();
+	if (
+		current.batch.brandId !== input.brandId ||
+		current.batch.scopeId !== input.scopeId ||
+		current.batch.idempotencyKey !== input.idempotencyKey ||
+		current.batch.executionMode !== "browser_runner" ||
+		protocol.notes !== `run-now:v1:${plan.manifestFingerprint}` ||
+		protocol.evidence.minimumArtifacts !== 1 ||
+		!protocol.evidence.requireSha256 ||
+		!protocol.evidence.requirePageUrl ||
+		protocol.evidence.allowedUriSchemes.length !== 1 ||
+		protocol.evidence.allowedUriSchemes[0] !== "https" ||
+		windowEndsAt - windowStartsAt !== 24 * 60 * 60 * 1_000
+	) {
+		throw new Error(`Run now idempotency key ${input.idempotencyKey} belongs to another batch`);
+	}
+	if (current.tasks.length === 0) return;
+	const expected = plan.tasks.map(deliveryTaskIdentity).sort();
+	const actual = current.tasks.map(deliveryTaskIdentity).sort();
+	if (actual.length !== expected.length || actual.some((identity, index) => identity !== expected[index])) {
+		throw new Error(`Run now idempotency key ${input.idempotencyKey} belongs to another manifest`);
+	}
 }
 
 function getSamplingTargetPresentation(surfaceTargetKey: string) {
@@ -257,7 +512,7 @@ function buildSamplingBatchSummary(
 		needsHumanPostSubmitCount: automationProgress?.needsHumanPostSubmit ?? 0,
 		isProvisional: resultStatus === "provisional",
 		resultStatus,
-		browserRunnerEnabled: browserRunnerEnabled(),
+		browserRunnerEnabled: browserRunnerFeatureEnabled(),
 		canCancel,
 	};
 }
@@ -402,7 +657,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				brands: brandRows,
 				selectedBrand: null,
 				targets: SAMPLING_TARGETS,
-				browserRunnerEnabled: browserRunnerEnabled(),
+				browserRunnerEnabled: browserRunnerFeatureEnabled(),
 			};
 		}
 
@@ -444,7 +699,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				prompts: promptRows,
 			},
 			targets: SAMPLING_TARGETS,
-			browserRunnerEnabled: browserRunnerEnabled(),
+			browserRunnerEnabled: browserRunnerFeatureEnabled(),
 		};
 	});
 
@@ -548,6 +803,24 @@ export const listSamplingEvidenceArtifactsFn = createServerFn({ method: "POST" }
 		return { artifacts: artifacts.map(toSamplingEvidenceArtifactDto) };
 	});
 
+export const runSamplingNowFn = createServerFn({ method: "POST" })
+	.validator(runSamplingNowInputSchema)
+	.handler(async ({ data }) => {
+		const { session, brand } = await requireSamplingAdminBrand(data.brandId);
+		const state = await executeSamplingRunNow(data, {
+			requirePlatformAdminBrand: async () => ({ userId: session.user.id, brandId: brand.id }),
+		});
+		const current = await getDeliveryBatch({ brandId: data.brandId, batchId: state.batch.id });
+		if (!current) throw new Error("Run now batch could not be read after start");
+		return buildSamplingBatchSummary(
+			current.batch,
+			summarizeDeliveryCoverage(current.tasks),
+			undefined,
+			await getBrowserRunnerProgress(current.batch.id),
+			current.tasks,
+		);
+	});
+
 export const createSamplingBatchFn = createServerFn({ method: "POST" })
 	.validator(createSamplingBatchInputSchema)
 	.handler(async ({ data }) => {
@@ -564,7 +837,10 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 		}
 		if (data.executionMode === "browser_runner") {
 			if (!browserRunnerEnabled()) throw new Error("Browser Runner is disabled");
-			assertBrowserRunnerEvidenceProtocol(data.protocol.evidence.minimumArtifacts);
+			assertBrowserRunnerEvidenceProtocol(
+				data.protocol.evidence.minimumArtifacts,
+				data.targets.map(({ captureRouteKey }) => captureRouteKey),
+			);
 		}
 		assertSamplingBrowserRunnerProtocol(data.executionMode, data.targets);
 

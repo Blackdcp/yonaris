@@ -6,8 +6,17 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/bootstrap/
 		handlers: {
 			GET: async ({ request }: { request: Request }) => {
 				try {
+					const runner = await requireBrowserRunner(request);
 					return Response.json(
-						{ ready: true, runner: requireBrowserRunner(request) },
+						{
+							ready: true,
+							runner: {
+								id: runner.id,
+								market: runner.market,
+								locale: runner.locale,
+								timezone: runner.timezone,
+							},
+						},
 						{ headers: { "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } },
 					);
 				} catch (error) {

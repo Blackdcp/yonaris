@@ -23,9 +23,33 @@ describe("sampling Browser Runner protocol", () => {
 		}
 	});
 
+	it("accepts one extension batch containing Doubao and DeepSeek", () => {
+		expect(() =>
+			assertSamplingBrowserRunnerProtocol("browser_runner", [
+				{
+					...dedicatedNativeAuto,
+					captureRouteKey: "browser_extension.doubao",
+				},
+				{
+					...dedicatedNativeAuto,
+					surfaceTargetKey: "deepseek.consumer_web",
+					captureRouteKey: "browser_extension.deepseek",
+				},
+			]),
+		).not.toThrow();
+	});
+
 	it("rejects the runner-only route in a manual batch", () => {
 		expect(() => assertSamplingBrowserRunnerProtocol("manual", [dedicatedNativeAuto])).toThrow(
 			/browser_runner\.doubao route requires Browser Runner execution mode/,
 		);
+	});
+
+	it("rejects extension routes in a manual batch", () => {
+		expect(() =>
+			assertSamplingBrowserRunnerProtocol("manual", [
+				{ ...dedicatedNativeAuto, captureRouteKey: "browser_extension.doubao" },
+			]),
+		).toThrow(/browser extension routes require Browser Runner execution mode/i);
 	});
 });

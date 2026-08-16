@@ -1,3 +1,5 @@
+import { isBrowserExtensionCaptureRoute } from "./browser-extension-contract";
+
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
 export const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE = "broker_create_transport_failure";
 export const BROWSER_RUNNER_DEDICATED_PROFILE_BUSY_CODE = "dedicated_profile_busy";
@@ -63,8 +65,22 @@ export function isBrowserRunnerCnScope(input: { market: string; locale: string; 
 	return input.market === "CN" && input.locale === "zh-CN" && input.timezone === "Asia/Shanghai";
 }
 
-export function assertBrowserRunnerEvidenceProtocol(minimumArtifacts: number): void {
-	if (minimumArtifacts !== 2) {
+export function assertBrowserRunnerEvidenceProtocol(
+	minimumArtifacts: number,
+	captureRouteKeys: readonly string[] = ["browser_runner.doubao"],
+): void {
+	const hasLegacy = captureRouteKeys.includes("browser_runner.doubao");
+	const hasExtension = captureRouteKeys.some(isBrowserExtensionCaptureRoute);
+	if (hasLegacy && hasExtension) {
+		throw new Error("Browser Runner batches cannot mix legacy and extension evidence protocols");
+	}
+	if (hasExtension) {
+		if (captureRouteKeys.some((route) => !isBrowserExtensionCaptureRoute(route)) || minimumArtifacts !== 1) {
+			throw new Error("Browser extension batches require exactly one page snapshot");
+		}
+		return;
+	}
+	if (!hasLegacy || captureRouteKeys.some((route) => route !== "browser_runner.doubao") || minimumArtifacts !== 2) {
 		throw new Error("Browser Runner batches require exactly two evidence artifacts (screenshot and page snapshot)");
 	}
 }
@@ -73,7 +89,10 @@ export function assertPortalBrowserRunnerMutationAllowed(
 	input: { captureRouteKey: string; submitIntentAt: Date | null },
 	action: "submit" | "release",
 ): void {
-	if (input.captureRouteKey === "browser_runner.doubao" && input.submitIntentAt !== null) {
+	if (
+		(input.captureRouteKey === "browser_runner.doubao" || isBrowserExtensionCaptureRoute(input.captureRouteKey)) &&
+		input.submitIntentAt !== null
+	) {
 		throw new Error(
 			`Post-submit Browser Runner tasks cannot be ${action === "submit" ? "submitted" : "released"} from the portal; resume the original runner session or finalize a terminal failure`,
 		);
