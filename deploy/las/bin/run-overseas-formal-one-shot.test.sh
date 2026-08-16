@@ -40,7 +40,7 @@ cat >"$mock_bin/docker" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 joined=" $* "
-[[ "$joined" == *" ./src/run-overseas-formal-one-shot.ts --request-file ./src/overseas-formal-run-requests/stepfun-us-chatgpt-1x-20260816.json "* ]]
+[[ "$joined" == *" ./src/run-overseas-formal-one-shot.ts --request-file /app/src/overseas-formal-run-requests/stepfun-us-chatgpt-1x-20260816.json "* ]]
 if [[ "$joined" == *" --status-only "* ]]; then mode=status-only; elif [[ "$joined" == *" --apply "* ]]; then mode=apply; else mode=dry-run; fi
 printf '%s\n' "$mode" >>"$MOCK_EVENT_LOG"
 printf '%s\n' 'provider raw response must stay private'

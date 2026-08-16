@@ -75,7 +75,7 @@ set -a
 source "$env_file"
 set +a
 compose=(docker compose --project-name yonaris --env-file "$env_file" --file "$compose_file")
-container_manifest="./src/overseas-formal-run-requests/$(basename -- "$manifest_path")"
+container_manifest="/app/src/overseas-formal-run-requests/$(basename -- "$manifest_path")"
 
 run_mode() {
 	local mode="$1"
