@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { expect, type APIRequestContext, test } from "@playwright/test";
+import { expect, type APIRequestContext, type BrowserContext, test } from "@playwright/test";
 import pg from "pg";
 import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
 import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
@@ -14,10 +14,7 @@ test("platform Run now produces a paired two-channel 30-sample cohort with custo
   page: customerPage,
   request,
 }) => {
-  // This test persists 30 observations and snapshots while the CI stack is
-  // cold and other fixture specs are running in parallel. Keep the deadline
-  // above the observed cold-start duration so teardown is not interrupted.
-  test.setTimeout(180_000);
+  test.setTimeout(120_000);
   const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
   const scopeName = `Extension E2E ${suffix}`;
   const scope = await createProgram(request, suffix, scopeName);
@@ -93,9 +90,37 @@ test("platform Run now produces a paired two-channel 30-sample cohort with custo
     await customerPage.getByText("LLM Responses", { exact: true }).first().click();
     await expect(customerPage.getByText("Browser answer HTML", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
   } finally {
-    await admin.close();
+    await closeContextWithinDeadline(admin, 5_000);
   }
 });
+
+async function closeContextWithinDeadline(context: BrowserContext, timeoutMs: number): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const closeResult = context.close({ reason: "Admin setup complete" }).then(
+    () => ({ status: "closed" as const }),
+    (error: unknown) => ({ status: "error" as const, error }),
+  );
+  const timeoutResult = new Promise<{ status: "timeout" }>((resolve) => {
+    timer = setTimeout(() => resolve({ status: "timeout" }), timeoutMs);
+  });
+  const result = await Promise.race([closeResult, timeoutResult]);
+  if (timer) clearTimeout(timer);
+  if (result.status === "error" && !isAlreadyClosedError(result.error)) throw result.error;
+  if (result.status === "timeout") {
+    // The Playwright browser fixture still owns the browser process and will
+    // finish cleanup. Keep a handler attached so a late close cannot become an
+    // unhandled rejection after the product assertions have passed.
+    void closeResult.then((lateResult) => {
+      if (lateResult.status === "error" && !isAlreadyClosedError(lateResult.error)) {
+        console.warn("Timed-out admin context cleanup later failed", lateResult.error);
+      }
+    });
+  }
+}
+
+function isAlreadyClosedError(error: unknown): boolean {
+  return error instanceof Error && /Target page, context or browser has been closed/i.test(error.message);
+}
 
 async function createProgram(request: APIRequestContext, suffix: string, name: string): Promise<{ id: string }> {
   const response = await request.post("/api/v1/measurement-scopes", {
