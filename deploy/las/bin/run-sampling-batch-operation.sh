@@ -124,6 +124,7 @@ run_mode() {
 import json
 import pathlib
 import sys
+import uuid
 
 mode, command_status, output_path, request_id, idempotency_key = sys.argv[1:]
 try:
@@ -164,18 +165,30 @@ allowed_statuses = {"absent", "draft", "frozen", "in_progress", "completed", "ca
 allowed_automation_statuses = {None, "not_started", "running", "needs_human", "settled"}
 if status not in allowed_statuses or automation_status not in allowed_automation_statuses:
     raise SystemExit("Sampling batch account operation returned an invalid lifecycle status.")
+batch_id = payload.get("batchId")
+if status == "absent":
+    if batch_id is not None:
+        raise SystemExit("An absent sampling batch unexpectedly returned an identifier.")
+else:
+    try:
+        parsed_batch_id = uuid.UUID(batch_id)
+    except (AttributeError, TypeError, ValueError):
+        raise SystemExit("Sampling batch account operation returned an invalid batch identifier.")
+    if str(parsed_batch_id) != batch_id:
+        raise SystemExit("Sampling batch account operation returned a non-canonical batch identifier.")
+batch_suffix = f" batch_id={batch_id}" if batch_id is not None else ""
 if mode == "status-only":
     if action != "existing_noop":
         raise SystemExit("Sampling batch status check unexpectedly proposed a mutation.")
-    print("sampling batch status: existing")
+    print(f"sampling batch status: existing{batch_suffix}")
 elif mode == "dry-run":
     if action not in {"would_create_freeze_start", "would_requeue_safe_pre_submit", "would_requeue_dedicated_profile_busy", "existing_noop"}:
         raise SystemExit("Sampling batch dry-run returned an unexpected action.")
-    print(f"sampling batch dry-run: action={action} status={status} planned=18")
+    print(f"sampling batch dry-run: action={action} status={status} planned=18{batch_suffix}")
 elif mode == "apply":
     if action not in {"created_frozen_started", "requeued_safe_pre_submit", "requeued_dedicated_profile_busy", "existing_noop"}:
         raise SystemExit("Sampling batch apply returned an unexpected action.")
-    print(f"sampling batch apply: action={action} status={status} planned=18")
+    print(f"sampling batch apply: action={action} status={status} planned=18{batch_suffix}")
 else:
     raise SystemExit("Sampling batch operation received an invalid mode.")
 PY

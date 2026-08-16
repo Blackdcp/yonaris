@@ -78,13 +78,13 @@ if [[ "$mode" == "status-only" && "${MOCK_BATCH_EXISTS:-false}" != "true" ]]; th
 	exit 1
 fi
 if [[ "${MOCK_BATCH_EXISTS:-false}" == "true" ]]; then
-	printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"batch-1","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}'
+	printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}'
 	exit 0
 fi
 case "$mode" in
-	status-only) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"batch-1","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
+	status-only) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
 	dry-run) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"would_create_freeze_start","batchId":null,"brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"absent","automationStatus":null,"plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
-	apply) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"created_frozen_started","batchId":"batch-1","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
+	apply) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"created_frozen_started","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
 esac
 EOF
 
@@ -115,6 +115,7 @@ fi
 grep -Fq 'sampling batch status: absent' <<<"$first_output"
 grep -Fq 'sampling batch dry-run:' <<<"$first_output"
 grep -Fq 'sampling batch apply:' <<<"$first_output"
+grep -Fq 'batch_id=11111111-1111-4111-8111-111111111111' <<<"$first_output"
 if grep -Fq 'The fixed batch is absent' <<<"$first_output"; then
 	echo "The operation leaked raw account-ops output." >&2
 	exit 1
