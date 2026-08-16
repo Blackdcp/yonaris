@@ -155,8 +155,24 @@ if [[ -f "$receipt_file" ]]; then
 	exit 0
 fi
 
-env RESPONSE_SNAPSHOT_HOST_ROOT="$FIXED_HOST_ROOT" \
-	bash "$SCRIPT_DIR/prepare-response-snapshot-storage.sh" >/dev/null
+compose=(docker compose --project-name yonaris --env-file "$ENV_FILE" --file "$COMPOSE_FILE")
+if [[ "$(id -u)" == 0 ]]; then
+	env RESPONSE_SNAPSHOT_HOST_ROOT="$FIXED_HOST_ROOT" \
+		bash "$SCRIPT_DIR/prepare-response-snapshot-storage.sh" >/dev/null
+else
+	RESPONSE_SNAPSHOT_HOST_ROOT="$FIXED_HOST_ROOT" \
+		RESPONSE_SNAPSHOT_ROOT="$FIXED_CONTAINER_ROOT" \
+		IMAGE_TAG="$release_tag" "${compose[@]}" run --rm --no-deps -T --user 0:0 --entrypoint sh worker -ceu '
+		storage_root=/var/lib/yonaris/response-snapshots/v1
+		test ! -L "$storage_root"
+		if test -e "$storage_root" && ! test -d "$storage_root"; then exit 1; fi
+		install -d -o 1001 -g 1001 -m 0750 -- "$storage_root"
+		test "$(stat -c %u:%g -- "$storage_root")" = 1001:1001
+		test "$(stat -c %a -- "$storage_root")" = 750
+	' >/dev/null
+	env RESPONSE_SNAPSHOT_HOST_ROOT="$FIXED_HOST_ROOT" \
+		bash "$SCRIPT_DIR/prepare-response-snapshot-storage.sh" --verify-only >/dev/null
+fi
 
 backup_file="$(mktemp --tmpdir="$(dirname -- "$ENV_FILE")" '.response-snapshot-env.backup.XXXXXX')"
 candidate_file="$(mktemp --tmpdir="$(dirname -- "$ENV_FILE")" '.response-snapshot-env.candidate.XXXXXX')"
@@ -174,7 +190,6 @@ RESPONSE_SNAPSHOT_OUTBOX_TTL_HOURS=24
 EOF
 chmod --reference="$ENV_FILE" "$candidate_file"
 chown --reference="$ENV_FILE" "$candidate_file"
-compose=(docker compose --project-name yonaris --env-file "$ENV_FILE" --file "$COMPOSE_FILE")
 mv -f -- "$candidate_file" "$ENV_FILE"
 candidate_file=''
 rollback_armed=true

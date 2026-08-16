@@ -5,7 +5,15 @@ set +x
 umask 027
 export LC_ALL=C
 
-if [[ "$(id -u)" != 0 ]]; then
+verify_only=false
+if [[ "${1:-}" == --verify-only && $# -eq 1 ]]; then
+	verify_only=true
+elif [[ $# -ne 0 ]]; then
+	echo "Usage: $0 [--verify-only]" >&2
+	exit 2
+fi
+
+if [[ "$verify_only" != true && "$(id -u)" != 0 ]]; then
 	echo "Response snapshot storage preparation must run as root." >&2
 	exit 1
 fi
@@ -47,7 +55,9 @@ if [[ -e "$storage_root" && ! -d "$storage_root" ]]; then
 	exit 1
 fi
 
-install -d -o "$runtime_uid" -g "$runtime_gid" -m 0750 -- "$storage_root"
+if [[ "$verify_only" != true ]]; then
+	install -d -o "$runtime_uid" -g "$runtime_gid" -m 0750 -- "$storage_root"
+fi
 
 if [[ -L "$storage_root" || ! -d "$storage_root" ]]; then
 	echo "Prepared response snapshot storage is unsafe." >&2

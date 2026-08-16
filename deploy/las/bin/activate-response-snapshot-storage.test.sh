@@ -32,7 +32,8 @@ EOF
 
 cat >"$BIN_DIR/prepare-response-snapshot-storage.sh" <<'EOF'
 #!/usr/bin/env bash
-printf 'prepare:%s\n' "${RESPONSE_SNAPSHOT_HOST_ROOT:-}" >>"$MOCK_EVENT_LOG"
+printf 'prepare:%s:%s\n' "${RESPONSE_SNAPSHOT_HOST_ROOT:-}" "${1:-}" >>"$MOCK_EVENT_LOG"
+[[ "${1:-}" == --verify-only ]]
 [[ "${MOCK_PREPARE_FAIL:-false}" != true ]]
 EOF
 cat >"$BIN_DIR/check-response-snapshot-storage.sh" <<'EOF'
@@ -43,10 +44,14 @@ EOF
 cat >"$MOCK_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 printf 'docker:%s\n' "$*" >>"$MOCK_EVENT_LOG"
-count="$(grep -c '^docker:' "$MOCK_EVENT_LOG")"
-if [[ "${MOCK_COMPOSE_FAIL:-false}" == true && "$count" == 1 ]]; then
+if [[ "${MOCK_COMPOSE_FAIL:-false}" == true && "$*" == *' up -d --no-deps web worker'* ]]; then
 	exit 88
 fi
+EOF
+cat >"$MOCK_BIN/id" <<'EOF'
+#!/usr/bin/env bash
+[[ "${1:-}" == -u ]]
+printf '1000\n'
 EOF
 cat >"$MOCK_BIN/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -105,6 +110,9 @@ grep -Fxq 'RESPONSE_SNAPSHOT_STOP_USED_PERCENT=80' "$ENV_FILE"
 grep -Fxq 'RESPONSE_SNAPSHOT_OUTBOX_TTL_HOURS=24' "$ENV_FILE"
 grep -Fxq 'UNRELATED_SETTING=preserved' "$ENV_FILE"
 grep -Fq 'check:true:--round-trip' "$EVENT_LOG"
+grep -Fq 'docker:compose --project-name yonaris' "$EVENT_LOG"
+grep -Fq 'run --rm --no-deps -T --user 0:0 --entrypoint sh worker' "$EVENT_LOG"
+grep -Fq 'prepare:/var/lib/yonaris/response-snapshots/v1:--verify-only' "$EVENT_LOG"
 
 : >"$EVENT_LOG"
 second_output="$(run_activation)"
