@@ -269,6 +269,7 @@ test("factory reuses the operator profile sequentially without deleting it and a
 		assert.equal(launches.length, 2);
 		assert.ok(launches.every(({ profileDirectory: value }) => value === profileDirectory));
 		assert.ok(launches.every(({ options }) => options.chromiumSandbox === true));
+		assert.ok(launches.every(({ options }) => options.headless === false));
 	} finally {
 		await rm(stateDirectory, { recursive: true, force: true });
 	}

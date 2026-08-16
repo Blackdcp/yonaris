@@ -21,7 +21,7 @@ ENV_FILE="$DEPLOY_ROOT/.env"
 REQUEST_FILE="$SOURCE_ROOT/deploy/las/sampling-batch-operations/requests/stepfun.json"
 EVENT_LOG="$TEST_ROOT/events.log"
 RELEASE_TAG="sha-4444444444444444444444444444444444444444"
-MANIFEST_PATH="apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v5.json"
+MANIFEST_PATH="apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v6.json"
 
 if python3 --version >/dev/null 2>&1; then
 	TEST_PYTHON="$(command -v python3)"
@@ -45,14 +45,14 @@ EOF
 printf '%s\n' "$RELEASE_TAG" >"$DEPLOY_ROOT/.release"
 printf '{}\n' >"$SOURCE_ROOT/$MANIFEST_PATH"
 cat >"$REQUEST_FILE" <<'EOF'
-{"schemaVersion":1,"operation":"run-sampling-batch","requestId":"stepfun-cn-doubao-6x-20260816-v5","manifestPath":"apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v5.json"}
+{"schemaVersion":1,"operation":"run-sampling-batch","requestId":"stepfun-cn-doubao-6x-20260816-v6","manifestPath":"apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v6.json"}
 EOF
 
 cat >"$MOCK_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 joined=" $* "
-expected=" --profile operations run --rm --no-deps -T account-ops node ./node_modules/tsx/dist/cli.mjs ./src/run-sampling-batch.ts --request-file ./src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v5.json "
+expected=" --profile operations run --rm --no-deps -T account-ops node ./node_modules/tsx/dist/cli.mjs ./src/run-sampling-batch.ts --request-file ./src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v6.json "
 if [[ "$joined" != *"$expected"* ]]; then
 	echo "Unexpected docker invocation." >&2
 	exit 90
@@ -78,13 +78,13 @@ if [[ "$mode" == "status-only" && "${MOCK_BATCH_EXISTS:-false}" != "true" ]]; th
 	exit 1
 fi
 if [[ "${MOCK_BATCH_EXISTS:-false}" == "true" ]]; then
-	printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}'
+	printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v6","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v6","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}'
 	exit 0
 fi
 case "$mode" in
-	status-only) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
-	dry-run) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"would_create_freeze_start","batchId":null,"brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"absent","automationStatus":null,"plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
-	apply) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v5","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5","action":"created_frozen_started","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
+	status-only) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v6","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v6","action":"existing_noop","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
+	dry-run) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v6","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v6","action":"would_create_freeze_start","batchId":null,"brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"absent","automationStatus":null,"plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
+	apply) printf '%s\n' '{"ok":true,"requestId":"stepfun-cn-doubao-6x-20260816-v6","idempotencyKey":"sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v6","action":"created_frozen_started","batchId":"11111111-1111-4111-8111-111111111111","brandId":"brand-1","brandName":"StepFun","scopeId":"scope-1","scopeKey":"cn-zh-scored","status":"in_progress","automationStatus":"running","plannedTaskCount":18,"succeededTaskCount":0,"failedTaskCount":0,"measurementWindow":{"startsAt":"2026-08-15T16:00:00.000Z","endsAt":"2026-08-23T15:59:59.000Z"},"timezone":"Asia/Shanghai"}' ;;
 esac
 EOF
 

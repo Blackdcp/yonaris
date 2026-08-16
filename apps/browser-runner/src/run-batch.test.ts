@@ -86,6 +86,35 @@ test("a post-submit timeout recovers in the same session and never resubmits", a
 	assert.ok(events.some(({ type, data }) => type === "post_submit_recovery" && data?.submitCalledAgain === false));
 });
 
+test("a dedicated post-submit handoff stops before claiming the remaining shared-profile tasks", async () => {
+	const first = {
+		...fixtureTask("dedicated-timeout", "post_submit_timeout"),
+		sessionRequirement: "dedicated_sampling_profile" as const,
+	};
+	const second = {
+		...fixtureTask("must-remain-queued", "success"),
+		sessionRequirement: "dedicated_sampling_profile" as const,
+	};
+	const directory = await temporaryDirectory();
+	const journal = await RunJournal.create(directory, "dedicated-stop-run");
+	const factory = new DoubaoFixtureSessionFactory([first, second]);
+	const summary = await runBatch({
+		taskSource: new FixtureTaskSource([first, second]),
+		sessionFactory: factory,
+		journal,
+		sink: new LocalObservationSink(journal.runDirectory),
+	});
+
+	assert.equal(summary.status, "incomplete");
+	assert.equal(summary.total, 1);
+	assert.equal(summary.needsHuman, 1);
+	assert.equal(summary.results[0]?.status, "needs_human");
+	assert.equal(
+		factory.calls.some(({ taskId }) => taskId === second.id),
+		false,
+	);
+});
+
 test("an unknown submit result is confirmed in the same session with at most one submit", async () => {
 	const task = fixtureTask("unknown-submit", "submit_unknown_then_confirmed");
 	const { summary, factory, events } = await execute([task]);

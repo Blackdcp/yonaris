@@ -6,16 +6,16 @@ REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 WORKFLOW="$REPO_ROOT/.github/workflows/deploy-las.yaml"
 
 REQUEST_DIR="$REPO_ROOT/deploy/las/sampling-batch-operations/requests"
-EXPECTED_REQUEST="$REQUEST_DIR/stepfun-cn-doubao-6x-20260816-v5.json"
+EXPECTED_REQUEST="$REQUEST_DIR/stepfun-cn-doubao-6x-20260816-v6.json"
 
 if [[ ! -f "$EXPECTED_REQUEST" ]]; then
-	echo 'The approved v5 sampling batch request is missing.' >&2
+	echo 'The approved v6 sampling batch request is missing.' >&2
 	exit 1
 fi
 shopt -s nullglob
 requests=("$REQUEST_DIR"/*.json)
 if [[ ${#requests[@]} -ne 1 || "${requests[0]}" != "$EXPECTED_REQUEST" ]]; then
-	echo 'The release must contain only the approved v5 sampling batch request.' >&2
+	echo 'The release must contain only the approved v6 sampling batch request.' >&2
 	exit 1
 fi
 

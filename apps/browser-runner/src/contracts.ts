@@ -22,6 +22,7 @@ export type FixtureScenario =
 	| "success_without_brand"
 	| "pre_submit_transient_then_success"
 	| "post_submit_transient_then_success"
+	| "post_submit_timeout"
 	| "submit_unknown_then_confirmed"
 	| "login_required"
 	| "captcha"

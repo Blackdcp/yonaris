@@ -88,6 +88,14 @@ export async function runBatch(options: RunBatchOptions): Promise<RunSummary> {
 		const result = await executeClaimedTask(claimed, options);
 		results.push(result);
 		if (
+			claimed.task.sessionRequirement === "dedicated_sampling_profile" &&
+			result.status === "needs_human" &&
+			result.phase === "post_submit"
+		) {
+			incomplete = true;
+			break;
+		}
+		if (
 			result.status === "persistence_failed" ||
 			(result.status === "needs_human" && result.code === "retry_coordination_failed")
 		) {

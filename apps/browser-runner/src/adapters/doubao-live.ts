@@ -59,7 +59,7 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 			const context = await sandboxedPersistentContext(
 				profileDirectory,
 				{
-					headless: true,
+					headless: !dedicated,
 					locale: "zh-CN",
 					timezoneId: "Asia/Shanghai",
 					viewport: { width: 1_440, height: 900 },
@@ -112,7 +112,7 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 			context = await sandboxedPersistentContext(
 				profileDirectory,
 				{
-					headless: true,
+					headless: !dedicated,
 					locale: "zh-CN",
 					timezoneId: "Asia/Shanghai",
 					viewport: { width: 1_440, height: 900 },

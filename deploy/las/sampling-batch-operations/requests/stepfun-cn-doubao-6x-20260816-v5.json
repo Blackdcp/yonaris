@@ -1,6 +1,0 @@
-{
-	"schemaVersion": 1,
-	"operation": "run-sampling-batch",
-	"requestId": "stepfun-cn-doubao-6x-20260816-v5",
-	"manifestPath": "apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v5.json"
-}

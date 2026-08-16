@@ -121,6 +121,14 @@ class DoubaoFixtureSession implements SurfaceSession {
 				"Fixture response was not ready yet",
 			);
 		}
+		if (this.#scenario() === "post_submit_timeout") {
+			throw new BrowserRunnerError(
+				"response_timeout",
+				"post_submit",
+				"recover_same_session",
+				"Fixture response never became available",
+			);
+		}
 		return {
 			answerText: this.#answerText(),
 			answerHtml: `<section data-role="answer">${escapeHtml(this.#answerText())}</section>`,
