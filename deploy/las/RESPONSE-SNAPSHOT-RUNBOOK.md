@@ -14,6 +14,8 @@ Yonaris response snapshots are immutable HTML and JSON answer records. They are 
 
 Snapshot failure never changes `prompt_runs`, visibility, share of voice, citations or query fan-out. A successful AI observation remains successful while its archive is shown as pending/failed when storage is unavailable.
 
+For local extension runs, the archived HTML is the sanitized current answer container captured at observation time, accompanied by canonical JSON and hashes. It is intentionally not a whole-page provider DOM or pixel screenshot. The standard Doubao/DeepSeek extension contract uploads exactly one page-snapshot artifact; original-site screenshots remain a separately contracted forensic capability.
+
 ## Staged release order
 
 Use this order for every production rollout:

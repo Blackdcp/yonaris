@@ -70,6 +70,9 @@ async function seed() {
     // the ordinary DELETE sequence used before scoped observations existed.
     await client.query(`
       TRUNCATE TABLE
+        browser_runner_pairings,
+        browser_runner_device_brands,
+        browser_runner_devices,
         response_snapshot_access_events,
         response_snapshot_outbox,
         response_snapshots,

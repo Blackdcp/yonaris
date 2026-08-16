@@ -9,6 +9,7 @@ on:
       - .github/workflows/e2e.yaml
       - .github/workflows/mode-compat.yaml
       - apps/browser-runner/**
+      - apps/browser-extension/**
       - apps/web/**
       - apps/worker/**
       - e2e/**
