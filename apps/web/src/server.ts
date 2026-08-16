@@ -2,7 +2,7 @@ import "../instrument.server.mjs";
 import { wrapFetchWithSentry } from "@sentry/tanstackstart-react";
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { startCredentialRefresh } from "@workspace/lib/secrets";
-import { applySecurityHeaders } from "./server-security-headers";
+import { fetchApplicationResponse } from "./server-fetch";
 
 // Not awaited: the app has to serve sign-in and settings whether or not the
 // credential store is reachable.
@@ -28,11 +28,20 @@ function configuredPosthogOrigin(): string | undefined {
 
 const posthogOrigin = configuredPosthogOrigin();
 
-export default createServerEntry(
-	wrapFetchWithSentry({
-		async fetch(request: Request) {
-			const response = await handler.fetch(request);
-			return applySecurityHeaders(request, response, { strictTransportSecurity, posthogOrigin });
-		},
-	}),
-);
+const directServerEntry = {
+	fetch(request: Request) {
+		return handler.fetch(request);
+	},
+};
+const instrumentedServerEntry = wrapFetchWithSentry({ ...directServerEntry });
+
+export default createServerEntry({
+	fetch(request: Request) {
+		return fetchApplicationResponse({
+			request,
+			directFetch: directServerEntry.fetch,
+			instrumentedFetch: instrumentedServerEntry.fetch,
+			securityHeaderOptions: { strictTransportSecurity, posthogOrigin },
+		});
+	},
+});
