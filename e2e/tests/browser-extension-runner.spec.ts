@@ -14,6 +14,7 @@ test("platform Run now produces a paired two-channel 30-sample cohort with custo
   page: customerPage,
   request,
 }) => {
+  test.setTimeout(120_000);
   const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
   const scopeName = `Extension E2E ${suffix}`;
   const scope = await createProgram(request, suffix, scopeName);

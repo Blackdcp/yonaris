@@ -1,20 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
-import {
-	BrowserRunnerDeviceError,
-	consumeBrowserRunnerPairing,
-	createBrowserRunnerPairing,
-	heartbeatBrowserRunnerDevice,
-	listBrowserRunnerDevices,
-	revokeBrowserRunnerDevice,
-} from "@workspace/lib/db/browser-runner-devices";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
-import {
-	BrowserRunnerHttpError,
-	type BrowserRunnerPrincipal,
-	browserRunnerFeatureEnabled,
-} from "./browser-runner-auth";
+import type { BrowserRunnerPrincipal } from "./browser-runner-auth";
 
 export const BROWSER_EXTENSION_FEATURE_VERSION = "browser-extension.v1" as const;
 
@@ -85,7 +73,11 @@ export async function pairBrowserRunnerDevice(
 		}) => Promise<{ device: { id: string }; token: string; allowedBrandIds: string[] }>;
 	} = {},
 ) {
-	assertBrowserRunnerFeatureEnabled();
+	await assertBrowserRunnerFeatureEnabled();
+	const { BrowserRunnerDeviceError, consumeBrowserRunnerPairing } = await import(
+		"@workspace/lib/db/browser-runner-devices"
+	);
+	const { BrowserRunnerHttpError } = await import("./browser-runner-auth");
 	const { code, ...heartbeat } = browserRunnerPairSchema.parse(input);
 	let paired: Awaited<ReturnType<NonNullable<typeof dependencies.consumePairing>>>;
 	try {
@@ -111,7 +103,9 @@ export async function updateBrowserRunnerDeviceHeartbeat(
 		now?: () => Date;
 	} = {},
 ) {
-	assertBrowserRunnerFeatureEnabled();
+	await assertBrowserRunnerFeatureEnabled();
+	const { heartbeatBrowserRunnerDevice } = await import("@workspace/lib/db/browser-runner-devices");
+	const { BrowserRunnerHttpError } = await import("./browser-runner-auth");
 	if (principal.kind !== "browser_extension") {
 		throw new BrowserRunnerHttpError(403, "Paired Browser Runner device required");
 	}
@@ -136,12 +130,14 @@ export const createBrowserRunnerPairingFn = createServerFn({ method: "POST" })
 	.validator(createPairingSchema)
 	.handler(async ({ data }) => {
 		const session = await requirePlatformAdmin();
-		assertBrowserRunnerFeatureEnabled();
+		await assertBrowserRunnerFeatureEnabled();
+		const { createBrowserRunnerPairing } = await import("@workspace/lib/db/browser-runner-devices");
 		return createBrowserRunnerPairing({ ...data, createdBy: session.user.id });
 	});
 
 export const listBrowserRunnerDevicesFn = createServerFn({ method: "GET" }).handler(async () => {
 	await requirePlatformAdmin();
+	const { listBrowserRunnerDevices } = await import("@workspace/lib/db/browser-runner-devices");
 	return (await listBrowserRunnerDevices()).map((device) => ({
 		id: device.id,
 		displayName: device.displayName,
@@ -161,11 +157,13 @@ export const revokeBrowserRunnerDeviceFn = createServerFn({ method: "POST" })
 	.validator(revokeDeviceSchema)
 	.handler(async ({ data }) => {
 		await requirePlatformAdmin();
+		const { revokeBrowserRunnerDevice } = await import("@workspace/lib/db/browser-runner-devices");
 		await revokeBrowserRunnerDevice(data);
 		return { revoked: true };
 	});
 
-export function assertBrowserRunnerFeatureEnabled(): void {
+async function assertBrowserRunnerFeatureEnabled(): Promise<void> {
+	const { BrowserRunnerHttpError, browserRunnerFeatureEnabled } = await import("./browser-runner-auth");
 	if (!browserRunnerFeatureEnabled()) throw new BrowserRunnerHttpError(503, "Browser Runner is disabled");
 }
 
