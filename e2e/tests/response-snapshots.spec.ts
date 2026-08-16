@@ -8,6 +8,7 @@ import {
   MEMTENSOR_SNAPSHOT_ID,
   STEPFUN_BRAND_ID,
   STEPFUN_PROMPT_ID,
+  STEPFUN_SNAPSHOT_EXPORT_DAYS_AGO,
   STEPFUN_SNAPSHOT_IDS,
   STEPFUN_SNAPSHOT_RUN_IDS,
 } from "../fixtures";
@@ -94,8 +95,8 @@ test.describe("customer response snapshot archive", () => {
   });
 
   test("exports only current authorized ready artifacts", async ({ request }) => {
-    const end = beijingDate(new Date());
-    const start = shiftDate(end, -7);
+    const end = shiftDate(beijingDate(new Date()), -STEPFUN_SNAPSHOT_EXPORT_DAYS_AGO);
+    const start = end;
     const query = new URLSearchParams({ brandId: STEPFUN_BRAND_ID, start, end });
     const estimate = await request.get(`/api/app/response-snapshots/export?${query}&mode=estimate`);
     expect(estimate.status()).toBe(200);

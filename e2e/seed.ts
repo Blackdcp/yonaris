@@ -38,6 +38,7 @@ import {
   STEPFUN_ORG_ID,
   STEPFUN_PROMPT_ID,
   STEPFUN_SCOPE_ID,
+  STEPFUN_SNAPSHOT_EXPORT_DAYS_AGO,
   STEPFUN_SNAPSHOT_IDS,
   STEPFUN_SNAPSHOT_RUN_IDS,
   TEST_BRAND_ID,
@@ -610,6 +611,7 @@ async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
   const hour = 60 * 60 * 1_000;
   const day = 24 * hour;
   const retention = 90 * day;
+  const snapshotExportDay = beijingNoonDaysAgo(now, STEPFUN_SNAPSHOT_EXPORT_DAYS_AGO);
   const stepfunRuns = [
     {
       id: STEPFUN_SNAPSHOT_RUN_IDS.nativeHtml,
@@ -617,7 +619,7 @@ async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
       provider: "brightdata",
       version: "gpt-5",
       answerText: "StepFun appears in this overseas native HTML answer.",
-      observedAt: new Date(now.getTime() - 6 * hour),
+      observedAt: snapshotExportDay,
       brandMentioned: true,
       webQueries: ["StepFun AI company"],
     },
@@ -627,7 +629,7 @@ async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
       provider: "brightdata",
       version: "sonar",
       answerText: "This overseas structured response is archived with deterministic fallback HTML.",
-      observedAt: new Date(now.getTime() - 5 * hour),
+      observedAt: new Date(snapshotExportDay.getTime() + hour),
       brandMentioned: false,
       webQueries: ["Chinese foundation model companies"],
     },
@@ -637,7 +639,7 @@ async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
       provider: "browser-runner",
       version: "consumer-web",
       answerText: "豆包回答：阶跃星辰（StepFun）是一家人工智能公司。",
-      observedAt: new Date(now.getTime() - 4 * hour),
+      observedAt: new Date(snapshotExportDay.getTime() + 2 * hour),
       brandMentioned: true,
       webQueries: [],
     },
@@ -885,6 +887,13 @@ async function seedResponseSnapshotFixtures(client: pg.Client): Promise<void> {
     ],
   );
   console.log("  Created response snapshot fixtures: 4 ready, 1 pending, 1 failed, 1 expired");
+}
+
+function beijingNoonDaysAgo(now: Date, daysAgo: number): Date {
+  const beijingDate = new Date(now.getTime() + 8 * 60 * 60 * 1_000).toISOString().slice(0, 10);
+  const result = new Date(`${beijingDate}T04:00:00.000Z`);
+  result.setUTCDate(result.getUTCDate() - daysAgo);
+  return result;
 }
 
 async function seedReadyResponseSnapshot(
