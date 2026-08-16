@@ -1,0 +1,19 @@
+{
+	"manifest_version": 3,
+	"name": "Yonaris Browser Runner",
+	"description": "Administrator-operated Doubao and DeepSeek collection for Yonaris.",
+	"version": "0.1.0",
+	"minimum_chrome_version": "120",
+	"permissions": ["storage", "alarms", "tabs", "scripting", "notifications"],
+	"host_permissions": ["https://portal.yonaris.com/*", "https://*.doubao.com/*", "https://chat.deepseek.com/*"],
+	"background": {
+		"service_worker": "background.js"
+	},
+	"action": {
+		"default_title": "Yonaris Browser Runner",
+		"default_popup": "popup.html"
+	},
+	"content_security_policy": {
+		"extension_pages": "script-src 'self'; object-src 'none'"
+	}
+}

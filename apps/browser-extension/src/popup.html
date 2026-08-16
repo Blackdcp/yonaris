@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Yonaris Browser Runner</title>
+		<link rel="stylesheet" href="popup.css" />
+	</head>
+	<body>
+		<main>
+			<header>
+				<p class="eyebrow">Yonaris</p>
+				<h1>Browser Runner</h1>
+			</header>
+			<section id="paired" hidden>
+				<p class="status ready">Paired and ready</p>
+				<p id="device-summary" class="muted"></p>
+				<button id="refresh" type="button">Refresh status</button>
+				<button id="disconnect" type="button" class="secondary">Disconnect</button>
+			</section>
+			<form id="pairing-form">
+				<label for="portal-url">Portal</label>
+				<input id="portal-url" value="https://portal.yonaris.com" readonly />
+				<label for="pairing-code">One-time pairing code</label>
+				<input id="pairing-code" autocomplete="off" maxlength="200" required />
+				<button id="pair" type="submit">Pair this Chrome</button>
+			</form>
+			<p id="message" role="status" class="muted"></p>
+		</main>
+		<script src="popup.js"></script>
+	</body>
+</html>
