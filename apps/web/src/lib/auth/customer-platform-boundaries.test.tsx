@@ -80,6 +80,8 @@ describe("fixed customer and platform workspaces", () => {
 		expect(markup).toContain("Settings");
 		expect(markup).not.toContain("Platform administration");
 		expect(markup).not.toContain("Sampling");
+		expect(markup).not.toContain("Run now");
+		expect(markup).not.toContain("Local devices");
 		expect(markup).not.toContain("Workflows");
 		expect(markup).not.toContain("Tools");
 	});

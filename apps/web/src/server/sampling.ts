@@ -1,4 +1,4 @@
-import { createServerFn } from "@tanstack/react-start";
+import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
 import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import {
 	assertBrowserRunnerEvidenceProtocol,
@@ -252,7 +252,7 @@ export type SamplingRunNowDependencies = {
 	now: () => Date;
 };
 
-export async function executeSamplingRunNow(
+export const executeSamplingRunNow = createServerOnlyFn(async function executeSamplingRunNow(
 	input: {
 		brandId: string;
 		scopeId: string;
@@ -355,7 +355,7 @@ export async function executeSamplingRunNow(
 		return current;
 	}
 	throw new Error("Run now batch is in an inconsistent lifecycle state");
-}
+});
 
 function defaultSamplingRunNowDependencies(): SamplingRunNowDependencies {
 	return {
