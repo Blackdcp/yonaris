@@ -4,6 +4,12 @@ set -Eeuo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 script_under_test="$script_dir/run-overseas-formal-one-shot.sh"
+workflow="$script_dir/../../../.github/workflows/deploy-las.yaml"
+
+overseas_job_block="$(sed -n '/^  overseas-formal-one-shot:/,/^  [[:alnum:]_-]*:/p' "$workflow")"
+grep -Fq -- '-o ServerAliveInterval=30' <<<"$overseas_job_block"
+grep -Fq -- '-o ServerAliveCountMax=20' <<<"$overseas_job_block"
+
 test_root="$(mktemp -d)"
 trap 'rm -rf -- "$test_root"' EXIT
 source_root="$test_root/source"
