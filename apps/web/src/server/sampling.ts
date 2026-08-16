@@ -657,7 +657,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				brands: brandRows,
 				selectedBrand: null,
 				targets: SAMPLING_TARGETS,
-				browserRunnerEnabled: browserRunnerEnabled(),
+				browserRunnerEnabled: browserRunnerFeatureEnabled(),
 			};
 		}
 
@@ -699,7 +699,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				prompts: promptRows,
 			},
 			targets: SAMPLING_TARGETS,
-			browserRunnerEnabled: browserRunnerEnabled(),
+			browserRunnerEnabled: browserRunnerFeatureEnabled(),
 		};
 	});
 
