@@ -79,11 +79,19 @@ describe("Browser Runner retry policy", () => {
 	});
 
 	it("blocks portal submit and release after durable Browser Runner submit intent", () => {
-		const postSubmit = { captureRouteKey: "browser_runner.doubao", submitIntentAt: new Date() };
-		expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "submit")).toThrow(/cannot be submitted/);
-		expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "release")).toThrow(/cannot be released/);
+		for (const captureRouteKey of ["browser_runner.doubao", "browser_extension.doubao", "browser_extension.deepseek"]) {
+			const postSubmit = { captureRouteKey, submitIntentAt: new Date() };
+			expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "submit")).toThrow(/cannot be submitted/);
+			expect(() => assertPortalBrowserRunnerMutationAllowed(postSubmit, "release")).toThrow(/cannot be released/);
+			expect(() =>
+				assertPortalBrowserRunnerMutationAllowed({ ...postSubmit, submitIntentAt: null }, "submit"),
+			).not.toThrow();
+		}
 		expect(() =>
-			assertPortalBrowserRunnerMutationAllowed({ ...postSubmit, submitIntentAt: null }, "submit"),
+			assertPortalBrowserRunnerMutationAllowed(
+				{ captureRouteKey: "manual_import.generic", submitIntentAt: new Date() },
+				"submit",
+			),
 		).not.toThrow();
 	});
 

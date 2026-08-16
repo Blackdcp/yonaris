@@ -1,3 +1,5 @@
+import { isBrowserExtensionCaptureRoute } from "./browser-extension-contract";
+
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
 export const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE = "broker_create_transport_failure";
 export const BROWSER_RUNNER_DEDICATED_PROFILE_BUSY_CODE = "dedicated_profile_busy";
@@ -73,7 +75,10 @@ export function assertPortalBrowserRunnerMutationAllowed(
 	input: { captureRouteKey: string; submitIntentAt: Date | null },
 	action: "submit" | "release",
 ): void {
-	if (input.captureRouteKey === "browser_runner.doubao" && input.submitIntentAt !== null) {
+	if (
+		(input.captureRouteKey === "browser_runner.doubao" || isBrowserExtensionCaptureRoute(input.captureRouteKey)) &&
+		input.submitIntentAt !== null
+	) {
 		throw new Error(
 			`Post-submit Browser Runner tasks cannot be ${action === "submit" ? "submitted" : "released"} from the portal; resume the original runner session or finalize a terminal failure`,
 		);
