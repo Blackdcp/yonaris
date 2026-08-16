@@ -20,6 +20,7 @@ on:
       - deploy/las/bin/**
       - deploy/las/browser-runner/**
       - deploy/las/browser-runner-activation/**
+      - deploy/las/response-snapshot-activation/**
       - deploy/las/response-snapshot-backfills/**
       - deploy/las/reviewed-consumer-cohort-imports/**
       - deploy/las/sampling-batch-operations/**
@@ -41,6 +42,60 @@ env:
   IMAGE_NAMESPACE: blackdcp
 
 jobs:
+  response_snapshot_activation_plan:
+    name: Plan approved response snapshot activation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_request: ${{ steps.plan.outputs.has_request }}
+      request_name: ${{ steps.plan.outputs.request_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Detect checked-in response snapshot activation request
+        id: plan
+        shell: bash
+        run: |
+          shopt -s nullglob
+          requests=(deploy/las/response-snapshot-activation/requests/*.json)
+          if (( ${#requests[@]} > 1 )); then
+            echo "Only one approved response snapshot activation request is allowed per release." >&2
+            exit 1
+          elif (( ${#requests[@]} == 1 )); then
+            request_name="$(basename -- "${requests[0]}")"
+            if [[ ! "$request_name" =~ ^[a-z0-9][a-z0-9._-]{0,95}\.json$ ]]; then
+              echo "Invalid response snapshot activation request filename." >&2
+              exit 1
+            fi
+            python3 - "${requests[0]}" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          expected = {
+              "schemaVersion": 1,
+              "operation": "enable-response-snapshot-storage",
+              "hostRoot": "/var/lib/yonaris/response-snapshots/v1",
+              "containerRoot": "/var/lib/yonaris/response-snapshots/v1",
+              "retentionDays": 90,
+              "warnUsedPercent": 70,
+              "stopUsedPercent": 80,
+              "outboxTtlHours": 24,
+          }
+          if request != expected:
+              raise SystemExit("Response snapshot activation request does not match the approved fixed contract.")
+          PY
+            echo "has_request=true" >> "$GITHUB_OUTPUT"
+            echo "request_name=$request_name" >> "$GITHUB_OUTPUT"
+            echo "Approved response snapshot activation request count: 1"
+          else
+            echo "has_request=false" >> "$GITHUB_OUTPUT"
+            echo "request_name=" >> "$GITHUB_OUTPUT"
+          fi
+
   browser_runner_activation_plan:
     name: Plan approved Browser Runner activation
     runs-on: ubuntu-latest
@@ -311,11 +366,13 @@ jobs:
           bash deploy/las/bin/check-response-snapshot-storage.test.sh
           bash deploy/las/bin/export-response-snapshots.test.sh
           bash deploy/las/bin/run-response-snapshot-backfill.test.sh
+          bash deploy/las/bin/activate-response-snapshot-storage.test.sh
           bash -n \
             deploy/las/bin/prepare-response-snapshot-storage.sh \
             deploy/las/bin/check-response-snapshot-storage.sh \
             deploy/las/bin/export-response-snapshots.sh \
             deploy/las/bin/run-response-snapshot-backfill.sh \
+            deploy/las/bin/activate-response-snapshot-storage.sh \
             deploy/las/bin/deploy.sh
 
   build-images:
@@ -437,6 +494,44 @@ jobs:
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-report-requests.sh sha-$RELEASE_SHA'"
+
+  response-snapshot-activation:
+    name: Activate approved response snapshot storage
+    needs:
+      - deploy
+      - response_snapshot_activation_plan
+    if: needs.deploy.result == 'success' && needs.response_snapshot_activation_plan.outputs.has_request == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://portal.yonaris.com/app/stepfun
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Execute idempotent response snapshot storage activation
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+          REQUEST_NAME: ${{ needs.response_snapshot_activation_plan.outputs.request_name }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/activate-response-snapshot-storage.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/response-snapshot-activation/requests/$REQUEST_NAME'"
 
   sampling-batch-operation:
     name: Run approved production sampling batch operation

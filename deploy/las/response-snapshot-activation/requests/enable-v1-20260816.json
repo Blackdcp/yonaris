@@ -1,0 +1,10 @@
+{
+	"schemaVersion": 1,
+	"operation": "enable-response-snapshot-storage",
+	"hostRoot": "/var/lib/yonaris/response-snapshots/v1",
+	"containerRoot": "/var/lib/yonaris/response-snapshots/v1",
+	"retentionDays": 90,
+	"warnUsedPercent": 70,
+	"stopUsedPercent": 80,
+	"outboxTtlHours": 24
+}
