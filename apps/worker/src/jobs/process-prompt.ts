@@ -118,7 +118,7 @@ async function getPromptContext(promptId: string): Promise<PromptContext | null>
 	};
 }
 
-async function runModelIteration({
+export async function runModelIteration({
 	sourceJobId,
 	promptId,
 	promptValue,

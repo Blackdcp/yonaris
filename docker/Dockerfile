@@ -117,6 +117,8 @@ RUN test -r ./node_modules/tsx/dist/cli.mjs \
   && test -r ./src/manage-customer-account.ts \
   && test -r ./src/run-sampling-batch.ts \
   && test -r ./src/audit-overseas-formal-readiness.ts \
+  && test -r ./src/run-overseas-formal-one-shot.ts \
+  && test -r ./src/overseas-formal-run-requests/stepfun-us-chatgpt-1x-20260816.json \
   && test -r ./src/sampling-batch-requests/stepfun-cn-doubao-6x-20260813.json \
   && test -r ./src/import-reviewed-consumer-cohort.ts \
   && test -r ./src/backfill-response-snapshots.ts \

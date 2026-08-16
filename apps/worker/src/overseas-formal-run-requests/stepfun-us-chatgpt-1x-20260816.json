@@ -1,0 +1,33 @@
+{
+	"schemaVersion": 1,
+	"operation": "run-overseas-formal-one-shot",
+	"requestId": "stepfun-us-chatgpt-1x-20260816",
+	"brand": { "nameExact": "StepFun" },
+	"sourceScope": { "keyExact": "cn-zh-scored" },
+	"destinationScope": {
+		"keyExact": "us-en-chatgpt-one-shot-20260816",
+		"nameExact": "US · English · ChatGPT one-shot 2026-08-16",
+		"marketExact": "US",
+		"localeExact": "en-US",
+		"timezoneExact": "Asia/Shanghai",
+		"evaluationRoleExact": "scored",
+		"automaticTargetKeys": []
+	},
+	"prompts": {
+		"enabledCountExact": 3,
+		"textsExact": [
+			"国内有哪些主流大模型公司?",
+			"如果我要选择国产大模型服务商,有哪些推荐?",
+			"阶跃星辰 StepFun 是一家什么公司?"
+		]
+	},
+	"target": {
+		"model": "chatgpt",
+		"provider": "brightdata",
+		"surfaceTargetKey": "chatgpt.consumer_web",
+		"captureRouteKey": "brightdata.chatgpt_dataset",
+		"webSearch": true,
+		"samplesPerPrompt": 1
+	},
+	"dailyAutomationEnabled": false
+}
