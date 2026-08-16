@@ -1,0 +1,103 @@
+import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
+import { AdaptiveSurfacePool, orderClaimsFairly } from "./concurrency";
+import type { TaskRunResult } from "./task-runner";
+
+export type SurfacePollSummary = {
+	succeeded: number;
+	retryScheduled: number;
+	needsHuman: number;
+	incomplete: number;
+};
+
+type PollStartedWorkInput = {
+	brandIds: readonly string[];
+	surfaces: readonly BrowserExtensionSurface[];
+	claim(brandId: string, surface: BrowserExtensionSurface): Promise<BrowserExtensionClaim | null>;
+	run(claim: BrowserExtensionClaim): Promise<TaskRunResult>;
+	pools?: Partial<Record<BrowserExtensionSurface, AdaptiveSurfacePool>>;
+	now?: () => number;
+	maximumTasksPerSurface?: number;
+};
+
+export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
+	bySurface: Record<BrowserExtensionSurface, SurfacePollSummary>;
+}> {
+	const bySurface = emptySummaries();
+	await Promise.all(
+		input.surfaces.map(async (surface) => {
+			try {
+				const pool = input.pools?.[surface] ?? new AdaptiveSurfacePool();
+				if (!pool.canStart(input.now?.() ?? Date.now())) return;
+				const maximumTasks = input.maximumTasksPerSurface ?? 100;
+				let processed = 0;
+				while (processed < maximumTasks && pool.canStart(input.now?.() ?? Date.now())) {
+					const claims = await claimRound(input.brandIds, surface, pool.current, input.claim);
+					if (claims.length === 0) break;
+					const results = await Promise.all(
+						orderClaimsFairly(claims).map(async (claim) => {
+							try {
+								return { claim, result: await input.run(claim) };
+							} catch {
+								return { claim, result: { status: "incomplete", code: "coordinator_unhandled" } as const };
+							}
+						}),
+					);
+					processed += results.length;
+					for (const { result } of results) {
+						switch (result.status) {
+							case "succeeded":
+								bySurface[surface].succeeded += 1;
+								pool.recordStableSuccess();
+								break;
+							case "retry_scheduled":
+								bySurface[surface].retryScheduled += 1;
+								break;
+							case "needs_human":
+								bySurface[surface].needsHuman += 1;
+								if (result.code === "rate_limited") pool.recordRateLimit(input.now?.() ?? Date.now());
+								break;
+							case "incomplete":
+								bySurface[surface].incomplete += 1;
+								break;
+						}
+					}
+				}
+			} catch {
+				bySurface[surface].incomplete += 1;
+			}
+		}),
+	);
+	return { bySurface };
+}
+
+async function claimRound(
+	brandIds: readonly string[],
+	surface: BrowserExtensionSurface,
+	maximum: number,
+	claim: PollStartedWorkInput["claim"],
+): Promise<BrowserExtensionClaim[]> {
+	const claims: BrowserExtensionClaim[] = [];
+	if (brandIds.length === 0) return claims;
+	let emptyBrands = 0;
+	let brandIndex = 0;
+	while (claims.length < maximum && emptyBrands < brandIds.length) {
+		const brandId = brandIds[brandIndex % brandIds.length];
+		brandIndex += 1;
+		if (!brandId) break;
+		const next = await claim(brandId, surface);
+		if (next) {
+			claims.push(next);
+			emptyBrands = 0;
+		} else {
+			emptyBrands += 1;
+		}
+	}
+	return claims;
+}
+
+function emptySummaries(): Record<BrowserExtensionSurface, SurfacePollSummary> {
+	return {
+		"doubao.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
+		"deepseek.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
+	};
+}

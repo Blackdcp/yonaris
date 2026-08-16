@@ -12,9 +12,11 @@ const JOURNAL_KEY = "browserRunnerJournal";
 const DEVICE_TOKEN_PATTERN = /^yrd_[A-Za-z0-9_-]{43}$/;
 const JOURNAL_PHASES = new Set<TaskJournalPhase>([
 	"claimed",
-	"intent_recorded",
+	"prepared",
+	"submit_intent",
 	"submitted",
-	"collecting",
+	"collected",
+	"uploaded",
 	"needs_human",
 ]);
 
@@ -101,6 +103,8 @@ function validateDevice(value: unknown): PairedDeviceConfig {
 function validateJournalEntry(value: unknown): TaskJournalEntry {
 	if (!isRecord(value)) throw new Error("Browser Runner task journal entry is invalid");
 	const taskId = requiredText(value.taskId, "taskId", 200);
+	const batchId = requiredText(value.batchId, "batchId", 200);
+	const brandId = requiredText(value.brandId, "brandId", 300);
 	if (typeof value.phase !== "string" || !JOURNAL_PHASES.has(value.phase as TaskJournalPhase)) {
 		throw new Error("Browser Runner task journal phase is invalid");
 	}
@@ -112,10 +116,21 @@ function validateJournalEntry(value: unknown): TaskJournalEntry {
 	}
 	const updatedAt = requiredText(value.updatedAt, "updatedAt", 50);
 	if (!Number.isFinite(new Date(updatedAt).getTime())) throw new Error("Browser Runner task journal time is invalid");
+	if (!Number.isSafeInteger(value.tabId) || (value.tabId as number) < 0) {
+		throw new Error("Browser Runner task journal tabId is invalid");
+	}
+	const runnerSessionId = requiredText(value.runnerSessionId, "runnerSessionId", 300);
+	const promptSha256 = requiredText(value.promptSha256, "promptSha256", 64);
+	if (!/^[0-9a-f]{64}$/.test(promptSha256)) throw new Error("Browser Runner task journal prompt digest is invalid");
 	return {
 		taskId,
+		batchId,
+		brandId,
 		phase: value.phase as TaskJournalPhase,
 		surfaceTargetKey: value.surfaceTargetKey as BrowserExtensionSurface,
+		tabId: value.tabId as number,
+		runnerSessionId,
+		promptSha256,
 		updatedAt,
 	};
 }

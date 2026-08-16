@@ -26,6 +26,7 @@ await build({
 await Promise.all([
 	cp(resolve(root, "src/popup.html"), resolve(output, "popup.html")),
 	cp(resolve(root, "src/popup.css"), resolve(output, "popup.css")),
+	cp(resolve(root, "src/icon.svg"), resolve(output, "icon.svg")),
 	copyManifest(),
 ]);
 

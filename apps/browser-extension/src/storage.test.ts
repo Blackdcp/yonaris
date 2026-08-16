@@ -31,8 +31,13 @@ describe("DeviceStorage", () => {
 		const storage = new DeviceStorage(memoryStorage());
 		await storage.saveJournal({
 			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
 			phase: "submitted",
 			surfaceTargetKey: "doubao.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
 			updatedAt: "2026-08-16T00:00:00.000Z",
 			answerText: "must never persist",
 		} as never);
@@ -53,8 +58,13 @@ describe("DeviceStorage", () => {
 		});
 		await storage.saveJournal({
 			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
 			phase: "claimed",
 			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
 			updatedAt: "2026-08-16T00:00:00.000Z",
 		});
 

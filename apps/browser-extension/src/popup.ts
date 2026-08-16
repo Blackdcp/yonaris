@@ -3,6 +3,11 @@ import { PORTAL_ORIGIN } from "./contracts";
 import { buildHeartbeat } from "./heartbeat";
 import { chromeDeviceStorage } from "./storage";
 
+type SurfaceSummary = { succeeded: number; retryScheduled: number; needsHuman: number; incomplete: number };
+type RuntimeSummary = {
+	bySurface: Partial<Record<"doubao.consumer_web" | "deepseek.consumer_web", SurfaceSummary>>;
+};
+
 const storage = chromeDeviceStorage();
 const form = requiredElement<HTMLFormElement>("pairing-form");
 const paired = requiredElement<HTMLElement>("paired");
@@ -10,7 +15,10 @@ const codeInput = requiredElement<HTMLInputElement>("pairing-code");
 const pairButton = requiredElement<HTMLButtonElement>("pair");
 const disconnectButton = requiredElement<HTMLButtonElement>("disconnect");
 const refreshButton = requiredElement<HTMLButtonElement>("refresh");
+const runNowButton = requiredElement<HTMLButtonElement>("run-now");
 const summary = requiredElement<HTMLElement>("device-summary");
+const doubaoStatus = requiredElement<HTMLElement>("doubao-status");
+const deepseekStatus = requiredElement<HTMLElement>("deepseek-status");
 const message = requiredElement<HTMLElement>("message");
 
 form.addEventListener("submit", (event) => {
@@ -19,6 +27,7 @@ form.addEventListener("submit", (event) => {
 });
 disconnectButton.addEventListener("click", () => void disconnect());
 refreshButton.addEventListener("click", () => void refresh());
+runNowButton.addEventListener("click", () => void runNow());
 
 void render();
 
@@ -49,7 +58,26 @@ async function refresh(): Promise<void> {
 	setBusy(true);
 	try {
 		const result = (await chrome.runtime.sendMessage({ type: "browser-runner:heartbeat" })) as { ok?: boolean };
+		await renderRuntimeStatus();
 		setMessage(result?.ok ? "Portal status refreshed." : "Portal could not be reached.");
+	} finally {
+		setBusy(false);
+	}
+}
+
+async function runNow(): Promise<void> {
+	setBusy(true);
+	setMessage("Checking for started work. You can close this popup.");
+	try {
+		const result = (await chrome.runtime.sendMessage({ type: "browser-runner:run-now" })) as {
+			ok?: boolean;
+			summary?: RuntimeSummary | null;
+		};
+		if (!result.ok) throw new Error("Browser Runner could not check for work.");
+		renderSummary(result.summary ?? null);
+		setMessage(result.summary ? "Work check finished." : "Pair this Chrome before running work.");
+	} catch (error) {
+		setMessage(error instanceof Error ? error.message : "Browser Runner could not check for work.");
 	} finally {
 		setBusy(false);
 	}
@@ -59,14 +87,43 @@ async function render(): Promise<void> {
 	const device = await storage.loadDevice();
 	form.hidden = device !== null;
 	paired.hidden = device === null;
-	if (device)
+	if (device) {
 		summary.textContent = `Device ${device.deviceId.slice(0, 8)} · ${device.allowedBrandIds.length} customer assignment(s)`;
+		await renderRuntimeStatus();
+	}
+}
+
+async function renderRuntimeStatus(): Promise<void> {
+	const status = (await chrome.runtime.sendMessage({ type: "browser-runner:status" })) as {
+		running?: boolean;
+		lastRun?: { summary?: RuntimeSummary | null } | null;
+	};
+	if (status.running) {
+		doubaoStatus.textContent = "Running";
+		deepseekStatus.textContent = "Running";
+		return;
+	}
+	renderSummary(status.lastRun?.summary ?? null);
+}
+
+function renderSummary(value: RuntimeSummary | null): void {
+	doubaoStatus.textContent = channelSummary(value?.bySurface?.["doubao.consumer_web"]);
+	deepseekStatus.textContent = channelSummary(value?.bySurface?.["deepseek.consumer_web"]);
+}
+
+function channelSummary(value: SurfaceSummary | undefined): string {
+	if (!value) return "Waiting";
+	if (value.needsHuman > 0 || value.incomplete > 0) return "Needs attention";
+	if (value.succeeded > 0) return `${value.succeeded} completed`;
+	if (value.retryScheduled > 0) return "Retry queued";
+	return "No started work";
 }
 
 function setBusy(busy: boolean): void {
 	pairButton.disabled = busy;
 	disconnectButton.disabled = busy;
 	refreshButton.disabled = busy;
+	runNowButton.disabled = busy;
 }
 
 function setMessage(value: string): void {

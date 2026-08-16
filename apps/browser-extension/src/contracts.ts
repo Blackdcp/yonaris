@@ -34,13 +34,49 @@ export interface PairedDeviceConfig {
 	allowedBrandIds: string[];
 }
 
-export type TaskJournalPhase = "claimed" | "intent_recorded" | "submitted" | "collecting" | "needs_human";
+export type TaskJournalPhase =
+	| "claimed"
+	| "prepared"
+	| "submit_intent"
+	| "submitted"
+	| "collected"
+	| "uploaded"
+	| "needs_human";
 
 export interface TaskJournalEntry {
 	taskId: string;
+	batchId: string;
+	brandId: string;
 	phase: TaskJournalPhase;
 	surfaceTargetKey: BrowserExtensionSurface;
+	tabId: number;
+	runnerSessionId: string;
+	promptSha256: string;
 	updatedAt: string;
+}
+
+export interface BrowserExtensionClaim {
+	taskId: string;
+	batchId: string;
+	brandId: string;
+	scopeId: string;
+	promptId: string;
+	promptText: string;
+	sampleIndex: number;
+	surfaceTargetKey: BrowserExtensionSurface;
+	captureRouteKey: "browser_extension.doubao" | "browser_extension.deepseek";
+	launchUrl: string;
+	sessionRequirement: "dedicated_sampling_profile";
+	searchRequirement: "platform_default";
+	evaluationRole: "scored";
+	minimumEvidenceArtifacts: 1;
+	automationAttemptCount: number;
+	leaseToken: string;
+	leaseGeneration: number;
+	leaseExpiresAt: string;
+	postSubmitAssist: boolean;
+	submitConfirmed: boolean;
+	runnerSessionId: string | null;
 }
 
 export interface PairingResponse {
