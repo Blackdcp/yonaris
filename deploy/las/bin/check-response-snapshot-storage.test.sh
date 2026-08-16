@@ -98,9 +98,10 @@ if [[ "$config_status" -eq 0 ]]; then
 	exit 1
 fi
 
+account_ops_mounts="$(awk '/^  account-ops:/{in_account_ops=1} /^  web:/{in_account_ops=0} in_account_ops{print}' "$COMPOSE_FILE")"
 web_mounts="$(awk '/^  web:/{in_web=1} /^  worker:/{in_web=0} in_web{print}' "$COMPOSE_FILE")"
 worker_mounts="$(awk '/^  worker:/{in_worker=1} in_worker{print}' "$COMPOSE_FILE")"
-for mounts in "$web_mounts" "$worker_mounts"; do
+for mounts in "$account_ops_mounts" "$web_mounts" "$worker_mounts"; do
 	grep -Fq '${RESPONSE_SNAPSHOT_HOST_ROOT:-/var/lib/yonaris/response-snapshots/v1}:${RESPONSE_SNAPSHOT_ROOT:-/var/lib/yonaris/response-snapshots/v1}' <<<"$mounts"
 done
 

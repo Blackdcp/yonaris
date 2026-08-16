@@ -53,6 +53,8 @@ services:
     env_file:
       - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
         required: true
+    volumes:
+      - ${RESPONSE_SNAPSHOT_HOST_ROOT:-/var/lib/yonaris/response-snapshots/v1}:${RESPONSE_SNAPSHOT_ROOT:-/var/lib/yonaris/response-snapshots/v1}
     networks:
       - backend
     depends_on:
