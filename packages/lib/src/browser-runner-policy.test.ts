@@ -15,12 +15,12 @@ import {
 } from "./browser-runner-policy";
 
 describe("Browser Runner retry policy", () => {
-	it("permits one explicit recovery only for the untouched two-attempt broker transport cohort", () => {
+	it("permits one explicit recovery only for the untouched first broker transport failure", () => {
 		const candidate = {
 			deliveryStatus: "available",
 			automationStatus: "needs_human" as const,
-			automationAttemptCount: 2,
-			claimCount: 2,
+			automationAttemptCount: 1,
+			claimCount: 1,
 			submitIntentAt: null,
 			submitConfirmedAt: null,
 			observationAttemptId: null,
@@ -30,7 +30,8 @@ describe("Browser Runner retry policy", () => {
 
 		expect(isSafePreSubmitBrokerTransportRecoveryCandidate(candidate)).toBe(true);
 		for (const unsafe of [
-			{ ...candidate, claimCount: 4 },
+			{ ...candidate, claimCount: 2 },
+			{ ...candidate, automationAttemptCount: 2 },
 			{ ...candidate, submitIntentAt: new Date() },
 			{ ...candidate, observationAttemptId: "attempt-id" },
 			{ ...candidate, needsHumanCode: "login_required" },

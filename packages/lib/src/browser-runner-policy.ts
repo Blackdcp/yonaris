@@ -1,5 +1,6 @@
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
 export const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE = "broker_create_transport_failure";
+const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_ATTEMPT_COUNT = 1;
 export const BROWSER_RUNNER_RETRYABLE_PRE_SUBMIT_CODES = [
 	"navigation_timeout",
 	"page_load_timeout",
@@ -23,8 +24,8 @@ export function isSafePreSubmitBrokerTransportRecoveryCandidate(input: {
 	return (
 		input.deliveryStatus === "available" &&
 		input.automationStatus === "needs_human" &&
-		input.automationAttemptCount === BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS &&
-		input.claimCount === BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS &&
+		input.automationAttemptCount === BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_ATTEMPT_COUNT &&
+		input.claimCount === BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_ATTEMPT_COUNT &&
 		input.submitIntentAt === null &&
 		input.submitConfirmedAt === null &&
 		input.observationAttemptId === null &&
