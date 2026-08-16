@@ -70,6 +70,54 @@ test("provisioning waits for a human-authenticated page before marking a sandbox
 	}
 });
 
+test("provisioning keeps the headed window open until the visible login action disappears", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-profile-login-transition-"));
+	const priorSelector = process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR;
+	process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR = "[data-authenticated]";
+	let loginChecks = 0;
+	let waits = 0;
+	const authenticated = {
+		async waitFor() {},
+		async count() {
+			return 1;
+		},
+		async isVisible() {
+			return true;
+		},
+	} as unknown as Locator;
+	const page = {
+		async goto() {},
+		locator() {
+			return authenticated;
+		},
+		getByRole() {
+			return {
+				async isVisible() {
+					loginChecks += 1;
+					return loginChecks === 1;
+				},
+			} as unknown as Locator;
+		},
+		async waitForTimeout() {
+			waits += 1;
+		},
+	} as unknown as Page;
+	const context = {
+		pages: () => [page],
+		async close() {},
+	} as unknown as BrowserContext;
+	try {
+		const profileDirectory = await provisionDedicatedDoubaoProfile(stateDirectory, async () => context);
+		assert.equal(loginChecks, 2);
+		assert.equal(waits, 1);
+		await assert.doesNotReject(assertDedicatedProfileReady(profileDirectory));
+	} finally {
+		if (priorSelector === undefined) delete process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR;
+		else process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR = priorSelector;
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("provisioning never marks a profile ready when the positive authenticated marker is absent", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-profile-provision-fail-"));
 	const priorSelector = process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR;

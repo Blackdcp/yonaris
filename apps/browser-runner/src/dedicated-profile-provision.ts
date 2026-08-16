@@ -52,17 +52,22 @@ export async function provisionDedicatedDoubaoProfile(
 				{ cause },
 			);
 		}
-		const loginButtonVisible = await page
-			.getByRole("button", { name: "\u767b\u5f55", exact: true })
-			.isVisible()
-			.catch(() => false);
-		if ((await authenticated.count()) !== 1 || !(await authenticated.isVisible()) || loginButtonVisible) {
-			throw new BrowserRunnerError(
-				"dedicated_profile_not_authenticated",
-				"session_open",
-				"needs_human",
-				"Manual Doubao authentication did not produce the approved dedicated-account state",
-			);
+		const authenticationDeadline = Date.now() + 10 * 60_000;
+		while (true) {
+			const loginButtonVisible = await page
+				.getByRole("button", { name: "\u767b\u5f55", exact: true })
+				.isVisible()
+				.catch(() => false);
+			if ((await authenticated.count()) === 1 && (await authenticated.isVisible()) && !loginButtonVisible) break;
+			if (Date.now() >= authenticationDeadline) {
+				throw new BrowserRunnerError(
+					"dedicated_profile_not_authenticated",
+					"session_open",
+					"needs_human",
+					"Manual Doubao authentication did not produce the approved dedicated-account state",
+				);
+			}
+			await page.waitForTimeout(1_000);
 		}
 		await initializeDedicatedProfile(profileDirectory);
 		return profileDirectory;
