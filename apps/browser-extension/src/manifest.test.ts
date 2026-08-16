@@ -7,6 +7,7 @@ describe("Manifest V3 permissions", () => {
 		const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "manifest.json"), "utf8")) as {
 			manifest_version: number;
 			host_permissions: string[];
+			content_scripts: Array<{ matches: string[]; js: string[]; run_at: string }>;
 			content_security_policy: { extension_pages: string };
 		};
 
@@ -17,6 +18,13 @@ describe("Manifest V3 permissions", () => {
 			"https://chat.deepseek.com/*",
 		]);
 		expect(JSON.stringify(manifest)).not.toContain("<all_urls>");
+		expect(manifest.content_scripts).toEqual([
+			{
+				matches: ["https://www.doubao.com/chat/*", "https://chat.deepseek.com/*"],
+				js: ["content-entry.js"],
+				run_at: "document_idle",
+			},
+		]);
 		expect(manifest.content_security_policy.extension_pages).not.toMatch(/unsafe-eval|https?:/);
 	});
 });

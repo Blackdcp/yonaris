@@ -1,0 +1,20 @@
+{
+	"version": "doubao-web-20260816-localpc-v1",
+	"surface": "doubao.consumer_web",
+	"launchUrl": "https://www.doubao.com/chat/",
+	"conversationPathPattern": "^/chat/(?:[0-9]+|local_[0-9]+)$",
+	"composer": "textarea.semi-input-textarea[placeholder*=\"发消息\"]",
+	"send": "#input-engine-container button.bg-dbx-text-highlight",
+	"newConversation": "#flow_chat_sidebar .nav-link-IkIer0",
+	"newConversationLabel": "新对话",
+	"userMessage": "div.content-KTJ1Rj",
+	"answer": "div.my-0.w-full.mx-auto:has(div.message-action-bar-raqbg0)",
+	"generating": "#input-engine-container button.bg-dbx-text-highlight",
+	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
+	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"],[class*=\"verify\"]",
+	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"],[data-testid=\"rate-limit\"]",
+	"searchUsed": null,
+	"searchNotUsed": null,
+	"citationLink": "a[href^=\"http\"]",
+	"queryItem": null
+}
