@@ -78,6 +78,18 @@ describe("Browser Runner retry policy", () => {
 		expect(() => assertBrowserRunnerEvidenceProtocol(3)).toThrow(/exactly two/);
 	});
 
+	it("freezes extension batches at exactly one page snapshot", () => {
+		expect(() =>
+			assertBrowserRunnerEvidenceProtocol(1, ["browser_extension.doubao", "browser_extension.deepseek"]),
+		).not.toThrow();
+		expect(() => assertBrowserRunnerEvidenceProtocol(2, ["browser_extension.deepseek"])).toThrow(
+			/exactly one page snapshot/i,
+		);
+		expect(() =>
+			assertBrowserRunnerEvidenceProtocol(1, ["browser_runner.doubao", "browser_extension.deepseek"]),
+		).toThrow(/cannot mix legacy and extension/i);
+	});
+
 	it("blocks portal submit and release after durable Browser Runner submit intent", () => {
 		for (const captureRouteKey of ["browser_runner.doubao", "browser_extension.doubao", "browser_extension.deepseek"]) {
 			const postSubmit = { captureRouteKey, submitIntentAt: new Date() };

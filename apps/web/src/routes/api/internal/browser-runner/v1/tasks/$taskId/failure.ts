@@ -9,7 +9,7 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/tasks/$tas
 				try {
 					const principal = await requireBrowserRunner(request);
 					const input = await parseBrowserRunnerJson(request, browserRunnerFailureSchema);
-					return Response.json(await failRunnerTask(params.taskId, input, principal.id), {
+					return Response.json(await failRunnerTask(params.taskId, input, principal), {
 						headers: { "Cache-Control": "no-store" },
 					});
 				} catch (error) {

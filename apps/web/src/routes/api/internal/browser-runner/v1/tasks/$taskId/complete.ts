@@ -11,7 +11,7 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/tasks/$tas
 					const input = await parseBrowserRunnerJson(request, browserRunnerObservationSchema, {
 						maxBytes: 6 * 1024 * 1024,
 					});
-					return Response.json(await completeRunnerTask(params.taskId, input, principal.id), {
+					return Response.json(await completeRunnerTask(params.taskId, input, principal), {
 						headers: { "Cache-Control": "no-store" },
 					});
 				} catch (error) {

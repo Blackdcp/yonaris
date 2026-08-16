@@ -276,6 +276,55 @@ describe("prepareSamplingObservation", () => {
 		expect(prepared.captureMetadata).not.toHaveProperty("operatorAttested");
 	});
 
+	it("preserves DeepSeek channel identity for browser-extension observations", () => {
+		const extensionTask = {
+			...task,
+			captureRouteKey: "browser_extension.deepseek",
+			sessionRequirement: "dedicated_sampling_profile" as const,
+			searchRequirement: "platform_default" as const,
+			automationStatus: "running" as const,
+			automationAttemptCount: 1,
+		};
+		const extensionFrozenTask = {
+			...frozenTask,
+			captureRouteKey: extensionTask.captureRouteKey,
+			sessionRequirement: extensionTask.sessionRequirement,
+			searchRequirement: extensionTask.searchRequirement,
+		};
+		extensionFrozenTask.slotKey = buildDeliveryTaskSlotKey(extensionFrozenTask);
+		extensionTask.slotKey = extensionFrozenTask.slotKey;
+
+		const prepared = prepareSamplingObservation({
+			task: extensionTask,
+			manifest: { ...manifest, tasks: [extensionFrozenTask] },
+			observation: {
+				...observation,
+				sessionMode: "dedicated_sampling_profile",
+				searchMode: "native_auto",
+				webSearchObserved: null,
+				operatorAttested: undefined,
+			},
+			captureActor: {
+				kind: "browser_runner",
+				id: "device-1",
+				adapterVersion: "deepseek-extension-v1",
+				browserVersion: "Chrome 140",
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+			},
+			leaseGeneration: 1,
+		});
+
+		expect(prepared.target).toMatchObject({
+			surfaceTargetKey: "deepseek.consumer_web",
+			captureRouteKey: "browser_extension.deepseek",
+			model: "deepseek",
+		});
+		expect(prepared.config.provider).toBe("browser-runner");
+		expect(prepared.webSearchObserved).toBeNull();
+	});
+
 	it("preserves unknown native-auto search instead of converting it to false", () => {
 		const nativeTask = { ...task, searchRequirement: "platform_default" as const };
 		const nativeFrozenTask = { ...frozenTask, searchRequirement: "platform_default" as const };

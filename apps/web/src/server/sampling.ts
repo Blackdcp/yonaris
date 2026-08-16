@@ -564,7 +564,10 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 		}
 		if (data.executionMode === "browser_runner") {
 			if (!browserRunnerEnabled()) throw new Error("Browser Runner is disabled");
-			assertBrowserRunnerEvidenceProtocol(data.protocol.evidence.minimumArtifacts);
+			assertBrowserRunnerEvidenceProtocol(
+				data.protocol.evidence.minimumArtifacts,
+				data.targets.map(({ captureRouteKey }) => captureRouteKey),
+			);
 		}
 		assertSamplingBrowserRunnerProtocol(data.executionMode, data.targets);
 

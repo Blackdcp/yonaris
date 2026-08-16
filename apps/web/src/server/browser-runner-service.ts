@@ -1,9 +1,16 @@
 import {
+	assertExtensionEvidenceProtocol,
+	type BrowserExtensionSurface,
+	browserExtensionCaptureRoute,
+	isBrowserExtensionCaptureRoute,
+} from "@workspace/lib/browser-extension-contract";
+import {
 	type BrowserRunnerClaim,
 	claimBrowserRunnerTask,
 	markBrowserRunnerSubmitConfirmed,
 	markBrowserRunnerSubmitIntent,
 	recordBrowserRunnerFailure,
+	resolveBrowserRunnerClaimTargets,
 	resumeBrowserRunnerTask,
 } from "@workspace/lib/db/browser-runner";
 import { db } from "@workspace/lib/db/db";
@@ -47,7 +54,12 @@ export const browserRunnerClaimSchema = z
 	.object({
 		brandId: z.string().trim().min(1).max(300),
 		batchId: z.guid().optional(),
-		surfaceTargetKeys: z.array(z.literal("doubao.consumer_web")).min(1).max(1).optional(),
+		surfaceTargetKeys: z
+			.array(z.enum(["doubao.consumer_web", "deepseek.consumer_web"]))
+			.min(1)
+			.max(2)
+			.refine((surfaces) => new Set(surfaces).size === surfaces.length, "Surface targets must be unique")
+			.optional(),
 	})
 	.strict();
 
@@ -83,12 +95,25 @@ export const browserRunnerObservationSchema = browserRunnerLeaseSchema.extend({
 });
 
 export function assertBrowserRunnerEvidenceSelection(
+	captureRouteKey: string,
 	artifacts: readonly { id: string; kind: "screenshot" | "page_snapshot" }[],
 	evidenceArtifactIds: readonly string[],
 ): void {
 	const submittedArtifactIds = new Set(evidenceArtifactIds);
 	const submittedArtifacts = artifacts.filter(({ id }) => submittedArtifactIds.has(id));
+	if (isBrowserExtensionCaptureRoute(captureRouteKey)) {
+		if (evidenceArtifactIds.length !== 1 || submittedArtifactIds.size !== 1 || submittedArtifacts.length !== 1) {
+			throw new Error("Browser extension completion requires exactly one staged page snapshot");
+		}
+		assertExtensionEvidenceProtocol({
+			captureRouteKey,
+			minimumArtifacts: evidenceArtifactIds.length,
+			kinds: submittedArtifacts.map(({ kind }) => kind),
+		});
+		return;
+	}
 	if (
+		captureRouteKey !== "browser_runner.doubao" ||
 		evidenceArtifactIds.length !== 2 ||
 		submittedArtifactIds.size !== 2 ||
 		submittedArtifacts.length !== 2 ||
@@ -109,6 +134,13 @@ export async function claimRunnerTask(
 		claim?: typeof claimBrowserRunnerTask;
 	} = {},
 ) {
+	assertPrincipalBrand(principal, input.brandId);
+	const captureTargets = resolveBrowserRunnerClaimTargets({
+		principalKind: principal.kind,
+		requestedSurfaceTargetKeys: input.surfaceTargetKeys,
+		supportedSurfaces: principal.kind === "browser_extension" ? principal.supportedSurfaces : undefined,
+	});
+	if (captureTargets.length === 0) return null;
 	try {
 		await (dependencies.assertCapacity ?? assertBrowserRunnerSnapshotClaimCapacity)({
 			enabled: process.env.RESPONSE_SNAPSHOT_ENABLED === "true",
@@ -121,9 +153,11 @@ export async function claimRunnerTask(
 		throw error;
 	}
 	const claim = await (dependencies.claim ?? claimBrowserRunnerTask)({
-		...input,
+		brandId: input.brandId,
+		batchId: input.batchId,
 		runnerId: principal.id,
 		leaseDurationMs: RUNNER_LEASE_MS,
+		captureTargets,
 	});
 	if (!claim) return null;
 	return buildRunnerClaimResponse(claim, principal, false);
@@ -131,7 +165,9 @@ export async function claimRunnerTask(
 
 export async function getRunnerQueueState(
 	input: z.infer<typeof browserRunnerClaimSchema>,
+	principal?: BrowserRunnerPrincipal,
 ): Promise<"settled" | "drained" | "waiting"> {
+	if (principal) assertPrincipalBrand(principal, input.brandId);
 	if (!input.batchId) {
 		const [pending] = await db
 			.select({ id: deliveryTasks.id })
@@ -191,6 +227,7 @@ export async function resumeRunnerTask(
 	input: z.infer<typeof browserRunnerResumeSchema>,
 	principal: BrowserRunnerPrincipal,
 ) {
+	await assertRunnerTask(taskId, input.brandId, principal);
 	const claim = await resumeBrowserRunnerTask({
 		brandId: input.brandId,
 		taskId,
@@ -244,7 +281,7 @@ async function buildRunnerClaimResponse(
 			timezone: manifest.scope.timezone,
 			market: manifest.scope.market,
 			locale: manifest.scope.locale,
-			launchUrl: "https://www.doubao.com/chat/",
+			launchUrl: browserRunnerLaunchUrl(claim.task.surfaceTargetKey),
 			minimumEvidenceArtifacts: manifest.protocol.evidence.minimumArtifacts,
 			automationAttemptCount: claim.task.automationAttemptCount,
 		},
@@ -260,12 +297,12 @@ async function buildRunnerClaimResponse(
 export async function heartbeatRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerLeaseSchema>,
-	runnerId: string,
+	principal: BrowserRunnerPrincipal,
 ) {
-	await assertRunnerTask(taskId, input.brandId, runnerId);
+	await assertRunnerTask(taskId, input.brandId, principal);
 	return heartbeatDeliveryTask({
 		taskId,
-		claimedBy: runnerClaimant(runnerId),
+		claimedBy: runnerClaimant(principal.id),
 		leaseToken: input.leaseToken,
 		leaseGeneration: input.leaseGeneration,
 		leaseDurationMs: RUNNER_LEASE_MS,
@@ -275,37 +312,37 @@ export async function heartbeatRunnerTask(
 export async function recordRunnerSubmitIntent(
 	taskId: string,
 	input: z.infer<typeof browserRunnerSessionLeaseSchema>,
-	runnerId: string,
+	principal: BrowserRunnerPrincipal,
 ) {
-	await assertRunnerTask(taskId, input.brandId, runnerId);
-	return markBrowserRunnerSubmitIntent({ taskId, ...input, runnerId });
+	await assertRunnerTask(taskId, input.brandId, principal);
+	return markBrowserRunnerSubmitIntent({ taskId, ...input, runnerId: principal.id });
 }
 
 export async function recordRunnerSubmitConfirmed(
 	taskId: string,
 	input: z.infer<typeof browserRunnerSessionLeaseSchema>,
-	runnerId: string,
+	principal: BrowserRunnerPrincipal,
 ) {
-	await assertRunnerTask(taskId, input.brandId, runnerId);
-	return markBrowserRunnerSubmitConfirmed({ taskId, ...input, runnerId });
+	await assertRunnerTask(taskId, input.brandId, principal);
+	return markBrowserRunnerSubmitConfirmed({ taskId, ...input, runnerId: principal.id });
 }
 
 export async function failRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerFailureSchema>,
-	runnerId: string,
+	principal: BrowserRunnerPrincipal,
 ) {
-	await assertRunnerTask(taskId, input.brandId, runnerId);
-	return recordBrowserRunnerFailure({ taskId, ...input, runnerId });
+	await assertRunnerTask(taskId, input.brandId, principal);
+	return recordBrowserRunnerFailure({ taskId, ...input, runnerId: principal.id });
 }
 
 export async function completeRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerObservationSchema>,
-	runnerId: string,
+	principal: BrowserRunnerPrincipal,
 ) {
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
-	const task = await assertRunnerTask(taskId, input.brandId, runnerId);
+	const task = await assertRunnerTask(taskId, input.brandId, principal);
 	if (task.status === "succeeded" && task.observationAttemptId) {
 		const existingRun = await db.query.promptRuns.findFirst({
 			where: eq(promptRuns.observationAttemptId, task.observationAttemptId),
@@ -313,7 +350,7 @@ export async function completeRunnerTask(
 		});
 		return { duplicate: true, attemptId: task.observationAttemptId, promptRunId: existingRun?.id ?? null };
 	}
-	await heartbeatRunnerTask(taskId, input, runnerId);
+	await heartbeatRunnerTask(taskId, input, principal);
 	if (!task.submitIntentAt || !task.submitConfirmedAt) {
 		throw new Error("Browser Runner completion requires durable submit intent and confirmation");
 	}
@@ -338,7 +375,7 @@ export async function completeRunnerTask(
 		observation,
 		captureActor: {
 			kind: "browser_runner",
-			id: runnerId,
+			id: principal.id,
 			adapterVersion: input.adapterVersion,
 			browserVersion: input.browserVersion,
 			market: "CN",
@@ -349,12 +386,12 @@ export async function completeRunnerTask(
 	});
 	const deliveryClaim = {
 		taskId,
-		claimedBy: runnerClaimant(runnerId),
+		claimedBy: runnerClaimant(principal.id),
 		leaseToken: input.leaseToken,
 		leaseGeneration: input.leaseGeneration,
 	};
 	const stagedArtifacts = await listEvidenceArtifactsForClaim({ brandId: task.brandId, claim: deliveryClaim });
-	assertBrowserRunnerEvidenceSelection(stagedArtifacts, observation.evidenceArtifactIds);
+	assertBrowserRunnerEvidenceSelection(task.captureRouteKey, stagedArtifacts, observation.evidenceArtifactIds);
 	const attempt = await claimImportedObservationAttempt({
 		sourceKey: `delivery-task:${task.id}`,
 		promptId: task.promptId,
@@ -420,7 +457,7 @@ export async function completeRunnerTask(
 		await recordBrowserRunnerFailure({
 			brandId: task.brandId,
 			taskId,
-			runnerId,
+			runnerId: principal.id,
 			leaseToken: input.leaseToken,
 			leaseGeneration: input.leaseGeneration,
 			stage: "post_submit",
@@ -473,17 +510,38 @@ export async function completeRunnerTask(
 	return { duplicate: false, attemptId: attempt.id, promptRunId: promptRun.id, snapshot: null };
 }
 
-export async function assertRunnerTask(taskId: string, brandId: string, runnerId: string) {
+export async function assertRunnerTask(taskId: string, brandId: string, principal: BrowserRunnerPrincipal) {
+	assertPrincipalBrand(principal, brandId);
 	const task = await getDeliveryTask({ brandId, taskId });
 	if (!task) throw new Error("Browser Runner task was not found");
-	if (
-		task.captureRouteKey !== "browser_runner.doubao" ||
-		task.surfaceTargetKey !== "doubao.consumer_web" ||
-		task.claimedBy !== runnerClaimant(runnerId)
-	) {
-		throw new Error("Task is not claimed by this Doubao Browser Runner");
+	const routeAllowed =
+		principal.kind === "legacy_host"
+			? task.surfaceTargetKey === "doubao.consumer_web" && task.captureRouteKey === "browser_runner.doubao"
+			: principal.supportedSurfaces.includes(task.surfaceTargetKey as BrowserExtensionSurface) &&
+				isExtensionTargetPair(task.surfaceTargetKey, task.captureRouteKey);
+	if (!routeAllowed || task.claimedBy !== runnerClaimant(principal.id)) {
+		throw new Error("Task is not claimed by this Browser Runner device");
 	}
 	return task;
+}
+
+function assertPrincipalBrand(principal: BrowserRunnerPrincipal, brandId: string): void {
+	if (principal.kind === "browser_extension" && !principal.allowedBrandIds.includes(brandId)) {
+		throw new BrowserRunnerHttpError(403, "Browser Runner device is not assigned to this brand");
+	}
+}
+
+function isExtensionTargetPair(surfaceTargetKey: string, captureRouteKey: string): boolean {
+	return (
+		(surfaceTargetKey === "doubao.consumer_web" || surfaceTargetKey === "deepseek.consumer_web") &&
+		captureRouteKey === browserExtensionCaptureRoute(surfaceTargetKey)
+	);
+}
+
+export function browserRunnerLaunchUrl(surfaceTargetKey: string): string {
+	if (surfaceTargetKey === "doubao.consumer_web") return "https://www.doubao.com/chat/";
+	if (surfaceTargetKey === "deepseek.consumer_web") return "https://chat.deepseek.com/";
+	throw new Error("Browser Runner task has an unsupported launch surface");
 }
 
 export function runnerClaimant(runnerId: string) {

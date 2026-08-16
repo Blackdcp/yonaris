@@ -17,7 +17,7 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/evidence/"
 					const principal = await requireBrowserRunner(request);
 					const runnerId = principal.id;
 					const headers = parseSamplingEvidenceUploadHeaders(request);
-					await assertRunnerTask(headers.taskId, headers.brandId, runnerId);
+					await assertRunnerTask(headers.taskId, headers.brandId, principal);
 					const content = await readRequestBodyWithinLimit(request, EVIDENCE_ARTIFACT_MAX_BYTES);
 					const claimedBy = runnerClaimant(runnerId);
 					const artifact = await stageEvidenceArtifact({

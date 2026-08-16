@@ -59,7 +59,10 @@ describe("Browser Runner internal HTTP task contract", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.json()).toEqual({ claim: null, queueState });
-			expect(mocks.getRunnerQueueState).toHaveBeenCalledWith({ brandId: "stepfun", batchId: "batch-1" });
+			expect(mocks.getRunnerQueueState).toHaveBeenCalledWith(
+				{ brandId: "stepfun", batchId: "batch-1" },
+				expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+			);
 		},
 	);
 
@@ -83,7 +86,10 @@ describe("Browser Runner internal HTTP task contract", () => {
 		mocks.getRunnerQueueState.mockResolvedValue("drained");
 		const response = await post(ClaimRoute, "/tasks/claim", { brandId: "stepfun" });
 		expect(await response.json()).toEqual({ claim: null, queueState: "drained" });
-		expect(mocks.getRunnerQueueState).toHaveBeenCalledWith({ brandId: "stepfun" });
+		expect(mocks.getRunnerQueueState).toHaveBeenCalledWith(
+			{ brandId: "stepfun" },
+			expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+		);
 	});
 
 	it("fails with 503 before invoking any service when the runner is disabled", async () => {
@@ -130,7 +136,11 @@ describe("Browser Runner internal HTTP task contract", () => {
 		const completion = { brandId: "stepfun", runnerSessionId: "durable-session-1", observation: {} };
 		const completed = await post(CompleteRoute, "/tasks/task-1/complete", completion, "task-1");
 		expect(await completed.json()).toEqual({ promptRunId: "run-1" });
-		expect(mocks.completeRunnerTask).toHaveBeenCalledWith("task-1", completion, "cn-runner-1");
+		expect(mocks.completeRunnerTask).toHaveBeenCalledWith(
+			"task-1",
+			completion,
+			expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+		);
 	});
 });
 
