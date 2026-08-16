@@ -39,7 +39,7 @@ describe("Browser Runner service contracts", () => {
 		await expect(
 			claimRunnerTask(
 				{ brandId: "stepfun", surfaceTargetKeys: ["doubao.consumer_web"] },
-				{ id: "runner-cn-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" },
+				{ kind: "legacy_host", id: "runner-cn-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" },
 				{
 					assertCapacity: async () => {
 						throw new BrowserRunnerSnapshotCapacityError("full");

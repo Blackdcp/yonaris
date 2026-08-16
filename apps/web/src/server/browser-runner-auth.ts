@@ -1,12 +1,33 @@
 import { createHash, timingSafeEqual } from "node:crypto";
+import { type BrowserExtensionSurface, isBrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
+import {
+	type AuthenticatedBrowserRunnerDevice,
+	authenticateBrowserRunnerDevice,
+} from "@workspace/lib/db/browser-runner-devices";
 import type { z } from "zod";
 
-export interface BrowserRunnerPrincipal {
-	id: string;
-	market: "CN";
-	locale: "zh-CN";
-	timezone: "Asia/Shanghai";
-}
+export type BrowserRunnerPrincipal =
+	| {
+			kind: "legacy_host";
+			id: string;
+			market: "CN";
+			locale: "zh-CN";
+			timezone: "Asia/Shanghai";
+	  }
+	| {
+			kind: "browser_extension";
+			id: string;
+			market: "CN";
+			locale: "zh-CN";
+			timezone: "Asia/Shanghai";
+			allowedBrandIds: readonly string[];
+			supportedSurfaces: readonly BrowserExtensionSurface[];
+	  };
+
+type DeviceAuthenticationRecord = Pick<
+	AuthenticatedBrowserRunnerDevice,
+	"id" | "allowedBrandIds" | "supportedSurfaces" | "revokedAt"
+>;
 
 export class BrowserRunnerHttpError extends Error {
 	constructor(
@@ -19,7 +40,7 @@ export class BrowserRunnerHttpError extends Error {
 }
 
 export function browserRunnerEnabled(): boolean {
-	if (process.env.BROWSER_RUNNER_ENABLED?.trim().toLowerCase() !== "true") return false;
+	if (!browserRunnerFeatureEnabled()) return false;
 	const configured = process.env.BROWSER_RUNNER_API_TOKEN?.trim();
 	const runnerId = process.env.BROWSER_RUNNER_ID?.trim();
 	if (!configured || configured.length < 32 || !validRunnerId(runnerId)) return false;
@@ -37,7 +58,60 @@ export function browserRunnerEnabled(): boolean {
 		.some((token) => equalToken(token, configured));
 }
 
-export function requireBrowserRunner(request: Request): BrowserRunnerPrincipal {
+export function browserRunnerFeatureEnabled(): boolean {
+	return process.env.BROWSER_RUNNER_ENABLED?.trim().toLowerCase() === "true";
+}
+
+export async function authenticateRunnerRequest(
+	request: Request,
+	dependencies: {
+		authenticateDevice?: (token: string) => Promise<DeviceAuthenticationRecord | null>;
+	} = {},
+): Promise<BrowserRunnerPrincipal> {
+	if (!browserRunnerFeatureEnabled()) {
+		throw new BrowserRunnerHttpError(503, "Browser Runner is disabled or not ready");
+	}
+	const presented = bearerToken(request);
+	const adminTokens = configuredAdminTokens();
+	if (presented.startsWith("yrd_")) {
+		if (adminTokens.some((token) => equalToken(token, presented))) {
+			throw new BrowserRunnerHttpError(401, "Valid Browser Runner bearer token required");
+		}
+		const device = await (dependencies.authenticateDevice ?? authenticateBrowserRunnerDevice)(presented);
+		if (!device || device.revokedAt !== null) {
+			throw new BrowserRunnerHttpError(401, "Valid Browser Runner bearer token required");
+		}
+		if (!validRunnerId(device.id) || device.allowedBrandIds.length < 1) {
+			throw new BrowserRunnerHttpError(401, "Browser Runner device authorization is invalid");
+		}
+		const supportedSurfaces: BrowserExtensionSurface[] = [];
+		for (const surface of device.supportedSurfaces) {
+			if (!isBrowserExtensionSurface(surface) || supportedSurfaces.includes(surface)) {
+				throw new BrowserRunnerHttpError(401, "Browser Runner device capabilities are invalid");
+			}
+			supportedSurfaces.push(surface);
+		}
+		if (supportedSurfaces.length < 1) {
+			throw new BrowserRunnerHttpError(401, "Browser Runner device capabilities are invalid");
+		}
+		return {
+			kind: "browser_extension",
+			id: device.id,
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			allowedBrandIds: [...device.allowedBrandIds],
+			supportedSurfaces,
+		};
+	}
+	return requireLegacyBrowserRunner(presented);
+}
+
+export async function requireBrowserRunner(request: Request): Promise<BrowserRunnerPrincipal> {
+	return authenticateRunnerRequest(request);
+}
+
+function requireLegacyBrowserRunner(presented: string): BrowserRunnerPrincipal {
 	if (!browserRunnerEnabled()) throw new BrowserRunnerHttpError(503, "Browser Runner is disabled or not ready");
 	const configured = process.env.BROWSER_RUNNER_API_TOKEN?.trim();
 	if (!configured || configured.length < 32) {
@@ -47,19 +121,14 @@ export function requireBrowserRunner(request: Request): BrowserRunnerPrincipal {
 	if (!validRunnerId(runnerId)) {
 		throw new BrowserRunnerHttpError(503, "Browser Runner principal is not configured");
 	}
-	const adminTokens = (process.env.ADMIN_API_KEYS ?? "")
-		.split(",")
-		.map((token) => token.trim())
-		.filter(Boolean);
+	const adminTokens = configuredAdminTokens();
 	if (adminTokens.some((token) => equalToken(token, configured))) {
 		throw new BrowserRunnerHttpError(503, "Browser Runner credential must not be an admin credential");
 	}
-	const authorization = request.headers.get("Authorization") ?? "";
-	const match = /^Bearer\s+(.+)$/i.exec(authorization);
-	if (!match?.[1] || !equalToken(match[1].trim(), configured)) {
+	if (!equalToken(presented, configured)) {
 		throw new BrowserRunnerHttpError(401, "Valid Browser Runner bearer token required");
 	}
-	return { id: runnerId, market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" };
+	return { kind: "legacy_host", id: runnerId, market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" };
 }
 
 export async function parseBrowserRunnerJson<T>(
@@ -121,6 +190,24 @@ export async function parseBrowserRunnerJson<T>(
 
 function validRunnerId(value: string | undefined): value is string {
 	return Boolean(value && value.length <= 200 && /^[A-Za-z0-9._:-]+$/.test(value));
+}
+
+function bearerToken(request: Request): string {
+	const authorization = request.headers.get("Authorization") ?? "";
+	const match = /^Bearer\s+(.+)$/i.exec(authorization);
+	if (!match?.[1]) throw new BrowserRunnerHttpError(401, "Valid Browser Runner bearer token required");
+	const token = match[1].trim();
+	if (token.length < 32 || token.length > 500) {
+		throw new BrowserRunnerHttpError(401, "Valid Browser Runner bearer token required");
+	}
+	return token;
+}
+
+function configuredAdminTokens(): string[] {
+	return (process.env.ADMIN_API_KEYS ?? "")
+		.split(",")
+		.map((token) => token.trim())
+		.filter(Boolean);
 }
 
 export function browserRunnerErrorResponse(error: unknown): Response {

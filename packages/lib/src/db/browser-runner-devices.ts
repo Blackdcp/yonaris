@@ -142,7 +142,7 @@ export async function consumeBrowserRunnerPairing(input: {
 	code: string;
 	heartbeat: BrowserRunnerDeviceHeartbeat;
 	now?: Date;
-}): Promise<{ device: BrowserRunnerDevice; token: string }> {
+}): Promise<{ device: BrowserRunnerDevice; token: string; allowedBrandIds: string[] }> {
 	const code = boundedText(input.code, "code", 200);
 	const heartbeat = validateDeviceHeartbeat(input.heartbeat);
 	const now = input.now ?? new Date();
@@ -182,7 +182,7 @@ export async function consumeBrowserRunnerPairing(input: {
 			.where(and(eq(browserRunnerPairings.id, pairing.id), isNull(browserRunnerPairings.consumedAt)))
 			.returning({ id: browserRunnerPairings.id });
 		if (!consumed) throw new BrowserRunnerDeviceError("Pairing code was consumed concurrently");
-		return { device, token };
+		return { device, token, allowedBrandIds: [pairing.brandId] };
 	});
 }
 

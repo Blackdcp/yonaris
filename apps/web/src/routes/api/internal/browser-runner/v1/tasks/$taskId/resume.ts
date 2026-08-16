@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/tasks/$tas
 		handlers: {
 			POST: async ({ request, params }: { request: Request; params: { taskId: string } }) => {
 				try {
-					const principal = requireBrowserRunner(request);
+					const principal = await requireBrowserRunner(request);
 					const input = await parseBrowserRunnerJson(request, browserRunnerResumeSchema);
 					return Response.json(await resumeRunnerTask(params.taskId, input, principal), {
 						headers: { "Cache-Control": "no-store" },

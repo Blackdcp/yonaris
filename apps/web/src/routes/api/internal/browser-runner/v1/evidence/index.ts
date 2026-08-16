@@ -14,7 +14,7 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/evidence/"
 		handlers: {
 			POST: async ({ request }: { request: Request }) => {
 				try {
-					const principal = requireBrowserRunner(request);
+					const principal = await requireBrowserRunner(request);
 					const runnerId = principal.id;
 					const headers = parseSamplingEvidenceUploadHeaders(request);
 					await assertRunnerTask(headers.taskId, headers.brandId, runnerId);

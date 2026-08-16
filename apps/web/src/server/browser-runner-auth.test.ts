@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
+	authenticateRunnerRequest,
 	type BrowserRunnerHttpError,
 	browserRunnerEnabled,
 	parseBrowserRunnerJson,
@@ -22,40 +23,94 @@ describe("Browser Runner machine authentication", () => {
 
 	afterEach(() => vi.unstubAllEnvs());
 
-	it("derives a CN principal from server configuration rather than request input", () => {
+	it("derives a CN legacy-host principal from server configuration rather than request input", async () => {
 		expect(browserRunnerEnabled()).toBe(true);
-		const principal = requireBrowserRunner(
+		const principal = await requireBrowserRunner(
 			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
 				headers: { Authorization: `Bearer ${token}` },
 			}),
 		);
-		expect(principal).toEqual({ id: "cn-runner-1", market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" });
+		expect(principal).toEqual({
+			kind: "legacy_host",
+			id: "cn-runner-1",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+		});
 	});
 
-	it("fails closed when the runner token is reused as an admin key or localization is not exact", () => {
+	it("authenticates a paired device and preserves its brand and surface capabilities", async () => {
+		const deviceToken = `yrd_${"a".repeat(43)}`;
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer ${deviceToken}` },
+			}),
+			{
+				authenticateDevice: async (receivedToken) => {
+					expect(receivedToken).toBe(deviceToken);
+					return {
+						id: "11111111-1111-4111-8111-111111111111",
+						allowedBrandIds: ["stepfun"],
+						supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+						revokedAt: null,
+					};
+				},
+			},
+		);
+
+		expect(principal).toEqual({
+			kind: "browser_extension",
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+		});
+	});
+
+	it("rejects a revoked paired device before any task body is parsed", async () => {
+		await expect(
+			authenticateRunnerRequest(
+				new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+					headers: { Authorization: `Bearer yrd_${"b".repeat(43)}` },
+				}),
+				{
+					authenticateDevice: async () => ({
+						id: "11111111-1111-4111-8111-111111111111",
+						allowedBrandIds: ["stepfun"],
+						supportedSurfaces: ["deepseek.consumer_web"],
+						revokedAt: new Date("2026-08-16T10:00:00.000Z"),
+					}),
+				},
+			),
+		).rejects.toMatchObject({ status: 401 });
+	});
+
+	it("fails closed when the runner token is reused as an admin key or localization is not exact", async () => {
 		vi.stubEnv("ADMIN_API_KEYS", `admin-other,${token}`);
 		expect(browserRunnerEnabled()).toBe(false);
-		expect(() =>
+		await expect(
 			requireBrowserRunner(
 				new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
 					headers: { Authorization: `Bearer ${token}` },
 				}),
 			),
-		).toThrow(expect.objectContaining({ status: 503 }));
+		).rejects.toMatchObject({ status: 503 });
 		vi.stubEnv("ADMIN_API_KEYS", "admin-other");
 		vi.stubEnv("BROWSER_RUNNER_TIMEZONE", "UTC");
 		expect(browserRunnerEnabled()).toBe(false);
 	});
 
-	it("fails closed with 503 when explicitly disabled", () => {
+	it("fails closed with 503 when explicitly disabled", async () => {
 		vi.stubEnv("BROWSER_RUNNER_ENABLED", "false");
-		expect(() =>
+		await expect(
 			requireBrowserRunner(
 				new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
 					headers: { Authorization: `Bearer ${token}` },
 				}),
 			),
-		).toThrow(expect.objectContaining({ status: 503 }));
+		).rejects.toMatchObject({ status: 503 });
 	});
 
 	it("bounds JSON before parsing and rejects client-authored identity fields", async () => {

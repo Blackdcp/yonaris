@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
 	getRunnerQueueState: vi.fn(),
 	resumeRunnerTask: vi.fn(),
 	completeRunnerTask: vi.fn(),
+	authenticateBrowserRunnerDevice: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -19,6 +20,10 @@ vi.mock("@/server/browser-runner-service", () => ({
 	getRunnerQueueState: mocks.getRunnerQueueState,
 	resumeRunnerTask: mocks.resumeRunnerTask,
 	completeRunnerTask: mocks.completeRunnerTask,
+}));
+
+vi.mock("@workspace/lib/db/browser-runner-devices", () => ({
+	authenticateBrowserRunnerDevice: mocks.authenticateBrowserRunnerDevice,
 }));
 
 import { Route as CompleteRoute } from "./$taskId/complete";
@@ -91,6 +96,22 @@ describe("Browser Runner internal HTTP task contract", () => {
 		expect(mocks.getRunnerQueueState).not.toHaveBeenCalled();
 	});
 
+	it("rejects a revoked paired device before invoking the task service", async () => {
+		mocks.authenticateBrowserRunnerDevice.mockResolvedValue(null);
+
+		const response = await post(
+			ClaimRoute,
+			"/tasks/claim",
+			{ brandId: "stepfun", runnerId: "spoofed" },
+			"ignored",
+			`yrd_${"a".repeat(43)}`,
+		);
+
+		expect(response.status).toBe(401);
+		expect(mocks.claimRunnerTask).not.toHaveBeenCalled();
+		expect(mocks.getRunnerQueueState).not.toHaveBeenCalled();
+	});
+
 	it("preserves the durable session contract across resume and complete", async () => {
 		mocks.resumeRunnerTask.mockResolvedValue({
 			claim: { task: { id: "task-1" }, runnerSessionId: "durable-session-1", postSubmitAssist: true },
@@ -113,12 +134,18 @@ describe("Browser Runner internal HTTP task contract", () => {
 	});
 });
 
-async function post(route: unknown, pathname: string, body: unknown, taskId = "ignored"): Promise<Response> {
+async function post(
+	route: unknown,
+	pathname: string,
+	body: unknown,
+	taskId = "ignored",
+	bearer = token,
+): Promise<Response> {
 	const handler = (route as MockRoute).server.handlers.POST;
 	return handler({
 		request: new Request(`https://portal.example.test${pathname}`, {
 			method: "POST",
-			headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+			headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
 			body: JSON.stringify(body),
 		}),
 		params: { taskId },
