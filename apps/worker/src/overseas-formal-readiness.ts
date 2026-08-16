@@ -2,6 +2,11 @@ export const OVERSEAS_FORMAL_PROMPT_COUNT = 3;
 export const OVERSEAS_FORMAL_ONE_SHOT_SAMPLES = 1;
 export const OVERSEAS_FORMAL_MAX_CALLS = 18;
 
+export function countCanonicalReviewedPrompts(actual: readonly string[], expected: readonly string[]): number {
+	const expectedCanonical = new Set(expected.map((value) => value.normalize("NFKC")));
+	return new Set(actual.map((value) => value.normalize("NFKC")).filter((value) => expectedCanonical.has(value))).size;
+}
+
 export interface OverseasFormalTarget {
 	model: string;
 	webSearch: boolean;

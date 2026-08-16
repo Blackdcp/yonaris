@@ -166,7 +166,12 @@ if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SE
 	die "browser environment contains a control-plane secret name"
 fi
 
-install -o root -g root -m 0755 "$script_dir/bin/yonaris-browser-peercred" /usr/local/libexec/yonaris-browser-peercred
+peercred_candidate="$(mktemp)"
+trap 'rm -f -- "$peercred_candidate"' EXIT
+tr -d '\r' <"$script_dir/bin/yonaris-browser-peercred" >"$peercred_candidate"
+install -o root -g root -m 0755 "$peercred_candidate" /usr/local/libexec/yonaris-browser-peercred
+rm -f -- "$peercred_candidate"
+trap - EXIT
 install -o root -g root -m 0755 "$script_dir/bin/apply-browser-egress.sh" /usr/local/sbin/yonaris-apply-browser-egress
 install -o root -g root -m 0755 "$script_dir/bin/browser-egress-negative-probes.sh" /usr/local/sbin/yonaris-browser-egress-negative-probes
 install -o root -g root -m 0755 "$script_dir/bin/clear-browser-egress.sh" /usr/local/sbin/yonaris-clear-browser-egress

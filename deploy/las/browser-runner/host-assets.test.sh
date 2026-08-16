@@ -169,6 +169,7 @@ grep -Fq 'BROWSER_NETWORK_ACTIVE_MARKER' "$clear_script"
 grep -Fq 'BROWSER_NETWORK_PROBE_RECEIPT' "$clear_script"
 
 install_script="$SCRIPT_DIR/install-host.sh"
+grep -Fq "tr -d '\\r'" "$install_script"
 if grep -Eq 'systemctl[[:space:]]+(enable|start|enable[[:space:]]+--now)' "$install_script"; then
 	echo "Installer must not enable or start Browser Runner services." >&2
 	exit 1

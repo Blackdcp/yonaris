@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildOverseasFormalReadiness } from "./overseas-formal-readiness";
+import { buildOverseasFormalReadiness, countCanonicalReviewedPrompts } from "./overseas-formal-readiness";
 
 const baseInput = {
 	brand: {
@@ -50,6 +50,13 @@ test("reports a bounded one-shot plan without enabling daily execution", () => {
 		report.targets.map(({ model }) => model),
 		["chatgpt", "perplexity"],
 	);
+});
+
+test("matches reviewed Chinese prompts when only full-width punctuation differs", () => {
+	const expected = ["问题一?", "问题二,继续?", "问题三?"];
+	const actual = ["问题一？", "问题二，继续？", "问题三？"];
+
+	assert.equal(countCanonicalReviewedPrompts(actual, expected), 3);
 });
 
 test("fails closed when prompt identity, provider, snapshots, or call cap is unsafe", () => {

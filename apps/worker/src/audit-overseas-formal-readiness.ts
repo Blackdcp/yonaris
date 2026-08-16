@@ -4,7 +4,7 @@ import { brands, measurementScopes, prompts } from "@workspace/lib/db/schema";
 import { resolveObservationTarget } from "@workspace/lib/observation-targets";
 import { getProvider, parseScrapeTargets, selectTargetsForBrand } from "@workspace/lib/providers";
 import { and, asc, eq } from "drizzle-orm";
-import { buildOverseasFormalReadiness } from "./overseas-formal-readiness";
+import { buildOverseasFormalReadiness, countCanonicalReviewedPrompts } from "./overseas-formal-readiness";
 import { EXPECTED_STEPFUN_PROMPTS } from "./sampling-batch-request";
 
 function selectExactlyOne<T>(rows: T[], entity: string): T {
@@ -45,8 +45,10 @@ async function main(): Promise<void> {
 		.from(prompts)
 		.where(and(eq(prompts.brandId, brand.id), eq(prompts.scopeId, scope.id), eq(prompts.enabled, true)))
 		.orderBy(asc(prompts.createdAt), asc(prompts.id));
-	const expectedPrompts = new Set<string>(EXPECTED_STEPFUN_PROMPTS);
-	const exactPromptValues = new Set(promptRows.map(({ value }) => value).filter((value) => expectedPrompts.has(value)));
+	const exactPromptMatchCount = countCanonicalReviewedPrompts(
+		promptRows.map(({ value }) => value),
+		EXPECTED_STEPFUN_PROMPTS,
+	);
 	const configuredTargets = parseScrapeTargets(process.env.SCRAPE_TARGETS);
 	const brandTargets = selectTargetsForBrand(configuredTargets, brand.enabledModels);
 	const brightDataConfigs = brandTargets.filter((target) => target.provider === "brightdata");
@@ -71,7 +73,7 @@ async function main(): Promise<void> {
 			enabled: scope.enabled,
 			automaticTargetKeys: scope.automaticTargetKeys,
 			promptCount: promptRows.length,
-			exactPromptMatchCount: exactPromptValues.size,
+			exactPromptMatchCount,
 		},
 		brightDataTargets,
 		providerConfigured: getProvider("brightdata").isConfigured(),

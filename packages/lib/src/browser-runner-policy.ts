@@ -1,4 +1,5 @@
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
+export const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE = "broker_create_transport_failure";
 export const BROWSER_RUNNER_RETRYABLE_PRE_SUBMIT_CODES = [
 	"navigation_timeout",
 	"page_load_timeout",
@@ -7,6 +8,30 @@ export const BROWSER_RUNNER_RETRYABLE_PRE_SUBMIT_CODES = [
 ] as const;
 
 export type BrowserRunnerTaskAutomationStatus = "queued" | "running" | "needs_human" | "completed";
+
+export function isSafePreSubmitBrokerTransportRecoveryCandidate(input: {
+	deliveryStatus: string;
+	automationStatus: BrowserRunnerTaskAutomationStatus | null;
+	automationAttemptCount: number;
+	claimCount: number;
+	submitIntentAt: Date | null;
+	submitConfirmedAt: Date | null;
+	observationAttemptId: string | null;
+	needsHumanCode: string | null;
+	lastErrorCode: string | null;
+}): boolean {
+	return (
+		input.deliveryStatus === "available" &&
+		input.automationStatus === "needs_human" &&
+		input.automationAttemptCount === BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS &&
+		input.claimCount === BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS &&
+		input.submitIntentAt === null &&
+		input.submitConfirmedAt === null &&
+		input.observationAttemptId === null &&
+		input.needsHumanCode === BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE &&
+		input.lastErrorCode === BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE
+	);
+}
 
 export function isBrowserRunnerCnScope(input: { market: string; locale: string; timezone: string }): boolean {
 	return input.market === "CN" && input.locale === "zh-CN" && input.timezone === "Asia/Shanghai";

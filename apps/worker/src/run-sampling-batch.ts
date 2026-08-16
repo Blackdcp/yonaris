@@ -1,4 +1,7 @@
-import { startBrowserRunnerBatch } from "@workspace/lib/db/browser-runner";
+import {
+	requeueBrowserRunnerSafePreSubmitTransportFailures,
+	startBrowserRunnerBatch,
+} from "@workspace/lib/db/browser-runner";
 import { db } from "@workspace/lib/db/db";
 import {
 	addDeliveryTasks,
@@ -121,6 +124,13 @@ async function findExistingBatch(brandId: string, idempotencyKey: string): Promi
 			sessionRequirement: task.sessionRequirement,
 			searchRequirement: task.searchRequirement,
 			evaluationRole: task.evaluationRole,
+			automationAttemptCount: task.automationAttemptCount,
+			claimCount: task.claimCount,
+			submitIntentAt: task.submitIntentAt,
+			submitConfirmedAt: task.submitConfirmedAt,
+			observationAttemptId: task.observationAttemptId,
+			needsHumanCode: task.needsHumanCode,
+			lastErrorCode: task.lastErrorCode,
 		})),
 	};
 }
@@ -154,6 +164,9 @@ const gateway: SamplingBatchOperationGateway = {
 	},
 	async start(brandId, batchId) {
 		await startBrowserRunnerBatch({ brandId, batchId });
+	},
+	async requeueSafePreSubmitTransportFailures(brandId, batchId, expectedTaskCount) {
+		await requeueBrowserRunnerSafePreSubmitTransportFailures({ brandId, batchId, expectedTaskCount });
 	},
 };
 

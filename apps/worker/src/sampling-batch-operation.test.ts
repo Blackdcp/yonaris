@@ -78,6 +78,13 @@ function exactExistingState(
 			sessionRequirement: task.sessionRequirement,
 			searchRequirement: task.searchRequirement,
 			evaluationRole: task.evaluationRole ?? "scored",
+			automationAttemptCount: 0,
+			claimCount: 0,
+			submitIntentAt: null,
+			submitConfirmedAt: null,
+			observationAttemptId: null,
+			needsHumanCode: null,
+			lastErrorCode: null,
 		})),
 	} satisfies SamplingBatchExistingState;
 }
@@ -165,6 +172,13 @@ class InMemoryGateway implements SamplingBatchOperationGateway {
 			sessionRequirement: task.sessionRequirement,
 			searchRequirement: task.searchRequirement,
 			evaluationRole: task.evaluationRole ?? "scored",
+			automationAttemptCount: 0,
+			claimCount: 0,
+			submitIntentAt: null,
+			submitConfirmedAt: null,
+			observationAttemptId: null,
+			needsHumanCode: null,
+			lastErrorCode: null,
 		}));
 	}
 
@@ -189,6 +203,33 @@ class InMemoryGateway implements SamplingBatchOperationGateway {
 		this.state.batch.automationStatus = "running";
 		this.state.batch.automationStartedAt = new Date("2026-08-13T01:00:00.000Z");
 	}
+
+	async requeueSafePreSubmitTransportFailures() {
+		this.mutations.push("requeue-safe-pre-submit");
+		if (!this.state) throw new Error("missing state");
+		this.state.batch.automationStatus = "running";
+		this.state.tasks = this.state.tasks.map((task) => ({
+			...task,
+			automationStatus: "queued",
+			automationAttemptCount: 0,
+			needsHumanCode: null,
+			lastErrorCode: "broker_transport_pre_submit_requeued_v1",
+		}));
+	}
+}
+
+function safeBrokerTransportNeedsHumanState(): SamplingBatchExistingState {
+	const state = exactExistingState();
+	state.batch.automationStatus = "needs_human";
+	state.tasks = state.tasks.map((task) => ({
+		...task,
+		automationStatus: "needs_human",
+		automationAttemptCount: 2,
+		claimCount: 2,
+		needsHumanCode: "broker_create_transport_failure",
+		lastErrorCode: "broker_create_transport_failure",
+	}));
+	return state;
 }
 
 class ConcurrentStartGateway extends InMemoryGateway {
@@ -314,6 +355,30 @@ describe("StepFun sampling existing batch identity", () => {
 });
 
 describe("StepFun sampling one-shot operation", () => {
+	it("dry-runs and then explicitly requeues the untouched two-attempt broker transport cohort once", async () => {
+		const dryRunGateway = new InMemoryGateway(safeBrokerTransportNeedsHumanState());
+		const dryRun = await executeSamplingBatchOperation(validSamplingBatchManifest, "dry-run", dryRunGateway);
+		assert.equal(dryRun.action, "would_requeue_safe_pre_submit");
+		assert.deepEqual(dryRunGateway.mutations, []);
+
+		const applyGateway = new InMemoryGateway(safeBrokerTransportNeedsHumanState());
+		const applied = await executeSamplingBatchOperation(validSamplingBatchManifest, "apply", applyGateway);
+		assert.equal(applied.action, "requeued_safe_pre_submit");
+		assert.equal(applied.automationStatus, "running");
+		assert.deepEqual(applyGateway.mutations, ["requeue-safe-pre-submit"]);
+	});
+
+	it("does not automatically requeue a second exhausted transport cohort", async () => {
+		const state = safeBrokerTransportNeedsHumanState();
+		state.tasks = state.tasks.map((task) => ({ ...task, claimCount: 4 }));
+		const gateway = new InMemoryGateway(state);
+
+		const receipt = await executeSamplingBatchOperation(validSamplingBatchManifest, "apply", gateway);
+
+		assert.equal(receipt.action, "existing_noop");
+		assert.deepEqual(gateway.mutations, []);
+	});
+
 	it("does not mutate an existing fixed batch in any mode", async () => {
 		for (const mode of ["dry-run", "apply", "status-only"] as const) {
 			const gateway = new InMemoryGateway(exactExistingState());

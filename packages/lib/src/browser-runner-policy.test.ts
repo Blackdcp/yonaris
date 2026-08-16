@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	assertBrowserRunnerEvidenceProtocol,
 	assertPortalBrowserRunnerMutationAllowed,
+	BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE,
 	browserRunnerHumanFinalization,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
@@ -10,9 +11,35 @@ import {
 	deriveBrowserRunnerResultStatus,
 	expiredBrowserRunnerClaimNeedsHuman,
 	isBrowserRunnerCnScope,
+	isSafePreSubmitBrokerTransportRecoveryCandidate,
 } from "./browser-runner-policy";
 
 describe("Browser Runner retry policy", () => {
+	it("permits one explicit recovery only for the untouched two-attempt broker transport cohort", () => {
+		const candidate = {
+			deliveryStatus: "available",
+			automationStatus: "needs_human" as const,
+			automationAttemptCount: 2,
+			claimCount: 2,
+			submitIntentAt: null,
+			submitConfirmedAt: null,
+			observationAttemptId: null,
+			needsHumanCode: BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE,
+			lastErrorCode: BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE,
+		};
+
+		expect(isSafePreSubmitBrokerTransportRecoveryCandidate(candidate)).toBe(true);
+		for (const unsafe of [
+			{ ...candidate, claimCount: 4 },
+			{ ...candidate, submitIntentAt: new Date() },
+			{ ...candidate, observationAttemptId: "attempt-id" },
+			{ ...candidate, needsHumanCode: "login_required" },
+			{ ...candidate, deliveryStatus: "claimed" },
+		]) {
+			expect(isSafePreSubmitBrokerTransportRecoveryCandidate(unsafe)).toBe(false);
+		}
+	});
+
 	it("accepts only the registered mainland-China scope contract", () => {
 		expect(isBrowserRunnerCnScope({ market: "CN", locale: "zh-CN", timezone: "Asia/Shanghai" })).toBe(true);
 		expect(isBrowserRunnerCnScope({ market: "CN", locale: "zh-CN", timezone: "UTC" })).toBe(false);

@@ -1,3 +1,4 @@
+import { isSafePreSubmitBrokerTransportRecoveryCandidate } from "@workspace/lib/browser-runner-policy";
 import type { DeliveryTaskPlanInput } from "@workspace/lib/db/delivery-batches";
 import {
 	DEFAULT_DELIVERY_EVIDENCE_POLICY,
@@ -39,6 +40,13 @@ export type SamplingBatchTaskState = {
 	sessionRequirement: string;
 	searchRequirement: string;
 	evaluationRole: string;
+	automationAttemptCount: number;
+	claimCount: number;
+	submitIntentAt: Date | null;
+	submitConfirmedAt: Date | null;
+	observationAttemptId: string | null;
+	needsHumanCode: string | null;
+	lastErrorCode: string | null;
 };
 
 export type SamplingBatchExistingState = {
@@ -77,13 +85,19 @@ export type SamplingBatchOperationGateway = {
 		measurementWindow: DeliveryProtocol["measurementWindow"],
 	): Promise<void>;
 	start(brandId: string, batchId: string): Promise<void>;
+	requeueSafePreSubmitTransportFailures(brandId: string, batchId: string, expectedTaskCount: number): Promise<void>;
 };
 
 export type SamplingBatchOperationReceipt = {
 	ok: true;
 	requestId: string;
 	idempotencyKey: string;
-	action: "would_create_freeze_start" | "created_frozen_started" | "existing_noop";
+	action:
+		| "would_create_freeze_start"
+		| "created_frozen_started"
+		| "would_requeue_safe_pre_submit"
+		| "requeued_safe_pre_submit"
+		| "existing_noop";
 	batchId: string | null;
 	brandId: string;
 	brandName: string;
@@ -179,7 +193,21 @@ export function buildSamplingTaskPlans(
 	return tasks;
 }
 
-function canonicalTask(task: Omit<SamplingBatchTaskState, "id" | "status" | "automationStatus">): string {
+function canonicalTask(
+	task: Pick<
+		SamplingBatchTaskState,
+		| "brandId"
+		| "scopeId"
+		| "promptId"
+		| "promptText"
+		| "surfaceTargetKey"
+		| "captureRouteKey"
+		| "sampleIndex"
+		| "sessionRequirement"
+		| "searchRequirement"
+		| "evaluationRole"
+	>,
+): string {
 	return JSON.stringify({
 		brandId: task.brandId,
 		scopeId: task.scopeId,
@@ -198,7 +226,7 @@ function canonicalReviewedPromptText(value: string): string {
 	return value.normalize("NFKC");
 }
 
-type SamplingBatchRecoveryStep = "add_tasks" | "freeze" | "start" | "none";
+type SamplingBatchRecoveryStep = "add_tasks" | "freeze" | "start" | "requeue_safe_pre_submit" | "none";
 
 function existingBatchConflict(): never {
 	throw new SamplingBatchRequestError(
@@ -325,6 +353,25 @@ function recoveryStepForExistingSamplingBatch(
 			existing.batch.automationStatus === derivedAutomationStatus &&
 			derivedAutomationStatus !== "settled"
 		) {
+			if (
+				derivedAutomationStatus === "needs_human" &&
+				existing.tasks.length === expectedTasks.length &&
+				existing.tasks.every((task) =>
+					isSafePreSubmitBrokerTransportRecoveryCandidate({
+						deliveryStatus: task.status,
+						automationStatus: task.automationStatus,
+						automationAttemptCount: task.automationAttemptCount,
+						claimCount: task.claimCount,
+						submitIntentAt: task.submitIntentAt,
+						submitConfirmedAt: task.submitConfirmedAt,
+						observationAttemptId: task.observationAttemptId,
+						needsHumanCode: task.needsHumanCode,
+						lastErrorCode: task.lastErrorCode,
+					}),
+				)
+			) {
+				return "requeue_safe_pre_submit";
+			}
 			return "none";
 		}
 		return existingBatchConflict();
@@ -419,8 +466,13 @@ export async function executeSamplingBatchOperation(
 	const protocol = buildSamplingBatchProtocol(request);
 	if (mode === "dry-run") {
 		if (existing) {
-			assertExistingSamplingBatchMatches(request, snapshot, existing);
-			return receiptForState(request, snapshot, "existing_noop", existing);
+			const recoveryStep = recoveryStepForExistingSamplingBatch(request, snapshot, existing);
+			return receiptForState(
+				request,
+				snapshot,
+				recoveryStep === "requeue_safe_pre_submit" ? "would_requeue_safe_pre_submit" : "existing_noop",
+				existing,
+			);
 		}
 		assertMeasurementWindowOpen(protocol, gateway.currentTime());
 		buildSamplingTaskPlans(request, snapshot);
@@ -430,6 +482,7 @@ export async function executeSamplingBatchOperation(
 	const tasks = buildSamplingTaskPlans(request, snapshot);
 	let batchId = existing?.batch.id ?? null;
 	let mutated = false;
+	let requeuedSafePreSubmit = false;
 	for (;;) {
 		if (!existing) {
 			assertMeasurementWindowOpen(protocol, gateway.currentTime());
@@ -438,7 +491,12 @@ export async function executeSamplingBatchOperation(
 		} else {
 			const recoveryStep = recoveryStepForExistingSamplingBatch(request, snapshot, existing);
 			if (recoveryStep === "none") {
-				return receiptForState(request, snapshot, mutated ? "created_frozen_started" : "existing_noop", existing);
+				return receiptForState(
+					request,
+					snapshot,
+					requeuedSafePreSubmit ? "requeued_safe_pre_submit" : mutated ? "created_frozen_started" : "existing_noop",
+					existing,
+				);
 			}
 			assertMeasurementWindowOpen(protocol, gateway.currentTime());
 			try {
@@ -446,8 +504,11 @@ export async function executeSamplingBatchOperation(
 					await gateway.addTasks(snapshot.brand.id, existing.batch.id, tasks);
 				} else if (recoveryStep === "freeze") {
 					await gateway.freeze(snapshot.brand.id, existing.batch.id, request.requestId, protocol.measurementWindow);
-				} else {
+				} else if (recoveryStep === "start") {
 					await gateway.start(snapshot.brand.id, existing.batch.id);
+				} else {
+					await gateway.requeueSafePreSubmitTransportFailures(snapshot.brand.id, existing.batch.id, tasks.length);
+					requeuedSafePreSubmit = true;
 				}
 			} catch (error) {
 				const concurrent = await gateway.findExistingBatch(snapshot.brand.id, request.batch.idempotencyKey);
