@@ -3,8 +3,8 @@ import { extname, isAbsolute, relative, resolve } from "node:path";
 
 export const SAMPLING_BATCH_SURFACE_TARGET = "doubao.consumer_web";
 export const SAMPLING_BATCH_CAPTURE_ROUTE = "browser_runner.doubao";
-export const SAMPLING_BATCH_REQUEST_ID = "stepfun-cn-doubao-6x-20260816-v2";
-export const SAMPLING_BATCH_IDEMPOTENCY_KEY = "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v2";
+export const SAMPLING_BATCH_REQUEST_ID = "stepfun-cn-doubao-6x-20260816-v3";
+export const SAMPLING_BATCH_IDEMPOTENCY_KEY = "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v3";
 export const SAMPLING_BATCH_NAME = "StepFun CN Doubao formal sampling 2026-08-16 - 6x";
 export const SAMPLING_BATCH_WINDOW_STARTS_AT = "2026-08-16T00:00:00+08:00";
 export const SAMPLING_BATCH_WINDOW_ENDS_AT = "2026-08-23T23:59:59+08:00";

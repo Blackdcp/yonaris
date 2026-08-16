@@ -20,12 +20,17 @@ import {
 	type OverseasFormalPromptIdentity,
 } from "./overseas-formal-run-policy";
 import {
+	EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST,
+	OVERSEAS_FORMAL_RUN_REQUEST_ID,
 	type OverseasFormalRunRequest,
 	OverseasFormalRunRequestError,
 	readOverseasFormalRunRequestFile,
 } from "./overseas-formal-run-request";
 
 type CliMode = "dry-run" | "apply" | "status-only";
+type FailureStage = "request" | "prerequisites" | "destination" | "execution" | "diagnostic";
+
+let failureStage: FailureStage = "request";
 
 function parseCli(argv: string[]): { requestFile: string; mode: CliMode } {
 	let requestFile: string | undefined;
@@ -233,8 +238,11 @@ async function diagnostic(
 
 async function main(): Promise<void> {
 	const cli = parseCli(process.argv.slice(2));
+	failureStage = "request";
 	const request = await readOverseasFormalRunRequestFile(cli.requestFile);
+	failureStage = "prerequisites";
 	const prerequisites = await resolvePrerequisites(request);
+	failureStage = "destination";
 	const existing = await readDestination(prerequisites.brand.id, request);
 	const sourceKeys = prerequisites.sourcePlan.calls.map((call) =>
 		buildObservationSourceKey({
@@ -289,6 +297,7 @@ async function main(): Promise<void> {
 		where: eq(competitors.brandId, prerequisites.brand.id),
 	});
 	const failures: unknown[] = [];
+	failureStage = "execution";
 	for (const call of plan.calls) {
 		try {
 			await runModelIteration({
@@ -306,6 +315,7 @@ async function main(): Promise<void> {
 			failures.push(error);
 		}
 	}
+	failureStage = "diagnostic";
 	const state = await diagnostic(prerequisites.brand.id, destination.scope.id, sourceKeys);
 	if (
 		failures.length > 0 ||
@@ -363,6 +373,13 @@ main().catch((error: unknown) => {
 		`${JSON.stringify({
 			ok: false,
 			operation: "overseas_formal_one_shot",
+			requestId: OVERSEAS_FORMAL_RUN_REQUEST_ID,
+			action: "failed",
+			failureStage,
+			scopeKey: EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST.destinationScope.keyExact,
+			channel: EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST.target.surfaceTargetKey,
+			plannedCalls: 3,
+			dailyAutomationEnabled: false,
 			code: known ? error.code : "overseas_formal_one_shot_failed",
 		})}\n`,
 	);

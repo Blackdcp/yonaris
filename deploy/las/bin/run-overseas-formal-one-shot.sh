@@ -120,6 +120,15 @@ if payload.get("scopeKey") != "us-en-chatgpt-one-shot-20260816" or payload.get("
 if payload.get("plannedCalls") != 3 or payload.get("dailyAutomationEnabled") is not False:
     raise SystemExit("Overseas formal account operation exceeded the approved one-shot budget.")
 if status != 0 or payload.get("ok") is not True:
+    if payload.get("action") == "failed":
+        stage = payload.get("failureStage")
+        code = payload.get("code")
+        if stage not in {"request", "prerequisites", "destination", "execution", "diagnostic"}:
+            raise SystemExit("Overseas formal account operation returned an invalid failure stage.")
+        if not isinstance(code, str) or re.fullmatch(r"[a-z0-9_]{1,80}", code) is None:
+            raise SystemExit("Overseas formal account operation returned an invalid failure code.")
+        print(f"overseas formal {mode} failed: stage={stage} code={code}", file=sys.stderr)
+        raise SystemExit(1)
     fields = [
         "completedCalls",
         "failedCalls",

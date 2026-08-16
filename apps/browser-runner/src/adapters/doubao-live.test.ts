@@ -328,6 +328,7 @@ test("dedicated preparation requires a positive authenticated marker and creates
 	let userMessageCount = 1;
 	let blankUrlChecks = 0;
 	let stabilityWaits = 0;
+	let authenticatedWaits = 0;
 	const clicked: string[] = [];
 	const locator = (selector: string) =>
 		({
@@ -338,6 +339,16 @@ test("dedicated preparation requires a positive authenticated marker and creates
 			},
 			async isVisible() {
 				return true;
+			},
+			first() {
+				return {
+					async waitFor(options: { state: string; timeout: number }) {
+						if (selector === "[data-authenticated]") {
+							assert.deepEqual(options, { state: "visible", timeout: 15_000 });
+							authenticatedWaits += 1;
+						}
+					},
+				} as unknown as Locator;
 			},
 			async click() {
 				clicked.push(selector);
@@ -367,6 +378,7 @@ test("dedicated preparation requires a positive authenticated marker and creates
 	try {
 		await prepareDedicatedConversation(page);
 		assert.deepEqual(clicked, ["[data-new-conversation]"]);
+		assert.equal(authenticatedWaits, 1);
 		assert.equal(blankUrlChecks, 1);
 		assert.equal(stabilityWaits, 1);
 		assert.equal(answerCount, 0);

@@ -654,6 +654,12 @@ export async function prepareDedicatedConversation(page: Page): Promise<void> {
 		.getByRole("button", { name: "\u767b\u5f55", exact: true })
 		.isVisible()
 		.catch(() => false);
+	if (!loginButtonVisible) {
+		await authenticated
+			.first()
+			.waitFor({ state: "visible", timeout: 15_000 })
+			.catch(() => undefined);
+	}
 	if ((await authenticated.count()) !== 1 || !(await authenticated.isVisible()) || loginButtonVisible) {
 		throw new BrowserRunnerError(
 			"dedicated_profile_not_authenticated",

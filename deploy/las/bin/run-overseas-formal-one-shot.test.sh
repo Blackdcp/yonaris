@@ -51,6 +51,10 @@ if [[ "$mode" == "apply" ]]; then
   fi
   printf '%s\n' '{"ok":true,"operation":"overseas_formal_one_shot","requestId":"stepfun-us-chatgpt-1x-20260816","action":"completed","scopeKey":"us-en-chatgpt-one-shot-20260816","channel":"chatgpt.consumer_web","plannedCalls":3,"completedCalls":3,"promptRunCount":3,"citationCount":7,"readySnapshots":3,"pendingSnapshots":0,"dailyAutomationEnabled":false}'
 else
+  if [[ "$mode" == "status-only" && "${MOCK_FAIL_STATUS:-false}" == true ]]; then
+    printf '%s\n' '{"ok":false,"operation":"overseas_formal_one_shot","requestId":"stepfun-us-chatgpt-1x-20260816","action":"failed","failureStage":"prerequisites","scopeKey":"us-en-chatgpt-one-shot-20260816","channel":"chatgpt.consumer_web","plannedCalls":3,"dailyAutomationEnabled":false,"code":"overseas_formal_one_shot_failed"}'
+    exit 1
+  fi
   printf '%s\n' "{\"ok\":true,\"operation\":\"overseas_formal_one_shot\",\"requestId\":\"stepfun-us-chatgpt-1x-20260816\",\"action\":\"$([[ \"$mode\" == status-only ]] && echo absent_read_only || echo would_create_and_run)\",\"scopeKey\":\"us-en-chatgpt-one-shot-20260816\",\"channel\":\"chatgpt.consumer_web\",\"plannedCalls\":3,\"dailyAutomationEnabled\":false}"
 fi
 printf '%s\n' '{"level":"info","message":"container cleanup completed"}'
@@ -79,4 +83,11 @@ if grep -Fq 'provider raw response' <<<"$failed_output"; then
 	echo "Overseas formal failure receipt leaked raw provider output." >&2
 	exit 1
 fi
+
+set +e
+status_failure_output="$(env PATH="$mock_bin:$PATH" MOCK_EVENT_LOG="$event_log" MOCK_FAIL_STATUS=true DEPLOY_ROOT="$deploy_root" COMPOSE_FILE="$source_root/deploy/las/compose.yaml" ENV_FILE="$deploy_root/.env" bash "$source_root/deploy/las/bin/run-overseas-formal-one-shot.sh" "$release_tag" "$request_file" 2>&1)"
+status_failure_status=$?
+set -e
+[[ "$status_failure_status" -ne 0 ]]
+grep -Fq 'overseas formal status-only failed: stage=prerequisites code=overseas_formal_one_shot_failed' <<<"$status_failure_output"
 echo "overseas formal one-shot mock tests passed"
