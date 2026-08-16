@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-	citationDateWindow,
 	applyPerPromptKeyedLVCF,
+	citationDateWindow,
+	generateDateRange,
 	getDaysFromLookback,
 	getDefaultLookbackPeriod,
-	generateDateRange,
 	type LookbackPeriod,
 } from "@/lib/chart-utils";
 import { toRoundedPercentages } from "@/lib/domain-categories";
@@ -23,6 +23,15 @@ describe("getDaysFromLookback", () => {
 });
 
 describe("getDefaultLookbackPeriod", () => {
+	beforeAll(() => {
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date("2026-08-17T12:00:00.000Z"));
+	});
+
+	afterAll(() => {
+		vi.useRealTimers();
+	});
+
 	const daysAgo = (days: number) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
 	it.each<[string, string | null | undefined]>([
