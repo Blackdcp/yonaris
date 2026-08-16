@@ -56,6 +56,28 @@ test("a dedicated task fails closed until the operator has initialized the exact
 	}
 });
 
+test("a successful manual reauthentication accepts the existing valid ready marker but rejects a mismatched marker", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-dedicated-reauth-"));
+	const profileDirectory = dedicatedProfileDirectory(stateDirectory);
+	try {
+		await initializeDedicatedProfile(profileDirectory);
+		await assert.doesNotReject(initializeDedicatedProfile(profileDirectory));
+
+		await writeFile(
+			path.join(profileDirectory, ".yonaris-dedicated-profile.json"),
+			`${JSON.stringify({ schemaVersion: 1, surface: "another-surface", purpose: "dedicated_sampling_profile" })}\n`,
+			"utf8",
+		);
+		await assert.rejects(
+			initializeDedicatedProfile(profileDirectory),
+			(error: unknown) =>
+				error instanceof Error && "code" in error && error.code === "dedicated_profile_initialization_failed",
+		);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
 test("one dedicated profile is reusable sequentially but rejects concurrent or stale task sessions", async () => {
 	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-dedicated-session-"));
 	const profileDirectory = dedicatedProfileDirectory(stateDirectory);

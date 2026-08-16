@@ -39,6 +39,17 @@ export async function initializeDedicatedProfile(profileDirectory: string): Prom
 		});
 		await chmod(markerPath, 0o600);
 	} catch (cause) {
+		if (isExistingFile(cause)) {
+			try {
+				const existing = await readMarker(markerPath);
+				if (JSON.stringify(existing) === JSON.stringify(DEDICATED_PROFILE_IDENTITY)) {
+					await chmod(markerPath, 0o600);
+					return;
+				}
+			} catch {
+				// A malformed or unsafe existing marker must remain fail-closed.
+			}
+		}
 		throw new BrowserRunnerError(
 			"dedicated_profile_initialization_failed",
 			"session_open",
