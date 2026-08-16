@@ -53,6 +53,7 @@ if [[ "$mode" == "apply" ]]; then
 else
   printf '%s\n' "{\"ok\":true,\"operation\":\"overseas_formal_one_shot\",\"requestId\":\"stepfun-us-chatgpt-1x-20260816\",\"action\":\"$([[ \"$mode\" == status-only ]] && echo absent_read_only || echo would_create_and_run)\",\"scopeKey\":\"us-en-chatgpt-one-shot-20260816\",\"channel\":\"chatgpt.consumer_web\",\"plannedCalls\":3,\"dailyAutomationEnabled\":false}"
 fi
+printf '%s\n' '{"level":"info","message":"container cleanup completed"}'
 EOF
 cat >"$mock_bin/flock" <<'EOF'
 #!/usr/bin/env bash

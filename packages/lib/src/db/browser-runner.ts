@@ -9,6 +9,7 @@ import {
 	expiredBrowserRunnerClaimNeedsHuman,
 	isBrowserRunnerCnScope,
 	isSafePreSubmitBrokerTransportRecoveryCandidate,
+	isSafePreSubmitDedicatedProfileBusyRecoveryCandidate,
 } from "../browser-runner-policy";
 import type { DeliveryProtocol } from "../delivery-manifest";
 import { normalizeDeliveryProtocol } from "../delivery-manifest";
@@ -537,6 +538,119 @@ export async function requeueBrowserRunnerSafePreSubmitTransportFailures(input: 
 			.returning({ id: deliveryTasks.id });
 		if (requeued.length !== input.expectedTaskCount) {
 			throw new BrowserRunnerStateError("Browser Runner safe transport recovery changed concurrently");
+		}
+		const [updatedBatch] = await tx
+			.update(deliveryBatches)
+			.set({ automationStatus: "running", automationSettledAt: null })
+			.where(
+				and(
+					eq(deliveryBatches.id, batch.id),
+					eq(deliveryBatches.status, "in_progress"),
+					eq(deliveryBatches.automationStatus, "needs_human"),
+				),
+			)
+			.returning({ id: deliveryBatches.id });
+		if (!updatedBatch) throw new BrowserRunnerStateError("Browser Runner batch recovery changed concurrently");
+		return { requeuedCount: requeued.length };
+	});
+}
+
+export async function requeueBrowserRunnerDedicatedProfileBusyTasks(input: {
+	brandId: string;
+	batchId: string;
+	expectedTaskCount: number;
+	expectedRequeueCount: number;
+}): Promise<{ requeuedCount: number }> {
+	if (
+		!Number.isSafeInteger(input.expectedTaskCount) ||
+		input.expectedTaskCount < 2 ||
+		input.expectedTaskCount > 100 ||
+		input.expectedRequeueCount !== input.expectedTaskCount - 1
+	) {
+		throw new BrowserRunnerStateError("Expected Browser Runner dedicated-profile recovery count is invalid");
+	}
+	return db.transaction(async (tx) => {
+		const [batch] = await tx
+			.select()
+			.from(deliveryBatches)
+			.where(and(eq(deliveryBatches.id, input.batchId), eq(deliveryBatches.brandId, input.brandId)))
+			.limit(1)
+			.for("update");
+		if (
+			batch?.executionMode !== "browser_runner" ||
+			batch.status !== "in_progress" ||
+			batch.automationStatus !== "needs_human" ||
+			batch.automationStartedAt === null ||
+			batch.plannedTaskCount !== input.expectedTaskCount
+		) {
+			throw new BrowserRunnerStateError("Browser Runner batch is not eligible for dedicated-profile recovery");
+		}
+		const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+		const now = new Date();
+		if (now < new Date(protocol.measurementWindow.startsAt) || now >= new Date(protocol.measurementWindow.endsAt)) {
+			throw new BrowserRunnerStateError("Browser Runner dedicated-profile recovery is outside the frozen window");
+		}
+		const tasks = await tx
+			.select()
+			.from(deliveryTasks)
+			.where(eq(deliveryTasks.batchId, batch.id))
+			.orderBy(asc(deliveryTasks.createdAt), asc(deliveryTasks.id))
+			.for("update");
+		const succeeded = tasks.filter(
+			(task) =>
+				task.status === "succeeded" &&
+				task.automationStatus === "completed" &&
+				task.submitIntentAt !== null &&
+				task.submitConfirmedAt !== null &&
+				task.observationAttemptId !== null,
+		);
+		const candidates = tasks.filter((task) =>
+			isSafePreSubmitDedicatedProfileBusyRecoveryCandidate({
+				deliveryStatus: task.status,
+				automationStatus: task.automationStatus,
+				automationAttemptCount: task.automationAttemptCount,
+				claimCount: task.claimCount,
+				submitIntentAt: task.submitIntentAt,
+				submitConfirmedAt: task.submitConfirmedAt,
+				observationAttemptId: task.observationAttemptId,
+				needsHumanCode: task.needsHumanCode,
+				lastErrorCode: task.lastErrorCode,
+			}),
+		);
+		if (
+			tasks.length !== input.expectedTaskCount ||
+			succeeded.length !== 1 ||
+			candidates.length !== input.expectedRequeueCount
+		) {
+			throw new BrowserRunnerStateError("Browser Runner dedicated-profile cohort is not safe to requeue");
+		}
+		const requeued = await tx
+			.update(deliveryTasks)
+			.set({
+				status: "available",
+				automationStatus: "queued",
+				automationAttemptCount: 0,
+				claimedBy: null,
+				claimedAt: null,
+				leaseTokenHash: null,
+				leaseExpiresAt: null,
+				runnerSessionId: null,
+				needsHumanCode: null,
+				needsHumanReason: null,
+				lastErrorClass: "BrowserRunnerOperatorRecovery",
+				lastErrorCode: "dedicated_profile_busy_requeued_v1",
+				lastErrorMessage: "The untouched tasks were explicitly requeued after the retained profile was released",
+				availableAt: now,
+			})
+			.where(
+				inArray(
+					deliveryTasks.id,
+					candidates.map(({ id }) => id),
+				),
+			)
+			.returning({ id: deliveryTasks.id });
+		if (requeued.length !== input.expectedRequeueCount) {
+			throw new BrowserRunnerStateError("Browser Runner dedicated-profile recovery changed concurrently");
 		}
 		const [updatedBatch] = await tx
 			.update(deliveryBatches)

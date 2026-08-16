@@ -106,6 +106,7 @@ test("post-submit assist confirms and extracts without invoking submit", async (
 					completeCalls += 1;
 					uploadedEvidencePaths = observation.evidence.map(({ path: evidencePath }) => evidencePath);
 				},
+				async markNeedsHuman() {},
 			},
 			sessionFactory: {
 				async resume(_task, _profileDirectory, _lastPageUrl, expectedSessionId) {
@@ -216,6 +217,7 @@ test("post-submit assist verifies the frozen prompt even when the server already
 					async submit() {
 						completionCalls += 1;
 					},
+					async markNeedsHuman() {},
 				},
 				sessionFactory: {
 					async resume() {
@@ -229,6 +231,106 @@ test("post-submit assist verifies the frozen prompt even when the server already
 		assert.equal(browserSubmitCalls, 0);
 		assert.equal(collectCalls, 0);
 		assert.equal(completionCalls, 0);
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
+	}
+});
+
+test("post-submit assist immediately persists a needs-human result when same-session recovery fails", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "browser-runner-assist-failure-"));
+	const journal = await RunJournal.create(stateDirectory, "assist-failure");
+	const task = {
+		id: "task-recovery-failure",
+		batchId: "batch-1",
+		brandId: "stepfun",
+		promptText: "the exact frozen prompt",
+		surfaceTargetKey: "doubao.consumer_web" as const,
+		captureRouteKey: "browser_runner.doubao" as const,
+		sampleIndex: 1,
+		sessionRequirement: "dedicated_sampling_profile" as const,
+		searchRequirement: "platform_default" as const,
+		evaluationRole: "scored" as const,
+		minimumEvidenceArtifacts: 2,
+		automationAttemptCount: 1,
+		leaseGeneration: 2,
+	};
+	const claimed: ClaimedRunnerTask = {
+		task,
+		submitConfirmed: true,
+		postSubmitAssist: true,
+		runnerSessionId: "bound-session",
+		claim: { leaseToken: "x".repeat(32), leaseGeneration: 2 },
+	};
+	const handoff: HandoffMetadata = {
+		taskId: task.id,
+		runId: "prior-run",
+		surface: "doubao",
+		sessionId: "bound-session",
+		profileDirectory: path.join(stateDirectory, "profiles", task.id),
+		lastPageUrl: "https://www.doubao.com/chat/task-recovery-failure",
+		phase: "post_submit",
+		code: "response_timeout",
+		message: "response timeout",
+		sessionRequirement: "dedicated_sampling_profile",
+		createdAt: new Date().toISOString(),
+		fixture: false,
+	};
+	let browserSubmitCalls = 0;
+	let needsHumanReason: { code: string; message: string; phase: string } | undefined;
+	try {
+		await assert.rejects(
+			resumePostSubmitTask({
+				handoff,
+				journal,
+				remote: {
+					async resume() {
+						return claimed;
+					},
+					async confirmPromptSubmitted() {},
+					async submit() {
+						throw new Error("must not complete a failed recovery");
+					},
+					async markNeedsHuman(_claimed, reason) {
+						needsHumanReason = reason;
+					},
+				},
+				sessionFactory: {
+					async resume() {
+						return {
+							id: "bound-session",
+							async open() {},
+							async prepare() {},
+							async submit() {
+								browserSubmitCalls += 1;
+							},
+							async confirmSubmission() {},
+							async collectResponse() {
+								throw new BrowserRunnerError(
+									"response_timeout",
+									"post_submit",
+									"needs_human",
+									"The retained response did not finish",
+								);
+							},
+							async captureEvidence() {
+								throw new Error("must not capture after response failure");
+							},
+							async handoffMetadata() {
+								throw new Error("must not create another handoff");
+							},
+							async close() {},
+						};
+					},
+				},
+			}),
+			/retained response did not finish/,
+		);
+		assert.equal(browserSubmitCalls, 0);
+		assert.deepEqual(needsHumanReason, {
+			code: "response_timeout",
+			message: "The retained response did not finish",
+			phase: "post_submit",
+		});
 	} finally {
 		await rm(stateDirectory, { recursive: true, force: true });
 	}

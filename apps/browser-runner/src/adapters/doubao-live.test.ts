@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { BrowserContext, Locator, Page } from "playwright";
 import type { RunnerTask } from "../contracts.js";
-import { dedicatedProfileDirectory, initializeDedicatedProfile } from "../dedicated-profile.js";
+import {
+	acquireDedicatedProfileSession,
+	assertDedicatedProfileSession,
+	dedicatedProfileDirectory,
+	initializeDedicatedProfile,
+} from "../dedicated-profile.js";
 import type { PersistentContextLaunchOptions } from "../sandbox-preflight.js";
 import { runnerSessionIdForTask } from "../session-identity.js";
 import {
@@ -15,6 +20,7 @@ import {
 	DOUBAO_COMPOSER_SELECTOR,
 	DOUBAO_SEND_SELECTOR,
 	DoubaoLiveSessionFactory,
+	exactSubmittedPromptIndex,
 	initializeProfileIdentity,
 	mapDoubaoAutomationError,
 	observedWebSearchState,
@@ -59,6 +65,13 @@ test("a resumed same-session answer may finish before the new process observes i
 		recoveredCompletionIsAcceptable({ resumedSession: true, generationMarkerObserved: true, markerVisible: true }),
 		false,
 	);
+});
+
+test("same-session recovery identifies the frozen prompt through the approved user-message nodes", () => {
+	assert.equal(exactSubmittedPromptIndex(["unrelated", "frozen prompt"], "frozen prompt"), 1);
+	assert.equal(exactSubmittedPromptIndex(["ｆｒｏｚｅｎ　ｐｒｏｍｐｔ"], "frozen prompt"), 0);
+	assert.equal(exactSubmittedPromptIndex(["frozen prompt", "frozen prompt"], "frozen prompt"), null);
+	assert.equal(exactSubmittedPromptIndex(["frozen prompt suffix"], "frozen prompt"), null);
 });
 
 function runnerTask(overrides: Partial<RunnerTask> = {}): RunnerTask {
@@ -122,6 +135,77 @@ test("resume requires an existing profile marker bound to the exact server task 
 		);
 	} finally {
 		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("automated same-session recovery launches headless under the broker service", async () => {
+	const root = await mkdtemp(path.join(tmpdir(), "doubao-headless-resume-"));
+	const task = runnerTask();
+	const sessionId = runnerSessionIdForTask(task);
+	const profiles = path.join(root, "profiles");
+	const profile = safeChildDirectory(profiles, task.id);
+	let options: PersistentContextLaunchOptions | undefined;
+	let currentUrl = "about:blank";
+	const page = {
+		async goto(url: string) {
+			currentUrl = url;
+		},
+		url() {
+			return currentUrl;
+		},
+	} as unknown as Page;
+	const context = {
+		pages: () => [page],
+		newPage: async () => page,
+		close: async () => undefined,
+	} as unknown as BrowserContext;
+	try {
+		await mkdir(profiles, { recursive: true });
+		await initializeProfileIdentity(profile, task, sessionId);
+		const factory = new DoubaoLiveSessionFactory(root, async (_profileDirectory, launchOptions) => {
+			options = launchOptions;
+			return context;
+		});
+		await factory.resume(task, profile, "https://www.doubao.com/chat/123456", sessionId);
+		assert.equal(options?.headless, true);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("a failed post-submit recovery retains the dedicated active-session marker", async () => {
+	const stateDirectory = await mkdtemp(path.join(tmpdir(), "doubao-retained-session-"));
+	const task = runnerTask({ sessionRequirement: "dedicated_sampling_profile" });
+	const sessionId = runnerSessionIdForTask(task);
+	const profile = dedicatedProfileDirectory(stateDirectory);
+	let currentUrl = "about:blank";
+	const page = {
+		async goto(url: string) {
+			currentUrl = url;
+		},
+		url() {
+			return currentUrl;
+		},
+	} as unknown as Page;
+	const launcher = async () =>
+		({
+			pages: () => [page],
+			newPage: async () => page,
+			close: async () => undefined,
+		}) as unknown as BrowserContext;
+	try {
+		await initializeDedicatedProfile(profile);
+		await acquireDedicatedProfileSession(profile, task, sessionId);
+		const factory = new DoubaoLiveSessionFactory(stateDirectory, launcher);
+		const failedRecovery = await factory.resume(task, profile, "https://www.doubao.com/chat/123456", sessionId);
+		await failedRecovery.close("needs_human");
+		await assert.doesNotReject(assertDedicatedProfileSession(profile, task, sessionId));
+
+		const successfulRecovery = await factory.resume(task, profile, "https://www.doubao.com/chat/123456", sessionId);
+		await successfulRecovery.close("succeeded");
+		await assert.rejects(assertDedicatedProfileSession(profile, task, sessionId));
+	} finally {
+		await rm(stateDirectory, { recursive: true, force: true });
 	}
 });
 

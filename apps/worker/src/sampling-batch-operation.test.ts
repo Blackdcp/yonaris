@@ -216,6 +216,23 @@ class InMemoryGateway implements SamplingBatchOperationGateway {
 			lastErrorCode: "broker_transport_pre_submit_requeued_v1",
 		}));
 	}
+
+	async requeueDedicatedProfileBusyTasks() {
+		this.mutations.push("requeue-dedicated-profile-busy");
+		if (!this.state) throw new Error("missing state");
+		this.state.batch.automationStatus = "running";
+		this.state.tasks = this.state.tasks.map((task) =>
+			task.needsHumanCode === "dedicated_profile_busy"
+				? {
+						...task,
+						automationStatus: "queued",
+						automationAttemptCount: 0,
+						needsHumanCode: null,
+						lastErrorCode: "dedicated_profile_busy_requeued_v1",
+					}
+				: task,
+		);
+	}
 }
 
 function safeBrokerTransportNeedsHumanState(): SamplingBatchExistingState {
@@ -229,6 +246,33 @@ function safeBrokerTransportNeedsHumanState(): SamplingBatchExistingState {
 		needsHumanCode: "broker_create_transport_failure",
 		lastErrorCode: "broker_create_transport_failure",
 	}));
+	return state;
+}
+
+function oneSucceededWithDedicatedProfileBusyState(): SamplingBatchExistingState {
+	const state = exactExistingState();
+	state.batch.automationStatus = "needs_human";
+	state.tasks = state.tasks.map((task, index) =>
+		index === 0
+			? {
+					...task,
+					status: "succeeded",
+					automationStatus: "completed",
+					automationAttemptCount: 1,
+					claimCount: 2,
+					submitIntentAt: new Date("2026-08-16T08:41:45.000Z"),
+					submitConfirmedAt: new Date("2026-08-16T08:41:46.000Z"),
+					observationAttemptId: "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+				}
+			: {
+					...task,
+					automationStatus: "needs_human",
+					automationAttemptCount: 1,
+					claimCount: 1,
+					needsHumanCode: "dedicated_profile_busy",
+					lastErrorCode: "dedicated_profile_busy",
+				},
+	);
 	return state;
 }
 
@@ -377,6 +421,19 @@ describe("StepFun sampling one-shot operation", () => {
 
 		assert.equal(receipt.action, "existing_noop");
 		assert.deepEqual(gateway.mutations, []);
+	});
+
+	it("requeues only the seventeen untouched tasks after the retained first answer succeeds", async () => {
+		const dryRunGateway = new InMemoryGateway(oneSucceededWithDedicatedProfileBusyState());
+		const dryRun = await executeSamplingBatchOperation(validSamplingBatchManifest, "dry-run", dryRunGateway);
+		assert.equal(dryRun.action, "would_requeue_dedicated_profile_busy");
+		assert.deepEqual(dryRunGateway.mutations, []);
+
+		const applyGateway = new InMemoryGateway(oneSucceededWithDedicatedProfileBusyState());
+		const applied = await executeSamplingBatchOperation(validSamplingBatchManifest, "apply", applyGateway);
+		assert.equal(applied.action, "requeued_dedicated_profile_busy");
+		assert.equal(applied.succeededTaskCount, 1);
+		assert.deepEqual(applyGateway.mutations, ["requeue-dedicated-profile-busy"]);
 	});
 
 	it("does not mutate an existing fixed batch in any mode", async () => {

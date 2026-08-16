@@ -12,6 +12,7 @@ import {
 	expiredBrowserRunnerClaimNeedsHuman,
 	isBrowserRunnerCnScope,
 	isSafePreSubmitBrokerTransportRecoveryCandidate,
+	isSafePreSubmitDedicatedProfileBusyRecoveryCandidate,
 } from "./browser-runner-policy";
 
 describe("Browser Runner retry policy", () => {
@@ -38,6 +39,30 @@ describe("Browser Runner retry policy", () => {
 			{ ...candidate, deliveryStatus: "claimed" },
 		]) {
 			expect(isSafePreSubmitBrokerTransportRecoveryCandidate(unsafe)).toBe(false);
+		}
+	});
+
+	it("permits requeueing an untouched task that only lost the shared dedicated profile", () => {
+		const candidate = {
+			deliveryStatus: "available",
+			automationStatus: "needs_human" as const,
+			automationAttemptCount: 1,
+			claimCount: 1,
+			submitIntentAt: null,
+			submitConfirmedAt: null,
+			observationAttemptId: null,
+			needsHumanCode: "dedicated_profile_busy",
+			lastErrorCode: "dedicated_profile_busy",
+		};
+
+		expect(isSafePreSubmitDedicatedProfileBusyRecoveryCandidate(candidate)).toBe(true);
+		for (const unsafe of [
+			{ ...candidate, claimCount: 2 },
+			{ ...candidate, submitIntentAt: new Date() },
+			{ ...candidate, observationAttemptId: "attempt-id" },
+			{ ...candidate, needsHumanCode: "login_required" },
+		]) {
+			expect(isSafePreSubmitDedicatedProfileBusyRecoveryCandidate(unsafe)).toBe(false);
 		}
 	});
 

@@ -112,7 +112,7 @@ export class DoubaoLiveSessionFactory implements SurfaceSessionFactory {
 			context = await sandboxedPersistentContext(
 				profileDirectory,
 				{
-					headless: false,
+					headless: true,
 					locale: "zh-CN",
 					timezoneId: "Asia/Shanghai",
 					viewport: { width: 1_440, height: 900 },
@@ -315,9 +315,23 @@ class DoubaoLiveSession implements SurfaceSession {
 
 	async confirmSubmission(promptText: string): Promise<void> {
 		this.#assertCurrentDoubaoUrl("post_submit");
-		const exactPrompt = this.#page.getByText(promptText, { exact: true }).last();
+		const userMessageSelector = requiredDedicatedSelector(
+			"BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR",
+			"the approved user-message nodes",
+		);
 		try {
-			await exactPrompt.waitFor({ state: "visible", timeout: 15_000 });
+			await this.#page.waitForFunction(
+				({ selector, expected }) =>
+					Array.from(document.querySelectorAll(selector)).filter(
+						(node) => (node.textContent ?? "").normalize("NFKC") === expected,
+					).length === 1,
+				{ selector: userMessageSelector, expected: promptText.normalize("NFKC") },
+				{ timeout: 15_000 },
+			);
+			const userMessages = this.#page.locator(userMessageSelector);
+			const exactIndex = exactSubmittedPromptIndex(await userMessages.allTextContents(), promptText);
+			if (exactIndex === null) throw new Error("The approved user-message nodes were ambiguous");
+			await userMessages.nth(exactIndex).waitFor({ state: "visible", timeout: 15_000 });
 		} catch (cause) {
 			const mapped = mapDoubaoAutomationError(cause, "post_submit", true);
 			if (mapped.code === "post_submit_timeout") {
@@ -466,7 +480,7 @@ class DoubaoLiveSession implements SurfaceSession {
 
 	async close(outcome: "succeeded" | "retrying" | "needs_human"): Promise<void> {
 		await this.#context.close();
-		if (outcome === "succeeded" || outcome === "retrying" || !this.#submitAttempted) {
+		if (outcome === "succeeded" || outcome === "retrying" || (!this.#submitAttempted && !this.#resumedSession)) {
 			if (this.#task.sessionRequirement === "dedicated_sampling_profile") {
 				await releaseDedicatedProfileSession(this.#profileDirectory, this.#task, this.id);
 			} else {
@@ -579,6 +593,14 @@ class DoubaoLiveSession implements SurfaceSession {
 			);
 		}
 	}
+}
+
+export function exactSubmittedPromptIndex(userMessageTexts: readonly string[], promptText: string): number | null {
+	const expected = promptText.normalize("NFKC");
+	const matches = userMessageTexts
+		.map((text, index) => ({ index, text: text.normalize("NFKC") }))
+		.filter(({ text }) => text === expected);
+	return matches.length === 1 ? (matches[0]?.index ?? null) : null;
 }
 
 export function recoveredCompletionIsAcceptable(input: {

@@ -169,11 +169,11 @@ if mode == "status-only":
         raise SystemExit("Sampling batch status check unexpectedly proposed a mutation.")
     print("sampling batch status: existing")
 elif mode == "dry-run":
-    if action not in {"would_create_freeze_start", "would_requeue_safe_pre_submit", "existing_noop"}:
+    if action not in {"would_create_freeze_start", "would_requeue_safe_pre_submit", "would_requeue_dedicated_profile_busy", "existing_noop"}:
         raise SystemExit("Sampling batch dry-run returned an unexpected action.")
     print(f"sampling batch dry-run: action={action} status={status} planned=18")
 elif mode == "apply":
-    if action not in {"created_frozen_started", "requeued_safe_pre_submit", "existing_noop"}:
+    if action not in {"created_frozen_started", "requeued_safe_pre_submit", "requeued_dedicated_profile_busy", "existing_noop"}:
         raise SystemExit("Sampling batch apply returned an unexpected action.")
     print(f"sampling batch apply: action={action} status={status} planned=18")
 else:

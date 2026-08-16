@@ -1,4 +1,5 @@
 import {
+	requeueBrowserRunnerDedicatedProfileBusyTasks,
 	requeueBrowserRunnerSafePreSubmitTransportFailures,
 	startBrowserRunnerBatch,
 } from "@workspace/lib/db/browser-runner";
@@ -167,6 +168,14 @@ const gateway: SamplingBatchOperationGateway = {
 	},
 	async requeueSafePreSubmitTransportFailures(brandId, batchId, expectedTaskCount) {
 		await requeueBrowserRunnerSafePreSubmitTransportFailures({ brandId, batchId, expectedTaskCount });
+	},
+	async requeueDedicatedProfileBusyTasks(brandId, batchId, expectedTaskCount, expectedRequeueCount) {
+		await requeueBrowserRunnerDedicatedProfileBusyTasks({
+			brandId,
+			batchId,
+			expectedTaskCount,
+			expectedRequeueCount,
+		});
 	},
 };
 

@@ -104,7 +104,13 @@ try:
     status = int(raw_status)
     lines = pathlib.Path(output_path).read_text(encoding="utf-8").splitlines()
     candidates = [json.loads(line) for line in lines if line.lstrip().startswith("{") and line.rstrip().endswith("}")]
-    payload = candidates[-1]
+    receipts = [
+        candidate
+        for candidate in candidates
+        if candidate.get("operation") == "overseas_formal_one_shot"
+        and candidate.get("requestId") == request_id
+    ]
+    payload = receipts[-1]
 except Exception:
     raise SystemExit("Overseas formal account operation returned unexpected output; raw output was withheld.")
 if payload.get("operation") != "overseas_formal_one_shot" or payload.get("requestId") != request_id:

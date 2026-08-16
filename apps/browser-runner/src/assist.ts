@@ -1,5 +1,11 @@
-import type { ClaimedRunnerTask, HandoffMetadata, SuccessfulRunnerObservation, SurfaceSession } from "./contracts.js";
-import { BrowserRunnerError, sanitizeDiagnostic } from "./errors.js";
+import type {
+	ClaimedRunnerTask,
+	HandoffMetadata,
+	RunnerPhase,
+	SuccessfulRunnerObservation,
+	SurfaceSession,
+} from "./contracts.js";
+import { BrowserRunnerError, normalizeRunnerError, sanitizeDiagnostic } from "./errors.js";
 import { saveEvidence } from "./evidence.js";
 import type { RunJournal } from "./journal.js";
 
@@ -7,6 +13,10 @@ type AssistRemote = {
 	resume(taskId: string): Promise<ClaimedRunnerTask>;
 	confirmPromptSubmitted(claimed: ClaimedRunnerTask, input: { sessionId: string }): Promise<void>;
 	submit(observation: SuccessfulRunnerObservation): Promise<void>;
+	markNeedsHuman(
+		claimed: ClaimedRunnerTask,
+		reason: { code: string; message: string; phase: RunnerPhase },
+	): Promise<void>;
 };
 
 type AssistSessionFactory = {
@@ -128,6 +138,31 @@ export async function resumePostSubmitTask(input: {
 		});
 	} catch (error) {
 		await session.close("needs_human").catch(() => undefined);
-		throw error;
+		const normalized = normalizeRunnerError(error, "post_submit");
+		try {
+			await input.remote.markNeedsHuman(claimed, {
+				code: normalized.code,
+				message: normalized.message,
+				phase: normalized.phase,
+			});
+		} catch (persistenceError) {
+			await input.journal.append({
+				type: "task_persistence_failed",
+				taskId: claimed.task.id,
+				phase: "persist",
+				code: "needs_human_persist_failed",
+				message: sanitizeDiagnostic(
+					persistenceError instanceof Error ? persistenceError.message : String(persistenceError),
+				),
+			});
+			throw new BrowserRunnerError(
+				"needs_human_persist_failed",
+				"persist",
+				"needs_human",
+				"The recovery failed and its central needs-human state could not be persisted",
+				{ cause: persistenceError },
+			);
+		}
+		throw normalized;
 	}
 }
