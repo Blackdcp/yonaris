@@ -9,12 +9,14 @@ import {
 	json,
 	pgEnum,
 	pgTable,
+	primaryKey,
 	smallint,
 	text,
 	timestamp,
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
+import type { BrowserExtensionReadiness } from "../browser-extension-contract";
 // `organization` is referenced by the brands FK below; the re-export makes it
 // (and the rest of the auth schema) visible to `import * as schema` consumers.
 import { organization } from "./schema-auth";
@@ -134,6 +136,100 @@ export const brands = pgTable(
 	},
 	(table) => ({
 		organizationIdIdx: uniqueIndex("brands_organization_id_uidx").on(table.organizationId),
+	}),
+).enableRLS();
+
+export const browserRunnerDevices = pgTable(
+	"browser_runner_devices",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		displayName: text("display_name").notNull(),
+		tokenHash: text("token_hash").notNull(),
+		extensionVersion: text("extension_version").notNull(),
+		browserFamily: text("browser_family").notNull(),
+		browserVersion: text("browser_version").notNull(),
+		platform: text("platform").notNull(),
+		supportedSurfaces: text("supported_surfaces").array().notNull().default([]),
+		readiness: json("readiness").$type<BrowserExtensionReadiness>().notNull().default({}),
+		lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+		revokedAt: timestamp("revoked_at", { withTimezone: true }),
+		createdBy: text("created_by").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		tokenHashIdx: uniqueIndex("browser_runner_devices_token_hash_uidx").on(table.tokenHash),
+		lastSeenIdx: index("browser_runner_devices_last_seen_idx").on(table.lastSeenAt),
+		validDisplayName: check(
+			"browser_runner_devices_valid_display_name",
+			sql`char_length(${table.displayName}) BETWEEN 1 AND 100`,
+		),
+		validTokenHash: check("browser_runner_devices_valid_token_hash", sql`${table.tokenHash} ~ '^[0-9a-f]{64}$'`),
+		validBrowserFamily: check("browser_runner_devices_valid_browser_family", sql`${table.browserFamily} = 'chrome'`),
+		validPlatform: check("browser_runner_devices_valid_platform", sql`${table.platform} IN ('windows', 'macos')`),
+		validSurfaceCount: check(
+			"browser_runner_devices_valid_surface_count",
+			sql`cardinality(${table.supportedSurfaces}) BETWEEN 1 AND 2`,
+		),
+		validSurfaces: check(
+			"browser_runner_devices_valid_surfaces",
+			sql`${table.supportedSurfaces} <@ ARRAY['doubao.consumer_web', 'deepseek.consumer_web']::text[]`,
+		),
+	}),
+).enableRLS();
+
+export const browserRunnerDeviceBrands = pgTable(
+	"browser_runner_device_brands",
+	{
+		deviceId: uuid("device_id")
+			.references(() => browserRunnerDevices.id, { onDelete: "cascade" })
+			.notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		assignedBy: text("assigned_by").notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => ({
+		pk: primaryKey({ columns: [table.deviceId, table.brandId], name: "browser_runner_device_brands_pk" }),
+		brandIdx: index("browser_runner_device_brands_brand_idx").on(table.brandId),
+	}),
+).enableRLS();
+
+export const browserRunnerPairings = pgTable(
+	"browser_runner_pairings",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		codeHash: text("code_hash").notNull(),
+		displayName: text("display_name").notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		createdBy: text("created_by").notNull(),
+		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+		consumedAt: timestamp("consumed_at", { withTimezone: true }),
+		deviceId: uuid("device_id").references(() => browserRunnerDevices.id),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+	},
+	(table) => ({
+		codeHashIdx: uniqueIndex("browser_runner_pairings_code_hash_uidx").on(table.codeHash),
+		brandCreatedIdx: index("browser_runner_pairings_brand_created_idx").on(table.brandId, table.createdAt),
+		validDisplayName: check(
+			"browser_runner_pairings_valid_display_name",
+			sql`char_length(${table.displayName}) BETWEEN 1 AND 100`,
+		),
+		validCodeHash: check("browser_runner_pairings_valid_code_hash", sql`${table.codeHash} ~ '^[0-9a-f]{64}$'`),
+		validExpiry: check(
+			"browser_runner_pairings_valid_expiry",
+			sql`${table.expiresAt} > ${table.createdAt} AND ${table.expiresAt} <= ${table.createdAt} + interval '15 minutes'`,
+		),
+		consumptionConsistent: check(
+			"browser_runner_pairings_consumption_consistent",
+			sql`(${table.consumedAt} IS NULL AND ${table.deviceId} IS NULL) OR (${table.consumedAt} IS NOT NULL AND ${table.deviceId} IS NOT NULL)`,
+		),
 	}),
 ).enableRLS();
 
@@ -788,6 +884,11 @@ export type NewDeliveryBatch = typeof deliveryBatches.$inferInsert;
 
 export type DeliveryTask = typeof deliveryTasks.$inferSelect;
 export type NewDeliveryTask = typeof deliveryTasks.$inferInsert;
+
+export type BrowserRunnerDevice = typeof browserRunnerDevices.$inferSelect;
+export type NewBrowserRunnerDevice = typeof browserRunnerDevices.$inferInsert;
+export type BrowserRunnerDeviceBrand = typeof browserRunnerDeviceBrands.$inferSelect;
+export type BrowserRunnerPairing = typeof browserRunnerPairings.$inferSelect;
 
 export type EvidenceArtifact = typeof evidenceArtifacts.$inferSelect;
 export type NewEvidenceArtifact = typeof evidenceArtifacts.$inferInsert;

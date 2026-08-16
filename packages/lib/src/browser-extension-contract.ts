@@ -3,12 +3,20 @@ export const BROWSER_EXTENSION_SURFACES = ["doubao.consumer_web", "deepseek.cons
 export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACES)[number];
 export type BrowserExtensionCaptureRoute = "browser_extension.doubao" | "browser_extension.deepseek";
 export type BrowserExtensionDeviceStatus = "online" | "offline" | "revoked";
-export type BrowserExtensionReadiness =
+export type BrowserExtensionReadinessStatus =
 	| "ready"
 	| "signed_out"
-	| "risk_controlled"
+	| "paused_by_risk_control"
 	| "adapter_incompatible"
 	| "unavailable";
+
+export interface BrowserExtensionSurfaceReadiness {
+	status: BrowserExtensionReadinessStatus;
+	adapterVersion: string;
+	activeConcurrency: number;
+}
+
+export type BrowserExtensionReadiness = Partial<Record<BrowserExtensionSurface, BrowserExtensionSurfaceReadiness>>;
 
 export interface BrowserExtensionClaim {
 	taskId: string;
