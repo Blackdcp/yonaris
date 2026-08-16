@@ -2,10 +2,10 @@ import { SAMPLING_BATCH_CAPTURE_ROUTE, SAMPLING_BATCH_SURFACE_TARGET } from "./s
 
 export const validSamplingBatchManifest = {
 	schemaVersion: 1,
-	requestId: "stepfun-cn-doubao-6x-20260816-v4",
+	requestId: "stepfun-cn-doubao-6x-20260816-v5",
 	batch: {
-		idempotencyKey: "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v4",
-		name: "StepFun CN Doubao formal sampling 2026-08-16 - 6x",
+		idempotencyKey: "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v5",
+		name: "StepFun CN Doubao formal sampling 2026-08-16 - 6x - v5",
 	},
 	brand: { nameExact: "StepFun" },
 	scope: {
