@@ -32,6 +32,7 @@ EOF
 cat >"$MOCK_BIN/docker" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
+printf '<IMAGE_TAG=%s>' "${IMAGE_TAG:-}" >>"$MOCK_DOCKER_LOG"
 printf '<%s>' "$@" >>"$MOCK_DOCKER_LOG"
 printf '\n' >>"$MOCK_DOCKER_LOG"
 if [[ " $* " == *" run "* ]]; then
@@ -51,6 +52,7 @@ RESPONSE_SNAPSHOT_RETENTION_DAYS=90
 RESPONSE_SNAPSHOT_WARN_USED_PERCENT=70
 RESPONSE_SNAPSHOT_STOP_USED_PERCENT=80
 RESPONSE_SNAPSHOT_OUTBOX_TTL_HOURS=24
+IMAGE_TAG=sha-stale-release
 EOF
 }
 
@@ -68,8 +70,10 @@ grep -Fqx 'response_snapshot_storage.used_percent=20' <<<"$ready"
 test ! -s "$DOCKER_LOG"
 
 : >"$DOCKER_LOG"
-round_trip="$(env PATH="$MOCK_BIN:$PATH" MOCK_DOCKER_LOG="$DOCKER_LOG" ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" bash "$SCRIPT_UNDER_TEST" --round-trip)"
+round_trip="$(env PATH="$MOCK_BIN:$PATH" MOCK_DOCKER_LOG="$DOCKER_LOG" IMAGE_TAG=sha-requested-release ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" bash "$SCRIPT_UNDER_TEST" --round-trip)"
 grep -Fqx 'response_snapshot_storage.round_trip=verified' <<<"$round_trip"
+grep -Fq '<IMAGE_TAG=sha-requested-release>' "$DOCKER_LOG"
+! grep -Fq '<IMAGE_TAG=sha-stale-release>' "$DOCKER_LOG"
 grep -Fq '<web>' "$DOCKER_LOG"
 grep -Fq '<worker>' "$DOCKER_LOG"
 

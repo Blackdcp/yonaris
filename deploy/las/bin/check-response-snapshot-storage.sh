@@ -22,10 +22,14 @@ if [[ ! -f "$ENV_FILE" || ! -f "$COMPOSE_FILE" ]]; then
 	exit 1
 fi
 
+requested_image_tag="${IMAGE_TAG:-}"
 set -a
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 set +a
+if [[ -n "$requested_image_tag" ]]; then
+	export IMAGE_TAG="$requested_image_tag"
+fi
 
 enabled="${RESPONSE_SNAPSHOT_ENABLED:-false}"
 if [[ "$enabled" != true && "$enabled" != false ]]; then

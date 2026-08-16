@@ -367,12 +367,14 @@ jobs:
           bash deploy/las/bin/export-response-snapshots.test.sh
           bash deploy/las/bin/run-response-snapshot-backfill.test.sh
           bash deploy/las/bin/activate-response-snapshot-storage.test.sh
+          bash deploy/las/bin/audit-overseas-formal-readiness.test.sh
           bash -n \
             deploy/las/bin/prepare-response-snapshot-storage.sh \
             deploy/las/bin/check-response-snapshot-storage.sh \
             deploy/las/bin/export-response-snapshots.sh \
             deploy/las/bin/run-response-snapshot-backfill.sh \
             deploy/las/bin/activate-response-snapshot-storage.sh \
+            deploy/las/bin/audit-overseas-formal-readiness.sh \
             deploy/las/bin/deploy.sh
 
   build-images:
@@ -494,6 +496,43 @@ jobs:
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-report-requests.sh sha-$RELEASE_SHA'"
+
+  overseas-formal-readiness:
+    name: Audit StepFun overseas formal readiness
+    needs:
+      - deploy
+      - response-snapshot-activation
+    if: needs.deploy.result == 'success' && needs['response-snapshot-activation'].result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://portal.yonaris.com/app/stepfun
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Read the sanitized formal-run readiness report
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/audit-overseas-formal-readiness.sh sha-$RELEASE_SHA'"
 
   response-snapshot-activation:
     name: Activate approved response snapshot storage
