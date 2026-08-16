@@ -391,6 +391,69 @@ test("dedicated preparation requires a positive authenticated marker and creates
 	}
 });
 
+test("dedicated preparation falls back to the approved blank chat route when the UI action is absent", async () => {
+	const priorAuthenticated = process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR;
+	const priorNewConversation = process.env.BROWSER_RUNNER_DOUBAO_NEW_CONVERSATION_SELECTOR;
+	const priorAnswer = process.env.BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR;
+	const priorUserMessage = process.env.BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR;
+	process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR = "[data-authenticated]";
+	process.env.BROWSER_RUNNER_DOUBAO_NEW_CONVERSATION_SELECTOR = "[data-new-conversation]";
+	process.env.BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR = "[data-answer]";
+	process.env.BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR = "[data-user-message]";
+	let answerCount = 1;
+	let userMessageCount = 1;
+	let navigations = 0;
+	const page = {
+		locator(selector: string) {
+			return {
+				async count() {
+					if (selector === "[data-new-conversation]") return 0;
+					if (selector === "[data-answer]") return answerCount;
+					if (selector === "[data-user-message]") return userMessageCount;
+					return 1;
+				},
+				async isVisible() {
+					return selector !== "[data-new-conversation]";
+				},
+				first() {
+					return { async waitFor() {} } as unknown as Locator;
+				},
+			} as unknown as Locator;
+		},
+		getByRole() {
+			return {
+				async isVisible() {
+					return false;
+				},
+			} as unknown as Locator;
+		},
+		async goto(url: string) {
+			assert.equal(url, "https://www.doubao.com/chat/");
+			navigations += 1;
+			answerCount = 0;
+			userMessageCount = 0;
+		},
+		async waitForURL(predicate: (url: URL) => boolean) {
+			assert.equal(predicate(new URL("https://www.doubao.com/chat/")), true);
+		},
+		async waitForTimeout(milliseconds: number) {
+			assert.equal(milliseconds, 1_000);
+		},
+		async waitForFunction() {},
+	} as unknown as Page;
+	try {
+		await prepareDedicatedConversation(page);
+		assert.equal(navigations, 1);
+		assert.equal(answerCount, 0);
+		assert.equal(userMessageCount, 0);
+	} finally {
+		restoreEnvironment("BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR", priorAuthenticated);
+		restoreEnvironment("BROWSER_RUNNER_DOUBAO_NEW_CONVERSATION_SELECTOR", priorNewConversation);
+		restoreEnvironment("BROWSER_RUNNER_DOUBAO_ANSWER_SELECTOR", priorAnswer);
+		restoreEnvironment("BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR", priorUserMessage);
+	}
+});
+
 test("dedicated preparation does not click login or continue without the authenticated marker", async () => {
 	const priorAuthenticated = process.env.BROWSER_RUNNER_DOUBAO_AUTHENTICATED_SELECTOR;
 	const priorNewConversation = process.env.BROWSER_RUNNER_DOUBAO_NEW_CONVERSATION_SELECTOR;

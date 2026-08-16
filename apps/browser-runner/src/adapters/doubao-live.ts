@@ -674,15 +674,11 @@ export async function prepareDedicatedConversation(page: Page): Promise<void> {
 		"the approved new-conversation action",
 	);
 	const newConversation = page.locator(newConversationSelector);
-	if ((await newConversation.count()) !== 1 || !(await newConversation.isVisible())) {
-		throw new BrowserRunnerError(
-			"new_conversation_action_unverified",
-			"pre_submit",
-			"needs_human",
-			"The dedicated Doubao profile does not expose one verified new-conversation action",
-		);
+	if ((await newConversation.count()) === 1 && (await newConversation.isVisible())) {
+		await newConversation.click();
+	} else {
+		await page.goto(DOUBAO_URL, { waitUntil: "domcontentloaded" });
 	}
-	await newConversation.click();
 
 	const answerSelector = requiredAnswerSelector();
 	const userMessageSelector = requiredDedicatedSelector(

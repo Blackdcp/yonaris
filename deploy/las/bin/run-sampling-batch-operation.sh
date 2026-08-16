@@ -33,10 +33,10 @@ COMPOSE_FILE="${COMPOSE_FILE:-$SOURCE_ROOT/deploy/las/compose.yaml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_ROOT/.env}"
 RELEASE_FILE="$DEPLOY_ROOT/.release"
 REQUEST_DIR="$SOURCE_ROOT/deploy/las/sampling-batch-operations/requests"
-MANIFEST_PATH="apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v3.json"
+MANIFEST_PATH="apps/worker/src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v4.json"
 MANIFEST_FILE="$SOURCE_ROOT/$MANIFEST_PATH"
-REQUEST_ID="stepfun-cn-doubao-6x-20260816-v3"
-IDEMPOTENCY_KEY="sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v3"
+REQUEST_ID="stepfun-cn-doubao-6x-20260816-v4"
+IDEMPOTENCY_KEY="sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v4"
 
 if [[ -L "$request_file" || ! -f "$request_file" || ! -r "$request_file" ]]; then
 	echo "Sampling batch request must be a readable regular file." >&2
