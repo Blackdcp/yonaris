@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertOverseasFormalDestination, buildOverseasFormalCallPlan } from "./overseas-formal-run-policy";
+import {
+	assertOverseasFormalDestination,
+	buildOverseasFormalCallPlan,
+	selectOverseasFormalDiagnosticCalls,
+} from "./overseas-formal-run-policy";
 import { EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST } from "./overseas-formal-run-request";
 
 const prompts = [
@@ -23,6 +27,37 @@ test("builds exactly three stable one-shot calls without a scheduling instructio
 	assert.ok(plan.calls.every(({ sampleIndex }) => sampleIndex === 1));
 	assert.equal(JSON.stringify(plan).includes("schedule"), false);
 	assert.equal(JSON.stringify(plan).includes("cadence"), false);
+});
+
+test("diagnostics use destination prompt identities once the copied scope exists", () => {
+	const sourcePlan = buildOverseasFormalCallPlan(EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST, prompts, {
+		model: "chatgpt",
+		provider: "brightdata",
+		webSearch: true,
+		surfaceTargetKey: "chatgpt.consumer_web",
+		captureRouteKey: "brightdata.chatgpt_dataset",
+	});
+	const destinationPlan = buildOverseasFormalCallPlan(
+		EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST,
+		prompts.map((prompt) => ({ ...prompt, id: `destination-${prompt.id}` })),
+		{
+			model: "chatgpt",
+			provider: "brightdata",
+			webSearch: true,
+			surfaceTargetKey: "chatgpt.consumer_web",
+			captureRouteKey: "brightdata.chatgpt_dataset",
+		},
+	);
+
+	const selected = selectOverseasFormalDiagnosticCalls(sourcePlan.calls, destinationPlan.calls);
+	assert.deepEqual(
+		selected.map(({ sourceJobId }) => sourceJobId),
+		destinationPlan.calls.map(({ sourceJobId }) => sourceJobId),
+	);
+	assert.notDeepEqual(
+		selected.map(({ sourceJobId }) => sourceJobId),
+		sourcePlan.calls.map(({ sourceJobId }) => sourceJobId),
+	);
 });
 
 test("fails closed for an extra prompt or another channel", () => {

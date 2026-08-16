@@ -18,6 +18,7 @@ import {
 	assertOverseasFormalDestination,
 	buildOverseasFormalCallPlan,
 	type OverseasFormalPromptIdentity,
+	selectOverseasFormalDiagnosticCalls,
 } from "./overseas-formal-run-policy";
 import {
 	EXPECTED_OVERSEAS_FORMAL_RUN_REQUEST,
@@ -244,14 +245,27 @@ async function main(): Promise<void> {
 	const prerequisites = await resolvePrerequisites(request);
 	failureStage = "destination";
 	const existing = await readDestination(prerequisites.brand.id, request);
-	const sourceKeys = prerequisites.sourcePlan.calls.map((call) =>
-		buildObservationSourceKey({
-			sourceJobId: call.sourceJobId,
-			config: prerequisites.config,
-			sampleIndex: call.sampleIndex,
-		}),
-	);
 	if (cli.mode !== "apply") {
+		const destinationPlan = existing
+			? buildOverseasFormalCallPlan(request, existing.prompts, {
+					model: prerequisites.config.model,
+					provider: prerequisites.config.provider,
+					webSearch: prerequisites.config.webSearch,
+					surfaceTargetKey: prerequisites.target.surfaceTargetKey,
+					captureRouteKey: prerequisites.target.captureRouteKey,
+				})
+			: null;
+		const diagnosticCalls = selectOverseasFormalDiagnosticCalls(
+			prerequisites.sourcePlan.calls,
+			destinationPlan?.calls ?? null,
+		);
+		const sourceKeys = diagnosticCalls.map((call) =>
+			buildObservationSourceKey({
+				sourceJobId: call.sourceJobId,
+				config: prerequisites.config,
+				sampleIndex: call.sampleIndex,
+			}),
+		);
 		const state = existing ? await diagnostic(prerequisites.brand.id, existing.scope.id, sourceKeys) : null;
 		process.stdout.write(
 			`${JSON.stringify({
@@ -292,6 +306,13 @@ async function main(): Promise<void> {
 		surfaceTargetKey: prerequisites.target.surfaceTargetKey,
 		captureRouteKey: prerequisites.target.captureRouteKey,
 	});
+	const sourceKeys = plan.calls.map((call) =>
+		buildObservationSourceKey({
+			sourceJobId: call.sourceJobId,
+			config: prerequisites.config,
+			sampleIndex: call.sampleIndex,
+		}),
+	);
 	const provider = getProvider(prerequisites.config.provider);
 	const competitorsList = await db.query.competitors.findMany({
 		where: eq(competitors.brandId, prerequisites.brand.id),

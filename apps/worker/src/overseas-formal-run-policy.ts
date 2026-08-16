@@ -75,6 +75,13 @@ export function buildOverseasFormalCallPlan(
 	};
 }
 
+export function selectOverseasFormalDiagnosticCalls<T>(
+	sourceCalls: readonly T[],
+	destinationCalls: readonly T[] | null,
+): readonly T[] {
+	return destinationCalls ?? sourceCalls;
+}
+
 export function assertOverseasFormalDestination(
 	request: OverseasFormalRunRequest,
 	destination: OverseasFormalDestinationIdentity,

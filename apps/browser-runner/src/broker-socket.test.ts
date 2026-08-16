@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
+import { createConnection } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, test } from "node:test";
 import { UnixSocketBrokerTransport } from "./broker-client.js";
-import type { BrokerSuccessResult } from "./broker-protocol.js";
+import {
+	type BrokerRequest,
+	type BrokerResponse,
+	type BrokerSuccessResult,
+	encodeBrokerFrame,
+} from "./broker-protocol.js";
 import { BrokerService } from "./broker-server.js";
 import { assertPeerCredentialGate, startBrokerSocketServer } from "./broker-socket.js";
 import { FakeEvidenceStore, FakeSessionFactory } from "./broker-test-doubles.js";
@@ -96,6 +102,50 @@ test("authorized peer receives one versioned response over the private socket", 
 	}
 	assert.deepEqual(result, { kind: "pong" });
 	assert.deepEqual(connectionErrors, []);
+});
+
+test("a control client disconnect during response delivery does not crash the broker", async (context) => {
+	const socketPath = await testSocketPath("disconnect");
+	let releaseResponse: (() => void) | undefined;
+	const responseGate = new Promise<void>((resolve) => {
+		releaseResponse = resolve;
+	});
+	const connectionErrors: unknown[] = [];
+	const service = {
+		async handle(request: BrokerRequest): Promise<BrokerResponse> {
+			await responseGate;
+			return { version: 1, requestId: request.requestId, ok: true, result: { kind: "pong" } };
+		},
+	} as BrokerService;
+	const server = await startBrokerSocketServer({
+		socketPath,
+		service,
+		verifyPeer: async () => undefined,
+		onConnectionError: (error) => connectionErrors.push(error),
+	});
+	context.after(() => server.close());
+
+	const client = createConnection(socketPath);
+	await new Promise<void>((resolve, reject) => {
+		client.once("connect", resolve);
+		client.once("error", reject);
+	});
+	await new Promise<void>((resolve, reject) => {
+		client.write(
+			encodeBrokerFrame({ version: 1, requestId: "request-disconnect", operation: "ping" }, 1_000),
+			(error) => (error ? reject(error) : resolve()),
+		);
+	});
+	client.destroy();
+	releaseResponse?.();
+	await new Promise((resolve) => setTimeout(resolve, 25));
+
+	assert.ok(connectionErrors.length <= 1);
+	const result = await new UnixSocketBrokerTransport(socketPath).request(
+		{ version: 1, requestId: "request-after-disconnect", operation: "ping" },
+		1_000,
+	);
+	assert.deepEqual(result, { kind: "pong" });
 });
 
 async function testSocketPath(name: string): Promise<string> {

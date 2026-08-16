@@ -84,6 +84,11 @@ export async function startBrokerSocketServer(options: {
 	const connections = new Set<Socket>();
 	const server = createServer({ allowHalfOpen: true }, (socket) => {
 		connections.add(socket);
+		// A control process can disappear while a long browser operation is still
+		// finishing. Keep the per-response promise responsible for reporting that
+		// failure, while this permanent listener prevents a later socket EPIPE from
+		// becoming an uncaught process-level error.
+		socket.on("error", () => undefined);
 		socket.once("close", () => connections.delete(socket));
 		socket.setTimeout(240_000, () => socket.destroy());
 		void handleConnection(socket, options.service, options.verifyPeer, options.onConnectionError);
@@ -114,11 +119,26 @@ async function handleConnection(
 		await verifyPeer(socket);
 		const request = parseBrokerRequest(await readBrokerFrame(socket, BROKER_REQUEST_MAX_BYTES));
 		const response = await service.handle(request);
-		socket.end(encodeBrokerFrame(response, BROKER_RESPONSE_MAX_BYTES));
+		await endBrokerResponse(socket, encodeBrokerFrame(response, BROKER_RESPONSE_MAX_BYTES));
 	} catch (error) {
 		onConnectionError?.(error);
 		socket.destroy();
 	}
+}
+
+async function endBrokerResponse(socket: Socket, frame: Buffer): Promise<void> {
+	await new Promise<void>((resolve, reject) => {
+		const cleanup = () => socket.off("error", onError);
+		const onError = (error: Error) => {
+			cleanup();
+			reject(error);
+		};
+		socket.once("error", onError);
+		socket.end(frame, () => {
+			cleanup();
+			resolve();
+		});
+	});
 }
 
 async function readPeerCredentials(
