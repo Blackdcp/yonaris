@@ -320,17 +320,18 @@ class DoubaoLiveSession implements SurfaceSession {
 			"the approved user-message nodes",
 		);
 		try {
-			await this.#page.waitForFunction(
-				({ selector, expected }) =>
-					Array.from(document.querySelectorAll(selector)).filter(
-						(node) => (node.textContent ?? "").normalize("NFKC") === expected,
-					).length === 1,
-				{ selector: userMessageSelector, expected: promptText.normalize("NFKC") },
-				{ timeout: 15_000 },
-			);
 			const userMessages = this.#page.locator(userMessageSelector);
-			const exactIndex = exactSubmittedPromptIndex(await userMessages.allTextContents(), promptText);
-			if (exactIndex === null) throw new Error("The approved user-message nodes were ambiguous");
+			await userMessages.first().waitFor({ state: "visible", timeout: 15_000 });
+			const userMessageTexts = await userMessages.allTextContents();
+			const exactIndex = exactSubmittedPromptIndex(userMessageTexts, promptText);
+			if (exactIndex === null) {
+				throw new BrowserRunnerError(
+					"submit_confirmation_mismatch",
+					"post_submit",
+					"needs_human",
+					"The approved user-message nodes did not contain exactly one copy of the frozen prompt",
+				);
+			}
 			await userMessages.nth(exactIndex).waitFor({ state: "visible", timeout: 15_000 });
 		} catch (cause) {
 			const mapped = mapDoubaoAutomationError(cause, "post_submit", true);
@@ -683,6 +684,14 @@ export async function prepareDedicatedConversation(page: Page): Promise<void> {
 		"the approved user-message nodes",
 	);
 	try {
+		await page.waitForURL(
+			(url) =>
+				url.protocol === "https:" &&
+				(url.hostname === "doubao.com" || url.hostname.endsWith(".doubao.com")) &&
+				/^\/chat\/?$/.test(url.pathname),
+			{ timeout: 15_000 },
+		);
+		await page.waitForTimeout(1_000);
 		await page.waitForFunction(
 			({ answer, userMessage }) =>
 				document.querySelectorAll(answer).length === 0 && document.querySelectorAll(userMessage).length === 0,

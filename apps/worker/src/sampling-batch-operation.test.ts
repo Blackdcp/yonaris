@@ -32,8 +32,8 @@ const snapshot: ResolvedSamplingBatchSnapshot = {
 
 const protocol: DeliveryProtocol = {
 	measurementWindow: {
-		startsAt: "2026-08-12T16:00:00.000Z",
-		endsAt: "2026-08-20T15:59:59.000Z",
+		startsAt: "2026-08-15T16:00:00.000Z",
+		endsAt: "2026-08-23T15:59:59.000Z",
 	},
 	evidence: {
 		minimumArtifacts: 2,
@@ -60,8 +60,8 @@ function exactExistingState(
 			automationStatus: status === "frozen" ? ("not_started" as const) : ("running" as const),
 			plannedTaskCount: 18,
 			protocol,
-			automationStartedAt: status === "frozen" ? null : new Date("2026-08-13T01:00:00.000Z"),
-			frozenAt: new Date("2026-08-13T00:59:00.000Z"),
+			automationStartedAt: status === "frozen" ? null : new Date("2026-08-16T01:00:00.000Z"),
+			frozenAt: new Date("2026-08-16T00:59:00.000Z"),
 			completedAt: null,
 		},
 		tasks: tasks.map((task, index) => ({
@@ -126,7 +126,7 @@ function cancelledAfterFreezeState(): SamplingBatchExistingState {
 class InMemoryGateway implements SamplingBatchOperationGateway {
 	state: SamplingBatchExistingState | null;
 	readonly mutations: string[] = [];
-	now = new Date("2026-08-13T01:00:00.000Z");
+	now = new Date("2026-08-16T01:00:00.000Z");
 
 	constructor(existing: SamplingBatchExistingState | null = null) {
 		this.state = existing;
@@ -192,7 +192,7 @@ class InMemoryGateway implements SamplingBatchOperationGateway {
 		if (!this.state) throw new Error("missing state");
 		this.state.batch.status = "frozen";
 		this.state.batch.plannedTaskCount = 18;
-		this.state.batch.frozenAt = new Date("2026-08-13T00:59:00.000Z");
+		this.state.batch.frozenAt = new Date("2026-08-16T00:59:00.000Z");
 		this.state.tasks = this.state.tasks.map((task) => ({ ...task, status: "available" }));
 	}
 
@@ -201,7 +201,7 @@ class InMemoryGateway implements SamplingBatchOperationGateway {
 		if (!this.state) throw new Error("missing state");
 		this.state.batch.status = "in_progress";
 		this.state.batch.automationStatus = "running";
-		this.state.batch.automationStartedAt = new Date("2026-08-13T01:00:00.000Z");
+		this.state.batch.automationStartedAt = new Date("2026-08-16T01:00:00.000Z");
 	}
 
 	async requeueSafePreSubmitTransportFailures() {
@@ -299,7 +299,7 @@ class ConcurrentStartGateway extends InMemoryGateway {
 		this.successfulStarts++;
 		this.state.batch.status = "in_progress";
 		this.state.batch.automationStatus = "running";
-		this.state.batch.automationStartedAt = new Date("2026-08-13T01:00:00.000Z");
+		this.state.batch.automationStartedAt = new Date("2026-08-16T01:00:00.000Z");
 	}
 }
 
@@ -389,7 +389,7 @@ describe("StepFun sampling existing batch identity", () => {
 		const alteredProtocol = exactExistingState();
 		alteredProtocol.batch.protocol = {
 			...protocol,
-			measurementWindow: { ...protocol.measurementWindow, endsAt: "2026-08-21T15:59:59.000Z" },
+			measurementWindow: { ...protocol.measurementWindow, endsAt: "2026-08-24T15:59:59.000Z" },
 		};
 		assert.throws(
 			() => assertExistingSamplingBatchMatches(validSamplingBatchManifest, snapshot, alteredProtocol),
@@ -465,7 +465,7 @@ describe("StepFun sampling one-shot operation", () => {
 
 	it("refuses an absent dry-run before the fixed measurement window starts", async () => {
 		const gateway = new InMemoryGateway();
-		gateway.now = new Date("2026-08-12T15:59:59.999Z");
+		gateway.now = new Date("2026-08-15T15:59:59.999Z");
 		await assert.rejects(
 			() => executeSamplingBatchOperation(validSamplingBatchManifest, "dry-run", gateway),
 			(error: unknown) => error instanceof SamplingBatchRequestError && error.code === "measurement_window_not_started",
@@ -475,7 +475,7 @@ describe("StepFun sampling one-shot operation", () => {
 
 	it("refuses an absent dry-run when the fixed measurement window has ended", async () => {
 		const gateway = new InMemoryGateway();
-		gateway.now = new Date("2026-08-20T15:59:59.000Z");
+		gateway.now = new Date("2026-08-23T15:59:59.000Z");
 		await assert.rejects(
 			() => executeSamplingBatchOperation(validSamplingBatchManifest, "dry-run", gateway),
 			(error: unknown) => error instanceof SamplingBatchRequestError && error.code === "measurement_window_closed",
@@ -540,7 +540,7 @@ describe("StepFun sampling one-shot operation", () => {
 
 	it("refuses to resume a frozen batch after its measurement window closes", async () => {
 		const gateway = new InMemoryGateway(exactExistingState("frozen"));
-		gateway.now = new Date("2026-08-20T16:00:00.000Z");
+		gateway.now = new Date("2026-08-23T16:00:00.000Z");
 		await assert.rejects(
 			() => executeSamplingBatchOperation(validSamplingBatchManifest, "apply", gateway),
 			(error: unknown) => error instanceof SamplingBatchRequestError && error.code === "measurement_window_closed",
@@ -561,7 +561,7 @@ describe("StepFun sampling one-shot operation", () => {
 
 	it("refuses apply outside the fixed measurement window before creating a draft", async () => {
 		const gateway = new InMemoryGateway();
-		gateway.now = new Date("2026-08-20T16:00:00.000Z");
+		gateway.now = new Date("2026-08-23T16:00:00.000Z");
 		await assert.rejects(
 			() => executeSamplingBatchOperation(validSamplingBatchManifest, "apply", gateway),
 			(error: unknown) => error instanceof SamplingBatchRequestError && error.code === "measurement_window_closed",

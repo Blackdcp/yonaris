@@ -119,7 +119,7 @@ describe("StepFun sampling batch request manifest", () => {
 
 	it("ships the reviewed request as the fixed checked-in manifest", async () => {
 		assert.deepEqual(
-			await readSamplingBatchRequestFile("src/sampling-batch-requests/stepfun-cn-doubao-6x-20260813.json"),
+			await readSamplingBatchRequestFile("src/sampling-batch-requests/stepfun-cn-doubao-6x-20260816-v2.json"),
 			validSamplingBatchManifest,
 		);
 	});

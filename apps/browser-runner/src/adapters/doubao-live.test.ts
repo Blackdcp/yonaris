@@ -326,6 +326,8 @@ test("dedicated preparation requires a positive authenticated marker and creates
 	process.env.BROWSER_RUNNER_DOUBAO_USER_MESSAGE_SELECTOR = "[data-user-message]";
 	let answerCount = 1;
 	let userMessageCount = 1;
+	let blankUrlChecks = 0;
+	let stabilityWaits = 0;
 	const clicked: string[] = [];
 	const locator = (selector: string) =>
 		({
@@ -353,10 +355,20 @@ test("dedicated preparation requires a positive authenticated marker and creates
 			} as unknown as Locator;
 		},
 		async waitForFunction() {},
+		async waitForURL(predicate: (url: URL) => boolean) {
+			assert.equal(predicate(new URL("https://www.doubao.com/chat/")), true);
+			blankUrlChecks += 1;
+		},
+		async waitForTimeout(milliseconds: number) {
+			assert.equal(milliseconds, 1_000);
+			stabilityWaits += 1;
+		},
 	} as unknown as Page;
 	try {
 		await prepareDedicatedConversation(page);
 		assert.deepEqual(clicked, ["[data-new-conversation]"]);
+		assert.equal(blankUrlChecks, 1);
+		assert.equal(stabilityWaits, 1);
 		assert.equal(answerCount, 0);
 		assert.equal(userMessageCount, 0);
 	} finally {

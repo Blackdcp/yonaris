@@ -2,10 +2,10 @@ import { SAMPLING_BATCH_CAPTURE_ROUTE, SAMPLING_BATCH_SURFACE_TARGET } from "./s
 
 export const validSamplingBatchManifest = {
 	schemaVersion: 1,
-	requestId: "stepfun-cn-doubao-6x-20260813",
+	requestId: "stepfun-cn-doubao-6x-20260816-v2",
 	batch: {
-		idempotencyKey: "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-13",
-		name: "StepFun CN Doubao sampling 2026-08-13 - 6x",
+		idempotencyKey: "sampling:stepfun:cn-zh-scored:doubao:6x:2026-08-16-v2",
+		name: "StepFun CN Doubao formal sampling 2026-08-16 - 6x",
 	},
 	brand: { nameExact: "StepFun" },
 	scope: {
@@ -32,8 +32,8 @@ export const validSamplingBatchManifest = {
 		searchRequirement: "platform_default",
 	},
 	measurementWindow: {
-		startsAt: "2026-08-13T00:00:00+08:00",
-		endsAt: "2026-08-20T23:59:59+08:00",
+		startsAt: "2026-08-16T00:00:00+08:00",
+		endsAt: "2026-08-23T23:59:59+08:00",
 		timezone: "Asia/Shanghai",
 	},
 } as const;
