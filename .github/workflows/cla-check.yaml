@@ -1,9 +1,10 @@
 # CLA Check
 #
-# Verifies that the author of every pull request has signed the CLA by
+# In the upstream Elmo repository, verifies that the author of every pull request has signed the CLA by
 # being listed in .github/contributors.txt on the PR head. The header of
 # contributors.txt is the click-wrap notice — adding your username to the
-# file is itself the agreement.
+# file is itself the agreement. Fork-owned product repositories do not ask
+# their contributors to grant rights to the upstream company.
 #
 # Org members, repo collaborators, the repo owner, and bot accounts are
 # exempt.
@@ -24,6 +25,7 @@ concurrency:
 jobs:
   cla:
     name: Verify CLA signature
+    if: github.repository == 'elmohq/elmo'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
