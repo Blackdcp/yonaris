@@ -1,6 +1,0 @@
-{
-  "schemaVersion": 1,
-  "operation": "repair-program-locale",
-  "requestId": "ppio-cn-zh-20260817",
-  "manifestPath": "apps/worker/src/program-locale-repair-requests/ppio-cn-zh-20260817.json"
-}
