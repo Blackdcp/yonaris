@@ -4,6 +4,7 @@ import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
 import type { Job, PgBoss } from "pg-boss";
 import { type AnalyzeBrandData, analyzeBrandJob } from "./jobs/analyze-brand";
 import { type GenerateReportData, generateReportJob } from "./jobs/generate-report";
+import { type ProcessOverseasRunCallData, processOverseasRunCallJob } from "./jobs/process-overseas-run-call";
 import { type ProcessPromptData, processPromptJob } from "./jobs/process-prompt";
 import {
 	type ResponseSnapshotMaintenanceData,
@@ -43,6 +44,12 @@ export async function registerHandlers(boss: PgBoss, scope: WorkerQueueScope = "
 			withSentry("process-prompt", processPromptJob),
 		);
 		console.log("Registered handler: process-prompt");
+		await boss.work<ProcessOverseasRunCallData>(
+			"process-overseas-run-call",
+			{ localConcurrency: 6 },
+			withSentry("process-overseas-run-call", processOverseasRunCallJob),
+		);
+		console.log("Registered handler: process-overseas-run-call");
 
 		if (getDeployment().features.reportGeneration) {
 			await boss.work<GenerateReportData>(

@@ -142,6 +142,7 @@ export function toBrightDataScrapeResult(
 		captureMethod: "brightdata_dataset" | "brightdata_serp";
 		webSearch: boolean;
 		modelVersion?: string;
+		providerSubmissionId?: string;
 	},
 ): ScrapeResult {
 	const record = ((Array.isArray(payload) ? payload[0] : payload) ?? {}) as Record<string, any>;
@@ -170,6 +171,7 @@ export function toBrightDataScrapeResult(
 			: [],
 		citations,
 		modelVersion: options.modelVersion ?? (typeof record.model === "string" ? record.model : undefined),
+		providerSubmissionId: options.providerSubmissionId,
 		snapshotSource: {
 			captureMethod: options.captureMethod,
 			contentSource: nativeHtml ? "native_answer_html" : "rendered_from_structured_response",
@@ -262,6 +264,7 @@ export const brightdata: Provider = {
 			return toBrightDataScrapeResult(payload, {
 				captureMethod: "brightdata_dataset",
 				webSearch: options?.webSearch ?? false,
+				providerSubmissionId: snapshotId,
 			});
 		} finally {
 			// A triggered snapshot we never consumed (timeout, terminal failure, an

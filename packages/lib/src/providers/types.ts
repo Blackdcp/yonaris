@@ -13,6 +13,7 @@ export interface ScrapeResult {
 	webQueries: string[];
 	citations: Citation[];
 	modelVersion?: string;
+	providerSubmissionId?: string;
 	snapshotSource?: {
 		captureMethod: "brightdata_dataset" | "brightdata_serp";
 		contentSource: "native_answer_html" | "rendered_from_structured_response";

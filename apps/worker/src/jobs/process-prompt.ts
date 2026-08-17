@@ -128,6 +128,7 @@ export async function runModelIteration({
 	config,
 	providerImpl,
 	runIndex,
+	beforeProviderRun,
 }: {
 	sourceJobId: string;
 	promptId: string;
@@ -138,7 +139,8 @@ export async function runModelIteration({
 	config: ModelConfig;
 	providerImpl: Provider;
 	runIndex: number;
-}): Promise<void> {
+	beforeProviderRun?: () => Promise<void>;
+}): Promise<{ observationAttemptId: string; promptRunId: string; providerSubmissionId?: string } | null> {
 	const logPrefix = `[${config.model}_${runIndex}]`;
 	const target = resolveObservationTarget(config);
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
@@ -166,7 +168,7 @@ export async function runModelIteration({
 	});
 	if (attempt.state === "completed") {
 		console.log(`${logPrefix} Observation already completed; skipping duplicate execution`);
-		return;
+		return attempt.promptRunId ? { observationAttemptId: attempt.id, promptRunId: attempt.promptRunId } : null;
 	}
 	if (attempt.state === "in_progress") {
 		throw new Error(`${logPrefix} Observation is already in progress`);
@@ -175,6 +177,7 @@ export async function runModelIteration({
 	let failureStage: "configuration" | "provider" | "persistence" = "configuration";
 	try {
 		assertObservationRouteSupportsScope(target, scope);
+		await beforeProviderRun?.();
 		failureStage = "provider";
 		const result = await providerImpl.run(config.model, promptValue, {
 			webSearch: config.webSearch,
@@ -255,6 +258,11 @@ export async function runModelIteration({
 				);
 			}
 		}
+		return {
+			observationAttemptId: attempt.id,
+			promptRunId,
+			...(result.providerSubmissionId ? { providerSubmissionId: result.providerSubmissionId } : {}),
+		};
 	} catch (error) {
 		try {
 			await markObservationFailed({
@@ -369,7 +377,7 @@ export async function processPromptJob(jobs: Job<ProcessPromptData>[]): Promise<
 						config,
 						providerImpl,
 						runIndex: i + 1,
-					}),
+					}).then(() => undefined),
 				);
 			}
 		}

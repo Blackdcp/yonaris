@@ -20,6 +20,7 @@ describe("toBrightDataScrapeResult", () => {
 		const result = toBrightDataScrapeResult(payload, {
 			captureMethod: "brightdata_dataset",
 			webSearch: true,
+			providerSubmissionId: "snapshot-123",
 		});
 
 		expect(result.snapshotSource).toEqual({
@@ -36,6 +37,7 @@ describe("toBrightDataScrapeResult", () => {
 				web_search_query: ["example query"],
 			},
 		]);
+		expect(result.providerSubmissionId).toBe("snapshot-123");
 	});
 
 	it("uses answer_section_html when answer_html is absent", () => {
