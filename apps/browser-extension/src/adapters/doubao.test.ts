@@ -38,6 +38,17 @@ describe("Doubao browser-extension adapter", () => {
 		expect(port.submitCount).toBe(1);
 	});
 
+	test("supports a send action that appears only after the prompt is filled", async () => {
+		const port = new FixtureDomPort(doubaoFixture({ sendMatchesBeforeFill: 0, sendMatches: 1 }));
+		const adapter = createDoubaoAdapter(port);
+
+		await adapter.openNewConversation();
+		await adapter.prepare("Prompt A");
+		await adapter.submitOnce("Prompt A");
+
+		expect(port.submitCount).toBe(1);
+	});
+
 	test("requires exactly one new answer container", async () => {
 		const port = new FixtureDomPort(doubaoFixture({ newAnswerCount: 2 }));
 		const adapter = createDoubaoAdapter(port);
