@@ -9,7 +9,7 @@ const DOUBAO_SURFACE = "doubao.consumer_web" as const;
 const DEEPSEEK_SURFACE = "deepseek.consumer_web" as const;
 const RUN_SURFACES = [DOUBAO_SURFACE] as const;
 const DECLARED_SURFACES = [DOUBAO_SURFACE, DEEPSEEK_SURFACE] as const;
-const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260818-localpc-v6";
+const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260818-localpc-v7";
 const UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION = "deepseek-web-stale";
 
 test.describe.configure({ mode: "serial" });
@@ -181,7 +181,7 @@ async function pairFakeExtension(
   const response = await request.post("/api/internal/browser-runner/v1/pair", {
     data: {
       code,
-      extensionVersion: "0.2.1",
+			extensionVersion: "0.2.2",
       browserFamily: "chrome",
       browserVersion: "140.0.0",
       platform: "windows",

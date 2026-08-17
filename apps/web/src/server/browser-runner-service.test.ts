@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
+	type assertRunnerTask,
+	authorizeRunnerTaskOperation,
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
 	browserRunnerObservationSchema,
@@ -14,6 +16,34 @@ import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-po
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
+
+type ExtensionTaskOperation = { kind: "resume" } | { kind: "complete"; adapterVersion: string };
+
+async function authorizeExtensionTaskOperation(input: {
+	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
+	readySurfaces: readonly ("doubao.consumer_web" | "deepseek.consumer_web")[];
+	operation: ExtensionTaskOperation;
+}) {
+	return authorizeRunnerTaskOperation(
+		"task-1",
+		"stepfun",
+		{
+			kind: "browser_extension",
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: [input.surfaceTargetKey],
+			readySurfaces: input.readySurfaces,
+		},
+		input.operation,
+		{
+			assertTask: async () =>
+				({ surfaceTargetKey: input.surfaceTargetKey }) as Awaited<ReturnType<typeof assertRunnerTask>>,
+		},
+	);
+}
 
 function observationInput() {
 	return {
@@ -117,6 +147,36 @@ describe("Browser Runner service contracts", () => {
 			}),
 		).rejects.toMatchObject({ status: 409 });
 		expect(claim).not.toHaveBeenCalled();
+	});
+
+	it("rejects an exact DeepSeek resume when the authenticated device has no approved ready DeepSeek surface", async () => {
+		await expect(
+			authorizeExtensionTaskOperation({
+				surfaceTargetKey: "deepseek.consumer_web",
+				readySurfaces: [],
+				operation: { kind: "resume" },
+			}),
+		).rejects.toMatchObject({ status: 409 });
+	});
+
+	it("rejects completion from stale Doubao v6 even when the authenticated surface is ready", async () => {
+		await expect(
+			authorizeExtensionTaskOperation({
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web"],
+				operation: { kind: "complete", adapterVersion: "doubao-web-20260818-localpc-v6" },
+			}),
+		).rejects.toMatchObject({ status: 409 });
+	});
+
+	it("accepts completion only when authenticated readiness and the current approved Doubao v7 agree", async () => {
+		await expect(
+			authorizeExtensionTaskOperation({
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web"],
+				operation: { kind: "complete", adapterVersion: "doubao-web-20260818-localpc-v7" },
+			}),
+		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
 	});
 
 	it("distinguishes pending work, a drained human queue, and a fully idle global poll", () => {

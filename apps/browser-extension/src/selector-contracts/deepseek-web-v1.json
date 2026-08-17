@@ -10,6 +10,7 @@
 	"userMessage": ".d29f3d7d.ds-message",
 	"answer": ".ds-assistant-message-main-content",
 	"generating": "div[role=\"button\"].ds-button--primary.ds-button--circle:not(.ds-button--disabled)",
+	"completion": null,
 	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"]",

@@ -55,7 +55,7 @@ describe("Browser Runner machine authentication", () => {
 						readiness: {
 							"doubao.consumer_web": {
 								status: "ready",
-								adapterVersion: "doubao-web-20260818-localpc-v6",
+								adapterVersion: "doubao-web-20260818-localpc-v7",
 								activeConcurrency: 0,
 							},
 							"deepseek.consumer_web": {

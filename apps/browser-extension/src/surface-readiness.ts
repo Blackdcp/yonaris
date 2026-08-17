@@ -16,6 +16,8 @@ const READINESS_STATUSES = new Set<BrowserExtensionReadinessStatus>([
 	"unavailable",
 ]);
 
+const QUALIFIED_DOUBAO_MIGRATION_VERSION = "doubao-web-20260818-localpc-v6";
+
 export const CURRENT_ADAPTER_VERSIONS: Readonly<Record<BrowserExtensionSurface, string>> = {
 	"doubao.consumer_web": doubaoContract.version,
 	"deepseek.consumer_web": deepSeekContract.version,
@@ -54,6 +56,14 @@ export function readySurfaces(readiness: BrowserExtensionReadiness): BrowserExte
 
 function normalizeSurface(value: unknown, surface: BrowserExtensionSurface): SurfaceReadiness {
 	const adapterVersion = CURRENT_ADAPTER_VERSIONS[surface];
+	if (
+		surface === "doubao.consumer_web" &&
+		isRecord(value) &&
+		value.adapterVersion === QUALIFIED_DOUBAO_MIGRATION_VERSION &&
+		value.status === "ready"
+	) {
+		return { status: "ready", adapterVersion, activeConcurrency: 0 };
+	}
 	if (!isRecord(value) || value.adapterVersion !== adapterVersion) {
 		return { status: "adapter_incompatible", adapterVersion, activeConcurrency: 0 };
 	}

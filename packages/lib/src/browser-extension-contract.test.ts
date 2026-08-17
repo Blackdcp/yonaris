@@ -20,8 +20,11 @@ describe("browser extension contract", () => {
 	});
 
 	it("allows only exact field-proven adapter versions and keeps pending DeepSeek fail-closed", () => {
-		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v6")).toBe(
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v7")).toBe(
 			true,
+		);
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v6")).toBe(
+			false,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-20260814-uat1")).toBe(false);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(

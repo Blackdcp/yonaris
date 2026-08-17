@@ -124,7 +124,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 			browserRunnerSurfaceReadiness: {
 				"doubao.consumer_web": {
 					status: "signed_out",
-					adapterVersion: "doubao-web-20260818-localpc-v6",
+					adapterVersion: "doubao-web-20260818-localpc-v7",
 					activeConcurrency: 0,
 				},
 				"deepseek.consumer_web": {

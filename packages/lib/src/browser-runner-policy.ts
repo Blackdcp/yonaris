@@ -1,4 +1,9 @@
-import { isBrowserExtensionCaptureRoute } from "./browser-extension-contract";
+import {
+	type BrowserExtensionSurface,
+	isApprovedBrowserExtensionAdapterVersion,
+	isBrowserExtensionCaptureRoute,
+	isBrowserExtensionSurface,
+} from "./browser-extension-contract";
 
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
 export const BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE = "broker_create_transport_failure";
@@ -12,6 +17,25 @@ export const BROWSER_RUNNER_RETRYABLE_PRE_SUBMIT_CODES = [
 ] as const;
 
 export type BrowserRunnerTaskAutomationStatus = "queued" | "running" | "needs_human" | "completed";
+
+export type BrowserExtensionTaskOperation = { kind: "resume" } | { kind: "complete"; adapterVersion: string };
+
+export function browserExtensionTaskOperationDenial(input: {
+	surfaceTargetKey: string;
+	readySurfaces: readonly BrowserExtensionSurface[];
+	operation: BrowserExtensionTaskOperation;
+}): "surface_not_ready" | "adapter_version_not_approved" | null {
+	if (!isBrowserExtensionSurface(input.surfaceTargetKey) || !input.readySurfaces.includes(input.surfaceTargetKey)) {
+		return "surface_not_ready";
+	}
+	if (
+		input.operation.kind === "complete" &&
+		!isApprovedBrowserExtensionAdapterVersion(input.surfaceTargetKey, input.operation.adapterVersion)
+	) {
+		return "adapter_version_not_approved";
+	}
+	return null;
+}
 
 export function isSafePreSubmitBrokerTransportRecoveryCandidate(input: {
 	deliveryStatus: string;

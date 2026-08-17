@@ -13,7 +13,7 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.2.1");
+		expect(manifest.version).toBe("0.2.2");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});

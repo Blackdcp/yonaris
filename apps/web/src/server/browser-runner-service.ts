@@ -5,6 +5,10 @@ import {
 	isBrowserExtensionCaptureRoute,
 } from "@workspace/lib/browser-extension-contract";
 import {
+	type BrowserExtensionTaskOperation,
+	browserExtensionTaskOperationDenial,
+} from "@workspace/lib/browser-runner-policy";
+import {
 	type BrowserRunnerClaim,
 	type BrowserRunnerTaskReconciliation,
 	claimBrowserRunnerTask,
@@ -253,7 +257,7 @@ export async function resumeRunnerTask(
 	input: z.infer<typeof browserRunnerResumeSchema>,
 	principal: BrowserRunnerPrincipal,
 ) {
-	await assertRunnerTask(taskId, input.brandId, principal);
+	await authorizeRunnerTaskOperation(taskId, input.brandId, principal, { kind: "resume" });
 	const claim = await resumeBrowserRunnerTask({
 		brandId: input.brandId,
 		taskId,
@@ -405,7 +409,10 @@ export async function completeRunnerTask(
 	principal: BrowserRunnerPrincipal,
 ) {
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
-	const task = await assertRunnerTask(taskId, input.brandId, principal);
+	const task = await authorizeRunnerTaskOperation(taskId, input.brandId, principal, {
+		kind: "complete",
+		adapterVersion: input.adapterVersion,
+	});
 	if (task.status === "succeeded" && task.observationAttemptId) {
 		const existingRun = await db.query.promptRuns.findFirst({
 			where: eq(promptRuns.observationAttemptId, task.observationAttemptId),
@@ -571,6 +578,35 @@ export async function completeRunnerTask(
 	}
 
 	return { duplicate: false, attemptId: attempt.id, promptRunId: promptRun.id, snapshot: null };
+}
+
+export async function authorizeRunnerTaskOperation(
+	taskId: string,
+	brandId: string,
+	principal: BrowserRunnerPrincipal,
+	operation: BrowserExtensionTaskOperation,
+	dependencies: { assertTask?: typeof assertRunnerTask } = {},
+) {
+	const task = await (dependencies.assertTask ?? assertRunnerTask)(taskId, brandId, principal);
+	if (principal.kind !== "browser_extension") return task;
+	const denial = browserExtensionTaskOperationDenial({
+		surfaceTargetKey: task.surfaceTargetKey,
+		readySurfaces: principal.readySurfaces,
+		operation,
+	});
+	if (denial === "surface_not_ready") {
+		throw new BrowserRunnerHttpError(
+			409,
+			"The task surface is not ready with a server-approved adapter on this Browser Runner device",
+		);
+	}
+	if (denial === "adapter_version_not_approved") {
+		throw new BrowserRunnerHttpError(
+			409,
+			"The completion adapter version is not the current server-approved version for this task surface",
+		);
+	}
+	return task;
 }
 
 export async function assertRunnerTask(taskId: string, brandId: string, principal: BrowserRunnerPrincipal) {

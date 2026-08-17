@@ -35,6 +35,7 @@ export type SelectorContract = {
 	userMessage: string;
 	answer: string;
 	generating: string;
+	completion: string | null;
 	loginWall: string;
 	captcha: string;
 	rateLimit: string;
@@ -82,6 +83,7 @@ export type DomElementRole =
 	| "user_message"
 	| "answer"
 	| "generating"
+	| "completion"
 	| "login_wall"
 	| "captcha"
 	| "rate_limit"

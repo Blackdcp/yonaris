@@ -17,6 +17,16 @@ describe("Doubao browser-extension adapter", () => {
 		expect(matches[0]?.getAttribute("data-message-id")).toBe("assistant-1");
 	});
 
+	test("uses the unique semantic read-aloud action as the completion signal", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div data-message-id="user-1" class="flex-row flex w-full justify-end">Prompt</div>
+			<div data-message-id="assistant-1" class="relative grid w-full">Answer</div>
+			<div class="answer-actions"><button aria-label="朗读"></button><button aria-label="复制"></button></div>
+		</body></html>`);
+
+		expect(document.querySelectorAll(doubaoContract.completion)).toHaveLength(1);
+	});
+
 	test("uses the exact New conversation action instead of New work task", async () => {
 		const port = new FixtureDomPort(doubaoFixture({ newConversationLabels: ["新工作任务", "新对话"] }));
 		const adapter = createDoubaoAdapter(port);
@@ -91,6 +101,52 @@ describe("Doubao browser-extension adapter", () => {
 			answerHtml: "<div>Current answer</div>",
 		});
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
+	});
+
+	test("captures a stable new answer when generation finishes before collection starts", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				generatingDurationMs: 0,
+				completionReadyDelayMs: 0,
+				answer: { text: "Fast answer", html: "<div>Fast answer</div>" },
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Fast answer",
+			answerHtml: "<div>Fast answer</div>",
+		});
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
+	});
+
+	test("does not capture a paused partial answer without an explicit completion signal", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				generatingDurationMs: 0,
+				completionReadyDelayMs: 10_000,
+				answer: { text: "Complete answer", html: "<div>Complete answer</div>" },
+				answerTimeline: [
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Partial answer",
+					"Complete answer",
+				],
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Complete answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(18_000);
 	});
 
 	test("records unknown search instead of inventing false", async () => {

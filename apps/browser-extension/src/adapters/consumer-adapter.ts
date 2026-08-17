@@ -34,7 +34,6 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	#answerCountBeforeSubmit = 0;
 	#preparedPrompt: string | null = null;
 	#submitted = false;
-	#resuming = false;
 
 	constructor(port: ConsumerDomPort, contract: SelectorContract) {
 		this.#port = port;
@@ -117,7 +116,6 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			throw this.#error("page_drift", "Preserved conversation contains more than one answer container");
 		}
 		this.#preparedPrompt = prompt;
-		this.#resuming = true;
 		this.#answerCountBeforeSubmit = 0;
 	}
 
@@ -134,6 +132,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
+			const completion = this.#contract.completion
+				? visibleElements(await this.#port.query("completion", this.#contract.completion)).length
+				: 0;
+			if (completion > 1) throw this.#error("page_drift", "Completion state is ambiguous");
 			const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
 			if (answers.length > this.#answerCountBeforeSubmit + 1) {
 				answerContainersAmbiguous = true;
@@ -149,7 +151,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 					stableText = latest;
 					stableSince = this.#port.now();
 				} else if (
-					(generatingSeen || this.#resuming) &&
+					(generatingSeen || completion === 1) &&
 					generating === 0 &&
 					this.#port.now() - stableSince >= STABLE_ANSWER_MS
 				) {
@@ -332,7 +334,7 @@ function validateSelectorContract(contract: SelectorContract): SelectorContract 
 	} catch {
 		throw new Error("Invalid account restriction text pattern");
 	}
-	const optionalSelectors = new Set(["searchUsed", "searchNotUsed", "citationLink", "queryItem"]);
+	const optionalSelectors = new Set(["completion", "searchUsed", "searchNotUsed", "citationLink", "queryItem"]);
 	for (const [key, value] of Object.entries(contract)) {
 		if (value === null && optionalSelectors.has(key)) continue;
 		if (

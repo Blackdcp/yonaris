@@ -38,7 +38,7 @@ const CAPTURE_ROUTES: Record<BrowserExtensionSurface, BrowserExtensionCaptureRou
 };
 
 const APPROVED_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
-	"doubao.consumer_web": "doubao-web-20260818-localpc-v6",
+	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",
 };
 
 export function isBrowserExtensionSurface(value: string): value is BrowserExtensionSurface {
