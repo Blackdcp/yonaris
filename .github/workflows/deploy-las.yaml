@@ -538,6 +538,9 @@ jobs:
       packages: write
     strategy:
       fail-fast: false
+      # GitHub codeload intermittently rate-limits parallel action downloads.
+      # Serialize the three immutable image builds so setup-buildx is fetched reliably.
+      max-parallel: 1
       matrix:
         include:
           - name: web
