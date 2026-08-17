@@ -101,6 +101,17 @@ export const responseSnapshotAccessActionEnum = pgEnum("response_snapshot_access
 	"download_manifest",
 	"export",
 ]);
+export const overseasRunCohortStatusEnum = pgEnum("overseas_run_cohort_status", [
+	"dispatch_pending",
+	"running",
+	"completed",
+]);
+export const overseasRunCallStatusEnum = pgEnum("overseas_run_call_status", [
+	"queued",
+	"running",
+	"succeeded",
+	"failed",
+]);
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
 	dataType() {
@@ -353,6 +364,58 @@ export const deliveryBatches = pgTable(
 		frozenManifestPresent: check(
 			"delivery_batches_frozen_manifest_present",
 			sql`${table.status} IN ('draft', 'cancelled') OR (${table.plannedTaskCount} > 0 AND ${table.manifestSnapshot} IS NOT NULL AND ${table.manifestHash} IS NOT NULL AND ${table.frozenAt} IS NOT NULL)`,
+		),
+	}),
+).enableRLS();
+
+export const overseasRunCohorts = pgTable(
+	"overseas_run_cohorts",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		idempotencyKey: text("idempotency_key").notNull(),
+		manifest: json("manifest").notNull(),
+		manifestFingerprint: text("manifest_fingerprint").notNull(),
+		status: overseasRunCohortStatusEnum("status").notNull().default("dispatch_pending"),
+		plannedCallCount: integer("planned_call_count").notNull(),
+		createdBy: text("created_by").notNull(),
+		startedAt: timestamp("started_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		brandIdempotencyIdx: uniqueIndex("overseas_run_cohorts_brand_idempotency_uidx").on(
+			table.brandId,
+			table.idempotencyKey,
+		),
+		brandScopeCreatedIdx: index("overseas_run_cohorts_brand_scope_created_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.createdAt,
+		),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "overseas_run_cohorts_brand_scope_fk",
+		}),
+		validManifestFingerprint: check(
+			"overseas_run_cohorts_valid_manifest_fingerprint",
+			sql`${table.manifestFingerprint} ~ '^[0-9a-f]{64}$'`,
+		),
+		positivePlannedCallCount: check(
+			"overseas_run_cohorts_positive_planned_call_count",
+			sql`${table.plannedCallCount} > 0 AND ${table.plannedCallCount} <= 10000`,
+		),
+		lifecycleConsistent: check(
+			"overseas_run_cohorts_lifecycle_consistent",
+			sql`(${table.status} = 'dispatch_pending' AND ${table.startedAt} IS NULL AND ${table.completedAt} IS NULL) OR (${table.status} = 'running' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NULL) OR (${table.status} = 'completed' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NOT NULL)`,
 		),
 	}),
 ).enableRLS();
@@ -660,6 +723,79 @@ export const promptRuns = pgTable(
 	}),
 ).enableRLS();
 
+export const overseasRunCalls = pgTable(
+	"overseas_run_calls",
+	{
+		id: uuid("id").defaultRandom().primaryKey().notNull(),
+		cohortId: uuid("cohort_id")
+			.references(() => overseasRunCohorts.id, { onDelete: "cascade" })
+			.notNull(),
+		brandId: text("brand_id")
+			.references(() => brands.id)
+			.notNull(),
+		scopeId: uuid("scope_id").notNull(),
+		promptId: uuid("prompt_id")
+			.references(() => prompts.id)
+			.notNull(),
+		promptText: text("prompt_text").notNull(),
+		channelKey: text("channel_key").notNull(),
+		model: text("model").notNull(),
+		provider: text("provider").notNull(),
+		requestedVersion: text("requested_version"),
+		webSearchEnabled: boolean("web_search_enabled").notNull(),
+		surfaceTargetKey: text("surface_target_key").notNull(),
+		captureRouteKey: text("capture_route_key").notNull(),
+		sampleIndex: smallint("sample_index").notNull(),
+		status: overseasRunCallStatusEnum("status").notNull().default("queued"),
+		jobDispatchedAt: timestamp("job_dispatched_at", { withTimezone: true }),
+		paidIntentAt: timestamp("paid_intent_at", { withTimezone: true }),
+		providerSubmissionId: text("provider_submission_id"),
+		observationAttemptId: uuid("observation_attempt_id").references(() => observationAttempts.id),
+		promptRunId: uuid("prompt_run_id").references(() => promptRuns.id),
+		failureClass: text("failure_class"),
+		failureCode: text("failure_code"),
+		failureMessage: text("failure_message"),
+		startedAt: timestamp("started_at", { withTimezone: true }),
+		completedAt: timestamp("completed_at", { withTimezone: true }),
+		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true })
+			.defaultNow()
+			.$onUpdate(() => new Date())
+			.notNull(),
+	},
+	(table) => ({
+		cohortSlotIdx: uniqueIndex("overseas_run_calls_cohort_slot_uidx").on(
+			table.cohortId,
+			table.promptId,
+			table.surfaceTargetKey,
+			table.sampleIndex,
+		),
+		cohortStatusCreatedIdx: index("overseas_run_calls_cohort_status_created_idx").on(
+			table.cohortId,
+			table.status,
+			table.createdAt,
+		),
+		attemptIdx: uniqueIndex("overseas_run_calls_observation_attempt_uidx").on(table.observationAttemptId),
+		runIdx: uniqueIndex("overseas_run_calls_prompt_run_uidx").on(table.promptRunId),
+		scopeBrandFk: foreignKey({
+			columns: [table.brandId, table.scopeId],
+			foreignColumns: [measurementScopes.brandId, measurementScopes.id],
+			name: "overseas_run_calls_brand_scope_fk",
+		}),
+		promptIdentityFk: foreignKey({
+			columns: [table.brandId, table.scopeId, table.promptId],
+			foreignColumns: [prompts.brandId, prompts.scopeId, prompts.id],
+			name: "overseas_run_calls_prompt_identity_fk",
+		}),
+		validSampleIndex: check("overseas_run_calls_valid_sample_index", sql`${table.sampleIndex} BETWEEN 1 AND 5`),
+		brightDataOnly: check("overseas_run_calls_brightdata_only", sql`${table.provider} = 'brightdata'`),
+		lifecycleConsistent: check(
+			"overseas_run_calls_lifecycle_consistent",
+			sql`(${table.status} = 'queued' AND ${table.startedAt} IS NULL AND ${table.completedAt} IS NULL AND ${table.paidIntentAt} IS NULL AND ${table.observationAttemptId} IS NULL AND ${table.promptRunId} IS NULL) OR (${table.status} = 'running' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NULL AND ${table.promptRunId} IS NULL) OR (${table.status} = 'succeeded' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NOT NULL AND ${table.paidIntentAt} IS NOT NULL AND ${table.observationAttemptId} IS NOT NULL AND ${table.promptRunId} IS NOT NULL AND ${table.failureClass} IS NULL AND ${table.failureCode} IS NULL AND ${table.failureMessage} IS NULL) OR (${table.status} = 'failed' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NOT NULL AND ${table.failureClass} IS NOT NULL AND ${table.failureCode} IS NOT NULL AND ${table.failureMessage} IS NOT NULL AND ${table.promptRunId} IS NULL)`,
+		),
+	}),
+).enableRLS();
+
 export const citations = pgTable(
 	"citations",
 	{
@@ -875,6 +1011,11 @@ export type NewCompetitor = typeof competitors.$inferInsert;
 
 export type PromptRun = typeof promptRuns.$inferSelect;
 export type NewPromptRun = typeof promptRuns.$inferInsert;
+
+export type OverseasRunCohort = typeof overseasRunCohorts.$inferSelect;
+export type NewOverseasRunCohort = typeof overseasRunCohorts.$inferInsert;
+export type OverseasRunCall = typeof overseasRunCalls.$inferSelect;
+export type NewOverseasRunCall = typeof overseasRunCalls.$inferInsert;
 
 export type ObservationAttempt = typeof observationAttempts.$inferSelect;
 export type NewObservationAttempt = typeof observationAttempts.$inferInsert;
