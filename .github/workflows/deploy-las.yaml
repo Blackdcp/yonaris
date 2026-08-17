@@ -531,27 +531,11 @@ jobs:
             deploy/las/bin/deploy.sh
 
   build-images:
-    name: Build ${{ matrix.name }}
+    name: Build immutable images
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      # GitHub codeload intermittently rate-limits parallel action downloads.
-      # Serialize the three immutable image builds so setup-buildx is fetched reliably.
-      max-parallel: 1
-      matrix:
-        include:
-          - name: web
-            target: web
-            image: yonaris-web
-          - name: worker
-            target: worker
-            image: yonaris-worker
-          - name: db-migrate
-            target: migrate
-            image: yonaris-db-migrate
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -566,17 +550,41 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build and push web
         uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
-          target: ${{ matrix.target }}
+          target: web
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}:sha-${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-web:sha-${{ github.sha }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Build and push worker
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: worker
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-worker:sha-${{ github.sha }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+
+      - name: Build and push db-migrate
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: migrate
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-db-migrate:sha-${{ github.sha }}
+          cache-from: type=gha,scope=db-migrate
+          cache-to: type=gha,mode=max,scope=db-migrate
 
   deploy:
     name: Deploy production
