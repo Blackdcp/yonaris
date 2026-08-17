@@ -1,0 +1,36 @@
+{
+	"schemaVersion": 1,
+	"requestId": "ppio-cn-zh-20260817",
+	"brand": {
+		"nameExact": "PPIO",
+		"websiteExact": "https://ppio.com/"
+	},
+	"customer": {
+		"emailExact": "ppio@admin.com",
+		"roleExact": "owner"
+	},
+	"program": {
+		"nameExact": "China Market",
+		"marketExact": "CN",
+		"localeFrom": "zn-CN",
+		"localeTo": "zh-CN",
+		"timezoneExact": "Asia/Shanghai",
+		"evaluationRoleExact": "scored",
+		"manualOnlyExact": true,
+		"enabledExact": true
+	},
+	"prompts": {
+		"enabledTextsExact": [
+			"PPIO 派欧云是什么，主要提供哪些云服务？",
+			"国内聚合大模型 API 平台怎么选？",
+			"怎么把使用 OpenAI SDK 的应用迁移到 PPIO？",
+			"PPIO Agent 沙箱是什么，适合哪些场景？",
+			"PPIO 有哪些可供 Agent 调用的 Skills 和 MCP 工具？",
+			"PPIO GPU 容器实例适合训练、推理还是渲染？",
+			"PPIO Serverless GPUs 与 GPU 容器实例有什么区别？",
+			"2026 年 AI 推理成本优化有哪些有效方法？",
+			"PPIO 边缘 CDN 如何降低时延并提升下载体验？",
+			"企业采购 PPIO 前需要确认哪些安全与合规事项？"
+		]
+	}
+}
