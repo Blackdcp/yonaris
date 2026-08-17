@@ -5,7 +5,7 @@ import { DurableTaskJournal } from "./journal";
 import { claimedTask, fakeAdapter, fakeRunnerApi, fakeTabDriver } from "./test-fixture";
 
 describe("ExtensionCoordinator", () => {
-	test("polls every paired brand across both approved channels", async () => {
+	test("polls every paired brand only on locally ready channels", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 		await storage.saveDevice({
 			portalBaseUrl: "https://portal.yonaris.com",
@@ -18,6 +18,7 @@ describe("ExtensionCoordinator", () => {
 			...fakeRunnerApi([]),
 			claimNext: async (brandId: string, surface: string) => {
 				claims.push(`${brandId}:${surface}`);
+				if (surface === "deepseek.consumer_web") throw new Error("Unavailable DeepSeek must not be polled");
 				return null;
 			},
 			resume: async () => claimedTask(),
@@ -29,15 +30,51 @@ describe("ExtensionCoordinator", () => {
 			browserVersion: "Chrome/140",
 		});
 
-		await coordinator.runOnce();
-		expect(new Set(claims)).toEqual(
-			new Set([
-				"stepfun:doubao.consumer_web",
-				"customer-2:doubao.consumer_web",
-				"stepfun:deepseek.consumer_web",
-				"customer-2:deepseek.consumer_web",
-			]),
-		);
+		const result = await coordinator.runOnce();
+		expect(new Set(claims)).toEqual(new Set(["stepfun:doubao.consumer_web", "customer-2:doubao.consumer_web"]));
+		expect(result?.bySurface["deepseek.consumer_web"].incomplete).toBe(0);
+	});
+
+	test("polls an explicitly qualified DeepSeek surface without claiming unavailable Doubao", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"doubao.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+		const claims: string[] = [];
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi([]),
+				claimNext: async (brandId, surface) => {
+					claims.push(`${brandId}:${surface}`);
+					return null;
+				},
+				resume: async () => claimedTask(),
+			}),
+			tabs: fakeTabDriver([], fakeAdapter([])),
+			browserVersion: "Chrome/140",
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(claims).toEqual(["stepfun:deepseek.consumer_web"]);
+		expect(summary?.bySurface["doubao.consumer_web"].incomplete).toBe(0);
+		expect(summary?.bySurface["deepseek.consumer_web"].incomplete).toBe(0);
 	});
 
 	test("moves an already-submitted task to exact manual recovery without resuming or claiming", async () => {

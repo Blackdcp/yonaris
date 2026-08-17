@@ -16,7 +16,7 @@ import {
 import { SamplingBatchCreateDialog } from "@/components/sampling/sampling-batch-create-dialog";
 import { SamplingBatchList } from "@/components/sampling/sampling-batch-list";
 import { storeSamplingLease } from "@/components/sampling/sampling-lease-storage";
-import { SamplingRunNowDialog } from "@/components/sampling/sampling-run-now-dialog";
+import { SamplingRunNowDialog, samplingBatchRefetchInterval } from "@/components/sampling/sampling-run-now-dialog";
 import { SamplingScopeProvisionDialog } from "@/components/sampling/sampling-scope-provision-dialog";
 import type {
 	BrowserRunnerDeviceView,
@@ -120,7 +120,7 @@ function SamplingQueuePage() {
 			});
 		},
 		enabled: Boolean(selectedBrandId),
-		refetchInterval: 60_000,
+		refetchInterval: (query) => samplingBatchRefetchInterval(query.state.data),
 	});
 	const devicesQuery = useQuery({
 		queryKey: ["admin", "sampling", "browser-runner-devices"],
@@ -385,6 +385,7 @@ function SamplingQueuePage() {
 
 			{context?.browserRunnerEnabled && context.selectedBrand && (
 				<SamplingRunNowDialog
+					key={context.selectedBrand.id}
 					brandId={context.selectedBrand.id}
 					programs={runNowPrograms}
 					devices={browserRunnerDevices}

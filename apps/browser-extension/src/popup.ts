@@ -45,7 +45,10 @@ async function pair(): Promise<void> {
 	setMessage("");
 	try {
 		const client = new BrowserRunnerApiClient({ baseUrl: PORTAL_ORIGIN });
-		const result = await client.pair({ code: codeInput.value, heartbeat: buildHeartbeat(navigator.userAgent) });
+		const result = await client.pair({
+			code: codeInput.value,
+			heartbeat: buildHeartbeat(navigator.userAgent, await storage.loadSurfaceReadiness()),
+		});
 		await storage.saveDevice({ portalBaseUrl: PORTAL_ORIGIN, ...result });
 		codeInput.value = "";
 		await chrome.runtime.sendMessage({ type: "browser-runner:heartbeat" });

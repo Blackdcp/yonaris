@@ -1,13 +1,16 @@
 import {
 	BROWSER_EXTENSION_SURFACES,
+	type BrowserExtensionReadiness,
 	type BrowserExtensionSurface,
 	type PairedDeviceConfig,
 	PORTAL_ORIGIN,
 	type TaskJournalEntry,
 	type TaskJournalPhase,
 } from "./contracts";
+import { defaultSurfaceReadiness, normalizeSurfaceReadiness } from "./surface-readiness";
 
 const DEVICE_KEY = "browserRunnerDevice";
+const SURFACE_READINESS_KEY = "browserRunnerSurfaceReadiness";
 const JOURNAL_KEY = "browserRunnerJournal";
 const JOURNAL_ENTRY_KEY_PREFIX = `${JOURNAL_KEY}:`;
 const DEVICE_TOKEN_PATTERN = /^yrd_[A-Za-z0-9_-]{43}$/;
@@ -41,6 +44,17 @@ export class DeviceStorage {
 		const raw = (await this.area.get(DEVICE_KEY))[DEVICE_KEY];
 		if (raw === undefined) return null;
 		return validateDevice(raw);
+	}
+
+	async saveSurfaceReadiness(input: BrowserExtensionReadiness): Promise<void> {
+		await this.area.set({ [SURFACE_READINESS_KEY]: normalizeSurfaceReadiness(input) });
+	}
+
+	async loadSurfaceReadiness(): Promise<BrowserExtensionReadiness> {
+		const raw = (await this.area.get(SURFACE_READINESS_KEY))[SURFACE_READINESS_KEY];
+		const readiness = raw === undefined ? defaultSurfaceReadiness() : normalizeSurfaceReadiness(raw);
+		await this.area.set({ [SURFACE_READINESS_KEY]: readiness });
+		return readiness;
 	}
 
 	async saveJournal(input: TaskJournalEntry): Promise<void> {
@@ -78,7 +92,11 @@ export class DeviceStorage {
 	async disconnect(): Promise<void> {
 		const stored = await this.area.get(null);
 		const keys = Object.keys(stored).filter(
-			(key) => key === DEVICE_KEY || key === JOURNAL_KEY || key.startsWith(JOURNAL_ENTRY_KEY_PREFIX),
+			(key) =>
+				key === DEVICE_KEY ||
+				key === SURFACE_READINESS_KEY ||
+				key === JOURNAL_KEY ||
+				key.startsWith(JOURNAL_ENTRY_KEY_PREFIX),
 		);
 		if (keys.length > 0) await this.area.remove(keys);
 	}

@@ -59,8 +59,8 @@ describe("Browser Runner machine authentication", () => {
 								activeConcurrency: 0,
 							},
 							"deepseek.consumer_web": {
-								status: "unavailable",
-								adapterVersion: "deepseek-web-20260814-uat1",
+								status: "ready",
+								adapterVersion: "deepseek-web-stale",
 								activeConcurrency: 0,
 							},
 						},
@@ -80,6 +80,32 @@ describe("Browser Runner machine authentication", () => {
 			supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 			readySurfaces: ["doubao.consumer_web"],
 		});
+	});
+
+	it("keeps an unqualified DeepSeek adapter out of ready surfaces even when the client reports ready", async () => {
+		const deviceToken = `yrd_${"c".repeat(43)}`;
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer ${deviceToken}` },
+			}),
+			{
+				authenticateDevice: async () => ({
+					id: "11111111-1111-4111-8111-111111111111",
+					allowedBrandIds: ["stepfun"],
+					supportedSurfaces: ["deepseek.consumer_web"],
+					readiness: {
+						"deepseek.consumer_web": {
+							status: "ready",
+							adapterVersion: "deepseek-web-20260814-uat1",
+							activeConcurrency: 0,
+						},
+					},
+					revokedAt: null,
+				}),
+			},
+		);
+
+		expect(principal).toMatchObject({ readySurfaces: [] });
 	});
 
 	it("rejects a revoked paired device before any task body is parsed", async () => {

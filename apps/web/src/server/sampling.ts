@@ -1,5 +1,10 @@
 import { createServerFn, createServerOnlyFn } from "@tanstack/react-start";
-import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
+import {
+	BROWSER_EXTENSION_SURFACES,
+	type BrowserExtensionSurface,
+	browserExtensionCaptureRoute,
+	isBrowserExtensionSurface,
+} from "@workspace/lib/browser-extension-contract";
 import {
 	assertBrowserRunnerEvidenceProtocol,
 	assertPortalBrowserRunnerMutationAllowed,
@@ -57,7 +62,7 @@ import {
 	MANUAL_OBSERVATION_SURFACE_TARGET_KEYS,
 	resolveManualObservationTarget,
 } from "@workspace/lib/manual-observation-targets";
-import { and, asc, count, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { browserRunnerEnabled, browserRunnerFeatureEnabled } from "./browser-runner-auth";
@@ -236,6 +241,11 @@ export type SamplingRunNowDependencies = {
 	readScope: (input: { brandId: string; scopeId: string }) => Promise<SamplingRunNowScope | null>;
 	listEnabledPrompts: (input: { brandId: string; scopeId: string }) => Promise<Array<{ id: string; value: string }>>;
 	findExisting: (input: { brandId: string; idempotencyKey: string }) => Promise<SamplingRunNowBatchState | null>;
+	findOverlappingActive: (input: {
+		brandId: string;
+		scopeId: string;
+		surfaces: readonly BrowserExtensionSurface[];
+	}) => Promise<{ id: string; name: string; surfaceTargetKey: BrowserExtensionSurface } | null>;
 	createDraft: (input: {
 		brandId: string;
 		scopeId: string;
@@ -251,6 +261,117 @@ export type SamplingRunNowDependencies = {
 	start: (input: { brandId: string; batchId: string }) => Promise<unknown>;
 	now: () => Date;
 };
+
+type BrowserExtensionOverlapInput = {
+	brandId: string;
+	scopeId: string;
+	surfaces: readonly BrowserExtensionSurface[];
+};
+
+type BrowserExtensionOverlap = {
+	id: string;
+	name: string;
+	surfaceTargetKey: BrowserExtensionSurface;
+};
+
+export type BrowserExtensionOverlapProtectionDependencies = {
+	withLocks: <T>(input: BrowserExtensionOverlapInput, operation: () => Promise<T>) => Promise<T>;
+	findExistingBatchId: (input: { brandId: string; idempotencyKey: string }) => Promise<string | null>;
+	findOverlappingActive: (
+		input: BrowserExtensionOverlapInput & { excludeBatchId?: string },
+	) => Promise<BrowserExtensionOverlap | null>;
+};
+
+export async function withBrowserExtensionOverlapProtection<T>(
+	input: BrowserExtensionOverlapInput & { idempotencyKey: string },
+	operation: () => Promise<T>,
+	overrides: Partial<BrowserExtensionOverlapProtectionDependencies> = {},
+): Promise<T> {
+	const surfaces = [...new Set(input.surfaces)].sort();
+	if (surfaces.length === 0) return operation();
+	const lockInput = { brandId: input.brandId, scopeId: input.scopeId, surfaces };
+	const withLocks = overrides.withLocks ?? withBrowserExtensionSurfaceLocks;
+	const findExistingBatchId = overrides.findExistingBatchId ?? findBrowserExtensionBatchIdByIdempotency;
+	const findOverlappingActive = overrides.findOverlappingActive ?? findOverlappingActiveBrowserExtensionBatch;
+
+	return withLocks(lockInput, async () => {
+		const existingBatchId = await findExistingBatchId({
+			brandId: input.brandId,
+			idempotencyKey: input.idempotencyKey,
+		});
+		const overlapping = await findOverlappingActive({
+			...lockInput,
+			...(existingBatchId ? { excludeBatchId: existingBatchId } : {}),
+		});
+		if (overlapping) {
+			throw new Error(
+				`Active Browser Runner batch "${overlapping.name}" (${overlapping.id}) already includes ${overlapping.surfaceTargetKey} for this Program. Finish or cancel it before starting another run.`,
+			);
+		}
+		return operation();
+	});
+}
+
+async function withBrowserExtensionSurfaceLocks<T>(
+	input: BrowserExtensionOverlapInput,
+	operation: () => Promise<T>,
+): Promise<T> {
+	return db.transaction(async (tx) => {
+		const lockNamespace = `yonaris:browser-extension-batch:${input.brandId}:${input.scopeId}`;
+		for (const surface of [...new Set(input.surfaces)].sort()) {
+			await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${lockNamespace}), hashtext(${surface}))`);
+		}
+		return operation();
+	});
+}
+
+async function findBrowserExtensionBatchIdByIdempotency(input: {
+	brandId: string;
+	idempotencyKey: string;
+}): Promise<string | null> {
+	const existing = await db.query.deliveryBatches.findFirst({
+		where: and(eq(deliveryBatches.brandId, input.brandId), eq(deliveryBatches.idempotencyKey, input.idempotencyKey)),
+		columns: { id: true },
+	});
+	return existing?.id ?? null;
+}
+
+async function findOverlappingActiveBrowserExtensionBatch(
+	input: BrowserExtensionOverlapInput & { excludeBatchId?: string },
+): Promise<BrowserExtensionOverlap | null> {
+	const targetConditions = input.surfaces.map((surface) =>
+		and(
+			eq(deliveryTasks.surfaceTargetKey, surface),
+			eq(deliveryTasks.captureRouteKey, browserExtensionCaptureRoute(surface)),
+		),
+	);
+	const [overlapping] = await db
+		.select({
+			id: deliveryBatches.id,
+			name: deliveryBatches.name,
+			surfaceTargetKey: deliveryTasks.surfaceTargetKey,
+		})
+		.from(deliveryBatches)
+		.innerJoin(
+			deliveryTasks,
+			and(eq(deliveryTasks.batchId, deliveryBatches.id), eq(deliveryTasks.brandId, deliveryBatches.brandId)),
+		)
+		.where(
+			and(
+				eq(deliveryBatches.brandId, input.brandId),
+				eq(deliveryBatches.scopeId, input.scopeId),
+				eq(deliveryBatches.executionMode, "browser_runner"),
+				inArray(deliveryBatches.status, ["draft", "frozen", "in_progress"]),
+				or(...targetConditions),
+				input.excludeBatchId ? ne(deliveryBatches.id, input.excludeBatchId) : undefined,
+			),
+		)
+		.orderBy(asc(deliveryBatches.createdAt), asc(deliveryBatches.id))
+		.limit(1);
+	return overlapping
+		? { ...overlapping, surfaceTargetKey: overlapping.surfaceTargetKey as BrowserExtensionSurface }
+		: null;
+}
 
 export const executeSamplingRunNow = createServerOnlyFn(async function executeSamplingRunNow(
 	input: {
@@ -282,6 +403,16 @@ export const executeSamplingRunNow = createServerOnlyFn(async function executeSa
 
 	let current = await dependencies.findExisting({ brandId: input.brandId, idempotencyKey: input.idempotencyKey });
 	if (!current) {
+		const overlapping = await dependencies.findOverlappingActive({
+			brandId: input.brandId,
+			scopeId: input.scopeId,
+			surfaces: input.surfaces,
+		});
+		if (overlapping) {
+			throw new Error(
+				`Active Browser Runner batch "${overlapping.name}" (${overlapping.id}) already includes ${overlapping.surfaceTargetKey} for this Program. Finish or cancel it before starting another run.`,
+			);
+		}
 		let batchId: string | undefined;
 		try {
 			batchId = (
@@ -383,6 +514,7 @@ function defaultSamplingRunNowDependencies(): SamplingRunNowDependencies {
 			});
 			return batch ? getDeliveryBatch({ brandId, batchId: batch.id }) : null;
 		},
+		findOverlappingActive: findOverlappingActiveBrowserExtensionBatch,
 		createDraft: createDraftDeliveryBatch,
 		readBatch: getDeliveryBatch,
 		addTasks: addDeliveryTasks,
@@ -807,9 +939,11 @@ export const runSamplingNowFn = createServerFn({ method: "POST" })
 	.validator(runSamplingNowInputSchema)
 	.handler(async ({ data }) => {
 		const { session, brand } = await requireSamplingAdminBrand(data.brandId);
-		const state = await executeSamplingRunNow(data, {
-			requirePlatformAdminBrand: async () => ({ userId: session.user.id, brandId: brand.id }),
-		});
+		const state = await withBrowserExtensionOverlapProtection(data, () =>
+			executeSamplingRunNow(data, {
+				requirePlatformAdminBrand: async () => ({ userId: session.user.id, brandId: brand.id }),
+			}),
+		);
 		const current = await getDeliveryBatch({ brandId: data.brandId, batchId: state.batch.id });
 		if (!current) throw new Error("Run now batch could not be read after start");
 		return buildSamplingBatchSummary(
@@ -955,52 +1089,75 @@ export const createSamplingBatchFn = createServerFn({ method: "POST" })
 			throw new Error(`A sampling batch cannot contain more than ${MAX_SAMPLING_TASKS_PER_BATCH} tasks`);
 		}
 
-		const batch = await createDraftDeliveryBatch({
-			brandId: brand.id,
-			scopeId: scope.id,
-			idempotencyKey: data.idempotencyKey,
-			name: data.name,
-			protocol: data.protocol,
-			createdBy: session.user.id,
-			executionMode: data.executionMode,
-		});
-		const existing = await getDeliveryBatch({ brandId: brand.id, batchId: batch.id });
-		if (!existing) throw new Error(`Delivery batch ${batch.id} could not be read after creation`);
-		if (existing.tasks.length > 0) {
-			const requestedTaskIdentities = taskPlans.map(deliveryTaskIdentity).sort();
-			const existingTaskIdentities = existing.tasks.map(deliveryTaskIdentity).sort();
-			if (
-				requestedTaskIdentities.length !== existingTaskIdentities.length ||
-				requestedTaskIdentities.some((identity, index) => identity !== existingTaskIdentities[index])
-			) {
-				throw new Error(`Delivery batch idempotency key ${data.idempotencyKey} is assigned to another manifest`);
+		const persistBatch = async () => {
+			const batch = await createDraftDeliveryBatch({
+				brandId: brand.id,
+				scopeId: scope.id,
+				idempotencyKey: data.idempotencyKey,
+				name: data.name,
+				protocol: data.protocol,
+				createdBy: session.user.id,
+				executionMode: data.executionMode,
+			});
+			const existing = await getDeliveryBatch({ brandId: brand.id, batchId: batch.id });
+			if (!existing) throw new Error(`Delivery batch ${batch.id} could not be read after creation`);
+			if (existing.tasks.length > 0) {
+				const requestedTaskIdentities = taskPlans.map(deliveryTaskIdentity).sort();
+				const existingTaskIdentities = existing.tasks.map(deliveryTaskIdentity).sort();
+				if (
+					requestedTaskIdentities.length !== existingTaskIdentities.length ||
+					requestedTaskIdentities.some((identity, index) => identity !== existingTaskIdentities[index])
+				) {
+					throw new Error(`Delivery batch idempotency key ${data.idempotencyKey} is assigned to another manifest`);
+				}
+				if (batch.status !== "draft") {
+					return buildSamplingBatchSummary(
+						batch,
+						summarizeDeliveryCoverage(existing.tasks),
+						undefined,
+						null,
+						existing.tasks,
+					);
+				}
+			} else if (batch.status !== "draft") {
+				throw new Error(`Frozen delivery batch ${batch.id} has no manifest tasks`);
 			}
-			if (batch.status !== "draft") {
-				return buildSamplingBatchSummary(
-					batch,
-					summarizeDeliveryCoverage(existing.tasks),
-					undefined,
-					null,
-					existing.tasks,
-				);
-			}
-		} else if (batch.status !== "draft") {
-			throw new Error(`Frozen delivery batch ${batch.id} has no manifest tasks`);
-		}
 
-		if (existing.tasks.length === 0) {
-			await addDeliveryTasks({ brandId: brand.id, batchId: batch.id, tasks: taskPlans });
-		}
-		const frozen = await freezeDeliveryBatch({ brandId: brand.id, batchId: batch.id, frozenBy: session.user.id });
-		const frozenBatch = await getDeliveryBatch({ brandId: brand.id, batchId: frozen.id });
-		if (!frozenBatch) throw new Error(`Frozen delivery batch ${frozen.id} could not be read`);
-		return buildSamplingBatchSummary(
-			frozen,
-			summarizeDeliveryCoverage(frozenBatch.tasks),
-			undefined,
-			null,
-			frozenBatch.tasks,
-		);
+			if (existing.tasks.length === 0) {
+				await addDeliveryTasks({ brandId: brand.id, batchId: batch.id, tasks: taskPlans });
+			}
+			const frozen = await freezeDeliveryBatch({ brandId: brand.id, batchId: batch.id, frozenBy: session.user.id });
+			const frozenBatch = await getDeliveryBatch({ brandId: brand.id, batchId: frozen.id });
+			if (!frozenBatch) throw new Error(`Frozen delivery batch ${frozen.id} could not be read`);
+			return buildSamplingBatchSummary(
+				frozen,
+				summarizeDeliveryCoverage(frozenBatch.tasks),
+				undefined,
+				null,
+				frozenBatch.tasks,
+			);
+		};
+
+		const browserExtensionSurfaces =
+			data.executionMode === "browser_runner"
+				? data.targets.flatMap((target) =>
+						isBrowserExtensionSurface(target.surfaceTargetKey) &&
+						target.captureRouteKey === browserExtensionCaptureRoute(target.surfaceTargetKey)
+							? [target.surfaceTargetKey]
+							: [],
+					)
+				: [];
+		return browserExtensionSurfaces.length > 0
+			? withBrowserExtensionOverlapProtection(
+					{
+						brandId: brand.id,
+						scopeId: scope.id,
+						surfaces: browserExtensionSurfaces,
+						idempotencyKey: data.idempotencyKey,
+					},
+					persistBatch,
+				)
+			: persistBatch();
 	});
 
 export const cancelSamplingBatchFn = createServerFn({ method: "POST" })

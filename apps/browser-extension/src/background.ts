@@ -9,12 +9,12 @@ import { chromeDeviceStorage } from "./storage";
 const HEARTBEAT_ALARM = "browser-runner-heartbeat";
 const LEGACY_WORK_ALARM = "browser-runner-work";
 const storage = chromeDeviceStorage();
-const heartbeat = buildHeartbeat(navigator.userAgent);
+const browserMetadata = buildHeartbeat(navigator.userAgent);
 const coordinator = new ExtensionCoordinator({
 	storage,
 	apiFactory: (device) => new BrowserRunnerApiClient({ baseUrl: device.portalBaseUrl, token: device.deviceToken }),
 	tabs: new ChromeTabDriver(),
-	browserVersion: heartbeat.browserVersion,
+	browserVersion: browserMetadata.browserVersion,
 	notify: notifyNeedsAttention,
 });
 let running: Promise<ExtensionRunSummary | null> | null = null;
@@ -71,7 +71,7 @@ async function sendHeartbeat(): Promise<void> {
 	const device = await storage.loadDevice();
 	if (!device) return;
 	const client = new BrowserRunnerApiClient({ baseUrl: device.portalBaseUrl, token: device.deviceToken });
-	await client.heartbeat(heartbeat);
+	await client.heartbeat(buildHeartbeat(navigator.userAgent, await storage.loadSurfaceReadiness()));
 }
 
 function runNow(): Promise<ExtensionRunSummary | null> {

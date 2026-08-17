@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { executeSamplingRunNow, type SamplingRunNowDependencies } from "./sampling";
+import {
+	executeSamplingRunNow,
+	type SamplingRunNowDependencies,
+	withBrowserExtensionOverlapProtection,
+} from "./sampling";
 
 const input = {
 	brandId: "stepfun",
@@ -70,6 +74,23 @@ describe("administrator Sampling Run now orchestration", () => {
 		expect(harness.start).not.toHaveBeenCalled();
 	});
 
+	it("rejects a new run when an active batch already contains a requested channel", async () => {
+		const harness = runNowHarness();
+		const findOverlappingActive = vi.fn(async () => ({
+			id: "33333333-3333-4333-8333-333333333333",
+			name: "Existing Doubao run",
+			surfaceTargetKey: "doubao.consumer_web" as const,
+		}));
+
+		await expect(
+			executeSamplingRunNow(input, {
+				...harness.dependencies,
+				findOverlappingActive,
+			}),
+		).rejects.toThrow(/active browser runner batch.*Existing Doubao run.*doubao/i);
+		expect(harness.createDraft).not.toHaveBeenCalled();
+	});
+
 	it("fails closed when an idempotency key is retried with a changed Prompt manifest", async () => {
 		const harness = runNowHarness();
 		await executeSamplingRunNow(input, harness.dependencies);
@@ -81,6 +102,106 @@ describe("administrator Sampling Run now orchestration", () => {
 		await expect(executeSamplingRunNow(input, harness.dependencies)).rejects.toThrow(/another batch|another manifest/i);
 	});
 });
+
+describe("Browser Extension batch overlap protection", () => {
+	it("excludes an idempotent retry's own batch from overlap detection", async () => {
+		const result = await withBrowserExtensionOverlapProtection(
+			{
+				brandId: input.brandId,
+				scopeId: input.scopeId,
+				surfaces: ["doubao.consumer_web"],
+				idempotencyKey: "same-create-click",
+			},
+			async () => "existing manifest",
+			{
+				withLocks: async (_lockInput, operation) => operation(),
+				findExistingBatchId: async () => "22222222-2222-4222-8222-222222222222",
+				findOverlappingActive: async ({ excludeBatchId }) =>
+					excludeBatchId === "22222222-2222-4222-8222-222222222222"
+						? null
+						: {
+								id: "22222222-2222-4222-8222-222222222222",
+								name: "This idempotent batch",
+								surfaceTargetKey: "doubao.consumer_web",
+							},
+			},
+		);
+
+		expect(result).toBe("existing manifest");
+	});
+
+	it("serializes Create batch and Run now so only one overlapping batch is created", async () => {
+		const withLocks = serialSurfaceLock();
+		let activeBatch = false;
+		const dependencies = {
+			withLocks,
+			findExistingBatchId: async () => null,
+			findOverlappingActive: async () =>
+				activeBatch
+					? {
+							id: "33333333-3333-4333-8333-333333333333",
+							name: "First extension run",
+							surfaceTargetKey: "doubao.consumer_web" as const,
+						}
+					: null,
+		};
+		const create = (idempotencyKey: string, surfaces: (typeof input.surfaces)[number][]) =>
+			withBrowserExtensionOverlapProtection(
+				{ brandId: input.brandId, scopeId: input.scopeId, surfaces, idempotencyKey },
+				async () => {
+					activeBatch = true;
+					return idempotencyKey;
+				},
+				dependencies,
+			);
+
+		const results = await Promise.allSettled([
+			create("create-batch-click", ["doubao.consumer_web", "deepseek.consumer_web"]),
+			create("run-now-click", ["deepseek.consumer_web", "doubao.consumer_web"]),
+		]);
+
+		expect(results.map(({ status }) => status)).toEqual(["fulfilled", "rejected"]);
+		expect(results[1]).toMatchObject({
+			reason: expect.objectContaining({ message: expect.stringMatching(/active/i) }),
+		});
+	});
+});
+
+type OverlapProtectionInput = {
+	brandId: string;
+	scopeId: string;
+	surfaces: readonly (typeof input.surfaces)[number][];
+	idempotencyKey: string;
+};
+
+type OverlapProtectionDependencies = {
+	withLocks: <T>(input: Omit<OverlapProtectionInput, "idempotencyKey">, operation: () => Promise<T>) => Promise<T>;
+	findExistingBatchId: (input: { brandId: string; idempotencyKey: string }) => Promise<string | null>;
+	findOverlappingActive: (
+		input: Omit<OverlapProtectionInput, "idempotencyKey"> & { excludeBatchId?: string },
+	) => Promise<{
+		id: string;
+		name: string;
+		surfaceTargetKey: (typeof input.surfaces)[number];
+	} | null>;
+};
+
+function serialSurfaceLock(): OverlapProtectionDependencies["withLocks"] {
+	let tail = Promise.resolve();
+	return async <T>(_input: Omit<OverlapProtectionInput, "idempotencyKey">, operation: () => Promise<T>) => {
+		const previous = tail;
+		let release: () => void = () => undefined;
+		tail = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		await previous;
+		try {
+			return await operation();
+		} finally {
+			release();
+		}
+	};
+}
 
 function runNowHarness(options: { concurrentAdd?: boolean; concurrentStart?: boolean } = {}) {
 	let current: Awaited<ReturnType<SamplingRunNowDependencies["readBatch"]>> = null;
@@ -145,6 +266,7 @@ function runNowHarness(options: { concurrentAdd?: boolean; concurrentStart?: boo
 		}),
 		listEnabledPrompts: async () => promptRows,
 		findExisting: async () => current,
+		findOverlappingActive: async () => null,
 		createDraft,
 		readBatch: async () => current,
 		addTasks,

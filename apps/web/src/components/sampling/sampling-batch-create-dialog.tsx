@@ -14,7 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { minimumEvidenceArtifactsForExecutionMode } from "./sampling-execution";
+import { captureRouteForExecution, minimumEvidenceArtifactsForExecutionMode } from "./sampling-execution";
 import { formatZonedDateTimeInput, parseZonedDateTimeInput } from "./sampling-timezone";
 import type {
 	CreateSamplingBatchInput,
@@ -172,6 +172,11 @@ export function SamplingBatchCreateDialog({
 			setError("Select at least one consumer surface.");
 			return;
 		}
+		const resolvedTargets = selectedTargets.map((target) => {
+			const draft = targetDrafts[target.surfaceTargetKey];
+			if (!draft) throw new Error(`Target ${target.surfaceTargetKey} is no longer selected.`);
+			return { target, draft, captureRouteKey: captureRouteForExecution(executionMode, target) };
+		});
 		let startsAt: Date;
 		let endsAt: Date;
 		try {
@@ -196,13 +201,10 @@ export function SamplingBatchCreateDialog({
 				idempotencyKey,
 				name: name.trim(),
 				promptIds: [...promptIds],
-				targets: selectedTargets.map((target) => {
-					const draft = targetDrafts[target.surfaceTargetKey];
-					if (!draft) throw new Error(`Target ${target.surfaceTargetKey} is no longer selected.`);
+				targets: resolvedTargets.map(({ target, draft, captureRouteKey }) => {
 					return {
 						surfaceTargetKey: target.surfaceTargetKey,
-						captureRouteKey:
-							executionMode === "browser_runner" ? ("browser_runner.doubao" as const) : target.captureRouteKey,
+						captureRouteKey,
 						evaluationRole,
 						...draft,
 					};
@@ -210,7 +212,10 @@ export function SamplingBatchCreateDialog({
 				protocol: {
 					measurementWindow: { startsAt: startsAt.toISOString(), endsAt: endsAt.toISOString() },
 					evidence: {
-						minimumArtifacts: minimumEvidenceArtifactsForExecutionMode(executionMode),
+						minimumArtifacts: minimumEvidenceArtifactsForExecutionMode(
+							executionMode,
+							resolvedTargets.map(({ captureRouteKey }) => captureRouteKey),
+						),
 						requireSha256: true,
 						requirePageUrl: true,
 						allowedUriSchemes: ["https", "http"],

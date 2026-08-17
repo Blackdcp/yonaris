@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	assertExtensionEvidenceProtocol,
 	browserExtensionCaptureRoute,
+	isApprovedBrowserExtensionAdapterVersion,
 	parseBrowserExtensionSurface,
 } from "./browser-extension-contract";
 
@@ -16,6 +17,17 @@ describe("browser extension contract", () => {
 
 	it("rejects surfaces that the first extension release cannot execute", () => {
 		expect(() => parseBrowserExtensionSurface("kimi.consumer_web")).toThrow(/not supported/i);
+	});
+
+	it("allows only exact field-proven adapter versions and keeps pending DeepSeek fail-closed", () => {
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v6")).toBe(
+			true,
+		);
+		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-20260814-uat1")).toBe(false);
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(
+			false,
+		);
+		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-stale")).toBe(false);
 	});
 
 	it("accepts one HTML page snapshot as the complete extension evidence contract", () => {

@@ -24,6 +24,14 @@ export function calculateSamplingRunNowTaskCount(promptCount: number, channelCou
 	return promptCount * channelCount * FIXED_SAMPLES_PER_CHANNEL;
 }
 
+export function samplingBatchRefetchInterval(data: { batches: ReadonlyArray<{ status: string }> } | undefined): number {
+	return data?.batches.some(
+		(batch) => batch.status === "draft" || batch.status === "frozen" || batch.status === "in_progress",
+	)
+		? 5_000
+		: 60_000;
+}
+
 export function browserRunnerDeviceIsOnline(device: BrowserRunnerDeviceView, now = new Date()): boolean {
 	if (device.revokedAt || !device.lastSeenAt) return false;
 	const lastSeenAt = new Date(device.lastSeenAt).getTime();
@@ -77,28 +85,44 @@ export function SamplingRunNowDialog({
 	now?: Date;
 }) {
 	const [scopeId, setScopeId] = useState(programs[0]?.id ?? "");
-	const [surfaces, setSurfaces] = useState<BrowserExtensionSurface[]>(["doubao.consumer_web", "deepseek.consumer_web"]);
+	const [surfaceSelectionOverride, setSurfaceSelectionOverride] = useState<BrowserExtensionSurface[] | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const selectedProgram = programs.find((program) => program.id === scopeId) ?? programs[0];
-	const taskCount = calculateSamplingRunNowTaskCount(selectedProgram?.promptCount ?? 0, surfaces.length);
 	const availability = useMemo(
 		() => new Map(CHANNELS.map(({ surface }) => [surface, channelAvailability(devices, brandId, surface, now)])),
 		[brandId, devices, now],
 	);
+	const readySurfaces = useMemo(
+		() => CHANNELS.map(({ surface }) => surface).filter((surface) => availability.get(surface)?.ready),
+		[availability],
+	);
+	const surfaces = surfaceSelectionOverride ?? readySurfaces;
+	const taskCount = calculateSamplingRunNowTaskCount(selectedProgram?.promptCount ?? 0, surfaces.length);
 
 	const toggleSurface = (surface: BrowserExtensionSurface, checked: boolean) => {
-		setSurfaces((current) =>
+		setSurfaceSelectionOverride(
 			checked
 				? CHANNELS.map(({ surface: candidate }) => candidate).filter(
-						(candidate) => candidate === surface || current.includes(candidate),
+						(candidate) => candidate === surface || surfaces.includes(candidate),
 					)
-				: current.filter((candidate) => candidate !== surface),
+				: surfaces.filter((candidate) => candidate !== surface),
 		);
 	};
 
 	const submit = async () => {
 		if (!selectedProgram || surfaces.length === 0) return;
+		const unavailableLabels = CHANNELS.filter(
+			({ surface }) => surfaces.includes(surface) && !availability.get(surface)?.ready,
+		).map(({ label }) => label);
+		if (
+			unavailableLabels.length > 0 &&
+			!window.confirm(
+				`${unavailableLabels.join(", ")} is not ready. Its tasks will wait in the queue for an administrator. Create this batch anyway?`,
+			)
+		) {
+			return;
+		}
 		setSubmitting(true);
 		setError(null);
 		try {

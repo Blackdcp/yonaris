@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
+import {
+	type BrowserExtensionReadiness,
+	type BrowserExtensionSurface,
+	isApprovedBrowserExtensionAdapterVersion,
+} from "@workspace/lib/browser-extension-contract";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import type { BrowserRunnerPrincipal } from "./browser-runner-auth";
@@ -63,6 +67,22 @@ const revokeDeviceSchema = z.object({ deviceId: z.guid() }).strict();
 
 type HeartbeatInput = z.infer<typeof browserRunnerDeviceHeartbeatSchema>;
 type PairInput = z.infer<typeof browserRunnerPairSchema>;
+
+export function projectEffectiveBrowserRunnerReadiness(
+	readiness: BrowserExtensionReadiness,
+	supportedSurfaces: readonly BrowserExtensionSurface[],
+): BrowserExtensionReadiness {
+	const effective: BrowserExtensionReadiness = {};
+	for (const surface of supportedSurfaces) {
+		const state = readiness[surface];
+		if (!state) continue;
+		effective[surface] =
+			state.status === "ready" && !isApprovedBrowserExtensionAdapterVersion(surface, state.adapterVersion)
+				? { ...state, status: "adapter_incompatible", activeConcurrency: 0 }
+				: state;
+	}
+	return effective;
+}
 
 export async function pairBrowserRunnerDevice(
 	input: PairInput,
@@ -138,19 +158,25 @@ export const createBrowserRunnerPairingFn = createServerFn({ method: "POST" })
 export const listBrowserRunnerDevicesFn = createServerFn({ method: "GET" }).handler(async () => {
 	await requirePlatformAdmin();
 	const { listBrowserRunnerDevices } = await import("@workspace/lib/db/browser-runner-devices");
-	return (await listBrowserRunnerDevices()).map((device) => ({
-		id: device.id,
-		displayName: device.displayName,
-		extensionVersion: device.extensionVersion,
-		browserFamily: device.browserFamily,
-		browserVersion: device.browserVersion,
-		platform: device.platform,
-		supportedSurfaces: device.supportedSurfaces as BrowserExtensionSurface[],
-		readiness: device.readiness as BrowserExtensionReadiness,
-		lastSeenAt: device.lastSeenAt?.toISOString() ?? null,
-		revokedAt: device.revokedAt?.toISOString() ?? null,
-		allowedBrandIds: device.allowedBrandIds,
-	}));
+	return (await listBrowserRunnerDevices()).map((device) => {
+		const supportedSurfaces = device.supportedSurfaces as BrowserExtensionSurface[];
+		return {
+			id: device.id,
+			displayName: device.displayName,
+			extensionVersion: device.extensionVersion,
+			browserFamily: device.browserFamily,
+			browserVersion: device.browserVersion,
+			platform: device.platform,
+			supportedSurfaces,
+			readiness: projectEffectiveBrowserRunnerReadiness(
+				device.readiness as BrowserExtensionReadiness,
+				supportedSurfaces,
+			),
+			lastSeenAt: device.lastSeenAt?.toISOString() ?? null,
+			revokedAt: device.revokedAt?.toISOString() ?? null,
+			allowedBrandIds: device.allowedBrandIds,
+		};
+	});
 });
 
 export const revokeBrowserRunnerDeviceFn = createServerFn({ method: "POST" })

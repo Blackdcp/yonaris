@@ -1,5 +1,9 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { type BrowserExtensionSurface, isBrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
+import {
+	type BrowserExtensionSurface,
+	isApprovedBrowserExtensionAdapterVersion,
+	isBrowserExtensionSurface,
+} from "@workspace/lib/browser-extension-contract";
 import {
 	type AuthenticatedBrowserRunnerDevice,
 	authenticateBrowserRunnerDevice,
@@ -95,7 +99,12 @@ export async function authenticateRunnerRequest(
 		if (supportedSurfaces.length < 1) {
 			throw new BrowserRunnerHttpError(401, "Browser Runner device capabilities are invalid");
 		}
-		const readySurfaces = supportedSurfaces.filter((surface) => device.readiness[surface]?.status === "ready");
+		const readySurfaces = supportedSurfaces.filter((surface) => {
+			const readiness = device.readiness[surface];
+			return (
+				readiness?.status === "ready" && isApprovedBrowserExtensionAdapterVersion(surface, readiness.adapterVersion)
+			);
+		});
 		return {
 			kind: "browser_extension",
 			id: device.id,

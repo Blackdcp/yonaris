@@ -27,6 +27,59 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadDevice()).resolves.toMatchObject({ deviceId: "device-1", allowedBrandIds: ["stepfun"] });
 	});
 
+	it("persists fail-closed per-surface qualification with DeepSeek unavailable by default", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+
+		await expect(storage.loadSurfaceReadiness()).resolves.toEqual({
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+		expect(await storage.dump()).toHaveProperty("browserRunnerSurfaceReadiness");
+	});
+
+	it("keeps an explicitly qualified surface ready only for its exact installed adapter version", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveSurfaceReadiness({
+			"doubao.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+
+		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
+			"doubao.consumer_web": { status: "unavailable" },
+			"deepseek.consumer_web": { status: "ready" },
+		});
+
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-stale",
+				activeConcurrency: 0,
+			},
+		});
+		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
+			"deepseek.consumer_web": {
+				status: "adapter_incompatible",
+				adapterVersion: "deepseek-web-20260814-uat1",
+			},
+		});
+	});
+
 	it("stores only task journal metadata and strips response content", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 		await storage.saveJournal({
@@ -162,6 +215,7 @@ describe("DeviceStorage", () => {
 
 	it("clears the device secret and journal on explicit disconnect", async () => {
 		const storage = new DeviceStorage(memoryStorage());
+		await storage.loadSurfaceReadiness();
 		await storage.saveDevice({
 			portalBaseUrl: "https://portal.yonaris.com",
 			deviceId: "device-1",

@@ -6,6 +6,7 @@ import type {
 	TaskJournalEntry,
 } from "../contracts";
 import type { DeviceStorage } from "../storage";
+import { readySurfaces } from "../surface-readiness";
 import { AdaptiveSurfacePool } from "./concurrency";
 import { DurableTaskJournal } from "./journal";
 import { pollStartedWork, type SurfacePollSummary } from "./poller";
@@ -42,8 +43,6 @@ type ExtensionCoordinatorDependencies = {
 	notify?(result: TaskRunResult, surface: BrowserExtensionSurface): Promise<void> | void;
 };
 
-const SURFACES: readonly BrowserExtensionSurface[] = ["doubao.consumer_web", "deepseek.consumer_web"];
-
 export class ExtensionCoordinator {
 	readonly #dependencies: ExtensionCoordinatorDependencies;
 	readonly #pools: Record<BrowserExtensionSurface, AdaptiveSurfacePool> = {
@@ -63,9 +62,10 @@ export class ExtensionCoordinator {
 		if ((await this.#reconcileJournalBeforePoll(api, journal)) === "stop") {
 			return { bySurface: emptySurfaceSummaries(), recovered: 0, recoveryIncomplete: 0 };
 		}
+		const surfaces = readySurfaces(await this.#dependencies.storage.loadSurfaceReadiness());
 		const polled = await pollStartedWork({
 			brandIds: device.allowedBrandIds,
-			surfaces: SURFACES,
+			surfaces,
 			pools: this.#pools,
 			claim: (brandId, surface) => api.claimNext(brandId, surface),
 			run: async (claim) => {

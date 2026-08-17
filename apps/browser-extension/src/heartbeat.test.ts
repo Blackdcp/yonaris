@@ -30,6 +30,34 @@ describe("buildHeartbeat", () => {
 		});
 	});
 
+	it("reports the exact persisted qualification instead of promoting DeepSeek implicitly", () => {
+		const heartbeat = buildHeartbeat("Mozilla/5.0 (Windows NT 10.0) Chrome/140.0.1 Safari/537.36", {
+			"doubao.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+
+		expect(heartbeat.readiness).toEqual({
+			"doubao.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+	});
+
 	it("fails closed on an unsupported host or non-Chrome browser", () => {
 		expect(() => buildHeartbeat("Mozilla/5.0 (X11; Linux x86_64) Chrome/140.0.1")).toThrow(/Windows and macOS/i);
 		expect(() => buildHeartbeat("Mozilla/5.0 (Windows NT 10.0) Firefox/141.0")).toThrow(/requires Chrome/i);

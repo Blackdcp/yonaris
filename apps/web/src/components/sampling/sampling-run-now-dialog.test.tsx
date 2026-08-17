@@ -1,6 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { calculateSamplingRunNowTaskCount, SamplingRunNowDialog } from "./sampling-run-now-dialog";
+import {
+	calculateSamplingRunNowTaskCount,
+	SamplingRunNowDialog,
+	samplingBatchRefetchInterval,
+} from "./sampling-run-now-dialog";
 import type { BrowserRunnerDeviceView } from "./types";
 
 const programs = [
@@ -51,7 +55,7 @@ describe("SamplingRunNowDialog", () => {
 		expect(markup).not.toMatch(/samples per prompt[^<]*input/i);
 	});
 
-	it("keeps an offline channel selectable and explains that work waits instead of failing", () => {
+	it("defaults to no channels while all eligible devices are offline", () => {
 		const offline = readyDevice();
 		offline.lastSeenAt = "2026-08-16T09:00:00.000Z";
 		const markup = renderToStaticMarkup(
@@ -65,8 +69,30 @@ describe("SamplingRunNowDialog", () => {
 		);
 
 		expect(markup).toContain("Offline · will wait in queue");
-		expect(markup).toContain("does not count as a failed observation");
-		expect(markup).toContain("Run 600 tasks now");
+		expect(markup).toContain("60 × 0 × 5 = 0 tasks");
+		expect(markup).toContain("Run 0 tasks now");
+	});
+
+	it("defaults to only the ready channel when another channel is unavailable", () => {
+		const device = readyDevice();
+		device.readiness["deepseek.consumer_web"] = {
+			status: "unavailable",
+			adapterVersion: "deepseek-1",
+			activeConcurrency: 0,
+		};
+		const markup = renderToStaticMarkup(
+			<SamplingRunNowDialog
+				brandId="stepfun"
+				programs={programs}
+				devices={[device]}
+				now={new Date("2026-08-16T10:00:30.000Z")}
+				onRun={vi.fn()}
+			/>,
+		);
+
+		expect(markup).toContain("Unavailable · will wait in queue");
+		expect(markup).toContain("60 × 1 × 5 = 300 tasks");
+		expect(markup).toContain("Run 300 tasks now");
 	});
 });
 
@@ -74,5 +100,13 @@ describe("calculateSamplingRunNowTaskCount", () => {
 	it("uses the same fixed five-run contract for one or two domestic channels", () => {
 		expect(calculateSamplingRunNowTaskCount(60, 1)).toBe(300);
 		expect(calculateSamplingRunNowTaskCount(60, 2)).toBe(600);
+	});
+});
+
+describe("sampling batch refresh policy", () => {
+	it("polls active batches every five seconds and settled pages every minute", () => {
+		expect(samplingBatchRefetchInterval({ batches: [{ status: "in_progress" }] })).toBe(5_000);
+		expect(samplingBatchRefetchInterval({ batches: [{ status: "completed" }, { status: "cancelled" }] })).toBe(60_000);
+		expect(samplingBatchRefetchInterval(undefined)).toBe(60_000);
 	});
 });

@@ -1,5 +1,5 @@
 export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
-export const EXTENSION_VERSION = "0.2.0" as const;
+export const EXTENSION_VERSION = "0.2.1" as const;
 export const BROWSER_EXTENSION_SURFACES = ["doubao.consumer_web", "deepseek.consumer_web"] as const;
 
 export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACES)[number];

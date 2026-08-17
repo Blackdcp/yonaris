@@ -1,6 +1,10 @@
 import { BrowserRunnerDeviceError } from "@workspace/lib/db/browser-runner-devices";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { pairBrowserRunnerDevice, updateBrowserRunnerDeviceHeartbeat } from "./browser-runner-devices";
+import {
+	pairBrowserRunnerDevice,
+	projectEffectiveBrowserRunnerReadiness,
+	updateBrowserRunnerDeviceHeartbeat,
+} from "./browser-runner-devices";
 
 const heartbeat = {
 	extensionVersion: "0.1.0",
@@ -99,5 +103,67 @@ describe("browser extension device service", () => {
 				heartbeat,
 			),
 		).rejects.toMatchObject({ status: 403 });
+	});
+
+	it("projects raw ready state to adapter_incompatible unless the adapter version is allowlisted", () => {
+		expect(
+			projectEffectiveBrowserRunnerReadiness(
+				{
+					"doubao.consumer_web": {
+						status: "ready",
+						adapterVersion: "doubao-web-v1",
+						activeConcurrency: 5,
+					},
+					"deepseek.consumer_web": {
+						status: "ready",
+						adapterVersion: "deepseek-web-20260814-uat1",
+						activeConcurrency: 1,
+					},
+				},
+				["doubao.consumer_web", "deepseek.consumer_web"],
+			),
+		).toEqual({
+			"doubao.consumer_web": {
+				status: "adapter_incompatible",
+				adapterVersion: "doubao-web-v1",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "adapter_incompatible",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
+	});
+
+	it("keeps an allowlisted adapter ready and preserves an explicit unavailable state", () => {
+		expect(
+			projectEffectiveBrowserRunnerReadiness(
+				{
+					"doubao.consumer_web": {
+						status: "ready",
+						adapterVersion: "doubao-web-20260818-localpc-v6",
+						activeConcurrency: 1,
+					},
+					"deepseek.consumer_web": {
+						status: "unavailable",
+						adapterVersion: "deepseek-web-20260814-uat1",
+						activeConcurrency: 0,
+					},
+				},
+				["doubao.consumer_web", "deepseek.consumer_web"],
+			),
+		).toEqual({
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: "doubao-web-20260818-localpc-v6",
+				activeConcurrency: 1,
+			},
+			"deepseek.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
 	});
 });

@@ -37,6 +37,10 @@ const CAPTURE_ROUTES: Record<BrowserExtensionSurface, BrowserExtensionCaptureRou
 	"deepseek.consumer_web": "browser_extension.deepseek",
 };
 
+const APPROVED_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
+	"doubao.consumer_web": "doubao-web-20260818-localpc-v6",
+};
+
 export function isBrowserExtensionSurface(value: string): value is BrowserExtensionSurface {
 	return Object.hasOwn(CAPTURE_ROUTES, value);
 }
@@ -50,6 +54,13 @@ export function parseBrowserExtensionSurface(value: string): BrowserExtensionSur
 
 export function browserExtensionCaptureRoute(surface: BrowserExtensionSurface): BrowserExtensionCaptureRoute {
 	return CAPTURE_ROUTES[surface];
+}
+
+export function isApprovedBrowserExtensionAdapterVersion(
+	surface: BrowserExtensionSurface,
+	adapterVersion: string,
+): boolean {
+	return adapterVersion === APPROVED_ADAPTER_VERSIONS[surface];
 }
 
 export function isBrowserExtensionCaptureRoute(value: string): value is BrowserExtensionCaptureRoute {

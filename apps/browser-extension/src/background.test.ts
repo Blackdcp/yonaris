@@ -10,6 +10,11 @@ describe.sequential("Browser Runner background scheduling", () => {
 	let runtimeMessageListener: RuntimeMessageListener | null = null;
 	let storageGetCalls = 0;
 	let storageGetImplementation: () => Promise<Record<string, unknown>> = async () => ({});
+	let fetchImplementation: (request: Request) => Promise<Response> = async () =>
+		new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
+			status: 200,
+			headers: { "Content-Type": "application/json" },
+		});
 	let notificationMessage: ((code: string) => string) | undefined;
 
 	beforeAll(async () => {
@@ -54,6 +59,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 			tabs: {},
 			notifications: { create: async () => "notification-id" },
 		} as unknown as typeof chrome);
+		vi.stubGlobal("fetch", (request: Request) => fetchImplementation(request));
 
 		const background = await import("./background");
 		notificationMessage = (background as { notificationMessage?: (code: string) => string }).notificationMessage;
@@ -62,6 +68,11 @@ describe.sequential("Browser Runner background scheduling", () => {
 	beforeEach(() => {
 		storageGetCalls = 0;
 		storageGetImplementation = async () => ({});
+		fetchImplementation = async () =>
+			new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
 	});
 
 	test("clears the legacy work alarm during setup", () => {
@@ -99,6 +110,55 @@ describe.sequential("Browser Runner background scheduling", () => {
 
 		expect(response).toMatchObject({ ok: true });
 		expect(storageGetCalls).toBeGreaterThan(0);
+	});
+
+	test("heartbeats the persisted per-surface qualification without promoting DeepSeek", async () => {
+		const requests: unknown[] = [];
+		storageGetImplementation = async () => ({
+			browserRunnerDevice: {
+				portalBaseUrl: "https://portal.yonaris.com",
+				deviceId: "device-1",
+				deviceToken: `yrd_${"a".repeat(43)}`,
+				allowedBrandIds: ["stepfun"],
+			},
+			browserRunnerSurfaceReadiness: {
+				"doubao.consumer_web": {
+					status: "signed_out",
+					adapterVersion: "doubao-web-20260818-localpc-v6",
+					activeConcurrency: 0,
+				},
+				"deepseek.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "deepseek-web-20260814-uat1",
+					activeConcurrency: 0,
+				},
+			},
+		});
+		fetchImplementation = async (request) => {
+			requests.push(await request.json());
+			return new Response(
+				JSON.stringify({
+					deviceId: "device-1",
+					serverTime: "2026-08-18T00:00:00.000Z",
+					featureVersion: "browser-extension.v1",
+				}),
+				{ status: 200, headers: { "Content-Type": "application/json" } },
+			);
+		};
+
+		const response = await new Promise<unknown>((resolve) => {
+			runtimeMessageListener?.({ type: "browser-runner:heartbeat" }, {}, resolve);
+		});
+
+		expect(response).toEqual({ ok: true });
+		expect(requests).toMatchObject([
+			{
+				readiness: {
+					"doubao.consumer_web": { status: "signed_out" },
+					"deepseek.consumer_web": { status: "unavailable" },
+				},
+			},
+		]);
 	});
 
 	test("accepts an exact local task id only through the manual recovery message", async () => {
