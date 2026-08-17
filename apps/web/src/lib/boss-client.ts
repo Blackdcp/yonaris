@@ -51,6 +51,10 @@ export async function getBoss(): Promise<PgBoss> {
 			retryBackoff: false,
 			expireInSeconds: 60 * 15,
 		});
+		await boss.createQueue("process-overseas-run-call", {
+			retryLimit: 0,
+			expireInSeconds: 60 * 20,
+		});
 
 		bossInstance = boss;
 		return boss;

@@ -52,6 +52,10 @@ async function main() {
 			retryBackoff: true,
 			expireInSeconds: 60 * 15, // 15 minute timeout
 		});
+		await boss.createQueue("process-overseas-run-call", {
+			retryLimit: 0,
+			expireInSeconds: 60 * 20,
+		});
 		if (getDeployment().features.reportGeneration) {
 			await boss.createQueue("generate-report", {
 				retryLimit: 3,
