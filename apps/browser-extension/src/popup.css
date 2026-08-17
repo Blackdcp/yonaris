@@ -88,6 +88,16 @@ button.secondary {
 	font-size: 12px;
 }
 
+.recovery-list {
+	display: grid;
+	gap: 6px;
+}
+
+.recovery-list button {
+	min-height: 34px;
+	font-size: 12px;
+}
+
 button:disabled {
 	cursor: wait;
 	opacity: 0.6;

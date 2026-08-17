@@ -4,6 +4,7 @@ export type AdapterFailureCode =
 	| "signed_out"
 	| "captcha"
 	| "rate_limited"
+	| "account_restricted"
 	| "page_drift"
 	| "response_timeout"
 	| "post_submit_unknown";
@@ -37,6 +38,8 @@ export type SelectorContract = {
 	loginWall: string;
 	captcha: string;
 	rateLimit: string;
+	accountRestricted: string;
+	accountRestrictedTextPattern: string;
 	searchUsed: string | null;
 	searchNotUsed: string | null;
 	citationLink: string | null;
@@ -81,7 +84,8 @@ export type DomElementRole =
 	| "generating"
 	| "login_wall"
 	| "captcha"
-	| "rate_limit";
+	| "rate_limit"
+	| "account_restricted";
 
 export type DomElementSummary = {
 	text: string;

@@ -1,6 +1,6 @@
 import { AdapterError, type CollectedAnswer, type ConsumerWebAdapter } from "../adapters/contracts";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
-import type { RunnerTab, RunnerTabDriver } from "./task-runner";
+import { type RunnerTab, type RunnerTabDriver, RunnerTabOpenError } from "./task-runner";
 
 type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "preflight" | "open_new_conversation" | "collect_current_answer" }
@@ -13,9 +13,10 @@ type AdapterCommand =
 type BrowserTab = { id?: number; url?: string; status?: string };
 
 export interface ChromeTabsGateway {
-	create(url: string): Promise<BrowserTab>;
+	create(url: string, options: { active: boolean }): Promise<BrowserTab>;
 	get(tabId: number): Promise<BrowserTab>;
 	remove(tabId: number): Promise<void>;
+	activate(tabId: number): Promise<void>;
 	sendMessage(tabId: number, command: AdapterCommand): Promise<unknown>;
 }
 
@@ -33,21 +34,33 @@ export class ChromeTabDriver implements RunnerTabDriver {
 
 	async open(claim: BrowserExtensionClaim): Promise<RunnerTab> {
 		assertApprovedUrl(claim.launchUrl, claim.surfaceTargetKey);
-		const created = await this.#gateway.create(claim.launchUrl);
+		const created = await this.#gateway.create(claim.launchUrl, { active: true });
 		if (!Number.isSafeInteger(created.id)) throw new Error("Chrome did not create a Browser Runner tab");
-		return this.#waitForReady(created.id as number, claim.surfaceTargetKey);
+		const tab = this.#runnerTab(created.id as number, claim.surfaceTargetKey);
+		try {
+			await this.#waitForReady(created.id as number, claim.surfaceTargetKey);
+			return tab;
+		} catch (error) {
+			throw new RunnerTabOpenError(tab, error);
+		}
 	}
 
 	async attach(tabId: number, surface: BrowserExtensionSurface): Promise<RunnerTab> {
 		if (!Number.isSafeInteger(tabId) || tabId < 0) throw new Error("Browser Runner tab id is invalid");
-		return this.#waitForReady(tabId, surface);
+		await this.#waitForReady(tabId, surface);
+		return this.#runnerTab(tabId, surface);
 	}
 
-	async #waitForReady(tabId: number, surface: BrowserExtensionSurface): Promise<RunnerTab> {
+	async activate(tabId: number): Promise<void> {
+		if (!Number.isSafeInteger(tabId) || tabId < 0) throw new Error("Browser Runner tab id is invalid");
+		await this.#gateway.activate(tabId);
+	}
+
+	async #waitForReady(tabId: number, surface: BrowserExtensionSurface): Promise<void> {
 		for (let attempt = 0; attempt < 60; attempt += 1) {
 			const tab = await this.#gateway.get(tabId);
 			if (tab.url) assertApprovedUrl(tab.url, surface);
-			if (tab.status === "complete") return this.#runnerTab(tabId, surface);
+			if (tab.status === "complete") return;
 			await this.#wait(500);
 		}
 		throw new Error("Consumer page did not finish loading");
@@ -119,9 +132,12 @@ class ContentScriptAdapter implements ConsumerWebAdapter {
 
 export function chromeTabsGateway(): ChromeTabsGateway {
 	return {
-		create: (url) => chrome.tabs.create({ url, active: false }),
+		create: (url, options) => chrome.tabs.create({ url, active: options.active }),
 		get: (tabId) => chrome.tabs.get(tabId),
 		remove: (tabId) => chrome.tabs.remove(tabId),
+		activate: async (tabId) => {
+			await chrome.tabs.update(tabId, { active: true });
+		},
 		sendMessage: (tabId, command) => chrome.tabs.sendMessage(tabId, command),
 	};
 }
@@ -132,7 +148,9 @@ function assertApprovedUrl(value: string, surface: BrowserExtensionSurface): voi
 		surface === "doubao.consumer_web"
 			? url.protocol === "https:" && (url.hostname === "doubao.com" || url.hostname.endsWith(".doubao.com"))
 			: url.protocol === "https:" && url.hostname === "chat.deepseek.com";
-	if (!approved || url.username || url.password) throw new Error("Browser Runner tab left the approved channel");
+	if (!approved || url.username || url.password) {
+		throw new AdapterError("page_drift", "pre_submit", "Browser Runner tab left the approved channel");
+	}
 }
 
 function adapterCode(value: unknown): AdapterError["code"] {
@@ -140,6 +158,7 @@ function adapterCode(value: unknown): AdapterError["code"] {
 		value === "signed_out" ||
 		value === "captcha" ||
 		value === "rate_limited" ||
+		value === "account_restricted" ||
 		value === "page_drift" ||
 		value === "response_timeout" ||
 		value === "post_submit_unknown"

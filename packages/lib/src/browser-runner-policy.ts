@@ -145,11 +145,58 @@ export function browserRunnerResumeDenial(input: {
 	submitIntentAt: Date | null;
 	originalClaimedBy: string | null;
 	requestingClaimant: string;
-}): "not_needs_human" | "no_submit_intent" | "wrong_runner" | null {
+}): "not_needs_human" | "wrong_runner" | null {
 	if (input.deliveryStatus !== "available" || input.automationStatus !== "needs_human") return "not_needs_human";
-	if (input.submitIntentAt === null) return "no_submit_intent";
 	if (input.originalClaimedBy !== input.requestingClaimant) return "wrong_runner";
 	return null;
+}
+
+export type BrowserRunnerExactTaskReconciliation =
+	| "terminal"
+	| "released"
+	| "resumable_pre"
+	| "resumable_post"
+	| "active"
+	| "blocked";
+
+export function reconcileBrowserRunnerExactTask(input: {
+	deliveryStatus: string;
+	automationStatus: BrowserRunnerTaskAutomationStatus | null;
+	submitIntentAt: Date | null;
+	originalClaimedBy: string | null;
+	requestingClaimant: string;
+	leaseExpiresAt: Date | null;
+	now: Date;
+}): BrowserRunnerExactTaskReconciliation {
+	if (
+		["succeeded", "failed", "cancelled"].includes(input.deliveryStatus) &&
+		input.automationStatus === "completed" &&
+		input.leaseExpiresAt === null
+	) {
+		return "terminal";
+	}
+	if (
+		input.deliveryStatus === "available" &&
+		input.automationStatus === "queued" &&
+		input.submitIntentAt === null &&
+		input.leaseExpiresAt === null
+	) {
+		return "released";
+	}
+	if (
+		input.deliveryStatus === "available" &&
+		input.automationStatus === "needs_human" &&
+		input.leaseExpiresAt === null
+	) {
+		if (input.originalClaimedBy !== input.requestingClaimant) return "blocked";
+		return input.submitIntentAt === null ? "resumable_pre" : "resumable_post";
+	}
+	if (input.deliveryStatus === "claimed" && input.automationStatus === "running" && input.leaseExpiresAt !== null) {
+		if (input.originalClaimedBy !== input.requestingClaimant) return "blocked";
+		if (input.leaseExpiresAt > input.now) return "active";
+		return input.submitIntentAt === null ? "resumable_pre" : "resumable_post";
+	}
+	return "blocked";
 }
 
 export function canCancelBrowserRunnerAfterStart(

@@ -3,6 +3,7 @@ import {
 	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionClaim,
 	type BrowserExtensionSurface,
+	type BrowserTaskReconciliation,
 	type DeviceHeartbeatInput,
 	type HeartbeatResponse,
 	type PairingResponse,
@@ -70,9 +71,17 @@ export class BrowserRunnerApiClient {
 		return response.claim === null ? null : parseClaim(response.claim, surface);
 	}
 
-	async resume(taskId: string, brandId: string): Promise<BrowserExtensionClaim> {
+	async resume(taskId: string, brandId: string, stage: "pre_submit" | "post_submit"): Promise<BrowserExtensionClaim> {
 		return parseClaim(
-			await this.request<unknown>(taskPath(taskId, "resume"), { authenticated: true, body: { brandId } }),
+			await this.request<unknown>(taskPath(taskId, "resume"), { authenticated: true, body: { brandId, stage } }),
+		);
+	}
+
+	async reconcileTask(taskId: string, brandId: string): Promise<BrowserTaskReconciliation> {
+		return parseTaskReconciliation(
+			await this.request<unknown>(taskPath(taskId, "reconcile"), { authenticated: true, body: { brandId } }),
+			taskId,
+			brandId,
 		);
 	}
 
@@ -252,6 +261,29 @@ function parseClaim(value: unknown, expectedSurface?: BrowserExtensionSurface): 
 		leaseExpiresAt,
 		postSubmitAssist: requiredBoolean(value.postSubmitAssist),
 		submitConfirmed: requiredBoolean(value.submitConfirmed),
+		runnerSessionId,
+	};
+}
+
+function parseTaskReconciliation(value: unknown, taskId: string, brandId: string): BrowserTaskReconciliation {
+	if (!isRecord(value) || !isRecord(value.task)) throw invalidProtocol();
+	const states = new Set(["resumable_pre", "resumable_post", "active", "released", "terminal", "blocked"]);
+	if (typeof value.state !== "string" || !states.has(value.state)) throw invalidProtocol();
+	const reconciledTaskId = requiredText(value.task.taskId, "task id", 200);
+	const reconciledBrandId = requiredText(value.task.brandId, "brand id", 300);
+	if (reconciledTaskId !== taskId || reconciledBrandId !== brandId) throw invalidProtocol();
+	const runnerSessionId =
+		value.runnerSessionId === null ? null : requiredText(value.runnerSessionId, "session id", 300);
+	if (value.state === "resumable_post" && runnerSessionId === null) throw invalidProtocol();
+	return {
+		state: value.state as BrowserTaskReconciliation["state"],
+		task: {
+			taskId: reconciledTaskId,
+			batchId: requiredText(value.task.batchId, "batch id", 200),
+			brandId: reconciledBrandId,
+			surfaceTargetKey: requiredSurface(value.task.surfaceTargetKey),
+			promptText: requiredText(value.task.promptText, "prompt", 20_000),
+		},
 		runnerSessionId,
 	};
 }

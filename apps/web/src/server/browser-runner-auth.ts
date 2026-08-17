@@ -22,11 +22,12 @@ export type BrowserRunnerPrincipal =
 			timezone: "Asia/Shanghai";
 			allowedBrandIds: readonly string[];
 			supportedSurfaces: readonly BrowserExtensionSurface[];
+			readySurfaces: readonly BrowserExtensionSurface[];
 	  };
 
 type DeviceAuthenticationRecord = Pick<
 	AuthenticatedBrowserRunnerDevice,
-	"id" | "allowedBrandIds" | "supportedSurfaces" | "revokedAt"
+	"id" | "allowedBrandIds" | "supportedSurfaces" | "readiness" | "revokedAt"
 >;
 
 export class BrowserRunnerHttpError extends Error {
@@ -94,6 +95,7 @@ export async function authenticateRunnerRequest(
 		if (supportedSurfaces.length < 1) {
 			throw new BrowserRunnerHttpError(401, "Browser Runner device capabilities are invalid");
 		}
+		const readySurfaces = supportedSurfaces.filter((surface) => device.readiness[surface]?.status === "ready");
 		return {
 			kind: "browser_extension",
 			id: device.id,
@@ -102,6 +104,7 @@ export async function authenticateRunnerRequest(
 			timezone: "Asia/Shanghai",
 			allowedBrandIds: [...device.allowedBrandIds],
 			supportedSurfaces,
+			readySurfaces,
 		};
 	}
 	return requireLegacyBrowserRunner(presented);

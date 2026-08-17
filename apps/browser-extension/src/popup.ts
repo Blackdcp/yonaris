@@ -7,6 +7,13 @@ type SurfaceSummary = { succeeded: number; retryScheduled: number; needsHuman: n
 type RuntimeSummary = {
 	bySurface: Partial<Record<"doubao.consumer_web" | "deepseek.consumer_web", SurfaceSummary>>;
 };
+type ManualRecoveryCandidate = {
+	taskId: string;
+	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
+	updatedAt: string;
+	canAttemptRecovery: boolean;
+	recoveryStage: "pre_submit" | "post_submit";
+};
 
 const storage = chromeDeviceStorage();
 const form = requiredElement<HTMLFormElement>("pairing-form");
@@ -19,6 +26,8 @@ const runNowButton = requiredElement<HTMLButtonElement>("run-now");
 const summary = requiredElement<HTMLElement>("device-summary");
 const doubaoStatus = requiredElement<HTMLElement>("doubao-status");
 const deepseekStatus = requiredElement<HTMLElement>("deepseek-status");
+const manualRecovery = requiredElement<HTMLElement>("manual-recovery");
+const manualRecoveryList = requiredElement<HTMLElement>("manual-recovery-list");
 const message = requiredElement<HTMLElement>("message");
 
 form.addEventListener("submit", (event) => {
@@ -90,6 +99,53 @@ async function render(): Promise<void> {
 	if (device) {
 		summary.textContent = `Device ${device.deviceId.slice(0, 8)} · ${device.allowedBrandIds.length} customer assignment(s)`;
 		await renderRuntimeStatus();
+		await renderManualRecoveries();
+	}
+}
+
+async function renderManualRecoveries(): Promise<void> {
+	const response = (await chrome.runtime.sendMessage({ type: "browser-runner:manual-recovery-list" })) as {
+		ok?: boolean;
+		entries?: ManualRecoveryCandidate[];
+	};
+	const entries = response.ok && Array.isArray(response.entries) ? response.entries : [];
+	manualRecoveryList.replaceChildren();
+	for (const entry of entries) {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.dataset.recoverable = String(entry.canAttemptRecovery);
+		button.disabled = !entry.canAttemptRecovery;
+		button.textContent = `${recoveryLabel(entry)} ${channelName(entry.surfaceTargetKey)} …${entry.taskId.slice(-8)} · ${new Date(entry.updatedAt).toLocaleString()}`;
+		button.addEventListener("click", () => void resumeNeedsHuman(entry));
+		manualRecoveryList.append(button);
+	}
+	manualRecovery.hidden = entries.length === 0;
+}
+
+async function resumeNeedsHuman(entry: ManualRecoveryCandidate): Promise<void> {
+	const { taskId } = entry;
+	setBusy(true);
+	setMessage(
+		entry.recoveryStage === "pre_submit"
+			? `Continuing task …${taskId.slice(-8)} after the administrator check.`
+			: `Recovering stopped session …${taskId.slice(-8)} without resubmitting.`,
+	);
+	try {
+		const response = (await chrome.runtime.sendMessage({
+			type: "browser-runner:manual-recovery-run",
+			taskId,
+		})) as { ok?: boolean; result?: { status?: string; code?: string } };
+		if (!response.ok || !response.result) throw new Error("The stopped session could not be recovered.");
+		setMessage(
+			response.result.status === "succeeded"
+				? `Recovered session …${taskId.slice(-8)}.`
+				: `Session …${taskId.slice(-8)} still needs attention (${response.result.code ?? response.result.status}).`,
+		);
+		await renderManualRecoveries();
+	} catch (error) {
+		setMessage(error instanceof Error ? error.message : "The stopped session could not be recovered.");
+	} finally {
+		setBusy(false);
 	}
 }
 
@@ -119,11 +175,23 @@ function channelSummary(value: SurfaceSummary | undefined): string {
 	return "No started work";
 }
 
+function channelName(surface: ManualRecoveryCandidate["surfaceTargetKey"]): string {
+	return surface === "doubao.consumer_web" ? "Doubao" : "DeepSeek";
+}
+
+function recoveryLabel(entry: ManualRecoveryCandidate): string {
+	if (!entry.canAttemptRecovery) return "Review";
+	return entry.recoveryStage === "pre_submit" ? "Continue" : "Recover response";
+}
+
 function setBusy(busy: boolean): void {
 	pairButton.disabled = busy;
 	disconnectButton.disabled = busy;
 	refreshButton.disabled = busy;
 	runNowButton.disabled = busy;
+	for (const button of manualRecoveryList.querySelectorAll("button")) {
+		button.disabled = busy || button.dataset.recoverable !== "true";
+	}
 }
 
 function setMessage(value: string): void {

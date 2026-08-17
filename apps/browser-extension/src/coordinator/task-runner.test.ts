@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
+import { AdapterError } from "../adapters/contracts";
 import { DeviceStorage, type ExtensionStorageArea } from "../storage";
 import { DurableTaskJournal } from "./journal";
-import { runClaimedTask } from "./task-runner";
+import { RunnerTabOpenError, runClaimedTask } from "./task-runner";
 import { claimedTask, fakeAdapter, fakeRunnerApi, fakeTabDriver } from "./test-fixture";
 
 describe("runClaimedTask", () => {
@@ -66,6 +67,71 @@ describe("runClaimedTask", () => {
 		expect(await dependencies.journal.entries()).toEqual({});
 	});
 
+	test("a first-open page drift journals the created tab before waiting for an administrator", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage);
+		const adapter = fakeAdapter(events);
+		const preservedTab = {
+			tabId: 42,
+			adapter,
+			close: async () => {
+				events.push("tab:close");
+			},
+		};
+		const tabs = fakeTabDriver(events, adapter);
+		tabs.open = async () => {
+			throw new RunnerTabOpenError(
+				preservedTab,
+				new AdapterError("page_drift", "pre_submit", "Initial page left the approved channel"),
+			);
+		};
+
+		await expect(
+			runClaimedTask(claimedTask(), {
+				api: fakeRunnerApi(events),
+				journal,
+				tabs,
+				browserVersion: "Chrome/140",
+				randomSessionId: () => "session-1",
+			}),
+		).resolves.toEqual({ status: "needs_human", code: "page_drift" });
+		expect(events).not.toContain("tab:close");
+		await expect(journal.entries()).resolves.toMatchObject({
+			"task-1": { phase: "needs_human", interruptedPhase: "claimed", tabId: 42 },
+		});
+	});
+
+	test("a recovered tab that left the approved surface remains an exact needs-human task", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage);
+		const claim = claimedTask();
+		await journal.start(claim, {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256(claim.promptText),
+		});
+		const tabs = fakeTabDriver(events, fakeAdapter(events));
+		tabs.attach = async () => {
+			throw new AdapterError("page_drift", "pre_submit", "Preserved tab left the approved channel");
+		};
+
+		await expect(
+			runClaimedTask(claim, {
+				api: fakeRunnerApi(events),
+				journal,
+				tabs,
+				browserVersion: "Chrome/140",
+			}),
+		).resolves.toEqual({ status: "needs_human", code: "page_drift" });
+		expect(events).not.toContain("api:retry:page_load_timeout");
+		expect(events).not.toContain("tab:close");
+		await expect(journal.entries()).resolves.toMatchObject({
+			"task-1": { phase: "needs_human", interruptedPhase: "claimed", tabId: 42 },
+		});
+	});
+
 	test("post-submit collection failure never submits again and preserves the tab for recovery", async () => {
 		const events: string[] = [];
 		const dependencies = fixtureDependencies(events, { collectFailure: new Error("page drift") });
@@ -73,6 +139,65 @@ describe("runClaimedTask", () => {
 		await expect(runClaimedTask(claimedTask(), dependencies)).resolves.toMatchObject({ status: "needs_human" });
 		expect(events.filter((event) => event === "adapter:submit")).toHaveLength(1);
 		expect(events).toContain("api:needs_human");
+		expect(events).not.toContain("tab:close");
+	});
+
+	test.each(["signed_out", "captcha", "page_drift", "account_restricted"] as const)(
+		"preserves the exact tab when %s stops before submit",
+		async (code) => {
+			const events: string[] = [];
+			const storage = new DeviceStorage(memoryStorage());
+			const journal = new DurableTaskJournal(storage);
+			const adapter = fakeAdapter(events);
+			adapter.preflight = async () => {
+				events.push("adapter:preflight");
+				throw new AdapterError(code, "pre_submit", `${code} requires an administrator`);
+			};
+
+			await expect(
+				runClaimedTask(claimedTask(), {
+					api: fakeRunnerApi(events),
+					journal,
+					tabs: fakeTabDriver(events, adapter),
+					browserVersion: "Chrome/140",
+					randomSessionId: () => "session-1",
+				}),
+			).resolves.toEqual({ status: "needs_human", code });
+
+			expect(events).not.toContain("adapter:submit");
+			expect(events).not.toContain("tab:close");
+			await expect(journal.entries()).resolves.toMatchObject({
+				"task-1": { phase: "needs_human", interruptedPhase: "claimed", tabId: 42 },
+			});
+		},
+	);
+
+	test("durable submit intent forces an adapter-reported pre-submit error into post-submit recovery", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage, (phase) => events.push(`journal:${phase}`));
+		const adapter = fakeAdapter(events);
+		adapter.submitOnce = async () => {
+			events.push("adapter:submit");
+			throw new AdapterError("page_drift", "pre_submit", "send button changed after durable intent");
+		};
+		const failures: Array<{ stage: string; code: string }> = [];
+		const api = fakeRunnerApi(events);
+		api.failTask = async (_claim, failure) => {
+			failures.push(failure);
+			return { retryScheduled: false };
+		};
+
+		const result = await runClaimedTask(claimedTask(), {
+			api,
+			journal,
+			tabs: fakeTabDriver(events, adapter),
+			browserVersion: "Chrome/140",
+			randomSessionId: () => "session-1",
+		});
+
+		expect(result).toEqual({ status: "needs_human", code: "page_drift" });
+		expect(failures).toMatchObject([{ stage: "post_submit", code: "page_drift" }]);
 		expect(events).not.toContain("tab:close");
 	});
 

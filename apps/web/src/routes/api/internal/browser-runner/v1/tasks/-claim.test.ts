@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
 	claimRunnerTask: vi.fn(),
 	getRunnerQueueState: vi.fn(),
+	reconcileRunnerTask: vi.fn(),
 	resumeRunnerTask: vi.fn(),
 	completeRunnerTask: vi.fn(),
 	authenticateBrowserRunnerDevice: vi.fn(),
@@ -14,10 +15,12 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/server/browser-runner-service", () => ({
 	browserRunnerClaimSchema: { safeParse: (value: unknown) => ({ success: true, data: value }) },
+	browserRunnerReconcileSchema: { safeParse: (value: unknown) => ({ success: true, data: value }) },
 	browserRunnerResumeSchema: { safeParse: (value: unknown) => ({ success: true, data: value }) },
 	browserRunnerObservationSchema: { safeParse: (value: unknown) => ({ success: true, data: value }) },
 	claimRunnerTask: mocks.claimRunnerTask,
 	getRunnerQueueState: mocks.getRunnerQueueState,
+	reconcileRunnerTask: mocks.reconcileRunnerTask,
 	resumeRunnerTask: mocks.resumeRunnerTask,
 	completeRunnerTask: mocks.completeRunnerTask,
 }));
@@ -27,6 +30,7 @@ vi.mock("@workspace/lib/db/browser-runner-devices", () => ({
 }));
 
 import { Route as CompleteRoute } from "./$taskId/complete";
+import { Route as ReconcileRoute } from "./$taskId/reconcile";
 import { Route as ResumeRoute } from "./$taskId/resume";
 import { Route as ClaimRoute } from "./claim";
 
@@ -122,13 +126,18 @@ describe("Browser Runner internal HTTP task contract", () => {
 		mocks.resumeRunnerTask.mockResolvedValue({
 			claim: { task: { id: "task-1" }, runnerSessionId: "durable-session-1", postSubmitAssist: true },
 		});
-		const resumed = await post(ResumeRoute, "/tasks/task-1/resume", { brandId: "stepfun" }, "task-1");
+		const resumed = await post(
+			ResumeRoute,
+			"/tasks/task-1/resume",
+			{ brandId: "stepfun", stage: "post_submit" },
+			"task-1",
+		);
 		expect(await resumed.json()).toMatchObject({
 			claim: { runnerSessionId: "durable-session-1", postSubmitAssist: true },
 		});
 		expect(mocks.resumeRunnerTask).toHaveBeenCalledWith(
 			"task-1",
-			{ brandId: "stepfun" },
+			{ brandId: "stepfun", stage: "post_submit" },
 			expect.objectContaining({ id: "cn-runner-1" }),
 		);
 
@@ -140,6 +149,24 @@ describe("Browser Runner internal HTTP task contract", () => {
 			"task-1",
 			completion,
 			expect.objectContaining({ kind: "legacy_host", id: "cn-runner-1" }),
+		);
+	});
+
+	it("reconciles one exact task through the authenticated device route", async () => {
+		mocks.reconcileRunnerTask.mockResolvedValue({
+			state: "terminal",
+			task: { taskId: "task-1", brandId: "stepfun" },
+			runnerSessionId: null,
+		});
+
+		const response = await post(ReconcileRoute, "/tasks/task-1/reconcile", { brandId: "stepfun" }, "task-1");
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ state: "terminal", task: { taskId: "task-1" } });
+		expect(mocks.reconcileRunnerTask).toHaveBeenCalledWith(
+			"task-1",
+			{ brandId: "stepfun" },
+			expect.objectContaining({ id: "cn-runner-1" }),
 		);
 	});
 });

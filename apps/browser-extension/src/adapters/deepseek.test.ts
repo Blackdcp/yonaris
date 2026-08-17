@@ -3,6 +3,35 @@ import { createDeepSeekAdapter, deepSeekSelectorContract } from "./deepseek";
 import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
+	test("waits for the page composer to become ready before declaring page drift", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
+		const adapter = createDeepSeekAdapter(port);
+
+		await expect(adapter.preflight()).resolves.toBeUndefined();
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(1_000);
+	});
+
+	test("classifies an explicit account restriction before entering a prompt", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ accountRestricted: true }));
+		const adapter = createDeepSeekAdapter(port);
+
+		await expect(adapter.preflight()).rejects.toMatchObject({
+			code: "account_restricted",
+			stage: "pre_submit",
+		});
+		expect(port.submitCount).toBe(0);
+	});
+
+	test("waits through a transient composer rerender before filling the prompt", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ composerMatchTimeline: [1, 1, 0, 1] }));
+		const adapter = createDeepSeekAdapter(port);
+		await adapter.openNewConversation();
+		await adapter.prepare("Prompt A");
+
+		await expect(adapter.submitOnce("Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
+	});
+
 	test("extracts only the answer created by this task", async () => {
 		const fixture = createAdapterFixture({
 			priorAnswers: [{ text: "Old answer", html: "<div>Old answer</div>" }],
@@ -26,6 +55,14 @@ describe("DeepSeek browser-extension adapter", () => {
 			const adapter = createDeepSeekAdapter(new FixtureDomPort(createAdapterFixture(override)));
 			await expect(adapter.preflight()).rejects.toMatchObject({ code: "page_drift", stage: "pre_submit" });
 		}
+	});
+
+	test("reports only safe selector counts when page readiness times out", async () => {
+		const adapter = createDeepSeekAdapter(new FixtureDomPort(createAdapterFixture({ composerMatches: 2 })));
+		await expect(adapter.preflight()).rejects.toMatchObject({
+			code: "page_drift",
+			message: "Consumer page controls did not become uniquely ready (composer=2, send=1, newConversation=1)",
+		});
 	});
 
 	test.each([

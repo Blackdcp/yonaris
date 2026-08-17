@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DeviceStorage, type ExtensionStorageArea } from "./storage";
 
-function memoryStorage(): ExtensionStorageArea {
-	const values: Record<string, unknown> = {};
+function memoryStorage(initial: Record<string, unknown> = {}): ExtensionStorageArea {
+	const values: Record<string, unknown> = { ...initial };
 	return {
 		get: async () => ({ ...values }),
 		set: async (items) => {
@@ -46,6 +46,118 @@ describe("DeviceStorage", () => {
 		expect(serialized).toContain("task-1");
 		expect(serialized).not.toContain("must never persist");
 		expect(serialized).not.toContain("answerText");
+	});
+
+	it("keeps every task when journal entries are saved concurrently", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+
+		await Promise.all([
+			storage.saveJournal({
+				taskId: "task-1",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				phase: "submitted",
+				surfaceTargetKey: "deepseek.consumer_web",
+				tabId: 41,
+				runnerSessionId: "session-1",
+				promptSha256: "a".repeat(64),
+				updatedAt: "2026-08-16T00:00:00.000Z",
+			}),
+			storage.saveJournal({
+				taskId: "task-2",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				phase: "claimed",
+				surfaceTargetKey: "doubao.consumer_web",
+				tabId: 42,
+				runnerSessionId: "session-2",
+				promptSha256: "b".repeat(64),
+				updatedAt: "2026-08-16T00:00:01.000Z",
+			}),
+		]);
+
+		await expect(storage.loadJournal()).resolves.toMatchObject({
+			"task-1": { phase: "submitted" },
+			"task-2": { phase: "claimed" },
+		});
+	});
+
+	it("does not resurrect a removed task while another task is saved", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 41,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
+			updatedAt: "2026-08-16T00:00:00.000Z",
+		});
+
+		await Promise.all([
+			storage.removeJournal("task-1"),
+			storage.saveJournal({
+				taskId: "task-2",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				phase: "claimed",
+				surfaceTargetKey: "doubao.consumer_web",
+				tabId: 42,
+				runnerSessionId: "session-2",
+				promptSha256: "b".repeat(64),
+				updatedAt: "2026-08-16T00:00:01.000Z",
+			}),
+		]);
+
+		await expect(storage.loadJournal()).resolves.toEqual({
+			"task-2": expect.objectContaining({ phase: "claimed" }),
+		});
+	});
+
+	it("migrates a legacy post-submit journal without losing its recovery state", async () => {
+		const legacyEntry = {
+			taskId: "task-legacy",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "submitted" as const,
+			surfaceTargetKey: "deepseek.consumer_web" as const,
+			tabId: 41,
+			runnerSessionId: "session-legacy",
+			promptSha256: "c".repeat(64),
+			updatedAt: "2026-08-16T00:00:00.000Z",
+		};
+		const storage = new DeviceStorage(memoryStorage({ browserRunnerJournal: { "task-legacy": legacyEntry } }));
+
+		await expect(storage.loadJournal()).resolves.toEqual({ "task-legacy": legacyEntry });
+		await expect(storage.dump()).resolves.toEqual({
+			"browserRunnerJournal:task-legacy": legacyEntry,
+		});
+	});
+
+	it("keeps a legacy post-submit boundary over a conflicting pre-submit entry", async () => {
+		const submittedEntry = {
+			taskId: "task-legacy",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "submitted" as const,
+			surfaceTargetKey: "deepseek.consumer_web" as const,
+			tabId: 41,
+			runnerSessionId: "session-legacy",
+			promptSha256: "c".repeat(64),
+			updatedAt: "2026-08-16T00:00:00.000Z",
+		};
+		const storage = new DeviceStorage(
+			memoryStorage({
+				browserRunnerJournal: { "task-legacy": submittedEntry },
+				"browserRunnerJournal:task-legacy": { ...submittedEntry, phase: "claimed" },
+			}),
+		);
+
+		await expect(storage.loadJournal()).resolves.toMatchObject({
+			"task-legacy": { phase: "submitted" },
+		});
 	});
 
 	it("clears the device secret and journal on explicit disconnect", async () => {

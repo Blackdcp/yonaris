@@ -31,9 +31,22 @@ export interface RunnerTab {
 	close(): Promise<void>;
 }
 
+export class RunnerTabOpenError extends Error {
+	readonly tab: RunnerTab;
+	readonly cause: unknown;
+
+	constructor(tab: RunnerTab, cause: unknown) {
+		super("Browser Runner tab opened but did not become ready");
+		this.name = "RunnerTabOpenError";
+		this.tab = tab;
+		this.cause = cause;
+	}
+}
+
 export interface RunnerTabDriver {
 	open(claim: BrowserExtensionClaim): Promise<RunnerTab>;
 	attach(tabId: number, surface: BrowserExtensionClaim["surfaceTargetKey"]): Promise<RunnerTab>;
+	activate(tabId: number): Promise<void>;
 }
 
 export type TaskRunResult =
@@ -127,7 +140,23 @@ export async function runClaimedTask(
 		await Promise.allSettled([dependencies.journal.remove(claim.taskId), tab.close()]);
 		return { status: "succeeded" };
 	} catch (error) {
-		const failure = classifyFailure(error, phase, Boolean(existing));
+		let failureSource = error;
+		if (error instanceof RunnerTabOpenError) {
+			tab = error.tab;
+			failureSource = error.cause;
+			if (!existing) {
+				try {
+					await dependencies.journal.start(claim, {
+						tabId: tab.tabId,
+						runnerSessionId,
+						promptSha256,
+					});
+				} catch {
+					return { status: "incomplete", code: "local_journal_persistence_failed" };
+				}
+			}
+		}
+		const failure = classifyFailure(failureSource, phase, Boolean(existing));
 		try {
 			const persisted = await dependencies.api.failTask(claim, failure);
 			if (persisted.retryScheduled) {
@@ -138,7 +167,6 @@ export async function runClaimedTask(
 			if ((await dependencies.journal.entries())[claim.taskId]) {
 				await dependencies.journal.advance(claim.taskId, "needs_human").catch(() => undefined);
 			}
-			if (failure.stage === "pre_submit") await tab?.close().catch(() => undefined);
 			return { status: "needs_human", code: failure.code };
 		} catch {
 			return { status: "incomplete", code: "failure_persistence_failed" };
@@ -171,10 +199,10 @@ async function persistNeedsHuman(
 }
 
 function classifyFailure(error: unknown, phase: string, resuming: boolean): RunnerFailureInput {
-	if (error instanceof AdapterError) {
-		return { stage: error.stage, code: error.code, reason: safeReason(error.message) };
-	}
 	const postSubmit = phaseAtOrAfterIntent(phase);
+	if (error instanceof AdapterError) {
+		return { stage: postSubmit ? "post_submit" : error.stage, code: error.code, reason: safeReason(error.message) };
+	}
 	return {
 		stage: postSubmit ? "post_submit" : "pre_submit",
 		code: postSubmit ? "post_submit_unknown" : resuming ? "browser_crash_before_submit" : "page_load_timeout",

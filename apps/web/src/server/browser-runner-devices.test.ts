@@ -66,6 +66,7 @@ describe("browser extension device service", () => {
 				timezone: "Asia/Shanghai",
 				allowedBrandIds: ["stepfun"],
 				supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+				readySurfaces: ["doubao.consumer_web"],
 			},
 			heartbeat,
 			{

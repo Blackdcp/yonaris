@@ -13,6 +13,8 @@
 	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"]",
+	"accountRestricted": "body",
+	"accountRestrictedTextPattern": "账号已被禁言|账号已被封禁|account (?:has been )?(?:restricted|suspended|banned)",
 	"searchUsed": null,
 	"searchNotUsed": null,
 	"citationLink": "a[href^=\"http\"]",

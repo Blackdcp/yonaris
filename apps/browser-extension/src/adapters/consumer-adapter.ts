@@ -18,6 +18,8 @@ const CONFIRM_TIMEOUT_MS = 30_000;
 const RESPONSE_TIMEOUT_MS = 180_000;
 const STABLE_ANSWER_MS = 8_000;
 const POLL_INTERVAL_MS = 250;
+const PAGE_READY_TIMEOUT_MS = 15_000;
+const NEW_CONVERSATION_TIMEOUT_MS = 15_000;
 
 export function createConsumerAdapter(port: ConsumerDomPort, contract: SelectorContract): ConsumerWebAdapter {
 	return new ConsumerAdapter(port, validateSelectorContract(contract));
@@ -44,32 +46,31 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 	async preflight(): Promise<void> {
 		this.#assertApprovedUrl(false);
-		await this.#assertUnblocked();
-		await this.#uniqueVisible("composer", this.#contract.composer);
-		if (this.surface !== "doubao.consumer_web") await this.#uniqueVisible("send", this.#contract.send);
-		await this.#newConversationAction();
+		await this.#waitForPageReady();
 	}
 
 	async openNewConversation(): Promise<void> {
 		await this.preflight();
 		const action = await this.#newConversationAction();
 		await this.#port.click("new_conversation", this.#contract.newConversation, action.index);
-		await this.#port.wait(500);
-		this.#assertApprovedUrl(false);
-		await this.#assertUnblocked();
-		const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
-		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
-		if (answers.length !== 0 || messages.length !== 0) {
-			throw this.#error("page_drift", "New conversation did not open a blank dialogue");
+		const timeoutAt = this.#port.now() + NEW_CONVERSATION_TIMEOUT_MS;
+		while (this.#port.now() <= timeoutAt) {
+			this.#assertApprovedUrl(false);
+			await this.#assertUnblocked();
+			const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
+			const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
+			if (answers.length === 0 && messages.length === 0) return;
+			await this.#port.wait(POLL_INTERVAL_MS);
 		}
+		throw this.#error("page_drift", "New conversation did not become a blank dialogue");
 	}
 
 	async prepare(promptText: string): Promise<void> {
 		const prompt = validatePrompt(promptText);
 		this.#assertApprovedUrl(false);
 		await this.#assertUnblocked();
-		await this.#uniqueVisible("composer", this.#contract.composer);
-		if (this.surface !== "doubao.consumer_web") await this.#uniqueVisible("send", this.#contract.send);
+		await this.#waitForUniqueVisible("composer", this.#contract.composer);
+		if (this.surface !== "doubao.consumer_web") await this.#waitForUniqueVisible("send", this.#contract.send);
 		this.#answerCountBeforeSubmit = visibleElements(await this.#port.query("answer", this.#contract.answer)).length;
 		this.#preparedPrompt = prompt;
 	}
@@ -79,9 +80,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		if (this.#preparedPrompt !== prompt) throw this.#error("page_drift", "Prompt does not match the prepared task");
 		if (this.#submitted) throw this.#error("post_submit_unknown", "Prompt submission was already attempted");
 		await this.#assertUnblocked();
-		const composer = await this.#uniqueVisible("composer", this.#contract.composer);
+		const composer = await this.#waitForUniqueVisible("composer", this.#contract.composer);
 		await this.#port.fill("composer", this.#contract.composer, composer.index, prompt);
-		const send = await this.#uniqueVisible("send", this.#contract.send);
+		const send = await this.#waitForUniqueVisible("send", this.#contract.send);
 		this.#submitted = true;
 		await this.#port.click("send", this.#contract.send, send.index);
 	}
@@ -126,6 +127,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		let generatingSeen = false;
 		let stableText = "";
 		let stableSince = 0;
+		let answerContainersAmbiguous = false;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertApprovedUrl(false);
 			await this.#assertUnblocked();
@@ -134,8 +136,13 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			if (generating === 1) generatingSeen = true;
 			const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
 			if (answers.length > this.#answerCountBeforeSubmit + 1) {
-				throw this.#error("page_drift", "Submission produced more than one answer container");
+				answerContainersAmbiguous = true;
+				stableText = "";
+				stableSince = 0;
+				await this.#port.wait(POLL_INTERVAL_MS);
+				continue;
 			}
+			answerContainersAmbiguous = false;
 			const latest = answers.at(-1)?.element.text.trim() ?? "";
 			if (answers.length === this.#answerCountBeforeSubmit + 1 && latest) {
 				if (latest !== stableText) {
@@ -150,6 +157,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				}
 			}
 			await this.#port.wait(POLL_INTERVAL_MS);
+		}
+		if (answerContainersAmbiguous) {
+			throw this.#error("page_drift", "Submission still has more than one answer container after timeout");
 		}
 		throw this.#error("response_timeout", "Timed out waiting for one complete answer");
 	}
@@ -204,6 +214,11 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	}
 
 	async #assertUnblocked(): Promise<void> {
+		const restrictedPattern = new RegExp(this.#contract.accountRestrictedTextPattern, "iu");
+		const restricted = visibleElements(await this.#port.query("account_restricted", this.#contract.accountRestricted));
+		if (restricted.some(({ element }) => restrictedPattern.test(element.text))) {
+			throw this.#error("account_restricted", "Consumer account is explicitly restricted");
+		}
 		for (const [role, selector, code] of [
 			["captcha", this.#contract.captcha, "captcha"],
 			["rate_limit", this.#contract.rateLimit, "rate_limited"],
@@ -215,20 +230,59 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 	}
 
-	async #uniqueVisible(role: DomElementRole, selector: string): Promise<{ element: DomElementSummary; index: number }> {
-		const visible = visibleElements(await this.#port.query(role, selector));
-		if (visible.length !== 1) throw this.#error("page_drift", `${role} is not unique and visible`);
-		return visible[0];
+	async #waitForPageReady(): Promise<void> {
+		const timeoutAt = this.#port.now() + PAGE_READY_TIMEOUT_MS;
+		let lastComposerCount = 0;
+		let lastSendCount = 0;
+		let lastConversationActionCount = 0;
+		while (this.#port.now() <= timeoutAt) {
+			this.#assertApprovedUrl(false);
+			await this.#assertUnblocked();
+			const composer = visibleElements(await this.#port.query("composer", this.#contract.composer));
+			const send =
+				this.surface === "doubao.consumer_web"
+					? [{ element: { text: "", visible: true }, index: 0 }]
+					: visibleElements(await this.#port.query("send", this.#contract.send));
+			const conversationActions = await this.#newConversationActions();
+			lastComposerCount = composer.length;
+			lastSendCount = send.length;
+			lastConversationActionCount = conversationActions.length;
+			if (composer.length === 1 && send.length === 1 && conversationActions.length === 1) return;
+			await this.#port.wait(POLL_INTERVAL_MS);
+		}
+		throw this.#error(
+			"page_drift",
+			`Consumer page controls did not become uniquely ready (composer=${lastComposerCount}, send=${lastSendCount}, newConversation=${lastConversationActionCount})`,
+		);
+	}
+
+	async #waitForUniqueVisible(
+		role: DomElementRole,
+		selector: string,
+	): Promise<{ element: DomElementSummary; index: number }> {
+		const timeoutAt = this.#port.now() + PAGE_READY_TIMEOUT_MS;
+		while (this.#port.now() <= timeoutAt) {
+			this.#assertApprovedUrl(false);
+			await this.#assertUnblocked();
+			const visible = visibleElements(await this.#port.query(role, selector));
+			if (visible.length === 1) return visible[0];
+			await this.#port.wait(POLL_INTERVAL_MS);
+		}
+		throw this.#error("page_drift", `${role} did not become unique and visible`);
 	}
 
 	async #newConversationAction(): Promise<{ element: DomElementSummary; index: number }> {
-		const visible = visibleElements(await this.#port.query("new_conversation", this.#contract.newConversation));
-		const expected = this.#contract.newConversationLabel;
-		const matching = expected
-			? visible.filter(({ element }) => normalizeText(element.text) === normalizeText(expected))
-			: visible;
+		const matching = await this.#newConversationActions();
 		if (matching.length !== 1) throw this.#error("page_drift", "New conversation action is ambiguous or missing");
 		return matching[0];
+	}
+
+	async #newConversationActions(): Promise<Array<{ element: DomElementSummary; index: number }>> {
+		const visible = visibleElements(await this.#port.query("new_conversation", this.#contract.newConversation));
+		const expected = this.#contract.newConversationLabel;
+		return expected
+			? visible.filter(({ element }) => normalizeText(element.text) === normalizeText(expected))
+			: visible;
 	}
 
 	#assertApprovedUrl(requireConversation: boolean): void {
@@ -266,6 +320,18 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 function validateSelectorContract(contract: SelectorContract): SelectorContract {
 	if (!/^[A-Za-z0-9._:-]{8,100}$/.test(contract.version)) throw new Error("Invalid adapter version");
+	if (
+		typeof contract.accountRestrictedTextPattern !== "string" ||
+		!contract.accountRestrictedTextPattern ||
+		contract.accountRestrictedTextPattern.length > 500
+	) {
+		throw new Error("Invalid account restriction text pattern");
+	}
+	try {
+		new RegExp(contract.accountRestrictedTextPattern, "iu");
+	} catch {
+		throw new Error("Invalid account restriction text pattern");
+	}
 	const optionalSelectors = new Set(["searchUsed", "searchNotUsed", "citationLink", "queryItem"]);
 	for (const [key, value] of Object.entries(contract)) {
 		if (value === null && optionalSelectors.has(key)) continue;

@@ -4,8 +4,11 @@ import {
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
 	browserRunnerObservationSchema,
+	browserRunnerReconcileSchema,
+	browserRunnerResumeSchema,
 	browserRunnerSessionLeaseSchema,
 	claimRunnerTask,
+	reconcileRunnerTask,
 } from "./browser-runner-service";
 import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-policy";
 
@@ -52,7 +55,7 @@ describe("Browser Runner service contracts", () => {
 		expect(claim).not.toHaveBeenCalled();
 	});
 
-	it("limits paired-device claims to assigned brands and declared surface capabilities", async () => {
+	it("limits paired-device claims to assigned brands and ready declared surfaces", async () => {
 		const claim = vi.fn(async () => null);
 		const principal = {
 			kind: "browser_extension" as const,
@@ -61,7 +64,8 @@ describe("Browser Runner service contracts", () => {
 			locale: "zh-CN" as const,
 			timezone: "Asia/Shanghai" as const,
 			allowedBrandIds: ["stepfun"],
-			supportedSurfaces: ["deepseek.consumer_web" as const],
+			supportedSurfaces: ["doubao.consumer_web" as const, "deepseek.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
 		};
 
 		await claimRunnerTask(
@@ -77,8 +81,8 @@ describe("Browser Runner service contracts", () => {
 			expect.objectContaining({
 				captureTargets: [
 					{
-						surfaceTargetKey: "deepseek.consumer_web",
-						captureRouteKey: "browser_extension.deepseek",
+						surfaceTargetKey: "doubao.consumer_web",
+						captureRouteKey: "browser_extension.doubao",
 					},
 				],
 			}),
@@ -90,6 +94,28 @@ describe("Browser Runner service contracts", () => {
 				claim,
 			}),
 		).rejects.toMatchObject({ status: 403 });
+		expect(claim).not.toHaveBeenCalled();
+	});
+
+	it("fails closed with an actionable response when an installed device has no ready requested surface", async () => {
+		const claim = vi.fn(async () => null);
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const, "deepseek.consumer_web" as const],
+			readySurfaces: [],
+		};
+
+		await expect(
+			claimRunnerTask({ brandId: "stepfun", surfaceTargetKeys: ["doubao.consumer_web"] }, principal, {
+				assertCapacity: async () => null,
+				claim,
+			}),
+		).rejects.toMatchObject({ status: 409 });
 		expect(claim).not.toHaveBeenCalled();
 	});
 
@@ -117,6 +143,97 @@ describe("Browser Runner service contracts", () => {
 		expect(browserRunnerSessionLeaseSchema.safeParse({ ...lease, runnerSessionId: "" }).success).toBe(false);
 		expect(browserRunnerObservationSchema.safeParse(complete).success).toBe(true);
 		expect(browserRunnerObservationSchema.safeParse({ ...complete, runnerSessionId: undefined }).success).toBe(false);
+	});
+
+	it("accepts an explicit extension stage while preserving legacy post-submit resume compatibility", () => {
+		expect(browserRunnerResumeSchema.safeParse({ brandId: "stepfun", stage: "pre_submit" }).success).toBe(true);
+		expect(browserRunnerResumeSchema.safeParse({ brandId: "stepfun", stage: "post_submit" }).success).toBe(true);
+		expect(browserRunnerResumeSchema.safeParse({ brandId: "stepfun" }).success).toBe(true);
+		expect(browserRunnerResumeSchema.safeParse({ brandId: "stepfun", stage: "unknown" }).success).toBe(false);
+	});
+
+	it("accepts only a brand-scoped exact-task reconciliation payload", () => {
+		expect(browserRunnerReconcileSchema.safeParse({ brandId: "stepfun" }).success).toBe(true);
+		expect(browserRunnerReconcileSchema.safeParse({ brandId: "stepfun", taskId: "spoofed" }).success).toBe(false);
+	});
+
+	it("returns the server-authoritative exact-task state without allocating a lease", async () => {
+		const reconcile = vi.fn(async () => ({
+			state: "resumable_pre" as const,
+			task: {
+				id: "task-1",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				surfaceTargetKey: "deepseek.consumer_web",
+				promptText: "Prompt A",
+				runnerSessionId: null,
+				claimedBy: "browser-runner:11111111-1111-4111-8111-111111111111",
+			},
+		}));
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["deepseek.consumer_web" as const],
+			readySurfaces: ["deepseek.consumer_web" as const],
+		};
+
+		await expect(
+			reconcileRunnerTask("task-1", { brandId: "stepfun" }, principal, {
+				reconcile,
+				assertTask: async () => null,
+			}),
+		).resolves.toEqual({
+			state: "resumable_pre",
+			task: {
+				taskId: "task-1",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				surfaceTargetKey: "deepseek.consumer_web",
+				promptText: "Prompt A",
+			},
+			runnerSessionId: null,
+		});
+		expect(reconcile).toHaveBeenCalledWith({
+			brandId: "stepfun",
+			taskId: "task-1",
+			runnerId: "11111111-1111-4111-8111-111111111111",
+		});
+	});
+
+	it("does not disclose an exact task or runner session to another paired device", async () => {
+		const reconcile = vi.fn(async () => ({
+			state: "blocked" as const,
+			task: {
+				id: "task-1",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				surfaceTargetKey: "deepseek.consumer_web",
+				promptText: "Confidential frozen prompt",
+				runnerSessionId: "session-owned-by-device-a",
+				claimedBy: "browser-runner:22222222-2222-4222-8222-222222222222",
+			},
+		}));
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["deepseek.consumer_web" as const],
+			readySurfaces: ["deepseek.consumer_web" as const],
+		};
+
+		await expect(
+			reconcileRunnerTask("task-1", { brandId: "stepfun" }, principal, {
+				reconcile,
+				assertTask: async () => null,
+			}),
+		).rejects.toThrow(/not claimed by this Browser Runner device/i);
 	});
 
 	it("rejects operator attestation in machine-authored observations", () => {

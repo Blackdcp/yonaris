@@ -6,9 +6,11 @@ import {
 } from "@workspace/lib/browser-extension-contract";
 import {
 	type BrowserRunnerClaim,
+	type BrowserRunnerTaskReconciliation,
 	claimBrowserRunnerTask,
 	markBrowserRunnerSubmitConfirmed,
 	markBrowserRunnerSubmitIntent,
+	reconcileBrowserRunnerTask,
 	recordBrowserRunnerFailure,
 	resolveBrowserRunnerClaimTargets,
 	resumeBrowserRunnerTask,
@@ -78,6 +80,13 @@ export const browserRunnerSessionLeaseSchema = browserRunnerLeaseSchema.extend({
 export const browserRunnerResumeSchema = z
 	.object({
 		brandId: z.string().trim().min(1).max(300),
+		stage: z.enum(["pre_submit", "post_submit"]).optional(),
+	})
+	.strict();
+
+export const browserRunnerReconcileSchema = z
+	.object({
+		brandId: z.string().trim().min(1).max(300),
 	})
 	.strict();
 
@@ -138,9 +147,26 @@ export async function claimRunnerTask(
 	const captureTargets = resolveBrowserRunnerClaimTargets({
 		principalKind: principal.kind,
 		requestedSurfaceTargetKeys: input.surfaceTargetKeys,
-		supportedSurfaces: principal.kind === "browser_extension" ? principal.supportedSurfaces : undefined,
+		supportedSurfaces: principal.kind === "browser_extension" ? principal.readySurfaces : undefined,
 	});
-	if (captureTargets.length === 0) return null;
+	if (captureTargets.length === 0) {
+		if (principal.kind === "browser_extension") {
+			const requested = input.surfaceTargetKeys ?? principal.supportedSurfaces;
+			const hasSupportedRequest = requested.some((surface) =>
+				principal.supportedSurfaces.includes(surface as BrowserExtensionSurface),
+			);
+			const hasReadyRequest = requested.some((surface) =>
+				principal.readySurfaces.includes(surface as BrowserExtensionSurface),
+			);
+			if (hasSupportedRequest && !hasReadyRequest) {
+				throw new BrowserRunnerHttpError(
+					409,
+					"No requested Browser Runner surface is ready on this device; reload or update the extension and complete the surface health check",
+				);
+			}
+		}
+		return null;
+	}
 	try {
 		await (dependencies.assertCapacity ?? assertBrowserRunnerSnapshotClaimCapacity)({
 			enabled: process.env.RESPONSE_SNAPSHOT_ENABLED === "true",
@@ -234,7 +260,44 @@ export async function resumeRunnerTask(
 		runnerId: principal.id,
 		leaseDurationMs: RUNNER_LEASE_MS,
 	});
-	return buildRunnerClaimResponse(claim, principal, true);
+	return buildRunnerClaimResponse(claim, principal, claim.recoveryStage === "post_submit");
+}
+
+export async function reconcileRunnerTask(
+	taskId: string,
+	input: z.infer<typeof browserRunnerReconcileSchema>,
+	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: (taskId: string, brandId: string, principal: BrowserRunnerPrincipal) => Promise<unknown>;
+		reconcile?: (input: Parameters<typeof reconcileBrowserRunnerTask>[0]) => Promise<{
+			state: BrowserRunnerTaskReconciliation["state"];
+			task: Pick<
+				BrowserRunnerTaskReconciliation["task"],
+				"id" | "batchId" | "brandId" | "surfaceTargetKey" | "promptText" | "runnerSessionId" | "claimedBy"
+			>;
+		}>;
+	} = {},
+) {
+	await (dependencies.assertTask ?? assertRunnerReconciliationTask)(taskId, input.brandId, principal);
+	const result = await (dependencies.reconcile ?? reconcileBrowserRunnerTask)({
+		brandId: input.brandId,
+		taskId,
+		runnerId: principal.id,
+	});
+	if (result.task.claimedBy !== runnerClaimant(principal.id)) {
+		throw new Error("Task is not claimed by this Browser Runner device");
+	}
+	return {
+		state: result.state,
+		task: {
+			taskId: result.task.id,
+			batchId: result.task.batchId,
+			brandId: result.task.brandId,
+			surfaceTargetKey: result.task.surfaceTargetKey,
+			promptText: result.task.promptText,
+		},
+		runnerSessionId: result.task.runnerSessionId,
+	};
 }
 
 async function buildRunnerClaimResponse(
@@ -511,6 +574,21 @@ export async function completeRunnerTask(
 }
 
 export async function assertRunnerTask(taskId: string, brandId: string, principal: BrowserRunnerPrincipal) {
+	assertPrincipalBrand(principal, brandId);
+	const task = await getDeliveryTask({ brandId, taskId });
+	if (!task) throw new Error("Browser Runner task was not found");
+	const routeAllowed =
+		principal.kind === "legacy_host"
+			? task.surfaceTargetKey === "doubao.consumer_web" && task.captureRouteKey === "browser_runner.doubao"
+			: principal.supportedSurfaces.includes(task.surfaceTargetKey as BrowserExtensionSurface) &&
+				isExtensionTargetPair(task.surfaceTargetKey, task.captureRouteKey);
+	if (!routeAllowed || task.claimedBy !== runnerClaimant(principal.id)) {
+		throw new Error("Task is not claimed by this Browser Runner device");
+	}
+	return task;
+}
+
+async function assertRunnerReconciliationTask(taskId: string, brandId: string, principal: BrowserRunnerPrincipal) {
 	assertPrincipalBrand(principal, brandId);
 	const task = await getDeliveryTask({ brandId, taskId });
 	if (!task) throw new Error("Browser Runner task was not found");

@@ -1,5 +1,5 @@
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
-import { AdaptiveSurfacePool, orderClaimsFairly } from "./concurrency";
+import { AdaptiveSurfacePool } from "./concurrency";
 import type { TaskRunResult } from "./task-runner";
 
 export type SurfacePollSummary = {
@@ -16,57 +16,48 @@ type PollStartedWorkInput = {
 	run(claim: BrowserExtensionClaim): Promise<TaskRunResult>;
 	pools?: Partial<Record<BrowserExtensionSurface, AdaptiveSurfacePool>>;
 	now?: () => number;
-	maximumTasksPerSurface?: number;
 };
 
 export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 	bySurface: Record<BrowserExtensionSurface, SurfacePollSummary>;
 }> {
 	const bySurface = emptySummaries();
-	await Promise.all(
-		input.surfaces.map(async (surface) => {
+	for (const surface of input.surfaces) {
+		try {
+			const pool = input.pools?.[surface] ?? new AdaptiveSurfacePool();
+			if (!pool.canStart(input.now?.() ?? Date.now())) continue;
+			const [claim] = await claimRound(input.brandIds, surface, 1, input.claim);
+			if (!claim) continue;
+
+			let result: TaskRunResult;
 			try {
-				const pool = input.pools?.[surface] ?? new AdaptiveSurfacePool();
-				if (!pool.canStart(input.now?.() ?? Date.now())) return;
-				const maximumTasks = input.maximumTasksPerSurface ?? 100;
-				let processed = 0;
-				while (processed < maximumTasks && pool.canStart(input.now?.() ?? Date.now())) {
-					const claims = await claimRound(input.brandIds, surface, pool.current, input.claim);
-					if (claims.length === 0) break;
-					const results = await Promise.all(
-						orderClaimsFairly(claims).map(async (claim) => {
-							try {
-								return { claim, result: await input.run(claim) };
-							} catch {
-								return { claim, result: { status: "incomplete", code: "coordinator_unhandled" } as const };
-							}
-						}),
-					);
-					processed += results.length;
-					for (const { result } of results) {
-						switch (result.status) {
-							case "succeeded":
-								bySurface[surface].succeeded += 1;
-								pool.recordStableSuccess();
-								break;
-							case "retry_scheduled":
-								bySurface[surface].retryScheduled += 1;
-								break;
-							case "needs_human":
-								bySurface[surface].needsHuman += 1;
-								if (result.code === "rate_limited") pool.recordRateLimit(input.now?.() ?? Date.now());
-								break;
-							case "incomplete":
-								bySurface[surface].incomplete += 1;
-								break;
-						}
-					}
-				}
+				result = await input.run(claim);
 			} catch {
-				bySurface[surface].incomplete += 1;
+				result = { status: "incomplete", code: "coordinator_unhandled" };
 			}
-		}),
-	);
+
+			switch (result.status) {
+				case "succeeded":
+					bySurface[surface].succeeded += 1;
+					pool.recordStableSuccess();
+					break;
+				case "retry_scheduled":
+					bySurface[surface].retryScheduled += 1;
+					break;
+				case "needs_human":
+					bySurface[surface].needsHuman += 1;
+					if (result.code === "rate_limited") pool.recordRateLimit(input.now?.() ?? Date.now());
+					break;
+				case "incomplete":
+					bySurface[surface].incomplete += 1;
+					break;
+			}
+			return { bySurface };
+		} catch {
+			bySurface[surface].incomplete += 1;
+			return { bySurface };
+		}
+	}
 	return { bySurface };
 }
 

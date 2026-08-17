@@ -43,9 +43,10 @@ test("remote intent and confirmation bind the durable browser session without fo
 });
 
 test("resume accepts only a server-declared post-submit assist session", async () => {
-	const fetchImplementation = (async (input: string | URL | Request) => {
+	const fetchImplementation = (async (input: string | URL | Request, init?: RequestInit) => {
 		const url = new URL(input instanceof Request ? input.url : input.toString());
 		assert.ok(url.pathname.endsWith("/tasks/task-1/resume"));
+		assert.deepEqual(JSON.parse(String(init?.body)), { brandId: "stepfun" });
 		return jsonResponse(claimResponse({ runnerSessionId: "original-durable-session", postSubmitAssist: true }));
 	}) as typeof fetch;
 	const remote = new BrowserRunnerRemoteClient({

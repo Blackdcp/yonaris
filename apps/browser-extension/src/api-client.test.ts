@@ -4,7 +4,7 @@ import type { DeviceHeartbeatInput } from "./contracts";
 import { claimedTask } from "./coordinator/test-fixture";
 
 const readyHeartbeat: DeviceHeartbeatInput = {
-	extensionVersion: "0.1.0",
+	extensionVersion: "0.2.0",
 	browserFamily: "chrome",
 	browserVersion: "140.0.0",
 	platform: "windows",
@@ -119,6 +119,77 @@ describe("BrowserRunnerApiClient", () => {
 			}),
 		);
 		await expect(client.claimNext("stepfun", "deepseek.consumer_web")).rejects.toThrow(/protocol/i);
+	});
+
+	it("requests an explicit exact-task pre-submit recovery without claiming new work", async () => {
+		const calls: Request[] = [];
+		const claim = claimedTask();
+		const client = authenticatedClient(calls, async () =>
+			Response.json({
+				task: { ...claim, id: claim.taskId },
+				leaseToken: claim.leaseToken,
+				leaseGeneration: claim.leaseGeneration,
+				leaseExpiresAt: claim.leaseExpiresAt,
+				postSubmitAssist: false,
+				submitConfirmed: false,
+				runnerSessionId: null,
+			}),
+		);
+
+		await client.resume("task-1", "stepfun", "pre_submit");
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0]?.url.endsWith("/api/internal/browser-runner/v1/tasks/task-1/resume")).toBe(true);
+		expect(await calls[0]?.json()).toEqual({ brandId: "stepfun", stage: "pre_submit" });
+	});
+
+	it("reconciles the exact local task before the coordinator can claim new work", async () => {
+		const calls: Request[] = [];
+		const client = authenticatedClient(calls, async () =>
+			Response.json({
+				state: "resumable_pre",
+				task: {
+					taskId: "task-1",
+					batchId: "batch-1",
+					brandId: "stepfun",
+					surfaceTargetKey: "deepseek.consumer_web",
+					promptText: "Prompt A",
+				},
+				runnerSessionId: null,
+			}),
+		);
+
+		await expect(client.reconcileTask("task-1", "stepfun")).resolves.toEqual({
+			state: "resumable_pre",
+			task: {
+				taskId: "task-1",
+				batchId: "batch-1",
+				brandId: "stepfun",
+				surfaceTargetKey: "deepseek.consumer_web",
+				promptText: "Prompt A",
+			},
+			runnerSessionId: null,
+		});
+		expect(calls[0]?.url.endsWith("/api/internal/browser-runner/v1/tasks/task-1/reconcile")).toBe(true);
+		expect(await calls[0]?.json()).toEqual({ brandId: "stepfun" });
+	});
+
+	it("rejects an unsafe exact-task reconciliation response", async () => {
+		const client = authenticatedClient([], async () =>
+			Response.json({
+				state: "terminal",
+				task: {
+					taskId: "different-task",
+					batchId: "batch-1",
+					brandId: "stepfun",
+					surfaceTargetKey: "deepseek.consumer_web",
+					promptText: "Prompt A",
+				},
+				runnerSessionId: null,
+			}),
+		);
+
+		await expect(client.reconcileTask("task-1", "stepfun")).rejects.toThrow(/protocol/i);
 	});
 
 	it("uploads exactly one HTML page snapshot and completes with native-auto observations", async () => {

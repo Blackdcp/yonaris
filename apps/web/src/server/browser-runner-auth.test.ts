@@ -52,6 +52,18 @@ describe("Browser Runner machine authentication", () => {
 						id: "11111111-1111-4111-8111-111111111111",
 						allowedBrandIds: ["stepfun"],
 						supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+						readiness: {
+							"doubao.consumer_web": {
+								status: "ready",
+								adapterVersion: "doubao-web-20260818-localpc-v6",
+								activeConcurrency: 0,
+							},
+							"deepseek.consumer_web": {
+								status: "unavailable",
+								adapterVersion: "deepseek-web-20260814-uat1",
+								activeConcurrency: 0,
+							},
+						},
 						revokedAt: null,
 					};
 				},
@@ -66,6 +78,7 @@ describe("Browser Runner machine authentication", () => {
 			timezone: "Asia/Shanghai",
 			allowedBrandIds: ["stepfun"],
 			supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+			readySurfaces: ["doubao.consumer_web"],
 		});
 	});
 
@@ -80,6 +93,7 @@ describe("Browser Runner machine authentication", () => {
 						id: "11111111-1111-4111-8111-111111111111",
 						allowedBrandIds: ["stepfun"],
 						supportedSurfaces: ["deepseek.consumer_web"],
+						readiness: {},
 						revokedAt: new Date("2026-08-16T10:00:00.000Z"),
 					}),
 				},

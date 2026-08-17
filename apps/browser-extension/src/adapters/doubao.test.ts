@@ -1,10 +1,22 @@
 import { parseHTML } from "linkedom";
 import { describe, expect, test } from "vitest";
+import doubaoContract from "../selector-contracts/doubao-web-v1.json";
 import { sanitizeAnswerHtml } from "./dom-port";
 import { createDoubaoAdapter } from "./doubao";
 import { type AdapterFixture, createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("Doubao browser-extension adapter", () => {
+	test("selects the assistant message without selecting the user message", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="my-0 w-full mx-auto"><div data-message-id="user-1" class="flex-row flex w-full justify-end">Prompt</div></div>
+			<div class="my-0 w-full mx-auto"><div data-message-id="assistant-1" class="relative grid w-full">Answer</div></div>
+		</body></html>`);
+
+		const matches = document.querySelectorAll(doubaoContract.answer);
+		expect(matches).toHaveLength(1);
+		expect(matches[0]?.getAttribute("data-message-id")).toBe("assistant-1");
+	});
+
 	test("uses the exact New conversation action instead of New work task", async () => {
 		const port = new FixtureDomPort(doubaoFixture({ newConversationLabels: ["新工作任务", "新对话"] }));
 		const adapter = createDoubaoAdapter(port);
@@ -12,6 +24,14 @@ describe("Doubao browser-extension adapter", () => {
 		await adapter.openNewConversation();
 
 		expect(port.clickedText).toBe("新对话");
+	});
+
+	test("waits until New conversation is actually blank", async () => {
+		const port = new FixtureDomPort(doubaoFixture({ blankConversationDelayMs: 1_500 }));
+		const adapter = createDoubaoAdapter(port);
+
+		await expect(adapter.openNewConversation()).resolves.toBeUndefined();
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(1_500);
 	});
 
 	test("fails closed when the New conversation action is ambiguous", async () => {
@@ -54,6 +74,23 @@ describe("Doubao browser-extension adapter", () => {
 		const adapter = createDoubaoAdapter(port);
 		await port.completeOneTask(adapter, "Prompt A");
 		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({ code: "page_drift" });
+	});
+
+	test("waits through transient duplicate answer containers before capturing one answer", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				newAnswerCountTimeline: [2, 2, 1],
+				answer: { text: "Current answer", html: "<div>Current answer</div>" },
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Current answer",
+			answerHtml: "<div>Current answer</div>",
+		});
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
 	test("records unknown search instead of inventing false", async () => {

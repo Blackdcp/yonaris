@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveBrowserRunnerClaimTargets } from "./browser-runner";
+import { browserRunnerNeedsHumanFinalizationPath, resolveBrowserRunnerClaimTargets } from "./browser-runner";
 
 describe("Browser Runner extension claim targets", () => {
 	it("does not let a DeepSeek-only device claim a Doubao task", () => {
@@ -47,5 +47,12 @@ describe("Browser Runner extension claim targets", () => {
 				captureRouteKey: "browser_runner.doubao",
 			},
 		]);
+	});
+});
+
+describe("Browser Runner needs-human finalization", () => {
+	it("routes available tasks through a private claim before the terminal failure transition", () => {
+		expect(browserRunnerNeedsHumanFinalizationPath("available")).toEqual(["claimed", "failed"]);
+		expect(browserRunnerNeedsHumanFinalizationPath("claimed")).toEqual(["failed"]);
 	});
 });

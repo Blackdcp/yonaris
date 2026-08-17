@@ -1,6 +1,6 @@
 import type { CollectedAnswer, ConsumerWebAdapter } from "../adapters/contracts";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
-import type { RunnerApi, RunnerTab, RunnerTabDriver } from "./task-runner";
+import type { RunnerFailureInput, RunnerTab, RunnerTabDriver } from "./task-runner";
 
 export function claimedTask(
 	override: Partial<BrowserExtensionClaim> & { taskId?: string } = {},
@@ -84,6 +84,9 @@ export function fakeTabDriver(events: string[], adapter: ConsumerWebAdapter, ope
 		},
 	};
 	return {
+		activate: async (tabId) => {
+			events.push(`tab:activate:${tabId}`);
+		},
 		open: async () => {
 			events.push("tab:open");
 			if (openFailure) throw openFailure;
@@ -93,8 +96,19 @@ export function fakeTabDriver(events: string[], adapter: ConsumerWebAdapter, ope
 	};
 }
 
-export function fakeRunnerApi(events: string[]): RunnerApi {
+export function fakeRunnerApi(events: string[]) {
 	return {
+		reconcileTask: async (taskId: string) => ({
+			state: "resumable_post" as const,
+			task: {
+				taskId,
+				batchId: "batch-1",
+				brandId: "stepfun",
+				surfaceTargetKey: "deepseek.consumer_web" as const,
+				promptText: "Prompt A",
+			},
+			runnerSessionId: "session-1",
+		}),
 		recordSubmitIntent: async () => {
 			events.push("api:submit_intent");
 		},
@@ -109,7 +123,7 @@ export function fakeRunnerApi(events: string[]): RunnerApi {
 		completeTask: async () => {
 			events.push("api:complete");
 		},
-		failTask: async (_claim, input) => {
+		failTask: async (_claim: BrowserExtensionClaim, input: RunnerFailureInput) => {
 			if (input.code === "page_load_timeout") {
 				events.push(`api:retry:${input.code}`);
 				return { retryScheduled: true };

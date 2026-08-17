@@ -1,4 +1,6 @@
 import { BROWSER_EXTENSION_SURFACES, type DeviceHeartbeatInput, EXTENSION_VERSION } from "./contracts";
+import deepSeekContract from "./selector-contracts/deepseek-web-v1.json";
+import doubaoContract from "./selector-contracts/doubao-web-v1.json";
 
 export function buildHeartbeat(userAgent: string): DeviceHeartbeatInput {
 	return {
@@ -8,8 +10,16 @@ export function buildHeartbeat(userAgent: string): DeviceHeartbeatInput {
 		platform: extensionPlatform(userAgent),
 		supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
 		readiness: {
-			"doubao.consumer_web": { status: "unavailable", adapterVersion: "pending", activeConcurrency: 0 },
-			"deepseek.consumer_web": { status: "unavailable", adapterVersion: "pending", activeConcurrency: 0 },
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: doubaoContract.version,
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "unavailable",
+				adapterVersion: deepSeekContract.version,
+				activeConcurrency: 0,
+			},
 		},
 	};
 }

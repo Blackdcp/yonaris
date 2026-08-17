@@ -1,5 +1,5 @@
 export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
-export const EXTENSION_VERSION = "0.1.0" as const;
+export const EXTENSION_VERSION = "0.2.0" as const;
 export const BROWSER_EXTENSION_SURFACES = ["doubao.consumer_web", "deepseek.consumer_web"] as const;
 
 export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACES)[number];
@@ -48,6 +48,7 @@ export interface TaskJournalEntry {
 	batchId: string;
 	brandId: string;
 	phase: TaskJournalPhase;
+	interruptedPhase?: Exclude<TaskJournalPhase, "needs_human">;
 	surfaceTargetKey: BrowserExtensionSurface;
 	tabId: number;
 	runnerSessionId: string;
@@ -76,6 +77,20 @@ export interface BrowserExtensionClaim {
 	leaseExpiresAt: string;
 	postSubmitAssist: boolean;
 	submitConfirmed: boolean;
+	runnerSessionId: string | null;
+}
+
+export type BrowserTaskReconciliationState =
+	| "resumable_pre"
+	| "resumable_post"
+	| "active"
+	| "released"
+	| "terminal"
+	| "blocked";
+
+export interface BrowserTaskReconciliation {
+	state: BrowserTaskReconciliationState;
+	task: Pick<TaskJournalEntry, "taskId" | "batchId" | "brandId" | "surfaceTargetKey"> & { promptText: string };
 	runnerSessionId: string | null;
 }
 

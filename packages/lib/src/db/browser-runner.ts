@@ -7,6 +7,7 @@ import {
 } from "../browser-extension-contract";
 import {
 	BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS,
+	type BrowserRunnerExactTaskReconciliation,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
 	decideBrowserRunnerFailure,
@@ -15,6 +16,7 @@ import {
 	isBrowserRunnerCnScope,
 	isSafePreSubmitBrokerTransportRecoveryCandidate,
 	isSafePreSubmitDedicatedProfileBusyRecoveryCandidate,
+	reconcileBrowserRunnerExactTask,
 } from "../browser-runner-policy";
 import type { DeliveryProtocol } from "../delivery-manifest";
 import { normalizeDeliveryProtocol } from "../delivery-manifest";
@@ -24,12 +26,29 @@ import { type DeliveryTask, deliveryBatches, deliveryTasks, measurementScopes } 
 
 export type BrowserRunnerQueue = "available" | "needs_human";
 
+export function browserRunnerNeedsHumanFinalizationPath(
+	status: DeliveryTask["status"],
+): readonly Extract<DeliveryTask["status"], "claimed" | "failed">[] {
+	if (status === "available") return ["claimed", "failed"];
+	if (status === "claimed") return ["failed"];
+	throw new BrowserRunnerStateError(`Task status ${status} cannot be finalized from needs-human`);
+}
+
 export interface BrowserRunnerClaim {
 	task: Omit<DeliveryTask, "leaseTokenHash">;
 	leaseToken: string;
 	leaseGeneration: number;
 	leaseExpiresAt: Date;
 }
+
+export type BrowserRunnerResumedClaim = BrowserRunnerClaim & {
+	recoveryStage: "pre_submit" | "post_submit";
+};
+
+export type BrowserRunnerTaskReconciliation = {
+	state: BrowserRunnerExactTaskReconciliation;
+	task: Omit<DeliveryTask, "leaseTokenHash">;
+};
 
 export type BrowserRunnerClaimTarget =
 	| { surfaceTargetKey: "doubao.consumer_web"; captureRouteKey: "browser_runner.doubao" }
@@ -260,7 +279,7 @@ export async function resumeBrowserRunnerTask(input: {
 	taskId: string;
 	runnerId: string;
 	leaseDurationMs?: number;
-}): Promise<BrowserRunnerClaim> {
+}): Promise<BrowserRunnerResumedClaim> {
 	const runnerId = requiredText(input.runnerId, "runnerId", 200);
 	const claimant = `browser-runner:${runnerId}`;
 	const leaseDurationMs = validLeaseDuration(input.leaseDurationMs);
@@ -299,6 +318,7 @@ export async function resumeBrowserRunnerTask(input: {
 			requestingClaimant: claimant,
 		});
 		if (denial) throw new BrowserRunnerStateError(`Browser Runner task cannot resume: ${denial}`);
+		const recoveryStage = task.submitIntentAt === null ? "pre_submit" : "post_submit";
 		const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
 		const now = new Date();
 		const startsAt = new Date(protocol.measurementWindow.startsAt);
@@ -319,6 +339,7 @@ export async function resumeBrowserRunnerTask(input: {
 				leaseExpiresAt,
 				claimCount: task.claimCount + 1,
 				claimedAt: now,
+				...(recoveryStage === "pre_submit" ? { needsHumanCode: null, needsHumanReason: null } : {}),
 			})
 			.where(
 				and(
@@ -327,7 +348,9 @@ export async function resumeBrowserRunnerTask(input: {
 					eq(deliveryTasks.automationStatus, "needs_human"),
 					eq(deliveryTasks.claimedBy, claimant),
 					eq(deliveryTasks.leaseGeneration, task.leaseGeneration),
-					isNotNull(deliveryTasks.submitIntentAt),
+					recoveryStage === "pre_submit"
+						? isNull(deliveryTasks.submitIntentAt)
+						: isNotNull(deliveryTasks.submitIntentAt),
 				),
 			)
 			.returning();
@@ -336,7 +359,67 @@ export async function resumeBrowserRunnerTask(input: {
 			.update(deliveryBatches)
 			.set({ automationStatus: "running" })
 			.where(and(eq(deliveryBatches.id, batch.id), eq(deliveryBatches.executionMode, "browser_runner")));
-		return { task: redact(resumed), leaseToken, leaseGeneration, leaseExpiresAt };
+		return { task: redact(resumed), leaseToken, leaseGeneration, leaseExpiresAt, recoveryStage };
+	});
+}
+
+export async function reconcileBrowserRunnerTask(input: {
+	brandId: string;
+	taskId: string;
+	runnerId: string;
+}): Promise<BrowserRunnerTaskReconciliation> {
+	const claimant = `browser-runner:${requiredText(input.runnerId, "runnerId", 200)}`;
+	return db.transaction(async (tx) => {
+		const [identity] = await tx
+			.select({ batchId: deliveryTasks.batchId })
+			.from(deliveryTasks)
+			.where(and(eq(deliveryTasks.id, input.taskId), eq(deliveryTasks.brandId, input.brandId)))
+			.limit(1);
+		if (!identity) throw new BrowserRunnerStateError("Browser Runner task was not found");
+		const [batch] = await tx
+			.select({ id: deliveryBatches.id, executionMode: deliveryBatches.executionMode })
+			.from(deliveryBatches)
+			.where(and(eq(deliveryBatches.id, identity.batchId), eq(deliveryBatches.brandId, input.brandId)))
+			.limit(1)
+			.for("update");
+		if (batch?.executionMode !== "browser_runner") {
+			throw new BrowserRunnerStateError("Browser Runner task was not found");
+		}
+		const [task] = await tx
+			.select()
+			.from(deliveryTasks)
+			.where(and(eq(deliveryTasks.id, input.taskId), eq(deliveryTasks.batchId, batch.id)))
+			.limit(1)
+			.for("update");
+		if (!task) throw new BrowserRunnerStateError("Browser Runner task was not found");
+		const now = new Date();
+		const state = reconcileBrowserRunnerExactTask({
+			deliveryStatus: task.status,
+			automationStatus: task.automationStatus,
+			submitIntentAt: task.submitIntentAt,
+			originalClaimedBy: task.claimedBy,
+			requestingClaimant: claimant,
+			leaseExpiresAt: task.leaseExpiresAt,
+			now,
+		});
+		if (
+			(state === "resumable_pre" || state === "resumable_post") &&
+			task.status === "claimed" &&
+			task.automationStatus === "running"
+		) {
+			await markTaskNeedsHuman(tx, task, {
+				code: state === "resumable_post" ? "submit_outcome_unknown" : "runner_lease_expired",
+				reason:
+					state === "resumable_post"
+						? "The previous runner recorded submit intent; automatic replay is forbidden"
+						: "The previous runner lease expired; automatic replay requires explicit human disposition",
+			});
+			await refreshBrowserRunnerBatchState(tx, task.batchId);
+			const [reconciled] = await tx.select().from(deliveryTasks).where(eq(deliveryTasks.id, task.id)).limit(1);
+			if (!reconciled) throw new BrowserRunnerStateError("Browser Runner task changed during reconciliation");
+			return { state, task: redact(reconciled) };
+		}
+		return { state, task: redact(task) };
 	});
 }
 
@@ -822,6 +905,33 @@ export async function finalizeBrowserRunnerNeedsHuman(input: {
 		) {
 			throw new BrowserRunnerStateError("Only unleased needs-human tasks can be finalized as terminal failures");
 		}
+		const availableCount = unresolved.filter(
+			(task) => browserRunnerNeedsHumanFinalizationPath(task.status)[0] === "claimed",
+		).length;
+		if (availableCount > 0) {
+			const internalLeaseTokenHash = randomBytes(32).toString("hex");
+			const privatelyClaimed = await tx
+				.update(deliveryTasks)
+				.set({
+					status: "claimed",
+					automationStatus: "running",
+					leaseTokenHash: internalLeaseTokenHash,
+					leaseGeneration: sql`${deliveryTasks.leaseGeneration} + 1`,
+					leaseExpiresAt: now,
+				})
+				.where(
+					and(
+						eq(deliveryTasks.batchId, batch.id),
+						eq(deliveryTasks.status, "available"),
+						eq(deliveryTasks.automationStatus, "needs_human"),
+						isNotNull(deliveryTasks.needsHumanCode),
+					),
+				)
+				.returning({ id: deliveryTasks.id });
+			if (privatelyClaimed.length !== availableCount) {
+				throw new BrowserRunnerStateError("Needs-human tasks changed during terminal failure finalization");
+			}
+		}
 		const finalized = await tx
 			.update(deliveryTasks)
 			.set({
@@ -839,9 +949,9 @@ export async function finalizeBrowserRunnerNeedsHuman(input: {
 			.where(
 				and(
 					eq(deliveryTasks.batchId, batch.id),
-					inArray(deliveryTasks.status, ["available", "claimed"]),
+					eq(deliveryTasks.status, "claimed"),
 					isNotNull(deliveryTasks.needsHumanCode),
-					or(eq(deliveryTasks.status, "available"), lte(deliveryTasks.leaseExpiresAt, now)),
+					lte(deliveryTasks.leaseExpiresAt, now),
 				),
 			)
 			.returning({ id: deliveryTasks.id });

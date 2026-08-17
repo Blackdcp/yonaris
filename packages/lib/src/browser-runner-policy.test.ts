@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import * as browserRunnerPolicy from "./browser-runner-policy";
 import {
 	assertBrowserRunnerEvidenceProtocol,
 	assertPortalBrowserRunnerMutationAllowed,
@@ -14,6 +15,25 @@ import {
 	isSafePreSubmitBrokerTransportRecoveryCandidate,
 	isSafePreSubmitDedicatedProfileBusyRecoveryCandidate,
 } from "./browser-runner-policy";
+
+type ExactTaskReconciliationInput = {
+	deliveryStatus: string;
+	automationStatus: "queued" | "running" | "needs_human" | "completed" | null;
+	submitIntentAt: Date | null;
+	originalClaimedBy: string | null;
+	requestingClaimant: string;
+	leaseExpiresAt: Date | null;
+	now: Date;
+};
+
+type ExactTaskReconciliation = "terminal" | "released" | "resumable_pre" | "resumable_post" | "active" | "blocked";
+
+function reconcileExactTask(input: ExactTaskReconciliationInput): ExactTaskReconciliation | "missing" {
+	const candidate: unknown = Reflect.get(browserRunnerPolicy, "reconcileBrowserRunnerExactTask");
+	return typeof candidate === "function"
+		? (candidate as (value: ExactTaskReconciliationInput) => ExactTaskReconciliation)(input)
+		: "missing";
+}
 
 describe("Browser Runner retry policy", () => {
 	it("permits one explicit recovery only for the untouched first broker transport failure", () => {
@@ -185,7 +205,7 @@ describe("Browser Runner retry policy", () => {
 		expect(deriveBrowserRunnerResultStatus({ isSettled: true, total: 0, succeeded: 0 })).toBe("incomplete");
 	});
 
-	it("resumes only a post-submit needs-human task for its original runner", () => {
+	it("lets the server derive the authoritative pre- or post-submit stage for the original runner", () => {
 		const base = {
 			deliveryStatus: "available",
 			automationStatus: "needs_human" as const,
@@ -195,7 +215,7 @@ describe("Browser Runner retry policy", () => {
 		};
 		expect(browserRunnerResumeDenial(base)).toBeNull();
 		expect(browserRunnerResumeDenial({ ...base, requestingClaimant: "browser-runner:cn-2" })).toBe("wrong_runner");
-		expect(browserRunnerResumeDenial({ ...base, submitIntentAt: null })).toBe("no_submit_intent");
+		expect(browserRunnerResumeDenial({ ...base, submitIntentAt: null })).toBeNull();
 		expect(browserRunnerResumeDenial({ ...base, deliveryStatus: "succeeded", automationStatus: "completed" })).toBe(
 			"not_needs_human",
 		);
@@ -257,5 +277,128 @@ describe("Browser Runner retry policy", () => {
 				now,
 			}),
 		).toEqual({ canFinalize: false, count: 0 });
+	});
+});
+
+describe("Browser Runner exact-task reconciliation policy", () => {
+	const now = new Date("2026-08-18T04:00:00.000Z");
+	const claimant = "browser-runner:device-1";
+	const base: ExactTaskReconciliationInput = {
+		deliveryStatus: "available",
+		automationStatus: "queued",
+		submitIntentAt: null,
+		originalClaimedBy: claimant,
+		requestingClaimant: claimant,
+		leaseExpiresAt: null,
+		now,
+	};
+
+	it.each(["succeeded", "failed", "cancelled"])("classifies a valid %s task as terminal", (deliveryStatus) => {
+		expect(
+			reconcileExactTask({
+				...base,
+				deliveryStatus,
+				automationStatus: "completed",
+			}),
+		).toBe("terminal");
+	});
+
+	it("classifies only an untouched available queued task as released", () => {
+		expect(reconcileExactTask(base)).toBe("released");
+
+		for (const invalid of [
+			{ ...base, deliveryStatus: "planned" },
+			{ ...base, submitIntentAt: new Date("2026-08-18T03:59:00.000Z") },
+			{ ...base, leaseExpiresAt: new Date("2026-08-18T04:01:00.000Z") },
+		]) {
+			expect(reconcileExactTask(invalid)).toBe("blocked");
+		}
+	});
+
+	it.each([
+		{ submitIntentAt: null, expected: "resumable_pre" },
+		{ submitIntentAt: new Date("2026-08-18T03:59:00.000Z"), expected: "resumable_post" },
+	] as const)(
+		"resumes an available needs-human task at $expected for its original runner",
+		({ submitIntentAt, expected }) => {
+			expect(
+				reconcileExactTask({
+					...base,
+					automationStatus: "needs_human",
+					submitIntentAt,
+				}),
+			).toBe(expected);
+		},
+	);
+
+	it("blocks an available needs-human task for a different runner", () => {
+		expect(
+			reconcileExactTask({
+				...base,
+				automationStatus: "needs_human",
+				requestingClaimant: "browser-runner:device-2",
+			}),
+		).toBe("blocked");
+	});
+
+	it.each([
+		{ submitIntentAt: null, leaseExpiresAt: new Date("2026-08-18T04:00:01.000Z") },
+		{
+			submitIntentAt: new Date("2026-08-18T03:59:00.000Z"),
+			leaseExpiresAt: new Date("2026-08-18T04:00:01.000Z"),
+		},
+	] as const)("keeps an unexpired claimed running task active", ({ submitIntentAt, leaseExpiresAt }) => {
+		expect(
+			reconcileExactTask({
+				...base,
+				deliveryStatus: "claimed",
+				automationStatus: "running",
+				submitIntentAt,
+				leaseExpiresAt,
+			}),
+		).toBe("active");
+	});
+
+	it.each([
+		{ submitIntentAt: null, leaseExpiresAt: new Date("2026-08-18T04:00:00.000Z"), expected: "resumable_pre" },
+		{
+			submitIntentAt: new Date("2026-08-18T03:59:00.000Z"),
+			leaseExpiresAt: new Date("2026-08-18T03:59:59.999Z"),
+			expected: "resumable_post",
+		},
+	] as const)(
+		"derives $expected for an expired claimed running task",
+		({ submitIntentAt, leaseExpiresAt, expected }) => {
+			expect(
+				reconcileExactTask({
+					...base,
+					deliveryStatus: "claimed",
+					automationStatus: "running",
+					submitIntentAt,
+					leaseExpiresAt,
+				}),
+			).toBe(expected);
+		},
+	);
+
+	it("blocks a claimed running task for a different runner", () => {
+		expect(
+			reconcileExactTask({
+				...base,
+				deliveryStatus: "claimed",
+				automationStatus: "running",
+				leaseExpiresAt: new Date("2026-08-18T04:00:01.000Z"),
+				requestingClaimant: "browser-runner:device-2",
+			}),
+		).toBe("blocked");
+	});
+
+	it.each([
+		{ ...base, deliveryStatus: "available", automationStatus: "running" as const },
+		{ ...base, deliveryStatus: "claimed", automationStatus: "queued" as const },
+		{ ...base, deliveryStatus: "claimed", automationStatus: "running" as const, leaseExpiresAt: null },
+		{ ...base, deliveryStatus: "succeeded", automationStatus: "running" as const },
+	])("blocks an illegal delivery/automation/lease combination", (input) => {
+		expect(reconcileExactTask(input)).toBe("blocked");
 	});
 });

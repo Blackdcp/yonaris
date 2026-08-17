@@ -2,16 +2,33 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { EXTENSION_VERSION } from "./contracts";
+
 describe("Manifest V3 permissions", () => {
+	it("keeps the release version aligned across the package, manifest, and runtime heartbeat", () => {
+		const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "manifest.json"), "utf8")) as {
+			version: string;
+		};
+		const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), "package.json"), "utf8")) as {
+			version: string;
+		};
+
+		expect(manifest.version).toBe("0.2.0");
+		expect(packageJson.version).toBe(manifest.version);
+		expect(EXTENSION_VERSION).toBe(manifest.version);
+	});
+
 	it("grants only the approved Portal, Doubao, and DeepSeek origins", () => {
 		const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "manifest.json"), "utf8")) as {
 			manifest_version: number;
+			permissions: string[];
 			host_permissions: string[];
 			content_scripts: Array<{ matches: string[]; js: string[]; run_at: string }>;
 			content_security_policy: { extension_pages: string };
 		};
 
 		expect(manifest.manifest_version).toBe(3);
+		expect(manifest.permissions).toEqual(["storage", "alarms", "tabs", "scripting", "notifications"]);
 		expect(manifest.host_permissions).toEqual([
 			"https://portal.yonaris.com/*",
 			"https://*.doubao.com/*",

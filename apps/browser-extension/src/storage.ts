@@ -9,6 +9,7 @@ import {
 
 const DEVICE_KEY = "browserRunnerDevice";
 const JOURNAL_KEY = "browserRunnerJournal";
+const JOURNAL_ENTRY_KEY_PREFIX = `${JOURNAL_KEY}:`;
 const DEVICE_TOKEN_PATTERN = /^yrd_[A-Za-z0-9_-]{43}$/;
 const JOURNAL_PHASES = new Set<TaskJournalPhase>([
 	"claimed",
@@ -19,6 +20,7 @@ const JOURNAL_PHASES = new Set<TaskJournalPhase>([
 	"uploaded",
 	"needs_human",
 ]);
+const POST_SUBMIT_JOURNAL_PHASES = new Set<TaskJournalPhase>(["submit_intent", "submitted", "collected", "uploaded"]);
 
 export interface ExtensionStorageArea {
 	get(keys?: string | string[] | null): Promise<Record<string, unknown>>;
@@ -27,6 +29,8 @@ export interface ExtensionStorageArea {
 }
 
 export class DeviceStorage {
+	#journalMigration: Promise<void> | null = null;
+
 	constructor(private readonly area: ExtensionStorageArea) {}
 
 	async saveDevice(input: PairedDeviceConfig): Promise<void> {
@@ -41,16 +45,24 @@ export class DeviceStorage {
 
 	async saveJournal(input: TaskJournalEntry): Promise<void> {
 		const entry = validateJournalEntry(input);
-		const current = await this.loadJournal();
-		await this.area.set({ [JOURNAL_KEY]: { ...current, [entry.taskId]: entry } });
+		await this.#ensureJournalMigrated();
+		await this.area.set({ [journalEntryKey(entry.taskId)]: entry });
 	}
 
 	async loadJournal(): Promise<Record<string, TaskJournalEntry>> {
-		const raw = (await this.area.get(JOURNAL_KEY))[JOURNAL_KEY];
-		if (raw === undefined) return {};
-		if (!isRecord(raw)) throw new Error("Browser Runner task journal is invalid");
+		await this.#ensureJournalMigrated();
+		const stored = await this.area.get(null);
 		const journal: Record<string, TaskJournalEntry> = {};
-		for (const value of Object.values(raw)) {
+		const legacy = stored[JOURNAL_KEY];
+		if (legacy !== undefined) {
+			if (!isRecord(legacy)) throw new Error("Browser Runner task journal is invalid");
+			for (const value of Object.values(legacy)) {
+				const entry = validateJournalEntry(value);
+				journal[entry.taskId] = entry;
+			}
+		}
+		for (const [key, value] of Object.entries(stored)) {
+			if (!key.startsWith(JOURNAL_ENTRY_KEY_PREFIX)) continue;
 			const entry = validateJournalEntry(value);
 			journal[entry.taskId] = entry;
 		}
@@ -58,21 +70,44 @@ export class DeviceStorage {
 	}
 
 	async removeJournal(taskId: string): Promise<void> {
-		const current = await this.loadJournal();
-		delete current[requiredText(taskId, "taskId", 200)];
-		if (Object.keys(current).length === 0) {
-			await this.area.remove(JOURNAL_KEY);
-			return;
-		}
-		await this.area.set({ [JOURNAL_KEY]: current });
+		const key = journalEntryKey(taskId);
+		await this.#ensureJournalMigrated();
+		await this.area.remove(key);
 	}
 
 	async disconnect(): Promise<void> {
-		await this.area.remove([DEVICE_KEY, JOURNAL_KEY]);
+		const stored = await this.area.get(null);
+		const keys = Object.keys(stored).filter(
+			(key) => key === DEVICE_KEY || key === JOURNAL_KEY || key.startsWith(JOURNAL_ENTRY_KEY_PREFIX),
+		);
+		if (keys.length > 0) await this.area.remove(keys);
 	}
 
 	async dump(): Promise<Record<string, unknown>> {
 		return this.area.get(null);
+	}
+
+	async #ensureJournalMigrated(): Promise<void> {
+		this.#journalMigration ??= this.#migrateLegacyJournal();
+		await this.#journalMigration;
+	}
+
+	async #migrateLegacyJournal(): Promise<void> {
+		const stored = await this.area.get(null);
+		const raw = stored[JOURNAL_KEY];
+		if (raw === undefined) return;
+		if (!isRecord(raw)) throw new Error("Browser Runner task journal is invalid");
+		const migrated: Record<string, TaskJournalEntry> = {};
+		for (const value of Object.values(raw)) {
+			const entry = validateJournalEntry(value);
+			const key = journalEntryKey(entry.taskId);
+			const existing = stored[key] === undefined ? null : validateJournalEntry(stored[key]);
+			if (!existing || (hasPostSubmitBoundary(entry) && !hasPostSubmitBoundary(existing))) {
+				migrated[key] = entry;
+			}
+		}
+		if (Object.keys(migrated).length > 0) await this.area.set(migrated);
+		await this.area.remove(JOURNAL_KEY);
 	}
 }
 
@@ -116,6 +151,18 @@ function validateJournalEntry(value: unknown): TaskJournalEntry {
 	}
 	const updatedAt = requiredText(value.updatedAt, "updatedAt", 50);
 	if (!Number.isFinite(new Date(updatedAt).getTime())) throw new Error("Browser Runner task journal time is invalid");
+	let interruptedPhase: Exclude<TaskJournalPhase, "needs_human"> | undefined;
+	if (value.interruptedPhase !== undefined) {
+		if (
+			value.phase !== "needs_human" ||
+			typeof value.interruptedPhase !== "string" ||
+			!JOURNAL_PHASES.has(value.interruptedPhase as TaskJournalPhase) ||
+			value.interruptedPhase === "needs_human"
+		) {
+			throw new Error("Browser Runner interrupted journal phase is invalid");
+		}
+		interruptedPhase = value.interruptedPhase as Exclude<TaskJournalPhase, "needs_human">;
+	}
 	if (!Number.isSafeInteger(value.tabId) || (value.tabId as number) < 0) {
 		throw new Error("Browser Runner task journal tabId is invalid");
 	}
@@ -127,6 +174,7 @@ function validateJournalEntry(value: unknown): TaskJournalEntry {
 		batchId,
 		brandId,
 		phase: value.phase as TaskJournalPhase,
+		...(interruptedPhase ? { interruptedPhase } : {}),
 		surfaceTargetKey: value.surfaceTargetKey as BrowserExtensionSurface,
 		tabId: value.tabId as number,
 		runnerSessionId,
@@ -144,4 +192,13 @@ function requiredText(value: unknown, field: string, maximum: number): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function journalEntryKey(taskId: string): string {
+	return `${JOURNAL_ENTRY_KEY_PREFIX}${requiredText(taskId, "taskId", 200)}`;
+}
+
+function hasPostSubmitBoundary(entry: TaskJournalEntry): boolean {
+	const phase = entry.phase === "needs_human" ? entry.interruptedPhase : entry.phase;
+	return phase !== undefined && POST_SUBMIT_JOURNAL_PHASES.has(phase);
 }

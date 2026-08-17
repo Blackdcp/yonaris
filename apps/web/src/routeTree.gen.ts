@@ -83,6 +83,7 @@ import { Route as ApiInternalBrowserRunnerV1TasksClaimRouteImport } from './rout
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdCompleteRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/complete'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdFailureRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/failure'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+import { Route as ApiInternalBrowserRunnerV1TasksTaskIdReconcileRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdResumeRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/resume'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
 import { Route as ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRouteImport } from './routes/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
@@ -492,6 +493,12 @@ const ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute =
     path: '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute =
+  ApiInternalBrowserRunnerV1TasksTaskIdReconcileRouteImport.update({
+    id: '/api/internal/browser-runner/v1/tasks/$taskId/reconcile',
+    path: '/api/internal/browser-runner/v1/tasks/$taskId/reconcile',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute =
   ApiInternalBrowserRunnerV1TasksTaskIdResumeRouteImport.update({
     id: '/api/internal/browser-runner/v1/tasks/$taskId/resume',
@@ -585,6 +592,7 @@ export interface FileRoutesByFullPath {
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/reconcile': typeof ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
@@ -658,6 +666,7 @@ export interface FileRoutesByTo {
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/reconcile': typeof ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
@@ -738,6 +747,7 @@ export interface FileRoutesById {
   '/api/internal/browser-runner/v1/tasks/$taskId/complete': typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/failure': typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat': typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  '/api/internal/browser-runner/v1/tasks/$taskId/reconcile': typeof ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/resume': typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
   '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent': typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
@@ -818,6 +828,7 @@ export interface FileRouteTypes {
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
     | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
     | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
     | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
@@ -891,6 +902,7 @@ export interface FileRouteTypes {
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
     | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
     | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
     | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
@@ -970,6 +982,7 @@ export interface FileRouteTypes {
     | '/api/internal/browser-runner/v1/tasks/$taskId/complete'
     | '/api/internal/browser-runner/v1/tasks/$taskId/failure'
     | '/api/internal/browser-runner/v1/tasks/$taskId/heartbeat'
+    | '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
     | '/api/internal/browser-runner/v1/tasks/$taskId/resume'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-confirmed'
     | '/api/internal/browser-runner/v1/tasks/$taskId/submit-intent'
@@ -1014,6 +1027,7 @@ export interface RootRouteChildren {
   ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdCompleteRoute
   ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute
   ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute
+  ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute
   ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute
   ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute
   ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdSubmitIntentRoute
@@ -1539,6 +1553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/internal/browser-runner/v1/tasks/$taskId/reconcile': {
+      id: '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
+      path: '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
+      fullPath: '/api/internal/browser-runner/v1/tasks/$taskId/reconcile'
+      preLoaderRoute: typeof ApiInternalBrowserRunnerV1TasksTaskIdReconcileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/internal/browser-runner/v1/tasks/$taskId/resume': {
       id: '/api/internal/browser-runner/v1/tasks/$taskId/resume'
       path: '/api/internal/browser-runner/v1/tasks/$taskId/resume'
@@ -1768,6 +1789,8 @@ const rootRouteChildren: RootRouteChildren = {
     ApiInternalBrowserRunnerV1TasksTaskIdFailureRoute,
   ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute:
     ApiInternalBrowserRunnerV1TasksTaskIdHeartbeatRoute,
+  ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute:
+    ApiInternalBrowserRunnerV1TasksTaskIdReconcileRoute,
   ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute:
     ApiInternalBrowserRunnerV1TasksTaskIdResumeRoute,
   ApiInternalBrowserRunnerV1TasksTaskIdSubmitConfirmedRoute:

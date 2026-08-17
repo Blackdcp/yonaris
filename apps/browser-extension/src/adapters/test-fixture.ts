@@ -18,16 +18,21 @@ export type AdapterFixture = {
 	pageUrl: string;
 	conversationUrl: string;
 	composerMatches: number;
+	composerMatchTimeline: number[];
+	composerReadyDelayMs: number;
 	sendMatches: number;
 	sendMatchesBeforeFill: number;
 	newConversationLabels: string[];
 	signedOut: boolean;
 	captcha: boolean;
 	rateLimited: boolean;
+	accountRestricted: boolean;
+	blankConversationDelayMs: number;
 	priorAnswers: FixtureAnswer[];
 	answer: FixtureAnswer;
 	answerTimeline: string[];
 	newAnswerCount: number;
+	newAnswerCountTimeline: number[];
 	submittedPrompt: string | null;
 	initiallySubmitted: boolean;
 	conversationUrlDelayMs: number;
@@ -45,15 +50,20 @@ export function createAdapterFixture(
 		pageUrl: "https://chat.deepseek.com/",
 		conversationUrl: "https://chat.deepseek.com/a/chat/s/test-session",
 		composerMatches: 1,
+		composerMatchTimeline: [],
+		composerReadyDelayMs: 0,
 		sendMatches: 1,
 		sendMatchesBeforeFill: override.sendMatches ?? 1,
 		signedOut: false,
 		captcha: false,
 		rateLimited: false,
+		accountRestricted: false,
+		blankConversationDelayMs: 0,
 		priorAnswers: [],
 		answer: { text: "Current answer", html: "<div>Current answer</div>" },
 		answerTimeline: [],
 		newAnswerCount: 1,
+		newAnswerCountTimeline: [],
 		submittedPrompt: null,
 		initiallySubmitted: false,
 		conversationUrlDelayMs: 0,
@@ -70,6 +80,8 @@ export class FixtureDomPort implements ConsumerDomPort {
 	#submitted = false;
 	#filledPrompt = "";
 	#conversationOpened = false;
+	#newConversationClickedAt: number | null = null;
+	#composerQueryCount = 0;
 	clickedText: string | null = null;
 	submitCount = 0;
 	elapsedMs = 0;
@@ -92,8 +104,15 @@ export class FixtureDomPort implements ConsumerDomPort {
 
 	async query(role: DomElementRole, _selector: string): Promise<readonly DomElementSummary[]> {
 		switch (role) {
-			case "composer":
-				return elements(this.#fixture.composerMatches, "");
+			case "composer": {
+				if (this.elapsedMs < this.#fixture.composerReadyDelayMs) return [];
+				const composerMatches =
+					this.#fixture.composerMatchTimeline[
+						Math.min(this.#composerQueryCount, this.#fixture.composerMatchTimeline.length - 1)
+					] ?? this.#fixture.composerMatches;
+				this.#composerQueryCount += 1;
+				return elements(composerMatches, "");
+			}
 			case "send":
 				return elements(this.#filledPrompt ? this.#fixture.sendMatches : this.#fixture.sendMatchesBeforeFill, "");
 			case "new_conversation":
@@ -104,7 +123,12 @@ export class FixtureDomPort implements ConsumerDomPort {
 				return this.#fixture.captcha ? elements(1, "") : [];
 			case "rate_limit":
 				return this.#fixture.rateLimited ? elements(1, "") : [];
+			case "account_restricted":
+				return this.#fixture.accountRestricted
+					? [{ text: "由于违反用户使用规范，你的账号已被禁言至 2026 年 8 月 19 日 00:43", visible: true }]
+					: [];
 			case "user_message":
+				if (this.#oldDialogueStillVisible()) return [{ text: "Old prompt", visible: true }];
 				return this.#submitted ? [{ text: this.#fixture.submittedPrompt ?? this.#filledPrompt, visible: true }] : [];
 			case "generating":
 				return this.#submitted && this.elapsedMs < 2_000 ? elements(1, "") : [];
@@ -117,6 +141,7 @@ export class FixtureDomPort implements ConsumerDomPort {
 		if (role === "new_conversation") {
 			this.clickedText = this.#fixture.newConversationLabels[index] ?? null;
 			this.#conversationOpened = true;
+			this.#newConversationClickedAt = this.elapsedMs;
 			return;
 		}
 		if (role === "send") {
@@ -154,15 +179,27 @@ export class FixtureDomPort implements ConsumerDomPort {
 	}
 
 	#answers(): DomElementSummary[] {
+		if (this.#oldDialogueStillVisible()) return [{ text: "Old answer", visible: true }];
 		const prior = this.#fixture.priorAnswers.map(({ text }) => ({ text, visible: false }));
 		if (!this.#submitted || !this.#conversationOpened) return prior;
+		const newAnswerCount =
+			this.#fixture.newAnswerCountTimeline[
+				Math.min(Math.floor(this.elapsedMs / 1_000), this.#fixture.newAnswerCountTimeline.length - 1)
+			] ?? this.#fixture.newAnswerCount;
 		return [
 			...prior,
-			...Array.from({ length: this.#fixture.newAnswerCount }, () => ({
+			...Array.from({ length: newAnswerCount }, () => ({
 				text: this.#currentAnswerText(),
 				visible: true,
 			})),
 		];
+	}
+
+	#oldDialogueStillVisible(): boolean {
+		return (
+			this.#newConversationClickedAt !== null &&
+			this.elapsedMs - this.#newConversationClickedAt < this.#fixture.blankConversationDelayMs
+		);
 	}
 
 	#currentAnswerText(): string {

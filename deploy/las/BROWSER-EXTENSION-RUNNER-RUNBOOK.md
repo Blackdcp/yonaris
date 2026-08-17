@@ -7,7 +7,8 @@ The Yonaris Browser Runner extension executes administrator-started Doubao and D
 - Only a global platform administrator can pair/revoke devices and use **Run now**.
 - **Run now** freezes every enabled Prompt in one CN / zh-CN / Asia/Shanghai scored Program.
 - Each selected channel receives exactly five samples per Prompt; every sample starts a new conversation.
-- Doubao and DeepSeek are separate queues. Each starts with five local tabs and adapts within one through ten. A rate limit cools only that channel.
+- A popup **Check for work now** click executes at most one task across all channels. The extension never claims work from a timer and never opens concurrent task tabs.
+- Only a surface whose installed adapter reports `ready` can receive a claim. A signed-out, restricted, changed or unverified surface stays unavailable.
 - A server submit intent is durable before the page click. After that point the task is never automatically re-asked.
 - Successful tasks upload answer text, citations/query observations and one sanitized current-answer HTML snapshot. Standard v1 does not capture a pixel screenshot or whole provider page.
 - Login, CAPTCHA, risk control, timeout or page drift creates no `prompt_run`; it lowers delivery coverage and never becomes `brandMentioned=false`.
@@ -32,7 +33,7 @@ The reviewed manifest permits only Portal, Doubao and DeepSeek origins. Reject a
 2. Open **Platform administration → Sampling operations → Local Browser devices**.
 3. Choose the customer, enter an operator-recognizable device name, and create the 15-minute one-time code.
 4. Open the extension popup, enter the code, and pair. The clear device token is shown by neither Portal nor the extension after exchange.
-5. Confirm the device becomes **Online** and both channel readiness rows are present. Revoke and pair again if the wrong customer was selected.
+5. Confirm the device becomes **Online** and inspect each channel readiness row. Do not assume both channels are ready: an unavailable adapter is intentionally excluded from claims. Revoke and pair again if the wrong customer was selected.
 
 Pairing authorizes only the selected customer and the two approved runner surfaces. It does not grant Portal page or customer-data access.
 
@@ -40,32 +41,40 @@ Pairing authorizes only the selected customer and the two approved runner surfac
 
 Run this before a scored customer cohort whenever the extension or an adapter version changes:
 
-1. In the dedicated Chrome profile, open Doubao and DeepSeek and confirm each ordinary login manually.
-2. Create a temporary CN scored Program with one non-sensitive Prompt.
-3. Use **Run now** for one channel at a time. The fixed product contract creates five independent samples; do not delete or manually replay individual tasks to improve an answer.
-4. Watch the local tabs: the adapter must choose **新对话** rather than **新工作任务**, submit the exact frozen Prompt once, observe one new answer, and close a successfully accepted tab.
-5. In Portal, confirm five successful tasks, five runs, channel identity, answer text, citation/query fields and five ready response snapshots.
+1. In the dedicated Chrome profile, open only the surface under test and confirm its ordinary login manually.
+2. Create a temporary CN observation Program with one non-sensitive Prompt and one sample. Do not use a scored customer cohort for adapter qualification.
+3. Start only that surface, then click **Check for work now** once. Do not delete or manually replay the task to improve an answer.
+4. Watch the single active tab: the adapter must choose **新对话** rather than **新工作任务**, submit the exact frozen Prompt once, observe one new answer, and close a successfully accepted tab.
+5. In Portal, confirm one successful task, one run, channel identity, answer text, citation/query fields and one ready response snapshot.
 6. Open the customer read-only Prompt detail and verify **Browser answer HTML**. Download HTML/JSON and verify they represent only the accepted answer, not sidebar/history/account data.
 7. If either site shows login, CAPTCHA, risk control or changed controls, stop the UAT. Resolve ordinary login manually or release an adapter update; never bypass the challenge.
 
-## StepFun 30-task pilot
+## Customer cohort after a one-task UAT
 
-After both one-channel UATs pass:
+Run only channels whose current adapter version passed the one-task UAT:
 
-1. Open **Sampling operations**, select StepFun and the intended CN scored Program.
-2. Select Doubao and DeepSeek. Check the displayed equation. For three enabled Prompts it must be `3 × 2 × 5 = 30 tasks`.
-3. Choose **Run 30 tasks now** once.
-4. Keep Chrome and the extension running. The popup's **Check for work now** action starts an immediate check; background checks only consume this already-started batch and never create another batch.
-5. Review Portal progress by channel. The batch is final only when all 30 frozen slots are resolved; unresolved technical tasks remain visible as needs-human/incomplete coverage.
+1. Open **Sampling operations**, select the customer and intended CN scored Program.
+2. Select only verified, ready channels and check the displayed task equation before creating the batch.
+3. Choose **Run tasks now** once. Do not create an overlapping batch for the same Program and channels.
+4. Keep Chrome and the extension running. Each popup **Check for work now** click executes at most one queued task; there is no background queue consumption.
+5. Review Portal progress after every task. Stop clicking at the first login, CAPTCHA, account restriction, page drift, timeout or needs-human result.
 6. Verify customer channel filters, Visibility denominator, answers, citations, query fan-out and snapshot readiness before presenting results.
 
 ## Pause, resume and recovery
 
 - To pause the local device, disable the unpacked extension or close its dedicated Chrome profile. Unclaimed tasks stay queued in Portal.
-- Re-enable/reopen Chrome and use **Check for work now** to resume claimable work.
+- Re-enable/reopen Chrome and use **Check for work now** for one further claimable task.
 - A clearly pre-submit transient failure may receive the one server-approved retry. Login/CAPTCHA/page drift waits for an administrator.
 - After submit intent, recovery is restricted to the original local tab and exact user message. If that tab/session cannot be proven, finalize it as a technical failure; never ask the Prompt again for the same task.
-- Doubao risk control does not stop DeepSeek, and vice versa.
+- A surface marked unavailable cannot receive a task. Do not continue on another account or channel merely to work around a provider restriction.
+
+## Safe rollout order
+
+1. Revoke or pause every paired device before deploying a Portal release that changes the extension protocol.
+2. Deploy Portal and verify health. Devices whose heartbeat does not report an approved `ready` adapter intentionally receive no claims.
+3. Install or reload the exact reviewed extension ZIP on one device, then confirm its adapter versions and readiness in Portal.
+4. Re-pair or unpause only that reviewed device. Run the one-task observation UAT before starting a scored cohort.
+5. Upgrade remaining devices one at a time. Temporary queue downtime during this fail-closed rollout is expected; allowing an older adapter to keep claiming is not.
 
 ## Revocation and rollback
 
