@@ -12,6 +12,14 @@ const metadata = {
 } as const;
 
 describe("BrowserRunnerExtensionInstall", () => {
+	it("keeps download disabled until matching package metadata is available", () => {
+		const markup = renderToStaticMarkup(<BrowserRunnerExtensionInstall />);
+
+		expect(markup).not.toContain('href="/downloads/yonaris-browser-extension.zip"');
+		expect(markup).toContain("disabled");
+		expect(markup).toContain("Loading package digest");
+	});
+
 	it("renders the same-origin reviewed package, digest and Windows/macOS Chrome installation flow", () => {
 		const markup = renderToStaticMarkup(<BrowserRunnerExtensionInstall metadata={metadata} />);
 

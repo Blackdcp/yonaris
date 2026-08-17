@@ -48,11 +48,17 @@ export function BrowserRunnerExtensionInstall({
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="flex flex-wrap items-center gap-3">
-					<Button asChild>
-						<a href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILE_NAME}>
+					{metadata ? (
+						<Button asChild>
+							<a href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILE_NAME}>
+								<Download /> Download extension ZIP
+							</a>
+						</Button>
+					) : (
+						<Button disabled>
 							<Download /> Download extension ZIP
-						</a>
-					</Button>
+						</Button>
+					)}
 					{metadata && <span className="text-sm text-muted-foreground">Version {metadata.version}</span>}
 				</div>
 
