@@ -177,7 +177,7 @@ PPIO's first full cohort is exactly 300 calls. Worker concurrency is bounded sep
 - all six channels are selected by default and can be deselected;
 - task equation and progress totals render correctly;
 - the customer dashboard channel filters show all completed surfaces;
-- a production smoke cohort uses one non-sensitive Prompt, one sample, and one channel before the PPIO 300-call cohort;
+- a production smoke cohort uses one non-sensitive Prompt, one channel, and the fixed five samples before the PPIO 300-call cohort;
 - after smoke success, the administrator runs the full PPIO `Global Market` cohort once and verifies metrics plus ready HTML/JSON snapshots.
 
 ## Rollout
@@ -187,7 +187,7 @@ PPIO's first full cohort is exactly 300 calls. Worker concurrency is bounded sep
 3. Add the Portal overseas card and progress list.
 4. Deploy migrations and compatible web/worker images with the feature flag disabled.
 5. Enable the feature for platform administrators after verifying all six production route readiness checks.
-6. Run one one-Prompt/one-channel production smoke cohort.
+6. Run one one-Prompt/one-channel/five-sample production smoke cohort.
 7. Run the PPIO 300-call cohort and verify channel totals, Elmo metrics, citations, queries, and snapshots.
 
 No daily schedule is created by this rollout.
