@@ -64,6 +64,9 @@ export function fakeAdapter(events: string[], collectFailure?: Error): ConsumerW
 		confirmSubmitted: async () => {
 			events.push("adapter:confirm");
 		},
+		resumeSubmitted: async () => {
+			events.push("adapter:resume");
+		},
 		collectCurrentAnswer: async () => {
 			events.push("adapter:collect");
 			if (collectFailure) throw collectFailure;

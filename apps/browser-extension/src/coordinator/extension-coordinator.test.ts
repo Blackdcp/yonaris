@@ -70,7 +70,7 @@ describe("ExtensionCoordinator", () => {
 
 		await coordinator.runOnce();
 		expect(events).not.toContain("adapter:submit");
-		expect(events).toContain("adapter:confirm");
+		expect(events).toContain("adapter:resume");
 		expect(events).toContain("api:complete");
 		expect(await journal.entries()).toEqual({});
 	});

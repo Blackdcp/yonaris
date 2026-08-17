@@ -32,6 +32,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	#answerCountBeforeSubmit = 0;
 	#preparedPrompt: string | null = null;
 	#submitted = false;
+	#resuming = false;
 
 	constructor(port: ConsumerDomPort, contract: SelectorContract) {
 		this.#port = port;
@@ -101,6 +102,24 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		throw this.#error("post_submit_unknown", "The exact submitted prompt did not appear in the conversation");
 	}
 
+	async resumeSubmitted(promptText: string): Promise<void> {
+		const prompt = validatePrompt(promptText);
+		this.#submitted = true;
+		this.#assertApprovedUrl(true);
+		await this.#assertUnblocked();
+		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
+		if (messages.length !== 1 || normalizeText(messages[0]?.element.text ?? "") !== normalizeText(prompt)) {
+			throw this.#error("post_submit_unknown", "Preserved conversation does not contain the exact submitted prompt");
+		}
+		const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
+		if (answers.length > 1) {
+			throw this.#error("page_drift", "Preserved conversation contains more than one answer container");
+		}
+		this.#preparedPrompt = prompt;
+		this.#resuming = true;
+		this.#answerCountBeforeSubmit = 0;
+	}
+
 	async collectCurrentAnswer(): Promise<CollectedAnswer> {
 		if (!this.#submitted) throw this.#error("post_submit_unknown", "Prompt was not submitted in this page session");
 		const timeoutAt = this.#port.now() + RESPONSE_TIMEOUT_MS;
@@ -108,7 +127,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		let stableText = "";
 		let stableSince = 0;
 		while (this.#port.now() < timeoutAt) {
-			this.#assertApprovedUrl(true);
+			this.#assertApprovedUrl(false);
 			await this.#assertUnblocked();
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
@@ -122,7 +141,11 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				if (latest !== stableText) {
 					stableText = latest;
 					stableSince = this.#port.now();
-				} else if (generatingSeen && generating === 0 && this.#port.now() - stableSince >= STABLE_ANSWER_MS) {
+				} else if (
+					(generatingSeen || this.#resuming) &&
+					generating === 0 &&
+					this.#port.now() - stableSince >= STABLE_ANSWER_MS
+				) {
 					return this.#readAcceptedAnswer(answers.at(-1)?.index ?? -1, stableText);
 				}
 			}

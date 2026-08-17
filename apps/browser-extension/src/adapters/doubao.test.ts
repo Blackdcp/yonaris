@@ -63,6 +63,37 @@ describe("Doubao browser-extension adapter", () => {
 		expect((await adapter.collectCurrentAnswer()).webSearchObserved).toBeNull();
 	});
 
+	test("waits for the durable conversation URL instead of failing immediately after submit", async () => {
+		const port = new FixtureDomPort(doubaoFixture({ conversationUrlDelayMs: 1_000 }));
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Current answer",
+			pageUrl: "https://www.doubao.com/chat/123456",
+		});
+	});
+
+	test("recovers an already completed answer without submitting the prompt again", async () => {
+		const port = new FixtureDomPort(doubaoFixture({ initiallySubmitted: true, submittedPrompt: "Prompt A" }));
+		const adapter = createDoubaoAdapter(port);
+
+		await adapter.resumeSubmitted("Prompt A");
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+		expect(port.submitCount).toBe(0);
+	});
+
+	test("refuses to recover a preserved conversation for a different prompt", async () => {
+		const port = new FixtureDomPort(doubaoFixture({ initiallySubmitted: true, submittedPrompt: "Prompt B" }));
+		const adapter = createDoubaoAdapter(port);
+
+		await expect(adapter.resumeSubmitted("Prompt A")).rejects.toMatchObject({
+			code: "post_submit_unknown",
+			stage: "post_submit",
+		});
+		expect(port.submitCount).toBe(0);
+	});
+
 	test.each([
 		["signed_out", { signedOut: true }],
 		["captcha", { captcha: true }],

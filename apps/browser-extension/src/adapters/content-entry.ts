@@ -5,7 +5,11 @@ import { createDoubaoAdapter } from "./doubao";
 
 type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "preflight" | "open_new_conversation" }
-	| { kind: "yonaris_adapter"; action: "prepare" | "submit_once" | "confirm_submitted"; promptText: string }
+	| {
+			kind: "yonaris_adapter";
+			action: "prepare" | "submit_once" | "confirm_submitted" | "resume_submitted";
+			promptText: string;
+	  }
 	| { kind: "yonaris_adapter"; action: "collect_current_answer" };
 
 const port = createDocumentDomPort(document, location);
@@ -47,6 +51,8 @@ async function execute(adapter: ConsumerWebAdapter, command: AdapterCommand): Pr
 			return adapter.submitOnce(command.promptText);
 		case "confirm_submitted":
 			return adapter.confirmSubmitted(command.promptText);
+		case "resume_submitted":
+			return adapter.resumeSubmitted(command.promptText);
 		case "collect_current_answer":
 			return adapter.collectCurrentAnswer();
 	}
@@ -62,12 +68,13 @@ function isAdapterCommand(value: unknown): value is AdapterCommand {
 			"prepare",
 			"submit_once",
 			"confirm_submitted",
+			"resume_submitted",
 			"collect_current_answer",
 		].includes(value.action)
 	)
 		return false;
 	return (
-		!["prepare", "submit_once", "confirm_submitted"].includes(value.action) ||
+		!["prepare", "submit_once", "confirm_submitted", "resume_submitted"].includes(value.action) ||
 		("promptText" in value && typeof value.promptText === "string")
 	);
 }

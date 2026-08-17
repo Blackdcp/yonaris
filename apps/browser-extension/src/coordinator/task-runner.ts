@@ -91,7 +91,7 @@ export async function runClaimedTask(
 				await dependencies.journal.resumePostSubmit(claim.taskId);
 				phase = "submit_intent";
 			}
-			await tab.adapter.confirmSubmitted(claim.promptText);
+			await tab.adapter.resumeSubmitted(claim.promptText);
 			if (!claim.submitConfirmed) await dependencies.api.confirmSubmitted(claim, runnerSessionId);
 			await dependencies.journal.advance(claim.taskId, "submitted");
 			phase = "submitted";
