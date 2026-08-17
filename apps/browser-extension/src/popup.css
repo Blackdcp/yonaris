@@ -33,6 +33,10 @@ section {
 	gap: 10px;
 }
 
+[hidden] {
+	display: none !important;
+}
+
 label {
 	font-size: 12px;
 	font-weight: 600;
