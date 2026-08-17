@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { EXPECTED_PPIO_GLOBAL_PROMPTS, type ProgramImportState } from "./program-import-policy";
 import { executeProgramImport, type ProgramImportRepository } from "./program-import-operation";
+import {
+	EXPECTED_PPIO_COMPETITORS,
+	EXPECTED_PPIO_GLOBAL_PROMPTS,
+	type ProgramImportState,
+} from "./program-import-policy";
 
 const request = {
-	schemaVersion: 1,
+	schemaVersion: 2,
 	requestId: "ppio-global-en-20260817",
 	brand: { nameExact: "PPIO", websiteExact: "https://ppio.com/" },
 	customer: { emailExact: "ppio@admin.com", roleExact: "owner" },
@@ -20,6 +24,7 @@ const request = {
 		isDefaultExact: false,
 	},
 	prompts: { exact: EXPECTED_PPIO_GLOBAL_PROMPTS },
+	competitors: { exact: EXPECTED_PPIO_COMPETITORS },
 } as const;
 
 function stateAbsent(): ProgramImportState {
@@ -30,6 +35,7 @@ function stateAbsent(): ProgramImportState {
 		programMatches: 0,
 		program: null,
 		prompts: [],
+		competitors: [],
 		history: { deliveryBatches: 0, observationAttempts: 0, promptRuns: 0, evidenceArtifacts: 0 },
 	};
 }
@@ -52,6 +58,7 @@ function statePresent(): ProgramImportState {
 			isDefault: false,
 		},
 		prompts: [...EXPECTED_PPIO_GLOBAL_PROMPTS],
+		competitors: [...EXPECTED_PPIO_COMPETITORS],
 		history: { deliveryBatches: 0, observationAttempts: 0, promptRuns: 0, evidenceArtifacts: 0 },
 	};
 }

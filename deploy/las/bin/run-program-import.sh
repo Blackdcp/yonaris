@@ -71,7 +71,7 @@ if request != expected_request:
 
 manifest = json.loads(pathlib.Path(manifest_path).read_text(encoding="utf-8"))
 expected_manifest = {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "requestId": request_id,
     "brand": {"nameExact": "PPIO", "websiteExact": "https://ppio.com/"},
     "customer": {"emailExact": "ppio@admin.com", "roleExact": "owner"},
@@ -106,6 +106,17 @@ for prompt in prompts:
     seen_values.add(value)
     if not isinstance(tags, list) or len(tags) != 4 or len(set(tags)) != 4 or not all(isinstance(tag, str) and tag for tag in tags):
         raise SystemExit("Program import manifest prompt tags must be four unique non-empty strings.")
+expected_competitors = [
+    {"name": "无问芯穹", "domains": ["infinigence-ai.com", "infini-ai.com"], "aliases": ["Infinigence AI", "Infini-AI"]},
+    {"name": "七牛云", "domains": ["qiniu.com"], "aliases": ["Qiniu Cloud", "Qiniu"]},
+    {"name": "硅基流动", "domains": ["siliconflow.cn"], "aliases": ["SiliconFlow"]},
+    {"name": "OpenRouter", "domains": ["openrouter.ai"], "aliases": []},
+    {"name": "Together AI", "domains": ["together.ai"], "aliases": ["Together"]},
+    {"name": "Fireworks AI", "domains": ["fireworks.ai"], "aliases": ["Fireworks"]},
+    {"name": "E2B", "domains": ["e2b.dev"], "aliases": []},
+]
+if manifest.get("competitors", {}).get("exact") != expected_competitors:
+    raise SystemExit("Program import manifest competitors do not match the fixed contract.")
 PY
 
 exec 8>"$DEPLOY_ROOT/.program-import.lock"

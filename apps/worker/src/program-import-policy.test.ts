@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
 	assessProgramImport,
+	EXPECTED_PPIO_COMPETITORS,
 	EXPECTED_PPIO_GLOBAL_PROMPTS,
-	parseProgramImportRequest,
 	ProgramImportError,
 	type ProgramImportState,
+	parseProgramImportRequest,
 } from "./program-import-policy";
 
 const validRequest = {
-	schemaVersion: 1,
+	schemaVersion: 2,
 	requestId: "ppio-global-en-20260817",
 	brand: { nameExact: "PPIO", websiteExact: "https://ppio.com/" },
 	customer: { emailExact: "ppio@admin.com", roleExact: "owner" },
@@ -25,6 +26,7 @@ const validRequest = {
 		isDefaultExact: false,
 	},
 	prompts: { exact: EXPECTED_PPIO_GLOBAL_PROMPTS },
+	competitors: { exact: EXPECTED_PPIO_COMPETITORS },
 } as const;
 
 function validState(overrides: Partial<ProgramImportState> = {}): ProgramImportState {
@@ -35,6 +37,7 @@ function validState(overrides: Partial<ProgramImportState> = {}): ProgramImportS
 		programMatches: 0,
 		program: null,
 		prompts: [],
+		competitors: [],
 		history: { deliveryBatches: 0, observationAttempts: 0, promptRuns: 0, evidenceArtifacts: 0 },
 		...overrides,
 	};
@@ -92,6 +95,27 @@ describe("PPIO global Program import assessment", () => {
 				isDefault: false,
 			},
 			prompts: [...EXPECTED_PPIO_GLOBAL_PROMPTS],
+			competitors: [...EXPECTED_PPIO_COMPETITORS],
+		});
+		assert.equal(assessProgramImport(validRequest, state).action, "unchanged");
+	});
+
+	it("treats the exact prompt set as idempotent regardless of database row order", () => {
+		const state = validState({
+			programMatches: 1,
+			program: {
+				key: "global-market",
+				name: "Global Market",
+				market: "US",
+				locale: "en-US",
+				timezone: "UTC",
+				evaluationRole: "scored",
+				automaticTargetKeys: [],
+				enabled: true,
+				isDefault: false,
+			},
+			prompts: [...EXPECTED_PPIO_GLOBAL_PROMPTS].reverse(),
+			competitors: [...EXPECTED_PPIO_COMPETITORS].reverse(),
 		});
 		assert.equal(assessProgramImport(validRequest, state).action, "unchanged");
 	});
@@ -111,6 +135,7 @@ describe("PPIO global Program import assessment", () => {
 				isDefault: false,
 			},
 			prompts: [...EXPECTED_PPIO_GLOBAL_PROMPTS],
+			competitors: [...EXPECTED_PPIO_COMPETITORS],
 		});
 		const cases: Array<[Partial<ProgramImportState>, string]> = [
 			[{ brandMatches: 2 }, "brand_ambiguous"],
@@ -131,6 +156,14 @@ describe("PPIO global Program import assessment", () => {
 					prompts: EXPECTED_PPIO_GLOBAL_PROMPTS.slice(1),
 				},
 				"prompt_identity_mismatch",
+			],
+			[
+				{
+					programMatches: 1,
+					program: baseExactState.program,
+					competitors: EXPECTED_PPIO_COMPETITORS.slice(1),
+				},
+				"competitor_identity_mismatch",
 			],
 		];
 

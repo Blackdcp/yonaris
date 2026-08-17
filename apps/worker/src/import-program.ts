@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import { computeSystemTags } from "@workspace/lib/tag-utils";
 import { db } from "@workspace/lib/db/db";
 import {
 	brands,
+	competitors,
 	deliveryBatches,
 	evidenceArtifacts,
 	measurementScopes,
@@ -10,9 +10,15 @@ import {
 	promptRuns,
 	prompts,
 } from "@workspace/lib/db/schema";
+import { computeSystemTags } from "@workspace/lib/tag-utils";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { executeProgramImport, type ProgramImportMode, type ProgramImportRepository } from "./program-import-operation";
-import { parseProgramImportRequest, type ProgramImportRequest, type ProgramImportState, ProgramImportError } from "./program-import-policy";
+import {
+	ProgramImportError,
+	type ProgramImportRequest,
+	type ProgramImportState,
+	parseProgramImportRequest,
+} from "./program-import-policy";
 
 type ProgramImportCliOptions = {
 	mode: ProgramImportMode;
@@ -78,65 +84,73 @@ async function readLockedState(request: ProgramImportRequest, connection: any): 
 		brandId === null
 			? []
 			: await connection
-				.select({
-					id: measurementScopes.id,
-					key: measurementScopes.key,
-					name: measurementScopes.name,
-					market: measurementScopes.market,
-					locale: measurementScopes.locale,
-					timezone: measurementScopes.timezone,
-					evaluationRole: measurementScopes.samplingEvaluationRole,
-					automaticTargetKeys: measurementScopes.automaticTargetKeys,
-					enabled: measurementScopes.enabled,
-					isDefault: measurementScopes.isDefault,
-				})
-				.from(measurementScopes)
-				.where(and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, request.program.keyExact)))
-				.limit(2);
+					.select({
+						id: measurementScopes.id,
+						key: measurementScopes.key,
+						name: measurementScopes.name,
+						market: measurementScopes.market,
+						locale: measurementScopes.locale,
+						timezone: measurementScopes.timezone,
+						evaluationRole: measurementScopes.samplingEvaluationRole,
+						automaticTargetKeys: measurementScopes.automaticTargetKeys,
+						enabled: measurementScopes.enabled,
+						isDefault: measurementScopes.isDefault,
+					})
+					.from(measurementScopes)
+					.where(and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.key, request.program.keyExact)))
+					.limit(2);
 
 	if (scopeRows.length === 1) {
 		await connection.execute(sql`select id from measurement_scopes where id = ${scopeRows[0]!.id} for update`);
 	}
 
 	const scopeId = scopeRows.length === 1 ? scopeRows[0]!.id : null;
+	const competitorRows =
+		brandId === null
+			? []
+			: await connection
+					.select({ name: competitors.name, domains: competitors.domains, aliases: competitors.aliases })
+					.from(competitors)
+					.where(eq(competitors.brandId, brandId))
+					.orderBy(asc(competitors.name), asc(competitors.id));
 	const promptRows =
 		brandId === null || scopeId === null
 			? []
 			: await connection
-				.select({ value: prompts.value, tagsExact: prompts.tags })
-				.from(prompts)
-				.where(and(eq(prompts.brandId, brandId), eq(prompts.scopeId, scopeId), eq(prompts.enabled, true)))
-				.orderBy(asc(prompts.createdAt), asc(prompts.id));
+					.select({ value: prompts.value, tagsExact: prompts.tags })
+					.from(prompts)
+					.where(and(eq(prompts.brandId, brandId), eq(prompts.scopeId, scopeId), eq(prompts.enabled, true)))
+					.orderBy(asc(prompts.createdAt), asc(prompts.id));
 
 	const [deliveryBatchHistory, observationAttemptHistory, promptRunHistory, evidenceArtifactHistory] =
 		scopeId === null
 			? [0, 0, 0, 0]
 			: await Promise.all([
-				connection
-					.select({ count: count() })
-					.from(deliveryBatches)
-					.where(eq(deliveryBatches.scopeId, scopeId))
-					.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
-				connection
-					.select({ count: count() })
-					.from(observationAttempts)
-					.where(eq(observationAttempts.scopeId, scopeId))
-					.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
-				connection
-					.select({ count: count() })
-					.from(promptRuns)
-					.where(eq(promptRuns.scopeId, scopeId))
-					.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
-				connection
-					.execute(sql<{ count: number | string }>`
+					connection
+						.select({ count: count() })
+						.from(deliveryBatches)
+						.where(eq(deliveryBatches.scopeId, scopeId))
+						.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
+					connection
+						.select({ count: count() })
+						.from(observationAttempts)
+						.where(eq(observationAttempts.scopeId, scopeId))
+						.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
+					connection
+						.select({ count: count() })
+						.from(promptRuns)
+						.where(eq(promptRuns.scopeId, scopeId))
+						.then((rows: Array<{ count: number | string }>) => Number(rows[0]?.count ?? 0)),
+					connection
+						.execute(sql<{ count: number | string }>`
 						select count(*)::int as count
 						from evidence_artifacts
 						where brand_id = ${brandId}
 						  and scope_id = ${scopeId}
 						  and status = 'attached'
 					`)
-					.then((result: { rows: Array<{ count: number | string }> }) => Number(result.rows[0]?.count ?? 0)),
-			]);
+						.then((result: { rows: Array<{ count: number | string }> }) => Number(result.rows[0]?.count ?? 0)),
+				]);
 
 	return {
 		brandMatches: brandRows.length,
@@ -146,18 +160,26 @@ async function readLockedState(request: ProgramImportRequest, connection: any): 
 		program:
 			scopeRows.length === 1
 				? {
-					key: scopeRows[0]!.key,
-					name: scopeRows[0]!.name,
-					market: scopeRows[0]!.market,
-					locale: scopeRows[0]!.locale,
-					timezone: scopeRows[0]!.timezone,
-					evaluationRole: scopeRows[0]!.evaluationRole,
-					automaticTargetKeys: scopeRows[0]!.automaticTargetKeys as string[] | null,
-					enabled: scopeRows[0]!.enabled,
-					isDefault: scopeRows[0]!.isDefault,
-				}
+						key: scopeRows[0]!.key,
+						name: scopeRows[0]!.name,
+						market: scopeRows[0]!.market,
+						locale: scopeRows[0]!.locale,
+						timezone: scopeRows[0]!.timezone,
+						evaluationRole: scopeRows[0]!.evaluationRole,
+						automaticTargetKeys: scopeRows[0]!.automaticTargetKeys as string[] | null,
+						enabled: scopeRows[0]!.enabled,
+						isDefault: scopeRows[0]!.isDefault,
+					}
 				: null,
-		prompts: promptRows.map((row: { value: string; tagsExact: string[] }) => ({ value: row.value, tagsExact: row.tagsExact })),
+		prompts: promptRows.map((row: { value: string; tagsExact: string[] }) => ({
+			value: row.value,
+			tagsExact: row.tagsExact,
+		})),
+		competitors: competitorRows.map((row: { name: string; domains: string[]; aliases: string[] }) => ({
+			name: row.name,
+			domains: row.domains,
+			aliases: row.aliases,
+		})),
 		history: {
 			deliveryBatches: deliveryBatchHistory,
 			observationAttempts: observationAttemptHistory,
@@ -183,25 +205,36 @@ function createRepository(request: ProgramImportRequest): ProgramImportRepositor
 			}),
 		lockOperation: async () => {
 			if (transactionConnection === null) {
-				throw new ProgramImportError("transaction_contract_error", "Repository lockOperation must run inside withSerializableTransaction");
+				throw new ProgramImportError(
+					"transaction_contract_error",
+					"Repository lockOperation must run inside withSerializableTransaction",
+				);
 			}
 			await transactionConnection.execute(sql`select pg_advisory_xact_lock(hashtext(${request.requestId}))`);
 		},
 		readStateForUpdate: async () => {
 			if (transactionConnection === null) {
-				throw new ProgramImportError("transaction_contract_error", "Repository readStateForUpdate must run inside withSerializableTransaction");
+				throw new ProgramImportError(
+					"transaction_contract_error",
+					"Repository readStateForUpdate must run inside withSerializableTransaction",
+				);
 			}
 			return readLockedState(request, transactionConnection);
 		},
 		createProgramWithPrompts: async (currentRequest) => {
 			if (transactionConnection === null) {
-				throw new ProgramImportError("transaction_contract_error", "Repository createProgramWithPrompts must run inside withSerializableTransaction");
+				throw new ProgramImportError(
+					"transaction_contract_error",
+					"Repository createProgramWithPrompts must run inside withSerializableTransaction",
+				);
 			}
 
 			const brandRows = await transactionConnection
 				.select({ id: brands.id, name: brands.name, website: brands.website })
 				.from(brands)
-				.where(and(eq(brands.name, currentRequest.brand.nameExact), eq(brands.website, currentRequest.brand.websiteExact)))
+				.where(
+					and(eq(brands.name, currentRequest.brand.nameExact), eq(brands.website, currentRequest.brand.websiteExact)),
+				)
 				.limit(2);
 			if (brandRows.length !== 1) {
 				throw new ProgramImportError("brand_not_found", "PPIO brand was not found");
@@ -244,6 +277,16 @@ function createRepository(request: ProgramImportRequest): ProgramImportRepositor
 					enabled: true,
 					tags: [...prompt.tagsExact],
 					systemTags: computeSystemTags(prompt.value, brand.name, brand.website),
+				})),
+			);
+
+			await transactionConnection.delete(competitors).where(eq(competitors.brandId, brand.id));
+			await transactionConnection.insert(competitors).values(
+				currentRequest.competitors.exact.map((competitor) => ({
+					brandId: brand.id,
+					name: competitor.name,
+					domains: [...competitor.domains],
+					aliases: [...competitor.aliases],
 				})),
 			);
 		},

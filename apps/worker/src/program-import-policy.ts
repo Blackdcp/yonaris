@@ -41,8 +41,18 @@ export const EXPECTED_PPIO_GLOBAL_PROMPTS = [
 	},
 ] as const;
 
+export const EXPECTED_PPIO_COMPETITORS = [
+	{ name: "无问芯穹", domains: ["infinigence-ai.com", "infini-ai.com"], aliases: ["Infinigence AI", "Infini-AI"] },
+	{ name: "七牛云", domains: ["qiniu.com"], aliases: ["Qiniu Cloud", "Qiniu"] },
+	{ name: "硅基流动", domains: ["siliconflow.cn"], aliases: ["SiliconFlow"] },
+	{ name: "OpenRouter", domains: ["openrouter.ai"], aliases: [] },
+	{ name: "Together AI", domains: ["together.ai"], aliases: ["Together"] },
+	{ name: "Fireworks AI", domains: ["fireworks.ai"], aliases: ["Fireworks"] },
+	{ name: "E2B", domains: ["e2b.dev"], aliases: [] },
+] as const;
+
 export type ProgramImportRequest = {
-	schemaVersion: 1;
+	schemaVersion: 2;
 	requestId: "ppio-global-en-20260817";
 	brand: { nameExact: "PPIO"; websiteExact: "https://ppio.com/" };
 	customer: { emailExact: "ppio@admin.com"; roleExact: "owner" };
@@ -58,6 +68,7 @@ export type ProgramImportRequest = {
 		isDefaultExact: false;
 	};
 	prompts: { exact: readonly { value: string; tagsExact: readonly string[] }[] };
+	competitors: { exact: readonly { name: string; domains: readonly string[]; aliases: readonly string[] }[] };
 };
 
 export type ProgramImportState = {
@@ -77,6 +88,7 @@ export type ProgramImportState = {
 		isDefault: boolean;
 	};
 	prompts: readonly { value: string; tagsExact: readonly string[] }[];
+	competitors: readonly { name: string; domains: readonly string[]; aliases: readonly string[] }[];
 	history: {
 		deliveryBatches: number;
 		observationAttempts: number;
@@ -115,22 +127,35 @@ function promptsEqual(
 	left: readonly { value: string; tagsExact: readonly string[] }[],
 	right: readonly { value: string; tagsExact: readonly string[] }[],
 ) {
+	const canonicalize = (prompts: readonly { value: string; tagsExact: readonly string[] }[]) =>
+		prompts.map((prompt) => JSON.stringify([prompt.value, prompt.tagsExact])).sort();
+	const canonicalLeft = canonicalize(left);
+	const canonicalRight = canonicalize(right);
 	return (
-		left.length === right.length &&
-		left.every(
-			(prompt, index) =>
-				prompt.value === right[index]?.value &&
-				prompt.tagsExact.length === right[index]?.tagsExact.length &&
-				prompt.tagsExact.every((tag, tagIndex) => tag === right[index]?.tagsExact[tagIndex]),
-		)
+		canonicalLeft.length === canonicalRight.length &&
+		canonicalLeft.every((value, index) => value === canonicalRight[index])
+	);
+}
+
+function competitorsEqual(
+	left: readonly { name: string; domains: readonly string[]; aliases: readonly string[] }[],
+	right: readonly { name: string; domains: readonly string[]; aliases: readonly string[] }[],
+): boolean {
+	const canonicalize = (items: readonly { name: string; domains: readonly string[]; aliases: readonly string[] }[]) =>
+		items.map((item) => JSON.stringify([item.name, [...item.domains].sort(), [...item.aliases].sort()])).sort();
+	const canonicalLeft = canonicalize(left);
+	const canonicalRight = canonicalize(right);
+	return (
+		canonicalLeft.length === canonicalRight.length &&
+		canonicalLeft.every((value, index) => value === canonicalRight[index])
 	);
 }
 
 export function parseProgramImportRequest(value: unknown): ProgramImportRequest {
 	if (
 		!isRecord(value) ||
-		!hasExactKeys(value, ["schemaVersion", "requestId", "brand", "customer", "program", "prompts"]) ||
-		value.schemaVersion !== 1 ||
+		!hasExactKeys(value, ["schemaVersion", "requestId", "brand", "customer", "program", "prompts", "competitors"]) ||
+		value.schemaVersion !== 2 ||
 		value.requestId !== "ppio-global-en-20260817"
 	) {
 		throw new ProgramImportError("invalid_request_contract", "The Program import request contract is invalid");
@@ -205,8 +230,30 @@ export function parseProgramImportRequest(value: unknown): ProgramImportRequest 
 		throw new ProgramImportError("invalid_prompt_contract", "The Program import prompt contract is invalid");
 	}
 
+	const competitors = value.competitors;
+	if (!isRecord(competitors) || !hasExactKeys(competitors, ["exact"]) || !Array.isArray(competitors.exact)) {
+		throw new ProgramImportError("invalid_competitor_contract", "The Program import competitor contract is invalid");
+	}
+	const exactCompetitors = competitors.exact.map((entry) => {
+		if (
+			!isRecord(entry) ||
+			!hasExactKeys(entry, ["name", "domains", "aliases"]) ||
+			typeof entry.name !== "string" ||
+			!Array.isArray(entry.domains) ||
+			!entry.domains.every((domain) => typeof domain === "string") ||
+			!Array.isArray(entry.aliases) ||
+			!entry.aliases.every((alias) => typeof alias === "string")
+		) {
+			throw new ProgramImportError("invalid_competitor_contract", "The Program import competitor contract is invalid");
+		}
+		return { name: entry.name, domains: [...entry.domains], aliases: [...entry.aliases] };
+	});
+	if (!competitorsEqual(exactCompetitors, EXPECTED_PPIO_COMPETITORS)) {
+		throw new ProgramImportError("invalid_competitor_contract", "The Program import competitor contract is invalid");
+	}
+
 	return {
-		schemaVersion: 1,
+		schemaVersion: 2,
 		requestId: "ppio-global-en-20260817",
 		brand: { nameExact: "PPIO", websiteExact: "https://ppio.com/" },
 		customer: { emailExact: "ppio@admin.com", roleExact: "owner" },
@@ -222,14 +269,17 @@ export function parseProgramImportRequest(value: unknown): ProgramImportRequest 
 			isDefaultExact: false,
 		},
 		prompts: { exact },
+		competitors: { exact: exactCompetitors },
 	};
 }
 
 export function assessProgramImport(request: ProgramImportRequest, state: ProgramImportState): ProgramImportAssessment {
 	if (state.brandMatches === 0) throw new ProgramImportError("brand_not_found", "PPIO brand was not found");
 	if (state.brandMatches !== 1) throw new ProgramImportError("brand_ambiguous", "PPIO brand is ambiguous");
-	if (state.customerMatches === 0) throw new ProgramImportError("customer_not_found", "PPIO customer owner was not found");
-	if (state.customerMatches !== 1) throw new ProgramImportError("customer_ambiguous", "PPIO customer owner is ambiguous");
+	if (state.customerMatches === 0)
+		throw new ProgramImportError("customer_not_found", "PPIO customer owner was not found");
+	if (state.customerMatches !== 1)
+		throw new ProgramImportError("customer_ambiguous", "PPIO customer owner is ambiguous");
 	if (state.customerRole !== request.customer.roleExact) {
 		throw new ProgramImportError("customer_role_mismatch", "PPIO customer role does not match");
 	}
@@ -262,6 +312,9 @@ export function assessProgramImport(request: ProgramImportRequest, state: Progra
 
 	if (!promptsEqual(state.prompts, request.prompts.exact)) {
 		throw new ProgramImportError("prompt_identity_mismatch", "Program prompts do not match");
+	}
+	if (!competitorsEqual(state.competitors, request.competitors.exact)) {
+		throw new ProgramImportError("competitor_identity_mismatch", "PPIO competitors do not match");
 	}
 
 	const historyCount = Object.values(state.history).reduce((total, count) => total + count, 0);
