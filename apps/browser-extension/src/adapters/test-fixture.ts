@@ -19,6 +19,7 @@ export type AdapterFixture = {
 	conversationUrl: string;
 	composerMatches: number;
 	sendMatches: number;
+	sendMatchesBeforeFill: number;
 	newConversationLabels: string[];
 	signedOut: boolean;
 	captcha: boolean;
@@ -43,6 +44,7 @@ export function createAdapterFixture(
 		conversationUrl: "https://chat.deepseek.com/a/chat/s/test-session",
 		composerMatches: 1,
 		sendMatches: 1,
+		sendMatchesBeforeFill: override.sendMatches ?? 1,
 		signedOut: false,
 		captcha: false,
 		rateLimited: false,
@@ -85,7 +87,7 @@ export class FixtureDomPort implements ConsumerDomPort {
 			case "composer":
 				return elements(this.#fixture.composerMatches, "");
 			case "send":
-				return elements(this.#fixture.sendMatches, "");
+				return elements(this.#filledPrompt ? this.#fixture.sendMatches : this.#fixture.sendMatchesBeforeFill, "");
 			case "new_conversation":
 				return this.#fixture.newConversationLabels.map((text) => ({ text, visible: true }));
 			case "login_wall":

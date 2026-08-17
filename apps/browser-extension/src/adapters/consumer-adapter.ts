@@ -45,7 +45,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		this.#assertApprovedUrl(false);
 		await this.#assertUnblocked();
 		await this.#uniqueVisible("composer", this.#contract.composer);
-		await this.#uniqueVisible("send", this.#contract.send);
+		if (this.surface !== "doubao.consumer_web") await this.#uniqueVisible("send", this.#contract.send);
 		await this.#newConversationAction();
 	}
 
@@ -68,7 +68,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		this.#assertApprovedUrl(false);
 		await this.#assertUnblocked();
 		await this.#uniqueVisible("composer", this.#contract.composer);
-		await this.#uniqueVisible("send", this.#contract.send);
+		if (this.surface !== "doubao.consumer_web") await this.#uniqueVisible("send", this.#contract.send);
 		this.#answerCountBeforeSubmit = visibleElements(await this.#port.query("answer", this.#contract.answer)).length;
 		this.#preparedPrompt = prompt;
 	}
@@ -79,8 +79,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		if (this.#submitted) throw this.#error("post_submit_unknown", "Prompt submission was already attempted");
 		await this.#assertUnblocked();
 		const composer = await this.#uniqueVisible("composer", this.#contract.composer);
-		const send = await this.#uniqueVisible("send", this.#contract.send);
 		await this.#port.fill("composer", this.#contract.composer, composer.index, prompt);
+		const send = await this.#uniqueVisible("send", this.#contract.send);
 		this.#submitted = true;
 		await this.#port.click("send", this.#contract.send, send.index);
 	}
