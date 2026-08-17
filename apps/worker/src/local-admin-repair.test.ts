@@ -79,6 +79,37 @@ describe("local admin repair ambiguity guards", () => {
 		);
 	});
 
+	it("prefers an existing platform admin over customer organization owners", () => {
+		assert.deepEqual(
+			selectUniqueBootstrapOwner([
+				{
+					membershipId: "customer-owner",
+					organizationId: "ppio",
+					userId: "customer-user",
+					memberRole: "owner",
+					userRole: "user",
+					hasReportGeneratorAccess: false,
+				},
+				{
+					membershipId: "platform-owner",
+					organizationId: "yonaris",
+					userId: "platform-user",
+					memberRole: "owner",
+					userRole: "user, admin",
+					hasReportGeneratorAccess: true,
+				},
+			]),
+			{
+				membershipId: "platform-owner",
+				organizationId: "yonaris",
+				userId: "platform-user",
+				memberRole: "owner",
+				userRole: "user, admin",
+				hasReportGeneratorAccess: true,
+			},
+		);
+	});
+
 	it("does not treat viewer or lookalike roles as bootstrap ownership", () => {
 		assert.throws(
 			() =>

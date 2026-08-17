@@ -117,6 +117,28 @@ export function hasOrganizationRole(value: string, expected: "owner" | "admin"):
 		.some((role) => role === expected);
 }
 
+function hasGlobalAdminRole(value: string | null): boolean {
+	return (
+		value
+			?.split(",")
+			.map((role) => role.trim())
+			.some((role) => role === "admin") ?? false
+	);
+}
+
+function sortBootstrapCandidates(candidates: BootstrapOwnerCandidate[]): BootstrapOwnerCandidate[] {
+	return [...candidates].sort((left, right) => {
+		if (left.hasReportGeneratorAccess !== right.hasReportGeneratorAccess) {
+			return left.hasReportGeneratorAccess ? -1 : 1;
+		}
+		if (left.organizationId !== right.organizationId) {
+			return left.organizationId < right.organizationId ? -1 : 1;
+		}
+		if (left.membershipId === right.membershipId) return 0;
+		return left.membershipId < right.membershipId ? -1 : 1;
+	});
+}
+
 export function selectUniqueBootstrapOwner(candidates: BootstrapOwnerCandidate[]): BootstrapOwnerCandidate {
 	const privilegedCandidates = candidates.filter(
 		(candidate) =>
@@ -127,6 +149,10 @@ export function selectUniqueBootstrapOwner(candidates: BootstrapOwnerCandidate[]
 		throw new LocalAdminRepairError("bootstrap_owner_not_found", "No organization has an owner/admin member");
 	}
 
+	const existingPlatformAdmins = privilegedCandidates.filter((candidate) => hasGlobalAdminRole(candidate.userRole));
+	const existingPlatformAdmin = sortBootstrapCandidates(existingPlatformAdmins)[0];
+	if (existingPlatformAdmin) return existingPlatformAdmin;
+
 	const uniqueUserIds = new Set(privilegedCandidates.map((candidate) => candidate.userId));
 	if (uniqueUserIds.size !== 1) {
 		throw new LocalAdminRepairError(
@@ -135,13 +161,7 @@ export function selectUniqueBootstrapOwner(candidates: BootstrapOwnerCandidate[]
 		);
 	}
 
-	return [...privilegedCandidates].sort((left, right) => {
-		if (left.organizationId !== right.organizationId) {
-			return left.organizationId < right.organizationId ? -1 : 1;
-		}
-		if (left.membershipId === right.membershipId) return 0;
-		return left.membershipId < right.membershipId ? -1 : 1;
-	})[0] as BootstrapOwnerCandidate;
+	return sortBootstrapCandidates(privilegedCandidates)[0] as BootstrapOwnerCandidate;
 }
 
 export type MembershipRow = { id: string; role: string };
