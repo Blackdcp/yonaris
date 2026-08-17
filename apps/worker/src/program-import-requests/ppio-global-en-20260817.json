@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "requestId": "ppio-global-en-20260817",
+  "brand": {
+    "nameExact": "PPIO",
+    "websiteExact": "https://ppio.com/"
+  },
+  "customer": {
+    "emailExact": "ppio@admin.com",
+    "roleExact": "owner"
+  },
+  "program": {
+    "keyExact": "global-market",
+    "nameExact": "Global Market",
+    "marketExact": "US",
+    "localeExact": "en-US",
+    "timezoneExact": "UTC",
+    "evaluationRoleExact": "scored",
+    "manualOnlyExact": true,
+    "enabledExact": true,
+    "isDefaultExact": false
+  },
+  "prompts": {
+    "exact": [
+      {
+        "value": "independent Agentic Cloud platforms",
+        "tagsExact": ["p0_brand_diagnostic_v1", "brand-observation", "agentic-cloud", "os-001"]
+      },
+      {
+        "value": "multi-model API platforms for production AI",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "model-api", "os-002"]
+      },
+      {
+        "value": "OpenAI- and Anthropic-compatible model gateways",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "model-api", "os-003"]
+      },
+      {
+        "value": "secure code-execution sandboxes for AI agents",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "agent-sandbox", "os-004"]
+      },
+      {
+        "value": "AI agent Skills and MCP integrations",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "agent-tools", "os-005"]
+      },
+      {
+        "value": "GPU container cloud for AI workloads",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "gpu-cloud", "os-006"]
+      },
+      {
+        "value": "serverless GPU inference",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "serverless-gpus", "os-007"]
+      },
+      {
+        "value": "AI inference performance, reliability and rate limits",
+        "tagsExact": ["p0_trend_context_v1", "trend-observation", "ai-infra", "os-008"]
+      },
+      {
+        "value": "edge CDN and live-video delivery",
+        "tagsExact": ["p0_result_core_v1", "result-monitoring", "edge-cdn", "os-009"]
+      },
+      {
+        "value": "enterprise AI security and data governance",
+        "tagsExact": ["p0_brand_diagnostic_v1", "brand-observation", "enterprise", "os-010"]
+      }
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "operation": "import-program",
+  "requestId": "ppio-global-en-20260817",
+  "manifestPath": "apps/worker/src/program-import-requests/ppio-global-en-20260817.json"
+}

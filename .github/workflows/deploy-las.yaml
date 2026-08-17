@@ -24,6 +24,7 @@ on:
       - deploy/las/response-snapshot-activation/**
       - deploy/las/response-snapshot-backfills/**
       - deploy/las/reviewed-consumer-cohort-imports/**
+      - deploy/las/program-imports/**
       - deploy/las/program-locale-repairs/**
       - deploy/las/sampling-batch-operations/**
       - package.json
@@ -354,6 +355,55 @@ jobs:
           }
           if request != expected:
               raise SystemExit("Program locale repair request does not match the fixed contract.")
+          PY
+            echo "has_request=true" >> "$GITHUB_OUTPUT"
+            echo "request_name=$request_name" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_request=false" >> "$GITHUB_OUTPUT"
+            echo "request_name=" >> "$GITHUB_OUTPUT"
+          fi
+
+  program_import_plan:
+    name: Plan approved Program import
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      has_request: ${{ steps.plan.outputs.has_request }}
+      request_name: ${{ steps.plan.outputs.request_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Detect and validate Program import request
+        id: plan
+        shell: bash
+        run: |
+          shopt -s nullglob
+          requests=(deploy/las/program-imports/requests/*.json)
+          if (( ${#requests[@]} > 1 )); then
+            echo "Only one Program import request is allowed per release." >&2
+            exit 1
+          elif (( ${#requests[@]} == 1 )); then
+            request_name="$(basename -- "${requests[0]}")"
+            if [[ ! "$request_name" =~ ^[a-z0-9][a-z0-9._-]{0,95}\.json$ ]]; then
+              echo "Invalid Program import request filename." >&2
+              exit 1
+            fi
+            python3 - "${requests[0]}" <<'PY'
+          import json
+          import pathlib
+          import sys
+
+          request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+          expected = {
+              "schemaVersion": 1,
+              "operation": "import-program",
+              "requestId": "ppio-global-en-20260817",
+              "manifestPath": "apps/worker/src/program-import-requests/ppio-global-en-20260817.json",
+          }
+          if request != expected:
+              raise SystemExit("Program import request does not match the fixed contract.")
           PY
             echo "has_request=true" >> "$GITHUB_OUTPUT"
             echo "request_name=$request_name" >> "$GITHUB_OUTPUT"
@@ -871,6 +921,44 @@ jobs:
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-program-locale-repair.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/program-locale-repairs/requests/$REQUEST_NAME'"
+
+  program-import:
+    name: Import approved production Program
+    needs:
+      - deploy
+      - program_import_plan
+    if: needs.deploy.result == 'success' && needs.program_import_plan.outputs.has_request == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://portal.yonaris.com/app/ppio
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Execute Program import
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+          REQUEST_NAME: ${{ needs.program_import_plan.outputs.request_name }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-program-import.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/program-imports/requests/$REQUEST_NAME'"
 
   response-snapshot-backfill:
     name: Backfill reviewed StepFun response snapshots
