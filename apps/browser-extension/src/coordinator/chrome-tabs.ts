@@ -4,7 +4,11 @@ import type { RunnerTab, RunnerTabDriver } from "./task-runner";
 
 type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "preflight" | "open_new_conversation" | "collect_current_answer" }
-	| { kind: "yonaris_adapter"; action: "prepare" | "submit_once" | "confirm_submitted"; promptText: string };
+	| {
+			kind: "yonaris_adapter";
+			action: "prepare" | "submit_once" | "confirm_submitted" | "resume_submitted";
+			promptText: string;
+	  };
 
 type BrowserTab = { id?: number; url?: string; status?: string };
 
@@ -90,6 +94,10 @@ class ContentScriptAdapter implements ConsumerWebAdapter {
 
 	async confirmSubmitted(promptText: string): Promise<void> {
 		await this.#command({ kind: "yonaris_adapter", action: "confirm_submitted", promptText });
+	}
+
+	async resumeSubmitted(promptText: string): Promise<void> {
+		await this.#command({ kind: "yonaris_adapter", action: "resume_submitted", promptText });
 	}
 
 	async collectCurrentAnswer(): Promise<CollectedAnswer> {

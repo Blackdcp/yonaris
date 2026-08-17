@@ -68,6 +68,7 @@ export interface ConsumerWebAdapter {
 	prepare(promptText: string): Promise<void>;
 	submitOnce(promptText: string): Promise<void>;
 	confirmSubmitted(promptText: string): Promise<void>;
+	resumeSubmitted(promptText: string): Promise<void>;
 	collectCurrentAnswer(): Promise<CollectedAnswer>;
 }
 

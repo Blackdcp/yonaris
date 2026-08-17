@@ -29,6 +29,8 @@ export type AdapterFixture = {
 	answerTimeline: string[];
 	newAnswerCount: number;
 	submittedPrompt: string | null;
+	initiallySubmitted: boolean;
+	conversationUrlDelayMs: number;
 	searchUsedCount: number;
 	searchNotUsedCount: number;
 };
@@ -53,6 +55,8 @@ export function createAdapterFixture(
 		answerTimeline: [],
 		newAnswerCount: 1,
 		submittedPrompt: null,
+		initiallySubmitted: false,
+		conversationUrlDelayMs: 0,
 		searchUsedCount: 0,
 		searchNotUsedCount: 0,
 		...override,
@@ -72,10 +76,14 @@ export class FixtureDomPort implements ConsumerDomPort {
 
 	constructor(fixture: AdapterFixture) {
 		this.#fixture = fixture;
+		this.#submitted = fixture.initiallySubmitted;
+		this.#conversationOpened = fixture.initiallySubmitted;
 	}
 
 	currentUrl(): string {
-		return this.#submitted ? this.#fixture.conversationUrl : this.#fixture.pageUrl;
+		return this.#submitted && this.elapsedMs >= this.#fixture.conversationUrlDelayMs
+			? this.#fixture.conversationUrl
+			: this.#fixture.pageUrl;
 	}
 
 	now(): number {
