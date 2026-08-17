@@ -8,6 +8,11 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { AlertTriangle, Bot, CheckCircle2, Laptop, UserRoundCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ListPagination } from "@/components/list-pagination";
+import {
+	type OverseasRunCohortView,
+	OverseasRunNowDialog,
+	type OverseasRunNowInput,
+} from "@/components/sampling/overseas-run-now-dialog";
 import { SamplingBatchCreateDialog } from "@/components/sampling/sampling-batch-create-dialog";
 import { SamplingBatchList } from "@/components/sampling/sampling-batch-list";
 import { storeSamplingLease } from "@/components/sampling/sampling-lease-storage";
@@ -25,6 +30,7 @@ import type {
 } from "@/components/sampling/types";
 import { getAppName } from "@/lib/route-head";
 import { listBrowserRunnerDevicesFn } from "@/server/browser-runner-devices";
+import { listOverseasRunCohortsFn, runOverseasNowFn } from "@/server/overseas-run-now";
 import {
 	cancelSamplingBatchFn,
 	claimSamplingTaskFn,
@@ -120,6 +126,15 @@ function SamplingQueuePage() {
 		queryKey: ["admin", "sampling", "browser-runner-devices"],
 		queryFn: () => listBrowserRunnerDevicesFn(),
 		refetchInterval: 60_000,
+	});
+	const overseasQuery = useQuery({
+		queryKey: ["admin", "sampling", "overseas-runs", selectedBrandId],
+		queryFn: () => {
+			if (!selectedBrandId) throw new Error("Select a brand before loading overseas runs.");
+			return listOverseasRunCohortsFn({ data: { brandId: selectedBrandId, limit: 10 } });
+		},
+		enabled: Boolean(selectedBrandId),
+		refetchInterval: 15_000,
 	});
 
 	const scopeById = useMemo(
@@ -221,6 +236,10 @@ function SamplingQueuePage() {
 		await runSamplingNowFn({ data: input });
 		await listQuery.refetch();
 	};
+	const runOverseasNow = async (input: OverseasRunNowInput) => {
+		await runOverseasNowFn({ data: input });
+		await overseasQuery.refetch();
+	};
 
 	const cancelBatch = async (batch: SamplingBatchView) => {
 		if (!window.confirm(`Cancel sampling batch “${batch.name}”? Claimed and unfinished tasks will be cancelled.`))
@@ -317,6 +336,20 @@ function SamplingQueuePage() {
 			promptCount:
 				context?.selectedBrand?.prompts.filter((prompt) => prompt.enabled && prompt.scopeId === scope.id).length ?? 0,
 		}));
+	const overseasPrograms = samplingScopes
+		.filter(
+			(scope) =>
+				scope.samplingEvaluationRole === "scored" &&
+				scope.market.toUpperCase() === "US" &&
+				scope.locale.toLowerCase().startsWith("en"),
+		)
+		.map((scope) => ({
+			id: scope.id,
+			name: scope.name,
+			timezone: scope.timezone,
+			promptCount:
+				context?.selectedBrand?.prompts.filter((prompt) => prompt.enabled && prompt.scopeId === scope.id).length ?? 0,
+		}));
 	const browserRunnerDevices = (devicesQuery.data ?? []) as BrowserRunnerDeviceView[];
 
 	return (
@@ -340,6 +373,15 @@ function SamplingQueuePage() {
 					</div>
 				)}
 			</div>
+
+			{context?.selectedBrand && (
+				<OverseasRunNowDialog
+					brandId={context.selectedBrand.id}
+					programs={overseasPrograms}
+					cohorts={(overseasQuery.data?.cohorts ?? []) as OverseasRunCohortView[]}
+					onRun={runOverseasNow}
+				/>
+			)}
 
 			{context?.browserRunnerEnabled && context.selectedBrand && (
 				<SamplingRunNowDialog
