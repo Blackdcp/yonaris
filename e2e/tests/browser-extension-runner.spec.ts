@@ -5,11 +5,16 @@ import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
 import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
 
 const AUTHORIZATION = { Authorization: `Bearer ${TEST_API_KEY}` };
-const SURFACES = ["doubao.consumer_web", "deepseek.consumer_web"] as const;
+const DOUBAO_SURFACE = "doubao.consumer_web" as const;
+const DEEPSEEK_SURFACE = "deepseek.consumer_web" as const;
+const RUN_SURFACES = [DOUBAO_SURFACE] as const;
+const DECLARED_SURFACES = [DOUBAO_SURFACE, DEEPSEEK_SURFACE] as const;
+const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260818-localpc-v6";
+const UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION = "deepseek-web-stale";
 
 test.describe.configure({ mode: "serial" });
 
-test("platform Run now produces a paired two-channel 30-sample cohort with customer snapshots", async ({
+test("platform Run now produces an approved Doubao 15-sample cohort while DeepSeek remains fail-closed", async ({
   browser,
   page: customerPage,
   request,
@@ -37,12 +42,13 @@ test("platform Run now produces a paired two-channel 30-sample cohort with custo
     await adminPage.goto(`/admin/sampling?brand=${STEPFUN_BRAND_ID}`);
     await expect(adminPage.getByRole("heading", { name: "Sampling Tasks" })).toBeVisible({ timeout: 30_000 });
     await adminPage.getByLabel("Program").selectOption(scope.id);
-    await expect(adminPage.getByText(/3\s*.*\s*2\s*.*\s*5\s*=\s*30 tasks/)).toBeVisible();
-    await adminPage.getByRole("button", { name: "Run 30 tasks now" }).click();
+    await expect(adminPage.getByText(/3\s*.*\s*1\s*.*\s*5\s*=\s*15 tasks/)).toBeVisible();
+    await adminPage.getByRole("button", { name: "Run 15 tasks now" }).click();
     await expect(adminPage.getByRole("row").filter({ hasText: scopeName }).first()).toBeVisible({ timeout: 20_000 });
 
+    await expectDeepSeekClaimRejected(request, token);
     const completed = await drainFakeExtension(request, token);
-    expect(completed).toBe(30);
+    expect(completed).toBe(15);
 
     const database = new pg.Client({ connectionString: DATABASE_URL });
     await database.connect();
@@ -71,12 +77,12 @@ test("platform Run now produces a paired two-channel 30-sample cohort with custo
         [STEPFUN_BRAND_ID, scope.id],
       );
       expect(result.rows[0]).toEqual({
-        tasks: "30",
-        successes: "30",
-        runs: "30",
-        mentioned: "24",
-        ready_snapshots: "30",
-        citations: "30",
+        tasks: "15",
+        successes: "15",
+        runs: "15",
+        mentioned: "12",
+        ready_snapshots: "15",
+        citations: "15",
       });
     } finally {
       await database.end();
@@ -175,14 +181,23 @@ async function pairFakeExtension(
   const response = await request.post("/api/internal/browser-runner/v1/pair", {
     data: {
       code,
-      extensionVersion: "0.1.0",
+      extensionVersion: "0.2.1",
       browserFamily: "chrome",
       browserVersion: "140.0.0",
       platform: "windows",
-      supportedSurfaces: [...SURFACES],
-      readiness: Object.fromEntries(
-        SURFACES.map((surface) => [surface, { status: "ready", adapterVersion: "fixture-v1", activeConcurrency: 0 }]),
-      ),
+      supportedSurfaces: [...DECLARED_SURFACES],
+      readiness: {
+        [DOUBAO_SURFACE]: {
+          status: "ready",
+          adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
+          activeConcurrency: 0,
+        },
+        [DEEPSEEK_SURFACE]: {
+          status: "ready",
+          adapterVersion: UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION,
+          activeConcurrency: 0,
+        },
+      },
     },
   });
   expect(response.status(), await response.text()).toBe(201);
@@ -192,13 +207,21 @@ async function pairFakeExtension(
   return body.deviceToken;
 }
 
+async function expectDeepSeekClaimRejected(request: APIRequestContext, token: string): Promise<void> {
+  const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { brandId: STEPFUN_BRAND_ID, surfaceTargetKeys: [DEEPSEEK_SURFACE] },
+  });
+  expect(response.status(), await response.text()).toBe(409);
+}
+
 async function drainFakeExtension(request: APIRequestContext, token: string): Promise<number> {
   const headers = { Authorization: `Bearer ${token}` };
   let completed = 0;
   for (let round = 0; round < 20; round += 1) {
     const claims = (
       await Promise.all(
-        SURFACES.flatMap((surface) =>
+        RUN_SURFACES.flatMap((surface) =>
           Array.from({ length: 5 }, async () => {
             const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
               headers,
@@ -265,7 +288,7 @@ async function completeFakeClaim(
     data: {
       ...lease,
       runnerSessionId,
-      adapterVersion: "fixture-v1",
+      adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
       browserVersion: "Chrome-140",
       observation: {
         answerText,
@@ -290,7 +313,7 @@ type RunnerClaim = {
     id: string;
     brandId: string;
     sampleIndex: number;
-    surfaceTargetKey: (typeof SURFACES)[number];
+    surfaceTargetKey: (typeof RUN_SURFACES)[number];
   };
   leaseToken: string;
   leaseGeneration: number;

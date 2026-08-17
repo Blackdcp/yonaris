@@ -282,35 +282,37 @@ export type BrowserExtensionOverlapProtectionDependencies = {
 	) => Promise<BrowserExtensionOverlap | null>;
 };
 
-export async function withBrowserExtensionOverlapProtection<T>(
-	input: BrowserExtensionOverlapInput & { idempotencyKey: string },
-	operation: () => Promise<T>,
-	overrides: Partial<BrowserExtensionOverlapProtectionDependencies> = {},
-): Promise<T> {
-	const surfaces = [...new Set(input.surfaces)].sort();
-	if (surfaces.length === 0) return operation();
-	const lockInput = { brandId: input.brandId, scopeId: input.scopeId, surfaces };
-	const withLocks = overrides.withLocks ?? withBrowserExtensionSurfaceLocks;
-	const findExistingBatchId = overrides.findExistingBatchId ?? findBrowserExtensionBatchIdByIdempotency;
-	const findOverlappingActive = overrides.findOverlappingActive ?? findOverlappingActiveBrowserExtensionBatch;
+export const withBrowserExtensionOverlapProtection = createServerOnlyFn(
+	async function withBrowserExtensionOverlapProtection<T>(
+		input: BrowserExtensionOverlapInput & { idempotencyKey: string },
+		operation: () => Promise<T>,
+		overrides: Partial<BrowserExtensionOverlapProtectionDependencies> = {},
+	): Promise<T> {
+		const surfaces = [...new Set(input.surfaces)].sort();
+		if (surfaces.length === 0) return operation();
+		const lockInput = { brandId: input.brandId, scopeId: input.scopeId, surfaces };
+		const withLocks = overrides.withLocks ?? withBrowserExtensionSurfaceLocks;
+		const findExistingBatchId = overrides.findExistingBatchId ?? findBrowserExtensionBatchIdByIdempotency;
+		const findOverlappingActive = overrides.findOverlappingActive ?? findOverlappingActiveBrowserExtensionBatch;
 
-	return withLocks(lockInput, async () => {
-		const existingBatchId = await findExistingBatchId({
-			brandId: input.brandId,
-			idempotencyKey: input.idempotencyKey,
+		return withLocks(lockInput, async () => {
+			const existingBatchId = await findExistingBatchId({
+				brandId: input.brandId,
+				idempotencyKey: input.idempotencyKey,
+			});
+			const overlapping = await findOverlappingActive({
+				...lockInput,
+				...(existingBatchId ? { excludeBatchId: existingBatchId } : {}),
+			});
+			if (overlapping) {
+				throw new Error(
+					`Active Browser Runner batch "${overlapping.name}" (${overlapping.id}) already includes ${overlapping.surfaceTargetKey} for this Program. Finish or cancel it before starting another run.`,
+				);
+			}
+			return operation();
 		});
-		const overlapping = await findOverlappingActive({
-			...lockInput,
-			...(existingBatchId ? { excludeBatchId: existingBatchId } : {}),
-		});
-		if (overlapping) {
-			throw new Error(
-				`Active Browser Runner batch "${overlapping.name}" (${overlapping.id}) already includes ${overlapping.surfaceTargetKey} for this Program. Finish or cancel it before starting another run.`,
-			);
-		}
-		return operation();
-	});
-}
+	},
+);
 
 async function withBrowserExtensionSurfaceLocks<T>(
 	input: BrowserExtensionOverlapInput,
