@@ -32,4 +32,3 @@ The web image builds `@workspace/browser-extension` before the Portal build. A p
 - UI tests require a same-origin download link, digest, Windows/macOS wording and pairing steps.
 - Docker and CI build the extension before Portal and verify the packaged files exist in the web output.
 - Existing pairing, device authorization, run-now, snapshot and metric regression suites remain green.
-

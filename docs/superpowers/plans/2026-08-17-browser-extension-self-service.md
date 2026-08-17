@@ -68,4 +68,3 @@
 - [ ] **Step 3: Update the dependency stage, builder commands, CI assertions and operator runbook.**
 - [ ] **Step 4: Run extension tests/build, web tests/typecheck/build, static checks and Docker build in proportion to release risk.**
 - [ ] **Step 5: Commit, push, open/merge the PR, monitor production deployment, and verify the production download URL plus existing paired-device state.**
-
