@@ -23,7 +23,7 @@ describe("BrowserRunnerExtensionInstall", () => {
 	it("renders the same-origin reviewed package, digest and Windows/macOS Chrome installation flow", () => {
 		const markup = renderToStaticMarkup(<BrowserRunnerExtensionInstall metadata={metadata} />);
 
-		expect(markup).toContain('href="/downloads/yonaris-browser-extension.zip"');
+		expect(markup).toContain(`href="/downloads/yonaris-browser-extension.zip?sha256=${metadata.sha256}"`);
 		expect(markup).toContain('download="yonaris-browser-extension.zip"');
 		expect(markup).toContain(metadata.sha256);
 		expect(markup).toContain("Windows or macOS");

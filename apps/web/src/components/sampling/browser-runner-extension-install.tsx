@@ -50,7 +50,7 @@ export function BrowserRunnerExtensionInstall({
 				<div className="flex flex-wrap items-center gap-3">
 					{metadata ? (
 						<Button asChild>
-							<a href={EXTENSION_DOWNLOAD_URL} download={EXTENSION_FILE_NAME}>
+							<a href={`${EXTENSION_DOWNLOAD_URL}?sha256=${metadata.sha256}`} download={EXTENSION_FILE_NAME}>
 								<Download /> Download extension ZIP
 							</a>
 						</Button>
