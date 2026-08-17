@@ -12,6 +12,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/browser-extension/package.json ./apps/browser-extension/
 COPY apps/web/package.json ./apps/web/
 COPY apps/worker/package.json ./apps/worker/
 COPY packages/ui/package.json ./packages/ui/
@@ -33,6 +34,7 @@ WORKDIR /app
 
 # Copy dependencies
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/browser-extension/node_modules ./apps/browser-extension/node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/apps/worker/node_modules ./apps/worker/node_modules
 COPY --from=deps /app/packages/ui/node_modules ./packages/ui/node_modules
@@ -52,8 +54,13 @@ ARG DEPLOYMENT_MODE=local
 ARG VITE_DEPLOYMENT_MODE=${DEPLOYMENT_MODE}
 ENV VITE_DEPLOYMENT_MODE=${VITE_DEPLOYMENT_MODE}
 
-# Build the web application (increase heap for large bundles)
+# Build the reviewed local extension, package that exact build into Portal,
+# then build the web application (increase heap for large bundles).
+RUN pnpm --filter @workspace/browser-extension build
+RUN pnpm --filter @workspace/web package:browser-extension
 RUN pnpm --filter @workspace/web build
+RUN test -r /app/apps/web/.output/public/downloads/yonaris-browser-extension.zip \
+  && test -r /app/apps/web/.output/public/downloads/yonaris-browser-extension.json
 
 # Create pruned standalone deployments (only each package's own deps)
 # --legacy: allows deploy without inject-workspace-packages (which breaks Alpine Docker builds)

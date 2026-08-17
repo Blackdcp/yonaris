@@ -164,7 +164,12 @@ async function pairFakeExtension(
   await adminPage.getByLabel("Device name").fill(`Fixture Chrome ${suffix}`);
   await adminPage.getByLabel("Customer").selectOption(STEPFUN_BRAND_ID);
   await adminPage.getByRole("button", { name: "Create pairing code" }).click();
-  const code = (await adminPage.locator("code").textContent())?.trim();
+  const code = (
+    await adminPage
+      .locator("code")
+      .filter({ hasText: /^yrp_[A-Za-z0-9_-]+$/ })
+      .textContent()
+  )?.trim();
   if (!code) throw new Error("Pairing code was not rendered");
 
   const response = await request.post("/api/internal/browser-runner/v1/pair", {

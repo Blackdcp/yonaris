@@ -4,6 +4,7 @@ import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/al
 import { Button } from "@workspace/ui/components/button";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { BrowserRunnerDeviceList } from "@/components/sampling/browser-runner-device-list";
+import { BrowserRunnerExtensionInstall } from "@/components/sampling/browser-runner-extension-install";
 import type { BrowserRunnerDeviceView, SamplingContextView } from "@/components/sampling/types";
 import { getAppName } from "@/lib/route-head";
 import {
@@ -65,6 +66,7 @@ function BrowserRunnerDevicesPage() {
 					</Link>
 				</Button>
 			</div>
+			<BrowserRunnerExtensionInstall />
 
 			{contextQuery.isError || devicesQuery.isError ? (
 				<Alert variant="destructive">

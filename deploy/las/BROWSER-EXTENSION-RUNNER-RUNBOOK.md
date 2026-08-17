@@ -16,11 +16,13 @@ The Yonaris Browser Runner extension executes administrator-started Doubao and D
 
 ## Install the reviewed build
 
-1. Open the successful GitHub Actions run for the exact deployed server SHA.
-2. Download artifact `yonaris-browser-extension-<sha>` and verify the run's E2E, migration and deployment gates are green.
+1. Sign in to Portal as the global platform administrator and open **Platform administration → Sampling operations → Local Browser devices**.
+2. Download the extension ZIP shown there. Portal serves the exact reviewed extension packaged into its own immutable web release and displays its SHA-256 digest.
 3. Extract the ZIP to a stable local directory owned by the operator. Do not run it from Downloads or a synced public folder.
 4. In current stable Chrome, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select the extracted directory containing `manifest.json`.
 5. Use a dedicated Chrome profile for monitoring. Sign in to Doubao and DeepSeek manually in normal tabs. Never store the phone number, password, SMS code, cookies or storage state in Yonaris.
+
+The successful deployment's GitHub Actions artifact remains a second immutable copy for release audit. Its ZIP must match the package served by Portal.
 
 The reviewed manifest permits only Portal, Doubao and DeepSeek origins. Reject an artifact that requests `<all_urls>`, `*://*/*`, clipboard, downloads, debugger, native messaging or proxy permissions.
 

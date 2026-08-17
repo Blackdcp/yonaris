@@ -100,8 +100,21 @@ jobs:
             throw new Error("Browser extension contains a forbidden wildcard permission");
           }
           NODE
+          pnpm --filter @workspace/web package:browser-extension
+          node --input-type=module <<'NODE'
+          import { createHash } from "node:crypto";
+          import { readFileSync } from "node:fs";
+          const root = "apps/web/public/downloads";
+          const zip = readFileSync(`${root}/yonaris-browser-extension.zip`);
+          const metadata = JSON.parse(readFileSync(`${root}/yonaris-browser-extension.json`, "utf8"));
+          const digest = createHash("sha256").update(zip).digest("hex");
+          if (metadata.fileName !== "yonaris-browser-extension.zip" || metadata.sha256 !== digest) {
+            throw new Error("Portal Browser Runner package metadata does not match the reviewed ZIP");
+          }
+          NODE
           mkdir -p artifacts
-          (cd apps/browser-extension/dist && zip -qr "$GITHUB_WORKSPACE/artifacts/yonaris-browser-extension-${GITHUB_SHA}.zip" .)
+          cp apps/web/public/downloads/yonaris-browser-extension.zip \
+            "$GITHUB_WORKSPACE/artifacts/yonaris-browser-extension-${GITHUB_SHA}.zip"
 
       - name: Upload Browser Runner extension
         uses: actions/upload-artifact@v7
