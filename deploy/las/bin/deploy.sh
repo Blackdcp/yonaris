@@ -107,6 +107,16 @@ for variable in "${required_vars[@]}"; do
   require_value "$variable"
 done
 
+# The administrator Overseas Run now control is independent of SCRAPE_TARGETS
+# and defaults to all six Bright Data channels, including Google AI Overview.
+# A configured Bright Data account therefore needs an explicit account-owned
+# SERP zone before this production deploy can show that default safely.
+brightdata_api_token="${BRIGHTDATA_API_TOKEN:-}"
+if [[ -n "${brightdata_api_token//[[:space:]]/}" ]]; then
+  require_value BRIGHTDATA_API_TOKEN
+  require_value BRIGHTDATA_SERP_ZONE
+fi
+
 IFS=',' read -r -a scrape_targets <<<"$SCRAPE_TARGETS"
 for target in "${scrape_targets[@]}"; do
   IFS=':' read -r _ provider _ <<<"${target//[[:space:]]/}"
@@ -121,7 +131,9 @@ for target in "${scrape_targets[@]}"; do
     anthropic-api) require_value ANTHROPIC_API_KEY ;;
     mistral-api) require_value MISTRAL_API_KEY ;;
     olostep) require_value OLOSTEP_API_KEY ;;
-    brightdata) require_value BRIGHTDATA_API_TOKEN ;;
+    brightdata)
+      require_value BRIGHTDATA_API_TOKEN
+      ;;
     oxylabs)
       require_value OXYLABS_USERNAME
       require_value OXYLABS_PASSWORD

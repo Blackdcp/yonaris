@@ -34,6 +34,8 @@ function emptyResponse(brandName: string, model: string | null): QueryFanoutResp
 		uniqueQueries: 0,
 		fanoutRuns: 0,
 		totalRuns: 0,
+		rawQueryRuns: 0,
+		exposedQueryRuns: 0,
 		avgPerExecution: 0,
 		coverageRate: 0,
 		topQueries: [],

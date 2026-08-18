@@ -9,12 +9,12 @@
  * per-prompt detail view so both render the same Google Shopping section.
  */
 import {
-	type ProductAttribution,
-	isGoogleShoppingUrl,
+	attributeProduct,
 	isGoogleSearchUrl,
+	isGoogleShoppingUrl,
+	type ProductAttribution,
 	parseGoogleProductName,
 	parseGoogleSearchQuery,
-	attributeProduct,
 } from "@/lib/domain-categories";
 
 /** Minimal per-prompt cited-page row this builder needs (a structural subset of
@@ -46,6 +46,12 @@ export const emptyGoogleModule = (): GoogleModule => ({
 	shopping: { totalCitations: 0, brandCount: 0, competitorCount: 0, products: [] },
 	search: { totalCitations: 0, queries: [] },
 });
+
+export const hasGoogleModuleContent = (module: GoogleModule | null | undefined): boolean =>
+	(module?.shopping.totalCitations ?? 0) > 0 || (module?.search.totalCitations ?? 0) > 0;
+
+export const getGoogleModuleCitationCount = (module: GoogleModule | null | undefined): number =>
+	(module?.shopping.totalCitations ?? 0) + (module?.search.totalCitations ?? 0);
 
 /**
  * Build the Google AI Mode module from per-prompt cited pages: Shopping products

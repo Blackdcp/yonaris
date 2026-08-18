@@ -2,14 +2,13 @@
  * /admin/tools — Admin utility for running the onboarding analysis against an
  * arbitrary website without going through the wizard.
  */
-import { useState } from "react";
+
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { getAppName } from "@/lib/route-head";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
-import { Label } from "@workspace/ui/components/label";
+import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
 import { Badge } from "@workspace/ui/components/badge";
+import { Button } from "@workspace/ui/components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import {
 	Dialog,
 	DialogContent,
@@ -18,9 +17,14 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "@workspace/ui/components/dialog";
-import { Sparkles, Loader2, Copy, Check } from "lucide-react";
-import { adminAnalyzeBrandFn } from "@/server/admin";
-import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
+import { Input } from "@workspace/ui/components/input";
+import { Label } from "@workspace/ui/components/label";
+import { Check, Copy, Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { OpportunitiesGenerationControl } from "@/components/opportunities-generation-control";
+import { getAppName } from "@/lib/route-head";
+import { adminAnalyzeBrandFn, getAdminOpportunityScopesFn } from "@/server/admin";
+import { generateOpportunitiesFn } from "@/server/opportunities";
 
 function AnalyzeBrandDialog() {
 	const [open, setOpen] = useState(false);
@@ -236,6 +240,11 @@ export const Route = createFileRoute("/_authed/admin/tools")({
 });
 
 function ToolsPage() {
+	const opportunityScopes = useQuery({
+		queryKey: ["admin-opportunity-scopes"],
+		queryFn: () => getAdminOpportunityScopesFn(),
+	});
+
 	return (
 		<div className="space-y-8">
 			<div className="space-y-2">
@@ -262,6 +271,12 @@ function ToolsPage() {
 						<AnalyzeBrandDialog />
 					</CardContent>
 				</Card>
+				<OpportunitiesGenerationControl
+					brands={opportunityScopes.data}
+					onGenerate={async (input) => {
+						return generateOpportunitiesFn({ data: input });
+					}}
+				/>
 			</div>
 		</div>
 	);

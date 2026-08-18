@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
 import { brands, measurementScopes, member, prompts } from "@workspace/lib/db/schema";
+import { selectImplicitMeasurementScope } from "@workspace/lib/measurement-scope-selection";
 import { and, asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { isPlatformIdentity, requireAuthSession } from "@/lib/auth/helpers";
@@ -59,6 +60,12 @@ export const getCustomerProgramContextFn = createServerFn({ method: "GET" })
 			if (prompt.enabled) counts.enabled += 1;
 			promptCounts.set(prompt.scopeId, counts);
 		}
+		const effectiveDefault = selectImplicitMeasurementScope(
+			scopeRows.map((scope) => ({
+				...scope,
+				hasEnabledPrompts: (promptCounts.get(scope.id)?.enabled ?? 0) > 0,
+			})),
+		);
 
 		return {
 			brand: { id: access.brand.id, name: access.brand.name },
@@ -72,7 +79,7 @@ export const getCustomerProgramContextFn = createServerFn({ method: "GET" })
 				locale: scope.locale,
 				timezone: scope.timezone,
 				enabled: scope.enabled,
-				isDefault: scope.isDefault,
+				isDefault: effectiveDefault ? scope.id === effectiveDefault.id : scope.isDefault,
 				manualOnly: scope.automaticTargetKeys !== null && scope.automaticTargetKeys.length === 0,
 				samplingEvaluationRole: scope.samplingEvaluationRole,
 				promptCount: promptCounts.get(scope.id)?.total ?? 0,

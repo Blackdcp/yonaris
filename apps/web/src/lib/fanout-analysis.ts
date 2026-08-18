@@ -34,6 +34,10 @@ export interface FanoutBreakdownRow {
 export interface FanoutModelTotalRow {
 	model: string;
 	runs: number;
+	/** Runs whose persisted web_queries contained a non-blank value, including the unavailable sentinel. */
+	raw_query_runs: number;
+	/** Runs with at least one non-sentinel query string, including prompt echoes. */
+	exposed_query_runs: number;
 	fanout_runs: number;
 	total_queries: number;
 }
@@ -103,6 +107,8 @@ export interface WordChanges {
 export interface ModelFanoutStat {
 	model: string;
 	runs: number;
+	rawQueryRuns: number;
+	exposedQueryRuns: number;
 	fanoutRuns: number;
 	totalQueries: number;
 	/** Mean fan-out queries per run that fanned out (1 decimal). */
@@ -130,6 +136,10 @@ export interface FanoutAnalysis {
 	uniqueQueries: number;
 	fanoutRuns: number;
 	totalRuns: number;
+	/** Runs with any persisted query payload, including the unavailable sentinel. */
+	rawQueryRuns: number;
+	/** Runs with a usable query string, including exact prompt echoes. */
+	exposedQueryRuns: number;
 	/** Mean fan-out queries per run that fanned out (1 decimal). */
 	avgPerExecution: number;
 	/** Baseline brand-mention rate across all fan-out query instances (0..100). */
@@ -143,6 +153,45 @@ export interface FanoutAnalysis {
 	topByPrompts: TopQueryStat[];
 	/** Queries issued by the most prompt runs. */
 	topByRuns: TopQueryStat[];
+}
+
+export type FanoutAvailability =
+	| { kind: "no_search_enabled_runs" }
+	| { kind: "queries_not_exposed"; unknownRuns: number; rawQueryRuns: number }
+	| { kind: "query_exposed_no_fanout"; exposedRuns: number; unknownRuns: number }
+	| { kind: "queries_available" };
+
+export function summarizeFanoutRunExposure(
+	input: Pick<FanoutAnalysis, "totalRuns" | "exposedQueryRuns" | "fanoutRuns">,
+): { exposedRuns: number; unknownRuns: number; fanoutRuns: number } {
+	return {
+		exposedRuns: input.exposedQueryRuns,
+		unknownRuns: Math.max(0, input.totalRuns - input.exposedQueryRuns),
+		fanoutRuns: input.fanoutRuns,
+	};
+}
+
+/**
+ * Distinguishes an engine that did not run with web search from one that ran
+ * but did not expose any verifiable query strings.
+ */
+export function describeFanoutAvailability(
+	input: Pick<FanoutAnalysis, "totalRuns" | "totalQueries" | "rawQueryRuns" | "exposedQueryRuns">,
+): FanoutAvailability {
+	if (input.totalRuns === 0) return { kind: "no_search_enabled_runs" };
+	if (input.totalQueries > 0) return { kind: "queries_available" };
+	if (input.exposedQueryRuns === 0) {
+		return {
+			kind: "queries_not_exposed",
+			unknownRuns: input.totalRuns,
+			rawQueryRuns: input.rawQueryRuns,
+		};
+	}
+	return {
+		kind: "query_exposed_no_fanout",
+		exposedRuns: input.exposedQueryRuns,
+		unknownRuns: Math.max(0, input.totalRuns - input.exposedQueryRuns),
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -378,7 +427,8 @@ export function computeFanoutAnalysis(
 
 	for (const row of breakdown) {
 		const query = norm(row.query);
-		if (!query || query === UNAVAILABLE_SENTINEL) continue;
+		const promptValue = promptValueMap.get(row.prompt_id) ?? "";
+		if (!query || query === UNAVAILABLE_SENTINEL || query === norm(promptValue)) continue;
 		totalQueries += row.count;
 		totalBrand += row.brand_mentions;
 
@@ -394,7 +444,6 @@ export function computeFanoutAnalysis(
 		if (!perModel.has(row.model)) perModel.set(row.model, new Map());
 		bump(perModel.get(row.model)!, query, row.count, row.brand_mentions);
 
-		const promptValue = promptValueMap.get(row.prompt_id) ?? "";
 		let pp = perPrompt.get(row.prompt_id);
 		if (!pp) {
 			pp = { value: promptValue, total: 0, queries: new Map() };
@@ -447,6 +496,8 @@ export function computeFanoutAnalysis(
 		.map((m) => ({
 			model: m.model,
 			runs: m.runs,
+			rawQueryRuns: m.raw_query_runs,
+			exposedQueryRuns: m.exposed_query_runs,
 			fanoutRuns: m.fanout_runs,
 			totalQueries: m.total_queries,
 			avgPerExecution: m.fanout_runs > 0 ? Math.round((m.total_queries / m.fanout_runs) * 10) / 10 : 0,
@@ -489,6 +540,8 @@ export function computeFanoutAnalysis(
 		.slice(0, L.breadth);
 
 	const totalRuns = modelTotals.reduce((s, m) => s + m.runs, 0);
+	const rawQueryRuns = modelTotals.reduce((s, m) => s + m.raw_query_runs, 0);
+	const exposedQueryRuns = modelTotals.reduce((s, m) => s + m.exposed_query_runs, 0);
 	const fanoutRuns = modelTotals.reduce((s, m) => s + m.fanout_runs, 0);
 
 	return {
@@ -496,6 +549,8 @@ export function computeFanoutAnalysis(
 		uniqueQueries: overall.size,
 		fanoutRuns,
 		totalRuns,
+		rawQueryRuns,
+		exposedQueryRuns,
 		avgPerExecution: fanoutRuns > 0 ? Math.round((totalQueries / fanoutRuns) * 10) / 10 : 0,
 		coverageRate,
 		topQueries,

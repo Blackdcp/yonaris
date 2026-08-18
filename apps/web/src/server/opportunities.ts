@@ -18,9 +18,10 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
+import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brandOpportunities, brands, competitors, measurementScopes } from "@workspace/lib/db/schema";
 import { runStructuredCompletionPrompt } from "@workspace/lib/onboarding";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { canGenerateOpportunities } from "@/lib/auth/execution-boundaries";
 import { isAdmin, requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
@@ -105,12 +106,26 @@ export interface OpportunitiesReport extends Omit<RawReport, "opportunities"> {
 	opportunities: ReportOpportunity[];
 }
 
-export type OpportunitiesReason = "insufficient-data" | null;
+export type OpportunitiesReason = "insufficient-data" | "not_generated" | null;
 export interface OpportunitiesResponse {
 	report: OpportunitiesReport | null;
 	reason: OpportunitiesReason;
 	generatedFor: { brandName: string } | null;
 	lastEvaluatedAt: string | null;
+}
+
+/** A legacy report predates scoped opportunities and is safe only when the
+ * requested scope is the brand's one and only measurement scope. */
+export function canReadOpportunityReportInScope(input: {
+	reportScopeId: string | null;
+	requestedScopeId: string;
+	totalScopeCount: number;
+	soleScopeId: string | null;
+}): boolean {
+	return (
+		input.reportScopeId === input.requestedScopeId ||
+		(input.reportScopeId === null && input.totalScopeCount === 1 && input.soleScopeId === input.requestedScopeId)
+	);
 }
 
 // ============================================================================
@@ -230,12 +245,12 @@ interface Digest {
 
 /** Assemble the deterministic digest text + the structured bits the server needs
  * to enrich the LLM output. Returns null if there isn't enough data. */
-async function buildDigest(brandId: string, timezoneParam: string): Promise<Digest | null> {
+async function buildDigest(brandId: string, scopeId: string, timezoneParam: string): Promise<Digest | null> {
 	const timezone = resolveTimezone(timezoneParam);
 	const r30 = resolveRange("1m", timezone);
 	const r7 = resolveRange("1w", timezone);
 
-	const prompts = await resolveFilteredPrompts(brandId, {});
+	const prompts = await resolveFilteredPrompts(brandId, { scopeId });
 	if (prompts.length === 0) return null;
 	const promptIds = prompts.map((p) => p.id);
 	const isBranded = new Map(prompts.map((p) => [p.id, isBrandedPrompt(p)]));
@@ -472,31 +487,54 @@ async function generateValidReport(prompt: string): Promise<{ report: RawReport;
 // ============================================================================
 
 export const getOpportunitiesFn = createServerFn({ method: "GET" })
-	.validator(z.object({ brandId: z.string() }))
+	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid() }))
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
 		const session = await requireAuthSession();
 		await requireBrandAccess(session.user.id, data.brandId);
-		const storedScopes = await db
-			.select({ id: measurementScopes.id, timezone: measurementScopes.timezone, enabled: measurementScopes.enabled })
+		await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		const scopes = await db
+			.select({ id: measurementScopes.id })
 			.from(measurementScopes)
 			.where(eq(measurementScopes.brandId, data.brandId))
 			.limit(2);
-		if (storedScopes.length !== 1 || !storedScopes[0]?.enabled) {
-			throw new Error("Opportunities are disabled until reports can be generated within one measurement scope.");
-		}
+		const totalScopeCount = scopes.length;
+		const soleScopeId = scopes[0]?.id ?? null;
 
 		// Customer reads are deliberately side-effect free. Generation is a paid
 		// platform operation exposed only by generateOpportunitiesFn below.
-		const [latest] = await db
+		const [latestScoped] = await db
 			.select()
 			.from(brandOpportunities)
-			.where(eq(brandOpportunities.brandId, data.brandId))
+			.where(and(eq(brandOpportunities.brandId, data.brandId), eq(brandOpportunities.scopeId, data.scopeId)))
 			.orderBy(desc(brandOpportunities.createdAt))
 			.limit(1);
-		const lastEvaluatedAt = latest?.createdAt.toISOString() ?? null;
-		if (latest)
-			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
-		return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
+		const [legacy] =
+			!latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
+				? await db
+						.select()
+						.from(brandOpportunities)
+						.where(and(eq(brandOpportunities.brandId, data.brandId), isNull(brandOpportunities.scopeId)))
+						.orderBy(desc(brandOpportunities.createdAt))
+						.limit(1)
+				: [];
+		const latest = latestScoped ?? legacy;
+		if (
+			latest &&
+			canReadOpportunityReportInScope({
+				reportScopeId: latest.scopeId ?? null,
+				requestedScopeId: data.scopeId,
+				totalScopeCount,
+				soleScopeId,
+			})
+		) {
+			return {
+				report: latest.report as OpportunitiesReport,
+				reason: null,
+				generatedFor: null,
+				lastEvaluatedAt: latest.createdAt.toISOString(),
+			};
+		}
+		return { report: null, reason: "not_generated", generatedFor: null, lastEvaluatedAt: null };
 	});
 
 /**
@@ -506,36 +544,66 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
  * never be called by the customer workspace page loader or query hook.
  */
 export const generateOpportunitiesFn = createServerFn({ method: "POST" })
-	.validator(z.object({ brandId: z.string() }))
+	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid() }))
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
 		const session = await requireAuthSession();
 		if (!canGenerateOpportunities(isAdmin(session))) {
 			throw new Error("Access denied. Platform administrator access required.");
 		}
-		const storedScopes = await db
-			.select({ id: measurementScopes.id, timezone: measurementScopes.timezone, enabled: measurementScopes.enabled })
+		const requestedScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
+		if (requestedScope.samplingEvaluationRole !== "scored") {
+			throw new Error("Opportunities can only be generated for a scored Program.");
+		}
+		const scopes = await db
+			.select({ id: measurementScopes.id })
 			.from(measurementScopes)
 			.where(eq(measurementScopes.brandId, data.brandId))
 			.limit(2);
-		if (storedScopes.length !== 1 || !storedScopes[0]?.enabled) {
-			throw new Error("Opportunities are disabled until reports can be generated within one measurement scope.");
-		}
+		const totalScopeCount = scopes.length;
+		const soleScopeId = scopes[0]?.id ?? null;
 
-		const [latest] = await db
+		const [latestScoped] = await db
 			.select()
 			.from(brandOpportunities)
-			.where(eq(brandOpportunities.brandId, data.brandId))
+			.where(and(eq(brandOpportunities.brandId, data.brandId), eq(brandOpportunities.scopeId, data.scopeId)))
 			.orderBy(desc(brandOpportunities.createdAt))
 			.limit(1);
+		const [legacy] =
+			!latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
+				? await db
+						.select()
+						.from(brandOpportunities)
+						.where(and(eq(brandOpportunities.brandId, data.brandId), isNull(brandOpportunities.scopeId)))
+						.orderBy(desc(brandOpportunities.createdAt))
+						.limit(1)
+				: [];
+		const latest = latestScoped ?? legacy;
 		const lastEvaluatedAt = latest?.createdAt.toISOString() ?? null;
 		const isFresh = latest && Date.now() - new Date(latest.createdAt).getTime() < REFRESH_AFTER_DAYS * 86_400_000;
-		if (latest && isFresh) {
+		if (
+			latest &&
+			isFresh &&
+			canReadOpportunityReportInScope({
+				reportScopeId: latest.scopeId ?? null,
+				requestedScopeId: data.scopeId,
+				totalScopeCount,
+				soleScopeId,
+			})
+		) {
 			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
 		}
 
-		const digest = await buildDigest(data.brandId, storedScopes[0]?.timezone ?? "UTC");
+		const digest = await buildDigest(data.brandId, requestedScope.id, requestedScope.timezone);
 		if (!digest) {
-			if (latest)
+			if (
+				latest &&
+				canReadOpportunityReportInScope({
+					reportScopeId: latest.scopeId ?? null,
+					requestedScopeId: data.scopeId,
+					totalScopeCount,
+					soleScopeId,
+				})
+			)
 				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
 			return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
 		}
@@ -552,7 +620,7 @@ export const generateOpportunitiesFn = createServerFn({ method: "POST" })
 		const report = enrichReport(generated.report, digest);
 		const [savedReport] = await db
 			.insert(brandOpportunities)
-			.values({ brandId: data.brandId, report, model: generated.model })
+			.values({ brandId: data.brandId, scopeId: data.scopeId, report, model: generated.model })
 			.returning({ createdAt: brandOpportunities.createdAt });
 
 		return {

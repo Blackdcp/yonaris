@@ -12,7 +12,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { dispatchOverseasRunCalls } from "./overseas-run-dispatch";
-import { planOverseasRunNow } from "./overseas-run-now-policy";
+import { assertOverseasRunNowChannelsReady, planOverseasRunNow } from "./overseas-run-now-policy";
 
 const channelKeySchema = z.enum(["chatgpt", "perplexity", "gemini", "copilot", "google-ai-mode", "google-ai-overview"]);
 
@@ -73,6 +73,11 @@ export const runOverseasNowFn = createServerFn({ method: "POST" })
 			channelKeys: data.channelKeys,
 			scope: { market: scope.market, locale: scope.locale, timezone: scope.timezone },
 		});
+		await assertOverseasRunNowChannelsReady(
+			plan.channels,
+			(config) => getProvider(config.provider).validateTarget?.(config) ?? null,
+			async (config) => (await getProvider(config.provider).preflightTarget?.(config)) ?? null,
+		);
 		const created = await createOverseasRunCohort({
 			brandId: data.brandId,
 			scopeId: data.scopeId,

@@ -1,4 +1,5 @@
 import { parseScrapeTargets } from "@workspace/config/scrape-targets";
+import { selectImplicitMeasurementScope } from "@workspace/lib/measurement-scope-selection";
 import { getObservationTargetCohort, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import type { ResponseSnapshotContentSource } from "@workspace/lib/response-snapshots/contract";
 
@@ -106,6 +107,16 @@ export function deriveCustomerScopeClassification(input: {
 }
 
 export function toCustomerBrandDto(source: CustomerBrandSource, effectiveModels: readonly string[]): CustomerBrandDto {
+	const populatedScopeIds = new Set(
+		source.prompts.filter((prompt) => prompt.enabled && prompt.scopeId !== null).map((prompt) => prompt.scopeId),
+	);
+	const effectiveDefault = selectImplicitMeasurementScope(
+		source.measurementScopes.map((scope) => ({
+			...scope,
+			hasEnabledPrompts: populatedScopeIds.has(scope.id),
+		})),
+	);
+
 	return {
 		id: source.id,
 		name: source.name,
@@ -135,7 +146,7 @@ export function toCustomerBrandDto(source: CustomerBrandSource, effectiveModels:
 				locale,
 				timezone,
 				enabled,
-				isDefault,
+				isDefault: effectiveDefault ? id === effectiveDefault.id : isDefault,
 				...deriveCustomerScopeClassification(classificationSource),
 			}),
 		),

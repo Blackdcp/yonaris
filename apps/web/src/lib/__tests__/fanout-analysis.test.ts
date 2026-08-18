@@ -1,12 +1,27 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	computeFanoutAnalysis,
-	promptKeywords,
-	normTok,
-	UNAVAILABLE_SENTINEL,
+	describeFanoutAvailability,
+	type FanoutAnalysis,
 	type FanoutBreakdownRow,
 	type FanoutModelTotalRow,
+	normTok,
+	promptKeywords,
+	summarizeFanoutRunExposure,
+	UNAVAILABLE_SENTINEL,
 } from "@/lib/fanout-analysis";
+
+describe("summarizeFanoutRunExposure", () => {
+	it("separates exposed prompt echoes from genuine fan-out and unknown runs", () => {
+		expect(
+			summarizeFanoutRunExposure({
+				totalRuns: 50,
+				exposedQueryRuns: 48,
+				fanoutRuns: 0,
+			}),
+		).toEqual({ exposedRuns: 48, unknownRuns: 2, fanoutRuns: 0 });
+	});
+});
 
 const promptMap = new Map<string, string>([
 	["p1", "crm software for startups"],
@@ -49,9 +64,9 @@ describe("computeFanoutAnalysis", () => {
 		{ prompt_id: "p2", model: "chatgpt", query: "top project management tool 2026", count: 3, brand_mentions: 0 },
 	];
 	const modelTotals: FanoutModelTotalRow[] = [
-		{ model: "chatgpt", runs: 10, fanout_runs: 9, total_queries: 9 },
-		{ model: "perplexity", runs: 4, fanout_runs: 1, total_queries: 1 },
-		{ model: "google-ai-mode", runs: 5, fanout_runs: 0, total_queries: 0 },
+		{ model: "chatgpt", runs: 10, raw_query_runs: 9, exposed_query_runs: 9, fanout_runs: 9, total_queries: 9 },
+		{ model: "perplexity", runs: 4, raw_query_runs: 1, exposed_query_runs: 1, fanout_runs: 1, total_queries: 1 },
+		{ model: "google-ai-mode", runs: 5, raw_query_runs: 0, exposed_query_runs: 0, fanout_runs: 0, total_queries: 0 },
 	];
 
 	const a = computeFanoutAnalysis(breakdown, modelTotals, promptMap);
@@ -165,11 +180,11 @@ describe("computeFanoutAnalysis: 'unavailable' sentinel", () => {
 		{ prompt_id: "p1", model: "openrouter-gpt", query: "Unavailable", count: 3, brand_mentions: 1 }, // mixed case
 		{ prompt_id: "p1", model: "chatgpt", query: "best crm software 2026", count: 4, brand_mentions: 3 },
 	];
-	// The SQL filters the sentinel, so OpenRouter's model totals come back at 0.
+	// The SQL excludes the sentinel from genuine fan-out while retaining raw-run coverage.
 	const modelTotals: FanoutModelTotalRow[] = [
-		{ model: "openrouter-claude", runs: 8, fanout_runs: 0, total_queries: 0 },
-		{ model: "openrouter-gpt", runs: 5, fanout_runs: 0, total_queries: 0 },
-		{ model: "chatgpt", runs: 4, fanout_runs: 4, total_queries: 4 },
+		{ model: "openrouter-claude", runs: 8, raw_query_runs: 6, exposed_query_runs: 0, fanout_runs: 0, total_queries: 0 },
+		{ model: "openrouter-gpt", runs: 5, raw_query_runs: 3, exposed_query_runs: 0, fanout_runs: 0, total_queries: 0 },
+		{ model: "chatgpt", runs: 4, raw_query_runs: 4, exposed_query_runs: 4, fanout_runs: 4, total_queries: 4 },
 	];
 	const a = computeFanoutAnalysis(breakdown, modelTotals, promptMap);
 
@@ -209,13 +224,116 @@ describe("computeFanoutAnalysis: empty input", () => {
 	});
 
 	it("zeroes per-query aggregates when runs exist but no breakdown rows survive filtering", () => {
-		const modelTotals: FanoutModelTotalRow[] = [{ model: "chatgpt", runs: 6, fanout_runs: 0, total_queries: 0 }];
+		const modelTotals: FanoutModelTotalRow[] = [
+			{ model: "chatgpt", runs: 6, raw_query_runs: 0, exposed_query_runs: 0, fanout_runs: 0, total_queries: 0 },
+		];
 		const a = computeFanoutAnalysis([], modelTotals, promptMap);
 		expect(a.totalRuns).toBe(6);
 		expect(a.totalQueries).toBe(0);
 		expect(a.avgPerExecution).toBe(0); // no divide-by-zero
 		expect(a.byModel).toEqual([
-			{ model: "chatgpt", runs: 6, fanoutRuns: 0, totalQueries: 0, avgPerExecution: 0, topQueries: [] },
+			{
+				model: "chatgpt",
+				runs: 6,
+				rawQueryRuns: 0,
+				exposedQueryRuns: 0,
+				fanoutRuns: 0,
+				totalQueries: 0,
+				avgPerExecution: 0,
+				topQueries: [],
+			},
 		]);
+	});
+});
+
+describe("describeFanoutAvailability", () => {
+	it("reports empty arrays and unavailable sentinels as queries not exposed", () => {
+		expect(
+			describeFanoutAvailability({
+				totalRuns: 4,
+				totalQueries: 0,
+				rawQueryRuns: 0,
+				exposedQueryRuns: 0,
+			}),
+		).toEqual({
+			kind: "queries_not_exposed",
+			unknownRuns: 4,
+			rawQueryRuns: 0,
+		});
+		expect(
+			describeFanoutAvailability({
+				totalRuns: 4,
+				totalQueries: 0,
+				rawQueryRuns: 4,
+				exposedQueryRuns: 0,
+			}),
+		).toEqual({
+			kind: "queries_not_exposed",
+			unknownRuns: 4,
+			rawQueryRuns: 4,
+		});
+	});
+
+	it("reports exposed prompt echoes without calling them unknown", () => {
+		expect(
+			describeFanoutAvailability({
+				totalRuns: 5,
+				totalQueries: 0,
+				rawQueryRuns: 3,
+				exposedQueryRuns: 3,
+			}),
+		).toEqual({
+			kind: "query_exposed_no_fanout",
+			exposedRuns: 3,
+			unknownRuns: 2,
+		});
+	});
+
+	it("keeps genuine fan-out separate from echo-only and unavailable runs", () => {
+		const modelTotals = [
+			{
+				model: "perplexity",
+				runs: 2,
+				fanout_runs: 0,
+				total_queries: 0,
+				raw_query_runs: 2,
+				exposed_query_runs: 2,
+			},
+			{
+				model: "openrouter",
+				runs: 2,
+				fanout_runs: 0,
+				total_queries: 0,
+				raw_query_runs: 2,
+				exposed_query_runs: 0,
+			},
+			{
+				model: "chatgpt",
+				runs: 1,
+				fanout_runs: 1,
+				total_queries: 1,
+				raw_query_runs: 1,
+				exposed_query_runs: 1,
+			},
+		];
+		const analysis = computeFanoutAnalysis(
+			[
+				{
+					prompt_id: "p1",
+					model: "perplexity",
+					query: " CRM SOFTWARE FOR STARTUPS ",
+					count: 2,
+					brand_mentions: 1,
+				},
+				{ prompt_id: "p2", model: "chatgpt", query: "best project management tools", count: 1, brand_mentions: 1 },
+			],
+			modelTotals,
+			promptMap,
+		) as FanoutAnalysis & { rawQueryRuns: number; exposedQueryRuns: number };
+
+		expect(analysis.totalQueries).toBe(1);
+		expect(analysis.rawQueryRuns).toBe(5);
+		expect(analysis.exposedQueryRuns).toBe(3);
+		expect(describeFanoutAvailability(analysis)).toEqual({ kind: "queries_available" });
 	});
 });

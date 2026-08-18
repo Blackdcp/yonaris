@@ -115,6 +115,9 @@ export interface SamplingTargetOption {
 export interface SamplingContextView {
 	brands: SamplingBrandOption[];
 	browserRunnerEnabled?: boolean;
+	overseasRunNow: {
+		googleAiOverviewReady: boolean;
+	};
 	selectedBrand: {
 		id: string;
 		name: string;

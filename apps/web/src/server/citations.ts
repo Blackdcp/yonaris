@@ -29,7 +29,29 @@ import {
 	classifyUrl as classifyUrlShared,
 } from "@/lib/domain-categories.server";
 import { buildGoogleModule, emptyGoogleModule } from "@/lib/google-module";
-import { getCitationUrlStats, getPerPromptCitationPages, getPerPromptDailyCitationPages } from "@/lib/postgres-read";
+import {
+	getCitationRunCoverage,
+	getCitationUrlStats,
+	getPerPromptCitationPages,
+	getPerPromptDailyCitationPages,
+} from "@/lib/postgres-read";
+
+export type CitationAvailability =
+	| { kind: "no_evaluated_runs" }
+	| { kind: "no_search_enabled_runs" }
+	| { kind: "no_extracted_links" }
+	| { kind: "links_extracted" };
+
+export function describeCitationAvailability(input: {
+	evaluatedRuns: number;
+	searchEnabledRuns: number;
+	extractedCitationRuns: number;
+}): CitationAvailability {
+	if (input.evaluatedRuns === 0) return { kind: "no_evaluated_runs" };
+	if (input.extractedCitationRuns > 0) return { kind: "links_extracted" };
+	if (input.searchEnabledRuns === 0) return { kind: "no_search_enabled_runs" };
+	return { kind: "no_extracted_links" };
+}
 
 /**
  * Get citation statistics for a brand
@@ -121,6 +143,14 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 			if (enabledPromptIds.length === 0) {
 				return {
 					totalCitations: 0,
+					evaluatedRuns: 0,
+					searchEnabledRuns: 0,
+					extractedCitationRuns: 0,
+					citationAvailability: describeCitationAvailability({
+						evaluatedRuns: 0,
+						searchEnabledRuns: 0,
+						extractedCitationRuns: 0,
+					}),
 					uniqueDomains: 0,
 					categoryCounts: emptyCategoryCounts(),
 					domainDistribution: [] as {
@@ -183,11 +213,12 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 			}
 		}
 
-		const [urlStats, perPromptDailyPages, perPromptPages, prevUrlStats] = await Promise.all([
+		const [urlStats, perPromptDailyPages, perPromptPages, prevUrlStats, citationCoverage] = await Promise.all([
 			getCitationUrlStats(data.brandId, fromDateStr, toDateStr, timezone, enabledPromptIds, data.model),
 			getPerPromptDailyCitationPages(data.brandId, fromDateStr, toDateStr, timezone, enabledPromptIds, data.model),
 			getPerPromptCitationPages(data.brandId, fromDateStr, toDateStr, timezone, enabledPromptIds, data.model),
 			getCitationUrlStats(data.brandId, prevFromDateStr, prevToDateStr, timezone, enabledPromptIds, data.model),
+			getCitationRunCoverage(data.brandId, fromDateStr, toDateStr, timezone, enabledPromptIds, data.model),
 		]);
 
 		function categorizeDomain(domain: string): CitationCategory {
@@ -483,6 +514,14 @@ export const getCitationsFn = createServerFn({ method: "GET" })
 
 		return {
 			totalCitations,
+			evaluatedRuns: Number(citationCoverage.evaluated_runs),
+			searchEnabledRuns: Number(citationCoverage.search_enabled_runs),
+			extractedCitationRuns: Number(citationCoverage.extracted_citation_runs),
+			citationAvailability: describeCitationAvailability({
+				evaluatedRuns: Number(citationCoverage.evaluated_runs),
+				searchEnabledRuns: Number(citationCoverage.search_enabled_runs),
+				extractedCitationRuns: Number(citationCoverage.extracted_citation_runs),
+			}),
 			uniqueDomains: domainDistribution.length,
 			categoryCounts,
 			domainDistribution,

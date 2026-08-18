@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { getShareOfVoiceFn } from "@/server/analysis";
 import type { LookbackPeriod } from "@/lib/chart-utils";
+import { getShareOfVoiceFn } from "@/server/analysis";
 
 export interface ShareOfVoiceFilters {
 	scopeId: string;
@@ -25,8 +25,8 @@ export function useShareOfVoice(brandId?: string, filters?: ShareOfVoiceFilters)
 		queryFn: () =>
 			getShareOfVoiceFn({
 				data: {
-					brandId: resolvedBrandId!,
-					scopeId: filters!.scopeId,
+					brandId: resolvedBrandId ?? "",
+					scopeId: filters?.scopeId ?? "",
 					lookback: filters?.lookback ?? "1m",
 					model: filters?.model,
 					tags: filters?.tags?.join(","),
@@ -35,6 +35,9 @@ export function useShareOfVoice(brandId?: string, filters?: ShareOfVoiceFilters)
 			}),
 		enabled: !!resolvedBrandId && !!filters?.scopeId,
 		staleTime: 30_000,
+		refetchOnWindowFocus: true,
+		refetchOnReconnect: true,
+		refetchInterval: 60_000,
 	});
 
 	return {

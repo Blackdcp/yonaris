@@ -8,6 +8,10 @@ const MAX_JSON_BYTES = 4 * 1024 * 1024;
 const MAX_COMPRESSED_BUNDLE_BYTES = 8 * 1024 * 1024;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 
+export function canUseNativeResponseSnapshotHtml(answerHtml: string): boolean {
+	return utf8(answerHtml).byteLength <= MAX_HTML_BYTES;
+}
+
 export type ResponseSnapshotContentSource =
 	| "native_answer_html"
 	| "browser_answer_html"
@@ -73,6 +77,12 @@ export class ResponseSnapshotValidationError extends Error {
 	}
 }
 
+export class ResponseSnapshotSizeValidationError extends ResponseSnapshotValidationError {}
+
+export function isResponseSnapshotBundleSizeError(error: unknown): error is ResponseSnapshotSizeValidationError {
+	return error instanceof ResponseSnapshotSizeValidationError;
+}
+
 export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): PreparedResponseSnapshotBundle {
 	const normalized = normalizeDraft(draft);
 	const snapshotJson = {
@@ -107,7 +117,7 @@ export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): Pre
 	} as const;
 	const jsonBytes = utf8(`${JSON.stringify(snapshotJson)}\n`);
 	if (jsonBytes.byteLength > MAX_JSON_BYTES) {
-		throw new ResponseSnapshotValidationError(`Snapshot JSON exceeds the ${MAX_JSON_BYTES} byte limit`);
+		throw new ResponseSnapshotSizeValidationError(`Snapshot JSON exceeds the ${MAX_JSON_BYTES} byte limit`);
 	}
 	const htmlBytes = utf8(
 		renderResponseSnapshotHtml({
@@ -119,7 +129,7 @@ export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): Pre
 		}),
 	);
 	if (htmlBytes.byteLength > MAX_HTML_BYTES) {
-		throw new ResponseSnapshotValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
+		throw new ResponseSnapshotSizeValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
 	}
 
 	const htmlSha256 = sha256(htmlBytes);
@@ -127,7 +137,7 @@ export function prepareResponseSnapshotBundle(draft: ResponseSnapshotDraft): Pre
 	const htmlGzip = gzipSync(htmlBytes, { level: 9 });
 	const jsonGzip = gzipSync(jsonBytes, { level: 9 });
 	if (htmlGzip.byteLength + jsonGzip.byteLength > MAX_COMPRESSED_BUNDLE_BYTES) {
-		throw new ResponseSnapshotValidationError(
+		throw new ResponseSnapshotSizeValidationError(
 			`Compressed snapshot exceeds the ${MAX_COMPRESSED_BUNDLE_BYTES} byte limit`,
 		);
 	}
@@ -192,8 +202,8 @@ function normalizeDraft(draft: ResponseSnapshotDraft): ResponseSnapshotDraft {
 	) {
 		throw new ResponseSnapshotValidationError(`${draft.contentSource} requires answer HTML`);
 	}
-	if (answerHtml && utf8(answerHtml).byteLength > MAX_HTML_BYTES) {
-		throw new ResponseSnapshotValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
+	if (answerHtml && !canUseNativeResponseSnapshotHtml(answerHtml)) {
+		throw new ResponseSnapshotSizeValidationError(`Snapshot HTML exceeds the ${MAX_HTML_BYTES} byte limit`);
 	}
 	if (draft.sourcePayloadSha256 !== undefined && !SHA256_PATTERN.test(draft.sourcePayloadSha256)) {
 		throw new ResponseSnapshotValidationError("sourcePayloadSha256 must be a lowercase SHA-256 digest");

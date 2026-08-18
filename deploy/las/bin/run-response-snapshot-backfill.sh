@@ -4,6 +4,75 @@ set -Eeuo pipefail
 set +x
 umask 077
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
+
+if [[ "${1:-}" == "--validate-source-provenance" ]]; then
+	if [[ $# -ne 3 ]]; then
+		echo "Usage: $0 --validate-source-provenance <reviewed-backfill-request.json> <current-40-character-git-sha>" >&2
+		exit 2
+	fi
+	request_file="$2"
+	current_sha="$3"
+	if [[ ! "$current_sha" =~ ^[0-9a-f]{40}$ ]]; then
+		echo "Refusing invalid current source SHA." >&2
+		exit 2
+	fi
+	request_dir="$SOURCE_ROOT/deploy/las/response-snapshot-backfills/requests"
+	request_root="$(realpath -e -- "$request_dir")"
+	resolved_request="$(realpath -e -- "$request_file")"
+	if [[ -L "$request_file" || ! -f "$resolved_request" || "$(dirname -- "$resolved_request")" != "$request_root" ]]; then
+		echo "Backfill request must be a direct checked-in file in the approved directory." >&2
+		exit 1
+	fi
+	request_name="$(basename -- "$resolved_request")"
+	if [[ ! "$request_name" =~ ^[a-z0-9][a-z0-9._-]{0,95}\.json$ ]]; then
+		echo "Backfill request filename is invalid." >&2
+		exit 1
+	fi
+	source_sha="$(python3 - "$resolved_request" <<'PY'
+import json
+import pathlib
+import re
+import sys
+
+request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+source_sha = request.get("sourceCommitSha")
+if not isinstance(source_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", source_sha):
+    raise SystemExit("Backfill source SHA is invalid")
+print(source_sha)
+PY
+)"
+	if [[ "$(git -C "$SOURCE_ROOT" rev-parse HEAD)" != "$current_sha" ]]; then
+		echo "Backfill release checkout does not match the current workflow SHA." >&2
+		exit 1
+	fi
+	if ! git -C "$SOURCE_ROOT" merge-base --is-ancestor "$source_sha" "$current_sha"; then
+		echo "Backfill source SHA is not an ancestor of the current release." >&2
+		exit 1
+	fi
+	request_relative="deploy/las/response-snapshot-backfills/requests/$request_name"
+	mapfile -t changed_entries < <(git -C "$SOURCE_ROOT" diff --name-status --no-renames "$source_sha" "$current_sha" --)
+	if [[ ${#changed_entries[@]} -ne 1 || "${changed_entries[0]}" != $'A\t'"$request_relative" ]]; then
+		echo "Backfill release range must add only the exact reviewed request file." >&2
+		exit 1
+	fi
+	mapfile -t touched_paths < <(
+		git -C "$SOURCE_ROOT" log --format= --name-only "$source_sha..$current_sha" -- |
+			sed '/^$/d' |
+			sort -u
+	)
+	if [[ ${#touched_paths[@]} -ne 1 || "${touched_paths[0]}" != "$request_relative" ]]; then
+		echo "Backfill release history must touch only the exact reviewed request file." >&2
+		exit 1
+	fi
+	if ! git -C "$SOURCE_ROOT" show "$current_sha:$request_relative" | cmp -s - "$resolved_request"; then
+		echo "Backfill request does not match the immutable current release." >&2
+		exit 1
+	fi
+	exit 0
+fi
+
 if [[ $# -ne 2 ]]; then
 	echo "Usage: $0 sha-<40-character-git-sha> <reviewed-backfill-request.json>" >&2
 	exit 2
@@ -15,8 +84,6 @@ if [[ ! "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
 	exit 2
 fi
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_ROOT="$(cd -- "$SCRIPT_DIR/../../.." && pwd)"
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/yonaris}"
 COMPOSE_FILE="${COMPOSE_FILE:-$SOURCE_ROOT/deploy/las/compose.yaml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_ROOT/.env}"
@@ -53,9 +120,13 @@ import re
 import sys
 
 request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-required = {"schemaVersion", "operation", "requestId", "brandId", "fromObservedAt", "toObservedAtExclusive", "channelsExact", "runIds", "expectedRunCount", "expectedRunFingerprint", "sourceCommitSha"}
-if set(request) != required or request.get("schemaVersion") != 1 or request.get("operation") != "backfill-response-snapshots" or request.get("brandId") != "stepfun":
+common = {"schemaVersion", "operation", "requestId", "brandId", "fromObservedAt", "toObservedAtExclusive", "channelsExact", "runIds", "expectedRunCount", "expectedRunFingerprint", "sourceCommitSha"}
+brand_id = request.get("brandId")
+required = common if brand_id == "stepfun" else common | {"sourceFailureCode"} if brand_id == "ppio" else set()
+if set(request) != required or request.get("schemaVersion") != 1 or request.get("operation") != "backfill-response-snapshots":
     raise SystemExit("Backfill request does not match the reviewed contract")
+if brand_id == "ppio" and request.get("sourceFailureCode") != "snapshot_contract_invalid":
+    raise SystemExit("PPIO backfill requires sourceFailureCode snapshot_contract_invalid")
 request_id = request.get("requestId")
 source_sha = request.get("sourceCommitSha")
 fingerprint = request.get("expectedRunFingerprint")
@@ -114,7 +185,7 @@ if mode == "dry-run" and payload.get("status") != "dry_run":
     raise SystemExit("Backfill dry-run returned an invalid lifecycle")
 if mode == "apply" and payload.get("status") != "applied":
     raise SystemExit("Backfill apply returned an invalid lifecycle")
-allowed = {"ok", "status", "requestId", "brandId", "total", "runFingerprint", "existing", "wouldCreate", "currentStatuses", "created", "alreadyReady", "pending", "failed"}
+allowed = {"ok", "status", "requestId", "brandId", "total", "runFingerprint", "existing", "wouldCreate", "wouldRebuild", "currentStatuses", "created", "alreadyReady", "pending", "failed"}
 print(json.dumps({key: payload[key] for key in sorted(payload) if key in allowed}, sort_keys=True, separators=(",", ":")))
 PY
 }

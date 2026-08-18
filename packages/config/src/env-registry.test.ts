@@ -35,6 +35,16 @@ describe("ENV_REGISTRY", () => {
 		expect(wrong.map((spec) => spec.name)).toEqual([]);
 	});
 
+	it("registers the explicit Bright Data SERP zone used only by Google AI Overview", () => {
+		expect(ENV_REGISTRY).toContainEqual(
+			expect.objectContaining({
+				name: "BRIGHTDATA_SERP_ZONE",
+				scope: "server",
+				requiredBy: "optional",
+			}),
+		);
+	});
+
 	it("matches turbo.json globalEnv", () => {
 		const turbo = JSON.parse(readFileSync(turboJsonPath, "utf8")) as { globalEnv: string[] };
 		const turboVars = new Set(turbo.globalEnv);

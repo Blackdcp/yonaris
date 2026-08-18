@@ -176,6 +176,13 @@
       "when": 1786985859772,
       "tag": "0024_overseas_run_now",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787019758271,
+      "tag": "0025_workable_whizzer",
+      "breakpoints": true
     }
   ]
 }

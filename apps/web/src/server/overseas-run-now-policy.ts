@@ -28,6 +28,39 @@ export const OVERSEAS_RUN_NOW_CHANNELS = [
 
 export type OverseasRunNowChannelKey = (typeof OVERSEAS_RUN_NOW_CHANNELS)[number]["key"];
 
+/**
+ * This is intentionally only a configuration readiness check. The POST path
+ * still checks the configured zone against Bright Data's account metadata
+ * before it creates any paid calls.
+ */
+export function getOverseasRunNowReadiness(environment: Record<string, string | undefined> = process.env): {
+	googleAiOverviewReady: boolean;
+} {
+	return { googleAiOverviewReady: Boolean(environment.BRIGHTDATA_SERP_ZONE?.trim()) };
+}
+
+export function assertOverseasRunNowChannelsAvailable(
+	channels: readonly (typeof OVERSEAS_RUN_NOW_CHANNELS)[number][],
+	validateTarget: (config: ModelConfig) => string | null,
+): void {
+	for (const channel of channels) {
+		const reason = validateTarget(channel.config);
+		if (reason) throw new Error(`Overseas Run now channel ${channel.label} is unavailable: ${reason}`);
+	}
+}
+
+export async function assertOverseasRunNowChannelsReady(
+	channels: readonly (typeof OVERSEAS_RUN_NOW_CHANNELS)[number][],
+	validateTarget: (config: ModelConfig) => string | null,
+	preflightTarget: (config: ModelConfig) => Promise<string | null>,
+): Promise<void> {
+	assertOverseasRunNowChannelsAvailable(channels, validateTarget);
+	for (const channel of channels) {
+		const reason = await preflightTarget(channel.config);
+		if (reason) throw new Error(`Overseas Run now channel ${channel.label} is unavailable: ${reason}`);
+	}
+}
+
 export interface OverseasRunNowCall {
 	identity: string;
 	promptId: string;

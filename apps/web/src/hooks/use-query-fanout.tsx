@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { getQueryFanoutFn } from "@/server/query-fanout";
 import type { LookbackPeriod } from "@/lib/chart-utils";
+import { getQueryFanoutFn } from "@/server/query-fanout";
 
 export interface QueryFanoutFilters {
 	scopeId?: string;
@@ -27,7 +27,7 @@ export function useQueryFanout(brandId?: string, filters?: QueryFanoutFilters) {
 		queryFn: () =>
 			getQueryFanoutFn({
 				data: {
-					brandId: resolvedBrandId!,
+					brandId: resolvedBrandId ?? "",
 					scopeId: filters?.scopeId,
 					lookback: filters?.lookback ?? "1m",
 					model: filters?.model,
@@ -38,6 +38,9 @@ export function useQueryFanout(brandId?: string, filters?: QueryFanoutFilters) {
 			}),
 		enabled: !!resolvedBrandId && (!!filters?.scopeId || !!filters?.promptId),
 		staleTime: 30_000,
+		refetchOnWindowFocus: true,
+		refetchOnReconnect: true,
+		refetchInterval: 60_000,
 	});
 
 	return {

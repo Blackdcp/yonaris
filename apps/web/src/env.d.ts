@@ -60,6 +60,7 @@ declare global {
 			readonly OPENROUTER_API_KEY?: string;
 			readonly OLOSTEP_API_KEY?: string;
 			readonly BRIGHTDATA_API_TOKEN?: string;
+			readonly BRIGHTDATA_SERP_ZONE?: string;
 			readonly OXYLABS_USERNAME?: string;
 			readonly OXYLABS_PASSWORD?: string;
 			readonly JINA_API_KEY?: string;

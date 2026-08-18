@@ -423,6 +423,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Detect and validate reviewed snapshot backfill request
         id: plan
@@ -447,15 +449,19 @@ jobs:
           import sys
 
           request = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
-          required = {
+          common = {
               "schemaVersion", "operation", "requestId", "brandId", "fromObservedAt",
               "toObservedAtExclusive", "channelsExact", "runIds", "expectedRunCount",
               "expectedRunFingerprint", "sourceCommitSha",
           }
+          brand_id = request.get("brandId")
+          required = common if brand_id == "stepfun" else common | {"sourceFailureCode"} if brand_id == "ppio" else set()
           if set(request) != required:
               raise SystemExit("Snapshot backfill request contains unexpected fields.")
-          if request["schemaVersion"] != 1 or request["operation"] != "backfill-response-snapshots" or request["brandId"] != "stepfun":
+          if request["schemaVersion"] != 1 or request["operation"] != "backfill-response-snapshots":
               raise SystemExit("Snapshot backfill request does not match the reviewed fixed contract.")
+          if brand_id == "ppio" and request.get("sourceFailureCode") != "snapshot_contract_invalid":
+              raise SystemExit("PPIO backfill requires sourceFailureCode snapshot_contract_invalid.")
           if not isinstance(request["requestId"], str) or not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,99}", request["requestId"]):
               raise SystemExit("Snapshot backfill requestId is invalid.")
           run_ids = request["runIds"]
@@ -482,6 +488,8 @@ jobs:
           if start.tzinfo is None or end.tzinfo is None or canonical(start) != request["fromObservedAt"] or canonical(end) != request["toObservedAtExclusive"] or start >= end:
               raise SystemExit("Snapshot backfill observation window is invalid.")
           PY
+            bash deploy/las/bin/run-response-snapshot-backfill.sh \
+              --validate-source-provenance "${requests[0]}" "$GITHUB_SHA"
             echo "has_request=true" >> "$GITHUB_OUTPUT"
             echo "request_name=$request_name" >> "$GITHUB_OUTPUT"
           else
@@ -972,7 +980,7 @@ jobs:
             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-program-import.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/program-imports/requests/$REQUEST_NAME'"
 
   response-snapshot-backfill:
-    name: Backfill reviewed StepFun response snapshots
+    name: Backfill reviewed response snapshots
     needs:
       - deploy
       - response_snapshot_backfill_plan
@@ -981,7 +989,7 @@ jobs:
     timeout-minutes: 30
     environment:
       name: production
-      url: https://portal.yonaris.com/app/stepfun
+      url: https://portal.yonaris.com
     permissions:
       contents: read
     steps:

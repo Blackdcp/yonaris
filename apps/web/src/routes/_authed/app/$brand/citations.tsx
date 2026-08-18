@@ -19,6 +19,7 @@ import { dashboardKeys } from "@/hooks/use-dashboard-summary";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useScopeModels } from "@/hooks/use-scope-models";
 import { getDaysFromLookback } from "@/lib/chart-utils";
+import { getGoogleModuleCitationCount } from "@/lib/google-module";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 export const Route = createFileRoute("/_authed/app/$brand/citations")({
@@ -85,6 +86,12 @@ function CitationsPage() {
 	);
 
 	const showFullSkeleton = filters.isScopeResolving || (isLoading && !citationData);
+	const emptyDescription =
+		citationData?.citationAvailability.kind === "no_evaluated_runs"
+			? "No prompt runs match this scope and time period yet."
+			: citationData?.citationAvailability.kind === "no_search_enabled_runs"
+				? `${citationData.evaluatedRuns} prompt runs completed, but none used web search, so no links could be extracted.`
+				: `${citationData?.evaluatedRuns ?? 0} prompt runs completed, including ${citationData?.searchEnabledRuns ?? 0} search-enabled runs, but this platform did not expose any extractable source links in the captured answers.`;
 
 	return (
 		<PageHeader
@@ -122,15 +129,17 @@ function CitationsPage() {
 						</CardContent>
 					</Card>
 				}
-				totalCount={citationData?.totalCitations}
+				totalCount={
+					citationData
+						? citationData.totalCitations + getGoogleModuleCitationCount(citationData.googleModule)
+						: undefined
+				}
 				noMatchesTitle="No citations found for the selected filters."
 				noMatchesDescription="Try adjusting your filters or time period."
 				emptyState={
 					<Card>
 						<CardContent className="pt-6">
-							<div className="text-muted-foreground text-center py-8">
-								No citations found. Citations are only available from prompts evaluated with web search enabled.
-							</div>
+							<div className="text-muted-foreground text-center py-8">{emptyDescription}</div>
 						</CardContent>
 					</Card>
 				}

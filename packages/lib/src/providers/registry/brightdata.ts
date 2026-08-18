@@ -30,58 +30,154 @@ function createClient(): bdclient {
 	return new bdclient({ apiKey: getCredential("BRIGHTDATA_API_TOKEN") });
 }
 
+type BrightDataZoneClient = {
+	listZones(): Promise<Array<{ name: string; type: string; status?: string | null }>>;
+	close(): Promise<void>;
+};
+
+function createReadOnlyZoneClient(): BrightDataZoneClient {
+	return new bdclient({ apiKey: getCredential("BRIGHTDATA_API_TOKEN"), autoCreateZones: false });
+}
+
 const BRIGHTDATA_REQUEST_URL = "https://api.brightdata.com/request";
+
+export class BrightDataProviderError extends Error {
+	readonly code: string;
+
+	constructor(code: string, message: string) {
+		super(message);
+		this.name = "BrightDataProviderError";
+		this.code = code;
+	}
+}
+
+/** Google AI Overview uses a customer-owned SERP zone. A fallback zone is unsafe:
+ * it can be absent from an account and turns one invalid batch into repeated 400s. */
+export function requireGoogleAiOverviewSerpZone(environment: Record<string, string | undefined> = process.env): string {
+	const zone = environment.BRIGHTDATA_SERP_ZONE?.trim();
+	if (!zone) {
+		throw new BrightDataProviderError(
+			"brightdata_serp_zone_unavailable",
+			"Google AI Overview is unavailable: configure BRIGHTDATA_SERP_ZONE for this Bright Data account",
+		);
+	}
+	return zone;
+}
+
+/**
+ * A zone listing is an account metadata request, not a SERP collection. Keep
+ * the SDK's zone auto-create feature disabled so this preflight cannot create
+ * or bill a zone as a side effect.
+ */
+export async function preflightGoogleAiOverviewSerpZone(
+	dependencies: { zone?: string; createClient?: () => BrightDataZoneClient } = {},
+): Promise<void> {
+	const zone = dependencies.zone ?? requireGoogleAiOverviewSerpZone();
+	const client = (dependencies.createClient ?? createReadOnlyZoneClient)();
+	try {
+		const zones = await client.listZones();
+		const activeSerpZone = zones.some(
+			(candidate) =>
+				candidate.name === zone &&
+				candidate.type === "serp" &&
+				(candidate.status == null || candidate.status === "active"),
+		);
+		if (!activeSerpZone) {
+			throw new BrightDataProviderError(
+				"brightdata_serp_zone_unavailable",
+				"Google AI Overview is unavailable: the configured Bright Data SERP zone is missing or inactive",
+			);
+		}
+	} catch (error) {
+		if (error instanceof BrightDataProviderError) throw error;
+		throw new BrightDataProviderError(
+			"brightdata_serp_zone_unavailable",
+			"Google AI Overview is unavailable: Bright Data active SERP zones could not be verified",
+		);
+	} finally {
+		try {
+			await client.close();
+		} catch {
+			// The metadata preflight has already completed; SDK cleanup must not mask its result.
+		}
+	}
+}
+
+type BrightDataSerpResponse = { ok: boolean; status: number; text(): Promise<string> };
+
+export async function requestGoogleAiOverviewSerp(input: {
+	zone: string;
+	request: () => Promise<BrightDataSerpResponse>;
+	sleep?: (milliseconds: number) => Promise<void>;
+}): Promise<ScrapeResult> {
+	const response = await input.request();
+	const text = await response.text();
+
+	if (response.status === 400) {
+		if (/\bzone\b[\s\S]*\bnot found\b/i.test(text)) {
+			throw new BrightDataProviderError(
+				"brightdata_serp_zone_unavailable",
+				"Google AI Overview is unavailable: the configured Bright Data SERP zone was not found",
+			);
+		}
+		throw new BrightDataProviderError(
+			"brightdata_serp_request_rejected",
+			"Google AI Overview request was rejected by Bright Data (HTTP 400)",
+		);
+	}
+
+	let parsed: unknown;
+	if (response.ok && text.trim()) {
+		try {
+			parsed = JSON.parse(text);
+		} catch {
+			// Without a provider idempotency token, retrying the POST could create another paid collection.
+		}
+	}
+
+	if (parsed !== undefined) {
+		return toBrightDataScrapeResult(parsed, {
+			captureMethod: "brightdata_serp",
+			webSearch: true,
+			modelVersion: "brightdata-serp",
+		});
+	}
+
+	const failureSummary = `${response.status} ${text.slice(0, 200)}`.trim();
+	throw new BrightDataProviderError(
+		"brightdata_serp_request_failed",
+		`BrightData SERP request failed without retry — ${failureSummary}`,
+	);
+}
 
 /**
  * Fetch Google's AI Overview through BrightData's SERP API. AI Overview is the
  * AI summary block on a normal results page, so we request a US-English Google
  * SERP as parsed JSON (`brd_json=1`) with `brd_ai_overview=2` — the flag that
  * makes BrightData surface the overview; without it AIO shows up in only a
- * fraction of SERPs. This runs through a serp zone (default `sdk_serp`, the zone
- * the BrightData SDK auto-provisions; override with BRIGHTDATA_SERP_ZONE), billed
- * to the same BRIGHTDATA_API_TOKEN — no dataset id or extra credential. The
- * parsed SERP carries an `ai_overview` object when Google shows one.
+ * fraction of SERPs. This runs through the explicitly configured customer SERP
+ * zone, billed to the same BRIGHTDATA_API_TOKEN — no dataset id or extra
+ * credential. The parsed SERP carries an `ai_overview` object when Google shows
+ * one.
  */
 async function runGoogleAiOverview(prompt: string): Promise<ScrapeResult> {
-	const zone = process.env.BRIGHTDATA_SERP_ZONE ?? "sdk_serp";
+	const zone = requireGoogleAiOverviewSerpZone();
 	const url = `https://www.google.com/search?q=${encodeURIComponent(prompt)}&brd_json=1&brd_ai_overview=2&gl=us&hl=en`;
-
-	let lastError = "";
-	for (let attempt = 0; attempt < 3; attempt++) {
-		const res = await fetch(BRIGHTDATA_REQUEST_URL, {
-			method: "POST",
-			headers: {
-				Authorization: `Bearer ${getCredential("BRIGHTDATA_API_TOKEN")}`,
-				"Content-Type": "application/json",
-			},
-			// `method: "GET"` tells BrightData how to fetch the target URL — without
-			// it the response comes back empty. `format: "raw"` returns the brd_json
-			// SERP directly as the body.
-			body: JSON.stringify({ zone, url, method: "GET", format: "raw" }),
-		});
-		const text = await res.text();
-
-		let parsed: unknown;
-		if (res.ok && text.trim()) {
-			try {
-				parsed = JSON.parse(text);
-			} catch {
-				// fall through to retry — a non-JSON body is a transient edge/error page
-			}
-		}
-
-		if (parsed !== undefined) {
-			return toBrightDataScrapeResult(parsed, {
-				captureMethod: "brightdata_serp",
-				webSearch: true,
-				modelVersion: "brightdata-serp",
-			});
-		}
-
-		lastError = `${res.status} ${text.slice(0, 200)}`.trim();
-		await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
-	}
-	throw new Error(`BrightData SERP request failed after 3 attempts — ${lastError}`);
+	return requestGoogleAiOverviewSerp({
+		zone,
+		request: () =>
+			fetch(BRIGHTDATA_REQUEST_URL, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${getCredential("BRIGHTDATA_API_TOKEN")}`,
+					"Content-Type": "application/json",
+				},
+				// `method: "GET"` tells BrightData how to fetch the target URL — without
+				// it the response comes back empty. `format: "raw"` returns the brd_json
+				// SERP directly as the body.
+				body: JSON.stringify({ zone, url, method: "GET", format: "raw" }),
+			}),
+	});
 }
 
 function normalizeAnswer(record: Record<string, any>): string {
@@ -202,6 +298,11 @@ export const brightdata: Provider = {
 			if (!config.webSearch) {
 				return `${config.model}:brightdata requires :online — AI Overview always uses web search`;
 			}
+			try {
+				requireGoogleAiOverviewSerpZone();
+			} catch (error) {
+				return error instanceof Error ? error.message : "Google AI Overview is unavailable";
+			}
 			return null;
 		}
 		// Allow custom dataset IDs via version slug (e.g. chatgpt:brightdata:gd_abc123)
@@ -213,6 +314,18 @@ export const brightdata: Provider = {
 			return `${config.model}:brightdata requires :online — this chatbot always uses web search`;
 		}
 		return null;
+	},
+
+	async preflightTarget(config: ModelConfig) {
+		if (config.model !== AI_OVERVIEW_MODEL) return null;
+		const targetError = this.validateTarget?.(config);
+		if (targetError) return targetError;
+		try {
+			await preflightGoogleAiOverviewSerpZone();
+			return null;
+		} catch (error) {
+			return error instanceof Error ? error.message : "Google AI Overview is unavailable";
+		}
 	},
 
 	async run(model: string, prompt: string, options?: ProviderOptions): Promise<ScrapeResult> {
@@ -257,8 +370,12 @@ export const brightdata: Provider = {
 			}
 
 			({ snapshot_id: snapshotId } = (await triggerRes.json()) as { snapshot_id: string });
+			if (!snapshotId) throw new Error("BrightData trigger returned no snapshot ID");
 			await pollUntilReady(snapshotId);
-			const payload = await client.scrape.snapshot.fetch(snapshotId, { format: "json" });
+			const readySnapshotId = snapshotId;
+			const payload = await fetchBrightDataSnapshotWhenReady(() =>
+				client.scrape.snapshot.fetch(readySnapshotId, { format: "json" }),
+			);
 			consumed = true;
 
 			return toBrightDataScrapeResult(payload, {
@@ -302,6 +419,31 @@ async function pollUntilReady(snapshotId: string): Promise<void> {
 	}
 
 	throw new Error(`BrightData snapshot ${snapshotId} timed out`);
+}
+
+export async function fetchBrightDataSnapshotWhenReady<T>(
+	fetchSnapshot: () => Promise<T>,
+	sleep: (milliseconds: number) => Promise<void> = (milliseconds) =>
+		new Promise<void>((resolve) => setTimeout(resolve, milliseconds)),
+): Promise<T> {
+	let lastError: Error | undefined;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		try {
+			return await fetchSnapshot();
+		} catch (error) {
+			if (!isSnapshotNotReadyError(error)) throw error;
+			lastError = error instanceof Error ? error : new Error(String(error));
+			if (attempt < 2) await sleep(1000 * (attempt + 1));
+		}
+	}
+	throw new BrightDataProviderError(
+		"brightdata_snapshot_not_ready",
+		lastError?.message ?? "BrightData snapshot is not ready yet, please try again later",
+	);
+}
+
+function isSnapshotNotReadyError(error: unknown): boolean {
+	return error instanceof Error && /snapshot is not ready yet/i.test(error.message);
 }
 
 /** Read snapshot status straight from datasets/v3/progress. We bypass the SDK's

@@ -29,7 +29,13 @@ import { type BrandFilterSearch, useListFilters } from "@/hooks/use-list-filters
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
 import { useScopeModels } from "@/hooks/use-scope-models";
-import { type PromptFanoutStat, promptKeywords, type TopQueryStat } from "@/lib/fanout-analysis";
+import {
+	describeFanoutAvailability,
+	type PromptFanoutStat,
+	promptKeywords,
+	summarizeFanoutRunExposure,
+	type TopQueryStat,
+} from "@/lib/fanout-analysis";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { getModelDisplayName } from "@/lib/utils";
 
@@ -85,6 +91,7 @@ function QueryFanoutPage() {
 		tags,
 		model: modelParam,
 	});
+	const availability = data ? describeFanoutAvailability(data) : null;
 
 	const infoContent = (
 		<p>
@@ -99,20 +106,31 @@ function QueryFanoutPage() {
 		content = <LoadingState />;
 	} else if (isError && !data) {
 		content = <EmptyState message="Couldn't load query fan-out right now. Reload the page to try again." />;
-	} else if (!data || data.totalRuns === 0) {
+	} else if (!data || availability?.kind === "no_search_enabled_runs") {
 		// totalRuns counts only web-search-enabled runs — a brand whose models all
 		// run without web search lands here even with plenty of runs.
 		content = (
 			<EmptyState message="No runs with web search enabled for the selected filters. Fan-out appears once your prompts have been run by an engine with web search." />
 		);
-	} else if (data.totalQueries === 0) {
+	} else if (availability?.kind === "queries_not_exposed") {
 		// Runs happened but none exposed fan-out — still show the KPIs (run counts)
 		// above the explanation rather than hiding everything.
 		content = (
 			<TooltipProvider delayDuration={150}>
 				<div className="space-y-6">
 					<StatRow data={data} />
-					<EmptyState message="No web queries in this period — the engines you track didn't expose any searches for these prompts and filters." />
+					<EmptyState message="The platform did not expose verifiable web queries for these prompt runs. Query availability is unknown; this is not evidence that no search occurred." />
+				</div>
+			</TooltipProvider>
+		);
+	} else if (availability?.kind === "query_exposed_no_fanout") {
+		content = (
+			<TooltipProvider delayDuration={150}>
+				<div className="space-y-6">
+					<StatRow data={data} />
+					<EmptyState
+						message={`${availability.exposedRuns} prompt runs exposed web queries, but they only repeated the original prompt; no fan-out rewrites were observed.${availability.unknownRuns > 0 ? ` ${availability.unknownRuns} other runs did not expose a query string.` : ""}`}
+					/>
 				</div>
 			</TooltipProvider>
 		);
@@ -186,16 +204,13 @@ function StatCard({ label, value, tip }: { label: string; value: React.ReactNode
 function RunsTooltip({ breakdown }: { breakdown: FanoutData["byModel"] }) {
 	return (
 		<>
-			<p>
-				Prompt runs that produced at least one web search. Some engines do not expose web searches, so this number may
-				be lower than expected.
-			</p>
+			<p>Prompt runs where the platform exposed at least one usable query string, including the original prompt.</p>
 			{breakdown.length > 0 && (
 				<div className="border-border/60 mt-2 space-y-0.5 border-t pt-2">
 					{breakdown.map((m) => (
 						<div key={m.model} className="flex items-center justify-between gap-3">
 							<span>{getModelDisplayName(m.model)}</span>
-							<span className="tabular-nums">{m.fanoutRuns.toLocaleString()}</span>
+							<span className="tabular-nums">{m.exposedQueryRuns.toLocaleString()}</span>
 						</div>
 					))}
 				</div>
@@ -206,14 +221,14 @@ function RunsTooltip({ breakdown }: { breakdown: FanoutData["byModel"] }) {
 
 function UnknownRunsTooltip({ byModel }: { byModel: FanoutData["byModel"] }) {
 	const rows = byModel
-		.map((m) => ({ model: m.model, unknown: m.runs - m.fanoutRuns }))
+		.map((m) => ({ model: m.model, unknown: m.runs - m.exposedQueryRuns }))
 		.filter((m) => m.unknown > 0)
 		.sort((a, b) => b.unknown - a.unknown);
 	return (
 		<>
 			<p>
-				Search-enabled runs without known queries. The engine may have chosen not to search at all, searched with just
-				the prompt itself, or searched without revealing its queries.
+				Search-enabled runs where the platform did not expose a usable query string. This is not evidence that no search
+				occurred.
 			</p>
 			{rows.length > 0 && (
 				<div className="border-border/60 mt-2 space-y-0.5 border-t pt-2">
@@ -230,10 +245,10 @@ function UnknownRunsTooltip({ byModel }: { byModel: FanoutData["byModel"] }) {
 }
 
 function StatRow({ data }: { data: FanoutData }) {
-	// Only models that actually produced fan-out — the tooltip describes runs that
-	// "produced at least one web search", so engines that ran but exposed none (e.g.
-	// OpenRouter) are left off rather than listed as 0.
-	const breakdown = data.byModel.filter((m) => m.fanoutRuns > 0).sort((a, b) => b.fanoutRuns - a.fanoutRuns);
+	const exposure = summarizeFanoutRunExposure(data);
+	const breakdown = data.byModel
+		.filter((m) => m.exposedQueryRuns > 0)
+		.sort((a, b) => b.exposedQueryRuns - a.exposedQueryRuns);
 	return (
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<StatCard
@@ -243,18 +258,18 @@ function StatRow({ data }: { data: FanoutData }) {
 			/>
 			<StatCard
 				label="Prompt Runs w/ Unknown Queries"
-				value={(data.totalRuns - data.fanoutRuns).toLocaleString()}
+				value={exposure.unknownRuns.toLocaleString()}
 				tip={<UnknownRunsTooltip byModel={data.byModel} />}
 			/>
 			<StatCard
-				label="Prompt Runs w/ Known Queries"
-				value={data.fanoutRuns.toLocaleString()}
+				label="Prompt Runs w/ Exposed Queries"
+				value={exposure.exposedRuns.toLocaleString()}
 				tip={<RunsTooltip breakdown={breakdown} />}
 			/>
 			<StatCard
 				label="Average Fan-Out"
 				value={data.avgPerExecution.toLocaleString()}
-				tip="Average queries per run that had at least one web query."
+				tip="Average rewritten fan-out queries per run that exposed at least one genuine query rewrite. Exact prompt echoes are excluded."
 			/>
 		</div>
 	);

@@ -66,6 +66,7 @@ import { and, asc, count, desc, eq, inArray, isNull, ne, or, sql } from "drizzle
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { browserRunnerEnabled, browserRunnerFeatureEnabled } from "./browser-runner-auth";
+import { getOverseasRunNowReadiness } from "./overseas-run-now-policy";
 import { assertSamplingBrowserRunnerProtocol } from "./sampling-browser-runner-protocol";
 import { samplingEvidenceDownloadUrl, toSamplingEvidenceArtifactDto } from "./sampling-evidence";
 import { prepareSamplingObservation, samplingObservationInputSchema } from "./sampling-observation";
@@ -792,6 +793,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 				selectedBrand: null,
 				targets: SAMPLING_TARGETS,
 				browserRunnerEnabled: browserRunnerFeatureEnabled(),
+				overseasRunNow: getOverseasRunNowReadiness(),
 			};
 		}
 
@@ -834,6 +836,7 @@ export const getSamplingContextFn = createServerFn({ method: "GET" })
 			},
 			targets: SAMPLING_TARGETS,
 			browserRunnerEnabled: browserRunnerFeatureEnabled(),
+			overseasRunNow: getOverseasRunNowReadiness(),
 		};
 	});
 

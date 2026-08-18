@@ -15,12 +15,17 @@ describe("mode compatibility migration rewind", () => {
 			"0022_response_snapshot_archive",
 			"0023_browser_extension_devices",
 			"0024_overseas_run_now",
+			"0025_workable_whizzer",
 		]);
 		for (const migration of post0021) expect(workflow).toContain(String(migration.when));
 		expect(workflow).toContain("DROP TABLE public.overseas_run_calls;");
 		expect(workflow).toContain("DROP TABLE public.overseas_run_cohorts;");
 		expect(workflow).toContain("DROP TYPE public.overseas_run_call_status;");
 		expect(workflow).toContain("DROP TYPE public.overseas_run_cohort_status;");
+		expect(workflow).toContain("DROP CONSTRAINT brand_opportunities_scope_fk;");
+		expect(workflow).toContain("DROP INDEX public.brand_opportunities_brand_scope_created_at_idx;");
+		expect(workflow).toContain("DROP COLUMN scope_id;");
+		expect(workflow).toContain("CREATE INDEX brand_opportunities_brand_id_created_at_idx");
 		expect(workflow).toContain(`'select count(*) from drizzle.__drizzle_migrations;')" = "${journal.entries.length}"`);
 	});
 });
