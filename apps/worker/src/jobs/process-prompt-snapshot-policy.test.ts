@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import { normalizeResponseSnapshotCitationTitle } from "../response-snapshot-citation-policy";
 import {
 	archivePromptResponseSnapshotBestEffort,
 	assertPromptSnapshotCaptureConfiguration,
@@ -102,6 +103,49 @@ test("draft construction normalizes query evidence without exposing a sentinel",
 		assert.equal(draft.answerHtml, SNAPSHOT_SOURCE.answerHtml);
 		assert.equal(draft.sourcePayloadSha256, SNAPSHOT_SOURCE.sourcePayloadSha256);
 	}
+});
+
+test("draft construction safely bounds provider citation titles before snapshot validation", () => {
+	const draft = buildPromptResponseSnapshotDraft({
+		promptRunId: "run-long-citation-title",
+		brandId: "ppio",
+		scopeId: "global-market",
+		promptId: "prompt-1",
+		promptText: "Which infrastructure providers support AI workloads?",
+		answerText: "PPIO is one provider.",
+		citations: [
+			{
+				url: "https://example.com/source",
+				title: "x".repeat(1_194),
+				domain: "example.com",
+				citationIndex: 0,
+			},
+		],
+		webQueries: [],
+		webSearchEnabled: true,
+		brandMentioned: true,
+		competitorsMentioned: [],
+		channel: "google-ai-mode.consumer_web",
+		modelVersion: "google-ai-mode",
+		market: "US",
+		locale: "en-US",
+		timezone: "UTC",
+		observedAt: new Date("2026-08-18T00:00:00.000Z"),
+		snapshotSource: SNAPSHOT_SOURCE,
+	});
+
+	assert.equal(draft.citations[0]?.title?.length, 1_000);
+	assert.doesNotThrow(() => prepareResponseSnapshotBundle(draft));
+});
+
+test("citation title normalization preserves valid values and never splits a surrogate pair", () => {
+	assert.equal(normalizeResponseSnapshotCitationTitle("  Source title  "), "Source title");
+	assert.equal(normalizeResponseSnapshotCitationTitle("   "), null);
+	assert.equal(normalizeResponseSnapshotCitationTitle("x".repeat(1_000)), "x".repeat(1_000));
+
+	const bounded = normalizeResponseSnapshotCitationTitle(`${"x".repeat(999)}😀tail`);
+	assert.equal(bounded, "x".repeat(999));
+	assert.ok((bounded?.length ?? 0) <= 1_000);
 });
 
 test("native HTML at the four-megabyte raw boundary falls back after final bundle validation", () => {
