@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
+import type { ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import { normalizeResponseSnapshotQueryEvidence } from "./response-snapshot-query-policy";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const SHA256 = /^[0-9a-f]{64}$/u;
 const GIT_SHA = /^[0-9a-f]{40}$/u;
 const SAFE_KEY = /^[a-z0-9][a-z0-9._-]{0,99}$/u;
-const EXPECTED_KEYS = [
+const BACKFILL_ACTION_CHUNK_SIZE = 100;
+const STEPFUN_EXPECTED_KEYS = [
 	"brandId",
 	"channelsExact",
 	"expectedRunCount",
@@ -17,6 +20,7 @@ const EXPECTED_KEYS = [
 	"sourceCommitSha",
 	"toObservedAtExclusive",
 ] as const;
+const PPIO_EXPECTED_KEYS = [...STEPFUN_EXPECTED_KEYS, "sourceFailureCode"].sort();
 
 export const BACKFILL_RESPONSE_SNAPSHOT_WRITE_SET = ["response_snapshots", "response_snapshot_outbox"] as const;
 
@@ -31,7 +35,7 @@ export type ResponseSnapshotBackfillRequest = {
 	schemaVersion: 1;
 	operation: "backfill-response-snapshots";
 	requestId: string;
-	brandId: string;
+	brandId: "stepfun" | "ppio";
 	fromObservedAt: string;
 	toObservedAtExclusive: string;
 	channelsExact: string[];
@@ -39,6 +43,7 @@ export type ResponseSnapshotBackfillRequest = {
 	expectedRunCount: number;
 	expectedRunFingerprint: string;
 	sourceCommitSha: string;
+	sourceFailureCode?: "snapshot_contract_invalid";
 };
 
 export type BackfillRunIdentity = {
@@ -86,6 +91,32 @@ export type PlannedResponseSnapshotBackfillRun = BackfillRunIdentity & {
 	sourcePayloadSha256: string;
 };
 
+export type BackfillCurrentSnapshotIdentity = {
+	promptRunId: string;
+	brandId: string;
+	promptId: string;
+	scopeId: string | null;
+	status: "pending" | "ready" | "failed" | "expired";
+	failureCode: string | null;
+};
+
+export type BackfillFilteredCohortRun = {
+	runId: string;
+	currentSnapshotStatus: BackfillCurrentSnapshotIdentity["status"] | null;
+	currentSnapshotFailureCode: string | null;
+};
+
+export type ResponseSnapshotBackfillAction = {
+	run: PlannedResponseSnapshotBackfillRun;
+	action: "rebuild" | "already_ready" | "pending";
+};
+
+export type ResponseSnapshotBackfillDryRunSummary = {
+	existing: number;
+	wouldCreate: number;
+	wouldRebuild: number;
+};
+
 export function parseResponseSnapshotBackfillCli(arguments_: string[]): {
 	requestFile: string;
 	sourceSha: string;
@@ -117,7 +148,16 @@ export function parseResponseSnapshotBackfillCli(arguments_: string[]): {
 }
 
 export function parseResponseSnapshotBackfillRequest(value: unknown): ResponseSnapshotBackfillRequest {
-	if (!isRecord(value) || !hasExactKeys(value, EXPECTED_KEYS)) {
+	if (!isRecord(value)) {
+		throw new ResponseSnapshotBackfillPolicyError("Backfill request must contain only the exact reviewed fields");
+	}
+	if (value.brandId !== "stepfun" && value.brandId !== "ppio") {
+		throw new ResponseSnapshotBackfillPolicyError(
+			"Response snapshot backfill is restricted to the reviewed StepFun or PPIO brand",
+		);
+	}
+	const expectedKeys = value.brandId === "ppio" ? PPIO_EXPECTED_KEYS : STEPFUN_EXPECTED_KEYS;
+	if (!hasExactKeys(value, expectedKeys)) {
 		throw new ResponseSnapshotBackfillPolicyError("Backfill request must contain only the exact reviewed fields");
 	}
 	if (value.schemaVersion !== 1 || value.operation !== "backfill-response-snapshots") {
@@ -126,9 +166,9 @@ export function parseResponseSnapshotBackfillRequest(value: unknown): ResponseSn
 	if (typeof value.requestId !== "string" || !SAFE_KEY.test(value.requestId)) {
 		throw new ResponseSnapshotBackfillPolicyError("Backfill requestId is invalid");
 	}
-	if (value.brandId !== "stepfun") {
+	if (value.brandId === "ppio" && value.sourceFailureCode !== "snapshot_contract_invalid") {
 		throw new ResponseSnapshotBackfillPolicyError(
-			"Response snapshot backfill is restricted to the reviewed StepFun brand",
+			"PPIO response snapshot backfill requires sourceFailureCode snapshot_contract_invalid",
 		);
 	}
 	const from = exactTimestamp(value.fromObservedAt, "fromObservedAt");
@@ -175,6 +215,7 @@ export function parseResponseSnapshotBackfillRequest(value: unknown): ResponseSn
 		expectedRunCount: value.expectedRunCount,
 		expectedRunFingerprint: value.expectedRunFingerprint,
 		sourceCommitSha: value.sourceCommitSha,
+		...(value.brandId === "ppio" ? { sourceFailureCode: "snapshot_contract_invalid" as const } : {}),
 	};
 }
 
@@ -215,6 +256,7 @@ export function buildResponseSnapshotBackfillPlan(
 	request: ResponseSnapshotBackfillRequest,
 	runs: BackfillRunIdentity[],
 	citations: BackfillCitationIdentity[],
+	filteredCohort: BackfillFilteredCohortRun[],
 ): { expectedRunCount: number; runFingerprint: string; runs: PlannedResponseSnapshotBackfillRun[] } {
 	if (runs.length !== request.expectedRunCount) {
 		throw new ResponseSnapshotBackfillPolicyError("Backfill did not resolve the exact expected run count");
@@ -228,6 +270,7 @@ export function buildResponseSnapshotBackfillPlan(
 	) {
 		throw new ResponseSnapshotBackfillPolicyError("Backfill did not resolve the exact run identity set");
 	}
+	assertFilteredCohort(request, filteredCohort);
 	const start = new Date(request.fromObservedAt);
 	const end = new Date(request.toObservedAtExclusive);
 	const channels = new Set(request.channelsExact);
@@ -277,6 +320,165 @@ export function buildResponseSnapshotBackfillPlan(
 		throw new ResponseSnapshotBackfillPolicyError("Backfill run fingerprint does not match the reviewed request");
 	}
 	return { expectedRunCount: request.expectedRunCount, runFingerprint, runs: planned };
+}
+
+function assertFilteredCohort(
+	request: ResponseSnapshotBackfillRequest,
+	filteredCohort: BackfillFilteredCohortRun[],
+): void {
+	const reviewedIds = new Set(request.runIds);
+	const filteredIds = new Set<string>();
+	for (const row of filteredCohort) {
+		if (!UUID.test(row.runId) || filteredIds.has(row.runId)) {
+			throw new ResponseSnapshotBackfillPolicyError("Backfill filtered cohort is invalid");
+		}
+		filteredIds.add(row.runId);
+	}
+	if (request.brandId === "stepfun") {
+		if (filteredIds.size !== reviewedIds.size || [...filteredIds].some((runId) => !reviewedIds.has(runId))) {
+			throw new ResponseSnapshotBackfillPolicyError("Reviewed runIds are not the exact filtered cohort");
+		}
+		return;
+	}
+	const filteredById = new Map(filteredCohort.map((row) => [row.runId, row]));
+	for (const reviewedId of reviewedIds) {
+		const row = filteredById.get(reviewedId);
+		if (!row) {
+			throw new ResponseSnapshotBackfillPolicyError("PPIO filtered cohort is missing a reviewed run");
+		}
+		if (
+			row.currentSnapshotStatus !== "ready" &&
+			(row.currentSnapshotStatus !== "failed" || row.currentSnapshotFailureCode !== request.sourceFailureCode)
+		) {
+			throw new ResponseSnapshotBackfillPolicyError(
+				"PPIO reviewed run is outside the approved current snapshot cohort",
+			);
+		}
+	}
+	const hasUnreviewedSourceFailure = filteredCohort.some(
+		(row) =>
+			row.currentSnapshotStatus === "failed" &&
+			row.currentSnapshotFailureCode === request.sourceFailureCode &&
+			!reviewedIds.has(row.runId),
+	);
+	if (hasUnreviewedSourceFailure) {
+		throw new ResponseSnapshotBackfillPolicyError(
+			"PPIO filtered cohort contains an unreviewed snapshot contract failure",
+		);
+	}
+}
+
+export function classifyResponseSnapshotBackfillActions(
+	request: ResponseSnapshotBackfillRequest,
+	runs: PlannedResponseSnapshotBackfillRun[],
+	snapshots: BackfillCurrentSnapshotIdentity[],
+): ResponseSnapshotBackfillAction[] {
+	const runById = new Map(runs.map((run) => [run.runId, run]));
+	const snapshotByRunId = new Map<string, BackfillCurrentSnapshotIdentity>();
+	for (const snapshot of snapshots) {
+		const run = runById.get(snapshot.promptRunId);
+		if (
+			!run ||
+			snapshotByRunId.has(snapshot.promptRunId) ||
+			snapshot.brandId !== run.brandId ||
+			snapshot.promptId !== run.promptId ||
+			snapshot.scopeId !== run.scopeId
+		) {
+			throw new ResponseSnapshotBackfillPolicyError("Current snapshot identity is inconsistent");
+		}
+		snapshotByRunId.set(snapshot.promptRunId, snapshot);
+	}
+
+	return runs.map((run) => {
+		const snapshot = snapshotByRunId.get(run.runId);
+		if (request.brandId === "ppio") {
+			if (!snapshot) {
+				throw new ResponseSnapshotBackfillPolicyError("PPIO backfill requires an existing current snapshot");
+			}
+			if (snapshot.status === "ready") return { run, action: "already_ready" as const };
+			if (snapshot.status !== "failed" || snapshot.failureCode !== request.sourceFailureCode) {
+				throw new ResponseSnapshotBackfillPolicyError(
+					"PPIO backfill current snapshot status or failure code is outside the reviewed cohort",
+				);
+			}
+			return { run, action: "rebuild" as const };
+		}
+		if (snapshot?.status === "ready") return { run, action: "already_ready" as const };
+		if (snapshot?.status === "pending") return { run, action: "pending" as const };
+		return { run, action: "rebuild" as const };
+	});
+}
+
+export function buildResponseSnapshotBackfillDraft(run: PlannedResponseSnapshotBackfillRun): ResponseSnapshotDraft {
+	const queryEvidence = normalizeResponseSnapshotQueryEvidence(run);
+	return {
+		runId: run.runId,
+		brandId: run.brandId,
+		scopeId: run.scopeId,
+		promptId: run.promptId,
+		promptText: run.promptText,
+		answerText: run.answerText,
+		citations: run.citations.map((citation) => ({
+			url: citation.url ?? "",
+			title: citation.title ?? null,
+			domain: citation.domain ?? "",
+			citationIndex: citation.citationIndex,
+		})),
+		...queryEvidence,
+		brandMentioned: run.brandMentioned,
+		competitorsMentioned: run.competitorsMentioned,
+		channel: run.model,
+		modelVersion: run.version,
+		market: run.scopeMarket ?? "ZZ",
+		locale: run.scopeLocale ?? "und",
+		timezone: run.scopeTimezone ?? "UTC",
+		observedAt: run.observedAt.toISOString(),
+		captureMethod: run.captureMethod,
+		contentSource: run.contentSource,
+		sourcePayloadSha256: run.sourcePayloadSha256,
+	};
+}
+
+export function summarizeResponseSnapshotBackfillDryRun(
+	actions: ResponseSnapshotBackfillAction[],
+	snapshots: BackfillCurrentSnapshotIdentity[],
+): ResponseSnapshotBackfillDryRunSummary {
+	const existingRunIds = new Set(snapshots.map((snapshot) => snapshot.promptRunId));
+	const rebuildActions = actions.filter(({ action }) => action === "rebuild");
+	return {
+		existing: snapshots.length,
+		wouldCreate: rebuildActions.filter(({ run }) => !existingRunIds.has(run.runId)).length,
+		wouldRebuild: rebuildActions.filter(({ run }) => existingRunIds.has(run.runId)).length,
+	};
+}
+
+export async function executeResponseSnapshotBackfillActions(
+	actions: ResponseSnapshotBackfillAction[],
+	dependencies: {
+		rebuild(run: PlannedResponseSnapshotBackfillRun): Promise<{
+			status: "ready" | "already_ready" | "retry_later" | "failed";
+			queued: boolean;
+		}>;
+	},
+): Promise<{ created: number; alreadyReady: number; pending: number; failed: number }> {
+	const receipt = { created: 0, alreadyReady: 0, pending: 0, failed: 0 };
+	for (let offset = 0; offset < actions.length; offset += BACKFILL_ACTION_CHUNK_SIZE) {
+		for (const { run, action } of actions.slice(offset, offset + BACKFILL_ACTION_CHUNK_SIZE)) {
+			if (action === "already_ready") {
+				receipt.alreadyReady += 1;
+				continue;
+			}
+			if (action === "pending") {
+				receipt.pending += 1;
+				continue;
+			}
+			const result = await dependencies.rebuild(run);
+			if (result.status === "ready" || result.status === "already_ready") receipt.created += 1;
+			else if (result.queued) receipt.pending += 1;
+			else receipt.failed += 1;
+		}
+	}
+	return receipt;
 }
 
 function responseSnapshotRunSourceFingerprint(run: BackfillRunIdentity, citations: BackfillCitationIdentity[]): string {

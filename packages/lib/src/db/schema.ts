@@ -983,6 +983,7 @@ export const brandOpportunities = pgTable(
 		brandId: text("brand_id")
 			.references(() => brands.id)
 			.notNull(),
+		scopeId: uuid("scope_id"),
 		/** The full enriched opportunities report the page renders (OpportunitiesReport JSON). */
 		report: json("report").notNull(),
 		/** Model/provider that generated it, when known. */
@@ -990,7 +991,16 @@ export const brandOpportunities = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => ({
-		brandCreatedIdx: index("brand_opportunities_brand_id_created_at_idx").on(table.brandId, table.createdAt),
+		brandScopeCreatedIdx: index("brand_opportunities_brand_scope_created_at_idx").on(
+			table.brandId,
+			table.scopeId,
+			table.createdAt,
+		),
+		scopeFk: foreignKey({
+			columns: [table.scopeId],
+			foreignColumns: [measurementScopes.id],
+			name: "brand_opportunities_scope_fk",
+		}),
 	}),
 ).enableRLS();
 

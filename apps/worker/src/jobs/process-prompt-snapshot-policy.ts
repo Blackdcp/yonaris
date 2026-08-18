@@ -1,10 +1,14 @@
 import { isAbsolute } from "node:path";
-import { WEB_QUERIES_UNAVAILABLE } from "@workspace/lib/constants";
 import type { SnapshotReservation } from "@workspace/lib/db/response-snapshots";
 import type { ScrapeResult } from "@workspace/lib/providers/types";
-import type { ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import {
+	isResponseSnapshotBundleSizeError,
+	prepareResponseSnapshotBundle,
+	type ResponseSnapshotDraft,
+} from "@workspace/lib/response-snapshots/contract";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import { recordResponseSnapshot } from "@workspace/lib/response-snapshots/service";
+import { normalizeResponseSnapshotQueryEvidence } from "../response-snapshot-query-policy";
 
 type SnapshotSource = NonNullable<ScrapeResult["snapshotSource"]>;
 
@@ -53,14 +57,9 @@ export function buildPromptResponseSnapshotDraft(input: {
 	observedAt: Date;
 	snapshotSource: SnapshotSource;
 }): ResponseSnapshotDraft {
-	const queryUnavailable = input.webQueries.includes(WEB_QUERIES_UNAVAILABLE);
-	const queryAvailability = input.webSearchEnabled
-		? queryUnavailable
-			? "unavailable"
-			: "available"
-		: "not_applicable";
+	const queryEvidence = normalizeResponseSnapshotQueryEvidence(input);
 
-	return {
+	const draft: ResponseSnapshotDraft = {
 		runId: input.promptRunId,
 		brandId: input.brandId,
 		scopeId: input.scopeId,
@@ -74,8 +73,7 @@ export function buildPromptResponseSnapshotDraft(input: {
 			domain: citation.domain,
 			citationIndex: citation.citationIndex,
 		})),
-		webQueries: input.webQueries.filter((query) => query !== WEB_QUERIES_UNAVAILABLE),
-		queryAvailability,
+		...queryEvidence,
 		brandMentioned: input.brandMentioned,
 		competitorsMentioned: input.competitorsMentioned,
 		channel: input.channel,
@@ -88,6 +86,20 @@ export function buildPromptResponseSnapshotDraft(input: {
 		contentSource: input.snapshotSource.contentSource,
 		sourcePayloadSha256: input.snapshotSource.sourcePayloadSha256,
 	};
+	if (draft.contentSource !== "native_answer_html") return draft;
+	try {
+		prepareResponseSnapshotBundle(draft);
+		return draft;
+	} catch (error) {
+		if (!isResponseSnapshotBundleSizeError(error)) throw error;
+		const structuredDraft: ResponseSnapshotDraft = {
+			...draft,
+			answerHtml: undefined,
+			contentSource: "rendered_from_structured_response",
+		};
+		prepareResponseSnapshotBundle(structuredDraft);
+		return structuredDraft;
+	}
 }
 
 export async function archivePromptResponseSnapshotBestEffort(

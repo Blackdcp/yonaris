@@ -213,6 +213,13 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "BrightData API token.",
 	},
 	{
+		name: "BRIGHTDATA_SERP_ZONE",
+		scope: "server",
+		requiredBy: "optional",
+		description:
+			"Explicit active BrightData SERP zone. It enables Google AI Overview in administrator Overseas Run now and is verified before a paid overseas cohort is created.",
+	},
+	{
 		name: "OXYLABS_USERNAME",
 		scope: "server",
 		requiredBy: "dynamic-scrape-targets",

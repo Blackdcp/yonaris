@@ -1,27 +1,52 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
+import type { OpportunitiesReason, OpportunitiesResponse } from "@/server/opportunities";
 import { getOpportunitiesFn } from "@/server/opportunities";
 
 export const opportunitiesKeys = {
 	all: ["opportunities-report"] as const,
-	detail: (brandId: string) => [...opportunitiesKeys.all, brandId] as const,
+	detail: (brandId: string, scopeId: string) => [...opportunitiesKeys.all, brandId, scopeId] as const,
 };
 
+const NOT_GENERATED_REFETCH_MS = 30_000;
+
+export function opportunitiesCachePolicy(reason: OpportunitiesReason | undefined): {
+	staleTime: number;
+	refetchInterval: number | false;
+	refetchOnWindowFocus: boolean;
+} {
+	if (reason === "not_generated") {
+		return {
+			staleTime: NOT_GENERATED_REFETCH_MS,
+			refetchInterval: NOT_GENERATED_REFETCH_MS,
+			refetchOnWindowFocus: true,
+		};
+	}
+	return {
+		staleTime: Number.POSITIVE_INFINITY,
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+	};
+}
+
 /**
- * Opportunities AEO report. The server returns a stored report and regenerates it
- * only when the latest is stale, so this is held for the session (staleTime:
- * Infinity, no refetch-on-focus) rather than refetched.
+ * Opportunities AEO report for one measurement scope. Customer reads are
+ * deliberately cache-only: an admin must explicitly request generation.
  */
-export function useOpportunities(brandId?: string, enabled = true) {
+export function useOpportunities(brandId?: string, scopeId?: string) {
 	const params = useParams({ strict: false }) as { brand?: string };
 	const resolvedBrandId = brandId || params.brand;
 
-	const query = useQuery({
-		queryKey: opportunitiesKeys.detail(resolvedBrandId || ""),
-		queryFn: () => getOpportunitiesFn({ data: { brandId: resolvedBrandId ?? "" } }),
-		enabled: !!resolvedBrandId && enabled,
-		staleTime: Number.POSITIVE_INFINITY,
-		refetchOnWindowFocus: false,
+	const query = useQuery<OpportunitiesResponse>({
+		queryKey: opportunitiesKeys.detail(resolvedBrandId || "", scopeId || ""),
+		queryFn: () => getOpportunitiesFn({ data: { brandId: resolvedBrandId ?? "", scopeId: scopeId ?? "" } }),
+		enabled: !!resolvedBrandId && !!scopeId,
+		staleTime: (query) =>
+			opportunitiesCachePolicy((query.state.data as OpportunitiesResponse | undefined)?.reason).staleTime,
+		refetchInterval: (query) =>
+			opportunitiesCachePolicy((query.state.data as OpportunitiesResponse | undefined)?.reason).refetchInterval,
+		refetchOnWindowFocus: (query) =>
+			opportunitiesCachePolicy((query.state.data as OpportunitiesResponse | undefined)?.reason).refetchOnWindowFocus,
 		retry: false,
 	});
 

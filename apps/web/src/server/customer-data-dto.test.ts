@@ -70,6 +70,65 @@ describe("customer brand DTO", () => {
 		expect(dto.measurementScopes[0]).not.toHaveProperty("captureRouteKey");
 	});
 
+	it("exposes the first populated Program as the effective default when the stored default is empty", () => {
+		const dto = toCustomerBrandDto(
+			{
+				id: "ppio",
+				name: "PPIO",
+				website: "https://ppio.com",
+				additionalDomains: [],
+				aliases: [],
+				enabled: true,
+				onboarded: true,
+				delayOverrideHours: null,
+				updatedAt: new Date("2026-08-18T00:00:00.000Z"),
+				prompts: [
+					{
+						id: "prompt-cn",
+						scopeId: "china",
+						value: "国内提示词",
+						enabled: true,
+						tags: [],
+						systemTags: [],
+					},
+				],
+				competitors: [],
+				measurementScopes: [
+					{
+						id: "legacy",
+						key: "legacy-unspecified",
+						name: "Legacy / Unspecified",
+						market: "ZZ",
+						locale: "und",
+						timezone: "UTC",
+						enabled: true,
+						isDefault: true,
+						automaticTargetKeys: null,
+						samplingEvaluationRole: null,
+					},
+					{
+						id: "china",
+						key: "cn-zh",
+						name: "China Market",
+						market: "CN",
+						locale: "zh-CN",
+						timezone: "Asia/Shanghai",
+						enabled: true,
+						isDefault: false,
+						automaticTargetKeys: [],
+						samplingEvaluationRole: "scored",
+					},
+				],
+			},
+			["doubao"],
+		);
+
+		expect(dto.measurementScopes.map(({ id, isDefault }) => ({ id, isDefault }))).toEqual([
+			{ id: "legacy", isDefault: false },
+			{ id: "china", isDefault: true },
+		]);
+	});
+
 	it.each([
 		[
 			{ automaticTargetKeys: null, samplingEvaluationRole: null },

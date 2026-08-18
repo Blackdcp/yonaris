@@ -52,6 +52,8 @@ export interface Provider {
 	/** Validate a target config. Returns an error message if invalid, null if valid.
 	 *  Omit for providers that accept any model (runtime validation only). */
 	validateTarget?(config: ModelConfig): string | null;
+	/** Verify an otherwise valid target before a paid batch is created. */
+	preflightTarget?(config: ModelConfig): Promise<string | null>;
 
 	/**
 	 * Run a single research call that returns a Zod-validated structured value.

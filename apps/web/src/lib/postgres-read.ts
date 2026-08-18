@@ -8,10 +8,10 @@
 import { type SQL, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import {
-	UNAVAILABLE_SENTINEL,
 	type FanoutBreakdownRow,
 	type FanoutModelTotalRow,
 	type FanoutPromptTotalRow,
+	UNAVAILABLE_SENTINEL,
 } from "@/lib/fanout-analysis";
 
 const db = drizzle(process.env.DATABASE_URL!);
@@ -80,6 +80,12 @@ export interface CitationUrlStats {
 	count: number;
 	avg_position: number | null;
 	prompt_count: number;
+}
+
+export interface CitationRunCoverage {
+	evaluated_runs: number;
+	search_enabled_runs: number;
+	extracted_citation_runs: number;
 }
 
 export interface PromptMentionSummary {
@@ -657,6 +663,34 @@ export async function getCitationUrlStats(
 		ORDER BY count DESC
 	`);
 	return rows;
+}
+
+/** Counts the evaluated runs behind citation results without inferring links from search configuration. */
+export async function getCitationRunCoverage(
+	brandId: string,
+	fromDate: string,
+	toDate: string,
+	timezone: string,
+	enabledPromptIds?: string[],
+	model?: string,
+): Promise<CitationRunCoverage> {
+	if (!enabledPromptIds?.length) {
+		return { evaluated_runs: 0, search_enabled_runs: 0, extracted_citation_runs: 0 };
+	}
+	const rows = await queryPg<CitationRunCoverage>(sql`
+		SELECT
+			count(DISTINCT pr.id)::int AS evaluated_runs,
+			count(DISTINCT pr.id) FILTER (WHERE pr.web_search_enabled)::int AS search_enabled_runs,
+			count(DISTINCT pr.id) FILTER (WHERE c.id IS NOT NULL)::int AS extracted_citation_runs
+		FROM prompt_runs pr
+		LEFT JOIN citations c ON c.prompt_run_id = pr.id
+		WHERE pr.brand_id = ${brandId}
+			AND pr.created_at >= (${fromDate}::date AT TIME ZONE ${timezone})
+			AND pr.created_at < ((${toDate}::date + interval '1 day') AT TIME ZONE ${timezone})
+			AND pr.prompt_id IN (${uuidList(enabledPromptIds)})
+			${model ? sql`AND pr.model = ${model}` : sql``}
+	`);
+	return rows[0] ?? { evaluated_runs: 0, search_enabled_runs: 0, extracted_citation_runs: 0 };
 }
 
 // ============================================================================
@@ -1238,8 +1272,16 @@ export async function getAdminActiveBrandsOverTime(): Promise<AdminActiveBrandsO
  * the sentinel) would surface something that never ran, and those age out of
  * the lookback windows.
  */
+function rawQueryWq(): SQL {
+	return sql`length(btrim(wq)) > 0`;
+}
+
+function exposedQueryWq(): SQL {
+	return sql`${rawQueryWq()} AND lower(btrim(wq)) <> ${UNAVAILABLE_SENTINEL}`;
+}
+
 function genuineFanoutWq(): SQL {
-	return sql`length(btrim(wq)) > 0 AND lower(btrim(wq)) <> ${UNAVAILABLE_SENTINEL} AND lower(btrim(wq)) <> lower(btrim(p.value))`;
+	return sql`${exposedQueryWq()} AND lower(btrim(wq)) <> lower(btrim(p.value))`;
 }
 
 /**
@@ -1272,6 +1314,7 @@ export async function getFanoutBreakdown(
 			SELECT DISTINCT lower(btrim(wq)) AS query FROM unnest(pr.web_queries) AS wq WHERE ${genuineFanoutWq()}
 		) fq
 		WHERE pr.brand_id = ${brandId}
+			AND pr.web_search_enabled
 			AND pr.created_at >= (${fromDate}::date AT TIME ZONE ${timezone})
 			AND pr.created_at < ((${toDate}::date + interval '1 day') AT TIME ZONE ${timezone})
 			AND pr.prompt_id IN (${uuidList(enabledPromptIds)})
@@ -1290,24 +1333,29 @@ export async function getFanoutModelTotals(
 	model?: string,
 ): Promise<FanoutModelTotalRow[]> {
 	if (!enabledPromptIds?.length) return [];
-	// `runs` counts every web-search-enabled run ("Search Prompt Runs"); `fanout_runs`
-	// and `total_queries` count only genuine fan-out (via `genuineFanoutWq`), so they
-	// stay consistent with `getFanoutBreakdown`. The per-run LATERAL yields one row per
-	// run holding its DISTINCT genuine-query count (per-run duplicates count once, as
-	// in the breakdown). Engines that don't expose their searches contribute runs
-	// but no queries.
+	// `raw_query_runs` records non-blank stored values (including the unavailable
+	// sentinel), while `exposed_query_runs` counts non-sentinel strings, including
+	// exact prompt echoes. Genuine fan-out excludes those echoes, so the page can
+	// distinguish unavailable query strings from query strings with no rewrite.
 	return queryPg<FanoutModelTotalRow>(sql`
 		SELECT
 			pr.model,
 			count(*) FILTER (WHERE pr.web_search_enabled)::int AS runs,
-			count(*) FILTER (WHERE fq.cnt > 0)::int AS fanout_runs,
-			COALESCE(sum(fq.cnt), 0)::int AS total_queries
+			count(*) FILTER (WHERE pr.web_search_enabled AND fq.raw_cnt > 0)::int AS raw_query_runs,
+			count(*) FILTER (WHERE pr.web_search_enabled AND fq.exposed_cnt > 0)::int AS exposed_query_runs,
+			count(*) FILTER (WHERE pr.web_search_enabled AND fq.cnt > 0)::int AS fanout_runs,
+			COALESCE(sum(fq.cnt) FILTER (WHERE pr.web_search_enabled), 0)::int AS total_queries
 		FROM prompt_runs pr
 		JOIN prompts p ON p.id = pr.prompt_id
 		CROSS JOIN LATERAL (
-			SELECT count(DISTINCT lower(btrim(wq)))::int AS cnt FROM unnest(pr.web_queries) AS wq WHERE ${genuineFanoutWq()}
+			SELECT
+				count(DISTINCT lower(btrim(wq))) FILTER (WHERE ${genuineFanoutWq()})::int AS cnt,
+				count(*) FILTER (WHERE ${rawQueryWq()})::int AS raw_cnt,
+				count(*) FILTER (WHERE ${exposedQueryWq()})::int AS exposed_cnt
+			FROM unnest(pr.web_queries) AS wq
 		) fq
 		WHERE pr.brand_id = ${brandId}
+			AND pr.web_search_enabled
 			AND pr.created_at >= (${fromDate}::date AT TIME ZONE ${timezone})
 			AND pr.created_at < ((${toDate}::date + interval '1 day') AT TIME ZONE ${timezone})
 			AND pr.prompt_id IN (${uuidList(enabledPromptIds)})
@@ -1341,6 +1389,7 @@ export async function getFanoutPromptTotals(
 			SELECT count(DISTINCT lower(btrim(wq)))::int AS cnt FROM unnest(pr.web_queries) AS wq WHERE ${genuineFanoutWq()}
 		) fq
 		WHERE pr.brand_id = ${brandId}
+			AND pr.web_search_enabled
 			AND pr.created_at >= (${fromDate}::date AT TIME ZONE ${timezone})
 			AND pr.created_at < ((${toDate}::date + interval '1 day') AT TIME ZONE ${timezone})
 			AND pr.prompt_id IN (${uuidList(enabledPromptIds)})

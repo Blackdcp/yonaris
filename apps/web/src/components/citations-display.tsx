@@ -1,21 +1,22 @@
 import { useMemo } from "react";
+import { ContentGapsCard } from "@/components/citations/content-gaps-card";
+import { GoogleShoppingCard } from "@/components/citations/google-shopping-card";
+import { RecentChangesCard } from "@/components/citations/recent-changes-card";
+import { RedditCard, useSubredditData } from "@/components/citations/reddit-card";
+import { CATEGORY_META, PAGE_TYPE_META } from "@/components/citations/shared";
+import { CitationStatsCards } from "@/components/citations/stats-cards";
+import { TopDomainsCard } from "@/components/citations/top-domains-card";
+import { TopUrlsCard } from "@/components/citations/top-urls-card";
+import { TrendAreaChart } from "@/components/citations/trend-area-chart";
+import type { CitationData } from "@/components/citations/types";
 import {
-	type CitationCategory,
 	CATEGORY_CONFIG,
 	CITATION_CATEGORIES,
 	CITATION_PAGE_TYPES,
+	type CitationCategory,
 	PAGE_TYPE_CONFIG,
 } from "@/lib/domain-categories";
-import type { CitationData } from "@/components/citations/types";
-import { CATEGORY_META, PAGE_TYPE_META } from "@/components/citations/shared";
-import { CitationStatsCards } from "@/components/citations/stats-cards";
-import { TrendAreaChart } from "@/components/citations/trend-area-chart";
-import { RecentChangesCard } from "@/components/citations/recent-changes-card";
-import { ContentGapsCard } from "@/components/citations/content-gaps-card";
-import { TopDomainsCard } from "@/components/citations/top-domains-card";
-import { TopUrlsCard } from "@/components/citations/top-urls-card";
-import { GoogleShoppingCard } from "@/components/citations/google-shopping-card";
-import { RedditCard, useSubredditData } from "@/components/citations/reddit-card";
+import { hasGoogleModuleContent } from "@/lib/google-module";
 
 export type {
 	CitationData,
@@ -95,6 +96,7 @@ export function CitationsDisplay({
 	);
 
 	const googleModule = citationData.googleModule;
+	const hasGoogleContent = hasGoogleModuleContent(googleModule);
 	const subredditData = useSubredditData(citationData.specificUrls, citationData.whatsChanged);
 	const whatsChanged = citationData.whatsChanged;
 	const totalChanges = whatsChanged
@@ -106,7 +108,7 @@ export function CitationsDisplay({
 		: 0;
 
 	// Bail out only AFTER every hook above has run unconditionally (Rules of Hooks).
-	if (citationData.totalCitations === 0) return null;
+	if (citationData.totalCitations === 0 && !hasGoogleContent) return null;
 
 	return (
 		<>
@@ -180,9 +182,7 @@ export function CitationsDisplay({
 			)}
 
 			{/* Google Shopping */}
-			{googleModule && googleModule.shopping.products.length > 0 && (
-				<GoogleShoppingCard googleModule={googleModule} brandId={brandId} />
-			)}
+			{googleModule && hasGoogleContent && <GoogleShoppingCard googleModule={googleModule} brandId={brandId} />}
 
 			{/* Top Cited Subreddits */}
 			{subredditData.length > 0 && <RedditCard subreddits={subredditData} />}

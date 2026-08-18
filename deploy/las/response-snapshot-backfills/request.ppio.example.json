@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"operation": "backfill-response-snapshots",
+	"requestId": "ppio-snapshot-contract-backfill-reviewed-date",
+	"brandId": "ppio",
+	"fromObservedAt": "2026-08-14T00:00:00.000Z",
+	"toObservedAtExclusive": "2026-08-15T00:00:00.000Z",
+	"channelsExact": ["google-ai-mode"],
+	"runIds": [
+		"11111111-1111-4111-8111-111111111111",
+		"22222222-2222-4222-8222-222222222222",
+		"33333333-3333-4333-8333-333333333333",
+		"44444444-4444-4444-8444-444444444444"
+	],
+	"expectedRunCount": 4,
+	"expectedRunFingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+	"sourceCommitSha": "0000000000000000000000000000000000000000",
+	"sourceFailureCode": "snapshot_contract_invalid"
+}

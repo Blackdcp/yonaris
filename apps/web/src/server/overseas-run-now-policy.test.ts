@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { OVERSEAS_RUN_NOW_CHANNELS, OVERSEAS_RUN_NOW_SAMPLES, planOverseasRunNow } from "./overseas-run-now-policy";
+import {
+	assertOverseasRunNowChannelsAvailable,
+	assertOverseasRunNowChannelsReady,
+	getOverseasRunNowReadiness,
+	OVERSEAS_RUN_NOW_CHANNELS,
+	OVERSEAS_RUN_NOW_SAMPLES,
+	planOverseasRunNow,
+} from "./overseas-run-now-policy";
 
 const ppioPrompts = Array.from({ length: 10 }, (_, index) => ({
 	id: `ppio-prompt-${String(index + 1).padStart(2, "0")}`,
@@ -17,6 +24,13 @@ describe("Overseas Bright Data Run now planning", () => {
 			"google-ai-overview",
 		]);
 		expect(OVERSEAS_RUN_NOW_CHANNELS.every(({ config }) => config.provider === "brightdata")).toBe(true);
+	});
+
+	it("only makes Google AI Overview selectable when an explicit SERP zone is configured", () => {
+		expect(getOverseasRunNowReadiness({})).toEqual({ googleAiOverviewReady: false });
+		expect(getOverseasRunNowReadiness({ BRIGHTDATA_SERP_ZONE: "  ppio_serp  " })).toEqual({
+			googleAiOverviewReady: true,
+		});
 	});
 
 	it("plans 300 unique calls for PPIO's 10 prompts, all channels, and five samples", () => {
@@ -66,5 +80,44 @@ describe("Overseas Bright Data Run now planning", () => {
 		expect(() => planOverseasRunNow({ ...input, prompts: tooManyPrompts, channelKeys: ["chatgpt"] })).toThrow(
 			/10,000/i,
 		);
+	});
+
+	it("rejects an unavailable channel before a cohort can dispatch paid calls", () => {
+		const plan = planOverseasRunNow({
+			prompts: ppioPrompts.slice(0, 1),
+			channelKeys: ["google-ai-overview"],
+			scope: { market: "US", locale: "en-US", timezone: "UTC" },
+		});
+
+		expect(() =>
+			assertOverseasRunNowChannelsAvailable(plan.channels, (config) =>
+				config.model === "google-ai-overview"
+					? "Google AI Overview is unavailable: configure BRIGHTDATA_SERP_ZONE"
+					: null,
+			),
+		).toThrow(/BRIGHTDATA_SERP_ZONE/);
+	});
+
+	it("blocks a configured-but-missing Google AI Overview zone before paid cohort dispatch", async () => {
+		const plan = planOverseasRunNow({
+			prompts: ppioPrompts.slice(0, 1),
+			channelKeys: ["google-ai-overview"],
+			scope: { market: "US", locale: "en-US", timezone: "UTC" },
+		});
+		let preflightCalls = 0;
+
+		await expect(
+			assertOverseasRunNowChannelsReady(
+				plan.channels,
+				() => null,
+				async (config) => {
+					preflightCalls += 1;
+					return config.model === "google-ai-overview"
+						? "Google AI Overview is unavailable: configured Bright Data SERP zone is not active"
+						: null;
+				},
+			),
+		).rejects.toThrow(/not active/);
+		expect(preflightCalls).toBe(1);
 	});
 });

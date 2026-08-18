@@ -3,18 +3,19 @@
  * Replaces apps/web/src/app/api/admin/* API routes.
  */
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireAuthSession, isAdmin } from "@/lib/auth/helpers";
-import { db } from "@workspace/lib/db/db";
-import { brands, prompts, promptRuns } from "@workspace/lib/db/schema";
-import { eq, sql, desc } from "drizzle-orm";
-import { getAdminRunsOverTime, getAdminBrandRunStats, getAdminActiveBrandsOverTime } from "@/lib/postgres-read";
-import { analyzeBrand } from "@workspace/lib/onboarding";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
+import { db } from "@workspace/lib/db/db";
+import { brands, measurementScopes, promptRuns, prompts } from "@workspace/lib/db/schema";
+import { analyzeBrand } from "@workspace/lib/onboarding";
 import { getModelOverdueStatus } from "@workspace/lib/overdue";
-import { sendImmediatePromptJob } from "@/lib/job-scheduler";
-import { Client } from "pg";
 import { parseScrapeTargets } from "@workspace/lib/providers";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { Client } from "pg";
+import { z } from "zod";
+import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { sendImmediatePromptJob } from "@/lib/job-scheduler";
+import { getAdminActiveBrandsOverTime, getAdminBrandRunStats, getAdminRunsOverTime } from "@/lib/postgres-read";
+import { type AdminOpportunityBrandRow, toAdminOpportunityBrands } from "./opportunities-admin-scopes";
 
 // ============================================================================
 // Admin guard helper
@@ -209,6 +210,57 @@ export const adminAnalyzeBrandFn = createServerFn({ method: "POST" })
 			maxPrompts: data.maxPrompts,
 		});
 	});
+
+/** Read-only list used exclusively by the platform-admin opportunities tool. */
+export const getAdminOpportunityScopesFn = createServerFn({ method: "GET" }).handler(async () => {
+	await requireAdmin();
+	const rows = await db
+		.select({
+			brandId: brands.id,
+			brandName: brands.name,
+			scopeId: measurementScopes.id,
+			scopeName: measurementScopes.name,
+			market: measurementScopes.market,
+			locale: measurementScopes.locale,
+			enabled: measurementScopes.enabled,
+			samplingEvaluationRole: measurementScopes.samplingEvaluationRole,
+			promptCount: sql<number>`count(${prompts.id})::int`,
+		})
+		.from(brands)
+		.innerJoin(measurementScopes, eq(measurementScopes.brandId, brands.id))
+		.leftJoin(
+			prompts,
+			and(eq(prompts.brandId, brands.id), eq(prompts.scopeId, measurementScopes.id), eq(prompts.enabled, true)),
+		)
+		.where(and(eq(measurementScopes.enabled, true), eq(measurementScopes.samplingEvaluationRole, "scored")))
+		.groupBy(
+			brands.id,
+			brands.name,
+			measurementScopes.id,
+			measurementScopes.name,
+			measurementScopes.market,
+			measurementScopes.locale,
+			measurementScopes.enabled,
+			measurementScopes.samplingEvaluationRole,
+		)
+		.orderBy(asc(brands.name), asc(measurementScopes.name));
+
+	const grouped = new Map<string, AdminOpportunityBrandRow>();
+	for (const row of rows) {
+		const brand = grouped.get(row.brandId) ?? { id: row.brandId, name: row.brandName, scopes: [] };
+		brand.scopes.push({
+			id: row.scopeId,
+			name: row.scopeName,
+			market: row.market,
+			locale: row.locale,
+			enabled: row.enabled,
+			samplingEvaluationRole: row.samplingEvaluationRole,
+			promptCount: row.promptCount,
+		});
+		grouped.set(row.brandId, brand);
+	}
+	return toAdminOpportunityBrands([...grouped.values()]);
+});
 
 // ============================================================================
 // Admin Workflows - Data Fetching

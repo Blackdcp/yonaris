@@ -13,22 +13,22 @@ import {
 	prompts,
 	responseSnapshots,
 } from "@workspace/lib/db/schema";
-import type { ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import { createResponseSnapshotService } from "@workspace/lib/response-snapshots/service";
 import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
 import type { Pool, PoolClient } from "pg";
 import {
+	buildResponseSnapshotBackfillDraft,
 	buildResponseSnapshotBackfillPlan,
-	type PlannedResponseSnapshotBackfillRun,
+	classifyResponseSnapshotBackfillActions,
+	executeResponseSnapshotBackfillActions,
 	parseResponseSnapshotBackfillCli,
 	parseResponseSnapshotBackfillRequest,
 	ResponseSnapshotBackfillPolicyError,
 	type ResponseSnapshotBackfillRequest,
+	summarizeResponseSnapshotBackfillDryRun,
 } from "./backfill-response-snapshots-policy";
 import { assertResponseSnapshotCapacity } from "./jobs/response-snapshot-maintenance-policy";
-
-const CHUNK_SIZE = 100;
 
 class ResponseSnapshotBackfillError extends Error {
 	constructor(
@@ -55,12 +55,13 @@ async function main(): Promise<void> {
 }
 
 async function executeBackfill(request: ResponseSnapshotBackfillRequest, apply: boolean) {
-	const { runRows, citationRows } = await readExactCohort(request);
-	const plan = buildResponseSnapshotBackfillPlan(request, runRows, citationRows);
+	const { runRows, citationRows, filteredCohortRows } = await readExactCohort(request);
+	const plan = buildResponseSnapshotBackfillPlan(request, runRows, citationRows, filteredCohortRows);
 	const currentRows = await readCurrentSnapshots(request.runIds);
-	assertCurrentSnapshotIdentities(plan.runs, currentRows);
+	const actions = classifyResponseSnapshotBackfillActions(request, plan.runs, currentRows);
 	const statusCounts = countCurrentStatuses(currentRows);
 	if (!apply) {
+		const actionCounts = summarizeResponseSnapshotBackfillDryRun(actions, currentRows);
 		return {
 			ok: true,
 			status: "dry_run",
@@ -68,8 +69,7 @@ async function executeBackfill(request: ResponseSnapshotBackfillRequest, apply: 
 			brandId: request.brandId,
 			total: plan.expectedRunCount,
 			runFingerprint: plan.runFingerprint,
-			existing: currentRows.length,
-			wouldCreate: plan.expectedRunCount - currentRows.length,
+			...actionCounts,
 			currentStatuses: statusCounts,
 		};
 	}
@@ -83,21 +83,8 @@ async function executeBackfill(request: ResponseSnapshotBackfillRequest, apply: 
 		throw new ResponseSnapshotBackfillError("storage_root_missing", "Response snapshot storage root is missing");
 	const storage = new FilesystemResponseSnapshotStorage(storageRoot);
 	const service = createResponseSnapshotService({ storage });
-	const byRunId = new Map(currentRows.map((row) => [row.promptRunId, row]));
-	const receipt = { created: 0, alreadyReady: 0, pending: 0, failed: 0 };
-
-	for (let offset = 0; offset < plan.runs.length; offset += CHUNK_SIZE) {
-		const chunk = plan.runs.slice(offset, offset + CHUNK_SIZE);
-		for (const run of chunk) {
-			const existing = byRunId.get(run.runId);
-			if (existing?.status === "ready") {
-				receipt.alreadyReady += 1;
-				continue;
-			}
-			if (existing?.status === "pending") {
-				receipt.pending += 1;
-				continue;
-			}
+	const receipt = await executeResponseSnapshotBackfillActions(actions, {
+		rebuild: async (run) => {
 			if (run.observedAt.getTime() + RESPONSE_SNAPSHOT_RETENTION_MS <= Date.now()) {
 				throw new ResponseSnapshotBackfillError(
 					"run_outside_retention",
@@ -113,12 +100,9 @@ async function executeBackfill(request: ResponseSnapshotBackfillRequest, apply: 
 					observedAt: run.observedAt,
 				}),
 			);
-			const result = await service.record({ reservation, draft: buildDraft(run) });
-			if (result.status === "ready" || result.status === "already_ready") receipt.created += 1;
-			else if (result.queued) receipt.pending += 1;
-			else receipt.failed += 1;
-		}
-	}
+			return service.record({ reservation, draft: buildResponseSnapshotBackfillDraft(run) });
+		},
+	});
 	if (receipt.failed > 0) {
 		throw new ResponseSnapshotBackfillError(
 			"snapshot_backfill_failed",
@@ -170,8 +154,16 @@ async function readExactCohort(request: ResponseSnapshotBackfillRequest) {
 		.orderBy(asc(promptRuns.id));
 
 	const exactFilterRows = await db
-		.select({ runId: promptRuns.id })
+		.select({
+			runId: promptRuns.id,
+			currentSnapshotStatus: responseSnapshots.status,
+			currentSnapshotFailureCode: responseSnapshots.failureCode,
+		})
 		.from(promptRuns)
+		.leftJoin(
+			responseSnapshots,
+			and(eq(responseSnapshots.promptRunId, promptRuns.id), eq(responseSnapshots.isCurrent, true)),
+		)
 		.where(
 			and(
 				eq(promptRuns.brandId, request.brandId),
@@ -181,15 +173,6 @@ async function readExactCohort(request: ResponseSnapshotBackfillRequest) {
 			),
 		)
 		.orderBy(asc(promptRuns.id));
-	if (
-		exactFilterRows.length !== request.runIds.length ||
-		exactFilterRows.some((row, index) => row.runId !== request.runIds[index])
-	) {
-		throw new ResponseSnapshotBackfillError(
-			"cohort_filter_mismatch",
-			"Reviewed runIds are not the exact filtered cohort",
-		);
-	}
 
 	const citationRows = await db
 		.select({
@@ -205,7 +188,7 @@ async function readExactCohort(request: ResponseSnapshotBackfillRequest) {
 		.from(citations)
 		.where(inArray(citations.promptRunId, request.runIds))
 		.orderBy(asc(citations.promptRunId), asc(citations.citationIndex), asc(citations.id));
-	return { runRows, citationRows };
+	return { runRows, citationRows, filteredCohortRows: exactFilterRows };
 }
 
 async function readCurrentSnapshots(runIds: string[]) {
@@ -217,65 +200,17 @@ async function readCurrentSnapshots(runIds: string[]) {
 			promptId: responseSnapshots.promptId,
 			scopeId: responseSnapshots.scopeId,
 			status: responseSnapshots.status,
+			failureCode: responseSnapshots.failureCode,
 		})
 		.from(responseSnapshots)
 		.where(and(inArray(responseSnapshots.promptRunId, runIds), eq(responseSnapshots.isCurrent, true)))
 		.orderBy(asc(responseSnapshots.promptRunId));
 }
 
-function assertCurrentSnapshotIdentities(
-	runs: PlannedResponseSnapshotBackfillRun[],
-	snapshots: Awaited<ReturnType<typeof readCurrentSnapshots>>,
-): void {
-	const runById = new Map(runs.map((run) => [run.runId, run]));
-	for (const snapshot of snapshots) {
-		const run = runById.get(snapshot.promptRunId);
-		if (
-			!run ||
-			snapshot.brandId !== run.brandId ||
-			snapshot.promptId !== run.promptId ||
-			snapshot.scopeId !== run.scopeId
-		) {
-			throw new ResponseSnapshotBackfillError("current_snapshot_conflict", "Current snapshot identity is inconsistent");
-		}
-	}
-}
-
 function countCurrentStatuses(rows: Awaited<ReturnType<typeof readCurrentSnapshots>>) {
 	const counts = { pending: 0, ready: 0, failed: 0, expired: 0 };
 	for (const row of rows) counts[row.status] += 1;
 	return counts;
-}
-
-function buildDraft(run: PlannedResponseSnapshotBackfillRun): ResponseSnapshotDraft {
-	return {
-		runId: run.runId,
-		brandId: run.brandId,
-		scopeId: run.scopeId,
-		promptId: run.promptId,
-		promptText: run.promptText,
-		answerText: run.answerText,
-		citations: run.citations.map((citation) => ({
-			url: citation.url ?? "",
-			title: citation.title ?? null,
-			domain: citation.domain ?? "",
-			citationIndex: citation.citationIndex,
-		})),
-		webQueries: run.webQueries,
-		queryAvailability:
-			run.webQueries.length > 0 ? "available" : run.webSearchEnabled ? "unavailable" : "not_applicable",
-		brandMentioned: run.brandMentioned,
-		competitorsMentioned: run.competitorsMentioned,
-		channel: run.model,
-		modelVersion: run.version,
-		market: run.scopeMarket ?? "ZZ",
-		locale: run.scopeLocale ?? "und",
-		timezone: run.scopeTimezone ?? "UTC",
-		observedAt: run.observedAt.toISOString(),
-		captureMethod: run.captureMethod,
-		contentSource: run.contentSource,
-		sourcePayloadSha256: run.sourcePayloadSha256,
-	};
 }
 
 async function withBrandLock<T>(brandId: string, operation: () => Promise<T>): Promise<T> {

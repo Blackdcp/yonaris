@@ -8,6 +8,8 @@ import { test, expect } from "@playwright/test";
 import { STEPFUN_BRAND_ID } from "../fixtures";
 
 const BRAND_ID = STEPFUN_BRAND_ID;
+const CITATIONS_TERMINAL_STATE =
+  /no citations found|failed to load|citations are only|total citations|cited|did not expose any extractable source links/i;
 
 test.describe("Citations Page", () => {
   test.beforeEach(async ({ page }) => {
@@ -21,23 +23,17 @@ test.describe("Citations Page", () => {
     // Wait for the page to actually finish loading by checking for a terminal state:
     // either citation content, an empty state, or an error message.
     // Use .first() because multiple elements may match when citation data loads.
-    await expect(
-      page.getByText(/no citations found|failed to load|citations are only|total citations|cited/i).first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(CITATIONS_TERMINAL_STATE).first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("page shows citations header or content", async ({ page }) => {
     // Wait for loading to finish
-    await expect(
-      page.getByText(/no citations found|failed to load|citations are only|cited/i).first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(CITATIONS_TERMINAL_STATE).first()).toBeVisible({ timeout: 30_000 });
   });
 
   test("page has filter controls when loaded", async ({ page }) => {
     // Wait for loading to finish
-    await expect(
-      page.getByText(/no citations found|failed to load|citations are only|cited/i).first()
-    ).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(CITATIONS_TERMINAL_STATE).first()).toBeVisible({ timeout: 30_000 });
 
     // Should have the page content
     const pageContent = await page.textContent("body");

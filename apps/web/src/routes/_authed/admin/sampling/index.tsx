@@ -379,6 +379,7 @@ function SamplingQueuePage() {
 					brandId={context.selectedBrand.id}
 					programs={overseasPrograms}
 					cohorts={(overseasQuery.data?.cohorts ?? []) as OverseasRunCohortView[]}
+					googleAiOverviewReady={context.overseasRunNow.googleAiOverviewReady}
 					onRun={runOverseasNow}
 				/>
 			)}

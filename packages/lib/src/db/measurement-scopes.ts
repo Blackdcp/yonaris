@@ -1,4 +1,5 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull } from "drizzle-orm";
+import { selectImplicitMeasurementScope } from "../measurement-scope-selection";
 import { db } from "./db";
 import { type MeasurementScope, measurementScopes, prompts } from "./schema";
 
@@ -64,15 +65,29 @@ export async function ensureLegacyMeasurementScope(brandId: string): Promise<str
 export async function resolveMeasurementScopeForBrand(brandId: string, scopeId?: string): Promise<MeasurementScope> {
 	let resolvedScopeId = scopeId;
 	if (!resolvedScopeId) {
-		const defaultScope = await db.query.measurementScopes.findFirst({
-			where: and(
-				eq(measurementScopes.brandId, brandId),
-				eq(measurementScopes.isDefault, true),
-				eq(measurementScopes.enabled, true),
-			),
-			columns: { id: true },
-		});
-		resolvedScopeId = defaultScope?.id ?? (await ensureLegacyMeasurementScope(brandId));
+		const candidates = await db
+			.select({
+				id: measurementScopes.id,
+				enabled: measurementScopes.enabled,
+				isDefault: measurementScopes.isDefault,
+				samplingEvaluationRole: measurementScopes.samplingEvaluationRole,
+				enabledPromptCount: count(prompts.id),
+			})
+			.from(measurementScopes)
+			.leftJoin(
+				prompts,
+				and(eq(prompts.scopeId, measurementScopes.id), eq(prompts.brandId, brandId), eq(prompts.enabled, true)),
+			)
+			.where(and(eq(measurementScopes.brandId, brandId), eq(measurementScopes.enabled, true)))
+			.groupBy(measurementScopes.id)
+			.orderBy(desc(measurementScopes.isDefault), asc(measurementScopes.createdAt), asc(measurementScopes.id));
+		const selected = selectImplicitMeasurementScope(
+			candidates.map((candidate) => ({
+				...candidate,
+				hasEnabledPrompts: candidate.enabledPromptCount > 0,
+			})),
+		);
+		resolvedScopeId = selected?.id ?? (await ensureLegacyMeasurementScope(brandId));
 	}
 	const scope = await db.query.measurementScopes.findFirst({
 		where: and(eq(measurementScopes.id, resolvedScopeId), eq(measurementScopes.brandId, brandId)),

@@ -116,7 +116,7 @@ async function getCustomerBrandFromDb(brandId: string): Promise<CustomerBrandDto
 		});
 		const brandScopes = await db.query.measurementScopes.findMany({
 			where: eq(measurementScopes.brandId, brandId),
-			orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
+			orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt), asc(scope.id)],
 			columns: {
 				id: true,
 				key: true,

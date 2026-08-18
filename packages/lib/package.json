@@ -37,6 +37,7 @@
 		"./report-metrics": "./src/report-metrics.ts",
 		"./mention-analysis": "./src/mention-analysis.ts",
 		"./manual-observation-targets": "./src/manual-observation-targets.ts",
+		"./measurement-scope-selection": "./src/measurement-scope-selection.ts",
 		"./observation-coverage": "./src/observation-coverage.ts",
 		"./observation-targets": "./src/observation-targets.ts",
 		"./delivery-manifest": "./src/delivery-manifest.ts",

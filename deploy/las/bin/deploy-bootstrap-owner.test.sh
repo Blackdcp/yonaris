@@ -30,6 +30,7 @@ BETTER_AUTH_SECRET=auth-secret
 ELMO_ENCRYPTION_KEY=encryption-key
 SCRAPE_TARGETS=chatgpt:brightdata:online
 BRIGHTDATA_API_TOKEN=brightdata-token
+BRIGHTDATA_SERP_ZONE=account-owned-serp-zone
 WORKER_ENABLED=true
 DEPLOYMENT_MODE=local
 EOF
@@ -251,8 +252,31 @@ if [[ "$prune_failure_status" -eq 0 ]]; then
 fi
 grep -Fq "images:prune:$NEW_RELEASE" "$EVENT_LOG"
 if grep -Eq 'preflight:|backup|migration|bootstrap:|runtime:start' "$EVENT_LOG"; then
-  echo "Deployment continued after targeted image cleanup failed." >&2
-  exit 1
+	echo "Deployment continued after targeted image cleanup failed." >&2
+	exit 1
 fi
+
+sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:fixture:online/' "$ENV_FILE"
+sed -i 's/^BRIGHTDATA_SERP_ZONE=.*/BRIGHTDATA_SERP_ZONE=/' "$ENV_FILE"
+: >"$EVENT_LOG"
+set +e
+run_deploy success >"$TEST_ROOT/missing-serp-zone.out" 2>"$TEST_ROOT/missing-serp-zone.err"
+missing_serp_zone_status=$?
+set -e
+if [[ "$missing_serp_zone_status" -eq 0 ]]; then
+	echo "Bright Data deployment unexpectedly accepted a missing SERP zone for the administrator Run now control." >&2
+	exit 1
+fi
+grep -Fq 'Missing required production value: BRIGHTDATA_SERP_ZONE' "$TEST_ROOT/missing-serp-zone.err"
+if [[ -s "$EVENT_LOG" ]]; then
+	echo "Deployment performed work before rejecting a missing Bright Data SERP zone." >&2
+	exit 1
+fi
+
+sed -i '/^BRIGHTDATA_API_TOKEN=/d; /^BRIGHTDATA_SERP_ZONE=/d' "$ENV_FILE"
+sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:fixture:online/' "$ENV_FILE"
+: >"$EVENT_LOG"
+run_deploy success >"$TEST_ROOT/no-brightdata.out"
+grep -Fq 'runtime:start' "$EVENT_LOG"
 
 echo "deploy bootstrap owner mock tests passed"

@@ -115,7 +115,13 @@ environment so encrypted provider credentials remain readable.
 
 The example keeps the current memory-tensor target,
 `chatgpt:brightdata:online`. Copy the existing `BRIGHTDATA_API_TOKEN`,
-`DEEPSEEK_API_KEY`, and `AGNES_API_KEY` from the local environment. The deploy
+`DEEPSEEK_API_KEY`, and `AGNES_API_KEY` from the local environment. The
+administrator Overseas Run now control is independent of `SCRAPE_TARGETS` and,
+when a Bright Data token is configured, defaults to all six Bright Data
+channels. Set `BRIGHTDATA_SERP_ZONE` to the exact name of an active,
+account-owned Bright Data SERP zone: deployment rejects a missing value, the UI
+keeps Google AI Overview disabled when it is absent outside deployment, and
+Yonaris validates the account metadata before it creates the paid cohort. The deploy
 script rejects missing required values and every `replace_with_...` placeholder.
 After PostgreSQL is initialized, changing `POSTGRES_PASSWORD` in the file alone
 does not rotate the database user's password.
