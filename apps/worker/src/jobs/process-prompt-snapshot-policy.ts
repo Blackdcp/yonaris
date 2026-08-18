@@ -8,6 +8,7 @@ import {
 } from "@workspace/lib/response-snapshots/contract";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import { recordResponseSnapshot } from "@workspace/lib/response-snapshots/service";
+import { normalizeResponseSnapshotCitations } from "../response-snapshot-citation-policy";
 import { normalizeResponseSnapshotQueryEvidence } from "../response-snapshot-query-policy";
 
 type SnapshotSource = NonNullable<ScrapeResult["snapshotSource"]>;
@@ -67,12 +68,7 @@ export function buildPromptResponseSnapshotDraft(input: {
 		promptText: input.promptText,
 		answerText: input.answerText,
 		...(input.snapshotSource.answerHtml ? { answerHtml: input.snapshotSource.answerHtml } : {}),
-		citations: input.citations.map((citation) => ({
-			url: citation.url,
-			title: citation.title ?? null,
-			domain: citation.domain,
-			citationIndex: citation.citationIndex,
-		})),
+		citations: normalizeResponseSnapshotCitations(input.citations),
 		...queryEvidence,
 		brandMentioned: input.brandMentioned,
 		competitorsMentioned: input.competitorsMentioned,

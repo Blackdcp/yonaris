@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import { normalizeResponseSnapshotCitations } from "./response-snapshot-citation-policy";
 import { normalizeResponseSnapshotQueryEvidence } from "./response-snapshot-query-policy";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -418,12 +419,14 @@ export function buildResponseSnapshotBackfillDraft(run: PlannedResponseSnapshotB
 		promptId: run.promptId,
 		promptText: run.promptText,
 		answerText: run.answerText,
-		citations: run.citations.map((citation) => ({
-			url: citation.url ?? "",
-			title: citation.title ?? null,
-			domain: citation.domain ?? "",
-			citationIndex: citation.citationIndex,
-		})),
+		citations: normalizeResponseSnapshotCitations(
+			run.citations.map((citation) => ({
+				url: citation.url ?? "",
+				title: citation.title,
+				domain: citation.domain ?? "",
+				citationIndex: citation.citationIndex,
+			})),
+		),
 		...queryEvidence,
 		brandMentioned: run.brandMentioned,
 		competitorsMentioned: run.competitorsMentioned,

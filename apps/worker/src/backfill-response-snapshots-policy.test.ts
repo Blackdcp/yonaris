@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { prepareResponseSnapshotBundle } from "@workspace/lib/response-snapshots/contract";
 import {
 	BACKFILL_RESPONSE_SNAPSHOT_WRITE_SET,
 	buildResponseSnapshotBackfillDraft,
@@ -80,6 +81,34 @@ describe("response snapshot backfill policy", () => {
 
 		assert.deepEqual(draft.webQueries, []);
 		assert.equal(draft.queryAvailability, "unavailable");
+	});
+
+	it("safely bounds persisted citation titles when reconstructing a historical snapshot", () => {
+		const run = validPpioRun();
+		const citations = [
+			{
+				promptRunId: run.runId,
+				promptId: run.promptId,
+				brandId: run.brandId,
+				model: run.model,
+				citationIndex: 0,
+				url: "https://example.com/source",
+				title: "x".repeat(1_194),
+				domain: "example.com",
+			},
+		];
+		const request = parseResponseSnapshotBackfillRequest({
+			...validPpioRequest(),
+			expectedRunFingerprint: responseSnapshotBackfillFingerprint([run], citations),
+		});
+		const plan = buildPlan(request, [run], citations);
+		const plannedRun = plan.runs[0];
+		assert.ok(plannedRun);
+
+		const draft = buildResponseSnapshotBackfillDraft(plannedRun);
+
+		assert.equal(draft.citations[0]?.title?.length, 1_000);
+		assert.doesNotThrow(() => prepareResponseSnapshotBundle(draft));
 	});
 
 	it("accepts PPIO only with an explicit snapshot contract failure source", () => {
