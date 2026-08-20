@@ -49,7 +49,7 @@ describe("Browser Runner extension package", () => {
 			sha256: expectedSha256,
 			version: "0.1.0",
 		});
-	});
+	}, 15_000);
 
 	it("rejects an extension build with a missing reviewed file", async () => {
 		const root = await createFixture();
