@@ -422,8 +422,9 @@ describe("Browser Runner service contracts", () => {
 	});
 
 	it("returns the exact launch URL for each approved extension surface", () => {
-		expect(browserRunnerLaunchUrl("doubao.consumer_web")).toBe("https://www.doubao.com/chat/");
-		expect(browserRunnerLaunchUrl("deepseek.consumer_web")).toBe("https://chat.deepseek.com/");
+		for (const { key, launchUrl } of BROWSER_EXTENSION_SURFACE_DEFINITIONS) {
+			expect(browserRunnerLaunchUrl(key)).toBe(launchUrl);
+		}
 		expect(() => browserRunnerLaunchUrl("unknown.consumer_web")).toThrow(/unsupported launch surface/i);
 	});
 

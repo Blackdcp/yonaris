@@ -4,9 +4,11 @@ import {
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionCaptureRoute,
+	isBrowserExtensionSurface,
 	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
 	STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS,
 } from "@workspace/lib/browser-extension-contract";
+import { browserExtensionSurfaceDefinition } from "@workspace/lib/browser-extension-surfaces";
 import {
 	type BrowserExtensionTaskOperation,
 	browserExtensionTaskOperationDenial,
@@ -882,15 +884,15 @@ function assertPrincipalBrand(principal: BrowserRunnerPrincipal, brandId: string
 
 function isExtensionTargetPair(surfaceTargetKey: string, captureRouteKey: string): boolean {
 	return (
-		(surfaceTargetKey === "doubao.consumer_web" || surfaceTargetKey === "deepseek.consumer_web") &&
-		captureRouteKey === browserExtensionCaptureRoute(surfaceTargetKey)
+		isBrowserExtensionSurface(surfaceTargetKey) && captureRouteKey === browserExtensionCaptureRoute(surfaceTargetKey)
 	);
 }
 
 export function browserRunnerLaunchUrl(surfaceTargetKey: string): string {
-	if (surfaceTargetKey === "doubao.consumer_web") return "https://www.doubao.com/chat/";
-	if (surfaceTargetKey === "deepseek.consumer_web") return "https://chat.deepseek.com/";
-	throw new Error("Browser Runner task has an unsupported launch surface");
+	if (!isBrowserExtensionSurface(surfaceTargetKey)) {
+		throw new Error("Browser Runner task has an unsupported launch surface");
+	}
+	return browserExtensionSurfaceDefinition(surfaceTargetKey).launchUrl;
 }
 
 export function runnerClaimant(runnerId: string) {
