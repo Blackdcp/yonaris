@@ -176,14 +176,20 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
-			snapshot: {
-				id: "snapshot-1",
-				status: "ready",
-				contentSource: "browser_answer_html",
+				snapshot: {
+					id: "snapshot-1",
+					status: "ready",
+					schemaVersion: "response-snapshot.v2",
+					contentSource: "rendered_from_structured_response",
 				createdAt: new Date("2026-08-12T11:01:30.000Z"),
 				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
 				htmlSha256: "a".repeat(64),
 				jsonSha256: "b".repeat(64),
+				visualEvidence: {
+					mediaType: "image/jpeg",
+					sha256: "c".repeat(64),
+					bytes: 12345,
+				},
 				storageBackend: "filesystem",
 				storageKey: "private/key",
 			},
@@ -203,14 +209,20 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
-			snapshot: {
-				id: "snapshot-1",
-				status: "ready",
-				contentSource: "browser_answer_html",
+				snapshot: {
+					id: "snapshot-1",
+					status: "ready",
+					schemaVersion: "response-snapshot.v2",
+					contentSource: "rendered_from_structured_response",
 				createdAt: "2026-08-12T11:01:30.000Z",
 				expiresAt: "2026-11-10T11:00:00.000Z",
 				htmlSha256: "a".repeat(64),
 				jsonSha256: "b".repeat(64),
+				visualEvidence: {
+					mediaType: "image/jpeg",
+					sha256: "c".repeat(64),
+					bytes: 12345,
+				},
 			},
 		});
 		expect(dto).not.toHaveProperty("rawOutput");
@@ -219,6 +231,34 @@ describe("customer prompt-run DTO", () => {
 		expect(dto).not.toHaveProperty("observationAttemptId");
 		expect(dto.snapshot).not.toHaveProperty("storageBackend");
 		expect(dto.snapshot).not.toHaveProperty("storageKey");
+	});
+
+	it("does not expose a legacy snapshot's attached administrator screenshot as customer evidence", () => {
+		const dto = toCustomerPromptRunDto({
+			id: "run-v1",
+			model: "doubao",
+			version: "legacy",
+			observedAt: new Date("2026-08-12T11:00:00.000Z"),
+			createdAt: new Date("2026-08-12T11:01:00.000Z"),
+			webSearchEnabled: false,
+			answerText: "Legacy answer",
+			webQueries: [],
+			brandMentioned: false,
+			competitorsMentioned: [],
+			snapshot: {
+				id: "snapshot-v1",
+				status: "ready",
+				schemaVersion: "response-snapshot.v1",
+				contentSource: "browser_answer_html",
+				createdAt: new Date("2026-08-12T11:01:30.000Z"),
+				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
+				htmlSha256: "a".repeat(64),
+				jsonSha256: "b".repeat(64),
+				visualEvidence: { mediaType: "image/jpeg", sha256: "c".repeat(64), bytes: 12_345 },
+			},
+		} as never);
+
+		expect(dto.snapshot?.visualEvidence).toBeNull();
 	});
 
 	it("pins the prompt-runs handler to an explicit safe projection", () => {
@@ -232,10 +272,17 @@ describe("customer prompt-run DTO", () => {
 		expect(handler).toContain("responseSnapshots.isCurrent");
 		expect(handler).toContain("status: responseSnapshots.status");
 		expect(handler).toContain("runs.map(toCustomerPromptRunDto)");
+		expect(handler).toContain("evidenceArtifacts.observationAttemptId");
+		expect(handler).toContain("evidenceArtifacts.brandId");
+		expect(handler).toContain("evidenceArtifacts.scopeId");
+		expect(handler).toContain("evidenceArtifacts.status} = 'attached'");
+		expect(handler).toContain("evidenceArtifacts.mediaType} = 'image/jpeg'");
+		expect(handler).toContain("responseSnapshots.schemaVersion} = 'response-snapshot.v2'");
+		expect(handler).toContain("responseSnapshots.expiresAt} > now()");
 		expect(handler).not.toContain("promptRuns.rawOutput");
 		expect(handler).not.toContain("promptRuns.provider");
 		expect(handler).not.toContain("promptRuns.captureRouteKey");
-		expect(handler).not.toContain("promptRuns.observationAttemptId");
+		expect(handler).not.toContain("observationAttemptId: promptRuns.observationAttemptId");
 		expect(handler).not.toContain("responseSnapshots.storageBackend");
 		expect(handler).not.toContain("responseSnapshots.storageKey");
 	});

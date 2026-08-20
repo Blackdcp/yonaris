@@ -1,7 +1,7 @@
 import { statfs as nodeStatfs } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { SnapshotReservation } from "@workspace/lib/db/response-snapshots";
-import type { ResponseSnapshotDraft } from "@workspace/lib/response-snapshots/contract";
+import type { ResponseSnapshotDraft, ResponseSnapshotDraftV2 } from "@workspace/lib/response-snapshots/contract";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import { recordResponseSnapshot } from "@workspace/lib/response-snapshots/service";
 
@@ -112,10 +112,63 @@ export function buildBrowserRunnerResponseSnapshotDraft(input: {
 	};
 }
 
+export function buildBrowserRunnerResponseSnapshotDraftV2(input: {
+	promptRunId: string;
+	brandId: string;
+	scopeId: string | null;
+	promptId: string;
+	promptText: string;
+	answerText: string;
+	citations: ResponseSnapshotDraftV2["citations"];
+	webQueries: string[];
+	webSearchEnabled: boolean;
+	brandMentioned: boolean;
+	competitorsMentioned: string[];
+	channel: string;
+	modelVersion: string;
+	market: string;
+	locale: string;
+	timezone: string;
+	observedAt: Date;
+	adapterVersion: string;
+	visualEvidence: ResponseSnapshotDraftV2["visualEvidence"];
+	captureDiagnostics: ResponseSnapshotDraftV2["captureDiagnostics"];
+}): ResponseSnapshotDraftV2 {
+	return {
+		schemaVersion: "response-snapshot.v2",
+		runId: input.promptRunId,
+		brandId: input.brandId,
+		scopeId: input.scopeId,
+		promptId: input.promptId,
+		promptText: input.promptText,
+		answerText: input.answerText,
+		citations: input.citations,
+		webQueries: input.webQueries,
+		queryAvailability: input.webSearchEnabled
+			? input.webQueries.length > 0
+				? "available"
+				: "unavailable"
+			: "not_applicable",
+		brandMentioned: input.brandMentioned,
+		competitorsMentioned: input.competitorsMentioned,
+		channel: input.channel,
+		modelVersion: input.modelVersion,
+		market: input.market,
+		locale: input.locale,
+		timezone: input.timezone,
+		observedAt: input.observedAt.toISOString(),
+		captureMethod: "consumer_web_browser",
+		contentSource: "rendered_from_structured_response",
+		visualEvidence: input.visualEvidence,
+		adapterVersion: input.adapterVersion,
+		captureDiagnostics: input.captureDiagnostics,
+	};
+}
+
 export async function archiveBrowserRunnerResponseSnapshotBestEffort(
 	input: {
 		reservation: SnapshotReservation;
-		draft: ResponseSnapshotDraft | (() => ResponseSnapshotDraft);
+		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | (() => ResponseSnapshotDraft | ResponseSnapshotDraftV2);
 		storageRoot: string;
 	},
 	dependencies: { record?: typeof recordResponseSnapshot } = {},

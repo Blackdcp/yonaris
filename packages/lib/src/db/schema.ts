@@ -99,6 +99,8 @@ export const responseSnapshotAccessActionEnum = pgEnum("response_snapshot_access
 	"download_html",
 	"download_json",
 	"download_manifest",
+	"view_screenshot",
+	"download_screenshot",
 	"export",
 ]);
 export const overseasRunCohortStatusEnum = pgEnum("overseas_run_cohort_status", [

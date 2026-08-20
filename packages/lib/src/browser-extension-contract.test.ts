@@ -3,6 +3,8 @@ import {
 	assertExtensionEvidenceProtocol,
 	browserExtensionCaptureRoute,
 	isApprovedBrowserExtensionAdapterVersion,
+	isBrowserExtensionAdapterVersionBindingSatisfied,
+	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
 	parseBrowserExtensionSurface,
 } from "./browser-extension-contract";
 
@@ -19,12 +21,12 @@ describe("browser extension contract", () => {
 		expect(() => parseBrowserExtensionSurface("kimi.consumer_web")).toThrow(/not supported/i);
 	});
 
-	it("allows only exact field-proven adapter versions and keeps pending DeepSeek fail-closed", () => {
+	it("approves Doubao v8 for production and rejects the retired v7 adapter", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v7")).toBe(
-			true,
-		);
-		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v6")).toBe(
 			false,
+		);
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260819-localpc-v8")).toBe(
+			true,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-20260814-uat1")).toBe(false);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(
@@ -33,25 +35,93 @@ describe("browser extension contract", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-stale")).toBe(false);
 	});
 
+	it("requires an explicit exact v8 binding after production activation", () => {
+		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", undefined)).toBe(false);
+		expect(
+			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260818-localpc-v7"),
+		).toBe(false);
+		expect(
+			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260819-localpc-v8"),
+		).toBe(true);
+		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("deepseek.consumer_web", undefined)).toBe(false);
+	});
+
+	it("requires an explicit exact request as soon as the simulated approval advances to Doubao v8", () => {
+		const approval = {
+			surface: "doubao.consumer_web" as const,
+			approvedAdapterVersion: "doubao-web-20260819-localpc-v8",
+		};
+
+		expect(
+			isBrowserExtensionAdapterVersionBindingSatisfied({
+				...approval,
+				requestedAdapterVersion: undefined,
+			}),
+		).toBe(false);
+		expect(
+			isBrowserExtensionAdapterVersionBindingSatisfied({
+				...approval,
+				requestedAdapterVersion: "doubao-web-20260818-localpc-v7",
+			}),
+		).toBe(false);
+		expect(
+			isBrowserExtensionAdapterVersionBindingSatisfied({
+				...approval,
+				requestedAdapterVersion: "doubao-web-20260819-localpc-v8",
+			}),
+		).toBe(true);
+	});
+
 	it("accepts one HTML page snapshot as the complete extension evidence contract", () => {
 		expect(() =>
 			assertExtensionEvidenceProtocol({
 				captureRouteKey: "browser_extension.deepseek",
+				adapterVersion: "deepseek-web-20260814-uat1",
 				minimumArtifacts: 1,
 				kinds: ["page_snapshot"],
 			}),
 		).not.toThrow();
 	});
 
+	it("requires one bounded JPEG screenshot for the structured Doubao v8 protocol", () => {
+		expect(() =>
+			assertExtensionEvidenceProtocol({
+				captureRouteKey: "browser_extension.doubao",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				minimumArtifacts: 1,
+				kinds: ["screenshot"],
+				mediaTypes: ["image/jpeg"],
+				byteSizes: [512_000],
+			}),
+		).not.toThrow();
+
+		for (const input of [
+			{ kinds: ["page_snapshot"], mediaTypes: ["text/html"], byteSizes: [512_000] },
+			{ kinds: ["screenshot"], mediaTypes: ["image/png"], byteSizes: [512_000] },
+			{ kinds: ["screenshot"], mediaTypes: ["image/jpeg"], byteSizes: [2 * 1024 * 1024 + 1] },
+		]) {
+			expect(() =>
+				assertExtensionEvidenceProtocol({
+					captureRouteKey: "browser_extension.doubao",
+					adapterVersion: "doubao-web-20260819-localpc-v8",
+					minimumArtifacts: 1,
+					...input,
+				}),
+			).toThrow(/exactly one bounded JPEG screenshot/i);
+		}
+	});
+
 	it("rejects screenshots and missing HTML snapshots for extension routes", () => {
 		for (const input of [
 			{
 				captureRouteKey: "browser_extension.doubao",
+				adapterVersion: "doubao-web-20260818-localpc-v7",
 				minimumArtifacts: 2,
 				kinds: ["page_snapshot", "screenshot"],
 			},
 			{
 				captureRouteKey: "browser_extension.deepseek",
+				adapterVersion: "deepseek-web-20260814-uat1",
 				minimumArtifacts: 1,
 				kinds: ["screenshot"],
 			},

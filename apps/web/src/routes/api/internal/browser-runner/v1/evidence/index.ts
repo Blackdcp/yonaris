@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { EVIDENCE_ARTIFACT_MAX_BYTES, stageEvidenceArtifact } from "@workspace/lib/db/evidence-artifacts";
 import { BrowserRunnerHttpError, browserRunnerErrorResponse, requireBrowserRunner } from "@/server/browser-runner-auth";
-import { assertRunnerTask, runnerClaimant } from "@/server/browser-runner-service";
+import { authorizeRunnerEvidenceUpload, runnerClaimant } from "@/server/browser-runner-service";
 import { mapSamplingEvidenceDomainError, toSamplingEvidenceArtifactDto } from "@/server/sampling-evidence";
 import {
 	parseSamplingEvidenceUploadHeaders,
@@ -17,7 +17,12 @@ export const Route = createFileRoute("/api/internal/browser-runner/v1/evidence/"
 					const principal = await requireBrowserRunner(request);
 					const runnerId = principal.id;
 					const headers = parseSamplingEvidenceUploadHeaders(request);
-					await assertRunnerTask(headers.taskId, headers.brandId, principal);
+					await authorizeRunnerEvidenceUpload(
+						headers.taskId,
+						headers.brandId,
+						{ runnerSessionId: headers.runnerSessionId, adapterVersion: headers.adapterVersion },
+						principal,
+					);
 					const content = await readRequestBodyWithinLimit(request, EVIDENCE_ARTIFACT_MAX_BYTES);
 					const claimedBy = runnerClaimant(runnerId);
 					const artifact = await stageEvidenceArtifact({

@@ -3,6 +3,8 @@ import {
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionCaptureRoute,
+	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
+	STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS,
 } from "@workspace/lib/browser-extension-contract";
 import {
 	type BrowserExtensionTaskOperation,
@@ -49,17 +51,19 @@ import {
 	assertBrowserRunnerSnapshotClaimCapacity,
 	BrowserRunnerSnapshotCapacityError,
 	buildBrowserRunnerResponseSnapshotDraft,
+	buildBrowserRunnerResponseSnapshotDraftV2,
 } from "./browser-runner-snapshot-policy";
 import {
-	browserAnswerHtmlSchema,
+	browserRunnerLegacyObservationSchema,
+	browserRunnerStructuredObservationSchema,
 	prepareSamplingObservation,
-	samplingObservationBaseSchema,
 } from "./sampling-observation";
 
 export const browserRunnerClaimSchema = z
 	.object({
 		brandId: z.string().trim().min(1).max(300),
 		batchId: z.guid().optional(),
+		adapterVersion: z.string().trim().min(1).max(100).optional(),
 		surfaceTargetKeys: z
 			.array(z.enum(["doubao.consumer_web", "deepseek.consumer_web"]))
 			.min(1)
@@ -74,6 +78,7 @@ export const browserRunnerLeaseSchema = z
 		brandId: z.string().trim().min(1).max(300),
 		leaseToken: z.string().min(32).max(500),
 		leaseGeneration: z.number().int().positive(),
+		adapterVersion: z.string().trim().min(1).max(100).optional(),
 	})
 	.strict();
 
@@ -85,6 +90,7 @@ export const browserRunnerResumeSchema = z
 	.object({
 		brandId: z.string().trim().min(1).max(300),
 		stage: z.enum(["pre_submit", "post_submit"]).optional(),
+		adapterVersion: z.string().trim().min(1).max(100).optional(),
 	})
 	.strict();
 
@@ -100,18 +106,61 @@ export const browserRunnerFailureSchema = browserRunnerLeaseSchema.extend({
 	reason: z.string().trim().min(1).max(1_000),
 });
 
-export const browserRunnerObservationSchema = browserRunnerLeaseSchema.extend({
-	runnerSessionId: z.string().trim().min(1).max(300),
-	adapterVersion: z.string().trim().min(1).max(100),
-	browserVersion: z.string().trim().min(1).max(200),
-	observation: samplingObservationBaseSchema.extend({ answerHtml: browserAnswerHtmlSchema }),
-});
+export const browserRunnerObservationSchema = browserRunnerLeaseSchema
+	.extend({
+		runnerSessionId: z.string().trim().min(1).max(300),
+		adapterVersion: z.string().trim().min(1).max(100),
+		browserVersion: z.string().trim().min(1).max(200),
+		observation: z.union([browserRunnerLegacyObservationSchema, browserRunnerStructuredObservationSchema]),
+	})
+	.superRefine((input, context) => {
+		const requiresStructuredObservation = Object.values(STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS).includes(
+			input.adapterVersion,
+		);
+		const isStructuredObservation =
+			"schemaVersion" in input.observation && input.observation.schemaVersion === "browser-runner-observation.v2";
+		if (requiresStructuredObservation !== isStructuredObservation) {
+			context.addIssue({
+				code: "custom",
+				path: ["observation"],
+				message: "Observation protocol does not match the exact adapter version",
+			});
+		}
+	});
+
+type BrowserRunnerEvidenceArtifact = {
+	id: string;
+	kind: "screenshot" | "page_snapshot";
+	mediaType?: string;
+	byteSize?: number;
+	sha256?: string;
+};
+
+type BrowserRunnerVisualEvidence = {
+	artifactId: string;
+	mediaType: "image/jpeg";
+	sha256: string;
+	bytes: number;
+};
+
+function assertVisualEvidence(value: BrowserRunnerVisualEvidence | null): BrowserRunnerVisualEvidence {
+	if (!value) throw new Error("Structured browser extension completion is missing its staged JPEG evidence");
+	return value;
+}
+
+function assertLegacyAnswerHtml(observation: z.infer<typeof browserRunnerObservationSchema>["observation"]): string {
+	if (!("answerHtml" in observation)) {
+		throw new Error("Legacy browser extension completion is missing answer-container HTML");
+	}
+	return observation.answerHtml;
+}
 
 export function assertBrowserRunnerEvidenceSelection(
 	captureRouteKey: string,
-	artifacts: readonly { id: string; kind: "screenshot" | "page_snapshot" }[],
+	artifacts: readonly BrowserRunnerEvidenceArtifact[],
 	evidenceArtifactIds: readonly string[],
-): void {
+	adapterVersion?: string,
+): BrowserRunnerVisualEvidence | null {
 	const submittedArtifactIds = new Set(evidenceArtifactIds);
 	const submittedArtifacts = artifacts.filter(({ id }) => submittedArtifactIds.has(id));
 	if (isBrowserExtensionCaptureRoute(captureRouteKey)) {
@@ -120,10 +169,28 @@ export function assertBrowserRunnerEvidenceSelection(
 		}
 		assertExtensionEvidenceProtocol({
 			captureRouteKey,
+			adapterVersion,
 			minimumArtifacts: evidenceArtifactIds.length,
 			kinds: submittedArtifacts.map(({ kind }) => kind),
+			mediaTypes: submittedArtifacts.map(({ mediaType }) => mediaType ?? ""),
+			byteSizes: submittedArtifacts.map(({ byteSize }) => byteSize ?? 0),
 		});
-		return;
+		if (submittedArtifacts[0]?.kind !== "screenshot") return null;
+		const screenshot = submittedArtifacts[0];
+		if (
+			screenshot.mediaType !== "image/jpeg" ||
+			screenshot.byteSize === undefined ||
+			screenshot.sha256 === undefined ||
+			!/^[0-9a-f]{64}$/u.test(screenshot.sha256)
+		) {
+			throw new Error("Structured browser extension completion requires valid staged JPEG metadata");
+		}
+		return {
+			artifactId: screenshot.id,
+			mediaType: screenshot.mediaType,
+			sha256: screenshot.sha256,
+			bytes: screenshot.byteSize,
+		};
 	}
 	if (
 		captureRouteKey !== "browser_runner.doubao" ||
@@ -135,6 +202,7 @@ export function assertBrowserRunnerEvidenceSelection(
 	) {
 		throw new Error("Browser Runner completion requires exactly one staged screenshot and one staged page snapshot");
 	}
+	return null;
 }
 
 const RUNNER_LEASE_MS = 15 * 60 * 1_000;
@@ -145,14 +213,35 @@ export async function claimRunnerTask(
 	dependencies: {
 		assertCapacity?: typeof assertBrowserRunnerSnapshotClaimCapacity;
 		claim?: typeof claimBrowserRunnerTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
 	} = {},
 ) {
 	assertPrincipalBrand(principal, input.brandId);
+	const isAdapterVersionBindingSatisfied =
+		dependencies.isAdapterVersionBindingSatisfied ?? isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	if (principal.kind === "browser_extension" && input.adapterVersion !== undefined) {
+		const requestedSurfaces = input.surfaceTargetKeys ?? principal.readySurfaces;
+		const [requestedSurface] = requestedSurfaces;
+		if (
+			requestedSurfaces.length !== 1 ||
+			!requestedSurface ||
+			!isAdapterVersionBindingSatisfied(requestedSurface, input.adapterVersion)
+		) {
+			throw new BrowserRunnerHttpError(409, "The running Browser Runner adapter is not approved for this claim");
+		}
+	}
 	const captureTargets = resolveBrowserRunnerClaimTargets({
 		principalKind: principal.kind,
 		requestedSurfaceTargetKeys: input.surfaceTargetKeys,
 		supportedSurfaces: principal.kind === "browser_extension" ? principal.readySurfaces : undefined,
 	});
+	if (
+		principal.kind === "browser_extension" &&
+		input.adapterVersion === undefined &&
+		captureTargets.some((target) => !isAdapterVersionBindingSatisfied(target.surfaceTargetKey, input.adapterVersion))
+	) {
+		throw new BrowserRunnerHttpError(409, "The running Browser Runner adapter is not approved for this claim");
+	}
 	if (captureTargets.length === 0) {
 		if (principal.kind === "browser_extension") {
 			const requested = input.surfaceTargetKeys ?? principal.supportedSurfaces;
@@ -256,9 +345,26 @@ export async function resumeRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerResumeSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		resume?: typeof resumeBrowserRunnerTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
-	await authorizeRunnerTaskOperation(taskId, input.brandId, principal, { kind: "resume" });
-	const claim = await resumeBrowserRunnerTask({
+	await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{
+			kind: "resume",
+			adapterVersion: input.adapterVersion,
+		},
+		{
+			assertTask: dependencies.assertTask,
+			isAdapterVersionBindingSatisfied: dependencies.isAdapterVersionBindingSatisfied,
+		},
+	);
+	const claim = await (dependencies.resume ?? resumeBrowserRunnerTask)({
 		brandId: input.brandId,
 		taskId,
 		runnerId: principal.id,
@@ -365,9 +471,23 @@ export async function heartbeatRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerLeaseSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		write?: typeof heartbeatDeliveryTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
-	await assertRunnerTask(taskId, input.brandId, principal);
-	return heartbeatDeliveryTask({
+	await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{ kind: "heartbeat", adapterVersion: input.adapterVersion },
+		{
+			assertTask: dependencies.assertTask,
+			isAdapterVersionBindingSatisfied: dependencies.isAdapterVersionBindingSatisfied,
+		},
+	);
+	return (dependencies.write ?? heartbeatDeliveryTask)({
 		taskId,
 		claimedBy: runnerClaimant(principal.id),
 		leaseToken: input.leaseToken,
@@ -380,18 +500,48 @@ export async function recordRunnerSubmitIntent(
 	taskId: string,
 	input: z.infer<typeof browserRunnerSessionLeaseSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		write?: typeof markBrowserRunnerSubmitIntent;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
-	await assertRunnerTask(taskId, input.brandId, principal);
-	return markBrowserRunnerSubmitIntent({ taskId, ...input, runnerId: principal.id });
+	await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{ kind: "submit_intent", adapterVersion: input.adapterVersion },
+		{
+			assertTask: dependencies.assertTask,
+			isAdapterVersionBindingSatisfied: dependencies.isAdapterVersionBindingSatisfied,
+		},
+	);
+	const { adapterVersion: _adapterVersion, ...leaseInput } = input;
+	return (dependencies.write ?? markBrowserRunnerSubmitIntent)({ taskId, ...leaseInput, runnerId: principal.id });
 }
 
 export async function recordRunnerSubmitConfirmed(
 	taskId: string,
 	input: z.infer<typeof browserRunnerSessionLeaseSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		write?: typeof markBrowserRunnerSubmitConfirmed;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
-	await assertRunnerTask(taskId, input.brandId, principal);
-	return markBrowserRunnerSubmitConfirmed({ taskId, ...input, runnerId: principal.id });
+	await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{ kind: "submit_confirmed", adapterVersion: input.adapterVersion },
+		{
+			assertTask: dependencies.assertTask,
+			isAdapterVersionBindingSatisfied: dependencies.isAdapterVersionBindingSatisfied,
+		},
+	);
+	const { adapterVersion: _adapterVersion, ...leaseInput } = input;
+	return (dependencies.write ?? markBrowserRunnerSubmitConfirmed)({ taskId, ...leaseInput, runnerId: principal.id });
 }
 
 export async function failRunnerTask(
@@ -407,12 +557,21 @@ export async function completeRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerObservationSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
-	const task = await authorizeRunnerTaskOperation(taskId, input.brandId, principal, {
-		kind: "complete",
-		adapterVersion: input.adapterVersion,
-	});
+	const task = await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{
+			kind: "complete",
+			adapterVersion: input.adapterVersion,
+		},
+		dependencies,
+	);
 	if (task.status === "succeeded" && task.observationAttemptId) {
 		const existingRun = await db.query.promptRuns.findFirst({
 			where: eq(promptRuns.observationAttemptId, task.observationAttemptId),
@@ -420,7 +579,7 @@ export async function completeRunnerTask(
 		});
 		return { duplicate: true, attemptId: task.observationAttemptId, promptRunId: existingRun?.id ?? null };
 	}
-	await heartbeatRunnerTask(taskId, input, principal);
+	await heartbeatRunnerTask(taskId, input, principal, dependencies);
 	if (!task.submitIntentAt || !task.submitConfirmedAt) {
 		throw new Error("Browser Runner completion requires durable submit intent and confirmation");
 	}
@@ -461,7 +620,12 @@ export async function completeRunnerTask(
 		leaseGeneration: input.leaseGeneration,
 	};
 	const stagedArtifacts = await listEvidenceArtifactsForClaim({ brandId: task.brandId, claim: deliveryClaim });
-	assertBrowserRunnerEvidenceSelection(task.captureRouteKey, stagedArtifacts, observation.evidenceArtifactIds);
+	const visualEvidence = assertBrowserRunnerEvidenceSelection(
+		task.captureRouteKey,
+		stagedArtifacts,
+		observation.evidenceArtifactIds,
+		input.adapterVersion,
+	);
 	const attempt = await claimImportedObservationAttempt({
 		sourceKey: `delivery-task:${task.id}`,
 		promptId: task.promptId,
@@ -543,31 +707,59 @@ export async function completeRunnerTask(
 			reservation: promptRun.snapshotReservation,
 			storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT ?? "",
 			draft: () =>
-				buildBrowserRunnerResponseSnapshotDraft({
-					promptRunId: promptRun.id,
-					brandId: brand.id,
-					scopeId: scope.id,
-					promptId: task.promptId,
-					promptText: task.promptText,
-					answerText: observation.answerText,
-					answerHtml: observation.answerHtml,
-					citations: prepared.citations.map((citation) => ({
-						url: citation.url,
-						title: citation.title ?? null,
-						domain: citation.domain,
-						citationIndex: citation.citationIndex,
-					})),
-					webQueries: observation.webQueries,
-					webSearchEnabled: prepared.config.webSearch,
-					brandMentioned: prepared.mentionResult.brandMentioned,
-					competitorsMentioned: prepared.mentionResult.competitorsMentioned,
-					channel: prepared.target.surfaceTargetKey,
-					modelVersion: recordedVersion,
-					market: scope.market,
-					locale: scope.locale,
-					timezone: scope.timezone,
-					observedAt: prepared.observedAt,
-				}),
+				"schemaVersion" in observation && observation.schemaVersion === "browser-runner-observation.v2"
+					? buildBrowserRunnerResponseSnapshotDraftV2({
+							promptRunId: promptRun.id,
+							brandId: brand.id,
+							scopeId: scope.id,
+							promptId: task.promptId,
+							promptText: task.promptText,
+							answerText: observation.answerText,
+							citations: prepared.citations.map((citation) => ({
+								url: citation.url,
+								title: citation.title ?? null,
+								domain: citation.domain,
+								citationIndex: citation.citationIndex,
+							})),
+							webQueries: observation.webQueries,
+							webSearchEnabled: prepared.config.webSearch,
+							brandMentioned: prepared.mentionResult.brandMentioned,
+							competitorsMentioned: prepared.mentionResult.competitorsMentioned,
+							channel: prepared.target.surfaceTargetKey,
+							modelVersion: recordedVersion,
+							market: scope.market,
+							locale: scope.locale,
+							timezone: scope.timezone,
+							observedAt: prepared.observedAt,
+							adapterVersion: input.adapterVersion,
+							visualEvidence: assertVisualEvidence(visualEvidence),
+							captureDiagnostics: observation.captureDiagnostics,
+						})
+					: buildBrowserRunnerResponseSnapshotDraft({
+							promptRunId: promptRun.id,
+							brandId: brand.id,
+							scopeId: scope.id,
+							promptId: task.promptId,
+							promptText: task.promptText,
+							answerText: observation.answerText,
+							answerHtml: assertLegacyAnswerHtml(observation),
+							citations: prepared.citations.map((citation) => ({
+								url: citation.url,
+								title: citation.title ?? null,
+								domain: citation.domain,
+								citationIndex: citation.citationIndex,
+							})),
+							webQueries: observation.webQueries,
+							webSearchEnabled: prepared.config.webSearch,
+							brandMentioned: prepared.mentionResult.brandMentioned,
+							competitorsMentioned: prepared.mentionResult.competitorsMentioned,
+							channel: prepared.target.surfaceTargetKey,
+							modelVersion: recordedVersion,
+							market: scope.market,
+							locale: scope.locale,
+							timezone: scope.timezone,
+							observedAt: prepared.observedAt,
+						}),
 		});
 		return {
 			duplicate: false,
@@ -585,15 +777,23 @@ export async function authorizeRunnerTaskOperation(
 	brandId: string,
 	principal: BrowserRunnerPrincipal,
 	operation: BrowserExtensionTaskOperation,
-	dependencies: { assertTask?: typeof assertRunnerTask } = {},
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
 	const task = await (dependencies.assertTask ?? assertRunnerTask)(taskId, brandId, principal);
 	if (principal.kind !== "browser_extension") return task;
-	const denial = browserExtensionTaskOperationDenial({
-		surfaceTargetKey: task.surfaceTargetKey,
-		readySurfaces: principal.readySurfaces,
-		operation,
-	});
+	const denial = browserExtensionTaskOperationDenial(
+		{
+			surfaceTargetKey: task.surfaceTargetKey,
+			readySurfaces: principal.readySurfaces,
+			operation,
+		},
+		{
+			isAdapterVersionBindingSatisfied: dependencies.isAdapterVersionBindingSatisfied,
+		},
+	);
 	if (denial === "surface_not_ready") {
 		throw new BrowserRunnerHttpError(
 			409,
@@ -603,8 +803,42 @@ export async function authorizeRunnerTaskOperation(
 	if (denial === "adapter_version_not_approved") {
 		throw new BrowserRunnerHttpError(
 			409,
-			"The completion adapter version is not the current server-approved version for this task surface",
+			"The operation adapter version is not the current server-approved version for this task surface",
 		);
+	}
+	return task;
+}
+
+export async function authorizeRunnerEvidenceUpload(
+	taskId: string,
+	brandId: string,
+	input: { runnerSessionId?: string; adapterVersion?: string },
+	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
+) {
+	const task = await authorizeRunnerTaskOperation(
+		taskId,
+		brandId,
+		principal,
+		{ kind: "evidence", adapterVersion: input.adapterVersion },
+		dependencies,
+	);
+	if (principal.kind !== "browser_extension") return task;
+	// The currently deployed Doubao v7 uploader predates these headers. The
+	// operation policy above admits this exact omission only while v7 remains
+	// approved; once v8 is approved, an omitted adapter version is rejected
+	// before this compatibility branch can run.
+	if (input.runnerSessionId === undefined && input.adapterVersion === undefined) return task;
+	if (
+		!input.runnerSessionId ||
+		!task.submitIntentAt ||
+		!task.submitConfirmedAt ||
+		task.runnerSessionId !== input.runnerSessionId
+	) {
+		throw new BrowserRunnerHttpError(409, "Evidence upload must match the confirmed Browser Runner session");
 	}
 	return task;
 }

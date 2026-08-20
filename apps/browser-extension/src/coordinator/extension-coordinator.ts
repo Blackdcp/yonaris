@@ -15,7 +15,12 @@ import { type RunnerApi, type RunnerTabDriver, runClaimedTask, type TaskRunResul
 export interface RunnerControlApi extends RunnerApi {
 	claimNext(brandId: string, surface: BrowserExtensionSurface): Promise<BrowserExtensionClaim | null>;
 	reconcileTask(taskId: string, brandId: string): Promise<BrowserTaskReconciliation>;
-	resume(taskId: string, brandId: string, stage: RecoveryStage): Promise<BrowserExtensionClaim>;
+	resume(
+		taskId: string,
+		brandId: string,
+		stage: RecoveryStage,
+		surface: BrowserExtensionSurface,
+	): Promise<BrowserExtensionClaim>;
 }
 
 type RecoveryStage = "pre_submit" | "post_submit";
@@ -91,7 +96,7 @@ export class ExtensionCoordinator {
 
 		let claim: BrowserExtensionClaim | undefined;
 		try {
-			claim = await api.resume(entry.taskId, entry.brandId, requestedStage);
+			claim = await api.resume(entry.taskId, entry.brandId, requestedStage, entry.surfaceTargetKey);
 			recoveryStage = claim.postSubmitAssist ? "post_submit" : "pre_submit";
 			await assertManualResumeClaim(entry, claim, recoveryStage);
 			await this.#dependencies.tabs.activate(entry.tabId);

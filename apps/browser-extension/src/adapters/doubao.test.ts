@@ -17,14 +17,17 @@ describe("Doubao browser-extension adapter", () => {
 		expect(matches[0]?.getAttribute("data-message-id")).toBe("assistant-1");
 	});
 
-	test("uses the unique semantic read-aloud action as the completion signal", () => {
+	test("binds the read-aloud completion and copy companion to the adjacent answer action group", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div data-message-id="user-1" class="flex-row flex w-full justify-end">Prompt</div>
 			<div data-message-id="assistant-1" class="relative grid w-full">Answer</div>
 			<div class="answer-actions"><button aria-label="朗读"></button><button aria-label="复制"></button></div>
 		</body></html>`);
 
-		expect(document.querySelectorAll(doubaoContract.completion)).toHaveLength(1);
+		const answer = document.querySelector(doubaoContract.answer);
+		const actionGroup = answer?.nextElementSibling;
+		expect(actionGroup?.querySelectorAll(doubaoContract.completion)).toHaveLength(1);
+		expect(actionGroup?.querySelectorAll(doubaoContract.completionCompanion)).toHaveLength(1);
 	});
 
 	test("uses the exact New conversation action instead of New work task", async () => {
@@ -98,7 +101,6 @@ describe("Doubao browser-extension adapter", () => {
 
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
 			answerText: "Current answer",
-			answerHtml: "<div>Current answer</div>",
 		});
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
@@ -116,9 +118,23 @@ describe("Doubao browser-extension adapter", () => {
 
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
 			answerText: "Fast answer",
-			answerHtml: "<div>Fast answer</div>",
 		});
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
+	});
+
+	test("does not accept an unrelated footer completion as the current answer completion", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				generatingDurationMs: 0,
+				completionReadyDelayMs: 0,
+				completionState: "unbound",
+				answer: { text: "Stable partial answer", html: "<div>Stable partial answer</div>" },
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({ code: "page_drift" });
 	});
 
 	test("does not capture a paused partial answer without an explicit completion signal", async () => {
@@ -149,11 +165,89 @@ describe("Doubao browser-extension adapter", () => {
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(18_000);
 	});
 
+	test("does not treat a brief generation indicator as the explicit completion signal", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				generatingDurationMs: 250,
+				completionReadyDelayMs: 20_000,
+				answer: { text: "Complete answer", html: "<div>Complete answer</div>" },
+				answerTimeline: [...Array.from({ length: 20 }, () => "Partial answer"), "Complete answer"],
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Complete answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(28_000);
+	});
+
 	test("records unknown search instead of inventing false", async () => {
 		const port = new FixtureDomPort(doubaoFixture({ searchUsedCount: 0, searchNotUsedCount: 0 }));
 		const adapter = createDoubaoAdapter(port);
 		await port.completeOneTask(adapter, "Prompt A");
 		expect((await adapter.collectCurrentAnswer()).webSearchObserved).toBeNull();
+	});
+
+	test("keeps an exact Prompt echo as query-exposure evidence for server-side fan-out classification", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				searchUsedCount: 1,
+				answer: {
+					text: "Current answer",
+					html: "<div>Current answer</div>",
+					queries: ["Prompt A", "AI inference pricing", "AI inference pricing"],
+				},
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			webSearchObserved: true,
+			webQueries: ["Prompt A", "AI inference pricing"],
+		});
+	});
+
+	test("normalizes a long citation title to the Portal contract without splitting a surrogate pair", async () => {
+		const title = `${"a".repeat(999)}😀tail`;
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				searchUsedCount: 1,
+				answer: {
+					text: "Current answer",
+					html: "<div>Current answer</div>",
+					queries: ["different query"],
+					citations: [{ url: "https://source.example/report", title }],
+				},
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		const answer = await adapter.collectCurrentAnswer();
+		expect(answer.citations[0]?.title).toHaveLength(999);
+		expect(answer.citations[0]?.title).toBe("a".repeat(999));
+	});
+
+	test("classifies invalid collected evidence as post-submit page drift", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				searchUsedCount: 1,
+				answer: {
+					text: "Current answer",
+					html: "<div>Current answer</div>",
+					queries: ["valid query"],
+					citations: [{ url: "https://user:secret@source.example/report", title: "Unsafe" }],
+				},
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({
+			code: "page_drift",
+			stage: "post_submit",
+		});
 	});
 
 	test("waits for the durable conversation URL instead of failing immediately after submit", async () => {
@@ -164,6 +258,37 @@ describe("Doubao browser-extension adapter", () => {
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
 			answerText: "Current answer",
 			pageUrl: "https://www.doubao.com/chat/123456",
+		});
+	});
+
+	test("refuses to collect an answer after the tab navigates to another conversation", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				conversationUrlTimeline: ["https://www.doubao.com/chat/123456", "https://www.doubao.com/chat/999999"],
+				answer: { text: "Other conversation secret", html: "<div>Other conversation secret</div>" },
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({
+			code: "page_drift",
+			stage: "post_submit",
+		});
+	});
+
+	test("classifies a malformed post-submit page URL as page drift", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				conversationUrlTimeline: ["https://www.doubao.com/chat/123456", "not-a-url"],
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({
+			code: "page_drift",
+			stage: "post_submit",
 		});
 	});
 
@@ -207,6 +332,18 @@ describe("Doubao browser-extension adapter", () => {
 		expect(html).toContain("Current answer");
 		expect(html).toContain('href="https://example.com/source"');
 		expect(html).not.toMatch(/script|form|iframe|input|onclick|onmouseover|style=|src=|<svg/i);
+	});
+
+	test("removes hidden descendants before stripping the attributes that hid them", () => {
+		const { document } = parseHTML("<html></html>");
+		const parser = parserFor(document);
+		const html = sanitizeAnswerHtml(
+			'<article><p>Visible answer</p><div hidden>hidden private text</div><div aria-hidden="true">stale answer</div><div style="opacity: 0">invisible overlay</div></article>',
+			parser,
+		);
+
+		expect(html).toContain("Visible answer");
+		expect(html).not.toMatch(/hidden private text|stale answer|invisible overlay/i);
 	});
 
 	test("rejects an oversized answer snapshot", () => {

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 	resolveAuthSession: vi.fn(),
 	loadAuthorizedResponseSnapshot: vi.fn(),
 	recordResponseSnapshotAccess: vi.fn(),
+	loadAuthorizedResponseSnapshotScreenshot: vi.fn(),
 	get: vi.fn(),
 	createDownload: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("@/lib/auth/resolve-session", () => ({ resolveAuthSession: mocks.resolve
 vi.mock("@/server/response-snapshots", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/server/response-snapshots")>()),
 	loadAuthorizedResponseSnapshot: mocks.loadAuthorizedResponseSnapshot,
+	loadAuthorizedResponseSnapshotScreenshot: mocks.loadAuthorizedResponseSnapshotScreenshot,
 	recordResponseSnapshotAccess: mocks.recordResponseSnapshotAccess,
 }));
 
@@ -40,6 +42,24 @@ const snapshotId = "11111111-1111-4111-8111-111111111111";
 const htmlBody = "<section>archived answer</section>";
 const htmlBytes = Buffer.from(htmlBody, "utf8");
 const sha256 = createHash("sha256").update(htmlBytes).digest("hex");
+const screenshotBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0xff, 0xd9]);
+const screenshotSha256 = createHash("sha256").update(screenshotBytes).digest("hex");
+const promptRunId = "33333333-3333-4333-8333-333333333333";
+const manifestBytes = Buffer.from(
+	`${JSON.stringify({
+		schemaVersion: "response-snapshot-manifest.v2",
+		runId: promptRunId,
+		artifacts: {},
+		visualEvidence: {
+			artifactId: "22222222-2222-4222-8222-222222222222",
+			mediaType: "image/jpeg",
+			sha256: screenshotSha256,
+			bytes: screenshotBytes.byteLength,
+		},
+	})}\n`,
+	"utf8",
+);
+const manifestSha256 = createHash("sha256").update(manifestBytes).digest("hex");
 
 describe("customer response snapshot asset route", () => {
 	beforeEach(() => {
@@ -48,22 +68,43 @@ describe("customer response snapshot asset route", () => {
 		mocks.resolveAuthSession.mockResolvedValue({ user: { id: "customer-1" } });
 		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
 			id: snapshotId,
+			promptRunId,
 			brandId: "stepfun",
+			schemaVersion: "response-snapshot.v2",
 			storageKey: "2026/08/15/stepfun/run-1/r1",
 			htmlSha256: sha256,
 			jsonSha256: "b".repeat(64),
-			manifestSha256: "c".repeat(64),
+			manifestSha256,
 			actorUserId: "customer-1",
 			actorKind: "customer",
 		});
-		mocks.get.mockResolvedValue({
-			asset: "html",
-			body: htmlBytes,
-			contentType: "text/html; charset=utf-8",
-			contentEncoding: null,
-			sha256,
-			bytes: htmlBytes.byteLength,
-			storedBytes: htmlBytes.byteLength,
+		mocks.get.mockImplementation(async (_storageKey: string, asset: string) =>
+			asset === "manifest"
+				? {
+						asset: "manifest",
+						body: manifestBytes,
+						contentType: "application/json; charset=utf-8",
+						contentEncoding: null,
+						sha256: manifestSha256,
+						bytes: manifestBytes.byteLength,
+						storedBytes: manifestBytes.byteLength,
+					}
+				: {
+						asset: "html",
+						body: htmlBytes,
+						contentType: "text/html; charset=utf-8",
+						contentEncoding: null,
+						sha256,
+						bytes: htmlBytes.byteLength,
+						storedBytes: htmlBytes.byteLength,
+					},
+		);
+		mocks.loadAuthorizedResponseSnapshotScreenshot.mockResolvedValue({
+			artifactId: "22222222-2222-4222-8222-222222222222",
+			mediaType: "image/jpeg",
+			sha256: screenshotSha256,
+			bytes: screenshotBytes.byteLength,
+			content: screenshotBytes,
 		});
 	});
 
@@ -113,6 +154,64 @@ describe("customer response snapshot asset route", () => {
 		expect(response.headers.get("content-encoding")).toBeNull();
 		expect(response.headers.get("content-length")).toBe(String(body.byteLength));
 		expect(Buffer.from(await response.arrayBuffer())).toEqual(body);
+	});
+
+	it("serves authorized v2 visual evidence directly from the attached artifact", async () => {
+		const response = await get("asset=screenshot&download=0");
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe("image/jpeg");
+		expect(response.headers.get("content-security-policy")).toBeNull();
+		expect(response.headers.get("x-yonaris-sha256")).toBe(screenshotSha256);
+		expect(Buffer.from(await response.arrayBuffer())).toEqual(screenshotBytes);
+		expect(mocks.get).toHaveBeenCalledWith("2026/08/15/stepfun/run-1/r1", "manifest");
+		expect(mocks.createDownload).not.toHaveBeenCalled();
+		expect(mocks.recordResponseSnapshotAccess).toHaveBeenCalledWith({
+			snapshotId,
+			brandId: "stepfun",
+			actorUserId: "customer-1",
+			asset: "screenshot",
+			download: false,
+		});
+	});
+
+	it("downloads visual evidence with a safe filename and a distinct audit action", async () => {
+		const response = await get("asset=screenshot&download=1");
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-disposition")).toContain(`response-snapshot-${snapshotId}.jpg`);
+		expect(mocks.recordResponseSnapshotAccess).toHaveBeenCalledWith(
+			expect.objectContaining({ asset: "screenshot", download: true }),
+		);
+	});
+
+	it("returns 404 when a legacy snapshot has no attached visual evidence", async () => {
+		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
+			...(await mocks.loadAuthorizedResponseSnapshot()),
+			schemaVersion: "response-snapshot.v1",
+		});
+		mocks.loadAuthorizedResponseSnapshotScreenshot.mockResolvedValue(null);
+
+		const response = await get("asset=screenshot&download=0");
+
+		expect(response.status).toBe(404);
+		expect(mocks.get).not.toHaveBeenCalled();
+		expect(mocks.recordResponseSnapshotAccess).not.toHaveBeenCalled();
+	});
+
+	it("fails closed when attached visual evidence bytes do not match their digest", async () => {
+		mocks.loadAuthorizedResponseSnapshotScreenshot.mockResolvedValue({
+			artifactId: "22222222-2222-4222-8222-222222222222",
+			mediaType: "image/jpeg",
+			sha256: "f".repeat(64),
+			bytes: screenshotBytes.byteLength,
+			content: screenshotBytes,
+		});
+
+		const response = await get("asset=screenshot&download=0");
+
+		expect(response.status).toBe(500);
+		expect(mocks.recordResponseSnapshotAccess).not.toHaveBeenCalled();
 	});
 
 	it("returns 401 without touching storage for an anonymous request", async () => {

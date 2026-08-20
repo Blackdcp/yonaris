@@ -6,7 +6,7 @@ import {
 } from "./response-snapshot-http";
 
 describe("response snapshot HTTP contract", () => {
-	it("accepts only the three fixed assets and binary download flag", () => {
+	it("accepts only the four fixed assets and binary download flag", () => {
 		expect(
 			parseResponseSnapshotAssetSelector(new URL("https://portal.example/snapshot?asset=html&download=0")),
 		).toEqual({
@@ -18,6 +18,12 @@ describe("response snapshot HTTP contract", () => {
 		).toEqual({
 			asset: "json",
 			download: true,
+		});
+		expect(
+			parseResponseSnapshotAssetSelector(new URL("https://portal.example/snapshot?asset=screenshot&download=0")),
+		).toEqual({
+			asset: "screenshot",
+			download: false,
 		});
 		for (const search of ["asset=../../secret", "asset=html&download=yes", "asset=html&extra=1"]) {
 			expect(() => parseResponseSnapshotAssetSelector(new URL(`https://portal.example/snapshot?${search}`))).toThrow();

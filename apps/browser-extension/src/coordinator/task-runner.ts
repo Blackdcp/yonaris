@@ -1,4 +1,9 @@
-import { AdapterError, type CollectedAnswer, type ConsumerWebAdapter } from "../adapters/contracts";
+import {
+	AdapterError,
+	type CollectedAnswer,
+	type ConsumerWebAdapter,
+	type EvidenceViewportRect,
+} from "../adapters/contracts";
 import type { BrowserExtensionClaim } from "../contracts";
 import type { DurableTaskJournal } from "./journal";
 
@@ -20,7 +25,12 @@ export interface RunnerApi {
 	recordSubmitIntent(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void>;
 	confirmSubmitted(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void>;
 	heartbeatTask(claim: BrowserExtensionClaim): Promise<void>;
-	uploadSnapshot(claim: BrowserExtensionClaim, html: string): Promise<string>;
+	uploadEvidence(
+		claim: BrowserExtensionClaim,
+		runnerSessionId: string,
+		adapterVersion: string,
+		screenshot: Uint8Array,
+	): Promise<string>;
 	completeTask(claim: BrowserExtensionClaim, input: RunnerCompletionInput): Promise<void>;
 	failTask(claim: BrowserExtensionClaim, input: RunnerFailureInput): Promise<{ retryScheduled: boolean }>;
 }
@@ -28,6 +38,7 @@ export interface RunnerApi {
 export interface RunnerTab {
 	tabId: number;
 	adapter: ConsumerWebAdapter;
+	captureEvidence(rect: EvidenceViewportRect): Promise<Uint8Array>;
 	close(): Promise<void>;
 }
 
@@ -127,7 +138,8 @@ export async function runClaimedTask(
 		const answer = await tab.adapter.collectCurrentAnswer();
 		await dependencies.journal.advance(claim.taskId, "collected");
 		phase = "collected";
-		const artifactId = await dependencies.api.uploadSnapshot(claim, buildResponseSnapshotHtml(claim, answer));
+		const screenshot = await tab.captureEvidence(answer.evidenceViewportRect);
+		const artifactId = await dependencies.api.uploadEvidence(claim, runnerSessionId, answer.adapterVersion, screenshot);
 		await dependencies.journal.advance(claim.taskId, "uploaded");
 		phase = "uploaded";
 		await dependencies.api.completeTask(claim, {
@@ -174,12 +186,6 @@ export async function runClaimedTask(
 	} finally {
 		clearInterval(heartbeat);
 	}
-}
-
-export function buildResponseSnapshotHtml(claim: BrowserExtensionClaim, answer: CollectedAnswer): string {
-	const channel = escapeHtml(claim.surfaceTargetKey);
-	const observedAt = escapeHtml(answer.observedAt);
-	return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'"><title>Yonaris response snapshot</title><style>body{font:16px/1.65 system-ui,sans-serif;max-width:880px;margin:40px auto;padding:0 24px;color:#172033}header{color:#667085;font-size:13px;border-bottom:1px solid #e5e7eb;padding-bottom:12px;margin-bottom:24px}pre{white-space:pre-wrap}</style></head><body><header>Channel: ${channel} · Observed: ${observedAt}</header><main>${answer.answerHtml}</main></body></html>`;
 }
 
 async function persistNeedsHuman(
@@ -246,21 +252,4 @@ function safeReason(value: string): string {
 			.trim()
 			.slice(0, 1_000) || "Browser task failed"
 	);
-}
-
-function escapeHtml(value: string): string {
-	return value.replace(/[&<>"']/g, (character) => {
-		switch (character) {
-			case "&":
-				return "&amp;";
-			case "<":
-				return "&lt;";
-			case ">":
-				return "&gt;";
-			case '"':
-				return "&quot;";
-			default:
-				return "&#39;";
-		}
-	});
 }

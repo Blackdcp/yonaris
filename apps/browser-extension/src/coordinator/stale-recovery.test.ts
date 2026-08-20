@@ -206,6 +206,18 @@ async function pairedStorageWithManualTask(): Promise<DeviceStorage> {
 		deviceToken: `yrd_${"a".repeat(43)}`,
 		allowedBrandIds: ["stepfun"],
 	});
+	await storage.saveSurfaceReadiness({
+		"doubao.consumer_web": {
+			status: "ready",
+			adapterVersion: "doubao-web-20260819-localpc-v8",
+			activeConcurrency: 0,
+		},
+		"deepseek.consumer_web": {
+			status: "unavailable",
+			adapterVersion: "deepseek-web-20260814-uat1",
+			activeConcurrency: 0,
+		},
+	});
 	await storage.saveJournal({
 		taskId: "manual-task",
 		batchId: "batch-1",

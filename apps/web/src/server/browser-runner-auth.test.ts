@@ -55,7 +55,7 @@ describe("Browser Runner machine authentication", () => {
 						readiness: {
 							"doubao.consumer_web": {
 								status: "ready",
-								adapterVersion: "doubao-web-20260818-localpc-v7",
+								adapterVersion: "doubao-web-20260819-localpc-v8",
 								activeConcurrency: 0,
 							},
 							"deepseek.consumer_web": {
@@ -106,6 +106,31 @@ describe("Browser Runner machine authentication", () => {
 		);
 
 		expect(principal).toMatchObject({ readySurfaces: [] });
+	});
+
+	it("keeps the production-approved Doubao v8 adapter in ready surfaces", async () => {
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer yrd_${"d".repeat(43)}` },
+			}),
+			{
+				authenticateDevice: async () => ({
+					id: "11111111-1111-4111-8111-111111111111",
+					allowedBrandIds: ["stepfun"],
+					supportedSurfaces: ["doubao.consumer_web"],
+					readiness: {
+						"doubao.consumer_web": {
+							status: "ready",
+							adapterVersion: "doubao-web-20260819-localpc-v8",
+							activeConcurrency: 0,
+						},
+					},
+					revokedAt: null,
+				}),
+			},
+		);
+
+		expect(principal).toMatchObject({ readySurfaces: ["doubao.consumer_web"] });
 	});
 
 	it("rejects a revoked paired device before any task body is parsed", async () => {

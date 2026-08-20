@@ -4,6 +4,7 @@ import {
 	archiveBrowserRunnerResponseSnapshotBestEffort,
 	assertBrowserRunnerSnapshotClaimCapacity,
 	buildBrowserRunnerResponseSnapshotDraft,
+	buildBrowserRunnerResponseSnapshotDraftV2,
 } from "./browser-runner-snapshot-policy";
 
 const reservation: SnapshotReservation = {
@@ -72,6 +73,43 @@ describe("Browser Runner response snapshot policy", () => {
 			queryAvailability: "unavailable",
 			answerHtml: expect.stringContaining("data-testid"),
 		});
+	});
+
+	it("builds a structured v2 snapshot that references the staged JPEG without provider HTML", () => {
+		const draft = buildBrowserRunnerResponseSnapshotDraftV2({
+			promptRunId: "55555555-5555-4555-8555-555555555555",
+			brandId: "ppio",
+			scopeId: "22222222-2222-4222-8222-222222222222",
+			promptId: "33333333-3333-4333-8333-333333333333",
+			promptText: "PPIO 是什么？",
+			answerText: "PPIO 提供云服务。",
+			citations: [],
+			webQueries: ["PPIO 云服务"],
+			webSearchEnabled: true,
+			brandMentioned: true,
+			competitorsMentioned: [],
+			channel: "doubao.consumer_web",
+			modelVersion: "doubao-web-20260819-localpc-v8",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			observedAt: new Date("2026-08-20T01:02:03.000Z"),
+			adapterVersion: "doubao-web-20260819-localpc-v8",
+			visualEvidence: {
+				artifactId: "11111111-1111-4111-8111-111111111111",
+				mediaType: "image/jpeg",
+				sha256: "a".repeat(64),
+				bytes: 512_000,
+			},
+			captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+		});
+
+		expect(draft).toMatchObject({
+			schemaVersion: "response-snapshot.v2",
+			contentSource: "rendered_from_structured_response",
+			visualEvidence: { artifactId: "11111111-1111-4111-8111-111111111111" },
+		});
+		expect(draft).not.toHaveProperty("answerHtml");
 	});
 
 	it("keeps the successful observation successful when snapshot archiving fails", async () => {

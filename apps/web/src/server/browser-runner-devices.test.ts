@@ -105,13 +105,13 @@ describe("browser extension device service", () => {
 		).rejects.toMatchObject({ status: 403 });
 	});
 
-	it("projects raw ready state to adapter_incompatible unless the adapter version is allowlisted", () => {
+	it("keeps the production-approved v8 readiness effective", () => {
 		expect(
 			projectEffectiveBrowserRunnerReadiness(
 				{
 					"doubao.consumer_web": {
 						status: "ready",
-						adapterVersion: "doubao-web-v1",
+						adapterVersion: "doubao-web-20260819-localpc-v8",
 						activeConcurrency: 5,
 					},
 					"deepseek.consumer_web": {
@@ -124,9 +124,9 @@ describe("browser extension device service", () => {
 			),
 		).toEqual({
 			"doubao.consumer_web": {
-				status: "adapter_incompatible",
-				adapterVersion: "doubao-web-v1",
-				activeConcurrency: 0,
+				status: "ready",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				activeConcurrency: 5,
 			},
 			"deepseek.consumer_web": {
 				status: "adapter_incompatible",
@@ -136,7 +136,7 @@ describe("browser extension device service", () => {
 		});
 	});
 
-	it("keeps an allowlisted adapter ready and preserves an explicit unavailable state", () => {
+	it("marks the retired v7 readiness adapter_incompatible after activation", () => {
 		expect(
 			projectEffectiveBrowserRunnerReadiness(
 				{
@@ -155,9 +155,9 @@ describe("browser extension device service", () => {
 			),
 		).toEqual({
 			"doubao.consumer_web": {
-				status: "ready",
+				status: "adapter_incompatible",
 				adapterVersion: "doubao-web-20260818-localpc-v7",
-				activeConcurrency: 1,
+				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",

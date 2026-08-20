@@ -17,6 +17,7 @@ type FixtureAnswer = {
 export type AdapterFixture = {
 	pageUrl: string;
 	conversationUrl: string;
+	conversationUrlTimeline: string[];
 	composerMatches: number;
 	composerMatchTimeline: number[];
 	composerReadyDelayMs: number;
@@ -38,6 +39,7 @@ export type AdapterFixture = {
 	conversationUrlDelayMs: number;
 	generatingDurationMs: number;
 	completionReadyDelayMs: number;
+	completionState: "bound" | "unbound" | "ambiguous";
 	searchUsedCount: number;
 	searchNotUsedCount: number;
 };
@@ -51,6 +53,7 @@ export function createAdapterFixture(
 	return {
 		pageUrl: "https://chat.deepseek.com/",
 		conversationUrl: "https://chat.deepseek.com/a/chat/s/test-session",
+		conversationUrlTimeline: [],
 		composerMatches: 1,
 		composerMatchTimeline: [],
 		composerReadyDelayMs: 0,
@@ -71,6 +74,7 @@ export function createAdapterFixture(
 		conversationUrlDelayMs: 0,
 		generatingDurationMs: 2_000,
 		completionReadyDelayMs: 2_000,
+		completionState: "bound",
 		searchUsedCount: 0,
 		searchNotUsedCount: 0,
 		...override,
@@ -97,9 +101,12 @@ export class FixtureDomPort implements ConsumerDomPort {
 	}
 
 	currentUrl(): string {
-		return this.#submitted && this.elapsedMs >= this.#fixture.conversationUrlDelayMs
-			? this.#fixture.conversationUrl
-			: this.#fixture.pageUrl;
+		if (!this.#submitted || this.elapsedMs < this.#fixture.conversationUrlDelayMs) return this.#fixture.pageUrl;
+		const timelineUrl =
+			this.#fixture.conversationUrlTimeline[
+				Math.min(Math.floor(this.elapsedMs / 1_000), this.#fixture.conversationUrlTimeline.length - 1)
+			];
+		return timelineUrl ?? this.#fixture.conversationUrl;
 	}
 
 	now(): number {
@@ -143,6 +150,11 @@ export class FixtureDomPort implements ConsumerDomPort {
 		}
 	}
 
+	async readCompletionState(): Promise<"missing" | "bound" | "unbound" | "ambiguous"> {
+		if (!this.#submitted || this.elapsedMs < this.#fixture.completionReadyDelayMs) return "missing";
+		return this.#fixture.completionState;
+	}
+
 	async click(role: DomElementRole, _selector: string, index: number): Promise<void> {
 		if (role === "new_conversation") {
 			this.clickedText = this.#fixture.newConversationLabels[index] ?? null;
@@ -165,10 +177,12 @@ export class FixtureDomPort implements ConsumerDomPort {
 		return {
 			text,
 			html: this.#fixture.answer.text === text ? this.#fixture.answer.html : `<div>${text}</div>`,
-			searchUsedCount: request.searchUsedSelector ? this.#fixture.searchUsedCount : 0,
+			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
+			searchUsedCount: request.searchUsedSelector || request.searchEvidence ? this.#fixture.searchUsedCount : 0,
 			searchNotUsedCount: request.searchNotUsedSelector ? this.#fixture.searchNotUsedCount : 0,
-			webQueries: request.queryItemSelector ? [...(this.#fixture.answer.queries ?? [])] : [],
-			citations: request.citationLinkSelector ? [...(this.#fixture.answer.citations ?? [])] : [],
+			webQueries: request.queryItemSelector || request.searchEvidence ? [...(this.#fixture.answer.queries ?? [])] : [],
+			citations:
+				request.citationLinkSelector || request.searchEvidence ? [...(this.#fixture.answer.citations ?? [])] : [],
 		};
 	}
 

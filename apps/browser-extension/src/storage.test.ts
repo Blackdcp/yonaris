@@ -27,13 +27,13 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadDevice()).resolves.toMatchObject({ deviceId: "device-1", allowedBrandIds: ["stepfun"] });
 	});
 
-	it("persists fail-closed per-surface qualification with DeepSeek unavailable by default", async () => {
+	it("keeps both unqualified candidate surfaces unavailable by default", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 
 		await expect(storage.loadSurfaceReadiness()).resolves.toEqual({
 			"doubao.consumer_web": {
-				status: "ready",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
@@ -45,13 +45,13 @@ describe("DeviceStorage", () => {
 		expect(await storage.dump()).toHaveProperty("browserRunnerSurfaceReadiness");
 	});
 
-	it("migrates the qualified Doubao v6 state only after the v7 extension is installed", async () => {
+	it("does not promote a qualified Doubao v7 state before v8 is activated", async () => {
 		const storage = new DeviceStorage(
 			memoryStorage({
 				browserRunnerSurfaceReadiness: {
 					"doubao.consumer_web": {
 						status: "ready",
-						adapterVersion: "doubao-web-20260818-localpc-v6",
+						adapterVersion: "doubao-web-20260818-localpc-v7",
 						activeConcurrency: 0,
 					},
 					"deepseek.consumer_web": {
@@ -65,8 +65,8 @@ describe("DeviceStorage", () => {
 
 		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 			"doubao.consumer_web": {
-				status: "ready",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				status: "adapter_incompatible",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
@@ -75,13 +75,37 @@ describe("DeviceStorage", () => {
 		});
 	});
 
-	it("does not promote an older unqualified Doubao adapter during the v7 migration", async () => {
+	it.each(["signed_out", "paused_by_risk_control", "unavailable", "adapter_incompatible"] as const)(
+		"never promotes a Doubao v7 %s state while v8 is qualification-only",
+		async (status) => {
+			const storage = new DeviceStorage(
+				memoryStorage({
+					browserRunnerSurfaceReadiness: {
+						"doubao.consumer_web": {
+							status,
+							adapterVersion: "doubao-web-20260818-localpc-v7",
+							activeConcurrency: 0,
+						},
+					},
+				}),
+			);
+
+			await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
+				"doubao.consumer_web": {
+					status: "adapter_incompatible",
+					adapterVersion: "doubao-web-20260819-localpc-v8",
+				},
+			});
+		},
+	);
+
+	it("does not promote an older unqualified Doubao adapter during the v8 migration", async () => {
 		const storage = new DeviceStorage(
 			memoryStorage({
 				browserRunnerSurfaceReadiness: {
 					"doubao.consumer_web": {
 						status: "ready",
-						adapterVersion: "doubao-web-20260818-localpc-v5",
+						adapterVersion: "doubao-web-20260818-localpc-v6",
 						activeConcurrency: 0,
 					},
 				},
@@ -91,7 +115,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 			"doubao.consumer_web": {
 				status: "adapter_incompatible",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 			},
 		});
 	});
@@ -101,7 +125,7 @@ describe("DeviceStorage", () => {
 		await storage.saveSurfaceReadiness({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {

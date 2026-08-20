@@ -3,6 +3,8 @@ import { selectImplicitMeasurementScope } from "@workspace/lib/measurement-scope
 import { getObservationTargetCohort, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import type { ResponseSnapshotContentSource } from "@workspace/lib/response-snapshots/contract";
 
+const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+
 export type CustomerDeliveryMode = "legacy" | "assisted" | "automatic";
 export type CustomerMeasurementLane = "scored" | "observation" | "consumer" | "diagnostic" | "unspecified";
 
@@ -166,11 +168,17 @@ export interface CustomerPromptRunDto {
 	snapshot: null | {
 		id: string;
 		status: "pending" | "ready" | "failed" | "expired";
+		schemaVersion: string | null;
 		contentSource: ResponseSnapshotContentSource | null;
 		createdAt: string;
 		expiresAt: string;
 		htmlSha256: string | null;
 		jsonSha256: string | null;
+		visualEvidence: null | {
+			mediaType: "image/jpeg";
+			sha256: string;
+			bytes: number;
+		};
 	};
 }
 
@@ -188,11 +196,17 @@ export function toCustomerPromptRunDto(input: {
 	snapshot: null | {
 		id: string;
 		status: "pending" | "ready" | "failed" | "expired";
+		schemaVersion: string | null;
 		contentSource: ResponseSnapshotContentSource | null;
 		createdAt: Date;
 		expiresAt: Date;
 		htmlSha256: string | null;
 		jsonSha256: string | null;
+		visualEvidence: null | {
+			mediaType: string;
+			sha256: string;
+			bytes: number;
+		};
 	};
 }): CustomerPromptRunDto {
 	return {
@@ -209,11 +223,25 @@ export function toCustomerPromptRunDto(input: {
 			? {
 					id: input.snapshot.id,
 					status: input.snapshot.status,
+					schemaVersion: input.snapshot.schemaVersion,
 					contentSource: input.snapshot.contentSource,
 					createdAt: input.snapshot.createdAt.toISOString(),
 					expiresAt: input.snapshot.expiresAt.toISOString(),
 					htmlSha256: input.snapshot.htmlSha256,
 					jsonSha256: input.snapshot.jsonSha256,
+					visualEvidence:
+						input.snapshot.schemaVersion === "response-snapshot.v2" &&
+						input.snapshot.visualEvidence?.mediaType === "image/jpeg" &&
+						SHA256_PATTERN.test(input.snapshot.visualEvidence.sha256) &&
+						Number.isSafeInteger(input.snapshot.visualEvidence.bytes) &&
+						input.snapshot.visualEvidence.bytes > 0 &&
+						input.snapshot.visualEvidence.bytes <= 2 * 1024 * 1024
+							? {
+									mediaType: "image/jpeg",
+									sha256: input.snapshot.visualEvidence.sha256,
+									bytes: input.snapshot.visualEvidence.bytes,
+								}
+							: null,
 				}
 			: null,
 	};

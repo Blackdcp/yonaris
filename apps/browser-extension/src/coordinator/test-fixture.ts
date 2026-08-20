@@ -37,7 +37,7 @@ export function claimedTask(
 export function fakeAdapter(events: string[], collectFailure?: Error): ConsumerWebAdapter {
 	const answer: CollectedAnswer = {
 		answerText: "Current answer",
-		answerHtml: "<article><p>Current answer</p></article>",
+		evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 		pageUrl: "https://chat.deepseek.com/a/chat/s/test-session",
 		observedAt: "2026-08-17T00:00:00.000Z",
 		webSearchObserved: null,
@@ -79,6 +79,10 @@ export function fakeTabDriver(events: string[], adapter: ConsumerWebAdapter, ope
 	const tab: RunnerTab = {
 		tabId: 42,
 		adapter,
+		captureEvidence: async () => {
+			events.push("tab:capture");
+			return Uint8Array.from([0xff, 0xd8, 0xff]);
+		},
 		close: async () => {
 			events.push("tab:close");
 		},
@@ -116,8 +120,8 @@ export function fakeRunnerApi(events: string[]) {
 			events.push("api:submit_confirmed");
 		},
 		heartbeatTask: async () => undefined,
-		uploadSnapshot: async () => {
-			events.push("api:upload");
+		uploadEvidence: async () => {
+			events.push("api:upload_screenshot");
 			return "artifact-1";
 		},
 		completeTask: async () => {

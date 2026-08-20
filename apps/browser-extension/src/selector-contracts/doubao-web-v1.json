@@ -1,5 +1,5 @@
 {
-	"version": "doubao-web-20260818-localpc-v7",
+	"version": "doubao-web-20260819-localpc-v8",
 	"surface": "doubao.consumer_web",
 	"launchUrl": "https://www.doubao.com/chat/",
 	"conversationPathPattern": "^/chat/(?:[0-9]+|local_[0-9]+)$",
@@ -11,6 +11,7 @@
 	"answer": "div[data-message-id].relative.grid.w-full",
 	"generating": "#input-engine-container button.bg-dbx-text-highlight",
 	"completion": "button[aria-label=\"朗读\"]",
+	"completionCompanion": "button[aria-label=\"复制\"]",
 	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"],[class*=\"verify\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"],[data-testid=\"rate-limit\"]",
@@ -19,5 +20,13 @@
 	"searchUsed": null,
 	"searchNotUsed": null,
 	"citationLink": "a[href^=\"http\"]",
-	"queryItem": null
+	"queryItem": null,
+	"searchEvidence": {
+		"container": "[data-plugin-identifier*=\"search_query_result_block\"]",
+		"summaryTextPattern": "^搜索\\s*(?<queries>\\d+)\\s*个关键词，参考\\s*(?<citations>\\d+)\\s*篇资料$",
+		"queryItem": ".mb-8.text-sm",
+		"queryTextPattern": "[“\"](?<query>[^”\"]+)[”\"]",
+		"citationLink": "a[data-thinking-box-tool-call=\"true\"][href]",
+		"citationTitlePrefixPattern": "^\\s*\\d+[.、\\]]\\s*"
+	}
 }

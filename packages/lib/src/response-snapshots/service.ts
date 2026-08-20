@@ -4,7 +4,12 @@ import {
 	type SnapshotFlushClaim,
 	type SnapshotReservation,
 } from "../db/response-snapshots";
-import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft, ResponseSnapshotValidationError } from "./contract";
+import {
+	prepareResponseSnapshotBundle,
+	type ResponseSnapshotDraft,
+	type ResponseSnapshotDraftV2,
+	ResponseSnapshotValidationError,
+} from "./contract";
 import type { ResponseSnapshotStorage } from "./storage";
 
 const MAX_BATCH_SIZE = 1_000;
@@ -38,7 +43,10 @@ export function createResponseSnapshotService(dependencies: {
 			return "retry_later";
 		}
 	};
-	const record = async (input: { reservation: SnapshotReservation; draft: ResponseSnapshotDraft }) => {
+	const record = async (input: {
+		reservation: SnapshotReservation;
+		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2;
+	}) => {
 		let bundle: ReturnType<typeof prepareResponseSnapshotBundle>;
 		try {
 			bundle = prepareResponseSnapshotBundle(input.draft);
@@ -116,7 +124,11 @@ export function createResponseSnapshotService(dependencies: {
 }
 
 export async function recordResponseSnapshot(
-	input: { reservation: SnapshotReservation; draft: ResponseSnapshotDraft; storage: ResponseSnapshotStorage },
+	input: {
+		reservation: SnapshotReservation;
+		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2;
+		storage: ResponseSnapshotStorage;
+	},
 	dependencies?: { persistence?: ResponseSnapshotPersistence; now?: () => Date },
 ) {
 	return createResponseSnapshotService({ storage: input.storage, ...dependencies }).record(input);

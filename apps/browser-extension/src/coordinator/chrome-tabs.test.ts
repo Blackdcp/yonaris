@@ -22,6 +22,23 @@ describe("ChromeTabDriver", () => {
 		expect(events.at(-1)).toBe("remove:42");
 	});
 
+	test("captures the claimed active tab and re-verifies it after cropping", async () => {
+		const events: string[] = [];
+		const crop = async (dataUrl: string, rect: { x: number }) => {
+			events.push(`crop:${dataUrl}:${rect.x}`);
+			return Uint8Array.from([0xff, 0xd8, 0xff]);
+		};
+		const driver = new ChromeTabDriver(fakeGateway(events), { wait: async () => undefined, captureCroppedJpeg: crop });
+		const tab = await driver.open(claimedTask());
+
+		await expect(tab.captureEvidence({ x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 })).resolves.toEqual(
+			Uint8Array.from([0xff, 0xd8, 0xff]),
+		);
+		expect(events).toContain("capture:7:jpeg:82");
+		expect(events).toContain("crop:data:image/jpeg;base64,fixture:10");
+		expect(events.filter((event) => event === "get:42")).toHaveLength(4);
+	});
+
 	test("rejects a recovered tab that has navigated outside the claimed channel", async () => {
 		const gateway = fakeGateway([], { url: "https://example.com/" });
 		const driver = new ChromeTabDriver(gateway, { wait: async () => undefined });
@@ -82,12 +99,25 @@ function fakeGateway(events: string[], options: { url?: string; response?: unkno
 			events.push(`create:${url}:active=${String(createOptions?.active)}`);
 			return { id: 42, url: options.url ?? url, status: "complete" };
 		},
-		get: async () => ({ id: 42, url: options.url ?? "https://chat.deepseek.com/", status: "complete" }),
+		get: async () => {
+			events.push("get:42");
+			return {
+				id: 42,
+				windowId: 7,
+				active: true,
+				url: options.url ?? "https://chat.deepseek.com/",
+				status: "complete",
+			};
+		},
 		remove: async (tabId) => {
 			events.push(`remove:${tabId}`);
 		},
 		activate: async (tabId) => {
 			events.push(`activate:${tabId}`);
+		},
+		captureVisibleTab: async (windowId, captureOptions) => {
+			events.push(`capture:${windowId}:${captureOptions.format}:${captureOptions.quality}`);
+			return "data:image/jpeg;base64,fixture";
 		},
 		sendMessage: async (tabId, command) => {
 			events.push(`message:${tabId}:${command.action}`);

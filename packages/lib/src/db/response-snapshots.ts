@@ -1,9 +1,24 @@
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
-import type { PreparedResponseSnapshotBundle, ResponseSnapshotDraft } from "../response-snapshots/contract";
+import type {
+	PreparedResponseSnapshotBundle,
+	ResponseSnapshotCaptureMethod,
+	ResponseSnapshotContentSource,
+	ResponseSnapshotDraft,
+	ResponseSnapshotDraftV2,
+} from "../response-snapshots/contract";
 import type { StoredResponseSnapshot } from "../response-snapshots/storage";
 import { db } from "./db";
 import type { DeliveryTransaction } from "./delivery-batches";
-import { citations, measurementScopes, promptRuns, prompts, responseSnapshotOutbox, responseSnapshots } from "./schema";
+import {
+	citations,
+	evidenceArtifacts,
+	measurementScopes,
+	observationAttempts,
+	promptRuns,
+	prompts,
+	responseSnapshotOutbox,
+	responseSnapshots,
+} from "./schema";
 
 export const RESPONSE_SNAPSHOT_RETENTION_MS = 90 * 24 * 60 * 60 * 1_000;
 export const RESPONSE_SNAPSHOT_OUTBOX_TTL_MS = 24 * 60 * 60 * 1_000;
@@ -39,7 +54,7 @@ export interface ResponseSnapshotPersistence {
 	completeExpiredDeletion(snapshotId: string): Promise<void>;
 	listStalePendingReservations(before: Date, limit: number): Promise<SnapshotReservation[]>;
 	supersedeStaleReservation(reservation: SnapshotReservation, failedAt: Date): Promise<SnapshotReservation>;
-	loadReconstructedDraft(snapshotId: string): Promise<ResponseSnapshotDraft>;
+	loadReconstructedDraft(snapshotId: string): Promise<ResponseSnapshotDraft | ResponseSnapshotDraftV2>;
 }
 
 type SnapshotHashIdentity = {
@@ -337,7 +352,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				.where(eq(responseSnapshotOutbox.snapshotId, snapshotId));
 			return {
 				reservation: { snapshotId, revision: snapshot.revision, expiresAt: snapshot.expiresAt },
-				bundle: hydrateBundle(snapshot, outbox),
+					bundle: hydratePreparedResponseSnapshotBundle(snapshot, outbox),
 				outboxExpiresAt: outbox.expiresAt,
 				claimedAt: now,
 			};
@@ -430,10 +445,47 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 		});
 	},
 	async completeExpiredDeletion(snapshotId) {
-		await db
-			.update(responseSnapshots)
-			.set({ storageBackend: null, storageKey: null })
-			.where(and(eq(responseSnapshots.id, snapshotId), eq(responseSnapshots.status, "expired")));
+		await db.transaction(async (tx) => {
+			const [snapshot] = await tx
+				.select({
+					status: responseSnapshots.status,
+					schemaVersion: responseSnapshots.schemaVersion,
+					brandId: responseSnapshots.brandId,
+					observationAttemptId: promptRuns.observationAttemptId,
+				})
+				.from(responseSnapshots)
+				.innerJoin(promptRuns, eq(promptRuns.id, responseSnapshots.promptRunId))
+				.where(eq(responseSnapshots.id, snapshotId))
+				.limit(1)
+				.for("update");
+			if (!snapshot || snapshot.status !== "expired") return;
+			if (snapshot.schemaVersion === "response-snapshot.v2") {
+				if (!snapshot.observationAttemptId) {
+					throw new ResponseSnapshotStateError("Expired v2 snapshot has no observation attempt");
+				}
+				const artifacts = await tx
+					.select({ id: evidenceArtifacts.id })
+					.from(evidenceArtifacts)
+					.where(
+						and(
+							eq(evidenceArtifacts.observationAttemptId, snapshot.observationAttemptId),
+							eq(evidenceArtifacts.brandId, snapshot.brandId),
+							eq(evidenceArtifacts.kind, "screenshot"),
+							eq(evidenceArtifacts.status, "attached"),
+							eq(evidenceArtifacts.mediaType, "image/jpeg"),
+						),
+					)
+					.for("update");
+				if (artifacts.length !== 1) {
+					throw new ResponseSnapshotStateError("Expired v2 snapshot must have exactly one attached JPEG");
+				}
+				await tx.delete(evidenceArtifacts).where(eq(evidenceArtifacts.id, artifacts[0]!.id));
+			}
+			await tx
+				.update(responseSnapshots)
+				.set({ storageBackend: null, storageKey: null })
+				.where(and(eq(responseSnapshots.id, snapshotId), eq(responseSnapshots.status, "expired")));
+		});
 	},
 	async listStalePendingReservations(before, limit) {
 		const rows = await db
@@ -520,16 +572,20 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				brandMentioned: promptRuns.brandMentioned,
 				competitorsMentioned: promptRuns.competitorsMentioned,
 				channel: promptRuns.model,
+				surfaceTargetKey: promptRuns.surfaceTargetKey,
 				modelVersion: promptRuns.version,
 				webSearchEnabled: promptRuns.webSearchEnabled,
 				observedAt: promptRuns.observedAt,
 				market: measurementScopes.market,
 				locale: measurementScopes.locale,
 				timezone: measurementScopes.timezone,
+				observationAttemptId: promptRuns.observationAttemptId,
+				captureMetadata: observationAttempts.captureMetadata,
 			})
 			.from(responseSnapshots)
 			.innerJoin(promptRuns, eq(promptRuns.id, responseSnapshots.promptRunId))
 			.innerJoin(prompts, eq(prompts.id, promptRuns.promptId))
+			.leftJoin(observationAttempts, eq(observationAttempts.id, promptRuns.observationAttemptId))
 			.leftJoin(measurementScopes, eq(measurementScopes.id, promptRuns.scopeId))
 			.where(eq(responseSnapshots.id, snapshotId))
 			.limit(1);
@@ -547,7 +603,29 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 			.from(citations)
 			.where(eq(citations.promptRunId, row.runId))
 			.orderBy(asc(citations.citationIndex), asc(citations.id));
-		return {
+		const visualEvidenceRows =
+			isV2RecoveryMetadata(row.captureMetadata) && row.observationAttemptId
+				? await db
+						.select({
+							artifactId: evidenceArtifacts.id,
+							mediaType: evidenceArtifacts.mediaType,
+							sha256: evidenceArtifacts.sha256,
+							bytes: evidenceArtifacts.byteSize,
+						})
+						.from(evidenceArtifacts)
+						.where(
+							and(
+								eq(evidenceArtifacts.observationAttemptId, row.observationAttemptId),
+								eq(evidenceArtifacts.brandId, row.brandId),
+								eq(evidenceArtifacts.kind, "screenshot"),
+								eq(evidenceArtifacts.status, "attached"),
+								eq(evidenceArtifacts.mediaType, "image/jpeg"),
+							),
+						)
+						.orderBy(asc(evidenceArtifacts.createdAt), asc(evidenceArtifacts.id))
+				: [];
+		return buildReconstructedResponseSnapshotDraft({
+			base: {
 			runId: row.runId,
 			brandId: row.brandId,
 			scopeId: row.scopeId,
@@ -560,27 +638,138 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				row.webQueries.length > 0 ? "available" : row.webSearchEnabled ? "unavailable" : "not_applicable",
 			brandMentioned: row.brandMentioned,
 			competitorsMentioned: row.competitorsMentioned,
-			channel: row.channel,
+			channel: row.surfaceTargetKey ?? row.channel,
 			modelVersion: row.modelVersion,
 			market: row.market ?? "ZZ",
 			locale: row.locale ?? "und",
 			timezone: row.timezone ?? "UTC",
 			observedAt: row.observedAt.toISOString(),
-			captureMethod: "historical_reconstruction",
-			contentSource: "reconstructed_from_historical_run",
-		};
+			},
+			captureMetadata: row.captureMetadata,
+			visualEvidence: visualEvidenceRows,
+		});
 	},
 };
 
-function hydrateBundle(
-	snapshot: typeof responseSnapshots.$inferSelect,
-	outbox: typeof responseSnapshotOutbox.$inferSelect,
+type ReconstructedResponseSnapshotBase = Omit<
+	ResponseSnapshotDraft,
+	"answerHtml" | "captureMethod" | "contentSource" | "sourcePayloadSha256"
+>;
+
+type ReconstructedVisualEvidence = {
+	artifactId: string;
+	mediaType: string;
+	sha256: string;
+	bytes: number;
+};
+
+export function buildReconstructedResponseSnapshotDraft(input: {
+	base: ReconstructedResponseSnapshotBase;
+	captureMetadata: unknown;
+	visualEvidence: readonly ReconstructedVisualEvidence[];
+}): ResponseSnapshotDraft | ResponseSnapshotDraftV2 {
+	if (!isV2RecoveryMetadata(input.captureMetadata)) {
+		return {
+			...input.base,
+			captureMethod: "historical_reconstruction",
+			contentSource: "reconstructed_from_historical_run",
+		};
+	}
+	const adapterVersion = input.captureMetadata.adapterVersion;
+	const captureDiagnostics = input.captureMetadata.captureDiagnostics;
+	if (typeof adapterVersion !== "string" || !adapterVersion.trim() || adapterVersion.length > 100) {
+		throw new ResponseSnapshotStateError("Structured snapshot recovery metadata has no valid adapter version");
+	}
+	if (!isValidCaptureDiagnostics(captureDiagnostics, input.base)) {
+		throw new ResponseSnapshotStateError("Structured snapshot recovery diagnostics do not match the stored run");
+	}
+	if (input.visualEvidence.length !== 1) {
+		throw new ResponseSnapshotStateError("Structured snapshot recovery requires exactly one attached JPEG");
+	}
+	const [visualEvidence] = input.visualEvidence;
+	if (
+		!visualEvidence ||
+		visualEvidence.mediaType !== "image/jpeg" ||
+		!/^[0-9a-f]{64}$/u.test(visualEvidence.sha256) ||
+		!Number.isSafeInteger(visualEvidence.bytes) ||
+		visualEvidence.bytes < 1 ||
+		visualEvidence.bytes > 2 * 1024 * 1024
+	) {
+		throw new ResponseSnapshotStateError("Structured snapshot recovery JPEG metadata is invalid");
+	}
+	return {
+		...input.base,
+		schemaVersion: "response-snapshot.v2",
+		captureMethod: "consumer_web_browser",
+		contentSource: "rendered_from_structured_response",
+		adapterVersion: adapterVersion.trim(),
+		captureDiagnostics,
+		visualEvidence: {
+			artifactId: visualEvidence.artifactId,
+			mediaType: "image/jpeg",
+			sha256: visualEvidence.sha256,
+			bytes: visualEvidence.bytes,
+		},
+	};
+}
+
+function isV2RecoveryMetadata(value: unknown): value is {
+	responseSnapshotSchemaVersion: "response-snapshot.v2";
+	adapterVersion?: unknown;
+	captureDiagnostics?: unknown;
+} {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"responseSnapshotSchemaVersion" in value &&
+		value.responseSnapshotSchemaVersion === "response-snapshot.v2"
+	);
+}
+
+function isValidCaptureDiagnostics(
+	value: unknown,
+	base: Pick<ReconstructedResponseSnapshotBase, "webQueries" | "citations">,
+): value is ResponseSnapshotDraftV2["captureDiagnostics"] {
+	if (typeof value !== "object" || value === null) return false;
+	const diagnostics = value as Record<string, unknown>;
+	return (
+		Object.keys(diagnostics).length === 4 &&
+		diagnostics.answerCount === 1 &&
+		diagnostics.completionCount === 1 &&
+		diagnostics.queryCount === base.webQueries.length &&
+		diagnostics.citationCount === base.citations.length
+	);
+}
+
+export function hydratePreparedResponseSnapshotBundle(
+	snapshot: {
+		promptRunId: string;
+		brandId: string;
+		observedAt: Date;
+		contentSource: ResponseSnapshotContentSource | null;
+		captureMethod: ResponseSnapshotCaptureMethod | null;
+		schemaVersion: string | null;
+		templateVersion: string | null;
+		sourcePayloadSha256: string | null;
+		htmlSha256: string | null;
+		jsonSha256: string | null;
+		manifestSha256: string | null;
+		htmlBytes: number | null;
+		jsonBytes: number | null;
+		manifestBytes: number | null;
+		htmlGzipBytes: number | null;
+		jsonGzipBytes: number | null;
+	},
+	outbox: { htmlGzip: Uint8Array; jsonGzip: Uint8Array; manifestJson: Uint8Array },
 ): PreparedResponseSnapshotBundle {
+	const isV1 =
+		snapshot.schemaVersion === "response-snapshot.v1" && snapshot.templateVersion === "response-snapshot-html.v1";
+	const isV2 =
+		snapshot.schemaVersion === "response-snapshot.v2" && snapshot.templateVersion === "response-snapshot-html.v2";
 	if (
 		!snapshot.contentSource ||
 		!snapshot.captureMethod ||
-		snapshot.schemaVersion !== "response-snapshot.v1" ||
-		snapshot.templateVersion !== "response-snapshot-html.v1" ||
+		(!isV1 && !isV2) ||
 		!snapshot.htmlSha256 ||
 		!snapshot.jsonSha256 ||
 		!snapshot.manifestSha256 ||
@@ -592,9 +781,7 @@ function hydrateBundle(
 	) {
 		throw new ResponseSnapshotStateError("Pending snapshot metadata is incomplete");
 	}
-	return {
-		schemaVersion: snapshot.schemaVersion,
-		templateVersion: snapshot.templateVersion,
+	const common = {
 		runId: snapshot.promptRunId,
 		brandId: snapshot.brandId,
 		observedAt: snapshot.observedAt.toISOString(),
@@ -613,6 +800,9 @@ function hydrateBundle(
 		htmlGzipBytes: snapshot.htmlGzipBytes,
 		jsonGzipBytes: snapshot.jsonGzipBytes,
 	};
+	return isV2
+		? { ...common, schemaVersion: "response-snapshot.v2", templateVersion: "response-snapshot-html.v2" }
+		: { ...common, schemaVersion: "response-snapshot.v1", templateVersion: "response-snapshot-html.v1" };
 }
 
 function stableFailureCode(value: string): string {

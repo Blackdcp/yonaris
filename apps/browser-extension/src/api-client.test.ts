@@ -103,7 +103,11 @@ describe("BrowserRunnerApiClient", () => {
 		);
 
 		await expect(client.claimNext("stepfun", "deepseek.consumer_web")).resolves.toEqual(claim);
-		expect(await calls[0]?.json()).toEqual({ brandId: "stepfun", surfaceTargetKeys: ["deepseek.consumer_web"] });
+		expect(await calls[0]?.json()).toEqual({
+			brandId: "stepfun",
+			surfaceTargetKeys: ["deepseek.consumer_web"],
+			adapterVersion: "deepseek-web-20260814-uat1",
+		});
 	});
 
 	it("rejects a mismatched capture route before it can open a consumer page", async () => {
@@ -136,11 +140,48 @@ describe("BrowserRunnerApiClient", () => {
 			}),
 		);
 
-		await client.resume("task-1", "stepfun", "pre_submit");
+		await client.resume("task-1", "stepfun", "pre_submit", "doubao.consumer_web");
 
 		expect(calls).toHaveLength(1);
 		expect(calls[0]?.url.endsWith("/api/internal/browser-runner/v1/tasks/task-1/resume")).toBe(true);
-		expect(await calls[0]?.json()).toEqual({ brandId: "stepfun", stage: "pre_submit" });
+		expect(await calls[0]?.json()).toEqual({
+			brandId: "stepfun",
+			stage: "pre_submit",
+			adapterVersion: "doubao-web-20260819-localpc-v8",
+		});
+	});
+
+	it("binds every leased Doubao mutation before completion to the running adapter version", async () => {
+		const calls: Request[] = [];
+		const client = authenticatedClient(calls, async () => Response.json({}));
+		const claim = claimedTask({ surfaceTargetKey: "doubao.consumer_web" });
+
+		await client.heartbeatTask(claim);
+		await client.recordSubmitIntent(claim, "runner-session-1");
+		await client.confirmSubmitted(claim, "runner-session-1");
+
+		expect(await Promise.all(calls.map((call) => call.json()))).toEqual([
+			{
+				brandId: "stepfun",
+				leaseToken: claim.leaseToken,
+				leaseGeneration: claim.leaseGeneration,
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			},
+			{
+				brandId: "stepfun",
+				leaseToken: claim.leaseToken,
+				leaseGeneration: claim.leaseGeneration,
+				runnerSessionId: "runner-session-1",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			},
+			{
+				brandId: "stepfun",
+				leaseToken: claim.leaseToken,
+				leaseGeneration: claim.leaseGeneration,
+				runnerSessionId: "runner-session-1",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			},
+		]);
 	});
 
 	it("reconciles the exact local task before the coordinator can claim new work", async () => {
@@ -192,42 +233,53 @@ describe("BrowserRunnerApiClient", () => {
 		await expect(client.reconcileTask("task-1", "stepfun")).rejects.toThrow(/protocol/i);
 	});
 
-	it("uploads exactly one HTML page snapshot and completes with native-auto observations", async () => {
+	it("uploads exactly one JPEG screenshot and completes with a strict structured observation", async () => {
 		const calls: Request[] = [];
 		const client = authenticatedClient(calls, async (request) => {
 			if (request.url.endsWith("/evidence/")) return Response.json({ artifact: { id: "artifact-1" } }, { status: 201 });
 			return Response.json({ duplicate: false, attemptId: "attempt-1", promptRunId: "run-1" });
 		});
 		const claim = claimedTask();
-		const artifactId = await client.uploadSnapshot(claim, "<!doctype html><html><body>answer</body></html>");
+		const screenshot = Uint8Array.from([0xff, 0xd8, 0xff, 0x01, 0x02]);
+		const artifactId = await client.uploadEvidence(claim, "session-1", "adapter-v1", screenshot);
 		await client.completeTask(claim, {
 			runnerSessionId: "session-1",
 			adapterVersion: "adapter-v1",
 			browserVersion: "Chrome/140",
 			answer: {
 				answerText: "answer",
-				answerHtml: "<article>answer</article>",
+				evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 				pageUrl: "https://chat.deepseek.com/a/chat/s/1",
 				observedAt: "2026-08-17T00:00:00.000Z",
-				webSearchObserved: null,
-				webQueries: [],
-				citations: [],
+				webSearchObserved: true,
+				webQueries: ["国产 GPU API", "AI inference pricing"],
+				citations: [{ url: "https://source.example/report", title: "Source report" }],
 				adapterVersion: "adapter-v1",
 			},
 			evidenceArtifactId: artifactId,
 		});
 
 		expect(artifactId).toBe("artifact-1");
-		expect(calls[0]?.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
-		expect(calls[0]?.headers.get("X-Yonaris-Evidence-Kind")).toBe("page_snapshot");
-		expect(await calls[1]?.json()).toMatchObject({
+		expect(calls[0]?.headers.get("Content-Type")).toBe("image/jpeg");
+		expect(calls[0]?.headers.get("X-Yonaris-Evidence-Kind")).toBe("screenshot");
+		expect(calls[0]?.headers.get("X-Yonaris-Runner-Session-Id")).toBe("session-1");
+		expect(calls[0]?.headers.get("X-Yonaris-Adapter-Version")).toBe("adapter-v1");
+		expect(new Uint8Array(await calls[0]?.arrayBuffer())).toEqual(screenshot);
+		const completion = await calls[1]?.json();
+		expect(completion).toMatchObject({
 			runnerSessionId: "session-1",
 			observation: {
+				schemaVersion: "browser-runner-observation.v2",
 				sessionMode: "dedicated_sampling_profile",
 				searchMode: "native_auto",
+				webSearchObserved: true,
+				webQueries: ["国产 GPU API", "AI inference pricing"],
+				citations: [{ url: "https://source.example/report", title: "Source report" }],
 				evidenceArtifactIds: ["artifact-1"],
+				captureDiagnostics: { answerCount: 1, queryCount: 2, citationCount: 1, completionCount: 1 },
 			},
 		});
+		expect(JSON.stringify(completion)).not.toContain("answerHtml");
 	});
 });
 

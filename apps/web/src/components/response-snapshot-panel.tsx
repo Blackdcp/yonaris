@@ -24,7 +24,7 @@ function formatBeijingDate(value: string) {
 	}).format(new Date(value));
 }
 
-function assetUrl(snapshotId: string, asset: "html" | "json" | "manifest", download: boolean) {
+function assetUrl(snapshotId: string, asset: "html" | "json" | "manifest" | "screenshot", download: boolean) {
 	return `/api/app/response-snapshots/${encodeURIComponent(snapshotId)}?asset=${asset}&download=${download ? 1 : 0}`;
 }
 
@@ -149,6 +149,20 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 				</p>
 			) : (
 				<>
+					{snapshot.visualEvidence && (
+						<figure className="space-y-2 rounded-md border bg-muted/20 p-3">
+							<figcaption className="text-sm font-medium">Captured browser evidence</figcaption>
+							<img
+								src={assetUrl(snapshot.id, "screenshot", false)}
+								alt={`Captured browser evidence for ${channel}`}
+								loading="lazy"
+								className="max-h-[32rem] w-auto max-w-full rounded-md border bg-white"
+							/>
+							<p className="text-xs text-muted-foreground">
+								Screenshot SHA-256: <code className="break-all text-foreground">{snapshot.visualEvidence.sha256}</code>
+							</p>
+						</figure>
+					)}
 					<iframe
 						title={`Archived response from ${channel}`}
 						src={assetUrl(snapshot.id, "html", false)}
@@ -166,6 +180,11 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+						{snapshot.visualEvidence && (
+							<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "screenshot", true)}>
+								Download screenshot
+							</a>
+						)}
 						<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "html", true)}>
 							Download HTML
 						</a>

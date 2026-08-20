@@ -7,6 +7,8 @@ export const SAMPLING_EVIDENCE_HEADERS = {
 	leaseGeneration: `${HEADER_PREFIX}Lease-Generation`,
 	kind: `${HEADER_PREFIX}Evidence-Kind`,
 	fileName: `${HEADER_PREFIX}Filename`,
+	runnerSessionId: `${HEADER_PREFIX}Runner-Session-Id`,
+	adapterVersion: `${HEADER_PREFIX}Adapter-Version`,
 } as const;
 
 export const SAMPLING_EVIDENCE_KINDS = ["screenshot", "page_snapshot"] as const;
@@ -23,6 +25,8 @@ export interface SamplingEvidenceClaimHeaders {
 export interface SamplingEvidenceUploadHeaders extends SamplingEvidenceClaimHeaders {
 	kind: SamplingEvidenceKind;
 	fileName: string;
+	runnerSessionId?: string;
+	adapterVersion?: string;
 }
 
 export class SamplingEvidenceHttpError extends Error {
@@ -38,6 +42,13 @@ export class SamplingEvidenceHttpError extends Error {
 function requiredHeader(request: Request, name: string, maxLength: number): string {
 	const value = request.headers.get(name)?.trim();
 	if (!value) throw new SamplingEvidenceHttpError(400, `${name} header is required`);
+	if (value.length > maxLength) throw new SamplingEvidenceHttpError(400, `${name} header is too long`);
+	return value;
+}
+
+function optionalHeader(request: Request, name: string, maxLength: number): string | undefined {
+	const value = request.headers.get(name)?.trim();
+	if (!value) return undefined;
 	if (value.length > maxLength) throw new SamplingEvidenceHttpError(400, `${name} header is too long`);
 	return value;
 }
@@ -117,7 +128,9 @@ export function parseSamplingEvidenceUploadHeaders(request: Request): SamplingEv
 		throw new SamplingEvidenceHttpError(400, `${SAMPLING_EVIDENCE_HEADERS.kind} is not supported`);
 	}
 	const fileName = decodeFileName(requiredHeader(request, SAMPLING_EVIDENCE_HEADERS.fileName, 1_000));
-	return { ...claim, kind: kind as SamplingEvidenceKind, fileName };
+	const runnerSessionId = optionalHeader(request, SAMPLING_EVIDENCE_HEADERS.runnerSessionId, 300);
+	const adapterVersion = optionalHeader(request, SAMPLING_EVIDENCE_HEADERS.adapterVersion, 100);
+	return { ...claim, kind: kind as SamplingEvidenceKind, fileName, runnerSessionId, adapterVersion };
 }
 
 export async function readRequestBodyWithinLimit(request: Request, maxBytes: number): Promise<Uint8Array> {

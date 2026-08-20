@@ -2,6 +2,7 @@ import type {
 	AnswerDomSnapshot,
 	CollectedAnswer,
 	CollectedCitation,
+	CompletionDomState,
 	ConsumerDomPort,
 	ConsumerWebAdapter,
 	DomElementRole,
@@ -9,6 +10,7 @@ import type {
 	SelectorContract,
 } from "./contracts";
 import { AdapterError } from "./contracts";
+import { normalizeCitationTitle } from "./search-evidence";
 
 const PROMPT_MAX_CHARACTERS = 20_000;
 const ANSWER_MAX_CHARACTERS = 500_000;
@@ -34,6 +36,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	#answerCountBeforeSubmit = 0;
 	#preparedPrompt: string | null = null;
 	#submitted = false;
+	#confirmedConversationUrl: string | null = null;
 
 	constructor(port: ConsumerDomPort, contract: SelectorContract) {
 		this.#port = port;
@@ -93,10 +96,19 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		const timeoutAt = this.#port.now() + CONFIRM_TIMEOUT_MS;
 		while (this.#port.now() < timeoutAt) {
+			this.#assertApprovedUrl(false);
 			await this.#assertUnblocked();
 			const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 			const latest = messages.at(-1)?.element.text;
-			if (latest && normalizeText(latest) === normalizeText(prompt)) return;
+			const currentUrl = new URL(this.#port.currentUrl());
+			if (
+				latest &&
+				normalizeText(latest) === normalizeText(prompt) &&
+				new RegExp(this.#contract.conversationPathPattern, "u").test(currentUrl.pathname)
+			) {
+				this.#confirmedConversationUrl = this.#approvedConversationUrl();
+				return;
+			}
 			await this.#port.wait(POLL_INTERVAL_MS);
 		}
 		throw this.#error("post_submit_unknown", "The exact submitted prompt did not appear in the conversation");
@@ -105,7 +117,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	async resumeSubmitted(promptText: string): Promise<void> {
 		const prompt = validatePrompt(promptText);
 		this.#submitted = true;
-		this.#assertApprovedUrl(true);
+		this.#confirmedConversationUrl = this.#approvedConversationUrl();
 		await this.#assertUnblocked();
 		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 		if (messages.length !== 1 || normalizeText(messages[0]?.element.text ?? "") !== normalizeText(prompt)) {
@@ -121,21 +133,40 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 	async collectCurrentAnswer(): Promise<CollectedAnswer> {
 		if (!this.#submitted) throw this.#error("post_submit_unknown", "Prompt was not submitted in this page session");
+		if (!this.#confirmedConversationUrl || !this.#preparedPrompt) {
+			throw this.#error("post_submit_unknown", "Submitted conversation identity is not confirmed");
+		}
 		const timeoutAt = this.#port.now() + RESPONSE_TIMEOUT_MS;
 		let generatingSeen = false;
 		let stableText = "";
 		let stableSince = 0;
 		let answerContainersAmbiguous = false;
 		while (this.#port.now() < timeoutAt) {
-			this.#assertApprovedUrl(false);
+			this.#assertConfirmedConversation();
 			await this.#assertUnblocked();
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
-			const completion = this.#contract.completion
-				? visibleElements(await this.#port.query("completion", this.#contract.completion)).length
-				: 0;
-			if (completion > 1) throw this.#error("page_drift", "Completion state is ambiguous");
+			let completionConfirmed = generatingSeen;
+			if (this.#contract.completion) {
+				if (!this.#contract.completionCompanion || !this.#port.readCompletionState) {
+					throw this.#error("page_drift", "Completion binding contract is unavailable");
+				}
+				let completionState: CompletionDomState;
+				try {
+					completionState = await this.#port.readCompletionState({
+						answerSelector: this.#contract.answer,
+						completionSelector: this.#contract.completion,
+						companionSelector: this.#contract.completionCompanion,
+					});
+				} catch {
+					throw this.#error("page_drift", "Completion binding could not be inspected");
+				}
+				if (completionState === "ambiguous" || completionState === "unbound") {
+					throw this.#error("page_drift", "Completion state is not bound to the current answer");
+				}
+				completionConfirmed = completionState === "bound";
+			}
 			const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
 			if (answers.length > this.#answerCountBeforeSubmit + 1) {
 				answerContainersAmbiguous = true;
@@ -150,11 +181,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				if (latest !== stableText) {
 					stableText = latest;
 					stableSince = this.#port.now();
-				} else if (
-					(generatingSeen || completion === 1) &&
-					generating === 0 &&
-					this.#port.now() - stableSince >= STABLE_ANSWER_MS
-				) {
+				} else if (completionConfirmed && generating === 0 && this.#port.now() - stableSince >= STABLE_ANSWER_MS) {
 					return this.#readAcceptedAnswer(answers.at(-1)?.index ?? -1, stableText);
 				}
 			}
@@ -168,14 +195,28 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 	async #readAcceptedAnswer(answerIndex: number, expectedText: string): Promise<CollectedAnswer> {
 		if (answerIndex < 0) throw this.#error("page_drift", "Current answer container disappeared");
-		const snapshot = await this.#port.readAnswer({
-			answerSelector: this.#contract.answer,
-			answerIndex,
-			searchUsedSelector: this.#contract.searchUsed,
-			searchNotUsedSelector: this.#contract.searchNotUsed,
-			citationLinkSelector: this.#contract.citationLink,
-			queryItemSelector: this.#contract.queryItem,
-		});
+		const pageUrl = this.#assertConfirmedConversation();
+		await this.#assertSubmittedPromptStillCurrent();
+		let snapshot: AnswerDomSnapshot;
+		try {
+			snapshot = await this.#port.readAnswer({
+				answerSelector: this.#contract.answer,
+				answerIndex,
+				searchUsedSelector: this.#contract.searchUsed,
+				searchNotUsedSelector: this.#contract.searchNotUsed,
+				citationLinkSelector: this.#contract.citationLink,
+				queryItemSelector: this.#contract.queryItem,
+				searchEvidence: this.#contract.searchEvidence,
+				evidenceViewport: {
+					promptSelector: this.#contract.userMessage,
+					completionSelector: this.#contract.completion,
+					companionSelector: this.#contract.completionCompanion,
+				},
+			});
+		} catch {
+			throw this.#error("page_drift", "Current answer search or citation evidence changed during capture");
+		}
+		this.#assertConfirmedConversation();
 		const answerText = snapshot.text.trim();
 		if (
 			!answerText ||
@@ -184,14 +225,25 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		) {
 			throw this.#error("page_drift", "Current answer container changed during capture");
 		}
+		let webQueries: string[];
+		let citations: CollectedCitation[];
+		try {
+			webQueries = uniqueStrings(snapshot.webQueries, QUERY_MAX_COUNT, 2_000, "query");
+			citations = uniqueCitations(snapshot.citations);
+		} catch {
+			throw this.#error("page_drift", "Current answer search or citation values violate the approved contract");
+		}
+		if (!snapshot.evidenceViewportRect) {
+			throw this.#error("page_drift", "Current answer has no verified visual evidence region");
+		}
 		return {
 			answerText,
-			answerHtml: snapshot.html,
-			pageUrl: this.#approvedConversationUrl(),
+			evidenceViewportRect: snapshot.evidenceViewportRect,
+			pageUrl,
 			observedAt: new Date(this.#port.now()).toISOString(),
 			webSearchObserved: this.#classifySearch(snapshot),
-			webQueries: uniqueStrings(snapshot.webQueries, QUERY_MAX_COUNT, 2_000, "query"),
-			citations: uniqueCitations(snapshot.citations),
+			webQueries,
+			citations,
 			adapterVersion: this.adapterVersion,
 		};
 	}
@@ -288,7 +340,12 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	}
 
 	#assertApprovedUrl(requireConversation: boolean): void {
-		const current = new URL(this.#port.currentUrl());
+		let current: URL;
+		try {
+			current = new URL(this.#port.currentUrl());
+		} catch {
+			throw this.#error("page_drift", "Navigation no longer has a valid consumer URL");
+		}
 		const launch = new URL(this.#contract.launchUrl);
 		const approvedHost =
 			this.surface === "doubao.consumer_web"
@@ -315,6 +372,25 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		return this.#port.currentUrl();
 	}
 
+	#assertConfirmedConversation(): string {
+		const current = this.#approvedConversationUrl();
+		if (!this.#confirmedConversationUrl || current !== this.#confirmedConversationUrl) {
+			throw this.#error("page_drift", "Navigation left the confirmed submitted conversation");
+		}
+		return current;
+	}
+
+	async #assertSubmittedPromptStillCurrent(): Promise<void> {
+		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
+		if (
+			messages.length !== 1 ||
+			!this.#preparedPrompt ||
+			normalizeText(messages[0]?.element.text ?? "") !== normalizeText(this.#preparedPrompt)
+		) {
+			throw this.#error("page_drift", "Confirmed conversation no longer contains the exact submitted prompt");
+		}
+	}
+
 	#error(code: ConstructorParameters<typeof AdapterError>[0], message: string): AdapterError {
 		return new AdapterError(code, this.#submitted ? "post_submit" : "pre_submit", message);
 	}
@@ -334,9 +410,22 @@ function validateSelectorContract(contract: SelectorContract): SelectorContract 
 	} catch {
 		throw new Error("Invalid account restriction text pattern");
 	}
-	const optionalSelectors = new Set(["completion", "searchUsed", "searchNotUsed", "citationLink", "queryItem"]);
+	validateSearchEvidenceContract(contract.searchEvidence);
+	const optionalSelectors = new Set([
+		"completion",
+		"completionCompanion",
+		"searchUsed",
+		"searchNotUsed",
+		"citationLink",
+		"queryItem",
+		"searchEvidence",
+	]);
+	if (Boolean(contract.completion) !== Boolean(contract.completionCompanion)) {
+		throw new Error("Completion and companion selectors must be configured together");
+	}
 	for (const [key, value] of Object.entries(contract)) {
 		if (value === null && optionalSelectors.has(key)) continue;
+		if (key === "searchEvidence") continue;
 		if (
 			!key.toLowerCase().includes("url") &&
 			!key.toLowerCase().includes("pattern") &&
@@ -356,6 +445,31 @@ function validateSelectorContract(contract: SelectorContract): SelectorContract 
 		}
 	}
 	return { ...contract };
+}
+
+function validateSearchEvidenceContract(contract: SelectorContract["searchEvidence"]): void {
+	if (!contract) return;
+	for (const [key, value] of Object.entries(contract)) {
+		if (typeof value !== "string" || value.length < 2 || value.length > 500 || value.trim() !== value) {
+			throw new Error(`Invalid search evidence contract value: ${key}`);
+		}
+	}
+	for (const pattern of [contract.summaryTextPattern, contract.queryTextPattern, contract.citationTitlePrefixPattern]) {
+		try {
+			new RegExp(pattern, "u");
+		} catch {
+			throw new Error("Invalid search evidence text pattern");
+		}
+	}
+	if (
+		contract.summaryTextPattern.includes("(?<queries>") === false ||
+		contract.summaryTextPattern.includes("(?<citations>") === false
+	) {
+		throw new Error("Search evidence summary pattern must expose counts");
+	}
+	if (contract.queryTextPattern.includes("(?<query>") === false) {
+		throw new Error("Search evidence query pattern must expose a query");
+	}
 }
 
 function visibleElements(elements: readonly DomElementSummary[]): Array<{ element: DomElementSummary; index: number }> {
@@ -401,8 +515,7 @@ function uniqueCitations(values: readonly CollectedCitation[]): CollectedCitatio
 		) {
 			throw new Error("Invalid citation URL");
 		}
-		const title = citation.title.trim();
-		if (!title || title.length > 2_000) throw new Error("Invalid citation title");
+		const title = normalizeCitationTitle(citation.title);
 		if (seen.has(url.href)) continue;
 		seen.add(url.href);
 		result.push({ url: url.href, title });

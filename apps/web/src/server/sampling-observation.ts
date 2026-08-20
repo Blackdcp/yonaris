@@ -9,20 +9,43 @@ import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import type { Citation } from "@workspace/lib/text-extraction";
 import { z } from "zod";
 
+function isCredentialFreeHttpUrl(value: string): boolean {
+	try {
+		const url = new URL(value);
+		return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password;
+	} catch {
+		return false;
+	}
+}
+
 const httpUrl = z
 	.string()
 	.trim()
 	.url()
-	.refine((value) => {
-		const protocol = new URL(value).protocol;
-		return protocol === "http:" || protocol === "https:";
-	}, "URL must use http or https");
+	.refine(isCredentialFreeHttpUrl, "URL must use http or https without embedded credentials");
 
-const citationSchema = z.object({
-	url: httpUrl,
-	title: z.string().trim().max(1_000).optional(),
-	citationIndex: z.number().int().min(0).max(32_767).optional(),
-});
+const citationHttpUrl = z
+	.string()
+	.trim()
+	.min(1)
+	.max(10_000)
+	.url()
+	.refine(isCredentialFreeHttpUrl, "URL must use http or https without embedded credentials");
+
+const citationSchema = z
+	.object({
+		url: citationHttpUrl,
+		title: z.string().trim().min(1).max(1_000).optional(),
+		citationIndex: z.number().int().min(0).max(32_767).optional(),
+	})
+	.strict();
+
+const structuredCitationSchema = z
+	.object({
+		url: citationHttpUrl,
+		title: z.string().trim().min(1).max(1_000),
+	})
+	.strict();
 
 export const browserAnswerHtmlSchema = z
 	.string()
@@ -45,6 +68,57 @@ export const samplingObservationBaseSchema = z
 		webQueries: z.array(z.string().trim().min(1).max(2_000)).max(100).default([]),
 	})
 	.strict();
+
+export const browserRunnerLegacyObservationSchema = samplingObservationBaseSchema.extend({
+	answerHtml: browserAnswerHtmlSchema,
+});
+
+export const browserRunnerStructuredObservationSchema = samplingObservationBaseSchema
+	.extend({
+		schemaVersion: z.literal("browser-runner-observation.v2"),
+		citations: z.array(structuredCitationSchema).max(200).default([]),
+		captureDiagnostics: z
+			.object({
+				answerCount: z.literal(1),
+				queryCount: z.number().int().min(0).max(100),
+				citationCount: z.number().int().min(0).max(200),
+				completionCount: z.literal(1),
+			})
+			.strict(),
+	})
+	.superRefine((observation, context) => {
+		if (observation.captureDiagnostics.queryCount !== observation.webQueries.length) {
+			context.addIssue({ code: "custom", path: ["captureDiagnostics", "queryCount"], message: "Query count mismatch" });
+		}
+		if (observation.captureDiagnostics.citationCount !== observation.citations.length) {
+			context.addIssue({
+				code: "custom",
+				path: ["captureDiagnostics", "citationCount"],
+				message: "Citation count mismatch",
+			});
+		}
+		const citationUrls = new Set<string>();
+		for (const [index, citation] of observation.citations.entries()) {
+			let canonicalUrl: string;
+			try {
+				canonicalUrl = new URL(citation.url).href;
+			} catch {
+				continue;
+			}
+			if (citationUrls.has(canonicalUrl)) {
+				context.addIssue({
+					code: "custom",
+					path: ["citations", index, "url"],
+					message: "Citation URLs must be unique",
+				});
+			}
+			citationUrls.add(canonicalUrl);
+		}
+	});
+
+export type BrowserRunnerLegacyObservation = z.infer<typeof browserRunnerLegacyObservationSchema>;
+export type BrowserRunnerStructuredObservation = z.infer<typeof browserRunnerStructuredObservationSchema>;
+export type BrowserRunnerObservation = BrowserRunnerLegacyObservation | BrowserRunnerStructuredObservation;
 
 export const samplingObservationInputSchema = samplingObservationBaseSchema.extend({
 	operatorAttested: z.literal(true),
@@ -101,7 +175,12 @@ function assertFrozenTask(snapshot: DeliveryManifestSnapshot, task: DeliveryTask
 export function prepareSamplingObservation(input: {
 	task: DeliveryTaskView;
 	manifest: DeliveryManifestSnapshot;
-	observation: SamplingObservationBase & { operatorAttested?: true; answerHtml?: string };
+	observation: SamplingObservationBase & {
+		operatorAttested?: true;
+		answerHtml?: string;
+		schemaVersion?: "browser-runner-observation.v2";
+		captureDiagnostics?: BrowserRunnerStructuredObservation["captureDiagnostics"];
+	};
 	captureActor?:
 		| { kind: "operator"; id: string }
 		| {
@@ -175,6 +254,13 @@ export function prepareSamplingObservation(input: {
 		version: input.observation.modelVersion,
 		webSearch: input.observation.searchMode !== "off",
 	};
+	const structuredCaptureDiagnostics =
+		input.observation.schemaVersion === "browser-runner-observation.v2"
+			? input.observation.captureDiagnostics
+			: undefined;
+	if (input.observation.schemaVersion === "browser-runner-observation.v2" && !structuredCaptureDiagnostics) {
+		throw new Error("Structured Browser Runner observations require capture diagnostics");
+	}
 	const captureMetadata = {
 		measurementEligibility:
 			captureActor.kind === "operator" ? "operator_attested_clean_session" : "browser_runner_clean_session",
@@ -204,14 +290,23 @@ export function prepareSamplingObservation(input: {
 					localizationRegistrationSource: "server_bound_runner_registration",
 				}
 			: {}),
+		...(input.observation.schemaVersion === "browser-runner-observation.v2"
+			? {
+					responseSnapshotSchemaVersion: "response-snapshot.v2",
+					captureDiagnostics: structuredCaptureDiagnostics,
+				}
+			: {}),
 	};
 	// Artifact IDs are lease-generation-local handles, while answer HTML is an
 	// archive representation that can contain harmless renderer attributes. Neither
 	// changes metric identity; evidence ownership and HTML integrity are validated
 	// independently before persistence.
-	const { answerHtml, evidenceArtifactIds, ...fingerprintedObservation } = input.observation;
+	const { answerHtml, captureDiagnostics, evidenceArtifactIds, schemaVersion, ...fingerprintedObservation } =
+		input.observation;
 	void answerHtml;
+	void captureDiagnostics;
 	void evidenceArtifactIds;
+	void schemaVersion;
 	const sampleFingerprint = createHash("sha256")
 		.update(JSON.stringify({ taskId: input.task.id, observation: fingerprintedObservation }))
 		.digest("hex");

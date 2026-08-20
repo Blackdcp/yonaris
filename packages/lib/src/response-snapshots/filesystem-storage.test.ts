@@ -2,7 +2,7 @@ import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "
 import { tmpdir } from "node:os";
 import { dirname, join, parse } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft } from "./contract";
+import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft, type ResponseSnapshotDraftV2 } from "./contract";
 import {
 	FilesystemResponseSnapshotStorage,
 	ResponseSnapshotStorageConflictError,
@@ -48,7 +48,55 @@ function draft(overrides: Partial<ResponseSnapshotDraft> = {}): ResponseSnapshot
 	};
 }
 
+function v2Draft(): ResponseSnapshotDraftV2 {
+	return {
+		schemaVersion: "response-snapshot.v2",
+		runId: "55555555-5555-4555-8555-555555555555",
+		brandId: "ppio",
+		scopeId: "22222222-2222-4222-8222-222222222222",
+		promptId: "33333333-3333-4333-8333-333333333333",
+		promptText: "What is PPIO?",
+		answerText: "PPIO provides cloud services.",
+		citations: [],
+		webQueries: [],
+		queryAvailability: "unavailable",
+		brandMentioned: true,
+		competitorsMentioned: [],
+		channel: "doubao",
+		modelVersion: "doubao-web-20260819-localpc-v8",
+		market: "CN",
+		locale: "zh-CN",
+		timezone: "Asia/Shanghai",
+		observedAt: "2026-08-20T01:02:03.000Z",
+		captureMethod: "consumer_web_browser",
+		contentSource: "rendered_from_structured_response",
+		visualEvidence: {
+			artifactId: "44444444-4444-4444-8444-444444444444",
+			mediaType: "image/jpeg",
+			sha256: "b".repeat(64),
+			bytes: 42_000,
+		},
+		adapterVersion: "doubao-web-20260819-localpc-v8",
+		captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+	};
+}
+
 describe("FilesystemResponseSnapshotStorage", () => {
+	it("round-trips a v2 manifest with an external screenshot reference", async () => {
+		const root = await temporaryRoot();
+		const storage = new FilesystemResponseSnapshotStorage(root);
+		const bundle = prepareResponseSnapshotBundle(v2Draft());
+
+		const stored = await storage.put(bundle, 1);
+
+		expect(stored.storageKey).toBe("ppio/2026/08/55555555-5555-4555-8555-555555555555/r1");
+		expect(await storage.head(stored.storageKey)).toEqual(stored);
+		expect(await storage.put(bundle, 1)).toEqual(stored);
+		const manifest = await storage.createDownload(stored.storageKey, "manifest");
+		expect(Buffer.from(manifest.body)).toEqual(Buffer.from(bundle.manifestJson));
+		expect(JSON.parse(Buffer.from(manifest.body).toString("utf8")).visualEvidence).toEqual(v2Draft().visualEvidence);
+	});
+
 	it("writes a durable three-file revision and reads verified assets", async () => {
 		const root = await temporaryRoot();
 		const storage = new FilesystemResponseSnapshotStorage(root);

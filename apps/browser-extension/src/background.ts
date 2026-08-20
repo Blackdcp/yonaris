@@ -1,8 +1,9 @@
 import { BrowserRunnerApiClient } from "./api-client";
-import type { BrowserExtensionSurface } from "./contracts";
+import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "./contracts";
 import { ChromeTabDriver } from "./coordinator/chrome-tabs";
 import { ExtensionCoordinator, type ExtensionRunSummary } from "./coordinator/extension-coordinator";
 import type { TaskRunResult } from "./coordinator/task-runner";
+import { type QualificationReadinessPublisher, qualifyAndRecordActiveDoubaoTab } from "./doubao-qualification-client";
 import { buildHeartbeat } from "./heartbeat";
 import { chromeDeviceStorage } from "./storage";
 
@@ -19,6 +20,8 @@ const coordinator = new ExtensionCoordinator({
 });
 let running: Promise<ExtensionRunSummary | null> | null = null;
 let manualRecoveryRunning = false;
+let qualificationRunning: ReturnType<typeof qualifyAndRecordActiveDoubaoTab> | null = null;
+let heartbeatTail: Promise<void> = Promise.resolve();
 let lastRun: { finishedAt: string; summary: ExtensionRunSummary | null } | null = null;
 
 chrome.runtime.onInstalled.addListener(ensureAlarms);
@@ -42,8 +45,18 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 			.catch(() => sendResponse({ ok: false }));
 		return true;
 	}
+	if (message.type === "browser-runner:qualify-doubao") {
+		void qualifyDoubao()
+			.then((result) => sendResponse({ ok: true, result }))
+			.catch((error) => sendResponse({ ok: false, error: safeRuntimeError(error) }));
+		return true;
+	}
 	if (message.type === "browser-runner:status") {
-		sendResponse({ ok: true, running: running !== null || manualRecoveryRunning, lastRun });
+		sendResponse({
+			ok: true,
+			running: running !== null || manualRecoveryRunning || qualificationRunning !== null,
+			lastRun,
+		});
 		return false;
 	}
 	if (message.type === "browser-runner:manual-recovery-list") {
@@ -67,15 +80,21 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 	return false;
 });
 
-async function sendHeartbeat(): Promise<void> {
+function sendHeartbeat(readiness?: BrowserExtensionReadiness): Promise<void> {
+	const operation = heartbeatTail.then(() => sendHeartbeatNow(readiness));
+	heartbeatTail = operation.catch(() => undefined);
+	return operation;
+}
+
+async function sendHeartbeatNow(readiness?: BrowserExtensionReadiness): Promise<void> {
 	const device = await storage.loadDevice();
 	if (!device) return;
 	const client = new BrowserRunnerApiClient({ baseUrl: device.portalBaseUrl, token: device.deviceToken });
-	await client.heartbeat(buildHeartbeat(navigator.userAgent, await storage.loadSurfaceReadiness()));
+	await client.heartbeat(buildHeartbeat(navigator.userAgent, readiness ?? (await storage.loadSurfaceReadiness())));
 }
 
 function runNow(): Promise<ExtensionRunSummary | null> {
-	if (manualRecoveryRunning) return Promise.resolve(null);
+	if (manualRecoveryRunning || qualificationRunning) return Promise.resolve(null);
 	if (running) return running;
 	running = coordinator.runOnce();
 	void running
@@ -88,12 +107,34 @@ function runNow(): Promise<ExtensionRunSummary | null> {
 	return running;
 }
 
-async function recoverNeedsHuman(taskId: string) {
+function qualifyDoubao(): ReturnType<typeof qualifyAndRecordActiveDoubaoTab> {
 	if (running || manualRecoveryRunning) {
+		return Promise.reject(new Error("Browser Runner is busy; check Doubao again after the current task finishes."));
+	}
+	if (qualificationRunning) return qualificationRunning;
+	const publisher: QualificationReadinessPublisher = {
+		confirmReadiness: (readiness) => sendHeartbeat(readiness),
+	};
+	const operation = qualifyAndRecordActiveDoubaoTab(storage, undefined, publisher);
+	qualificationRunning = operation;
+	void operation.then(
+		() => {
+			if (qualificationRunning === operation) qualificationRunning = null;
+		},
+		() => {
+			if (qualificationRunning === operation) qualificationRunning = null;
+		},
+	);
+	return operation;
+}
+
+async function recoverNeedsHuman(taskId: string) {
+	if (running || manualRecoveryRunning || qualificationRunning) {
 		return { taskId, status: "not_recoverable" as const, code: "runner_busy" };
 	}
 	manualRecoveryRunning = true;
 	try {
+		await sendHeartbeat();
 		return await coordinator.recoverNeedsHuman(taskId);
 	} finally {
 		manualRecoveryRunning = false;
@@ -134,6 +175,10 @@ function runtimeTaskId(value: unknown): string | null {
 	if (typeof value !== "string") return null;
 	const taskId = value.trim();
 	return taskId && taskId.length <= 200 ? taskId : null;
+}
+
+function safeRuntimeError(error: unknown): string {
+	return error instanceof Error && error.message.trim() ? error.message.slice(0, 500) : "The operation failed safely.";
 }
 
 ensureAlarms();

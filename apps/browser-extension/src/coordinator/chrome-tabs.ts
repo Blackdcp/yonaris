@@ -1,5 +1,11 @@
-import { AdapterError, type CollectedAnswer, type ConsumerWebAdapter } from "../adapters/contracts";
+import {
+	AdapterError,
+	type CollectedAnswer,
+	type ConsumerWebAdapter,
+	type EvidenceViewportRect,
+} from "../adapters/contracts";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
+import { captureCroppedJpeg } from "./screenshot";
 import { type RunnerTab, type RunnerTabDriver, RunnerTabOpenError } from "./task-runner";
 
 type AdapterCommand =
@@ -10,26 +16,29 @@ type AdapterCommand =
 			promptText: string;
 	  };
 
-type BrowserTab = { id?: number; url?: string; status?: string };
+type BrowserTab = { id?: number; windowId?: number; active?: boolean; url?: string; status?: string };
 
 export interface ChromeTabsGateway {
 	create(url: string, options: { active: boolean }): Promise<BrowserTab>;
 	get(tabId: number): Promise<BrowserTab>;
 	remove(tabId: number): Promise<void>;
 	activate(tabId: number): Promise<void>;
+	captureVisibleTab(windowId: number, options: { format: "jpeg"; quality: 82 }): Promise<string>;
 	sendMessage(tabId: number, command: AdapterCommand): Promise<unknown>;
 }
 
 export class ChromeTabDriver implements RunnerTabDriver {
 	readonly #gateway: ChromeTabsGateway;
 	readonly #wait: (milliseconds: number) => Promise<void>;
+	readonly #captureCroppedJpeg: typeof captureCroppedJpeg;
 
 	constructor(
 		gateway: ChromeTabsGateway = chromeTabsGateway(),
-		options: { wait?: (milliseconds: number) => Promise<void> } = {},
+		options: { wait?: (milliseconds: number) => Promise<void>; captureCroppedJpeg?: typeof captureCroppedJpeg } = {},
 	) {
 		this.#gateway = gateway;
 		this.#wait = options.wait ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+		this.#captureCroppedJpeg = options.captureCroppedJpeg ?? captureCroppedJpeg;
 	}
 
 	async open(claim: BrowserExtensionClaim): Promise<RunnerTab> {
@@ -70,8 +79,25 @@ export class ChromeTabDriver implements RunnerTabDriver {
 		return {
 			tabId,
 			adapter: new ContentScriptAdapter(this.#gateway, tabId, surface),
+			captureEvidence: (rect) => this.#captureEvidence(tabId, surface, rect),
 			close: () => this.#gateway.remove(tabId),
 		};
+	}
+
+	async #captureEvidence(
+		tabId: number,
+		surface: BrowserExtensionSurface,
+		rect: EvidenceViewportRect,
+	): Promise<Uint8Array> {
+		const before = await this.#gateway.get(tabId);
+		const windowId = assertCapturableTab(before, tabId, surface);
+		await this.#gateway.activate(tabId);
+		const active = await this.#gateway.get(tabId);
+		assertSameActiveTab(active, tabId, windowId, before.url, surface);
+		const dataUrl = await this.#gateway.captureVisibleTab(windowId, { format: "jpeg", quality: 82 });
+		const after = await this.#gateway.get(tabId);
+		assertSameActiveTab(after, tabId, windowId, active.url, surface);
+		return this.#captureCroppedJpeg(dataUrl, rect);
 	}
 }
 
@@ -138,8 +164,32 @@ export function chromeTabsGateway(): ChromeTabsGateway {
 		activate: async (tabId) => {
 			await chrome.tabs.update(tabId, { active: true });
 		},
+		captureVisibleTab: (windowId, options) => chrome.tabs.captureVisibleTab(windowId, options),
 		sendMessage: (tabId, command) => chrome.tabs.sendMessage(tabId, command),
 	};
+}
+
+function assertCapturableTab(tab: BrowserTab, tabId: number, surface: BrowserExtensionSurface): number {
+	if (tab.id !== undefined && tab.id !== tabId) throw new Error("Chrome returned a different Browser Runner tab");
+	if (!tab.url) throw new Error("Browser Runner tab URL is unavailable");
+	assertApprovedUrl(tab.url, surface);
+	if (!Number.isSafeInteger(tab.windowId) || (tab.windowId ?? -1) < 0) {
+		throw new Error("Browser Runner tab window is unavailable");
+	}
+	return tab.windowId as number;
+}
+
+function assertSameActiveTab(
+	tab: BrowserTab,
+	tabId: number,
+	windowId: number,
+	expectedUrl: string | undefined,
+	surface: BrowserExtensionSurface,
+): void {
+	const currentWindowId = assertCapturableTab(tab, tabId, surface);
+	if (currentWindowId !== windowId || tab.active !== true || tab.url !== expectedUrl) {
+		throw new AdapterError("page_drift", "post_submit", "Browser Runner tab changed during evidence capture");
+	}
 }
 
 function assertApprovedUrl(value: string, surface: BrowserExtensionSurface): void {

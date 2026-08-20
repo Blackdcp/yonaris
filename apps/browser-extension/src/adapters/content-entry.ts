@@ -1,7 +1,9 @@
+import { isApprovedDoubaoConversationUrl } from "../doubao-qualification-client";
 import type { AdapterError, ConsumerWebAdapter } from "./contracts";
 import { createDeepSeekAdapter } from "./deepseek";
-import { createDocumentDomPort } from "./dom-port";
-import { createDoubaoAdapter } from "./doubao";
+import { createDocumentDomPort, isDomElementVisible, readVisibleDomText } from "./dom-port";
+import { createDoubaoAdapter, doubaoSelectorContract } from "./doubao";
+import { inspectLatestStructuredSearchEvidence } from "./search-evidence";
 
 type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "preflight" | "open_new_conversation" }
@@ -10,14 +12,15 @@ type AdapterCommand =
 			action: "prepare" | "submit_once" | "confirm_submitted" | "resume_submitted";
 			promptText: string;
 	  }
-	| { kind: "yonaris_adapter"; action: "collect_current_answer" };
+	| { kind: "yonaris_adapter"; action: "collect_current_answer" }
+	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" };
 
 const port = createDocumentDomPort(document, location);
 const adapter = createAdapterForHost(location.hostname, port);
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
 	if (!isAdapterCommand(message)) return false;
-	void execute(adapter, message)
+	void execute(adapter, message, () => location.href)
 		.then((value) => sendResponse({ ok: true, value }))
 		.catch((error: unknown) => {
 			const adapterError = error as Partial<AdapterError>;
@@ -39,7 +42,11 @@ function createAdapterForHost(hostname: string, domPort: ReturnType<typeof creat
 	throw new Error("Browser adapter is not approved for this host");
 }
 
-async function execute(adapter: ConsumerWebAdapter, command: AdapterCommand): Promise<unknown> {
+async function execute(
+	adapter: ConsumerWebAdapter,
+	command: AdapterCommand,
+	readPageUrl: () => string,
+): Promise<unknown> {
 	switch (command.action) {
 		case "preflight":
 			return adapter.preflight();
@@ -55,6 +62,30 @@ async function execute(adapter: ConsumerWebAdapter, command: AdapterCommand): Pr
 			return adapter.resumeSubmitted(command.promptText);
 		case "collect_current_answer":
 			return adapter.collectCurrentAnswer();
+		case "inspect_search_evidence": {
+			const initialConversationUrl = readPageUrl();
+			if (!isApprovedDoubaoConversationUrl(initialConversationUrl)) {
+				throw new Error("Search-evidence inspection requires an approved Doubao conversation URL");
+			}
+			await adapter.preflight();
+			const currentConversationUrl = readPageUrl();
+			if (
+				currentConversationUrl !== initialConversationUrl ||
+				!isApprovedDoubaoConversationUrl(currentConversationUrl)
+			) {
+				throw new Error("Search-evidence inspection left the approved Doubao conversation URL during preflight");
+			}
+			return inspectLatestStructuredSearchEvidence(
+				document,
+				doubaoSelectorContract.answer,
+				doubaoSelectorContract.searchEvidence,
+				isDomElementVisible,
+				doubaoSelectorContract.completion,
+				readVisibleDomText,
+				doubaoSelectorContract.generating,
+				doubaoSelectorContract.completionCompanion,
+			);
+		}
 	}
 }
 
@@ -70,6 +101,7 @@ function isAdapterCommand(value: unknown): value is AdapterCommand {
 			"confirm_submitted",
 			"resume_submitted",
 			"collect_current_answer",
+			"inspect_search_evidence",
 		].includes(value.action)
 	)
 		return false;
