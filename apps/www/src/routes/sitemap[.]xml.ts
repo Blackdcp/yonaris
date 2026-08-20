@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { MARKETING_SITEMAP_PATHS } from "@/lib/marketing-content";
 import { SITE_URL } from "@/lib/seo";
 
 interface SitemapEntry {
@@ -13,9 +14,11 @@ interface SitemapEntry {
 	lastmod?: string;
 }
 
-const staticPages: SitemapEntry[] = [
-	{ path: "/", changefreq: "weekly", priority: 1.0 },
-];
+const staticPages: SitemapEntry[] = MARKETING_SITEMAP_PATHS.map((path) => ({
+	path,
+	changefreq: path === "/" || path === "/zh" ? "weekly" : "monthly",
+	priority: path === "/" ? 1 : path === "/zh" || path.endsWith("/diagnostic") ? 0.9 : path.startsWith("/agent") || path.startsWith("/llms") ? 0.6 : 0.8,
+}));
 
 export const Route = createFileRoute("/sitemap.xml")({
 	server: {
