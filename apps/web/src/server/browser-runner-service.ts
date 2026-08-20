@@ -1,5 +1,6 @@
 import {
 	assertExtensionEvidenceProtocol,
+	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionCaptureRoute,
@@ -65,9 +66,9 @@ export const browserRunnerClaimSchema = z
 		batchId: z.guid().optional(),
 		adapterVersion: z.string().trim().min(1).max(100).optional(),
 		surfaceTargetKeys: z
-			.array(z.enum(["doubao.consumer_web", "deepseek.consumer_web"]))
+			.array(z.enum(BROWSER_EXTENSION_SURFACES))
 			.min(1)
-			.max(2)
+			.max(BROWSER_EXTENSION_SURFACES.length)
 			.refine((surfaces) => new Set(surfaces).size === surfaces.length, "Surface targets must be unique")
 			.optional(),
 	})

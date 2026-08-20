@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionReadiness,
 	type BrowserExtensionSurface,
 	isApprovedBrowserExtensionAdapterVersion,
@@ -10,7 +11,7 @@ import type { BrowserRunnerPrincipal } from "./browser-runner-auth";
 
 export const BROWSER_EXTENSION_FEATURE_VERSION = "browser-extension.v1" as const;
 
-const surfaceSchema = z.enum(["doubao.consumer_web", "deepseek.consumer_web"]);
+const surfaceSchema = z.enum(BROWSER_EXTENSION_SURFACES);
 const readinessStateSchema = z
 	.object({
 		status: z.enum(["ready", "signed_out", "paused_by_risk_control", "adapter_incompatible", "unavailable"]),
@@ -25,10 +26,11 @@ const readinessStateSchema = z
 	.strict();
 
 const readinessSchema = z
-	.object({
-		"doubao.consumer_web": readinessStateSchema.optional(),
-		"deepseek.consumer_web": readinessStateSchema.optional(),
-	})
+	.object(
+		Object.fromEntries(
+			BROWSER_EXTENSION_SURFACES.map((surface) => [surface, readinessStateSchema.optional()]),
+		) as Record<BrowserExtensionSurface, z.ZodOptional<typeof readinessStateSchema>>,
+	)
 	.strict();
 
 export const browserRunnerDeviceHeartbeatSchema = z
@@ -47,7 +49,7 @@ export const browserRunnerDeviceHeartbeatSchema = z
 			.max(100)
 			.regex(/^[0-9A-Za-z][0-9A-Za-z._-]*$/),
 		platform: z.enum(["windows", "macos"]),
-		supportedSurfaces: z.array(surfaceSchema).min(1).max(2),
+		supportedSurfaces: z.array(surfaceSchema).min(1).max(BROWSER_EXTENSION_SURFACES.length),
 		readiness: readinessSchema,
 	})
 	.strict();

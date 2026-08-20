@@ -9,6 +9,7 @@ import {
 	type assertRunnerTask,
 	authorizeRunnerEvidenceUpload,
 	authorizeRunnerTaskOperation,
+	browserRunnerClaimSchema,
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
 	browserRunnerLeaseSchema,
@@ -91,6 +92,16 @@ function observationInput() {
 }
 
 describe("Browser Runner service contracts", () => {
+	it("accepts a claim request spanning every registered browser surface", () => {
+		expect(
+			browserRunnerClaimSchema.safeParse({
+				brandId: "stepfun",
+				adapterVersion: "surface-adapter-v1",
+				surfaceTargetKeys: BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key }) => key),
+			}).success,
+		).toBe(true);
+	});
+
 	it("binds evidence upload to the confirmed runner session and approved adapter", async () => {
 		const principal = {
 			kind: "browser_extension" as const,
