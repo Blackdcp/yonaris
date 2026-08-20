@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmod, lstat, mkdir, open, readdir, readFile, rename, rmdir, unlink } from "node:fs/promises";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { gunzipSync } from "node:zlib";
-import type { PreparedResponseSnapshotBundle } from "./contract";
+import type { PreparedResponseSnapshotBundle, ResponseSnapshotVisualEvidence } from "./contract";
 import type {
 	ResponseSnapshotAsset,
 	ResponseSnapshotAssetName,
@@ -16,9 +16,11 @@ const FILE_MODE = 0o600;
 const MAX_MANIFEST_BYTES = 1024 * 1024;
 const MAX_COMPRESSED_ASSET_BYTES = 8 * 1024 * 1024;
 const MAX_UNCOMPRESSED_ASSET_BYTES = 4 * 1024 * 1024;
+const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
 const SAFE_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._-]{0,299}$/u;
 const SAFE_RUN_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,99}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
 const ASSET_FILE_NAMES = {
 	html: "snapshot.html.gz",
@@ -33,14 +35,19 @@ type SnapshotManifestArtifact = {
 	gzipBytes: number;
 };
 
-type SnapshotManifest = {
-	schemaVersion: "response-snapshot-manifest.v1";
+type SnapshotManifestBase = {
 	runId: string;
 	artifacts: {
 		html: SnapshotManifestArtifact;
 		json: SnapshotManifestArtifact;
 	};
 };
+
+type SnapshotManifest = SnapshotManifestBase &
+	(
+		| { schemaVersion: "response-snapshot-manifest.v1" }
+		| { schemaVersion: "response-snapshot-manifest.v2"; visualEvidence: ResponseSnapshotVisualEvidence }
+	);
 
 type ParsedStorageKey = {
 	segments: [string, string, string, string, string];
@@ -472,7 +479,8 @@ function parseManifest(value: Uint8Array): SnapshotManifest {
 	}
 	if (
 		!isRecord(parsed) ||
-		parsed.schemaVersion !== "response-snapshot-manifest.v1" ||
+		(parsed.schemaVersion !== "response-snapshot-manifest.v1" &&
+			parsed.schemaVersion !== "response-snapshot-manifest.v2") ||
 		typeof parsed.runId !== "string"
 	) {
 		throw new ResponseSnapshotStorageIntegrityError("Snapshot manifest contract is invalid");
@@ -481,7 +489,37 @@ function parseManifest(value: Uint8Array): SnapshotManifest {
 	if (!isRecord(artifacts)) throw new ResponseSnapshotStorageIntegrityError("Snapshot manifest artifacts are invalid");
 	const html = parseManifestArtifact(artifacts.html, ASSET_FILE_NAMES.html);
 	const json = parseManifestArtifact(artifacts.json, ASSET_FILE_NAMES.json);
-	return { schemaVersion: parsed.schemaVersion, runId: parsed.runId, artifacts: { html, json } };
+	const common = { runId: parsed.runId, artifacts: { html, json } };
+	if (parsed.schemaVersion === "response-snapshot-manifest.v1") {
+		return { ...common, schemaVersion: parsed.schemaVersion };
+	}
+	return {
+		...common,
+		schemaVersion: parsed.schemaVersion,
+		visualEvidence: parseVisualEvidence(parsed.visualEvidence),
+	};
+}
+
+function parseVisualEvidence(value: unknown): ResponseSnapshotVisualEvidence {
+	if (
+		!isRecord(value) ||
+		typeof value.artifactId !== "string" ||
+		!UUID_PATTERN.test(value.artifactId) ||
+		value.mediaType !== "image/jpeg" ||
+		typeof value.sha256 !== "string" ||
+		!SHA256_PATTERN.test(value.sha256) ||
+		!Number.isInteger(value.bytes) ||
+		Number(value.bytes) < 1 ||
+		Number(value.bytes) > MAX_SCREENSHOT_BYTES
+	) {
+		throw new ResponseSnapshotStorageIntegrityError("Snapshot visual evidence metadata is invalid");
+	}
+	return {
+		artifactId: value.artifactId,
+		mediaType: value.mediaType,
+		sha256: value.sha256,
+		bytes: Number(value.bytes),
+	};
 }
 
 function parseManifestArtifact(
