@@ -38,14 +38,14 @@ function reconcileExactTask(input: ExactTaskReconciliationInput): ExactTaskRecon
 }
 
 describe("Browser Runner retry policy", () => {
-	it("preserves omitted resume compatibility while Doubao v7 remains approved", () => {
+	it("rejects omitted resume bindings after Doubao v8 production activation", () => {
 		expect(
 			browserExtensionTaskOperationDenial({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
 				operation: { kind: "resume" },
 			}),
-		).toBeNull();
+		).toBe("adapter_version_not_approved");
 	});
 
 	it("requires an exact adapter binding for resume under a simulated Doubao v8 approval", () => {

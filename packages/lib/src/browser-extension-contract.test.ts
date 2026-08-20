@@ -21,12 +21,12 @@ describe("browser extension contract", () => {
 		expect(() => parseBrowserExtensionSurface("kimi.consumer_web")).toThrow(/not supported/i);
 	});
 
-	it("keeps production on Doubao v7 while the v8 qualification artifact remains fail-closed", () => {
+	it("approves Doubao v8 for production and rejects the retired v7 adapter", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v7")).toBe(
-			true,
+			false,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260819-localpc-v8")).toBe(
-			false,
+			true,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-20260814-uat1")).toBe(false);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(
@@ -35,14 +35,14 @@ describe("browser extension contract", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-stale")).toBe(false);
 	});
 
-	it("preserves the legacy v7 omission window until the separate v8 activation", () => {
-		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", undefined)).toBe(true);
+	it("requires an explicit exact v8 binding after production activation", () => {
+		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", undefined)).toBe(false);
 		expect(
 			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260818-localpc-v7"),
-		).toBe(true);
+		).toBe(false);
 		expect(
 			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260819-localpc-v8"),
-		).toBe(false);
+		).toBe(true);
 		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("deepseek.consumer_web", undefined)).toBe(false);
 	});
 

@@ -141,7 +141,7 @@ describe("Browser Runner service contracts", () => {
 		).rejects.toMatchObject({ status: 409 });
 	});
 
-	it("preserves the explicit v7 omission window for already deployed evidence uploads", async () => {
+	it("rejects omitted evidence bindings after Doubao v8 activation", async () => {
 		const principal = {
 			kind: "browser_extension" as const,
 			id: guid1,
@@ -156,7 +156,7 @@ describe("Browser Runner service contracts", () => {
 
 		await expect(
 			authorizeRunnerEvidenceUpload("task-1", "stepfun", {}, principal, { assertTask: async () => task }),
-		).resolves.toBe(task);
+		).rejects.toMatchObject({ status: 409 });
 	});
 	it("checks snapshot capacity before allocating a task lease", async () => {
 		const claim = vi.fn();
@@ -191,7 +191,7 @@ describe("Browser Runner service contracts", () => {
 		await claimRunnerTask(
 			{
 				brandId: "stepfun",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 			},
 			principal,
 			{ assertCapacity: async () => null, claim },
@@ -239,7 +239,7 @@ describe("Browser Runner service contracts", () => {
 		expect(claim).not.toHaveBeenCalled();
 	});
 
-	it("rejects a v8 candidate claim until the separate server activation", async () => {
+	it("accepts an exact v8 claim after production activation", async () => {
 		const claim = vi.fn(async () => null);
 		const principal = {
 			kind: "browser_extension" as const,
@@ -262,11 +262,11 @@ describe("Browser Runner service contracts", () => {
 				principal,
 				{ assertCapacity: async () => null, claim },
 			),
-		).rejects.toMatchObject({ status: 409 });
-		expect(claim).not.toHaveBeenCalled();
+		).resolves.toBeNull();
+		expect(claim).toHaveBeenCalled();
 	});
 
-	it("keeps omitted v7 claim compatibility during qualification-only rollout", async () => {
+	it("rejects an omitted claim binding after production activation", async () => {
 		const claim = vi.fn(async () => null);
 		const principal = {
 			kind: "browser_extension" as const,
@@ -284,8 +284,8 @@ describe("Browser Runner service contracts", () => {
 				assertCapacity: async () => null,
 				claim,
 			}),
-		).resolves.toBeNull();
-		expect(claim).toHaveBeenCalled();
+		).rejects.toMatchObject({ status: 409 });
+		expect(claim).not.toHaveBeenCalled();
 	});
 
 	it.each([undefined, "doubao-web-20260818-localpc-v7"])(
@@ -363,14 +363,14 @@ describe("Browser Runner service contracts", () => {
 		).rejects.toMatchObject({ status: 409 });
 	});
 
-	it("rejects a Doubao v8 resume until the separate server activation", async () => {
+	it("accepts a Doubao v8 resume after production activation", async () => {
 		await expect(
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
 				operation: { kind: "resume", adapterVersion: "doubao-web-20260819-localpc-v8" },
 			}),
-		).rejects.toMatchObject({ status: 409 });
+		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
 	});
 
 	it("rejects completion from stale Doubao v6 even when the authenticated surface is ready", async () => {
@@ -383,24 +383,24 @@ describe("Browser Runner service contracts", () => {
 		).rejects.toMatchObject({ status: 409 });
 	});
 
-	it("rejects completion from Doubao v8 until the separate server activation", async () => {
+	it("accepts completion from the production-approved Doubao v8 adapter", async () => {
 		await expect(
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
 				operation: { kind: "complete", adapterVersion: "doubao-web-20260819-localpc-v8" },
 			}),
-		).rejects.toMatchObject({ status: 409 });
+		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
 	});
 
-	it("accepts the still-current explicit v7 adapter version for completion", async () => {
+	it("rejects completion from the retired explicit v7 adapter version", async () => {
 		await expect(
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
 				operation: { kind: "complete", adapterVersion: "doubao-web-20260818-localpc-v7" },
 			}),
-		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
+		).rejects.toMatchObject({ status: 409 });
 	});
 
 	it("distinguishes pending work, a drained human queue, and a fully idle global poll", () => {

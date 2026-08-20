@@ -38,7 +38,7 @@ const CAPTURE_ROUTES: Record<BrowserExtensionSurface, BrowserExtensionCaptureRou
 };
 
 const APPROVED_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
-	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",
+	"doubao.consumer_web": "doubao-web-20260819-localpc-v8",
 };
 
 const LEGACY_ADAPTER_VERSION_OMISSION_WINDOWS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {

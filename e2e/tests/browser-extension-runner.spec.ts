@@ -14,7 +14,7 @@ const DOUBAO_SURFACE = "doubao.consumer_web" as const;
 const DEEPSEEK_SURFACE = "deepseek.consumer_web" as const;
 const RUN_SURFACES = [DOUBAO_SURFACE] as const;
 const DECLARED_SURFACES = [DOUBAO_SURFACE, DEEPSEEK_SURFACE] as const;
-const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260818-localpc-v7";
+const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260819-localpc-v8";
 const UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION = "deepseek-web-stale";
 
 test.describe.configure({ mode: "serial" });
@@ -52,7 +52,7 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
     await expect(adminPage.getByRole("row").filter({ hasText: scopeName }).first()).toBeVisible({ timeout: 20_000 });
 
     await expectDeepSeekClaimRejected(request, token);
-    await expectDoubaoV8ClaimRejected(request, token);
+    await expectRetiredDoubaoV7ClaimRejected(request, token);
     const structured = await completeOneStructuredV8Claim(scope.id);
     const completed = await drainFakeExtension(request, token);
     expect(completed).toBe(14);
@@ -103,8 +103,8 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
         citations: "15",
         search_observed: "15",
         query_runs: "15",
-        structured_v2_runs: "1",
-        attached_jpegs: "1",
+        structured_v2_runs: "15",
+        attached_jpegs: "15",
       });
     } finally {
       await database.end();
@@ -116,7 +116,9 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
 
     await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${prompts[0]?.id}`);
     await customerPage.getByText("LLM Responses", { exact: true }).first().click();
-    await expect(customerPage.getByText("Browser answer HTML", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+    await expect(customerPage.getByText("Captured browser evidence", { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    });
 
     for (const asset of ["html", "json", "manifest"] as const) {
       const response = await customerPage.context().request.get(
@@ -140,7 +142,9 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
 
     await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${structured.promptId}`);
     await customerPage.getByText("LLM Responses", { exact: true }).first().click();
-    await expect(customerPage.getByText("Captured browser evidence", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(customerPage.getByText("Captured browser evidence", { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    });
   } finally {
     await closeContextWithinDeadline(admin, 5_000);
   }
@@ -229,7 +233,7 @@ async function pairFakeExtension(
   const response = await request.post("/api/internal/browser-runner/v1/pair", {
     data: {
       code,
-			extensionVersion: "0.2.2",
+			extensionVersion: "0.2.3",
       browserFamily: "chrome",
       browserVersion: "140.0.0",
       platform: "windows",
@@ -394,15 +398,13 @@ async function completeOneStructuredV8Claim(scopeId: string): Promise<{
   return { promptId: claim.task.promptId, snapshotId: completion.snapshot.id, jpeg };
 }
 
-async function expectDoubaoV8ClaimRejected(request: APIRequestContext, token: string): Promise<void> {
-  const candidateVersion = STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS[DOUBAO_SURFACE];
-  if (!candidateVersion) throw new Error("Doubao structured candidate version is not configured");
+async function expectRetiredDoubaoV7ClaimRejected(request: APIRequestContext, token: string): Promise<void> {
   const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
     headers: { Authorization: `Bearer ${token}` },
     data: {
       brandId: STEPFUN_BRAND_ID,
       surfaceTargetKeys: [DOUBAO_SURFACE],
-      adapterVersion: candidateVersion,
+      adapterVersion: "doubao-web-20260818-localpc-v7",
     },
   });
   expect(response.status(), await response.text()).toBe(409);
@@ -418,7 +420,11 @@ async function drainFakeExtension(request: APIRequestContext, token: string): Pr
           Array.from({ length: 5 }, async () => {
             const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
               headers,
-              data: { brandId: STEPFUN_BRAND_ID, surfaceTargetKeys: [surface] },
+              data: {
+                brandId: STEPFUN_BRAND_ID,
+                surfaceTargetKeys: [surface],
+                adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
+              },
             });
             expect(response.status(), await response.text()).toBe(200);
             return ((await response.json()) as { claim: RunnerClaim | null }).claim;
@@ -438,33 +444,37 @@ async function completeFakeClaim(
   headers: Record<string, string>,
   claim: RunnerClaim,
 ): Promise<void> {
+  const runnerSessionId = `fixture-${claim.task.id}`;
   const lease = {
     brandId: claim.task.brandId,
     leaseToken: claim.leaseToken,
     leaseGeneration: claim.leaseGeneration,
+    runnerSessionId,
+    adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
   };
-  const runnerSessionId = `fixture-${claim.task.id}`;
   for (const action of ["submit-intent", "submit-confirmed"] as const) {
     const response = await request.post(`/api/internal/browser-runner/v1/tasks/${claim.task.id}/${action}`, {
       headers,
-      data: { ...lease, runnerSessionId },
+      data: lease,
     });
     expect(response.status(), await response.text()).toBe(200);
   }
 
-  const snapshotHtml = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body><article><p>StepFun fixture answer ${claim.task.id}</p></article></body></html>`;
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0xff, 0xd9]);
   const evidence = await request.post("/api/internal/browser-runner/v1/evidence/", {
     headers: {
       ...headers,
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "image/jpeg",
       "X-Yonaris-Brand-Id": claim.task.brandId,
       "X-Yonaris-Task-Id": claim.task.id,
       "X-Yonaris-Lease-Token": claim.leaseToken,
       "X-Yonaris-Lease-Generation": String(claim.leaseGeneration),
-      "X-Yonaris-Evidence-Kind": "page_snapshot",
-      "X-Yonaris-Filename": encodeURIComponent(`response-${claim.task.id}.html`),
+      "X-Yonaris-Evidence-Kind": "screenshot",
+      "X-Yonaris-Filename": encodeURIComponent(`response-${claim.task.id}.jpg`),
+      "X-Yonaris-Runner-Session-Id": runnerSessionId,
+      "X-Yonaris-Adapter-Version": APPROVED_DOUBAO_ADAPTER_VERSION,
     },
-    data: snapshotHtml,
+    data: jpeg,
   });
   expect(evidence.status(), await evidence.text()).toBe(201);
   const artifactId = ((await evidence.json()) as { artifact: { id: string } }).artifact.id;
@@ -480,21 +490,20 @@ async function completeFakeClaim(
     headers,
     data: {
       ...lease,
-      runnerSessionId,
-      adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
       browserVersion: "Chrome-140",
       observation: {
+        schemaVersion: "browser-runner-observation.v2",
         answerText,
-        answerHtml: `<article><p>${answerText}</p></article>`,
         observedAt: new Date().toISOString(),
         pageUrl,
         sessionMode: "dedicated_sampling_profile",
         searchMode: "native_auto",
         webSearchObserved: true,
-        modelVersion: "consumer-web-fixture-v1",
+        modelVersion: "consumer-web-fixture-v2",
         evidenceArtifactIds: [artifactId],
         citations: [{ url: `https://example.com/source/${claim.task.id}`, title: "Fixture source" }],
         webQueries: [`fixture query ${claim.task.sampleIndex}`],
+        captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 1, completionCount: 1 },
       },
     },
   });
