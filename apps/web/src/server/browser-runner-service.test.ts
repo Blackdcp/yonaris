@@ -1,3 +1,4 @@
+import { isBrowserExtensionAdapterVersionBindingSatisfied } from "@workspace/lib/browser-extension-contract";
 import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
@@ -5,19 +6,38 @@ import {
 	authorizeRunnerTaskOperation,
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
+	browserRunnerLeaseSchema,
 	browserRunnerObservationSchema,
 	browserRunnerReconcileSchema,
 	browserRunnerResumeSchema,
 	browserRunnerSessionLeaseSchema,
 	claimRunnerTask,
+	heartbeatRunnerTask,
 	reconcileRunnerTask,
+	recordRunnerSubmitConfirmed,
+	recordRunnerSubmitIntent,
+	resumeRunnerTask,
 } from "./browser-runner-service";
 import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-policy";
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
+const futureDoubaoV8Binding = (
+	surface: "doubao.consumer_web" | "deepseek.consumer_web",
+	requestedAdapterVersion: string | undefined,
+) =>
+	isBrowserExtensionAdapterVersionBindingSatisfied({
+		surface,
+		requestedAdapterVersion,
+		approvedAdapterVersion: "doubao-web-20260819-localpc-v8",
+	});
 
-type ExtensionTaskOperation = { kind: "resume" } | { kind: "complete"; adapterVersion: string };
+type ExtensionTaskOperation =
+	| { kind: "resume"; adapterVersion?: string }
+	| { kind: "heartbeat"; adapterVersion?: string }
+	| { kind: "submit_intent"; adapterVersion?: string }
+	| { kind: "submit_confirmed"; adapterVersion?: string }
+	| { kind: "complete"; adapterVersion: string };
 
 async function authorizeExtensionTaskOperation(input: {
 	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
@@ -101,7 +121,7 @@ describe("Browser Runner service contracts", () => {
 		await claimRunnerTask(
 			{
 				brandId: "stepfun",
-				surfaceTargetKeys: ["doubao.consumer_web", "deepseek.consumer_web"],
+				adapterVersion: "doubao-web-20260818-localpc-v7",
 			},
 			principal,
 			{ assertCapacity: async () => null, claim },
@@ -149,12 +169,136 @@ describe("Browser Runner service contracts", () => {
 		expect(claim).not.toHaveBeenCalled();
 	});
 
+	it("rejects a v8 candidate claim until the separate server activation", async () => {
+		const claim = vi.fn(async () => null);
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+
+		await expect(
+			claimRunnerTask(
+				{
+					brandId: "stepfun",
+					surfaceTargetKeys: ["doubao.consumer_web"],
+					adapterVersion: "doubao-web-20260819-localpc-v8",
+				},
+				principal,
+				{ assertCapacity: async () => null, claim },
+			),
+		).rejects.toMatchObject({ status: 409 });
+		expect(claim).not.toHaveBeenCalled();
+	});
+
+	it("keeps omitted v7 claim compatibility during qualification-only rollout", async () => {
+		const claim = vi.fn(async () => null);
+		const principal = {
+			kind: "browser_extension" as const,
+			id: "11111111-1111-4111-8111-111111111111",
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+
+		await expect(
+			claimRunnerTask({ brandId: "stepfun", surfaceTargetKeys: ["doubao.consumer_web"] }, principal, {
+				assertCapacity: async () => null,
+				claim,
+			}),
+		).resolves.toBeNull();
+		expect(claim).toHaveBeenCalled();
+	});
+
+	it.each([undefined, "doubao-web-20260818-localpc-v7"])(
+		"rejects a %s claim before allocating a lease when the ready surface is simulated as approved v8",
+		async (adapterVersion) => {
+			const claim = vi.fn(async () => null);
+			const assertCapacity = vi.fn(async () => null);
+			const principal = {
+				kind: "browser_extension" as const,
+				id: "11111111-1111-4111-8111-111111111111",
+				market: "CN" as const,
+				locale: "zh-CN" as const,
+				timezone: "Asia/Shanghai" as const,
+				allowedBrandIds: ["stepfun"],
+				supportedSurfaces: ["doubao.consumer_web" as const],
+				readySurfaces: ["doubao.consumer_web" as const],
+			};
+
+			await expect(
+				claimRunnerTask(
+					{
+						brandId: "stepfun",
+						surfaceTargetKeys: ["doubao.consumer_web"],
+						adapterVersion,
+					},
+					principal,
+					{
+						assertCapacity,
+						claim,
+						isAdapterVersionBindingSatisfied: futureDoubaoV8Binding,
+					},
+				),
+			).rejects.toMatchObject({ status: 409 });
+			expect(assertCapacity).not.toHaveBeenCalled();
+			expect(claim).not.toHaveBeenCalled();
+		},
+	);
+
+	it.each([undefined, "doubao-web-20260818-localpc-v7"])(
+		"rejects a %s resume before allocating a lease when the ready surface is simulated as approved v8",
+		async (adapterVersion) => {
+			const resume = vi.fn(async () => {
+				throw new Error("lease allocated");
+			});
+			const principal = {
+				kind: "browser_extension" as const,
+				id: "11111111-1111-4111-8111-111111111111",
+				market: "CN" as const,
+				locale: "zh-CN" as const,
+				timezone: "Asia/Shanghai" as const,
+				allowedBrandIds: ["stepfun"],
+				supportedSurfaces: ["doubao.consumer_web" as const],
+				readySurfaces: ["doubao.consumer_web" as const],
+			};
+
+			await expect(
+				resumeRunnerTask("task-1", { brandId: "stepfun", adapterVersion }, principal, {
+					assertTask: async () =>
+						({ surfaceTargetKey: "doubao.consumer_web" }) as Awaited<ReturnType<typeof assertRunnerTask>>,
+					resume,
+					isAdapterVersionBindingSatisfied: futureDoubaoV8Binding,
+				}),
+			).rejects.toMatchObject({ status: 409 });
+			expect(resume).not.toHaveBeenCalled();
+		},
+	);
+
 	it("rejects an exact DeepSeek resume when the authenticated device has no approved ready DeepSeek surface", async () => {
 		await expect(
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "deepseek.consumer_web",
 				readySurfaces: [],
 				operation: { kind: "resume" },
+			}),
+		).rejects.toMatchObject({ status: 409 });
+	});
+
+	it("rejects a Doubao v8 resume until the separate server activation", async () => {
+		await expect(
+			authorizeExtensionTaskOperation({
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web"],
+				operation: { kind: "resume", adapterVersion: "doubao-web-20260819-localpc-v8" },
 			}),
 		).rejects.toMatchObject({ status: 409 });
 	});
@@ -169,7 +313,17 @@ describe("Browser Runner service contracts", () => {
 		).rejects.toMatchObject({ status: 409 });
 	});
 
-	it("accepts completion only when authenticated readiness and the current approved Doubao v7 agree", async () => {
+	it("rejects completion from Doubao v8 until the separate server activation", async () => {
+		await expect(
+			authorizeExtensionTaskOperation({
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web"],
+				operation: { kind: "complete", adapterVersion: "doubao-web-20260819-localpc-v8" },
+			}),
+		).rejects.toMatchObject({ status: 409 });
+	});
+
+	it("accepts the still-current explicit v7 adapter version for completion", async () => {
 		await expect(
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
@@ -200,9 +354,58 @@ describe("Browser Runner service contracts", () => {
 			...lease
 		} = complete;
 		expect(browserRunnerSessionLeaseSchema.safeParse(lease).success).toBe(true);
+		expect(
+			browserRunnerLeaseSchema.safeParse({
+				brandId: lease.brandId,
+				leaseToken: lease.leaseToken,
+				leaseGeneration: lease.leaseGeneration,
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			}).success,
+		).toBe(true);
+		expect(
+			browserRunnerSessionLeaseSchema.safeParse({
+				...lease,
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			}).success,
+		).toBe(true);
 		expect(browserRunnerSessionLeaseSchema.safeParse({ ...lease, runnerSessionId: "" }).success).toBe(false);
 		expect(browserRunnerObservationSchema.safeParse(complete).success).toBe(true);
 		expect(browserRunnerObservationSchema.safeParse({ ...complete, runnerSessionId: undefined }).success).toBe(false);
+	});
+
+	it.each([
+		["heartbeat", heartbeatRunnerTask],
+		["submit_intent", recordRunnerSubmitIntent],
+		["submit_confirmed", recordRunnerSubmitConfirmed],
+	] as const)("rejects stale v7 %s before mutating a lease after simulated v8 activation", async (kind, mutate) => {
+		const principal = {
+			kind: "browser_extension" as const,
+			id: guid1,
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+		const write = vi.fn(async () => ({ ok: true }));
+		const input = {
+			brandId: "stepfun",
+			leaseToken: "lease-token-that-is-at-least-thirty-two-characters",
+			leaseGeneration: 1,
+			adapterVersion: "doubao-web-20260818-localpc-v7",
+			...(kind === "heartbeat" ? {} : { runnerSessionId: "runner-session-1" }),
+		};
+
+		await expect(
+			mutate("task-1", input as never, principal, {
+				assertTask: async () =>
+					({ surfaceTargetKey: "doubao.consumer_web" }) as Awaited<ReturnType<typeof assertRunnerTask>>,
+				write,
+				isAdapterVersionBindingSatisfied: futureDoubaoV8Binding,
+			} as never),
+		).rejects.toMatchObject({ status: 409 });
+		expect(write).not.toHaveBeenCalled();
 	});
 
 	it("accepts an explicit extension stage while preserving legacy post-submit resume compatibility", () => {
@@ -318,6 +521,35 @@ describe("Browser Runner service contracts", () => {
 		).toBe(false);
 	});
 
+	it("accepts only the strict structured body for the Doubao v8 completion protocol", () => {
+		const legacy = observationInput();
+		const { answerHtml: _answerHtml, ...structuredFields } = legacy.observation;
+		const structured = {
+			...legacy,
+			adapterVersion: "doubao-web-20260819-localpc-v8",
+			observation: {
+				...structuredFields,
+				schemaVersion: "browser-runner-observation.v2",
+				evidenceArtifactIds: [guid1],
+				captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+			},
+		};
+
+		expect(browserRunnerObservationSchema.safeParse(structured).success).toBe(true);
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...legacy,
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+			}).success,
+		).toBe(false);
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...structured,
+				observation: { ...structured.observation, answerHtml: legacy.observation.answerHtml },
+			}).success,
+		).toBe(false);
+	});
+
 	it("accepts native-auto search with an explicitly unknown observation", () => {
 		const input = observationInput();
 		expect(
@@ -388,10 +620,29 @@ describe("Browser Runner service contracts", () => {
 				"browser_extension.deepseek",
 				[{ id: guid1, kind: "page_snapshot" }],
 				[guid1],
+				"deepseek-web-20260814-uat1",
 			),
 		).not.toThrow();
+		expect(
+			assertBrowserRunnerEvidenceSelection(
+				"browser_extension.doubao",
+				[{ id: guid1, kind: "screenshot", mediaType: "image/jpeg", byteSize: 512_000, sha256: "a".repeat(64) }],
+				[guid1],
+				"doubao-web-20260819-localpc-v8",
+			),
+		).toEqual({
+			artifactId: guid1,
+			mediaType: "image/jpeg",
+			sha256: "a".repeat(64),
+			bytes: 512_000,
+		});
 		expect(() =>
-			assertBrowserRunnerEvidenceSelection("browser_extension.doubao", [{ id: guid1, kind: "screenshot" }], [guid1]),
-		).toThrow(/exactly one page snapshot/i);
+			assertBrowserRunnerEvidenceSelection(
+				"browser_extension.doubao",
+				[{ id: guid1, kind: "page_snapshot", mediaType: "text/html", byteSize: 512_000, sha256: "a".repeat(64) }],
+				[guid1],
+				"doubao-web-20260819-localpc-v8",
+			),
+		).toThrow(/bounded JPEG screenshot/i);
 	});
 });

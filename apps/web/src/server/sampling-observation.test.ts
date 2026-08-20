@@ -6,6 +6,7 @@ import {
 } from "@workspace/lib/delivery-manifest";
 import { describe, expect, it } from "vitest";
 import {
+	browserRunnerStructuredObservationSchema,
 	prepareSamplingObservation,
 	type SamplingObservationInput,
 	samplingObservationInputSchema,
@@ -350,6 +351,113 @@ describe("prepareSamplingObservation", () => {
 			webSearchObserved: null,
 		});
 		expect(prepared.rawOutput).toMatchObject({ webSearchObserved: null });
+	});
+
+	it("preserves Doubao observed search and citations from the browser extension", () => {
+		const extensionTask = {
+			...task,
+			surfaceTargetKey: "doubao.consumer_web",
+			captureRouteKey: "browser_extension.doubao",
+			sessionRequirement: "dedicated_sampling_profile" as const,
+			searchRequirement: "platform_default" as const,
+			automationStatus: "running" as const,
+			automationAttemptCount: 1,
+		};
+		const extensionFrozenTask = {
+			...frozenTask,
+			surfaceTargetKey: extensionTask.surfaceTargetKey,
+			captureRouteKey: extensionTask.captureRouteKey,
+			sessionRequirement: extensionTask.sessionRequirement,
+			searchRequirement: extensionTask.searchRequirement,
+		};
+		extensionFrozenTask.slotKey = buildDeliveryTaskSlotKey(extensionFrozenTask);
+		extensionTask.slotKey = extensionFrozenTask.slotKey;
+
+		const prepared = prepareSamplingObservation({
+			task: extensionTask,
+			manifest: { ...manifest, tasks: [extensionFrozenTask] },
+			observation: {
+				...observation,
+				pageUrl: "https://www.doubao.com/chat/123456",
+				sessionMode: "dedicated_sampling_profile",
+				searchMode: "native_auto",
+				webSearchObserved: true,
+				webQueries: ["国产 GPU API", "AI inference pricing"],
+				citations: [{ url: "https://www.source.example/report", title: "Source report" }],
+				operatorAttested: undefined,
+			},
+			captureActor: {
+				kind: "browser_runner",
+				id: "device-1",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				browserVersion: "Chrome 151",
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+			},
+			leaseGeneration: 1,
+		});
+
+		expect(prepared.webSearchObserved).toBe(true);
+		expect(prepared.citations).toEqual([
+			{
+				url: "https://www.source.example/report",
+				domain: "source.example",
+				title: "Source report",
+				citationIndex: 0,
+			},
+		]);
+		expect(prepared.rawOutput).toMatchObject({
+			webSearchObserved: true,
+			citations: [{ domain: "source.example", title: "Source report" }],
+		});
+	});
+
+	it("accepts strict structured runner observations without provider DOM HTML", () => {
+		const structured = {
+			schemaVersion: "browser-runner-observation.v2",
+			answerText: "PPIO 提供云服务。",
+			observedAt: "2026-08-20T01:02:03.000Z",
+			pageUrl: "https://www.doubao.com/chat/123456",
+			sessionMode: "dedicated_sampling_profile",
+			searchMode: "native_auto",
+			webSearchObserved: true,
+			evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
+			citations: [],
+			webQueries: ["PPIO 云服务"],
+			captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+		};
+
+		expect(browserRunnerStructuredObservationSchema.safeParse(structured).success).toBe(true);
+		expect(
+			browserRunnerStructuredObservationSchema.safeParse({ ...structured, answerHtml: "<p>provider DOM</p>" }).success,
+		).toBe(false);
+		expect(
+			browserRunnerStructuredObservationSchema.safeParse({
+				...structured,
+				captureDiagnostics: { ...structured.captureDiagnostics, queryCount: 0 },
+			}).success,
+		).toBe(false);
+	});
+
+	it("rejects citation URLs that contain embedded credentials", () => {
+		const parsed = samplingObservationInputSchema.safeParse({
+			...observation,
+			citations: [{ url: "https://user:secret@source.example/report", title: "Unsafe source" }],
+		});
+
+		expect(parsed.success).toBe(false);
+	});
+
+	it("returns a validation failure instead of throwing for a malformed URL", () => {
+		const parse = () =>
+			samplingObservationInputSchema.safeParse({
+				...observation,
+				pageUrl: "not-a-url",
+			});
+
+		expect(parse).not.toThrow();
+		expect(parse().success).toBe(false);
 	});
 
 	it("rejects native-auto search on a frozen forbidden task", () => {

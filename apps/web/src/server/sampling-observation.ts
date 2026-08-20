@@ -14,9 +14,13 @@ const httpUrl = z
 	.trim()
 	.url()
 	.refine((value) => {
-		const protocol = new URL(value).protocol;
-		return protocol === "http:" || protocol === "https:";
-	}, "URL must use http or https");
+		try {
+			const url = new URL(value);
+			return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password;
+		} catch {
+			return false;
+		}
+	}, "URL must use http or https without embedded credentials");
 
 const citationSchema = z.object({
 	url: httpUrl,
@@ -45,6 +49,39 @@ export const samplingObservationBaseSchema = z
 		webQueries: z.array(z.string().trim().min(1).max(2_000)).max(100).default([]),
 	})
 	.strict();
+
+export const browserRunnerLegacyObservationSchema = samplingObservationBaseSchema.extend({
+	answerHtml: browserAnswerHtmlSchema,
+});
+
+export const browserRunnerStructuredObservationSchema = samplingObservationBaseSchema
+	.extend({
+		schemaVersion: z.literal("browser-runner-observation.v2"),
+		captureDiagnostics: z
+			.object({
+				answerCount: z.literal(1),
+				queryCount: z.number().int().min(0).max(100),
+				citationCount: z.number().int().min(0).max(200),
+				completionCount: z.literal(1),
+			})
+			.strict(),
+	})
+	.superRefine((observation, context) => {
+		if (observation.captureDiagnostics.queryCount !== observation.webQueries.length) {
+			context.addIssue({ code: "custom", path: ["captureDiagnostics", "queryCount"], message: "Query count mismatch" });
+		}
+		if (observation.captureDiagnostics.citationCount !== observation.citations.length) {
+			context.addIssue({
+				code: "custom",
+				path: ["captureDiagnostics", "citationCount"],
+				message: "Citation count mismatch",
+			});
+		}
+	});
+
+export type BrowserRunnerLegacyObservation = z.infer<typeof browserRunnerLegacyObservationSchema>;
+export type BrowserRunnerStructuredObservation = z.infer<typeof browserRunnerStructuredObservationSchema>;
+export type BrowserRunnerObservation = BrowserRunnerLegacyObservation | BrowserRunnerStructuredObservation;
 
 export const samplingObservationInputSchema = samplingObservationBaseSchema.extend({
 	operatorAttested: z.literal(true),
@@ -101,7 +138,12 @@ function assertFrozenTask(snapshot: DeliveryManifestSnapshot, task: DeliveryTask
 export function prepareSamplingObservation(input: {
 	task: DeliveryTaskView;
 	manifest: DeliveryManifestSnapshot;
-	observation: SamplingObservationBase & { operatorAttested?: true; answerHtml?: string };
+	observation: SamplingObservationBase & {
+		operatorAttested?: true;
+		answerHtml?: string;
+		schemaVersion?: "browser-runner-observation.v2";
+		captureDiagnostics?: BrowserRunnerStructuredObservation["captureDiagnostics"];
+	};
 	captureActor?:
 		| { kind: "operator"; id: string }
 		| {
@@ -209,9 +251,12 @@ export function prepareSamplingObservation(input: {
 	// archive representation that can contain harmless renderer attributes. Neither
 	// changes metric identity; evidence ownership and HTML integrity are validated
 	// independently before persistence.
-	const { answerHtml, evidenceArtifactIds, ...fingerprintedObservation } = input.observation;
+	const { answerHtml, captureDiagnostics, evidenceArtifactIds, schemaVersion, ...fingerprintedObservation } =
+		input.observation;
 	void answerHtml;
+	void captureDiagnostics;
 	void evidenceArtifactIds;
+	void schemaVersion;
 	const sampleFingerprint = createHash("sha256")
 		.update(JSON.stringify({ taskId: input.task.id, observation: fingerprintedObservation }))
 		.digest("hex");

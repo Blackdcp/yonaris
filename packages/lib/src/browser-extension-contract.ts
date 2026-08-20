@@ -41,6 +41,17 @@ const APPROVED_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface
 	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",
 };
 
+const LEGACY_ADAPTER_VERSION_OMISSION_WINDOWS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
+	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",
+};
+
+export const STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> =
+	{
+		"doubao.consumer_web": "doubao-web-20260819-localpc-v8",
+	};
+
+const MAX_STRUCTURED_SCREENSHOT_BYTES = 2 * 1024 * 1024;
+
 export function isBrowserExtensionSurface(value: string): value is BrowserExtensionSurface {
 	return Object.hasOwn(CAPTURE_ROUTES, value);
 }
@@ -60,7 +71,30 @@ export function isApprovedBrowserExtensionAdapterVersion(
 	surface: BrowserExtensionSurface,
 	adapterVersion: string,
 ): boolean {
-	return adapterVersion === APPROVED_ADAPTER_VERSIONS[surface];
+	return isCurrentBrowserExtensionAdapterVersionBindingSatisfied(surface, adapterVersion);
+}
+
+export function isBrowserExtensionAdapterVersionBindingSatisfied(input: {
+	surface: BrowserExtensionSurface;
+	requestedAdapterVersion: string | undefined;
+	approvedAdapterVersion: string | undefined;
+}): boolean {
+	if (input.approvedAdapterVersion === undefined) return false;
+	if (input.requestedAdapterVersion !== undefined) {
+		return input.requestedAdapterVersion === input.approvedAdapterVersion;
+	}
+	return LEGACY_ADAPTER_VERSION_OMISSION_WINDOWS[input.surface] === input.approvedAdapterVersion;
+}
+
+export function isCurrentBrowserExtensionAdapterVersionBindingSatisfied(
+	surface: BrowserExtensionSurface,
+	requestedAdapterVersion: string | undefined,
+): boolean {
+	return isBrowserExtensionAdapterVersionBindingSatisfied({
+		surface,
+		requestedAdapterVersion,
+		approvedAdapterVersion: APPROVED_ADAPTER_VERSIONS[surface],
+	});
 }
 
 export function isBrowserExtensionCaptureRoute(value: string): value is BrowserExtensionCaptureRoute {
@@ -69,12 +103,33 @@ export function isBrowserExtensionCaptureRoute(value: string): value is BrowserE
 
 export function assertExtensionEvidenceProtocol(input: {
 	captureRouteKey: string;
+	adapterVersion?: string;
 	minimumArtifacts: number;
 	kinds: readonly string[];
+	mediaTypes?: readonly string[];
+	byteSizes?: readonly number[];
 }): void {
 	if (!input.captureRouteKey.startsWith("browser_extension.")) return;
 	if (!isBrowserExtensionCaptureRoute(input.captureRouteKey)) {
 		throw new Error(`Browser extension capture route ${input.captureRouteKey} is not supported`);
+	}
+	const surface =
+		input.captureRouteKey === "browser_extension.doubao" ? "doubao.consumer_web" : "deepseek.consumer_web";
+	if (STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS[surface] === input.adapterVersion) {
+		if (
+			input.minimumArtifacts !== 1 ||
+			input.kinds.length !== 1 ||
+			input.kinds[0] !== "screenshot" ||
+			input.mediaTypes?.length !== 1 ||
+			input.mediaTypes[0] !== "image/jpeg" ||
+			input.byteSizes?.length !== 1 ||
+			!Number.isInteger(input.byteSizes[0]) ||
+			(input.byteSizes[0] ?? 0) < 1 ||
+			(input.byteSizes[0] ?? 0) > MAX_STRUCTURED_SCREENSHOT_BYTES
+		) {
+			throw new Error("Structured browser extension completion requires exactly one bounded JPEG screenshot");
+		}
+		return;
 	}
 	if (input.minimumArtifacts !== 1 || input.kinds.length !== 1 || input.kinds[0] !== "page_snapshot") {
 		throw new Error("Browser extension completion requires exactly one page snapshot");
