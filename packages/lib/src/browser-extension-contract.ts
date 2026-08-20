@@ -46,10 +46,10 @@ const LEGACY_ADAPTER_VERSION_OMISSION_WINDOWS: Readonly<Partial<Record<BrowserEx
 	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",
 };
 
-export const STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> =
-	{
-		"doubao.consumer_web": "doubao-web-20260819-localpc-v8",
-	};
+export const STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS: Readonly<Record<BrowserExtensionSurface, string>> =
+	mapBrowserExtensionSurfaces(
+		(surface) => BROWSER_EXTENSION_SURFACE_DEFINITIONS.find(({ key }) => key === surface)?.adapterVersion ?? "",
+	);
 
 const MAX_STRUCTURED_SCREENSHOT_BYTES = 2 * 1024 * 1024;
 

@@ -49,7 +49,12 @@ describe("browser extension contract", () => {
 			"https://www.doubao.com/chat/",
 			"doubao-web-20260819-localpc-v8",
 		],
-		["deepseek.consumer_web", "browser_extension.deepseek", "https://chat.deepseek.com/", "deepseek-web-20260814-uat1"],
+		[
+			"deepseek.consumer_web",
+			"browser_extension.deepseek",
+			"https://chat.deepseek.com/",
+			"deepseek-web-20260821-localpc-v2",
+		],
 		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v1"],
 		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v1"],
 		["wenxin.consumer_web", "browser_extension.wenxin", "https://yiyan.baidu.com/", "wenxin-web-20260821-localpc-v1"],
@@ -181,6 +186,19 @@ describe("browser extension contract", () => {
 				}),
 			).toThrow(/exactly one bounded JPEG screenshot/i);
 		}
+	});
+
+	it("requires one bounded JPEG screenshot for the structured DeepSeek v2 protocol", () => {
+		expect(() =>
+			assertExtensionEvidenceProtocol({
+				captureRouteKey: "browser_extension.deepseek",
+				adapterVersion: "deepseek-web-20260821-localpc-v2",
+				minimumArtifacts: 1,
+				kinds: ["screenshot"],
+				mediaTypes: ["image/jpeg"],
+				byteSizes: [512_000],
+			}),
+		).not.toThrow();
 	});
 
 	it("rejects screenshots and missing HTML snapshots for extension routes", () => {

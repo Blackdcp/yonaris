@@ -14,6 +14,27 @@ const READY_CONTROLS = `
 `;
 
 describe("DeepSeek unqualified DOM fixture skeleton", () => {
+	test("collects the current completed answer, visible citation, and answer-bound evidence rectangle", async () => {
+		const port = completedAnswerFixturePort(`
+			${READY_CONTROLS}
+			<div class="d29f3d7d ds-message">Prompt A</div>
+			<div class="ds-assistant-message-main-content">
+				<p>Current answer</p>
+				<a href="https://source.example/report">Source A</a>
+			</div>
+		`);
+		const adapter = createDeepSeekAdapter(port, UNQUALIFIED_FIXTURE_CONTRACT);
+
+		await adapter.resumeSubmitted("Prompt A");
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: expect.stringContaining("Current answer"),
+			webSearchObserved: null,
+			webQueries: [],
+			citations: [{ url: "https://source.example/report", title: "Source A" }],
+			evidenceViewportRect: { x: 240, y: 80, width: 660, height: 420, devicePixelRatio: 1 },
+		});
+	});
+
 	test.each([
 		["signed_out", `${READY_CONTROLS}<input type="tel" aria-label="登录手机号">`],
 		["captcha", `${READY_CONTROLS}<iframe src="https://example.invalid/captcha" title="verification"></iframe>`],
@@ -69,4 +90,48 @@ function cssFixturePort(fragment: string): ConsumerDomPort & { submitCount: numb
 		},
 	};
 	return port;
+}
+
+function completedAnswerFixturePort(fragment: string): ConsumerDomPort {
+	const { document } = parseHTML(`<!doctype html><html><body>${fragment}</body></html>`);
+	let now = Date.parse("2026-08-21T00:00:00.000Z");
+	let generatingChecks = 0;
+	return {
+		currentUrl: () => "https://chat.deepseek.com/a/chat/s/test-session",
+		now: () => now,
+		query: async (role, selector) => {
+			if (role === "generating") {
+				generatingChecks += 1;
+				return generatingChecks === 1 ? [{ text: "", visible: true }] : [];
+			}
+			return [...document.querySelectorAll(selector)].map((element) => ({
+				text: (element.textContent ?? "").trim(),
+				visible: !element.hasAttribute("hidden"),
+			}));
+		},
+		click: async () => undefined,
+		fill: async () => undefined,
+		readAnswer: async (request) => {
+			const answer = [...document.querySelectorAll(request.answerSelector)][request.answerIndex];
+			if (!answer) throw new Error("Fixture answer is missing");
+			const citations = request.citationLinkSelector
+				? [...answer.querySelectorAll<HTMLAnchorElement>(request.citationLinkSelector)].map((anchor) => ({
+						url: anchor.href,
+						title: (anchor.textContent ?? "").trim(),
+					}))
+				: [];
+			return {
+				text: (answer.textContent ?? "").trim(),
+				html: answer.outerHTML,
+				evidenceViewportRect: { x: 240, y: 80, width: 660, height: 420, devicePixelRatio: 1 },
+				searchUsedCount: 0,
+				searchNotUsedCount: 0,
+				webQueries: [],
+				citations,
+			};
+		},
+		wait: async (milliseconds) => {
+			now += milliseconds;
+		},
+	};
 }
