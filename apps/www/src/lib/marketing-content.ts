@@ -389,6 +389,21 @@ export function buildDiagnosticMailto(input: DiagnosticInput, locale: Locale): s
 	return `mailto:${encodeURIComponent(CONTACT_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(diagnosticBody(input, locale))}`;
 }
 
+export function validateDiagnosticInput(input: DiagnosticInput): (keyof DiagnosticInput)[] {
+	const errors: (keyof DiagnosticInput)[] = [];
+	for (const field of ["brand", "question", "name"] as const) {
+		if (!input[field].trim()) errors.push(field);
+	}
+	try {
+		const website = new URL(input.website.trim());
+		if (website.protocol !== "http:" && website.protocol !== "https:") errors.push("website");
+	} catch {
+		errors.push("website");
+	}
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) errors.push("email");
+	return ["brand", "website", "question", "name", "email"].filter((field) => errors.includes(field as keyof DiagnosticInput)) as (keyof DiagnosticInput)[];
+}
+
 const agentDocuments: Record<AgentSection, { canonical: string; title: string; scope: string; body: () => string }> = {
 	company: {
 		canonical: "/",

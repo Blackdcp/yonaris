@@ -8,6 +8,7 @@ import {
 	getMarketingNavigation,
 	getMarketingPageMeta,
 	renderAgentDocument,
+	validateDiagnosticInput,
 } from "./marketing-content";
 
 describe("marketing content", () => {
@@ -97,5 +98,30 @@ describe("marketing content", () => {
 		expect(mailto).toMatch(/^mailto:black\.dcp%40outlook\.com\?/);
 		expect(mailto).toContain("Acme%20%26%20Co");
 		expect(mailto).toContain("Which%20platform%20should%20a%20global%20team%20choose%3F");
+	});
+
+	it("blocks incomplete or malformed diagnostic requests before opening email", () => {
+		expect(
+			validateDiagnosticInput({
+				brand: " ",
+				website: "acme",
+				market: "",
+				competitors: "",
+				question: "",
+				name: "",
+				email: "not-an-email",
+			}),
+		).toEqual(["brand", "website", "question", "name", "email"]);
+		expect(
+			validateDiagnosticInput({
+				brand: "Acme",
+				website: "https://acme.example",
+				market: "",
+				competitors: "",
+				question: "Which option fits us?",
+				name: "Ava",
+				email: "ava@acme.example",
+			}),
+		).toEqual([]);
 	});
 });
