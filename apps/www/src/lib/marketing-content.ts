@@ -350,6 +350,26 @@ export function getMarketingNavigation(locale: Locale, page: MarketingPageKey = 
 	};
 }
 
+export function getMarketingPageMeta(locale: Locale, page: MarketingPageKey) {
+	const content = getMarketingContent(locale);
+	const route = MARKETING_ROUTES.find((entry) => entry.key === page) ?? MARKETING_ROUTES[0];
+	const title =
+		page === "home"
+			? `${content.hero.title.join(" ")} | Yonaris`
+			: page === "diagnostic"
+				? `${content.diagnostic.title} | Yonaris`
+				: `${content.pages[page].title} | Yonaris`;
+	const description =
+		page === "home" ? content.hero.body : page === "diagnostic" ? content.diagnostic.body : content.pages[page].description;
+
+	return {
+		title,
+		description,
+		canonicalPath: route[locale],
+		alternatePath: route[locale === "en" ? "zh" : "en"],
+	};
+}
+
 function diagnosticBody(input: DiagnosticInput, locale: Locale): string {
 	const labels =
 		locale === "zh"

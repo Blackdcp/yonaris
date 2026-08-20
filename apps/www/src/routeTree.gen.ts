@@ -40,6 +40,7 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as GlossaryIndexRouteImport } from './routes/glossary/index'
 import { Route as GlossarySlugRouteImport } from './routes/glossary/$slug'
 import { Route as OgStatusDotpngRouteImport } from './routes/og/status[.]png'
+import { Route as ZhIndexRouteImport } from './routes/zh/index'
 import { Route as AiVisibilityToolsAlternativesIndexRouteImport } from './routes/ai-visibility-tools/alternatives/index'
 import { Route as AiVisibilityToolsAlternativesSlugRouteImport } from './routes/ai-visibility-tools/alternatives/$slug'
 import { Route as AiVisibilityToolsCategoryIndexRouteImport } from './routes/ai-visibility-tools/category/index'
@@ -210,6 +211,11 @@ const OgStatusDotpngRoute = OgStatusDotpngRouteImport.update({
   path: '/og/status.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhIndexRoute = ZhIndexRouteImport.update({
+  id: '/zh/',
+  path: '/zh/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiVisibilityToolsAlternativesIndexRoute =
   AiVisibilityToolsAlternativesIndexRouteImport.update({
     id: '/ai-visibility-tools/alternatives/',
@@ -323,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/blog/': typeof BlogIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/glossary/': typeof GlossaryIndexRoute
+  '/zh/': typeof ZhIndexRoute
   '/ai-visibility-tools/alternatives/$slug': typeof AiVisibilityToolsAlternativesSlugRoute
   '/ai-visibility-tools/category/$slug': typeof AiVisibilityToolsCategorySlugRoute
   '/ai-visibility-tools/category/open-source': typeof AiVisibilityToolsCategoryOpenSourceRoute
@@ -370,6 +377,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogIndexRoute
   '/docs': typeof DocsIndexRoute
   '/glossary': typeof GlossaryIndexRoute
+  '/zh': typeof ZhIndexRoute
   '/ai-visibility-tools/alternatives/$slug': typeof AiVisibilityToolsAlternativesSlugRoute
   '/ai-visibility-tools/category/$slug': typeof AiVisibilityToolsCategorySlugRoute
   '/ai-visibility-tools/category/open-source': typeof AiVisibilityToolsCategoryOpenSourceRoute
@@ -418,6 +426,7 @@ export interface FileRoutesById {
   '/blog/': typeof BlogIndexRoute
   '/docs/': typeof DocsIndexRoute
   '/glossary/': typeof GlossaryIndexRoute
+  '/zh/': typeof ZhIndexRoute
   '/ai-visibility-tools/alternatives/$slug': typeof AiVisibilityToolsAlternativesSlugRoute
   '/ai-visibility-tools/category/$slug': typeof AiVisibilityToolsCategorySlugRoute
   '/ai-visibility-tools/category/open-source': typeof AiVisibilityToolsCategoryOpenSourceRoute
@@ -467,6 +476,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/docs/'
     | '/glossary/'
+    | '/zh/'
     | '/ai-visibility-tools/alternatives/$slug'
     | '/ai-visibility-tools/category/$slug'
     | '/ai-visibility-tools/category/open-source'
@@ -514,6 +524,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/docs'
     | '/glossary'
+    | '/zh'
     | '/ai-visibility-tools/alternatives/$slug'
     | '/ai-visibility-tools/category/$slug'
     | '/ai-visibility-tools/category/open-source'
@@ -561,6 +572,7 @@ export interface FileRouteTypes {
     | '/blog/'
     | '/docs/'
     | '/glossary/'
+    | '/zh/'
     | '/ai-visibility-tools/alternatives/$slug'
     | '/ai-visibility-tools/category/$slug'
     | '/ai-visibility-tools/category/open-source'
@@ -609,6 +621,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   DocsIndexRoute: typeof DocsIndexRoute
   GlossaryIndexRoute: typeof GlossaryIndexRoute
+  ZhIndexRoute: typeof ZhIndexRoute
   AiVisibilityToolsAlternativesSlugRoute: typeof AiVisibilityToolsAlternativesSlugRoute
   AiVisibilityToolsCategorySlugRoute: typeof AiVisibilityToolsCategorySlugRoute
   AiVisibilityToolsCategoryOpenSourceRoute: typeof AiVisibilityToolsCategoryOpenSourceRoute
@@ -844,6 +857,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgStatusDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/': {
+      id: '/zh/'
+      path: '/zh'
+      fullPath: '/zh/'
+      preLoaderRoute: typeof ZhIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-visibility-tools/alternatives/': {
       id: '/ai-visibility-tools/alternatives/'
       path: '/ai-visibility-tools/alternatives'
@@ -977,6 +997,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   DocsIndexRoute: DocsIndexRoute,
   GlossaryIndexRoute: GlossaryIndexRoute,
+  ZhIndexRoute: ZhIndexRoute,
   AiVisibilityToolsAlternativesSlugRoute:
     AiVisibilityToolsAlternativesSlugRoute,
   AiVisibilityToolsCategorySlugRoute: AiVisibilityToolsCategorySlugRoute,

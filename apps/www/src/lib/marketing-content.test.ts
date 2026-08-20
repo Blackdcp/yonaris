@@ -5,6 +5,7 @@ import {
 	getLocalizedPath,
 	getMarketingContent,
 	getMarketingNavigation,
+	getMarketingPageMeta,
 	renderAgentDocument,
 } from "./marketing-content";
 
@@ -14,6 +15,17 @@ describe("marketing content", () => {
 		expect(getMarketingContent("en").category).toBe("AI-native MarTech");
 		expect(getMarketingContent("zh").cta.primary).toBe("获取免费诊断");
 		expect(getMarketingContent("zh").hero.title).toEqual(["重构 MarTech", "同时面向人，也面向智能体"]);
+	});
+
+	it("provides localized page metadata with reciprocal canonical paths", () => {
+		expect(getMarketingPageMeta("en", "home")).toEqual({
+			title: "MarTech, rebuilt. For humans and agents. | Yonaris",
+			description:
+				"Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in an AI-mediated market.",
+			canonicalPath: "/",
+			alternatePath: "/zh",
+		});
+		expect(getMarketingPageMeta("zh", "home").canonicalPath).toBe("/zh");
 	});
 
 	it("gives every human page an English and Chinese route", () => {
