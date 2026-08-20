@@ -57,7 +57,7 @@ describe("browser extension contract", () => {
 		],
 		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v1"],
 		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v1"],
-		["wenxin.consumer_web", "browser_extension.wenxin", "https://yiyan.baidu.com/", "wenxin-web-20260821-localpc-v1"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v1"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",

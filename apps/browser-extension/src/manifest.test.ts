@@ -35,7 +35,7 @@ describe("Manifest V3 permissions", () => {
 			"https://chat.deepseek.com/*",
 			"https://www.qianwen.com/*",
 			"https://www.kimi.com/*",
-			"https://yiyan.baidu.com/*",
+			"https://wenxin.baidu.com/*",
 			"https://yuanbao.tencent.com/*",
 		]);
 		expect(JSON.stringify(manifest)).not.toContain("<all_urls>");
@@ -47,7 +47,7 @@ describe("Manifest V3 permissions", () => {
 					"https://chat.deepseek.com/*",
 					"https://www.qianwen.com/*",
 					"https://www.kimi.com/*",
-					"https://yiyan.baidu.com/*",
+					"https://wenxin.baidu.com/*",
 					"https://yuanbao.tencent.com/*",
 				],
 				js: ["content-entry.js"],

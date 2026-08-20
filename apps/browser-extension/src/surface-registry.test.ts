@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createAdapterFixture, FixtureDomPort } from "./adapters/test-fixture";
 import { BROWSER_EXTENSION_SURFACES } from "./contracts";
 import { extensionSurfaceDefinition } from "./surface-registry";
 
@@ -9,7 +10,16 @@ describe("extension surface registry", () => {
 			expect(definition.surface).toBe(surface);
 			expect(definition.approvedUrl(new URL(definition.launchUrl))).toBe(true);
 			expect(definition.contentScriptMatches.length).toBeGreaterThan(0);
+			expect(definition.contract.surface).toBe(surface);
+			expect(definition.createAdapter(new FixtureDomPort(createAdapterFixture())).surface).toBe(surface);
 		}
+	});
+
+	it("uses the current Wenxin origin rather than the retired redirect origin", () => {
+		const definition = extensionSurfaceDefinition("wenxin.consumer_web");
+		expect(definition.launchUrl).toBe("https://wenxin.baidu.com/");
+		expect(definition.approvedUrl(new URL("https://wenxin.baidu.com/"))).toBe(true);
+		expect(definition.approvedUrl(new URL("https://yiyan.baidu.com/"))).toBe(false);
 	});
 
 	it("fails closed for credentials, insecure URLs, sibling domains, and unknown surfaces", () => {

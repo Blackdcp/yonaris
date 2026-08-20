@@ -31,7 +31,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		key: "wenxin.consumer_web",
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
-		launchUrl: "https://yiyan.baidu.com/",
+		launchUrl: "https://wenxin.baidu.com/",
 		adapterVersion: "wenxin-web-20260821-localpc-v1",
 	},
 	{
