@@ -211,7 +211,9 @@ async function pairFakeExtension(
   request: APIRequestContext,
   suffix: string,
 ): Promise<string> {
-  await adminPage.goto("/admin/sampling/devices");
+  await adminPage.goto("/admin/sampling");
+  await expect(adminPage.getByRole("heading", { name: "Sampling Tasks" })).toBeVisible({ timeout: 30_000 });
+  await adminPage.getByRole("link", { name: "Local devices" }).click();
   await expect(adminPage.getByRole("heading", { name: "Local Browser devices" })).toBeVisible({ timeout: 30_000 });
   await adminPage.getByLabel("Device name").fill(`Fixture Chrome ${suffix}`);
   await adminPage.getByLabel("Customer").selectOption(STEPFUN_BRAND_ID);
@@ -267,6 +269,7 @@ async function completeOneStructuredV8Claim(scopeId: string): Promise<{
   jpeg: Buffer;
 }> {
   process.env.DATABASE_URL = DATABASE_URL;
+  process.env.APP_URL = "http://localhost:1515";
   process.env.RESPONSE_SNAPSHOT_ENABLED = "true";
   process.env.RESPONSE_SNAPSHOT_ROOT = fileURLToPath(new URL("../.snapshot-fixtures", import.meta.url));
 
