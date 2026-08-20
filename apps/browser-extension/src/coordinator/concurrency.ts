@@ -22,8 +22,8 @@ export class AdaptiveSurfacePool {
 
 	constructor(options: AdaptiveSurfacePoolOptions = {}) {
 		this.#minimum = positiveInteger(options.minimum ?? 1, "minimum");
-		this.#maximum = positiveInteger(options.maximum ?? 5, "maximum");
-		this.#current = positiveInteger(options.initial ?? 2, "initial");
+		this.#maximum = positiveInteger(options.maximum ?? 1, "maximum");
+		this.#current = positiveInteger(options.initial ?? 1, "initial");
 		this.#successWindow = positiveInteger(options.successWindow ?? 5, "successWindow");
 		this.#baseCooldownMs = positiveInteger(options.baseCooldownMs ?? 60_000, "baseCooldownMs");
 		this.#maximumCooldownMs = positiveInteger(options.maximumCooldownMs ?? 15 * 60_000, "maximumCooldownMs");

@@ -53,10 +53,8 @@ export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 					bySurface[surface].incomplete += 1;
 					break;
 			}
-			return { bySurface };
 		} catch {
 			bySurface[surface].incomplete += 1;
-			return { bySurface };
 		}
 	}
 	return { bySurface };

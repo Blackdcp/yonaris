@@ -3,11 +3,11 @@ import { AdaptiveSurfacePool, orderClaimsFairly } from "./concurrency";
 import { claimedTask } from "./test-fixture";
 
 describe("AdaptiveSurfacePool", () => {
-	test("defaults to two concurrent tabs per consumer surface", () => {
+	test("defaults to one task because the local browser runner is globally sequential", () => {
 		const pool = new AdaptiveSurfacePool();
-		expect(pool.current).toBe(2);
+		expect(pool.current).toBe(1);
 		for (let index = 0; index < 50; index += 1) pool.recordStableSuccess();
-		expect(pool.current).toBe(5);
+		expect(pool.current).toBe(1);
 	});
 
 	test("starts at five and stays within one through ten", () => {
