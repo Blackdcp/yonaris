@@ -88,6 +88,10 @@ jobs:
             "https://portal.yonaris.com/*",
             "https://*.doubao.com/*",
             "https://chat.deepseek.com/*",
+            "https://www.qianwen.com/*",
+            "https://www.kimi.com/*",
+            "https://wenxin.baidu.com/*",
+            "https://yuanbao.tencent.com/*",
           ];
           const expectedPermissions = ["storage", "alarms", "tabs", "scripting", "notifications"];
           if (JSON.stringify(manifest.host_permissions) !== JSON.stringify(expectedHosts)) {
