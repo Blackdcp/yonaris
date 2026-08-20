@@ -2,6 +2,7 @@ import {
 	type BrowserExtensionSurface,
 	isBrowserExtensionAdapterVersionBindingSatisfied,
 } from "@workspace/lib/browser-extension-contract";
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
@@ -715,4 +716,34 @@ describe("Browser Runner service contracts", () => {
 			),
 		).toThrow(/bounded JPEG screenshot/i);
 	});
+
+	it.each(BROWSER_EXTENSION_SURFACE_DEFINITIONS)(
+		"accepts one session-bound JPEG for $label structured completion",
+		({ captureRoute, adapterVersion }) => {
+			expect(
+				assertBrowserRunnerEvidenceSelection(
+					captureRoute,
+					[
+						{
+							id: guid1,
+							kind: "screenshot",
+							mediaType: "image/jpeg",
+							byteSize: 512_000,
+							sha256: "a".repeat(64),
+						},
+					],
+					[guid1],
+					adapterVersion,
+				),
+			).toEqual({ artifactId: guid1, mediaType: "image/jpeg", sha256: "a".repeat(64), bytes: 512_000 });
+			expect(() =>
+				assertBrowserRunnerEvidenceSelection(
+					captureRoute,
+					[{ id: guid1, kind: "page_snapshot", mediaType: "text/html", byteSize: 128, sha256: "a".repeat(64) }],
+					[guid1],
+					adapterVersion,
+				),
+			).toThrow(/bounded JPEG screenshot/i);
+		},
+	);
 });

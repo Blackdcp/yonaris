@@ -1,3 +1,4 @@
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import type { SnapshotReservation } from "@workspace/lib/db/response-snapshots";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -111,6 +112,47 @@ describe("Browser Runner response snapshot policy", () => {
 		});
 		expect(draft).not.toHaveProperty("answerHtml");
 	});
+
+	it.each(BROWSER_EXTENSION_SURFACE_DEFINITIONS)(
+		"builds the same strict v2 snapshot envelope for $label",
+		({ key, adapterVersion }) => {
+			const draft = buildBrowserRunnerResponseSnapshotDraftV2({
+				promptRunId: "55555555-5555-4555-8555-555555555555",
+				brandId: "ppio",
+				scopeId: "22222222-2222-4222-8222-222222222222",
+				promptId: "33333333-3333-4333-8333-333333333333",
+				promptText: "PPIO 是什么？",
+				answerText: `PPIO response from ${key}`,
+				citations: [],
+				webQueries: [],
+				webSearchEnabled: true,
+				brandMentioned: true,
+				competitorsMentioned: [],
+				channel: key,
+				modelVersion: adapterVersion,
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+				observedAt: new Date("2026-08-21T01:02:03.000Z"),
+				adapterVersion,
+				visualEvidence: {
+					artifactId: "11111111-1111-4111-8111-111111111111",
+					mediaType: "image/jpeg",
+					sha256: "a".repeat(64),
+					bytes: 512_000,
+				},
+				captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+			});
+
+			expect(draft).toMatchObject({
+				schemaVersion: "response-snapshot.v2",
+				channel: key,
+				modelVersion: adapterVersion,
+				visualEvidence: { artifactId: "11111111-1111-4111-8111-111111111111" },
+			});
+			expect(draft).not.toHaveProperty("answerHtml");
+		},
+	);
 
 	it("keeps the successful observation successful when snapshot archiving fails", async () => {
 		const record = vi.fn().mockRejectedValue(new Error("disk unavailable"));

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "./browser-extension-surfaces";
 import {
 	assertManualObservationCaptureRouteKey,
 	assertManualObservationPageUrl,
@@ -46,10 +47,11 @@ describe("manual observation targets", () => {
 		expect(assisted.captureMode).toBe("assisted_browser");
 	});
 
-	it.each([
-		["doubao.consumer_web", "browser_extension.doubao", "doubao"],
-		["deepseek.consumer_web", "browser_extension.deepseek", "deepseek"],
-	] as const)("registers %s only for its exact extension route", (surfaceTargetKey, captureRouteKey, model) => {
+	it.each(
+		BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(
+			({ key, captureRoute }) => [key, captureRoute, key.split(".")[0]] as const,
+		),
+	)("registers %s only for its exact extension route", (surfaceTargetKey, captureRouteKey, model) => {
 		expect(resolveManualObservationTarget({ surfaceTargetKey, captureRouteKey })).toEqual({
 			model,
 			surfaceTargetKey,
