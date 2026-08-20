@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
 	type assertRunnerTask,
+	authorizeRunnerEvidenceUpload,
 	authorizeRunnerTaskOperation,
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
@@ -37,6 +38,7 @@ type ExtensionTaskOperation =
 	| { kind: "heartbeat"; adapterVersion?: string }
 	| { kind: "submit_intent"; adapterVersion?: string }
 	| { kind: "submit_confirmed"; adapterVersion?: string }
+	| { kind: "evidence"; adapterVersion?: string }
 	| { kind: "complete"; adapterVersion: string };
 
 async function authorizeExtensionTaskOperation(input: {
@@ -88,6 +90,74 @@ function observationInput() {
 }
 
 describe("Browser Runner service contracts", () => {
+	it("binds evidence upload to the confirmed runner session and approved adapter", async () => {
+		const principal = {
+			kind: "browser_extension" as const,
+			id: guid1,
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+		const task = {
+			surfaceTargetKey: "doubao.consumer_web",
+			runnerSessionId: "session-current",
+			submitIntentAt: new Date("2026-08-20T00:00:00Z"),
+			submitConfirmedAt: new Date("2026-08-20T00:00:01Z"),
+		} as Awaited<ReturnType<typeof assertRunnerTask>>;
+		const dependencies = {
+			assertTask: async () => task,
+			isAdapterVersionBindingSatisfied: futureDoubaoV8Binding,
+		};
+
+		await expect(
+			authorizeRunnerEvidenceUpload(
+				"task-1",
+				"stepfun",
+				{ runnerSessionId: "session-current", adapterVersion: "doubao-web-20260819-localpc-v8" },
+				principal,
+				dependencies,
+			),
+		).resolves.toBe(task);
+		await expect(
+			authorizeRunnerEvidenceUpload(
+				"task-1",
+				"stepfun",
+				{ runnerSessionId: "session-stale", adapterVersion: "doubao-web-20260819-localpc-v8" },
+				principal,
+				dependencies,
+			),
+		).rejects.toMatchObject({ status: 409 });
+		await expect(
+			authorizeRunnerEvidenceUpload(
+				"task-1",
+				"stepfun",
+				{ runnerSessionId: "session-current", adapterVersion: "doubao-web-20260818-localpc-v7" },
+				principal,
+				dependencies,
+			),
+		).rejects.toMatchObject({ status: 409 });
+	});
+
+	it("preserves the explicit v7 omission window for already deployed evidence uploads", async () => {
+		const principal = {
+			kind: "browser_extension" as const,
+			id: guid1,
+			market: "CN" as const,
+			locale: "zh-CN" as const,
+			timezone: "Asia/Shanghai" as const,
+			allowedBrandIds: ["stepfun"],
+			supportedSurfaces: ["doubao.consumer_web" as const],
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+		const task = { surfaceTargetKey: "doubao.consumer_web" } as Awaited<ReturnType<typeof assertRunnerTask>>;
+
+		await expect(
+			authorizeRunnerEvidenceUpload("task-1", "stepfun", {}, principal, { assertTask: async () => task }),
+		).resolves.toBe(task);
+	});
 	it("checks snapshot capacity before allocating a task lease", async () => {
 		const claim = vi.fn();
 		await expect(

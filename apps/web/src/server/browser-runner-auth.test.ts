@@ -108,6 +108,31 @@ describe("Browser Runner machine authentication", () => {
 		expect(principal).toMatchObject({ readySurfaces: [] });
 	});
 
+	it("keeps Doubao v8 out of ready surfaces until the separate server activation", async () => {
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer yrd_${"d".repeat(43)}` },
+			}),
+			{
+				authenticateDevice: async () => ({
+					id: "11111111-1111-4111-8111-111111111111",
+					allowedBrandIds: ["stepfun"],
+					supportedSurfaces: ["doubao.consumer_web"],
+					readiness: {
+						"doubao.consumer_web": {
+							status: "ready",
+							adapterVersion: "doubao-web-20260819-localpc-v8",
+							activeConcurrency: 0,
+						},
+					},
+					revokedAt: null,
+				}),
+			},
+		);
+
+		expect(principal).toMatchObject({ readySurfaces: [] });
+	});
+
 	it("rejects a revoked paired device before any task body is parsed", async () => {
 		await expect(
 			authenticateRunnerRequest(

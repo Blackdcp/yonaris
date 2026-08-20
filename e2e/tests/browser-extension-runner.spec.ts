@@ -1,5 +1,10 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import { expect, type APIRequestContext, type BrowserContext, test } from "@playwright/test";
+import {
+  isBrowserExtensionAdapterVersionBindingSatisfied,
+  STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS,
+} from "@workspace/lib/browser-extension-contract";
 import pg from "pg";
 import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
 import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
@@ -47,8 +52,10 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
     await expect(adminPage.getByRole("row").filter({ hasText: scopeName }).first()).toBeVisible({ timeout: 20_000 });
 
     await expectDeepSeekClaimRejected(request, token);
+    await expectDoubaoV8ClaimRejected(request, token);
+    const structured = await completeOneStructuredV8Claim(scope.id);
     const completed = await drainFakeExtension(request, token);
-    expect(completed).toBe(15);
+    expect(completed).toBe(14);
 
     const database = new pg.Client({ connectionString: DATABASE_URL });
     await database.connect();
@@ -60,6 +67,10 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
         mentioned: string;
         ready_snapshots: string;
         citations: string;
+        search_observed: string;
+        query_runs: string;
+        structured_v2_runs: string;
+        attached_jpegs: string;
       }>(
         `SELECT
            count(DISTINCT t.id)::text AS tasks,
@@ -67,12 +78,19 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
            count(DISTINCT r.id)::text AS runs,
            count(DISTINCT r.id) FILTER (WHERE r.brand_mentioned)::text AS mentioned,
            count(DISTINCT rs.id) FILTER (WHERE rs.status = 'ready' AND rs.is_current)::text AS ready_snapshots,
-           count(DISTINCT c.id)::text AS citations
+           count(DISTINCT c.id)::text AS citations,
+           count(DISTINCT r.id) FILTER (WHERE r.web_search_observed IS TRUE)::text AS search_observed,
+           count(DISTINCT r.id) FILTER (WHERE cardinality(r.web_queries) > 0)::text AS query_runs,
+           count(DISTINCT r.id) FILTER (WHERE rs.schema_version = 'response-snapshot.v2')::text AS structured_v2_runs,
+           count(DISTINCT ea.id) FILTER (
+             WHERE ea.status = 'attached' AND ea.kind = 'screenshot' AND ea.media_type = 'image/jpeg'
+           )::text AS attached_jpegs
          FROM delivery_batches b
          JOIN delivery_tasks t ON t.batch_id = b.id
          LEFT JOIN prompt_runs r ON r.observation_attempt_id = t.observation_attempt_id
          LEFT JOIN response_snapshots rs ON rs.prompt_run_id = r.id
          LEFT JOIN citations c ON c.prompt_run_id = r.id
+         LEFT JOIN evidence_artifacts ea ON ea.observation_attempt_id = r.observation_attempt_id
          WHERE b.brand_id = $1 AND b.scope_id = $2`,
         [STEPFUN_BRAND_ID, scope.id],
       );
@@ -83,6 +101,10 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
         mentioned: "12",
         ready_snapshots: "15",
         citations: "15",
+        search_observed: "15",
+        query_runs: "15",
+        structured_v2_runs: "1",
+        attached_jpegs: "1",
       });
     } finally {
       await database.end();
@@ -95,6 +117,30 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
     await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${prompts[0]?.id}`);
     await customerPage.getByText("LLM Responses", { exact: true }).first().click();
     await expect(customerPage.getByText("Browser answer HTML", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+
+    for (const asset of ["html", "json", "manifest"] as const) {
+      const response = await customerPage.context().request.get(
+        `/api/app/response-snapshots/${structured.snapshotId}?asset=${asset}&download=1`,
+      );
+      expect(response.status(), await response.text()).toBe(200);
+      const body = await response.body();
+      expect(createHash("sha256").update(body).digest("hex")).toBe(response.headers()["x-yonaris-sha256"]);
+      if (asset === "json") {
+        const archived = JSON.parse(body.toString("utf8")) as Record<string, unknown>;
+        expect(archived.schemaVersion).toBe("response-snapshot.v2");
+        expect(archived).not.toHaveProperty("answerHtml");
+      }
+    }
+    const screenshot = await customerPage.context().request.get(
+      `/api/app/response-snapshots/${structured.snapshotId}?asset=screenshot&download=1`,
+    );
+    expect(screenshot.status(), await screenshot.text()).toBe(200);
+    expect(await screenshot.body()).toEqual(structured.jpeg);
+    expect(screenshot.headers()["x-yonaris-sha256"]).toBe(createHash("sha256").update(structured.jpeg).digest("hex"));
+
+    await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${structured.promptId}`);
+    await customerPage.getByText("LLM Responses", { exact: true }).first().click();
+    await expect(customerPage.getByText("Captured browser evidence", { exact: true })).toBeVisible({ timeout: 20_000 });
   } finally {
     await closeContextWithinDeadline(admin, 5_000);
   }
@@ -215,6 +261,150 @@ async function expectDeepSeekClaimRejected(request: APIRequestContext, token: st
   expect(response.status(), await response.text()).toBe(409);
 }
 
+async function completeOneStructuredV8Claim(scopeId: string): Promise<{
+  promptId: string;
+  snapshotId: string;
+  jpeg: Buffer;
+}> {
+  process.env.DATABASE_URL = DATABASE_URL;
+  process.env.RESPONSE_SNAPSHOT_ENABLED = "true";
+  process.env.RESPONSE_SNAPSHOT_ROOT = fileURLToPath(new URL("../.snapshot-fixtures", import.meta.url));
+
+  const database = new pg.Client({ connectionString: DATABASE_URL });
+  await database.connect();
+  let batchId: string | undefined;
+  try {
+    const batchResult = await database.query<{ id: string }>(
+      `SELECT id::text
+       FROM delivery_batches
+       WHERE brand_id = $1 AND scope_id = $2 AND execution_mode = 'browser_runner'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [STEPFUN_BRAND_ID, scopeId],
+    );
+    batchId = batchResult.rows[0]?.id;
+  } finally {
+    await database.end();
+  }
+  if (!batchId) throw new Error("Structured v8 fixture batch was not found");
+
+  const serviceModuleUrl = new URL("../../apps/web/src/server/browser-runner-service.ts", import.meta.url).href;
+  const [service, evidence] = await Promise.all([
+    import(serviceModuleUrl),
+    import("@workspace/lib/db/evidence-artifacts"),
+  ]);
+  const adapterVersion = STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS[DOUBAO_SURFACE];
+  if (!adapterVersion) throw new Error("Doubao structured candidate version is not configured");
+  const runnerId = randomUUID();
+  const principal = {
+    kind: "browser_extension" as const,
+    id: runnerId,
+    market: "CN" as const,
+    locale: "zh-CN" as const,
+    timezone: "Asia/Shanghai" as const,
+    allowedBrandIds: [STEPFUN_BRAND_ID],
+    supportedSurfaces: [DOUBAO_SURFACE],
+    readySurfaces: [DOUBAO_SURFACE],
+  };
+  const futureV8Binding = (surface: typeof DOUBAO_SURFACE | typeof DEEPSEEK_SURFACE, requested: string | undefined) =>
+    isBrowserExtensionAdapterVersionBindingSatisfied({
+      surface,
+      requestedAdapterVersion: requested,
+      approvedAdapterVersion: surface === DOUBAO_SURFACE ? adapterVersion : undefined,
+    });
+  const dependencies = { isAdapterVersionBindingSatisfied: futureV8Binding };
+  const claim = await service.claimRunnerTask(
+    { brandId: STEPFUN_BRAND_ID, batchId, surfaceTargetKeys: [DOUBAO_SURFACE], adapterVersion },
+    principal,
+    dependencies,
+  );
+  if (!claim || claim.task.scopeId !== scopeId) throw new Error("Structured v8 fixture could not claim its task");
+  if (
+    claim.task.sessionRequirement !== "dedicated_sampling_profile" ||
+    claim.task.searchRequirement !== "platform_default"
+  ) {
+    throw new Error("Structured v8 fixture claimed an incompatible frozen protocol");
+  }
+
+  const runnerSessionId = `structured-v8-${claim.task.id}`;
+  const lease = {
+    brandId: STEPFUN_BRAND_ID,
+    leaseToken: claim.leaseToken,
+    leaseGeneration: claim.leaseGeneration,
+    runnerSessionId,
+    adapterVersion,
+  };
+  await service.recordRunnerSubmitIntent(claim.task.id, lease, principal, dependencies);
+  await service.recordRunnerSubmitConfirmed(claim.task.id, lease, principal, dependencies);
+  await service.authorizeRunnerEvidenceUpload(
+    claim.task.id,
+    STEPFUN_BRAND_ID,
+    { runnerSessionId, adapterVersion },
+    principal,
+    dependencies,
+  );
+
+  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0xff, 0xd9]);
+  const artifact = await evidence.stageEvidenceArtifact({
+    brandId: STEPFUN_BRAND_ID,
+    claim: {
+      taskId: claim.task.id,
+      claimedBy: service.runnerClaimant(runnerId),
+      leaseToken: claim.leaseToken,
+      leaseGeneration: claim.leaseGeneration,
+    },
+    uploadedBy: service.runnerClaimant(runnerId),
+    originalFilename: `structured-${claim.task.id}.jpg`,
+    expectedKind: "screenshot",
+    content: jpeg,
+  });
+  const answerText =
+    claim.task.sampleIndex === 1
+      ? `This deterministic structured ${claim.task.surfaceTargetKey} answer does not name the monitored brand.`
+      : `StepFun is included in this deterministic structured ${claim.task.surfaceTargetKey} answer.`;
+  const completion = await service.completeRunnerTask(
+    claim.task.id,
+    {
+      ...lease,
+      browserVersion: "Chrome-140",
+      observation: {
+        schemaVersion: "browser-runner-observation.v2",
+        answerText,
+        observedAt: new Date().toISOString(),
+        pageUrl: `https://www.doubao.com/chat/${claim.task.id}`,
+        sessionMode: "dedicated_sampling_profile",
+        searchMode: "native_auto",
+        webSearchObserved: true,
+        modelVersion: "consumer-web-fixture-v2",
+        evidenceArtifactIds: [artifact.id],
+        citations: [{ url: `https://example.com/structured-source/${claim.task.id}`, title: "Structured source" }],
+        webQueries: [`structured fixture query ${claim.task.sampleIndex}`],
+        captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 1, completionCount: 1 },
+      },
+    },
+    principal,
+    dependencies,
+  );
+  if (!completion.promptRunId || !completion.snapshot || completion.snapshot.status !== "ready") {
+    throw new Error("Structured v8 fixture did not produce a ready snapshot");
+  }
+  return { promptId: claim.task.promptId, snapshotId: completion.snapshot.id, jpeg };
+}
+
+async function expectDoubaoV8ClaimRejected(request: APIRequestContext, token: string): Promise<void> {
+  const candidateVersion = STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS[DOUBAO_SURFACE];
+  if (!candidateVersion) throw new Error("Doubao structured candidate version is not configured");
+  const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
+    headers: { Authorization: `Bearer ${token}` },
+    data: {
+      brandId: STEPFUN_BRAND_ID,
+      surfaceTargetKeys: [DOUBAO_SURFACE],
+      adapterVersion: candidateVersion,
+    },
+  });
+  expect(response.status(), await response.text()).toBe(409);
+}
+
 async function drainFakeExtension(request: APIRequestContext, token: string): Promise<number> {
   const headers = { Authorization: `Bearer ${token}` };
   let completed = 0;
@@ -297,7 +487,7 @@ async function completeFakeClaim(
         pageUrl,
         sessionMode: "dedicated_sampling_profile",
         searchMode: "native_auto",
-        webSearchObserved: null,
+        webSearchObserved: true,
         modelVersion: "consumer-web-fixture-v1",
         evidenceArtifactIds: [artifactId],
         citations: [{ url: `https://example.com/source/${claim.task.id}`, title: "Fixture source" }],

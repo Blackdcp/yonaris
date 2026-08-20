@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { isBrowserExtensionAdapterVersionBindingSatisfied } from "./browser-extension-contract";
 import * as browserRunnerPolicy from "./browser-runner-policy";
 import {
 	assertBrowserRunnerEvidenceProtocol,
 	assertPortalBrowserRunnerMutationAllowed,
 	BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE,
+	browserExtensionTaskOperationDenial,
 	browserRunnerHumanFinalization,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
@@ -36,6 +38,85 @@ function reconcileExactTask(input: ExactTaskReconciliationInput): ExactTaskRecon
 }
 
 describe("Browser Runner retry policy", () => {
+	it("preserves omitted resume compatibility while Doubao v7 remains approved", () => {
+		expect(
+			browserExtensionTaskOperationDenial({
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web"],
+				operation: { kind: "resume" },
+			}),
+		).toBeNull();
+	});
+
+	it("requires an exact adapter binding for resume under a simulated Doubao v8 approval", () => {
+		const dependencies = {
+			isAdapterVersionBindingSatisfied: (
+				surface: "doubao.consumer_web" | "deepseek.consumer_web",
+				requestedAdapterVersion: string | undefined,
+			) =>
+				isBrowserExtensionAdapterVersionBindingSatisfied({
+					surface,
+					requestedAdapterVersion,
+					approvedAdapterVersion: "doubao-web-20260819-localpc-v8",
+				}),
+		};
+		const base = {
+			surfaceTargetKey: "doubao.consumer_web",
+			readySurfaces: ["doubao.consumer_web" as const],
+		};
+
+		for (const operation of [
+			{ kind: "resume" as const },
+			{ kind: "resume" as const, adapterVersion: "doubao-web-20260818-localpc-v7" },
+		]) {
+			expect(browserExtensionTaskOperationDenial({ ...base, operation }, dependencies)).toBe(
+				"adapter_version_not_approved",
+			);
+		}
+		expect(
+			browserExtensionTaskOperationDenial(
+				{
+					...base,
+					operation: { kind: "resume", adapterVersion: "doubao-web-20260819-localpc-v8" },
+				},
+				dependencies,
+			),
+		).toBeNull();
+	});
+
+	it.each(["heartbeat", "submit_intent", "submit_confirmed", "evidence"] as const)(
+		"requires an exact adapter binding for %s under a simulated Doubao v8 approval",
+		(kind) => {
+			const dependencies = {
+				isAdapterVersionBindingSatisfied: (
+					surface: "doubao.consumer_web" | "deepseek.consumer_web",
+					requestedAdapterVersion: string | undefined,
+				) =>
+					isBrowserExtensionAdapterVersionBindingSatisfied({
+						surface,
+						requestedAdapterVersion,
+						approvedAdapterVersion: "doubao-web-20260819-localpc-v8",
+					}),
+			};
+			const base = {
+				surfaceTargetKey: "doubao.consumer_web",
+				readySurfaces: ["doubao.consumer_web" as const],
+			};
+
+			for (const adapterVersion of [undefined, "doubao-web-20260818-localpc-v7"]) {
+				expect(
+					browserExtensionTaskOperationDenial({ ...base, operation: { kind, adapterVersion } }, dependencies),
+				).toBe("adapter_version_not_approved");
+			}
+			expect(
+				browserExtensionTaskOperationDenial(
+					{ ...base, operation: { kind, adapterVersion: "doubao-web-20260819-localpc-v8" } },
+					dependencies,
+				),
+			).toBeNull();
+		},
+	);
+
 	it("permits one explicit recovery only for the untouched first broker transport failure", () => {
 		const candidate = {
 			deliveryStatus: "available",

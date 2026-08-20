@@ -6,7 +6,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { MAX_PROMPTS } from "@workspace/lib/constants";
 import { db } from "@workspace/lib/db/db";
 import { ensureLegacyMeasurementScope, resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
-import { brands, competitors, promptRuns, prompts, responseSnapshots, SYSTEM_TAGS } from "@workspace/lib/db/schema";
+import {
+	brands,
+	competitors,
+	evidenceArtifacts,
+	promptRuns,
+	prompts,
+	responseSnapshots,
+	SYSTEM_TAGS,
+} from "@workspace/lib/db/schema";
 import { computeSystemTags, getEffectiveBrandedStatus } from "@workspace/lib/tag-utils";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -583,11 +591,30 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 					snapshot: {
 						id: responseSnapshots.id,
 						status: responseSnapshots.status,
+						schemaVersion: responseSnapshots.schemaVersion,
 						contentSource: responseSnapshots.contentSource,
 						createdAt: responseSnapshots.createdAt,
 						expiresAt: responseSnapshots.expiresAt,
 						htmlSha256: responseSnapshots.htmlSha256,
 						jsonSha256: responseSnapshots.jsonSha256,
+						visualEvidence: sql<null | { mediaType: string; sha256: string; bytes: number }>`(
+							SELECT json_build_object(
+								'mediaType', ${evidenceArtifacts.mediaType},
+								'sha256', ${evidenceArtifacts.sha256},
+								'bytes', ${evidenceArtifacts.byteSize}
+							)
+							FROM ${evidenceArtifacts}
+							WHERE ${evidenceArtifacts.observationAttemptId} = ${promptRuns.observationAttemptId}
+								AND ${evidenceArtifacts.brandId} = ${responseSnapshots.brandId}
+								AND ${evidenceArtifacts.scopeId} IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+								AND ${evidenceArtifacts.kind} = 'screenshot'
+								AND ${evidenceArtifacts.status} = 'attached'
+								AND ${evidenceArtifacts.mediaType} = 'image/jpeg'
+								AND ${responseSnapshots.schemaVersion} = 'response-snapshot.v2'
+								AND ${responseSnapshots.status} = 'ready'
+								AND ${responseSnapshots.expiresAt} > now()
+							LIMIT 1
+						)`,
 					},
 				})
 				.from(promptRuns)

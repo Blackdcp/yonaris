@@ -10,6 +10,16 @@ import {
 } from "./schema";
 
 describe("response snapshot archive schema", () => {
+	it("permits physical deletion only for attached v2 JPEGs whose snapshots have expired", () => {
+		const migration = readFileSync(new URL("./migrations/0027_response_snapshot_visual_evidence.sql", import.meta.url), "utf8");
+		expect(migration).toContain('CREATE OR REPLACE FUNCTION "enforce_evidence_artifact"()');
+		expect(migration).toContain("OLD.status = 'attached'");
+		expect(migration).toContain("OLD.kind = 'screenshot'");
+		expect(migration).toContain("rs.schema_version = 'response-snapshot.v2'");
+		expect(migration).toContain("rs.status = 'expired'");
+		expect(migration).toContain("rs.expires_at <= clock_timestamp()");
+		expect(migration).toContain("NOT EXISTS");
+	});
 	it("supports only the reviewed lifecycle and content-source values", () => {
 		expect(responseSnapshotStatusEnum.enumValues).toEqual(["pending", "ready", "failed", "expired"]);
 		expect(responseSnapshotContentSourceEnum.enumValues).toEqual([
@@ -23,6 +33,8 @@ describe("response snapshot archive schema", () => {
 			"download_html",
 			"download_json",
 			"download_manifest",
+			"view_screenshot",
+			"download_screenshot",
 			"export",
 		]);
 	});
@@ -84,3 +96,4 @@ describe("response snapshot archive schema", () => {
 		]);
 	});
 });
+import { readFileSync } from "node:fs";

@@ -14,6 +14,29 @@ describe("runClaimedTask", () => {
 		expect(events.indexOf("journal:submit_intent")).toBeLessThan(events.indexOf("api:submit_intent"));
 		expect(events.indexOf("api:submit_intent")).toBeLessThan(events.indexOf("adapter:submit"));
 		expect(events.filter((event) => event === "adapter:submit")).toHaveLength(1);
+		expect(
+			events.filter((event) =>
+				[
+					"api:submit_intent",
+					"adapter:submit",
+					"api:submit_confirmed",
+					"adapter:collect",
+					"tab:capture",
+					"api:upload_screenshot",
+					"api:complete",
+					"tab:close",
+				].includes(event),
+			),
+		).toEqual([
+			"api:submit_intent",
+			"adapter:submit",
+			"api:submit_confirmed",
+			"adapter:collect",
+			"tab:capture",
+			"api:upload_screenshot",
+			"api:complete",
+			"tab:close",
+		]);
 	});
 
 	test("a durable submit intent prevents automatic resubmission after restart", async () => {
@@ -75,6 +98,7 @@ describe("runClaimedTask", () => {
 		const preservedTab = {
 			tabId: 42,
 			adapter,
+			captureEvidence: async () => Uint8Array.from([0xff, 0xd8, 0xff]),
 			close: async () => {
 				events.push("tab:close");
 			},

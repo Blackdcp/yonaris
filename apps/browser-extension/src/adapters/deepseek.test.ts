@@ -46,7 +46,6 @@ describe("DeepSeek browser-extension adapter", () => {
 
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
 			answerText: "Current answer",
-			answerHtml: "<div>Current answer</div>",
 		});
 	});
 

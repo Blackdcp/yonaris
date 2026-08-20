@@ -1,8 +1,8 @@
 import {
 	type BrowserExtensionSurface,
-	isApprovedBrowserExtensionAdapterVersion,
 	isBrowserExtensionCaptureRoute,
 	isBrowserExtensionSurface,
+	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
 } from "./browser-extension-contract";
 
 export const BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS = 2;
@@ -18,20 +18,30 @@ export const BROWSER_RUNNER_RETRYABLE_PRE_SUBMIT_CODES = [
 
 export type BrowserRunnerTaskAutomationStatus = "queued" | "running" | "needs_human" | "completed";
 
-export type BrowserExtensionTaskOperation = { kind: "resume" } | { kind: "complete"; adapterVersion: string };
+export type BrowserExtensionTaskOperation =
+	| { kind: "resume"; adapterVersion?: string }
+	| { kind: "heartbeat"; adapterVersion?: string }
+	| { kind: "submit_intent"; adapterVersion?: string }
+	| { kind: "submit_confirmed"; adapterVersion?: string }
+	| { kind: "evidence"; adapterVersion?: string }
+	| { kind: "complete"; adapterVersion: string };
 
-export function browserExtensionTaskOperationDenial(input: {
-	surfaceTargetKey: string;
-	readySurfaces: readonly BrowserExtensionSurface[];
-	operation: BrowserExtensionTaskOperation;
-}): "surface_not_ready" | "adapter_version_not_approved" | null {
+export function browserExtensionTaskOperationDenial(
+	input: {
+		surfaceTargetKey: string;
+		readySurfaces: readonly BrowserExtensionSurface[];
+		operation: BrowserExtensionTaskOperation;
+	},
+	dependencies: {
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
+): "surface_not_ready" | "adapter_version_not_approved" | null {
 	if (!isBrowserExtensionSurface(input.surfaceTargetKey) || !input.readySurfaces.includes(input.surfaceTargetKey)) {
 		return "surface_not_ready";
 	}
-	if (
-		input.operation.kind === "complete" &&
-		!isApprovedBrowserExtensionAdapterVersion(input.surfaceTargetKey, input.operation.adapterVersion)
-	) {
+	const isAdapterVersionBindingSatisfied =
+		dependencies.isAdapterVersionBindingSatisfied ?? isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	if (!isAdapterVersionBindingSatisfied(input.surfaceTargetKey, input.operation.adapterVersion)) {
 		return "adapter_version_not_approved";
 	}
 	return null;

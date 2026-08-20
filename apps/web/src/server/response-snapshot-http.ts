@@ -5,6 +5,8 @@ import { ResponseSnapshotAccessError } from "./response-snapshots";
 const SAFE_FILE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,299}$/u;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 
+export type ResponseSnapshotAppAssetName = ResponseSnapshotAssetName | "screenshot";
+
 export class ResponseSnapshotHttpError extends Error {
 	constructor(
 		public readonly status: 400 | 401 | 403 | 404 | 409 | 410 | 500 | 503,
@@ -16,7 +18,7 @@ export class ResponseSnapshotHttpError extends Error {
 }
 
 export function parseResponseSnapshotAssetSelector(url: URL): {
-	asset: ResponseSnapshotAssetName;
+	asset: ResponseSnapshotAppAssetName;
 	download: boolean;
 } {
 	const keys = [...url.searchParams.keys()];
@@ -28,8 +30,8 @@ export function parseResponseSnapshotAssetSelector(url: URL): {
 	}
 	const asset = url.searchParams.get("asset");
 	const download = url.searchParams.get("download");
-	if (asset !== "html" && asset !== "json" && asset !== "manifest") {
-		throw new ResponseSnapshotHttpError(400, "asset must be html, json, or manifest");
+	if (asset !== "html" && asset !== "json" && asset !== "manifest" && asset !== "screenshot") {
+		throw new ResponseSnapshotHttpError(400, "asset must be html, json, manifest, or screenshot");
 	}
 	if (download !== "0" && download !== "1") {
 		throw new ResponseSnapshotHttpError(400, "download must be 0 or 1");
@@ -43,7 +45,7 @@ export function attachmentContentDisposition(fileName: string): string {
 }
 
 export function buildResponseSnapshotAssetHeaders(input: {
-	asset: ResponseSnapshotAssetName;
+	asset: ResponseSnapshotAppAssetName;
 	download: boolean;
 	contentType: string;
 	contentEncoding: "gzip" | null;

@@ -331,7 +331,7 @@ function normalizeDraft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2) 
 				throw new ResponseSnapshotValidationError("citationIndex must be unique");
 			}
 			citationIndexes.add(citation.citationIndex);
-			const url = requiredText(citation.url, "citation.url", 4_096);
+			const url = requiredText(citation.url, "citation.url", 10_000);
 			const parsed = new URL(url);
 			if ((parsed.protocol !== "https:" && parsed.protocol !== "http:") || parsed.username || parsed.password) {
 				throw new ResponseSnapshotValidationError("citation.url must be an HTTP(S) URL without credentials");

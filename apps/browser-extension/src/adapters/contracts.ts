@@ -36,6 +36,7 @@ export type SelectorContract = {
 	answer: string;
 	generating: string;
 	completion: string | null;
+	completionCompanion: string | null;
 	loginWall: string;
 	captcha: string;
 	rateLimit: string;
@@ -45,6 +46,16 @@ export type SelectorContract = {
 	searchNotUsed: string | null;
 	citationLink: string | null;
 	queryItem: string | null;
+	searchEvidence: SearchEvidenceContract | null;
+};
+
+export type SearchEvidenceContract = {
+	container: string;
+	summaryTextPattern: string;
+	queryItem: string;
+	queryTextPattern: string;
+	citationLink: string;
+	citationTitlePrefixPattern: string;
 };
 
 export type CollectedCitation = {
@@ -52,9 +63,17 @@ export type CollectedCitation = {
 	title: string;
 };
 
+export type EvidenceViewportRect = {
+	x: number;
+	y: number;
+	width: number;
+	height: number;
+	devicePixelRatio: number;
+};
+
 export type CollectedAnswer = {
 	answerText: string;
-	answerHtml: string;
+	evidenceViewportRect: EvidenceViewportRect;
 	pageUrl: string;
 	observedAt: string;
 	webSearchObserved: boolean | null;
@@ -101,21 +120,37 @@ export type AnswerReadRequest = {
 	searchNotUsedSelector: string | null;
 	citationLinkSelector: string | null;
 	queryItemSelector: string | null;
+	searchEvidence: SearchEvidenceContract | null;
+	evidenceViewport?: {
+		promptSelector: string;
+		completionSelector: string | null;
+		companionSelector: string | null;
+	};
 };
 
 export type AnswerDomSnapshot = {
 	text: string;
 	html: string;
+	evidenceViewportRect: EvidenceViewportRect | null;
 	searchUsedCount: number;
 	searchNotUsedCount: number;
 	webQueries: string[];
 	citations: CollectedCitation[];
 };
 
+export type CompletionReadRequest = {
+	answerSelector: string;
+	completionSelector: string;
+	companionSelector: string;
+};
+
+export type CompletionDomState = "missing" | "bound" | "unbound" | "ambiguous";
+
 export interface ConsumerDomPort {
 	currentUrl(): string;
 	now(): number;
 	query(role: DomElementRole, selector: string): Promise<readonly DomElementSummary[]>;
+	readCompletionState?(request: CompletionReadRequest): Promise<CompletionDomState>;
 	click(role: DomElementRole, selector: string, index: number): Promise<void>;
 	fill(role: "composer", selector: string, index: number, value: string): Promise<void>;
 	readAnswer(request: AnswerReadRequest): Promise<AnswerDomSnapshot>;

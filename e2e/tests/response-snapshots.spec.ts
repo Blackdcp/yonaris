@@ -38,6 +38,7 @@ test.describe("customer response snapshot archive", () => {
     await expect(chatgptFrame.locator("script, iframe, img")).toHaveCount(0);
     await expect(page.locator('iframe[title="Archived response from perplexity"]')).toBeVisible();
     await expect(page.locator('iframe[title="Archived response from doubao"]')).toBeVisible();
+    await expect(page.getByText("Captured browser evidence", { exact: true })).toHaveCount(0);
     await page.waitForTimeout(250);
     expect(externalRequests).toEqual([]);
   });
@@ -60,6 +61,20 @@ test.describe("customer response snapshot archive", () => {
       `/api/app/response-snapshots/${MEMTENSOR_SNAPSHOT_ID}?asset=json&download=1`,
     );
     expect(otherTenant.status()).toBe(404);
+    expect(
+      (
+        await request.get(
+          `/api/app/response-snapshots/${MEMTENSOR_SNAPSHOT_ID}?asset=screenshot&download=0`,
+        )
+      ).status(),
+    ).toBe(404);
+    expect(
+      (
+        await request.get(
+          `/api/app/response-snapshots/${STEPFUN_SNAPSHOT_IDS.domesticBrowser}?asset=screenshot&download=0`,
+        )
+      ).status(),
+    ).toBe(404);
     expect(
       (
         await request.get(

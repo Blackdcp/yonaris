@@ -9,24 +9,43 @@ import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import type { Citation } from "@workspace/lib/text-extraction";
 import { z } from "zod";
 
+function isCredentialFreeHttpUrl(value: string): boolean {
+	try {
+		const url = new URL(value);
+		return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password;
+	} catch {
+		return false;
+	}
+}
+
 const httpUrl = z
 	.string()
 	.trim()
 	.url()
-	.refine((value) => {
-		try {
-			const url = new URL(value);
-			return (url.protocol === "http:" || url.protocol === "https:") && !url.username && !url.password;
-		} catch {
-			return false;
-		}
-	}, "URL must use http or https without embedded credentials");
+	.refine(isCredentialFreeHttpUrl, "URL must use http or https without embedded credentials");
 
-const citationSchema = z.object({
-	url: httpUrl,
-	title: z.string().trim().max(1_000).optional(),
-	citationIndex: z.number().int().min(0).max(32_767).optional(),
-});
+const citationHttpUrl = z
+	.string()
+	.trim()
+	.min(1)
+	.max(10_000)
+	.url()
+	.refine(isCredentialFreeHttpUrl, "URL must use http or https without embedded credentials");
+
+const citationSchema = z
+	.object({
+		url: citationHttpUrl,
+		title: z.string().trim().min(1).max(1_000).optional(),
+		citationIndex: z.number().int().min(0).max(32_767).optional(),
+	})
+	.strict();
+
+const structuredCitationSchema = z
+	.object({
+		url: citationHttpUrl,
+		title: z.string().trim().min(1).max(1_000),
+	})
+	.strict();
 
 export const browserAnswerHtmlSchema = z
 	.string()
@@ -57,6 +76,7 @@ export const browserRunnerLegacyObservationSchema = samplingObservationBaseSchem
 export const browserRunnerStructuredObservationSchema = samplingObservationBaseSchema
 	.extend({
 		schemaVersion: z.literal("browser-runner-observation.v2"),
+		citations: z.array(structuredCitationSchema).max(200).default([]),
 		captureDiagnostics: z
 			.object({
 				answerCount: z.literal(1),
@@ -76,6 +96,23 @@ export const browserRunnerStructuredObservationSchema = samplingObservationBaseS
 				path: ["captureDiagnostics", "citationCount"],
 				message: "Citation count mismatch",
 			});
+		}
+		const citationUrls = new Set<string>();
+		for (const [index, citation] of observation.citations.entries()) {
+			let canonicalUrl: string;
+			try {
+				canonicalUrl = new URL(citation.url).href;
+			} catch {
+				continue;
+			}
+			if (citationUrls.has(canonicalUrl)) {
+				context.addIssue({
+					code: "custom",
+					path: ["citations", index, "url"],
+					message: "Citation URLs must be unique",
+				});
+			}
+			citationUrls.add(canonicalUrl);
 		}
 	});
 
@@ -217,6 +254,13 @@ export function prepareSamplingObservation(input: {
 		version: input.observation.modelVersion,
 		webSearch: input.observation.searchMode !== "off",
 	};
+	const structuredCaptureDiagnostics =
+		input.observation.schemaVersion === "browser-runner-observation.v2"
+			? input.observation.captureDiagnostics
+			: undefined;
+	if (input.observation.schemaVersion === "browser-runner-observation.v2" && !structuredCaptureDiagnostics) {
+		throw new Error("Structured Browser Runner observations require capture diagnostics");
+	}
 	const captureMetadata = {
 		measurementEligibility:
 			captureActor.kind === "operator" ? "operator_attested_clean_session" : "browser_runner_clean_session",
@@ -244,6 +288,12 @@ export function prepareSamplingObservation(input: {
 					registeredLocale: captureActor.locale,
 					registeredTimezone: captureActor.timezone,
 					localizationRegistrationSource: "server_bound_runner_registration",
+				}
+			: {}),
+		...(input.observation.schemaVersion === "browser-runner-observation.v2"
+			? {
+					responseSnapshotSchemaVersion: "response-snapshot.v2",
+					captureDiagnostics: structuredCaptureDiagnostics,
 				}
 			: {}),
 	};

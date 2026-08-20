@@ -557,12 +557,21 @@ export async function completeRunnerTask(
 	taskId: string,
 	input: z.infer<typeof browserRunnerObservationSchema>,
 	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
 ) {
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
-	const task = await authorizeRunnerTaskOperation(taskId, input.brandId, principal, {
-		kind: "complete",
-		adapterVersion: input.adapterVersion,
-	});
+	const task = await authorizeRunnerTaskOperation(
+		taskId,
+		input.brandId,
+		principal,
+		{
+			kind: "complete",
+			adapterVersion: input.adapterVersion,
+		},
+		dependencies,
+	);
 	if (task.status === "succeeded" && task.observationAttemptId) {
 		const existingRun = await db.query.promptRuns.findFirst({
 			where: eq(promptRuns.observationAttemptId, task.observationAttemptId),
@@ -570,7 +579,7 @@ export async function completeRunnerTask(
 		});
 		return { duplicate: true, attemptId: task.observationAttemptId, promptRunId: existingRun?.id ?? null };
 	}
-	await heartbeatRunnerTask(taskId, input, principal);
+	await heartbeatRunnerTask(taskId, input, principal, dependencies);
 	if (!task.submitIntentAt || !task.submitConfirmedAt) {
 		throw new Error("Browser Runner completion requires durable submit intent and confirmation");
 	}
@@ -796,6 +805,40 @@ export async function authorizeRunnerTaskOperation(
 			409,
 			"The operation adapter version is not the current server-approved version for this task surface",
 		);
+	}
+	return task;
+}
+
+export async function authorizeRunnerEvidenceUpload(
+	taskId: string,
+	brandId: string,
+	input: { runnerSessionId?: string; adapterVersion?: string },
+	principal: BrowserRunnerPrincipal,
+	dependencies: {
+		assertTask?: typeof assertRunnerTask;
+		isAdapterVersionBindingSatisfied?: typeof isCurrentBrowserExtensionAdapterVersionBindingSatisfied;
+	} = {},
+) {
+	const task = await authorizeRunnerTaskOperation(
+		taskId,
+		brandId,
+		principal,
+		{ kind: "evidence", adapterVersion: input.adapterVersion },
+		dependencies,
+	);
+	if (principal.kind !== "browser_extension") return task;
+	// The currently deployed Doubao v7 uploader predates these headers. The
+	// operation policy above admits this exact omission only while v7 remains
+	// approved; once v8 is approved, an omitted adapter version is rejected
+	// before this compatibility branch can run.
+	if (input.runnerSessionId === undefined && input.adapterVersion === undefined) return task;
+	if (
+		!input.runnerSessionId ||
+		!task.submitIntentAt ||
+		!task.submitConfirmedAt ||
+		task.runnerSessionId !== input.runnerSessionId
+	) {
+		throw new BrowserRunnerHttpError(409, "Evidence upload must match the confirmed Browser Runner session");
 	}
 	return task;
 }

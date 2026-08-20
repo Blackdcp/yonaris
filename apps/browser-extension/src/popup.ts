@@ -1,3 +1,4 @@
+import type { StructuredSearchQualification } from "./adapters/search-evidence";
 import { BrowserRunnerApiClient } from "./api-client";
 import { PORTAL_ORIGIN } from "./contracts";
 import { buildHeartbeat } from "./heartbeat";
@@ -23,6 +24,7 @@ const pairButton = requiredElement<HTMLButtonElement>("pair");
 const disconnectButton = requiredElement<HTMLButtonElement>("disconnect");
 const refreshButton = requiredElement<HTMLButtonElement>("refresh");
 const runNowButton = requiredElement<HTMLButtonElement>("run-now");
+const inspectDoubaoButton = requiredElement<HTMLButtonElement>("inspect-doubao");
 const summary = requiredElement<HTMLElement>("device-summary");
 const doubaoStatus = requiredElement<HTMLElement>("doubao-status");
 const deepseekStatus = requiredElement<HTMLElement>("deepseek-status");
@@ -37,6 +39,7 @@ form.addEventListener("submit", (event) => {
 disconnectButton.addEventListener("click", () => void disconnect());
 refreshButton.addEventListener("click", () => void refresh());
 runNowButton.addEventListener("click", () => void runNow());
+inspectDoubaoButton.addEventListener("click", () => void inspectDoubao());
 
 void render();
 
@@ -90,6 +93,39 @@ async function runNow(): Promise<void> {
 		setMessage(result.summary ? "Work check finished." : "Pair this Chrome before running work.");
 	} catch (error) {
 		setMessage(error instanceof Error ? error.message : "Browser Runner could not check for work.");
+	} finally {
+		setBusy(false);
+	}
+}
+
+async function inspectDoubao(): Promise<void> {
+	setBusy(true);
+	setMessage("Checking the open Doubao answer without sending a prompt.");
+	try {
+		const response = (await chrome.runtime.sendMessage({ type: "browser-runner:qualify-doubao" })) as {
+			ok?: boolean;
+			result?: StructuredSearchQualification;
+			error?: string;
+		};
+		if (!response.ok || !response.result) {
+			throw new Error(response.error ?? "The active Doubao page could not be checked safely.");
+		}
+		const result = response.result;
+		if (result.status === "qualified") {
+			setMessage(
+				`Doubao page structure verified and qualified locally: ${result.queryCount} quer${result.queryCount === 1 ? "y" : "ies"}, ${result.citationCount} citation${result.citationCount === 1 ? "" : "s"}. No prompt was sent.`,
+			);
+		} else if (result.status === "no_search_evidence") {
+			setMessage("This answer has no search block. Open an existing answer that shows search sources and check again.");
+		} else if (result.status === "no_citation_evidence") {
+			setMessage("This answer has no source link to verify. Open a searched answer that shows at least one source.");
+		} else if (result.status === "no_answer") {
+			setMessage("The open Doubao conversation has no visible answer to check.");
+		} else {
+			setMessage("The Doubao search/source structure did not pass the read-only safety check.");
+		}
+	} catch (error) {
+		setMessage(error instanceof Error ? error.message : "The active Doubao page could not be checked safely.");
 	} finally {
 		setBusy(false);
 	}
@@ -192,6 +228,7 @@ function setBusy(busy: boolean): void {
 	disconnectButton.disabled = busy;
 	refreshButton.disabled = busy;
 	runNowButton.disabled = busy;
+	inspectDoubaoButton.disabled = busy;
 	for (const button of manualRecoveryList.querySelectorAll("button")) {
 		button.disabled = busy || button.dataset.recoverable !== "true";
 	}

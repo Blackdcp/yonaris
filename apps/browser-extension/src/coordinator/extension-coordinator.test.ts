@@ -13,6 +13,18 @@ describe("ExtensionCoordinator", () => {
 			deviceToken: `yrd_${"a".repeat(43)}`,
 			allowedBrandIds: ["stepfun", "customer-2"],
 		});
+		await storage.saveSurfaceReadiness({
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				activeConcurrency: 0,
+			},
+			"deepseek.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "deepseek-web-20260814-uat1",
+				activeConcurrency: 0,
+			},
+		});
 		const claims: string[] = [];
 		const api = {
 			...fakeRunnerApi([]),
@@ -46,7 +58,7 @@ describe("ExtensionCoordinator", () => {
 		await storage.saveSurfaceReadiness({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260818-localpc-v7",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {

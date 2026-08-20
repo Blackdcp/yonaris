@@ -10,6 +10,7 @@ import {
 	PORTAL_ORIGIN,
 } from "./contracts";
 import type { RunnerCompletionInput, RunnerFailureInput } from "./coordinator/task-runner";
+import { CURRENT_ADAPTER_VERSIONS } from "./surface-readiness";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEVICE_TOKEN_PATTERN = /^yrd_[A-Za-z0-9_-]{43}$/;
@@ -65,15 +66,23 @@ export class BrowserRunnerApiClient {
 	async claimNext(brandId: string, surface: BrowserExtensionSurface): Promise<BrowserExtensionClaim | null> {
 		const response = await this.request<unknown>("/api/internal/browser-runner/v1/tasks/claim", {
 			authenticated: true,
-			body: { brandId, surfaceTargetKeys: [surface] },
+			body: { brandId, surfaceTargetKeys: [surface], adapterVersion: CURRENT_ADAPTER_VERSIONS[surface] },
 		});
 		if (!isRecord(response) || !("claim" in response)) throw invalidProtocol();
 		return response.claim === null ? null : parseClaim(response.claim, surface);
 	}
 
-	async resume(taskId: string, brandId: string, stage: "pre_submit" | "post_submit"): Promise<BrowserExtensionClaim> {
+	async resume(
+		taskId: string,
+		brandId: string,
+		stage: "pre_submit" | "post_submit",
+		surface: BrowserExtensionSurface,
+	): Promise<BrowserExtensionClaim> {
 		return parseClaim(
-			await this.request<unknown>(taskPath(taskId, "resume"), { authenticated: true, body: { brandId, stage } }),
+			await this.request<unknown>(taskPath(taskId, "resume"), {
+				authenticated: true,
+				body: { brandId, stage, adapterVersion: CURRENT_ADAPTER_VERSIONS[surface] },
+			}),
 		);
 	}
 
@@ -86,20 +95,23 @@ export class BrowserRunnerApiClient {
 	}
 
 	async heartbeatTask(claim: BrowserExtensionClaim): Promise<void> {
-		await this.request(taskPath(claim.taskId, "heartbeat"), { authenticated: true, body: leaseBody(claim) });
+		await this.request(taskPath(claim.taskId, "heartbeat"), {
+			authenticated: true,
+			body: versionedLeaseBody(claim),
+		});
 	}
 
 	async recordSubmitIntent(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void> {
 		await this.request(taskPath(claim.taskId, "submit-intent"), {
 			authenticated: true,
-			body: { ...leaseBody(claim), runnerSessionId },
+			body: { ...versionedLeaseBody(claim), runnerSessionId },
 		});
 	}
 
 	async confirmSubmitted(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void> {
 		await this.request(taskPath(claim.taskId, "submit-confirmed"), {
 			authenticated: true,
-			body: { ...leaseBody(claim), runnerSessionId },
+			body: { ...versionedLeaseBody(claim), runnerSessionId },
 		});
 	}
 
@@ -112,21 +124,34 @@ export class BrowserRunnerApiClient {
 		return { retryScheduled: response.retryScheduled };
 	}
 
-	async uploadSnapshot(claim: BrowserExtensionClaim, html: string): Promise<string> {
-		if (!html.startsWith("<!doctype html>") || new TextEncoder().encode(html).byteLength > 1_100_000) {
-			throw new BrowserRunnerApiError("Browser Runner response snapshot is invalid");
+	async uploadEvidence(
+		claim: BrowserExtensionClaim,
+		runnerSessionId: string,
+		adapterVersion: string,
+		screenshot: Uint8Array,
+	): Promise<string> {
+		if (
+			screenshot.byteLength < 3 ||
+			screenshot.byteLength > 2 * 1024 * 1024 ||
+			screenshot[0] !== 0xff ||
+			screenshot[1] !== 0xd8 ||
+			screenshot[2] !== 0xff
+		) {
+			throw new BrowserRunnerApiError("Browser Runner screenshot evidence is invalid");
 		}
 		const response = await this.requestRaw("/api/internal/browser-runner/v1/evidence/", {
 			authenticated: true,
-			body: html,
-			contentType: "text/html; charset=utf-8",
+			body: screenshot.slice().buffer,
+			contentType: "image/jpeg",
 			headers: {
 				"X-Yonaris-Brand-Id": claim.brandId,
 				"X-Yonaris-Task-Id": claim.taskId,
 				"X-Yonaris-Lease-Token": claim.leaseToken,
 				"X-Yonaris-Lease-Generation": String(claim.leaseGeneration),
-				"X-Yonaris-Evidence-Kind": "page_snapshot",
-				"X-Yonaris-Filename": encodeURIComponent(`response-${claim.taskId}.html`),
+				"X-Yonaris-Evidence-Kind": "screenshot",
+				"X-Yonaris-Filename": encodeURIComponent(`response-${claim.taskId}.jpg`),
+				"X-Yonaris-Runner-Session-Id": requiredText(runnerSessionId, "runner session id", 300),
+				"X-Yonaris-Adapter-Version": requiredText(adapterVersion, "adapter version", 100),
 			},
 		});
 		const parsed = await readJson(response);
@@ -144,8 +169,8 @@ export class BrowserRunnerApiClient {
 				adapterVersion: input.adapterVersion,
 				browserVersion: input.browserVersion,
 				observation: {
+					schemaVersion: "browser-runner-observation.v2",
 					answerText: input.answer.answerText,
-					answerHtml: input.answer.answerHtml,
 					observedAt: input.answer.observedAt,
 					pageUrl: input.answer.pageUrl,
 					sessionMode: "dedicated_sampling_profile",
@@ -154,6 +179,12 @@ export class BrowserRunnerApiClient {
 					evidenceArtifactIds: [input.evidenceArtifactId],
 					citations: input.answer.citations,
 					webQueries: input.answer.webQueries,
+					captureDiagnostics: {
+						answerCount: 1,
+						queryCount: input.answer.webQueries.length,
+						citationCount: input.answer.citations.length,
+						completionCount: 1,
+					},
 				},
 			},
 		});
@@ -292,12 +323,16 @@ function leaseBody(claim: BrowserExtensionClaim) {
 	return { brandId: claim.brandId, leaseToken: claim.leaseToken, leaseGeneration: claim.leaseGeneration };
 }
 
+function versionedLeaseBody(claim: BrowserExtensionClaim) {
+	return { ...leaseBody(claim), adapterVersion: CURRENT_ADAPTER_VERSIONS[claim.surfaceTargetKey] };
+}
+
 function taskPath(taskId: string, action: string): string {
 	return `/api/internal/browser-runner/v1/tasks/${encodeURIComponent(taskId)}/${action}`;
 }
 
 function assertCollectedAnswer(answer: CollectedAnswer): void {
-	if (!answer.answerText.trim() || !answer.answerHtml.trim() || !Number.isFinite(Date.parse(answer.observedAt))) {
+	if (!answer.answerText.trim() || !Number.isFinite(Date.parse(answer.observedAt))) {
 		throw new BrowserRunnerApiError("Browser Runner answer is invalid");
 	}
 	const pageUrl = new URL(answer.pageUrl);

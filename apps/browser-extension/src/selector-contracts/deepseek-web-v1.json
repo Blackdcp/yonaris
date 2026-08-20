@@ -11,6 +11,7 @@
 	"answer": ".ds-assistant-message-main-content",
 	"generating": "div[role=\"button\"].ds-button--primary.ds-button--circle:not(.ds-button--disabled)",
 	"completion": null,
+	"completionCompanion": null,
 	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"]",
@@ -19,5 +20,6 @@
 	"searchUsed": null,
 	"searchNotUsed": null,
 	"citationLink": "a[href^=\"http\"]",
-	"queryItem": null
+	"queryItem": null,
+	"searchEvidence": null
 }

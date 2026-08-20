@@ -6,11 +6,17 @@ import { ResponseSnapshotExportControls, ResponseSnapshotPanel } from "./respons
 const readySnapshot = {
 	id: "11111111-1111-4111-8111-111111111111",
 	status: "ready" as const,
-	contentSource: "browser_answer_html" as const,
+	schemaVersion: "response-snapshot.v2",
+	contentSource: "rendered_from_structured_response" as const,
 	createdAt: "2026-08-15T00:00:00.000Z",
 	expiresAt: "2026-11-13T00:00:00.000Z",
 	htmlSha256: "a".repeat(64),
 	jsonSha256: "b".repeat(64),
+	visualEvidence: {
+		mediaType: "image/jpeg" as const,
+		sha256: "c".repeat(64),
+		bytes: 12345,
+	},
 } satisfies NonNullable<CustomerPromptRunDto["snapshot"]>;
 
 describe("ResponseSnapshotPanel", () => {
@@ -20,8 +26,17 @@ describe("ResponseSnapshotPanel", () => {
 		["rendered_from_structured_response", "Rendered structured response"],
 		["reconstructed_from_historical_run", "Historical reconstruction"],
 	] as const)("renders the same read-only viewer for %s", (contentSource, expectedLabel) => {
+		const structured = contentSource === "rendered_from_structured_response";
 		const markup = renderToStaticMarkup(
-			<ResponseSnapshotPanel snapshot={{ ...readySnapshot, contentSource }} channel="doubao.consumer_web" />,
+			<ResponseSnapshotPanel
+				snapshot={{
+					...readySnapshot,
+					schemaVersion: structured ? "response-snapshot.v2" : "response-snapshot.v1",
+					contentSource,
+					visualEvidence: structured ? readySnapshot.visualEvidence : null,
+				}}
+				channel="doubao.consumer_web"
+			/>,
 		);
 
 		expect(markup).toContain("Response snapshot");
@@ -31,10 +46,38 @@ describe("ResponseSnapshotPanel", () => {
 		expect(markup).toContain(readySnapshot.jsonSha256);
 		expect(markup).toContain('sandbox=""');
 		expect(markup).toContain(`/${readySnapshot.id}?asset=html&amp;download=0`);
+		if (structured) {
+			expect(markup).toContain(`/${readySnapshot.id}?asset=screenshot&amp;download=0`);
+			expect(markup).toContain("Captured browser evidence");
+			expect(markup).toContain(readySnapshot.visualEvidence.sha256);
+		} else {
+			expect(markup).not.toContain("Captured browser evidence");
+			expect(markup).not.toContain("asset=screenshot");
+		}
 		expect(markup).toContain("Download HTML");
+		expect(markup.includes("Download screenshot")).toBe(structured);
 		expect(markup).toContain("Download JSON");
 		expect(markup).toContain("Download manifest");
 		expect(markup).not.toMatch(/delete|edit|extend retention/i);
+	});
+
+	it("keeps legacy snapshots usable without showing a broken screenshot", () => {
+		const markup = renderToStaticMarkup(
+			<ResponseSnapshotPanel
+				snapshot={{
+					...readySnapshot,
+					schemaVersion: "response-snapshot.v1",
+					contentSource: "browser_answer_html",
+					visualEvidence: null,
+				}}
+				channel="doubao.consumer_web"
+			/>,
+		);
+
+		expect(markup).toContain("Response snapshot");
+		expect(markup).toContain("Download HTML");
+		expect(markup).not.toContain("Captured browser evidence");
+		expect(markup).not.toContain("asset=screenshot");
 	});
 
 	it.each([

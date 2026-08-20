@@ -415,17 +415,17 @@ describe("prepareSamplingObservation", () => {
 
 	it("accepts strict structured runner observations without provider DOM HTML", () => {
 		const structured = {
-			schemaVersion: "browser-runner-observation.v2",
+			schemaVersion: "browser-runner-observation.v2" as const,
 			answerText: "PPIO 提供云服务。",
-			observedAt: "2026-08-20T01:02:03.000Z",
+			observedAt: "2020-08-10T01:02:03.000Z",
 			pageUrl: "https://www.doubao.com/chat/123456",
-			sessionMode: "dedicated_sampling_profile",
-			searchMode: "native_auto",
+			sessionMode: "dedicated_sampling_profile" as const,
+			searchMode: "native_auto" as const,
 			webSearchObserved: true,
 			evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
 			citations: [],
 			webQueries: ["PPIO 云服务"],
-			captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+			captureDiagnostics: { answerCount: 1 as const, queryCount: 1, citationCount: 0, completionCount: 1 as const },
 		};
 
 		expect(browserRunnerStructuredObservationSchema.safeParse(structured).success).toBe(true);
@@ -438,6 +438,79 @@ describe("prepareSamplingObservation", () => {
 				captureDiagnostics: { ...structured.captureDiagnostics, queryCount: 0 },
 			}).success,
 		).toBe(false);
+
+		const extensionTask = {
+			...task,
+			surfaceTargetKey: "doubao.consumer_web",
+			captureRouteKey: "browser_extension.doubao",
+			sessionRequirement: "dedicated_sampling_profile" as const,
+			searchRequirement: "platform_default" as const,
+		};
+		const extensionFrozenTask = {
+			...frozenTask,
+			surfaceTargetKey: extensionTask.surfaceTargetKey,
+			captureRouteKey: extensionTask.captureRouteKey,
+			sessionRequirement: extensionTask.sessionRequirement,
+			searchRequirement: extensionTask.searchRequirement,
+		};
+		extensionFrozenTask.slotKey = buildDeliveryTaskSlotKey(extensionFrozenTask);
+		extensionTask.slotKey = extensionFrozenTask.slotKey;
+		const prepared = prepareSamplingObservation({
+			task: extensionTask,
+			manifest: { ...manifest, tasks: [extensionFrozenTask] },
+			observation: structured,
+			captureActor: {
+				kind: "browser_runner",
+				id: "device-1",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				browserVersion: "Chrome 151",
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+			},
+			leaseGeneration: 1,
+		});
+		expect(prepared.captureMetadata).toMatchObject({
+			responseSnapshotSchemaVersion: "response-snapshot.v2",
+			adapterVersion: "doubao-web-20260819-localpc-v8",
+			captureDiagnostics: structured.captureDiagnostics,
+		});
+	});
+
+	it("rejects structured citation payloads that cannot be archived unchanged", () => {
+		const structured = {
+			schemaVersion: "browser-runner-observation.v2" as const,
+			answerText: "PPIO 提供云服务。",
+			observedAt: "2026-08-20T01:02:03.000Z",
+			pageUrl: "https://www.doubao.com/chat/123456",
+			sessionMode: "dedicated_sampling_profile" as const,
+			searchMode: "native_auto" as const,
+			webSearchObserved: true,
+			evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
+			webQueries: ["PPIO 云服务"],
+			captureDiagnostics: { answerCount: 1 as const, queryCount: 1, citationCount: 1, completionCount: 1 as const },
+		};
+		const validCitation = { url: "https://source.example/report", title: "Source report" };
+
+		for (const citations of [
+			[{ ...validCitation, providerHtml: "<script>secret</script>" }],
+			[{ ...validCitation, url: `https://source.example/${"a".repeat(10_000)}` }],
+			[{ ...validCitation, title: "" }],
+			[{ url: "https://source.example/untitled" }],
+			[
+				{ ...validCitation, citationIndex: 0 },
+				{ ...validCitation, url: "https://source.example/other", citationIndex: 0 },
+			],
+			[validCitation, { ...validCitation }],
+		]) {
+			expect(
+				browserRunnerStructuredObservationSchema.safeParse({
+					...structured,
+					citations,
+					captureDiagnostics: { ...structured.captureDiagnostics, citationCount: citations.length },
+				}).success,
+			).toBe(false);
+		}
 	});
 
 	it("rejects citation URLs that contain embedded credentials", () => {
