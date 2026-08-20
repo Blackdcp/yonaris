@@ -138,6 +138,7 @@ export interface SamplingRunNowInput {
 	brandId: string;
 	scopeId: string;
 	surfaces: BrowserExtensionSurface[];
+	samplesPerPrompt: 1 | 5;
 	idempotencyKey: string;
 }
 

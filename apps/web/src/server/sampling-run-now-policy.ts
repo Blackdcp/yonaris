@@ -10,20 +10,21 @@ import type { DeliveryTaskPlanInput } from "@workspace/lib/db/delivery-batches";
 import type { DeliveryProtocol } from "@workspace/lib/delivery-manifest";
 
 export const SAMPLING_RUN_NOW_SAMPLES = 5;
+export const DOMESTIC_MONITORING_SAMPLES_PER_PROMPT = 1;
 export const SAMPLING_RUN_NOW_WINDOW_HOURS = 24;
 export const SAMPLING_RUN_NOW_MAX_TASKS = 10_000;
 
 export type SamplingRunNowTarget = {
 	surfaceTargetKey: BrowserExtensionSurface;
 	captureRouteKey: BrowserExtensionCaptureRoute;
-	samplesPerPrompt: typeof SAMPLING_RUN_NOW_SAMPLES;
+	samplesPerPrompt: 1 | typeof SAMPLING_RUN_NOW_SAMPLES;
 	evaluationRole: "scored";
 	sessionRequirement: "dedicated_sampling_profile";
 	searchRequirement: "platform_default";
 };
 
 export type SamplingRunNowPlan = {
-	samplesPerPrompt: typeof SAMPLING_RUN_NOW_SAMPLES;
+	samplesPerPrompt: 1 | typeof SAMPLING_RUN_NOW_SAMPLES;
 	taskCount: number;
 	targets: SamplingRunNowTarget[];
 	tasks: DeliveryTaskPlanInput[];
@@ -35,6 +36,7 @@ export type SamplingRunNowPlan = {
 export function planSamplingRunNow(input: {
 	prompts: readonly { id: string; value: string }[];
 	surfaces: readonly BrowserExtensionSurface[];
+	samplesPerPrompt: 1 | typeof SAMPLING_RUN_NOW_SAMPLES;
 	now: Date;
 }): SamplingRunNowPlan {
 	if (!Number.isFinite(input.now.getTime())) throw new Error("Run now requires a valid request time");
@@ -46,13 +48,16 @@ export function planSamplingRunNow(input: {
 	for (const surface of input.surfaces) {
 		if (!isBrowserExtensionSurface(surface)) throw new Error(`Run now channel ${surface} is unsupported`);
 	}
+	if (input.samplesPerPrompt !== 1 && input.samplesPerPrompt !== SAMPLING_RUN_NOW_SAMPLES) {
+		throw new Error("Run now samples per Prompt must be one or five");
+	}
 
 	const prompts = input.prompts
 		.map((prompt) => ({ id: requiredText(prompt.id, "Prompt id"), value: requiredText(prompt.value, "Prompt text") }))
 		.sort((left, right) => left.id.localeCompare(right.id));
 	const selected = new Set<BrowserExtensionSurface>(input.surfaces);
 	const surfaces = BROWSER_EXTENSION_SURFACES.filter((surface) => selected.has(surface));
-	const taskCount = prompts.length * surfaces.length * SAMPLING_RUN_NOW_SAMPLES;
+	const taskCount = prompts.length * surfaces.length * input.samplesPerPrompt;
 	if (taskCount > SAMPLING_RUN_NOW_MAX_TASKS) {
 		throw new Error(`Run now cannot contain more than ${SAMPLING_RUN_NOW_MAX_TASKS.toLocaleString("en-US")} tasks`);
 	}
@@ -61,7 +66,7 @@ export function planSamplingRunNow(input: {
 		(surfaceTargetKey): SamplingRunNowTarget => ({
 			surfaceTargetKey,
 			captureRouteKey: browserExtensionCaptureRoute(surfaceTargetKey),
-			samplesPerPrompt: SAMPLING_RUN_NOW_SAMPLES,
+			samplesPerPrompt: input.samplesPerPrompt,
 			evaluationRole: "scored",
 			sessionRequirement: "dedicated_sampling_profile",
 			searchRequirement: "platform_default",
@@ -70,7 +75,7 @@ export function planSamplingRunNow(input: {
 	const tasks: DeliveryTaskPlanInput[] = [];
 	for (const prompt of prompts) {
 		for (const target of targets) {
-			for (let sampleIndex = 1; sampleIndex <= SAMPLING_RUN_NOW_SAMPLES; sampleIndex += 1) {
+			for (let sampleIndex = 1; sampleIndex <= input.samplesPerPrompt; sampleIndex += 1) {
 				tasks.push({
 					promptId: prompt.id,
 					expectedPromptText: prompt.value,
@@ -90,7 +95,7 @@ export function planSamplingRunNow(input: {
 	const startsAt = input.now.toISOString();
 	const endsAt = new Date(input.now.getTime() + SAMPLING_RUN_NOW_WINDOW_HOURS * 60 * 60 * 1_000).toISOString();
 	return {
-		samplesPerPrompt: SAMPLING_RUN_NOW_SAMPLES,
+		samplesPerPrompt: input.samplesPerPrompt,
 		taskCount,
 		targets,
 		tasks,

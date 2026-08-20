@@ -1,3 +1,7 @@
+import {
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+	BROWSER_EXTENSION_SURFACES,
+} from "@workspace/lib/browser-extension-surfaces";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -24,11 +28,13 @@ function readyDevice(): BrowserRunnerDeviceView {
 		browserFamily: "chrome",
 		browserVersion: "140.0.0",
 		platform: "macos",
-		supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
-		readiness: {
-			"doubao.consumer_web": { status: "ready", adapterVersion: "doubao-1", activeConcurrency: 0 },
-			"deepseek.consumer_web": { status: "ready", adapterVersion: "deepseek-1", activeConcurrency: 0 },
-		},
+		supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
+		readiness: Object.fromEntries(
+			BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, adapterVersion }) => [
+				key,
+				{ status: "ready" as const, adapterVersion, activeConcurrency: 0 },
+			]),
+		),
 		lastSeenAt: "2026-08-16T10:00:00.000Z",
 		revokedAt: null,
 		allowedBrandIds: ["stepfun"],
@@ -36,7 +42,7 @@ function readyDevice(): BrowserRunnerDeviceView {
 }
 
 describe("SamplingRunNowDialog", () => {
-	it("fixes collection at five samples per selected channel and exposes no repeat-count control", () => {
+	it("defaults the one-click monitoring action to one pass across all six channels", () => {
 		const markup = renderToStaticMarkup(
 			<SamplingRunNowDialog
 				brandId="stepfun"
@@ -49,13 +55,14 @@ describe("SamplingRunNowDialog", () => {
 
 		expect(markup).toContain("Run now");
 		expect(markup).toContain("All 60 enabled Prompts");
-		expect(markup).toContain("60 × 2 × 5 = 600 tasks");
-		expect(markup).toContain("Five samples per Prompt and channel");
+		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
+		expect(markup).toContain("One run per Prompt and channel");
+		for (const { label } of BROWSER_EXTENSION_SURFACE_DEFINITIONS) expect(markup).toContain(label);
 		expect(markup).not.toContain('type="number"');
 		expect(markup).not.toMatch(/samples per prompt[^<]*input/i);
 	});
 
-	it("defaults to no channels while all eligible devices are offline", () => {
+	it("keeps all six channels selected while devices are offline so tasks can queue", () => {
 		const offline = readyDevice();
 		offline.lastSeenAt = "2026-08-16T09:00:00.000Z";
 		const markup = renderToStaticMarkup(
@@ -69,11 +76,11 @@ describe("SamplingRunNowDialog", () => {
 		);
 
 		expect(markup).toContain("Offline · will wait in queue");
-		expect(markup).toContain("60 × 0 × 5 = 0 tasks");
-		expect(markup).toContain("Run 0 tasks now");
+		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
+		expect(markup).toContain("Run 360 tasks now");
 	});
 
-	it("defaults to only the ready channel when another channel is unavailable", () => {
+	it("keeps an unavailable channel selected so its task waits rather than disappearing", () => {
 		const device = readyDevice();
 		device.readiness["deepseek.consumer_web"] = {
 			status: "unavailable",
@@ -91,15 +98,15 @@ describe("SamplingRunNowDialog", () => {
 		);
 
 		expect(markup).toContain("Unavailable · will wait in queue");
-		expect(markup).toContain("60 × 1 × 5 = 300 tasks");
-		expect(markup).toContain("Run 300 tasks now");
+		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
+		expect(markup).toContain("Run 360 tasks now");
 	});
 });
 
 describe("calculateSamplingRunNowTaskCount", () => {
-	it("uses the same fixed five-run contract for one or two domestic channels", () => {
-		expect(calculateSamplingRunNowTaskCount(60, 1)).toBe(300);
-		expect(calculateSamplingRunNowTaskCount(60, 2)).toBe(600);
+	it("uses the one-pass contract for the six domestic channels", () => {
+		expect(calculateSamplingRunNowTaskCount(60, 1)).toBe(60);
+		expect(calculateSamplingRunNowTaskCount(60, 6)).toBe(360);
 	});
 });
 
