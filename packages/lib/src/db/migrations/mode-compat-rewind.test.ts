@@ -16,6 +16,7 @@ describe("mode compatibility migration rewind", () => {
 			"0023_browser_extension_devices",
 			"0024_overseas_run_now",
 			"0025_workable_whizzer",
+			"0026_cancel_empty_legacy_default",
 		]);
 		for (const migration of post0021) expect(workflow).toContain(String(migration.when));
 		expect(workflow).toContain("DROP TABLE public.overseas_run_calls;");
