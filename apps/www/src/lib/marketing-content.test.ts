@@ -4,6 +4,7 @@ import {
 	buildDiagnosticMailto,
 	getLocalizedPath,
 	getMarketingContent,
+	getMarketingDetailPage,
 	getMarketingNavigation,
 	getMarketingPageMeta,
 	renderAgentDocument,
@@ -56,6 +57,17 @@ describe("marketing content", () => {
 			expect(content.method.steps).toHaveLength(5);
 			expect(content.evidence.scope).toEqual([6, 30, 24, 8, 768]);
 			expect(content.geo.title).toBeTruthy();
+		}
+	});
+
+	it("keeps every detail page useful and bilingual", () => {
+		for (const page of ["platform", "methodology", "results", "geo"] as const) {
+			const english = getMarketingDetailPage("en", page);
+			const chinese = getMarketingDetailPage("zh", page);
+			expect(english.summary).toBeTruthy();
+			expect(chinese.summary).toBeTruthy();
+			expect(english.sections.length).toBeGreaterThanOrEqual(3);
+			expect(chinese.sections).toHaveLength(english.sections.length);
 		}
 	});
 

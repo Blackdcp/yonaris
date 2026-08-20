@@ -1,5 +1,6 @@
 export type Locale = "en" | "zh";
 export type MarketingPageKey = "home" | "platform" | "methodology" | "results" | "geo" | "diagnostic";
+export type MarketingDetailPageKey = Exclude<MarketingPageKey, "home" | "diagnostic">;
 export type AgentSection = "company" | "platform" | "methodology" | "results";
 
 export interface DiagnosticInput {
@@ -323,6 +324,10 @@ const zh: MarketingContent = {
 
 export function getMarketingContent(locale: Locale): MarketingContent {
 	return locale === "zh" ? zh : en;
+}
+
+export function getMarketingDetailPage(locale: Locale, page: MarketingDetailPageKey): DetailPageContent {
+	return getMarketingContent(locale).pages[page];
 }
 
 export function getLocalizedPath(path: string, locale: Locale): string {

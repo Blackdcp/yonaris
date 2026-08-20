@@ -13,12 +13,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as GeoRouteImport } from './routes/geo'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as OffSiteAeoRouteImport } from './routes/off-site-aeo'
 import { Route as OgDotpngRouteImport } from './routes/og[.]png'
+import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
+import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -41,6 +45,10 @@ import { Route as GlossaryIndexRouteImport } from './routes/glossary/index'
 import { Route as GlossarySlugRouteImport } from './routes/glossary/$slug'
 import { Route as OgStatusDotpngRouteImport } from './routes/og/status[.]png'
 import { Route as ZhIndexRouteImport } from './routes/zh/index'
+import { Route as ZhGeoRouteImport } from './routes/zh/geo'
+import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
+import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
+import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as AiVisibilityToolsAlternativesIndexRouteImport } from './routes/ai-visibility-tools/alternatives/index'
 import { Route as AiVisibilityToolsAlternativesSlugRouteImport } from './routes/ai-visibility-tools/alternatives/$slug'
 import { Route as AiVisibilityToolsCategoryIndexRouteImport } from './routes/ai-visibility-tools/category/index'
@@ -76,6 +84,11 @@ const FeaturesRoute = FeaturesRouteImport.update({
   path: '/features',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GeoRoute = GeoRouteImport.update({
+  id: '/geo',
+  path: '/geo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
   id: '/llms-full.txt',
   path: '/llms-full.txt',
@@ -84,6 +97,11 @@ const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
 const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
   id: '/llms.txt',
   path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MethodologyRoute = MethodologyRouteImport.update({
+  id: '/methodology',
+  path: '/methodology',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OffSiteAeoRoute = OffSiteAeoRouteImport.update({
@@ -96,6 +114,11 @@ const OgDotpngRoute = OgDotpngRouteImport.update({
   path: '/og.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlatformRoute = PlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
@@ -104,6 +127,11 @@ const PricingRoute = PricingRouteImport.update({
 const RepoActivityDotsvgRoute = RepoActivityDotsvgRouteImport.update({
   id: '/repo-activity.svg',
   path: '/repo-activity.svg',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsRoute = ResultsRouteImport.update({
+  id: '/results',
+  path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RoadmapRoute = RoadmapRouteImport.update({
@@ -216,6 +244,26 @@ const ZhIndexRoute = ZhIndexRouteImport.update({
   path: '/zh/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhGeoRoute = ZhGeoRouteImport.update({
+  id: '/zh/geo',
+  path: '/zh/geo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhMethodologyRoute = ZhMethodologyRouteImport.update({
+  id: '/zh/methodology',
+  path: '/zh/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhPlatformRoute = ZhPlatformRouteImport.update({
+  id: '/zh/platform',
+  path: '/zh/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhResultsRoute = ZhResultsRouteImport.update({
+  id: '/zh/results',
+  path: '/zh/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AiVisibilityToolsAlternativesIndexRoute =
   AiVisibilityToolsAlternativesIndexRouteImport.update({
     id: '/ai-visibility-tools/alternatives/',
@@ -302,12 +350,16 @@ export interface FileRoutesByFullPath {
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
   '/features': typeof FeaturesRoute
+  '/geo': typeof GeoRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -323,6 +375,10 @@ export interface FileRoutesByFullPath {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/geo': typeof ZhGeoRoute
+  '/zh/methodology': typeof ZhMethodologyRoute
+  '/zh/platform': typeof ZhPlatformRoute
+  '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/ai-search/': typeof AiSearchIndexRoute
   '/ai-visibility-tools/': typeof AiVisibilityToolsIndexRoute
@@ -350,12 +406,16 @@ export interface FileRoutesByTo {
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
   '/features': typeof FeaturesRoute
+  '/geo': typeof GeoRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -371,6 +431,10 @@ export interface FileRoutesByTo {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/geo': typeof ZhGeoRoute
+  '/zh/methodology': typeof ZhMethodologyRoute
+  '/zh/platform': typeof ZhPlatformRoute
+  '/zh/results': typeof ZhResultsRoute
   '/aeo-for': typeof AeoForIndexRoute
   '/ai-search': typeof AiSearchIndexRoute
   '/ai-visibility-tools': typeof AiVisibilityToolsIndexRoute
@@ -399,12 +463,16 @@ export interface FileRoutesById {
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
   '/features': typeof FeaturesRoute
+  '/geo': typeof GeoRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -420,6 +488,10 @@ export interface FileRoutesById {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/geo': typeof ZhGeoRoute
+  '/zh/methodology': typeof ZhMethodologyRoute
+  '/zh/platform': typeof ZhPlatformRoute
+  '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/ai-search/': typeof AiSearchIndexRoute
   '/ai-visibility-tools/': typeof AiVisibilityToolsIndexRoute
@@ -449,12 +521,16 @@ export interface FileRouteTypes {
     | '/brand'
     | '/changelog'
     | '/features'
+    | '/geo'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/platform'
     | '/pricing'
     | '/repo-activity.svg'
+    | '/results'
     | '/roadmap'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -470,6 +546,10 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/geo'
+    | '/zh/methodology'
+    | '/zh/platform'
+    | '/zh/results'
     | '/aeo-for/'
     | '/ai-search/'
     | '/ai-visibility-tools/'
@@ -497,12 +577,16 @@ export interface FileRouteTypes {
     | '/brand'
     | '/changelog'
     | '/features'
+    | '/geo'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/platform'
     | '/pricing'
     | '/repo-activity.svg'
+    | '/results'
     | '/roadmap'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -518,6 +602,10 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/geo'
+    | '/zh/methodology'
+    | '/zh/platform'
+    | '/zh/results'
     | '/aeo-for'
     | '/ai-search'
     | '/ai-visibility-tools'
@@ -545,12 +633,16 @@ export interface FileRouteTypes {
     | '/brand'
     | '/changelog'
     | '/features'
+    | '/geo'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/platform'
     | '/pricing'
     | '/repo-activity.svg'
+    | '/results'
     | '/roadmap'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -566,6 +658,10 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/geo'
+    | '/zh/methodology'
+    | '/zh/platform'
+    | '/zh/results'
     | '/aeo-for/'
     | '/ai-search/'
     | '/ai-visibility-tools/'
@@ -594,12 +690,16 @@ export interface RootRouteChildren {
   BrandRoute: typeof BrandRoute
   ChangelogRoute: typeof ChangelogRoute
   FeaturesRoute: typeof FeaturesRoute
+  GeoRoute: typeof GeoRoute
   LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
+  MethodologyRoute: typeof MethodologyRoute
   OffSiteAeoRoute: typeof OffSiteAeoRoute
   OgDotpngRoute: typeof OgDotpngRoute
+  PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
+  ResultsRoute: typeof ResultsRoute
   RoadmapRoute: typeof RoadmapRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -615,6 +715,10 @@ export interface RootRouteChildren {
   DocsSplatRoute: typeof DocsSplatRoute
   GlossarySlugRoute: typeof GlossarySlugRoute
   OgStatusDotpngRoute: typeof OgStatusDotpngRoute
+  ZhGeoRoute: typeof ZhGeoRoute
+  ZhMethodologyRoute: typeof ZhMethodologyRoute
+  ZhPlatformRoute: typeof ZhPlatformRoute
+  ZhResultsRoute: typeof ZhResultsRoute
   AeoForIndexRoute: typeof AeoForIndexRoute
   AiSearchIndexRoute: typeof AiSearchIndexRoute
   AiVisibilityToolsIndexRoute: typeof AiVisibilityToolsIndexRoute
@@ -668,6 +772,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FeaturesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/geo': {
+      id: '/geo'
+      path: '/geo'
+      fullPath: '/geo'
+      preLoaderRoute: typeof GeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/llms-full.txt': {
       id: '/llms-full.txt'
       path: '/llms-full.txt'
@@ -680,6 +791,13 @@ declare module '@tanstack/react-router' {
       path: '/llms.txt'
       fullPath: '/llms.txt'
       preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/methodology': {
+      id: '/methodology'
+      path: '/methodology'
+      fullPath: '/methodology'
+      preLoaderRoute: typeof MethodologyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/off-site-aeo': {
@@ -696,6 +814,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/platform': {
+      id: '/platform'
+      path: '/platform'
+      fullPath: '/platform'
+      preLoaderRoute: typeof PlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
@@ -708,6 +833,13 @@ declare module '@tanstack/react-router' {
       path: '/repo-activity.svg'
       fullPath: '/repo-activity.svg'
       preLoaderRoute: typeof RepoActivityDotsvgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results': {
+      id: '/results'
+      path: '/results'
+      fullPath: '/results'
+      preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roadmap': {
@@ -864,6 +996,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/geo': {
+      id: '/zh/geo'
+      path: '/zh/geo'
+      fullPath: '/zh/geo'
+      preLoaderRoute: typeof ZhGeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/methodology': {
+      id: '/zh/methodology'
+      path: '/zh/methodology'
+      fullPath: '/zh/methodology'
+      preLoaderRoute: typeof ZhMethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/platform': {
+      id: '/zh/platform'
+      path: '/zh/platform'
+      fullPath: '/zh/platform'
+      preLoaderRoute: typeof ZhPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/results': {
+      id: '/zh/results'
+      path: '/zh/results'
+      fullPath: '/zh/results'
+      preLoaderRoute: typeof ZhResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ai-visibility-tools/alternatives/': {
       id: '/ai-visibility-tools/alternatives/'
       path: '/ai-visibility-tools/alternatives'
@@ -970,12 +1130,16 @@ const rootRouteChildren: RootRouteChildren = {
   BrandRoute: BrandRoute,
   ChangelogRoute: ChangelogRoute,
   FeaturesRoute: FeaturesRoute,
+  GeoRoute: GeoRoute,
   LlmsFullDottxtRoute: LlmsFullDottxtRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
+  MethodologyRoute: MethodologyRoute,
   OffSiteAeoRoute: OffSiteAeoRoute,
   OgDotpngRoute: OgDotpngRoute,
+  PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
+  ResultsRoute: ResultsRoute,
   RoadmapRoute: RoadmapRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -991,6 +1155,10 @@ const rootRouteChildren: RootRouteChildren = {
   DocsSplatRoute: DocsSplatRoute,
   GlossarySlugRoute: GlossarySlugRoute,
   OgStatusDotpngRoute: OgStatusDotpngRoute,
+  ZhGeoRoute: ZhGeoRoute,
+  ZhMethodologyRoute: ZhMethodologyRoute,
+  ZhPlatformRoute: ZhPlatformRoute,
+  ZhResultsRoute: ZhResultsRoute,
   AeoForIndexRoute: AeoForIndexRoute,
   AiSearchIndexRoute: AiSearchIndexRoute,
   AiVisibilityToolsIndexRoute: AiVisibilityToolsIndexRoute,
