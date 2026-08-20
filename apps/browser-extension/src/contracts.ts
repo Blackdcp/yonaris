@@ -1,8 +1,11 @@
+import type { BrowserExtensionSurface as SharedBrowserExtensionSurface } from "@workspace/lib/browser-extension-surfaces";
+
+export { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-surfaces";
+
 export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
 export const EXTENSION_VERSION = "0.2.3" as const;
-export const BROWSER_EXTENSION_SURFACES = ["doubao.consumer_web", "deepseek.consumer_web"] as const;
 
-export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACES)[number];
+export type BrowserExtensionSurface = SharedBrowserExtensionSurface;
 export type BrowserExtensionReadinessStatus =
 	| "ready"
 	| "signed_out"

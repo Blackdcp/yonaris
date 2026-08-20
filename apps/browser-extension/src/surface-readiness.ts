@@ -1,12 +1,14 @@
 import {
+	browserExtensionSurfaceDefinition,
+	mapBrowserExtensionSurfaces,
+} from "@workspace/lib/browser-extension-surfaces";
+import {
 	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionReadiness,
 	type BrowserExtensionReadinessStatus,
 	type BrowserExtensionSurface,
 	type SurfaceReadiness,
 } from "./contracts";
-import deepSeekContract from "./selector-contracts/deepseek-web-v1.json";
-import doubaoContract from "./selector-contracts/doubao-web-v1.json";
 
 const READINESS_STATUSES = new Set<BrowserExtensionReadinessStatus>([
 	"ready",
@@ -16,24 +18,16 @@ const READINESS_STATUSES = new Set<BrowserExtensionReadinessStatus>([
 	"unavailable",
 ]);
 
-export const CURRENT_ADAPTER_VERSIONS: Readonly<Record<BrowserExtensionSurface, string>> = {
-	"doubao.consumer_web": doubaoContract.version,
-	"deepseek.consumer_web": deepSeekContract.version,
-};
+export const CURRENT_ADAPTER_VERSIONS: Readonly<Record<BrowserExtensionSurface, string>> = mapBrowserExtensionSurfaces(
+	(surface) => browserExtensionSurfaceDefinition(surface).adapterVersion,
+);
 
 export function defaultSurfaceReadiness(): Record<BrowserExtensionSurface, SurfaceReadiness> {
-	return {
-		"doubao.consumer_web": {
-			status: "unavailable",
-			adapterVersion: CURRENT_ADAPTER_VERSIONS["doubao.consumer_web"],
-			activeConcurrency: 0,
-		},
-		"deepseek.consumer_web": {
-			status: "unavailable",
-			adapterVersion: CURRENT_ADAPTER_VERSIONS["deepseek.consumer_web"],
-			activeConcurrency: 0,
-		},
-	};
+	return mapBrowserExtensionSurfaces((surface) => ({
+		status: "unavailable",
+		adapterVersion: CURRENT_ADAPTER_VERSIONS[surface],
+		activeConcurrency: 0,
+	}));
 }
 
 export function normalizeSurfaceReadiness(value: unknown): Record<BrowserExtensionSurface, SurfaceReadiness> {

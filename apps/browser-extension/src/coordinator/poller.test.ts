@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
 import { pollStartedWork } from "./poller";
 import { claimedTask } from "./test-fixture";
 
@@ -6,7 +7,7 @@ describe("pollStartedWork", () => {
 	test("runs at most one claimed task globally across all surfaces", async () => {
 		const runTaskIds: string[] = [];
 		const claimSurfaces: string[] = [];
-		const queues = {
+		const queues: Partial<Record<BrowserExtensionSurface, BrowserExtensionClaim[]>> = {
 			"doubao.consumer_web": [claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" })],
 			"deepseek.consumer_web": [claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" })],
 		};
@@ -16,7 +17,7 @@ describe("pollStartedWork", () => {
 			surfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 			claim: async (_brandId, surface) => {
 				claimSurfaces.push(surface);
-				return queues[surface].shift() ?? null;
+				return queues[surface]?.shift() ?? null;
 			},
 			run: async (claim) => {
 				runTaskIds.push(claim.taskId);
@@ -36,7 +37,7 @@ describe("pollStartedWork", () => {
 		{ status: "incomplete" as const, code: "coordinator_unhandled", summaryKey: "incomplete" as const },
 	])("stops claiming after the first $status result", async ({ status, code, summaryKey }) => {
 		const claimSurfaces: string[] = [];
-		const queues = {
+		const queues: Partial<Record<BrowserExtensionSurface, BrowserExtensionClaim[]>> = {
 			"doubao.consumer_web": [claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" })],
 			"deepseek.consumer_web": [claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" })],
 		};
@@ -46,7 +47,7 @@ describe("pollStartedWork", () => {
 			surfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 			claim: async (_brandId, surface) => {
 				claimSurfaces.push(surface);
-				return queues[surface].shift() ?? null;
+				return queues[surface]?.shift() ?? null;
 			},
 			run: async () => ({ status, code }),
 			now: () => 1_000,

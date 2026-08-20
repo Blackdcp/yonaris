@@ -69,7 +69,7 @@ Create a single `as const` registry with this shape:
 ```ts
 export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
   { key: "doubao.consumer_web", label: "Doubao", captureRoute: "browser_extension.doubao", launchUrl: "https://www.doubao.com/chat/", adapterVersion: "doubao-web-20260819-localpc-v8" },
-  { key: "deepseek.consumer_web", label: "DeepSeek", captureRoute: "browser_extension.deepseek", launchUrl: "https://chat.deepseek.com/", adapterVersion: "deepseek-web-20260821-localpc-v2" },
+  { key: "deepseek.consumer_web", label: "DeepSeek", captureRoute: "browser_extension.deepseek", launchUrl: "https://chat.deepseek.com/", adapterVersion: "deepseek-web-20260814-uat1" },
   { key: "qwen.consumer_web", label: "Qwen", captureRoute: "browser_extension.qwen", launchUrl: "https://www.qianwen.com/", adapterVersion: "qwen-web-20260821-localpc-v1" },
   { key: "kimi.consumer_web", label: "Kimi", captureRoute: "browser_extension.kimi", launchUrl: "https://www.kimi.com/", adapterVersion: "kimi-web-20260821-localpc-v1" },
   { key: "wenxin.consumer_web", label: "Wenxin", captureRoute: "browser_extension.wenxin", launchUrl: "https://yiyan.baidu.com/", adapterVersion: "wenxin-web-20260821-localpc-v1" },

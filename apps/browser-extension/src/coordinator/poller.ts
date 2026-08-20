@@ -1,3 +1,4 @@
+import { mapBrowserExtensionSurfaces } from "@workspace/lib/browser-extension-surfaces";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
 import { AdaptiveSurfacePool } from "./concurrency";
 import type { TaskRunResult } from "./task-runner";
@@ -87,8 +88,5 @@ async function claimRound(
 }
 
 function emptySummaries(): Record<BrowserExtensionSurface, SurfacePollSummary> {
-	return {
-		"doubao.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
-		"deepseek.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
-	};
+	return mapBrowserExtensionSurfaces(() => ({ succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 }));
 }

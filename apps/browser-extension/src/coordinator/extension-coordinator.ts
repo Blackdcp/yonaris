@@ -1,3 +1,4 @@
+import { mapBrowserExtensionSurfaces } from "@workspace/lib/browser-extension-surfaces";
 import type {
 	BrowserExtensionClaim,
 	BrowserExtensionSurface,
@@ -50,10 +51,7 @@ type ExtensionCoordinatorDependencies = {
 
 export class ExtensionCoordinator {
 	readonly #dependencies: ExtensionCoordinatorDependencies;
-	readonly #pools: Record<BrowserExtensionSurface, AdaptiveSurfacePool> = {
-		"doubao.consumer_web": new AdaptiveSurfacePool(),
-		"deepseek.consumer_web": new AdaptiveSurfacePool(),
-	};
+	readonly #pools = mapBrowserExtensionSurfaces(() => new AdaptiveSurfacePool());
 
 	constructor(dependencies: ExtensionCoordinatorDependencies) {
 		this.#dependencies = dependencies;
@@ -187,10 +185,7 @@ export class ExtensionCoordinator {
 }
 
 function emptySurfaceSummaries(): Record<BrowserExtensionSurface, SurfacePollSummary> {
-	return {
-		"doubao.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
-		"deepseek.consumer_web": { succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 },
-	};
+	return mapBrowserExtensionSurfaces(() => ({ succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 }));
 }
 
 function isPostSubmitPhase(phase: string): boolean {

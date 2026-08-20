@@ -7,18 +7,82 @@ import {
 	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
 	parseBrowserExtensionSurface,
 } from "./browser-extension-contract";
+import {
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+	BROWSER_EXTENSION_SURFACES,
+	browserExtensionSurfaceDefinition,
+	mapBrowserExtensionSurfaces,
+} from "./browser-extension-surfaces";
 
 describe("browser extension contract", () => {
+	it("defines the exact domestic execution order once", () => {
+		expect(BROWSER_EXTENSION_SURFACES).toEqual([
+			"doubao.consumer_web",
+			"deepseek.consumer_web",
+			"qwen.consumer_web",
+			"kimi.consumer_web",
+			"wenxin.consumer_web",
+			"yuanbao.consumer_web",
+		]);
+		expect(BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ label }) => label)).toEqual([
+			"Doubao",
+			"DeepSeek",
+			"Qwen",
+			"Kimi",
+			"Wenxin",
+			"Yuanbao",
+		]);
+	});
+
+	it("builds complete keyed state for every registered surface", () => {
+		const labels = mapBrowserExtensionSurfaces((surface) => browserExtensionSurfaceDefinition(surface).label);
+
+		expect(Object.keys(labels)).toEqual(BROWSER_EXTENSION_SURFACES);
+		expect(labels["qwen.consumer_web"]).toBe("Qwen");
+		expect(labels["yuanbao.consumer_web"]).toBe("Yuanbao");
+	});
+
+	it.each([
+		[
+			"doubao.consumer_web",
+			"browser_extension.doubao",
+			"https://www.doubao.com/chat/",
+			"doubao-web-20260819-localpc-v8",
+		],
+		["deepseek.consumer_web", "browser_extension.deepseek", "https://chat.deepseek.com/", "deepseek-web-20260814-uat1"],
+		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v1"],
+		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v1"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://yiyan.baidu.com/", "wenxin-web-20260821-localpc-v1"],
+		[
+			"yuanbao.consumer_web",
+			"browser_extension.yuanbao",
+			"https://yuanbao.tencent.com/",
+			"yuanbao-web-20260821-localpc-v1",
+		],
+	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
+		expect(browserExtensionSurfaceDefinition(surface)).toEqual({
+			key: surface,
+			label: expect.any(String),
+			captureRoute,
+			launchUrl,
+			adapterVersion,
+		});
+	});
+
 	it.each([
 		["doubao.consumer_web", "browser_extension.doubao"],
 		["deepseek.consumer_web", "browser_extension.deepseek"],
+		["qwen.consumer_web", "browser_extension.qwen"],
+		["kimi.consumer_web", "browser_extension.kimi"],
+		["wenxin.consumer_web", "browser_extension.wenxin"],
+		["yuanbao.consumer_web", "browser_extension.yuanbao"],
 	] as const)("maps %s to its exact capture route %s", (surface, route) => {
 		expect(parseBrowserExtensionSurface(surface)).toBe(surface);
 		expect(browserExtensionCaptureRoute(surface)).toBe(route);
 	});
 
-	it("rejects surfaces that the first extension release cannot execute", () => {
-		expect(() => parseBrowserExtensionSurface("kimi.consumer_web")).toThrow(/not supported/i);
+	it("rejects surfaces outside the domestic registry", () => {
+		expect(() => parseBrowserExtensionSurface("unknown.consumer_web")).toThrow(/not supported/i);
 	});
 
 	it("approves Doubao v8 for production and rejects the retired v7 adapter", () => {
