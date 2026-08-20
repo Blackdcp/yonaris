@@ -44,7 +44,7 @@ describe("Sampling Run now planning", () => {
 		expect(() =>
 			planSamplingRunNow({
 				prompts: [{ id: "p1", value: "prompt" }],
-				surfaces: ["kimi.consumer_web" as never],
+				surfaces: ["unsupported.consumer_web" as never],
 				now: new Date(),
 			}),
 		).toThrow(/unsupported/i);

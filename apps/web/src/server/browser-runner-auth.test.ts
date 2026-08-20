@@ -1,3 +1,7 @@
+import {
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+	BROWSER_EXTENSION_SURFACES,
+} from "@workspace/lib/browser-extension-surfaces";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -82,7 +86,35 @@ describe("Browser Runner machine authentication", () => {
 		});
 	});
 
-	it("keeps an unqualified DeepSeek adapter out of ready surfaces even when the client reports ready", async () => {
+	it("projects all six exact approved adapters as ready", async () => {
+		const readiness = Object.fromEntries(
+			BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, adapterVersion }) => [
+				key,
+				{ status: "ready" as const, adapterVersion, activeConcurrency: 0 },
+			]),
+		);
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer yrd_${"e".repeat(43)}` },
+			}),
+			{
+				authenticateDevice: async () => ({
+					id: "11111111-1111-4111-8111-111111111111",
+					allowedBrandIds: ["stepfun"],
+					supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
+					readiness,
+					revokedAt: null,
+				}),
+			},
+		);
+
+		expect(principal).toMatchObject({
+			supportedSurfaces: BROWSER_EXTENSION_SURFACES,
+			readySurfaces: BROWSER_EXTENSION_SURFACES,
+		});
+	});
+
+	it("keeps a stale DeepSeek adapter out of ready surfaces even when the client reports ready", async () => {
 		const deviceToken = `yrd_${"c".repeat(43)}`;
 		const principal = await authenticateRunnerRequest(
 			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
@@ -96,7 +128,7 @@ describe("Browser Runner machine authentication", () => {
 					readiness: {
 						"deepseek.consumer_web": {
 							status: "ready",
-							adapterVersion: "deepseek-web-20260814-uat1",
+							adapterVersion: "deepseek-web-stale",
 							activeConcurrency: 0,
 						},
 					},

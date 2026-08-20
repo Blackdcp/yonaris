@@ -185,11 +185,11 @@ export const browserRunnerDevices = pgTable(
 		validPlatform: check("browser_runner_devices_valid_platform", sql`${table.platform} IN ('windows', 'macos')`),
 		validSurfaceCount: check(
 			"browser_runner_devices_valid_surface_count",
-			sql`cardinality(${table.supportedSurfaces}) BETWEEN 1 AND 2`,
+			sql`cardinality(${table.supportedSurfaces}) BETWEEN 1 AND 6`,
 		),
 		validSurfaces: check(
 			"browser_runner_devices_valid_surfaces",
-			sql`${table.supportedSurfaces} <@ ARRAY['doubao.consumer_web', 'deepseek.consumer_web']::text[]`,
+			sql`${table.supportedSurfaces} <@ ARRAY['doubao.consumer_web', 'deepseek.consumer_web', 'qwen.consumer_web', 'kimi.consumer_web', 'wenxin.consumer_web', 'yuanbao.consumer_web']::text[]`,
 		),
 	}),
 ).enableRLS();

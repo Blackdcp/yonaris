@@ -1,4 +1,7 @@
-import { isBrowserExtensionAdapterVersionBindingSatisfied } from "@workspace/lib/browser-extension-contract";
+import {
+	type BrowserExtensionSurface,
+	isBrowserExtensionAdapterVersionBindingSatisfied,
+} from "@workspace/lib/browser-extension-contract";
 import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
@@ -23,10 +26,7 @@ import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-po
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
-const futureDoubaoV8Binding = (
-	surface: "doubao.consumer_web" | "deepseek.consumer_web",
-	requestedAdapterVersion: string | undefined,
-) =>
+const futureDoubaoV8Binding = (surface: BrowserExtensionSurface, requestedAdapterVersion: string | undefined) =>
 	isBrowserExtensionAdapterVersionBindingSatisfied({
 		surface,
 		requestedAdapterVersion,
@@ -42,8 +42,8 @@ type ExtensionTaskOperation =
 	| { kind: "complete"; adapterVersion: string };
 
 async function authorizeExtensionTaskOperation(input: {
-	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
-	readySurfaces: readonly ("doubao.consumer_web" | "deepseek.consumer_web")[];
+	surfaceTargetKey: BrowserExtensionSurface;
+	readySurfaces: readonly BrowserExtensionSurface[];
 	operation: ExtensionTaskOperation;
 }) {
 	return authorizeRunnerTaskOperation(

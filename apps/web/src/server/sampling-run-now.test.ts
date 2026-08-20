@@ -1,3 +1,4 @@
+import type { BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import { describe, expect, it, vi } from "vitest";
 import {
 	executeSamplingRunNow,
@@ -5,7 +6,12 @@ import {
 	withBrowserExtensionOverlapProtection,
 } from "./sampling";
 
-const input = {
+const input: {
+	brandId: string;
+	scopeId: string;
+	surfaces: readonly BrowserExtensionSurface[];
+	idempotencyKey: string;
+} = {
 	brandId: "stepfun",
 	scopeId: "11111111-1111-4111-8111-111111111111",
 	surfaces: ["doubao.consumer_web", "deepseek.consumer_web"] as const,

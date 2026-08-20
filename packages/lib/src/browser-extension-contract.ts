@@ -3,6 +3,7 @@ import {
 	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionCaptureRoute,
 	type BrowserExtensionSurface,
+	mapBrowserExtensionSurfaces,
 } from "./browser-extension-surfaces";
 
 export type { BrowserExtensionCaptureRoute, BrowserExtensionSurface } from "./browser-extension-surfaces";
@@ -37,9 +38,9 @@ export interface BrowserExtensionClaim {
 	leaseExpiresAt: string;
 }
 
-const APPROVED_ADAPTER_VERSIONS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
-	"doubao.consumer_web": "doubao-web-20260819-localpc-v8",
-};
+const APPROVED_ADAPTER_VERSIONS: Readonly<Record<BrowserExtensionSurface, string>> = mapBrowserExtensionSurfaces(
+	(surface) => BROWSER_EXTENSION_SURFACE_DEFINITIONS.find(({ key }) => key === surface)?.adapterVersion ?? "",
+);
 
 const LEGACY_ADAPTER_VERSION_OMISSION_WINDOWS: Readonly<Partial<Record<BrowserExtensionSurface, string>>> = {
 	"doubao.consumer_web": "doubao-web-20260818-localpc-v7",

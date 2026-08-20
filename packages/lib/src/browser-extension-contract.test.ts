@@ -92,11 +92,19 @@ describe("browser extension contract", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260819-localpc-v8")).toBe(
 			true,
 		);
-		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-20260814-uat1")).toBe(false);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(
 			false,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("deepseek.consumer_web", "deepseek-web-stale")).toBe(false);
+	});
+
+	it("approves the exact registered adapter for every domestic surface", () => {
+		for (const definition of BROWSER_EXTENSION_SURFACE_DEFINITIONS) {
+			expect(isApprovedBrowserExtensionAdapterVersion(definition.key, definition.adapterVersion)).toBe(true);
+			expect(isApprovedBrowserExtensionAdapterVersion(definition.key, `${definition.adapterVersion}-stale`)).toBe(
+				false,
+			);
+		}
 	});
 
 	it("requires an explicit exact v8 binding after production activation", () => {

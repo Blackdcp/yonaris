@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
 	BROWSER_EXTENSION_SURFACES,
+	type BrowserExtensionCaptureRoute,
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionSurface,
@@ -14,7 +15,7 @@ export const SAMPLING_RUN_NOW_MAX_TASKS = 10_000;
 
 export type SamplingRunNowTarget = {
 	surfaceTargetKey: BrowserExtensionSurface;
-	captureRouteKey: "browser_extension.doubao" | "browser_extension.deepseek";
+	captureRouteKey: BrowserExtensionCaptureRoute;
 	samplesPerPrompt: typeof SAMPLING_RUN_NOW_SAMPLES;
 	evaluationRole: "scored";
 	sessionRequirement: "dedicated_sampling_profile";

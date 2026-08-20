@@ -1,0 +1,4 @@
+ALTER TABLE "browser_runner_devices" DROP CONSTRAINT "browser_runner_devices_valid_surface_count";--> statement-breakpoint
+ALTER TABLE "browser_runner_devices" DROP CONSTRAINT "browser_runner_devices_valid_surfaces";--> statement-breakpoint
+ALTER TABLE "browser_runner_devices" ADD CONSTRAINT "browser_runner_devices_valid_surface_count" CHECK (cardinality("browser_runner_devices"."supported_surfaces") BETWEEN 1 AND 6);--> statement-breakpoint
+ALTER TABLE "browser_runner_devices" ADD CONSTRAINT "browser_runner_devices_valid_surfaces" CHECK ("browser_runner_devices"."supported_surfaces" <@ ARRAY['doubao.consumer_web', 'deepseek.consumer_web', 'qwen.consumer_web', 'kimi.consumer_web', 'wenxin.consumer_web', 'yuanbao.consumer_web']::text[]);

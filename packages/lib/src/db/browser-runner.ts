@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { and, asc, eq, gt, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
 import {
 	BROWSER_EXTENSION_SURFACES,
+	type BrowserExtensionCaptureRoute,
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 } from "../browser-extension-contract";
@@ -54,7 +55,7 @@ export type BrowserRunnerClaimTarget =
 	| { surfaceTargetKey: "doubao.consumer_web"; captureRouteKey: "browser_runner.doubao" }
 	| {
 			surfaceTargetKey: BrowserExtensionSurface;
-			captureRouteKey: "browser_extension.doubao" | "browser_extension.deepseek";
+			captureRouteKey: BrowserExtensionCaptureRoute;
 	  };
 
 export function resolveBrowserRunnerClaimTargets(input: {
