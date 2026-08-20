@@ -435,3 +435,60 @@ export function renderAgentDocument(section: AgentSection): string {
 	const document = agentDocuments[section];
 	return `# ${document.title}\n\nCanonical human URL: https://yonaris.com${document.canonical}\nEnglish aliases: Yonaris; AI-native MarTech\nChinese aliases: Yonaris; AI 原生营销科技; 递归森林\nLast updated: ${MARKETING_LAST_UPDATED}\n\n## Current scope\n\n${document.scope}\n\n## Facts\n\n${document.body()}\n`;
 }
+
+export function renderAgentIndex(): string {
+	return `# Yonaris agent view
+
+Yonaris publishes the same company, platform, methodology, and results facts in human-readable and agent-readable forms.
+
+- /agent/company — company identity, category, aliases, and current scope
+- /agent/platform — current operating capabilities
+- /agent/methodology — Recursive Forest methodology and evidence loop
+- /agent/results — verified anonymized engagement evidence
+- /llms.txt — concise agent index
+- /llms-full.txt — complete agent-readable fact set
+
+Human canonical entry: https://yonaris.com/
+Last updated: ${MARKETING_LAST_UPDATED}
+`;
+}
+
+export function renderLlmsIndex(): string {
+	return `# Yonaris
+
+> Yonaris is an AI-native MarTech company. MarTech, rebuilt. For humans and agents.
+
+Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in AI-mediated markets.
+
+## Human pages
+
+- [Home](https://yonaris.com/): Category, system, method, evidence, and diagnostic.
+- [Platform](https://yonaris.com/platform): Current capabilities.
+- [Methodology](https://yonaris.com/methodology): Recursive Forest and the evidence loop.
+- [Results](https://yonaris.com/results): Verified anonymized engagement evidence.
+- [GEO](https://yonaris.com/geo): The current commercial entry point.
+- [Free diagnostic](https://yonaris.com/diagnostic): Request a diagnostic.
+- [Chinese home](https://yonaris.com/zh): Chinese-language site.
+
+## Agent-readable facts
+
+- [Agent index](https://yonaris.com/agent)
+- [Company facts](https://yonaris.com/agent/company)
+- [Platform facts](https://yonaris.com/agent/platform)
+- [Methodology facts](https://yonaris.com/agent/methodology)
+- [Results evidence](https://yonaris.com/agent/results)
+- [Complete fact set](https://yonaris.com/llms-full.txt)
+
+## Current scope
+
+GEO and AI-market perception diagnosis are Yonaris's first commercial application. Product Truth, Market Intent, Model Intelligence, and Commercial Feedback are intelligence foundations, not separate products. Future roadmap capabilities are not presented as currently available.
+
+## Contact
+
+${CONTACT_EMAIL}
+`;
+}
+
+export function renderLlmsFull(): string {
+	return `${renderLlmsIndex()}\n\n---\n\n${(["company", "platform", "methodology", "results"] as const).map(renderAgentDocument).join("\n\n---\n\n")}`;
+}

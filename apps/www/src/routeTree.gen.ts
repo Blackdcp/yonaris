@@ -31,6 +31,11 @@ import { Route as StatusRouteImport } from './routes/status'
 import { Route as VisionRouteImport } from './routes/vision'
 import { Route as AeoForIndexRouteImport } from './routes/aeo-for/index'
 import { Route as AeoForSlugRouteImport } from './routes/aeo-for/$slug'
+import { Route as AgentIndexRouteImport } from './routes/agent/index'
+import { Route as AgentCompanyRouteImport } from './routes/agent/company'
+import { Route as AgentMethodologyRouteImport } from './routes/agent/methodology'
+import { Route as AgentPlatformRouteImport } from './routes/agent/platform'
+import { Route as AgentResultsRouteImport } from './routes/agent/results'
 import { Route as AiSearchIndexRouteImport } from './routes/ai-search/index'
 import { Route as AiSearchSlugRouteImport } from './routes/ai-search/$slug'
 import { Route as AiVisibilityToolsIndexRouteImport } from './routes/ai-visibility-tools/index'
@@ -174,6 +179,31 @@ const AeoForIndexRoute = AeoForIndexRouteImport.update({
 const AeoForSlugRoute = AeoForSlugRouteImport.update({
   id: '/aeo-for/$slug',
   path: '/aeo-for/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentIndexRoute = AgentIndexRouteImport.update({
+  id: '/agent/',
+  path: '/agent/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentCompanyRoute = AgentCompanyRouteImport.update({
+  id: '/agent/company',
+  path: '/agent/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentMethodologyRoute = AgentMethodologyRouteImport.update({
+  id: '/agent/methodology',
+  path: '/agent/methodology',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentPlatformRoute = AgentPlatformRouteImport.update({
+  id: '/agent/platform',
+  path: '/agent/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentResultsRoute = AgentResultsRouteImport.update({
+  id: '/agent/results',
+  path: '/agent/results',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AiSearchIndexRoute = AiSearchIndexRouteImport.update({
@@ -379,6 +409,10 @@ export interface FileRoutesByFullPath {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/company': typeof AgentCompanyRoute
+  '/agent/methodology': typeof AgentMethodologyRoute
+  '/agent/platform': typeof AgentPlatformRoute
+  '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -394,6 +428,7 @@ export interface FileRoutesByFullPath {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
+  '/agent/': typeof AgentIndexRoute
   '/ai-search/': typeof AiSearchIndexRoute
   '/ai-visibility-tools/': typeof AiVisibilityToolsIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -437,6 +472,10 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/company': typeof AgentCompanyRoute
+  '/agent/methodology': typeof AgentMethodologyRoute
+  '/agent/platform': typeof AgentPlatformRoute
+  '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -452,6 +491,7 @@ export interface FileRoutesByTo {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for': typeof AeoForIndexRoute
+  '/agent': typeof AgentIndexRoute
   '/ai-search': typeof AiSearchIndexRoute
   '/ai-visibility-tools': typeof AiVisibilityToolsIndexRoute
   '/blog': typeof BlogIndexRoute
@@ -496,6 +536,10 @@ export interface FileRoutesById {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/company': typeof AgentCompanyRoute
+  '/agent/methodology': typeof AgentMethodologyRoute
+  '/agent/platform': typeof AgentPlatformRoute
+  '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
@@ -511,6 +555,7 @@ export interface FileRoutesById {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
+  '/agent/': typeof AgentIndexRoute
   '/ai-search/': typeof AiSearchIndexRoute
   '/ai-visibility-tools/': typeof AiVisibilityToolsIndexRoute
   '/blog/': typeof BlogIndexRoute
@@ -556,6 +601,10 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/company'
+    | '/agent/methodology'
+    | '/agent/platform'
+    | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
     | '/api/openapi.json'
@@ -571,6 +620,7 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/results'
     | '/aeo-for/'
+    | '/agent/'
     | '/ai-search/'
     | '/ai-visibility-tools/'
     | '/blog/'
@@ -614,6 +664,10 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/company'
+    | '/agent/methodology'
+    | '/agent/platform'
+    | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
     | '/api/openapi.json'
@@ -629,6 +683,7 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/results'
     | '/aeo-for'
+    | '/agent'
     | '/ai-search'
     | '/ai-visibility-tools'
     | '/blog'
@@ -672,6 +727,10 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/company'
+    | '/agent/methodology'
+    | '/agent/platform'
+    | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
     | '/api/openapi.json'
@@ -687,6 +746,7 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/results'
     | '/aeo-for/'
+    | '/agent/'
     | '/ai-search/'
     | '/ai-visibility-tools/'
     | '/blog/'
@@ -731,6 +791,10 @@ export interface RootRouteChildren {
   StatusRoute: typeof StatusRoute
   VisionRoute: typeof VisionRoute
   AeoForSlugRoute: typeof AeoForSlugRoute
+  AgentCompanyRoute: typeof AgentCompanyRoute
+  AgentMethodologyRoute: typeof AgentMethodologyRoute
+  AgentPlatformRoute: typeof AgentPlatformRoute
+  AgentResultsRoute: typeof AgentResultsRoute
   AiSearchSlugRoute: typeof AiSearchSlugRoute
   AiVisibilityToolsSlugRoute: typeof AiVisibilityToolsSlugRoute
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
@@ -746,6 +810,7 @@ export interface RootRouteChildren {
   ZhPlatformRoute: typeof ZhPlatformRoute
   ZhResultsRoute: typeof ZhResultsRoute
   AeoForIndexRoute: typeof AeoForIndexRoute
+  AgentIndexRoute: typeof AgentIndexRoute
   AiSearchIndexRoute: typeof AiSearchIndexRoute
   AiVisibilityToolsIndexRoute: typeof AiVisibilityToolsIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
@@ -922,6 +987,41 @@ declare module '@tanstack/react-router' {
       path: '/aeo-for/$slug'
       fullPath: '/aeo-for/$slug'
       preLoaderRoute: typeof AeoForSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/': {
+      id: '/agent/'
+      path: '/agent'
+      fullPath: '/agent/'
+      preLoaderRoute: typeof AgentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/company': {
+      id: '/agent/company'
+      path: '/agent/company'
+      fullPath: '/agent/company'
+      preLoaderRoute: typeof AgentCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/methodology': {
+      id: '/agent/methodology'
+      path: '/agent/methodology'
+      fullPath: '/agent/methodology'
+      preLoaderRoute: typeof AgentMethodologyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/platform': {
+      id: '/agent/platform'
+      path: '/agent/platform'
+      fullPath: '/agent/platform'
+      preLoaderRoute: typeof AgentPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/results': {
+      id: '/agent/results'
+      path: '/agent/results'
+      fullPath: '/agent/results'
+      preLoaderRoute: typeof AgentResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-search/': {
@@ -1187,6 +1287,10 @@ const rootRouteChildren: RootRouteChildren = {
   StatusRoute: StatusRoute,
   VisionRoute: VisionRoute,
   AeoForSlugRoute: AeoForSlugRoute,
+  AgentCompanyRoute: AgentCompanyRoute,
+  AgentMethodologyRoute: AgentMethodologyRoute,
+  AgentPlatformRoute: AgentPlatformRoute,
+  AgentResultsRoute: AgentResultsRoute,
   AiSearchSlugRoute: AiSearchSlugRoute,
   AiVisibilityToolsSlugRoute: AiVisibilityToolsSlugRoute,
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
@@ -1202,6 +1306,7 @@ const rootRouteChildren: RootRouteChildren = {
   ZhPlatformRoute: ZhPlatformRoute,
   ZhResultsRoute: ZhResultsRoute,
   AeoForIndexRoute: AeoForIndexRoute,
+  AgentIndexRoute: AgentIndexRoute,
   AiSearchIndexRoute: AiSearchIndexRoute,
   AiVisibilityToolsIndexRoute: AiVisibilityToolsIndexRoute,
   BlogIndexRoute: BlogIndexRoute,

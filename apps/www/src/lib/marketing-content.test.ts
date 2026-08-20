@@ -7,7 +7,10 @@ import {
 	getMarketingDetailPage,
 	getMarketingNavigation,
 	getMarketingPageMeta,
+	renderAgentIndex,
 	renderAgentDocument,
+	renderLlmsFull,
+	renderLlmsIndex,
 	validateDiagnosticInput,
 } from "./marketing-content";
 
@@ -79,6 +82,17 @@ describe("marketing content", () => {
 		expect(company).toContain("Current scope");
 		expect(company).toContain("Last updated: 2026-08-21");
 		expect(company).not.toContain("four products");
+	});
+
+	it("publishes a complete agent index without inherited Elmo positioning", () => {
+		const index = renderAgentIndex();
+		expect(index).toContain("/agent/company");
+		expect(index).toContain("/agent/platform");
+		expect(index).toContain("/agent/methodology");
+		expect(index).toContain("/agent/results");
+		expect(index).not.toContain("self-hosted AI visibility platform");
+		expect(renderLlmsIndex()).toContain("For humans and agents");
+		expect(renderLlmsFull()).toContain("# Yonaris results evidence");
 	});
 
 	it("builds an encoded diagnostic email without pretending to submit it", () => {
