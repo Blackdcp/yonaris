@@ -49,6 +49,8 @@ export type ResponseSnapshotHtmlInput = {
 	citations: Array<{ url: string; title: string | null; domain: string; citationIndex: number }>;
 };
 
+export type StructuredResponseSnapshotHtmlInput = Omit<ResponseSnapshotHtmlInput, "answerHtml">;
+
 export function sanitizeAnswerHtml(input: string): string {
 	const { document } = parseHTML(`<!doctype html><html><head></head><body>${input}</body></html>`);
 	return Array.from(document.body.childNodes)
@@ -58,6 +60,14 @@ export function sanitizeAnswerHtml(input: string): string {
 
 export function renderResponseSnapshotHtml(input: ResponseSnapshotHtmlInput): string {
 	const answer = input.answerHtml ? sanitizeAnswerHtml(input.answerHtml) : renderPlainText(input.answerText);
+	return renderDocument(input, answer);
+}
+
+export function renderStructuredResponseSnapshotHtml(input: StructuredResponseSnapshotHtmlInput): string {
+	return renderDocument(input, renderPlainText(input.answerText));
+}
+
+function renderDocument(input: StructuredResponseSnapshotHtmlInput, answer: string): string {
 	const citations = [...input.citations]
 		.sort((left, right) => left.citationIndex - right.citationIndex)
 		.map((citation) => {
