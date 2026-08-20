@@ -4,6 +4,7 @@ import {
 	buildDiagnosticMailto,
 	getLocalizedPath,
 	getMarketingContent,
+	getMarketingNavigation,
 	renderAgentDocument,
 } from "./marketing-content";
 
@@ -20,6 +21,19 @@ describe("marketing content", () => {
 		expect(MARKETING_ROUTES.every((route) => route.en && route.zh)).toBe(true);
 		expect(getLocalizedPath("/methodology", "zh")).toBe("/zh/methodology");
 		expect(getLocalizedPath("/zh/results", "en")).toBe("/results");
+	});
+
+	it("builds a localized navigation model with one conversion target", () => {
+		expect(getMarketingNavigation("en")).toMatchObject({
+		home: "/",
+		language: { label: "中文", path: "/zh" },
+		diagnostic: { label: "Get a Free Diagnostic", path: "/diagnostic" },
+	});
+		expect(getMarketingNavigation("zh")).toMatchObject({
+			home: "/zh",
+			language: { label: "EN", path: "/" },
+			diagnostic: { label: "获取免费诊断", path: "/zh/diagnostic" },
+		});
 	});
 
 	it("describes the operating system without presenting foundations as products", () => {

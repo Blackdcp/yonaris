@@ -333,6 +333,23 @@ export function getLocalizedPath(path: string, locale: Locale): string {
 	return locale === "zh" ? `/zh${normalizedPath === "/" ? "" : normalizedPath}` : normalizedPath.replace(/^\/zh(?=\/|$)/, "") || "/";
 }
 
+export function getMarketingNavigation(locale: Locale, page: MarketingPageKey = "home") {
+	const content = getMarketingContent(locale);
+	const currentRoute = MARKETING_ROUTES.find((route) => route.key === page) ?? MARKETING_ROUTES[0];
+	return {
+		home: locale === "zh" ? "/zh" : "/",
+		items: content.navigation,
+		language: {
+			label: locale === "zh" ? "EN" : "中文",
+			path: currentRoute[locale === "zh" ? "en" : "zh"],
+		},
+		diagnostic: {
+			label: content.cta.primary,
+			path: locale === "zh" ? "/zh/diagnostic" : "/diagnostic",
+		},
+	};
+}
+
 function diagnosticBody(input: DiagnosticInput, locale: Locale): string {
 	const labels =
 		locale === "zh"
