@@ -7,7 +7,7 @@ SET
     "updated_at" = NOW()
 WHERE
     "key" = 'legacy-unspecified'
-    AND "role" IS NULL
+    AND "sampling_evaluation_role" IS NULL
     AND "is_default" = true
     AND NOT EXISTS (
         SELECT 1
