@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { BrowserRunnerApiClient } from "./api-client";
-import type { DeviceHeartbeatInput } from "./contracts";
+import { BROWSER_EXTENSION_SURFACES, type DeviceHeartbeatInput } from "./contracts";
 import { claimedTask } from "./coordinator/test-fixture";
+import { extensionSurfaceDefinition } from "./surface-registry";
 
 const readyHeartbeat: DeviceHeartbeatInput = {
 	extensionVersion: "0.2.0",
@@ -108,6 +109,32 @@ describe("BrowserRunnerApiClient", () => {
 			surfaceTargetKeys: ["deepseek.consumer_web"],
 			adapterVersion: "deepseek-web-20260814-uat1",
 		});
+	});
+
+	it("claims the exact capture route and launch URL for every registered surface", async () => {
+		for (const surface of BROWSER_EXTENSION_SURFACES) {
+			const definition = extensionSurfaceDefinition(surface);
+			const claim = claimedTask({
+				surfaceTargetKey: surface,
+				captureRouteKey: definition.captureRoute,
+				launchUrl: definition.launchUrl,
+			});
+			const client = authenticatedClient([], async () =>
+				Response.json({
+					claim: {
+						task: { ...claim, id: claim.taskId },
+						leaseToken: claim.leaseToken,
+						leaseGeneration: claim.leaseGeneration,
+						leaseExpiresAt: claim.leaseExpiresAt,
+						postSubmitAssist: claim.postSubmitAssist,
+						submitConfirmed: claim.submitConfirmed,
+						runnerSessionId: claim.runnerSessionId,
+					},
+				}),
+			);
+
+			await expect(client.claimNext("stepfun", surface)).resolves.toEqual(claim);
+		}
 	});
 
 	it("rejects a mismatched capture route before it can open a consumer page", async () => {

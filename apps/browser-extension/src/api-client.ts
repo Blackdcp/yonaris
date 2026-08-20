@@ -11,6 +11,7 @@ import {
 } from "./contracts";
 import type { RunnerCompletionInput, RunnerFailureInput } from "./coordinator/task-runner";
 import { CURRENT_ADAPTER_VERSIONS } from "./surface-readiness";
+import { extensionSurfaceDefinition } from "./surface-registry";
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 const DEVICE_TOKEN_PATTERN = /^yrd_[A-Za-z0-9_-]{43}$/;
@@ -253,10 +254,9 @@ function parseClaim(value: unknown, expectedSurface?: BrowserExtensionSurface): 
 	const task = value.task;
 	const surfaceTargetKey = requiredSurface(task.surfaceTargetKey);
 	if (expectedSurface && surfaceTargetKey !== expectedSurface) throw invalidProtocol();
-	const expectedRoute =
-		surfaceTargetKey === "doubao.consumer_web" ? "browser_extension.doubao" : "browser_extension.deepseek";
-	const expectedLaunch =
-		surfaceTargetKey === "doubao.consumer_web" ? "https://www.doubao.com/chat/" : "https://chat.deepseek.com/";
+	const definition = extensionSurfaceDefinition(surfaceTargetKey);
+	const expectedRoute = definition.captureRoute;
+	const expectedLaunch = definition.launchUrl;
 	if (
 		task.captureRouteKey !== expectedRoute ||
 		task.launchUrl !== expectedLaunch ||

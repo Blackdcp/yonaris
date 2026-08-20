@@ -13,12 +13,12 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.2.3");
+		expect(manifest.version).toBe("0.3.0");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});
 
-	it("grants only the approved Portal, Doubao, and DeepSeek origins", () => {
+	it("grants only the approved Portal and six domestic consumer origins", () => {
 		const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "manifest.json"), "utf8")) as {
 			manifest_version: number;
 			permissions: string[];
@@ -33,11 +33,23 @@ describe("Manifest V3 permissions", () => {
 			"https://portal.yonaris.com/*",
 			"https://*.doubao.com/*",
 			"https://chat.deepseek.com/*",
+			"https://www.qianwen.com/*",
+			"https://www.kimi.com/*",
+			"https://yiyan.baidu.com/*",
+			"https://yuanbao.tencent.com/*",
 		]);
 		expect(JSON.stringify(manifest)).not.toContain("<all_urls>");
 		expect(manifest.content_scripts).toEqual([
 			{
-				matches: ["https://www.doubao.com/chat/*", "https://chat.deepseek.com/*"],
+				matches: [
+					"https://doubao.com/chat/*",
+					"https://www.doubao.com/chat/*",
+					"https://chat.deepseek.com/*",
+					"https://www.qianwen.com/*",
+					"https://www.kimi.com/*",
+					"https://yiyan.baidu.com/*",
+					"https://yuanbao.tencent.com/*",
+				],
 				js: ["content-entry.js"],
 				run_at: "document_idle",
 			},
