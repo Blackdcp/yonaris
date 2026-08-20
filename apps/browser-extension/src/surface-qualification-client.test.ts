@@ -7,7 +7,8 @@ import {
 	type QualificationTabsGateway,
 	qualifyActiveDoubaoTab,
 	qualifyAndRecordActiveDoubaoTab,
-} from "./doubao-qualification-client";
+	qualifyAndRecordActiveSurfaceTab,
+} from "./surface-qualification-client";
 
 afterEach(() => {
 	vi.unstubAllGlobals();
@@ -155,28 +156,46 @@ describe("Doubao read-only qualification client", () => {
 	});
 
 	test.each([
-		["signed-out wall", '<input type="password">', "signed_out"],
-		["CAPTCHA", '<iframe src="https://captcha.example/challenge"></iframe>', "captcha"],
-		["rate limit", '<div class="rate-limit">Try again later</div>', "rate_limited"],
-		["account restriction", "<div>账号已被封禁</div>", "account_restricted"],
-	] as const)("does not record readiness for a valid old answer behind a visible %s", async (_label, blocker, code) => {
-		const harness = await installContentQualificationHarness(blocker);
-		const writes: BrowserExtensionReadiness[] = [];
+		["signed-out wall", '<input type="password">', "signed_out", "Consumer page reported signed_out"],
+		[
+			"CAPTCHA",
+			'<iframe src="https://captcha.example/challenge"></iframe>',
+			"captcha",
+			"Consumer page reported captcha",
+		],
+		[
+			"rate limit",
+			'<div class="rate-limit">Try again later</div>',
+			"rate_limited",
+			"Consumer page reported rate_limited",
+		],
+		[
+			"account restriction",
+			"<div>账号已被封禁</div>",
+			"account_restricted",
+			"Consumer account is explicitly restricted",
+		],
+	] as const)(
+		"surfaces the safe adapter reason and does not record readiness for a valid old answer behind a visible %s",
+		async (_label, blocker, code, expectedMessage) => {
+			const harness = await installContentQualificationHarness(blocker);
+			const writes: BrowserExtensionReadiness[] = [];
 
-		await expect(
-			qualifyAndRecordActiveDoubaoTab(qualificationStore(writes), harness.gateway, confirmedPublisher()),
-		).rejects.toThrow(/could not be checked safely/i);
-		expect(harness.response()).toMatchObject({
-			ok: false,
-			error: { code, stage: "pre_submit" },
-		});
-		expect(writes.at(-1)?.["doubao.consumer_web"]).toEqual({
-			status: "unavailable",
-			adapterVersion: "doubao-web-20260819-localpc-v8",
-			activeConcurrency: 0,
-		});
-		expect(harness.clickCount()).toBe(0);
-	});
+			await expect(
+				qualifyAndRecordActiveDoubaoTab(qualificationStore(writes), harness.gateway, confirmedPublisher()),
+			).rejects.toThrow(expectedMessage);
+			expect(harness.response()).toMatchObject({
+				ok: false,
+				error: { code, stage: "pre_submit" },
+			});
+			expect(writes.at(-1)?.["doubao.consumer_web"]).toEqual({
+				status: "unavailable",
+				adapterVersion: "doubao-web-20260819-localpc-v8",
+				activeConcurrency: 0,
+			});
+			expect(harness.clickCount()).toBe(0);
+		},
+	);
 
 	test("confirms unavailable with the Portal before inspecting the active DOM", async () => {
 		const events: string[] = [];
@@ -312,6 +331,64 @@ describe("Doubao read-only qualification client", () => {
 			qualifyAndRecordActiveDoubaoTab(qualificationStore(writes, "ready"), gateway, publisher),
 		).rejects.toThrow(/Portal unavailable/i);
 		expect(writes.at(-1)?.["doubao.consumer_web"]?.status).toBe("unavailable");
+	});
+});
+
+describe("registry-driven surface qualification", () => {
+	test("uses read-only preflight and records the detected non-Doubao surface as ready", async () => {
+		const writes: BrowserExtensionReadiness[] = [];
+		const commands: unknown[] = [];
+		const store: QualificationReadinessStore = {
+			loadSurfaceReadiness: async () => ({
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260821-localpc-v1",
+					activeConcurrency: 0,
+				},
+			}),
+			saveSurfaceReadiness: async (readiness) => {
+				writes.push(readiness);
+			},
+		};
+		const gateway: QualificationTabsGateway = {
+			queryActive: async () => [{ id: 42, url: "https://www.qianwen.com/" }],
+			sendMessage: async (_tabId, command) => {
+				commands.push(command);
+				return { ok: true };
+			},
+		};
+
+		await expect(qualifyAndRecordActiveSurfaceTab(store, gateway, confirmedPublisher())).resolves.toEqual({
+			surface: "qwen.consumer_web",
+			label: "Qwen",
+			status: "ready",
+			answerCount: 0,
+			queryCount: 0,
+			citationCount: 0,
+		});
+		expect(commands).toEqual([{ kind: "yonaris_adapter", action: "preflight" }]);
+		expect(writes.map((value) => value["qwen.consumer_web"]?.status)).toEqual(["unavailable", "ready"]);
+	});
+
+	test("rejects an unsupported active tab before changing readiness", async () => {
+		const writes: BrowserExtensionReadiness[] = [];
+		const store: QualificationReadinessStore = {
+			loadSurfaceReadiness: async () => ({}),
+			saveSurfaceReadiness: async (readiness) => {
+				writes.push(readiness);
+			},
+		};
+		const gateway: QualificationTabsGateway = {
+			queryActive: async () => [{ id: 42, url: "https://example.com/" }],
+			sendMessage: async () => {
+				throw new Error("must not inspect");
+			},
+		};
+
+		await expect(qualifyAndRecordActiveSurfaceTab(store, gateway, confirmedPublisher())).rejects.toThrow(
+			/supported domestic AI page/i,
+		);
+		expect(writes).toHaveLength(0);
 	});
 });
 

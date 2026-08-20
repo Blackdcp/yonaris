@@ -143,7 +143,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260814-uat1",
+					adapterVersion: "deepseek-web-20260821-localpc-v2",
 					activeConcurrency: 0,
 				},
 			},
@@ -187,7 +187,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260814-uat1",
+					adapterVersion: "deepseek-web-20260821-localpc-v2",
 					activeConcurrency: 0,
 				},
 			},
@@ -217,7 +217,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 		};
 		const responses: unknown[] = [];
 
-		const handled = runtimeMessageListener?.({ type: "browser-runner:qualify-doubao" }, {}, (value) =>
+		const handled = runtimeMessageListener?.({ type: "browser-runner:qualify-surface" }, {}, (value) =>
 			responses.push(value),
 		);
 
@@ -225,8 +225,8 @@ describe.sequential("Browser Runner background scheduling", () => {
 		await vi.waitFor(() => expect(responses).toHaveLength(1));
 		expect(responses[0]).toMatchObject({ ok: true, result: { status: "qualified" } });
 		expect(events).toEqual([
-			"portal:unavailable:doubao-web-20260819-localpc-v8",
 			"dom:query",
+			"portal:unavailable:doubao-web-20260819-localpc-v8",
 			"dom:inspect",
 			"portal:ready:doubao-web-20260819-localpc-v8",
 		]);
@@ -250,6 +250,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 		const events: string[] = [];
 		const firstHeartbeatGate = deferred<Response>();
 		let requestCount = 0;
+		let tabsMessageCalls = 0;
 		fetchImplementation = async (request) => {
 			requestCount += 1;
 			const body = (await request.json()) as {
@@ -269,10 +270,13 @@ describe.sequential("Browser Runner background scheduling", () => {
 			events.push("dom:query");
 			return [{ id: 42, url: "https://www.doubao.com/chat/123456" }];
 		};
-		tabsSendMessageImplementation = async () => ({
-			ok: true,
-			value: { status: "page_drift", answerCount: 1, queryCount: 0, citationCount: 0 },
-		});
+		tabsSendMessageImplementation = async () => {
+			tabsMessageCalls += 1;
+			return {
+				ok: true,
+				value: { status: "page_drift", answerCount: 1, queryCount: 0, citationCount: 0 },
+			};
+		};
 		const heartbeatResult = new Promise<unknown>((resolve) => {
 			runtimeMessageListener?.({ type: "browser-runner:heartbeat" }, {}, resolve);
 		});
@@ -288,7 +292,8 @@ describe.sequential("Browser Runner background scheduling", () => {
 
 		try {
 			expect(requestCount).toBe(1);
-			expect(tabsQueryCalls).toBe(0);
+			expect(tabsQueryCalls).toBe(1);
+			expect(tabsMessageCalls).toBe(0);
 		} finally {
 			firstHeartbeatGate.resolve(heartbeatResponse());
 		}
@@ -296,10 +301,10 @@ describe.sequential("Browser Runner background scheduling", () => {
 		await expect(qualificationResult).resolves.toMatchObject({ ok: true, result: { status: "page_drift" } });
 		expect(events).toEqual([
 			"portal:start:ready",
+			"dom:query",
 			"portal:finish:ready",
 			"portal:start:unavailable",
 			"portal:finish:unavailable",
-			"dom:query",
 		]);
 	});
 
@@ -548,7 +553,7 @@ function readyV8Readiness() {
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260814-uat1",
+			adapterVersion: "deepseek-web-20260821-localpc-v2",
 			activeConcurrency: 0,
 		},
 	};

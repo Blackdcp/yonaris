@@ -1,8 +1,14 @@
-export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
-export const EXTENSION_VERSION = "0.2.3" as const;
-export const BROWSER_EXTENSION_SURFACES = ["doubao.consumer_web", "deepseek.consumer_web"] as const;
+import type {
+	BrowserExtensionCaptureRoute,
+	BrowserExtensionSurface as SharedBrowserExtensionSurface,
+} from "@workspace/lib/browser-extension-surfaces";
 
-export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACES)[number];
+export { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-surfaces";
+
+export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
+export const EXTENSION_VERSION = "0.3.0" as const;
+
+export type BrowserExtensionSurface = SharedBrowserExtensionSurface;
 export type BrowserExtensionReadinessStatus =
 	| "ready"
 	| "signed_out"
@@ -65,7 +71,7 @@ export interface BrowserExtensionClaim {
 	promptText: string;
 	sampleIndex: number;
 	surfaceTargetKey: BrowserExtensionSurface;
-	captureRouteKey: "browser_extension.doubao" | "browser_extension.deepseek";
+	captureRouteKey: BrowserExtensionCaptureRoute;
 	launchUrl: string;
 	sessionRequirement: "dedicated_sampling_profile";
 	searchRequirement: "platform_default";

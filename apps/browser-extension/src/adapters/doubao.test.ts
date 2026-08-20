@@ -21,7 +21,7 @@ describe("Doubao browser-extension adapter", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div data-message-id="user-1" class="flex-row flex w-full justify-end">Prompt</div>
 			<div data-message-id="assistant-1" class="relative grid w-full">Answer</div>
-			<div class="answer-actions"><button aria-label="朗读"></button><button aria-label="复制"></button></div>
+			<div class="answer-actions"><div><button></button><button aria-label="朗读"></button></div></div>
 		</body></html>`);
 
 		const answer = document.querySelector(doubaoContract.answer);
@@ -30,13 +30,21 @@ describe("Doubao browser-extension adapter", () => {
 		expect(actionGroup?.querySelectorAll(doubaoContract.completionCompanion)).toHaveLength(1);
 	});
 
-	test("uses the exact New conversation action instead of New work task", async () => {
-		const port = new FixtureDomPort(doubaoFixture({ newConversationLabels: ["新工作任务", "新对话"] }));
+	test("uses the exact New conversation first line when the sidebar also renders keyboard shortcuts", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				newConversationLabels: [
+					"新工作任务\nCtrl J",
+					"新对话\nCtrl Shift K",
+					"技能 · 连接器 · 伙伴",
+				],
+			}),
+		);
 		const adapter = createDoubaoAdapter(port);
 
 		await adapter.openNewConversation();
 
-		expect(port.clickedText).toBe("新对话");
+		expect(port.clickedText).toBe("新对话\nCtrl Shift K");
 	});
 
 	test("waits until New conversation is actually blank", async () => {

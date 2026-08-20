@@ -1,4 +1,6 @@
 import { describe, expect, test } from "vitest";
+import { BROWSER_EXTENSION_SURFACES } from "../contracts";
+import { extensionSurfaceDefinition } from "../surface-registry";
 import { ChromeTabDriver, type ChromeTabsGateway } from "./chrome-tabs";
 import { claimedTask } from "./test-fixture";
 
@@ -20,6 +22,27 @@ describe("ChromeTabDriver", () => {
 		expect(events).toContain("message:42:open_new_conversation");
 		expect(events).toContain("message:42:submit_once");
 		expect(events.at(-1)).toBe("remove:42");
+	});
+
+	test("opens and accepts the exact registered URL for every domestic surface", async () => {
+		for (const surface of BROWSER_EXTENSION_SURFACES) {
+			const events: string[] = [];
+			const definition = extensionSurfaceDefinition(surface);
+			const driver = new ChromeTabDriver(fakeGateway(events, { url: definition.launchUrl }), {
+				wait: async () => undefined,
+			});
+			const tab = await driver.open(
+				claimedTask({
+					surfaceTargetKey: surface,
+					captureRouteKey: definition.captureRoute,
+					launchUrl: definition.launchUrl,
+				}),
+			);
+
+			expect(tab.adapter.surface).toBe(surface);
+			expect(tab.adapter.launchUrl).toBe(definition.launchUrl);
+			expect(events[0]).toBe(`create:${definition.launchUrl}:active=true`);
+		}
 	});
 
 	test("captures the claimed active tab and re-verifies it after cropping", async () => {

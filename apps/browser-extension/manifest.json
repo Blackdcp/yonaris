@@ -1,17 +1,33 @@
 {
 	"manifest_version": 3,
 	"name": "Yonaris Browser Runner",
-	"description": "Administrator-operated Doubao and DeepSeek collection for Yonaris.",
-	"version": "0.2.3",
+	"description": "Administrator-operated domestic AI monitoring for Yonaris.",
+	"version": "0.3.0",
 	"minimum_chrome_version": "120",
 	"permissions": ["storage", "alarms", "tabs", "scripting", "notifications"],
-	"host_permissions": ["https://portal.yonaris.com/*", "https://*.doubao.com/*", "https://chat.deepseek.com/*"],
+	"host_permissions": [
+		"https://portal.yonaris.com/*",
+		"https://*.doubao.com/*",
+		"https://chat.deepseek.com/*",
+		"https://www.qianwen.com/*",
+		"https://www.kimi.com/*",
+		"https://wenxin.baidu.com/*",
+		"https://yuanbao.tencent.com/*"
+	],
 	"background": {
 		"service_worker": "background.js"
 	},
 	"content_scripts": [
 		{
-			"matches": ["https://www.doubao.com/chat/*", "https://chat.deepseek.com/*"],
+			"matches": [
+				"https://doubao.com/chat/*",
+				"https://www.doubao.com/chat/*",
+				"https://chat.deepseek.com/*",
+				"https://www.qianwen.com/*",
+				"https://www.kimi.com/*",
+				"https://wenxin.baidu.com/*",
+				"https://yuanbao.tencent.com/*"
+			],
 			"js": ["content-entry.js"],
 			"run_at": "document_idle"
 		}

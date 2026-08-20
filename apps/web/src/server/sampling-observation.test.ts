@@ -1,3 +1,4 @@
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import type { DeliveryTaskView } from "@workspace/lib/db/delivery-batches";
 import {
 	buildDeliveryTaskSlotKey,
@@ -476,6 +477,68 @@ describe("prepareSamplingObservation", () => {
 			captureDiagnostics: structured.captureDiagnostics,
 		});
 	});
+
+	it.each(BROWSER_EXTENSION_SURFACE_DEFINITIONS)(
+		"preserves $label strict observation metadata for the v2 archive",
+		({ key, captureRoute, adapterVersion, launchUrl }) => {
+			const structured = {
+				schemaVersion: "browser-runner-observation.v2" as const,
+				answerText: `PPIO is present in the ${key} answer.`,
+				observedAt: "2020-08-10T01:02:03.000Z",
+				pageUrl: launchUrl,
+				sessionMode: "dedicated_sampling_profile" as const,
+				searchMode: "native_auto" as const,
+				webSearchObserved: null,
+				evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
+				citations: [],
+				webQueries: [],
+				captureDiagnostics: { answerCount: 1 as const, queryCount: 0, citationCount: 0, completionCount: 1 as const },
+			};
+			const extensionTask = {
+				...task,
+				surfaceTargetKey: key,
+				captureRouteKey: captureRoute,
+				sessionRequirement: "dedicated_sampling_profile" as const,
+				searchRequirement: "platform_default" as const,
+			};
+			const extensionFrozenTask = {
+				...frozenTask,
+				surfaceTargetKey: key,
+				captureRouteKey: captureRoute,
+				sessionRequirement: "dedicated_sampling_profile" as const,
+				searchRequirement: "platform_default" as const,
+			};
+			extensionFrozenTask.slotKey = buildDeliveryTaskSlotKey(extensionFrozenTask);
+			extensionTask.slotKey = extensionFrozenTask.slotKey;
+
+			const prepared = prepareSamplingObservation({
+				task: extensionTask,
+				manifest: { ...manifest, tasks: [extensionFrozenTask] },
+				observation: structured,
+				captureActor: {
+					kind: "browser_runner",
+					id: "device-1",
+					adapterVersion,
+					browserVersion: "Chrome 151",
+					market: "CN",
+					locale: "zh-CN",
+					timezone: "Asia/Shanghai",
+				},
+				leaseGeneration: 1,
+			});
+
+			expect(prepared.captureMetadata).toMatchObject({
+				responseSnapshotSchemaVersion: "response-snapshot.v2",
+				adapterVersion,
+				captureDiagnostics: structured.captureDiagnostics,
+			});
+			expect(prepared.target).toMatchObject({
+				surfaceTargetKey: key,
+				captureRouteKey: captureRoute,
+				captureMode: "browser_runner",
+			});
+		},
+	);
 
 	it("rejects structured citation payloads that cannot be archived unchanged", () => {
 		const structured = {

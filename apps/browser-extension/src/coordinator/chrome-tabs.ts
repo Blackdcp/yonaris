@@ -5,6 +5,7 @@ import {
 	type EvidenceViewportRect,
 } from "../adapters/contracts";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
+import { extensionSurfaceDefinition } from "../surface-registry";
 import { captureCroppedJpeg } from "./screenshot";
 import { type RunnerTab, type RunnerTabDriver, RunnerTabOpenError } from "./task-runner";
 
@@ -112,7 +113,7 @@ class ContentScriptAdapter implements ConsumerWebAdapter {
 		this.#gateway = gateway;
 		this.#tabId = tabId;
 		this.surface = surface;
-		this.launchUrl = surface === "doubao.consumer_web" ? "https://www.doubao.com/chat/" : "https://chat.deepseek.com/";
+		this.launchUrl = extensionSurfaceDefinition(surface).launchUrl;
 	}
 
 	async preflight(): Promise<void> {
@@ -194,11 +195,7 @@ function assertSameActiveTab(
 
 function assertApprovedUrl(value: string, surface: BrowserExtensionSurface): void {
 	const url = new URL(value);
-	const approved =
-		surface === "doubao.consumer_web"
-			? url.protocol === "https:" && (url.hostname === "doubao.com" || url.hostname.endsWith(".doubao.com"))
-			: url.protocol === "https:" && url.hostname === "chat.deepseek.com";
-	if (!approved || url.username || url.password) {
+	if (!extensionSurfaceDefinition(surface).approvedUrl(url)) {
 		throw new AdapterError("page_drift", "pre_submit", "Browser Runner tab left the approved channel");
 	}
 }

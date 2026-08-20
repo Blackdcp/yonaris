@@ -1,3 +1,4 @@
+import type { BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import { describe, expect, it, vi } from "vitest";
 import {
 	executeSamplingRunNow,
@@ -5,10 +6,24 @@ import {
 	withBrowserExtensionOverlapProtection,
 } from "./sampling";
 
-const input = {
+const input: {
+	brandId: string;
+	scopeId: string;
+	surfaces: readonly BrowserExtensionSurface[];
+	samplesPerPrompt: 1 | 5;
+	idempotencyKey: string;
+} = {
 	brandId: "stepfun",
 	scopeId: "11111111-1111-4111-8111-111111111111",
-	surfaces: ["doubao.consumer_web", "deepseek.consumer_web"] as const,
+	surfaces: [
+		"doubao.consumer_web",
+		"deepseek.consumer_web",
+		"qwen.consumer_web",
+		"kimi.consumer_web",
+		"wenxin.consumer_web",
+		"yuanbao.consumer_web",
+	] as const,
+	samplesPerPrompt: 1,
 	idempotencyKey: "run-now-click-1",
 };
 
@@ -26,12 +41,12 @@ describe("administrator Sampling Run now orchestration", () => {
 		expect(readScope).not.toHaveBeenCalled();
 	});
 
-	it("creates, freezes, and starts one five-sample-per-channel batch without requiring an online device", async () => {
+	it("creates, freezes, and starts one one-pass six-surface batch without requiring an online device", async () => {
 		const harness = runNowHarness();
 		const result = await executeSamplingRunNow(input, harness.dependencies);
 
 		expect(result.batch).toMatchObject({ status: "in_progress", automationStatus: "running" });
-		expect(result.tasks).toHaveLength(20);
+		expect(result.tasks).toHaveLength(12);
 		expect(harness.createDraft).toHaveBeenCalledTimes(1);
 		expect(harness.addTasks).toHaveBeenCalledTimes(1);
 		expect(harness.freeze).toHaveBeenCalledTimes(1);
@@ -51,7 +66,7 @@ describe("administrator Sampling Run now orchestration", () => {
 		const result = await executeSamplingRunNow(input, harness.dependencies);
 
 		expect(result.batch).toMatchObject({ status: "in_progress", automationStatus: "running" });
-		expect(result.tasks).toHaveLength(20);
+		expect(result.tasks).toHaveLength(12);
 		expect(harness.addTasks).toHaveBeenCalledTimes(1);
 		expect(harness.freeze).not.toHaveBeenCalled();
 		expect(harness.start).not.toHaveBeenCalled();

@@ -1,3 +1,8 @@
+import {
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+	type BrowserExtensionCaptureRoute,
+	type BrowserExtensionSurface,
+} from "./browser-extension-surfaces";
 import type { ObservationTargetDescriptor, SurfaceKind } from "./observation-targets";
 
 export const MANUAL_OBSERVATION_SURFACE_TARGET_KEYS = [
@@ -21,8 +26,7 @@ export const MANUAL_OBSERVATION_CAPTURE_ROUTE_KEYS = [
 	"manual_import.generic",
 	"assisted_browser.generic",
 	"browser_runner.doubao",
-	"browser_extension.doubao",
-	"browser_extension.deepseek",
+	...BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ captureRoute }) => captureRoute),
 ] as const;
 
 export type ManualObservationSurfaceTargetKey = (typeof MANUAL_OBSERVATION_SURFACE_TARGET_KEYS)[number];
@@ -73,20 +77,26 @@ const MANUAL_SURFACES: Record<ManualObservationSurfaceTargetKey, ManualSurfaceDe
 	"google_search.ai_mode": { model: "google-ai-mode", surfaceKind: "search_surface" },
 };
 
+const EXTENSION_CAPTURE_MODES = Object.fromEntries(
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ captureRoute }) => [captureRoute, "browser_runner"]),
+) as Record<BrowserExtensionCaptureRoute, "browser_runner">;
+
 const MANUAL_CAPTURE_MODES: Record<ManualObservationCaptureRouteKey, ManualObservationTargetDescriptor["captureMode"]> =
 	{
 		"manual_import.generic": "manual_import",
 		"assisted_browser.generic": "assisted_browser",
 		"browser_runner.doubao": "browser_runner",
-		"browser_extension.doubao": "browser_runner",
-		"browser_extension.deepseek": "browser_runner",
+		...EXTENSION_CAPTURE_MODES,
 	};
+
+const EXTENSION_ROUTE_SURFACE_RESTRICTIONS = Object.fromEntries(
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ captureRoute, key }) => [captureRoute, key]),
+) as Record<BrowserExtensionCaptureRoute, BrowserExtensionSurface>;
 
 const ROUTE_SURFACE_RESTRICTIONS: Partial<Record<ManualObservationCaptureRouteKey, ManualObservationSurfaceTargetKey>> =
 	{
 		"browser_runner.doubao": "doubao.consumer_web",
-		"browser_extension.doubao": "doubao.consumer_web",
-		"browser_extension.deepseek": "deepseek.consumer_web",
+		...EXTENSION_ROUTE_SURFACE_RESTRICTIONS,
 	};
 
 const SURFACE_HOSTS: Record<ManualObservationSurfaceTargetKey, readonly string[]> = {

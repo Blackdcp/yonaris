@@ -1,9 +1,9 @@
-import { isApprovedDoubaoConversationUrl } from "../doubao-qualification-client";
+import { isApprovedDoubaoConversationUrl } from "../surface-qualification-client";
+import { extensionSurfaceForUrl } from "../surface-registry";
 import type { AdapterError, ConsumerWebAdapter } from "./contracts";
-import { createDeepSeekAdapter } from "./deepseek";
-import { createDocumentDomPort, isDomElementVisible, readVisibleDomText } from "./dom-port";
-import { createDoubaoAdapter, doubaoSelectorContract } from "./doubao";
-import { inspectLatestStructuredSearchEvidence } from "./search-evidence";
+import { createDocumentDomPort, isDomElementVisible, readStructuredSearchEvidence } from "./dom-port";
+import { doubaoSelectorContract } from "./doubao";
+import { inspectLatestStructuredSearchEvidenceAsync } from "./search-evidence";
 
 type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "preflight" | "open_new_conversation" }
@@ -16,7 +16,7 @@ type AdapterCommand =
 	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" };
 
 const port = createDocumentDomPort(document, location);
-const adapter = createAdapterForHost(location.hostname, port);
+const adapter = extensionSurfaceForUrl(new URL(location.href)).createAdapter(port);
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
 	if (!isAdapterCommand(message)) return false;
@@ -35,12 +35,6 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 		});
 	return true;
 });
-
-function createAdapterForHost(hostname: string, domPort: ReturnType<typeof createDocumentDomPort>): ConsumerWebAdapter {
-	if (hostname === "chat.deepseek.com") return createDeepSeekAdapter(domPort);
-	if (hostname === "doubao.com" || hostname.endsWith(".doubao.com")) return createDoubaoAdapter(domPort);
-	throw new Error("Browser adapter is not approved for this host");
-}
 
 async function execute(
 	adapter: ConsumerWebAdapter,
@@ -75,15 +69,15 @@ async function execute(
 			) {
 				throw new Error("Search-evidence inspection left the approved Doubao conversation URL during preflight");
 			}
-			return inspectLatestStructuredSearchEvidence(
+			return await inspectLatestStructuredSearchEvidenceAsync(
 				document,
 				doubaoSelectorContract.answer,
 				doubaoSelectorContract.searchEvidence,
 				isDomElementVisible,
 				doubaoSelectorContract.completion,
-				readVisibleDomText,
 				doubaoSelectorContract.generating,
 				doubaoSelectorContract.completionCompanion,
+				readStructuredSearchEvidence,
 			);
 		}
 	}

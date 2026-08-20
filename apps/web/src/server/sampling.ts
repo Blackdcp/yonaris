@@ -177,8 +177,9 @@ const runSamplingNowInputSchema = z
 		surfaces: z
 			.array(z.enum(BROWSER_EXTENSION_SURFACES))
 			.min(1)
-			.max(2)
+			.max(BROWSER_EXTENSION_SURFACES.length)
 			.refine((surfaces) => new Set(surfaces).size === surfaces.length, "Channels must be unique"),
+		samplesPerPrompt: z.union([z.literal(1), z.literal(5)]),
 		idempotencyKey: z.string().trim().min(1).max(200),
 	})
 	.strict();
@@ -381,6 +382,7 @@ export const executeSamplingRunNow = createServerOnlyFn(async function executeSa
 		brandId: string;
 		scopeId: string;
 		surfaces: readonly BrowserExtensionSurface[];
+		samplesPerPrompt: 1 | 5;
 		idempotencyKey: string;
 	},
 	overrides: Partial<SamplingRunNowDependencies> = {},
@@ -402,7 +404,12 @@ export const executeSamplingRunNow = createServerOnlyFn(async function executeSa
 		throw new Error("Run now requires a scored Program");
 	}
 	const promptRows = await dependencies.listEnabledPrompts({ brandId: input.brandId, scopeId: input.scopeId });
-	const plan = planSamplingRunNow({ prompts: promptRows, surfaces: input.surfaces, now: dependencies.now() });
+	const plan = planSamplingRunNow({
+		prompts: promptRows,
+		surfaces: input.surfaces,
+		samplesPerPrompt: input.samplesPerPrompt,
+		now: dependencies.now(),
+	});
 
 	let current = await dependencies.findExisting({ brandId: input.brandId, idempotencyKey: input.idempotencyKey });
 	if (!current) {

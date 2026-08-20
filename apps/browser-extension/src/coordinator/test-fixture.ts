@@ -1,11 +1,13 @@
 import type { CollectedAnswer, ConsumerWebAdapter } from "../adapters/contracts";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
+import { extensionSurfaceDefinition } from "../surface-registry";
 import type { RunnerFailureInput, RunnerTab, RunnerTabDriver } from "./task-runner";
 
 export function claimedTask(
 	override: Partial<BrowserExtensionClaim> & { taskId?: string } = {},
 ): BrowserExtensionClaim {
 	const surfaceTargetKey = override.surfaceTargetKey ?? "deepseek.consumer_web";
+	const definition = extensionSurfaceDefinition(surfaceTargetKey);
 	return {
 		taskId: override.taskId ?? "task-1",
 		batchId: "batch-1",
@@ -15,10 +17,8 @@ export function claimedTask(
 		promptText: "Prompt A",
 		sampleIndex: override.sampleIndex ?? 1,
 		surfaceTargetKey,
-		captureRouteKey:
-			surfaceTargetKey === "doubao.consumer_web" ? "browser_extension.doubao" : "browser_extension.deepseek",
-		launchUrl:
-			surfaceTargetKey === "doubao.consumer_web" ? "https://www.doubao.com/chat/" : "https://chat.deepseek.com/",
+		captureRouteKey: definition.captureRoute,
+		launchUrl: definition.launchUrl,
 		sessionRequirement: "dedicated_sampling_profile",
 		searchRequirement: "platform_default",
 		evaluationRole: "scored",

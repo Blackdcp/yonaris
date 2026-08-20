@@ -2,6 +2,10 @@ import type {
 	BrowserExtensionReadinessStatus,
 	BrowserExtensionSurface,
 } from "@workspace/lib/browser-extension-contract";
+import {
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+	BROWSER_EXTENSION_SURFACES,
+} from "@workspace/lib/browser-extension-surfaces";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
@@ -12,13 +16,11 @@ import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { BrowserRunnerDeviceView, SamplingRunNowInput, SamplingRunNowProgram } from "./types";
 
-const FIXED_SAMPLES_PER_CHANNEL = 5;
+const FIXED_SAMPLES_PER_CHANNEL = 1;
 const DEVICE_ONLINE_WINDOW_MS = 2 * 60 * 1_000;
 
-const CHANNELS: ReadonlyArray<{ surface: BrowserExtensionSurface; label: string }> = [
-	{ surface: "doubao.consumer_web", label: "Doubao" },
-	{ surface: "deepseek.consumer_web", label: "DeepSeek" },
-];
+const CHANNELS: ReadonlyArray<{ surface: BrowserExtensionSurface; label: string }> =
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, label }) => ({ surface: key, label }));
 
 export function calculateSamplingRunNowTaskCount(promptCount: number, channelCount: number): number {
 	return promptCount * channelCount * FIXED_SAMPLES_PER_CHANNEL;
@@ -93,11 +95,7 @@ export function SamplingRunNowDialog({
 		() => new Map(CHANNELS.map(({ surface }) => [surface, channelAvailability(devices, brandId, surface, now)])),
 		[brandId, devices, now],
 	);
-	const readySurfaces = useMemo(
-		() => CHANNELS.map(({ surface }) => surface).filter((surface) => availability.get(surface)?.ready),
-		[availability],
-	);
-	const surfaces = surfaceSelectionOverride ?? readySurfaces;
+	const surfaces = surfaceSelectionOverride ?? [...BROWSER_EXTENSION_SURFACES];
 	const taskCount = calculateSamplingRunNowTaskCount(selectedProgram?.promptCount ?? 0, surfaces.length);
 
 	const toggleSurface = (surface: BrowserExtensionSurface, checked: boolean) => {
@@ -130,6 +128,7 @@ export function SamplingRunNowDialog({
 				brandId,
 				scopeId: selectedProgram.id,
 				surfaces,
+				samplesPerPrompt: FIXED_SAMPLES_PER_CHANNEL,
 				idempotencyKey: `run-now-${crypto.randomUUID()}`,
 			});
 		} catch (caught) {
@@ -147,8 +146,7 @@ export function SamplingRunNowDialog({
 					Run now
 				</CardTitle>
 				<CardDescription>
-					Run every enabled Prompt in a scored China Program. Five samples per Prompt and channel; no schedule is
-					created.
+					Run every enabled Prompt in a scored China Program. One run per Prompt and channel; no schedule is created.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">

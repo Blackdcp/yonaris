@@ -1,6 +1,8 @@
+import { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-contract";
 import { BrowserRunnerDeviceError } from "@workspace/lib/db/browser-runner-devices";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+	browserRunnerDeviceHeartbeatSchema,
 	pairBrowserRunnerDevice,
 	projectEffectiveBrowserRunnerReadiness,
 	updateBrowserRunnerDeviceHeartbeat,
@@ -26,6 +28,23 @@ const heartbeat = {
 describe("browser extension device service", () => {
 	beforeEach(() => vi.stubEnv("BROWSER_RUNNER_ENABLED", "true"));
 	afterEach(() => vi.unstubAllEnvs());
+
+	it("accepts one paired device advertising every registered browser surface", () => {
+		const readiness = Object.fromEntries(
+			BROWSER_EXTENSION_SURFACES.map((surface) => [
+				surface,
+				{ status: "ready", adapterVersion: `${surface}-v1`, activeConcurrency: 1 },
+			]),
+		);
+
+		expect(
+			browserRunnerDeviceHeartbeatSchema.safeParse({
+				...heartbeat,
+				supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
+				readiness,
+			}).success,
+		).toBe(true);
+	});
 
 	it("returns a paired device token once without echoing device metadata", async () => {
 		const result = await pairBrowserRunnerDevice(

@@ -88,6 +88,10 @@ jobs:
             "https://portal.yonaris.com/*",
             "https://*.doubao.com/*",
             "https://chat.deepseek.com/*",
+            "https://www.qianwen.com/*",
+            "https://www.kimi.com/*",
+            "https://wenxin.baidu.com/*",
+            "https://yuanbao.tencent.com/*",
           ];
           const expectedPermissions = ["storage", "alarms", "tabs", "scripting", "notifications"];
           if (JSON.stringify(manifest.host_permissions) !== JSON.stringify(expectedHosts)) {
@@ -236,9 +240,9 @@ jobs:
         env:
           E2E_SKIP_AUTH_SETUP: "true"
 
-      - name: Dump worker logs
+      - name: Dump service logs
         if: failure()
-        run: docker compose logs worker
+        run: docker compose logs web worker
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v7

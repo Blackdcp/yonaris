@@ -335,7 +335,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		const visible = visibleElements(await this.#port.query("new_conversation", this.#contract.newConversation));
 		const expected = this.#contract.newConversationLabel;
 		return expected
-			? visible.filter(({ element }) => normalizeText(element.text) === normalizeText(expected))
+			? visible.filter(({ element }) => firstVisibleTextLine(element.text) === normalizeText(expected))
 			: visible;
 	}
 
@@ -484,6 +484,10 @@ function validatePrompt(value: string): string {
 
 function normalizeText(value: string): string {
 	return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
+}
+
+function firstVisibleTextLine(value: string): string {
+	return normalizeText(value.split(/\r?\n/u).find((line) => line.trim()) ?? "");
 }
 
 function uniqueStrings(values: readonly string[], maximum: number, maxLength: number, label: string): string[] {

@@ -43,6 +43,7 @@
 		"./delivery-manifest": "./src/delivery-manifest.ts",
 		"./browser-runner-policy": "./src/browser-runner-policy.ts",
 		"./browser-extension-contract": "./src/browser-extension-contract.ts",
+		"./browser-extension-surfaces": "./src/browser-extension-surfaces.ts",
 		"./response-snapshots/contract": "./src/response-snapshots/contract.ts",
 		"./response-snapshots/html": "./src/response-snapshots/html.ts",
 		"./response-snapshots/storage": "./src/response-snapshots/storage.ts",

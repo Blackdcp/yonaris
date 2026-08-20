@@ -1,10 +1,15 @@
-import { isBrowserExtensionAdapterVersionBindingSatisfied } from "@workspace/lib/browser-extension-contract";
+import {
+	type BrowserExtensionSurface,
+	isBrowserExtensionAdapterVersionBindingSatisfied,
+} from "@workspace/lib/browser-extension-contract";
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import { describe, expect, it, vi } from "vitest";
 import {
 	assertBrowserRunnerEvidenceSelection,
 	type assertRunnerTask,
 	authorizeRunnerEvidenceUpload,
 	authorizeRunnerTaskOperation,
+	browserRunnerClaimSchema,
 	browserRunnerGlobalQueueState,
 	browserRunnerLaunchUrl,
 	browserRunnerLeaseSchema,
@@ -23,10 +28,7 @@ import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-po
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
-const futureDoubaoV8Binding = (
-	surface: "doubao.consumer_web" | "deepseek.consumer_web",
-	requestedAdapterVersion: string | undefined,
-) =>
+const futureDoubaoV8Binding = (surface: BrowserExtensionSurface, requestedAdapterVersion: string | undefined) =>
 	isBrowserExtensionAdapterVersionBindingSatisfied({
 		surface,
 		requestedAdapterVersion,
@@ -42,8 +44,8 @@ type ExtensionTaskOperation =
 	| { kind: "complete"; adapterVersion: string };
 
 async function authorizeExtensionTaskOperation(input: {
-	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
-	readySurfaces: readonly ("doubao.consumer_web" | "deepseek.consumer_web")[];
+	surfaceTargetKey: BrowserExtensionSurface;
+	readySurfaces: readonly BrowserExtensionSurface[];
 	operation: ExtensionTaskOperation;
 }) {
 	return authorizeRunnerTaskOperation(
@@ -90,6 +92,16 @@ function observationInput() {
 }
 
 describe("Browser Runner service contracts", () => {
+	it("accepts a claim request spanning every registered browser surface", () => {
+		expect(
+			browserRunnerClaimSchema.safeParse({
+				brandId: "stepfun",
+				adapterVersion: "surface-adapter-v1",
+				surfaceTargetKeys: BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key }) => key),
+			}).success,
+		).toBe(true);
+	});
+
 	it("binds evidence upload to the confirmed runner session and approved adapter", async () => {
 		const principal = {
 			kind: "browser_extension" as const,
@@ -410,8 +422,9 @@ describe("Browser Runner service contracts", () => {
 	});
 
 	it("returns the exact launch URL for each approved extension surface", () => {
-		expect(browserRunnerLaunchUrl("doubao.consumer_web")).toBe("https://www.doubao.com/chat/");
-		expect(browserRunnerLaunchUrl("deepseek.consumer_web")).toBe("https://chat.deepseek.com/");
+		for (const { key, launchUrl } of BROWSER_EXTENSION_SURFACE_DEFINITIONS) {
+			expect(browserRunnerLaunchUrl(key)).toBe(launchUrl);
+		}
 		expect(() => browserRunnerLaunchUrl("unknown.consumer_web")).toThrow(/unsupported launch surface/i);
 	});
 
@@ -715,4 +728,34 @@ describe("Browser Runner service contracts", () => {
 			),
 		).toThrow(/bounded JPEG screenshot/i);
 	});
+
+	it.each(BROWSER_EXTENSION_SURFACE_DEFINITIONS)(
+		"accepts one session-bound JPEG for $label structured completion",
+		({ captureRoute, adapterVersion }) => {
+			expect(
+				assertBrowserRunnerEvidenceSelection(
+					captureRoute,
+					[
+						{
+							id: guid1,
+							kind: "screenshot",
+							mediaType: "image/jpeg",
+							byteSize: 512_000,
+							sha256: "a".repeat(64),
+						},
+					],
+					[guid1],
+					adapterVersion,
+				),
+			).toEqual({ artifactId: guid1, mediaType: "image/jpeg", sha256: "a".repeat(64), bytes: 512_000 });
+			expect(() =>
+				assertBrowserRunnerEvidenceSelection(
+					captureRoute,
+					[{ id: guid1, kind: "page_snapshot", mediaType: "text/html", byteSize: 128, sha256: "a".repeat(64) }],
+					[guid1],
+					adapterVersion,
+				),
+			).toThrow(/bounded JPEG screenshot/i);
+		},
+	);
 });

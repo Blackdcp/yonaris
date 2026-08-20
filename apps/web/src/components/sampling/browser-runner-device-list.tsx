@@ -2,6 +2,10 @@ import type {
 	BrowserExtensionReadinessStatus,
 	BrowserExtensionSurface,
 } from "@workspace/lib/browser-extension-contract";
+import {
+	browserExtensionSurfaceDefinition,
+	mapBrowserExtensionSurfaces,
+} from "@workspace/lib/browser-extension-surfaces";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
@@ -13,10 +17,9 @@ import { useState } from "react";
 import { browserRunnerDeviceIsOnline } from "./sampling-run-now-dialog";
 import type { BrowserRunnerDeviceView, BrowserRunnerPairingView, SamplingBrandOption } from "./types";
 
-const SURFACE_LABELS: Record<BrowserExtensionSurface, string> = {
-	"doubao.consumer_web": "Doubao",
-	"deepseek.consumer_web": "DeepSeek",
-};
+const SURFACE_LABELS: Record<BrowserExtensionSurface, string> = mapBrowserExtensionSurfaces(
+	(surface) => browserExtensionSurfaceDefinition(surface).label,
+);
 
 export async function confirmBrowserRunnerDeviceRevocation(
 	device: BrowserRunnerDeviceView,

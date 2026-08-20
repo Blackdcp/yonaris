@@ -90,8 +90,8 @@ describe("Doubao structured search evidence", () => {
 				</div>
 			</div>
 			<div class="answer-actions">
+				<button>Copy</button>
 				<button aria-label="朗读">Read</button>
-				<button aria-label="复制">Copy</button>
 			</div>
 		</body></html>`);
 		installVisibleLinkedomGlobals(window);
@@ -150,8 +150,8 @@ describe("Doubao structured search evidence", () => {
 			<div class="content-KTJ1Rj">Current prompt</div>
 			<div data-message-id="assistant-current" class="relative grid w-full">Current long answer</div>
 			<div class="answer-actions">
+				<button>Copy</button>
 				<button aria-label="朗读">Read</button>
-				<button aria-label="复制">Copy</button>
 			</div>
 		</body></html>`);
 		installVisibleLinkedomGlobals(window);
@@ -198,8 +198,8 @@ describe("Doubao structured search evidence", () => {
 			<div class="content-KTJ1Rj">Current prompt</div>
 			<div data-message-id="assistant-current" class="relative grid w-full">Current answer above viewport</div>
 			<div class="answer-actions">
+				<button>Copy</button>
 				<button aria-label="朗读">Read</button>
-				<button aria-label="复制">Copy</button>
 			</div>
 		</body></html>`);
 		installVisibleLinkedomGlobals(window);
@@ -2633,6 +2633,107 @@ describe("Doubao structured search evidence", () => {
 				isDomElementVisible,
 			),
 		).toEqual({ status: "qualified", answerCount: 1, queryCount: 1, citationCount: 1 });
+	});
+
+	test("temporarily reveals search evidence inside a scrolled container and restores its position", async () => {
+		const { document, window } = parseHTML(`<!doctype html><html><body>
+			<div class="search-scroll" style="overflow-y:auto;width:400px;height:100px">
+				<div data-message-id="assistant-current" class="relative grid w-full">
+					<p>Visible answer</p>
+					<div data-plugin-identifier="search_query_result_block">
+						搜索 1 个关键词，参考 1 篇资料
+						<div class="mb-8 text-sm">“visible query”</div>
+						<a data-thinking-box-tool-call="true" href="https://visible.example/source">1. Visible source</a>
+					</div>
+				</div>
+			</div>
+		</body></html>`);
+		installVisibleLinkedomGlobals(window);
+		const scroller = document.querySelector<HTMLElement>(".search-scroll");
+		const answer = document.querySelector<HTMLElement>('[data-message-id="assistant-current"]');
+		const search = document.querySelector<HTMLElement>('[data-plugin-identifier="search_query_result_block"]');
+		if (!scroller || !answer || !search) throw new Error("Scrollable search fixture is incomplete");
+		scroller.scrollTop = 300;
+		scroller.getBoundingClientRect = () =>
+			({ width: 400, height: 100, top: 0, bottom: 100, left: 0, right: 400 }) as DOMRect;
+		answer.getBoundingClientRect = () =>
+			({ width: 400, height: 100, top: 0, bottom: 100, left: 0, right: 400 }) as DOMRect;
+		for (const element of [search, ...search.querySelectorAll<HTMLElement>("*")]) {
+			element.getBoundingClientRect = () => {
+				const top = 200 - scroller.scrollTop;
+				return { width: 300, height: 20, top, bottom: top + 20, left: 0, right: 300 } as DOMRect;
+			};
+		}
+		Object.defineProperty(window.Element.prototype, "scrollIntoView", {
+			configurable: true,
+			value(this: Element) {
+				if (this === search || search.contains(this)) scroller.scrollTop = 200;
+			},
+		});
+		const port = createDocumentDomPort(document, { href: "https://doubao.com/chat/123" } as Location);
+
+		const snapshot = await port.readAnswer({
+			answerSelector: doubaoContract.answer,
+			answerIndex: 0,
+			searchUsedSelector: doubaoContract.searchUsed,
+			searchNotUsedSelector: doubaoContract.searchNotUsed,
+			citationLinkSelector: doubaoContract.citationLink,
+			queryItemSelector: doubaoContract.queryItem,
+			searchEvidence: doubaoContract.searchEvidence,
+		});
+
+		expect(snapshot.searchUsedCount).toBe(1);
+		expect(snapshot.webQueries).toEqual(["visible query"]);
+		expect(snapshot.citations).toEqual([{ url: "https://visible.example/source", title: "Visible source" }]);
+		expect(scroller.scrollTop).toBe(300);
+	});
+
+	test("temporarily expands a collapsed search panel and restores its collapsed state", async () => {
+		const { document, window } = parseHTML(`<!doctype html><html><body>
+			<div data-message-id="assistant-current" class="relative grid w-full">
+				<div data-plugin-identifier="search_query_result_block">
+					<div><div class="cursor-pointer">搜索 1 个关键词，参考 1 篇资料</div></div>
+				</div>
+			</div>
+		</body></html>`);
+		installVisibleLinkedomGlobals(window);
+		const container = document.querySelector<HTMLElement>('[data-plugin-identifier="search_query_result_block"]');
+		const disclosure = document.querySelector<HTMLElement>(".cursor-pointer");
+		if (!container || !disclosure) throw new Error("Collapsed search fixture is incomplete");
+		let expanded = false;
+		let clickCount = 0;
+		disclosure.click = () => {
+			clickCount += 1;
+			expanded = !expanded;
+			if (expanded) {
+				setTimeout(() => {
+					container.insertAdjacentHTML(
+						"beforeend",
+						'<div class="mb-8 text-sm">“temporary query”</div><a data-thinking-box-tool-call="true" href="https://temporary.example/source">1. Temporary source</a>',
+					);
+				}, 0);
+			} else {
+				container.querySelector(".mb-8.text-sm")?.remove();
+				container.querySelector('a[data-thinking-box-tool-call="true"]')?.remove();
+			}
+		};
+		const port = createDocumentDomPort(document, { href: "https://doubao.com/chat/123" } as Location);
+
+		const snapshot = await port.readAnswer({
+			answerSelector: doubaoContract.answer,
+			answerIndex: 0,
+			searchUsedSelector: doubaoContract.searchUsed,
+			searchNotUsedSelector: doubaoContract.searchNotUsed,
+			citationLinkSelector: doubaoContract.citationLink,
+			queryItemSelector: doubaoContract.queryItem,
+			searchEvidence: doubaoContract.searchEvidence,
+		});
+
+		expect(snapshot.webQueries).toEqual(["temporary query"]);
+		expect(snapshot.citations).toEqual([{ url: "https://temporary.example/source", title: "Temporary source" }]);
+		expect(clickCount).toBe(2);
+		expect(expanded).toBe(false);
+		expect(container.querySelector(doubaoContract.searchEvidence?.queryItem ?? ".missing")).toBeNull();
 	});
 
 	test("keeps no search evidence unknown instead of inventing false", () => {

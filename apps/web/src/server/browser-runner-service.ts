@@ -1,11 +1,14 @@
 import {
 	assertExtensionEvidenceProtocol,
+	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionSurface,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionCaptureRoute,
+	isBrowserExtensionSurface,
 	isCurrentBrowserExtensionAdapterVersionBindingSatisfied,
 	STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS,
 } from "@workspace/lib/browser-extension-contract";
+import { browserExtensionSurfaceDefinition } from "@workspace/lib/browser-extension-surfaces";
 import {
 	type BrowserExtensionTaskOperation,
 	browserExtensionTaskOperationDenial,
@@ -65,9 +68,9 @@ export const browserRunnerClaimSchema = z
 		batchId: z.guid().optional(),
 		adapterVersion: z.string().trim().min(1).max(100).optional(),
 		surfaceTargetKeys: z
-			.array(z.enum(["doubao.consumer_web", "deepseek.consumer_web"]))
+			.array(z.enum(BROWSER_EXTENSION_SURFACES))
 			.min(1)
-			.max(2)
+			.max(BROWSER_EXTENSION_SURFACES.length)
 			.refine((surfaces) => new Set(surfaces).size === surfaces.length, "Surface targets must be unique")
 			.optional(),
 	})
@@ -881,15 +884,15 @@ function assertPrincipalBrand(principal: BrowserRunnerPrincipal, brandId: string
 
 function isExtensionTargetPair(surfaceTargetKey: string, captureRouteKey: string): boolean {
 	return (
-		(surfaceTargetKey === "doubao.consumer_web" || surfaceTargetKey === "deepseek.consumer_web") &&
-		captureRouteKey === browserExtensionCaptureRoute(surfaceTargetKey)
+		isBrowserExtensionSurface(surfaceTargetKey) && captureRouteKey === browserExtensionCaptureRoute(surfaceTargetKey)
 	);
 }
 
 export function browserRunnerLaunchUrl(surfaceTargetKey: string): string {
-	if (surfaceTargetKey === "doubao.consumer_web") return "https://www.doubao.com/chat/";
-	if (surfaceTargetKey === "deepseek.consumer_web") return "https://chat.deepseek.com/";
-	throw new Error("Browser Runner task has an unsupported launch surface");
+	if (!isBrowserExtensionSurface(surfaceTargetKey)) {
+		throw new Error("Browser Runner task has an unsupported launch surface");
+	}
+	return browserExtensionSurfaceDefinition(surfaceTargetKey).launchUrl;
 }
 
 export function runnerClaimant(runnerId: string) {

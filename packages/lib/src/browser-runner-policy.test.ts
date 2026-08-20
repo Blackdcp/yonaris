@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isBrowserExtensionAdapterVersionBindingSatisfied } from "./browser-extension-contract";
+import type { BrowserExtensionSurface } from "./browser-extension-surfaces";
 import * as browserRunnerPolicy from "./browser-runner-policy";
 import {
 	assertBrowserRunnerEvidenceProtocol,
@@ -38,6 +39,25 @@ function reconcileExactTask(input: ExactTaskReconciliationInput): ExactTaskRecon
 }
 
 describe("Browser Runner retry policy", () => {
+	it("authorizes an exact approved operation for every registered surface", () => {
+		for (const [surfaceTargetKey, adapterVersion] of [
+			["doubao.consumer_web", "doubao-web-20260819-localpc-v8"],
+			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v2"],
+			["qwen.consumer_web", "qwen-web-20260821-localpc-v1"],
+			["kimi.consumer_web", "kimi-web-20260821-localpc-v1"],
+			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v1"],
+			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v1"],
+		] as const) {
+			expect(
+				browserExtensionTaskOperationDenial({
+					surfaceTargetKey,
+					readySurfaces: [surfaceTargetKey],
+					operation: { kind: "complete", adapterVersion },
+				}),
+			).toBeNull();
+		}
+	});
+
 	it("rejects omitted resume bindings after Doubao v8 production activation", () => {
 		expect(
 			browserExtensionTaskOperationDenial({
@@ -51,7 +71,7 @@ describe("Browser Runner retry policy", () => {
 	it("requires an exact adapter binding for resume under a simulated Doubao v8 approval", () => {
 		const dependencies = {
 			isAdapterVersionBindingSatisfied: (
-				surface: "doubao.consumer_web" | "deepseek.consumer_web",
+				surface: BrowserExtensionSurface,
 				requestedAdapterVersion: string | undefined,
 			) =>
 				isBrowserExtensionAdapterVersionBindingSatisfied({
@@ -89,7 +109,7 @@ describe("Browser Runner retry policy", () => {
 		(kind) => {
 			const dependencies = {
 				isAdapterVersionBindingSatisfied: (
-					surface: "doubao.consumer_web" | "deepseek.consumer_web",
+					surface: BrowserExtensionSurface,
 					requestedAdapterVersion: string | undefined,
 				) =>
 					isBrowserExtensionAdapterVersionBindingSatisfied({

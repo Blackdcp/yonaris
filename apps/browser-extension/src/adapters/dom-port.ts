@@ -7,8 +7,13 @@ import type {
 	DomElementRole,
 	DomElementSummary,
 	EvidenceViewportRect,
+	SearchEvidenceContract,
 } from "./contracts";
-import { extractStructuredSearchEvidence, inspectAnswerCompletionState } from "./search-evidence";
+import {
+	extractStructuredSearchEvidence,
+	inspectAnswerCompletionState,
+	type StructuredSearchEvidence,
+} from "./search-evidence";
 
 export const ANSWER_HTML_MAX_BYTES = 1024 * 1024;
 
@@ -226,12 +231,7 @@ class DocumentDomPort implements ConsumerDomPort {
 
 	async readAnswer(request: AnswerReadRequest): Promise<AnswerDomSnapshot> {
 		const answer = this.#at(request.answerSelector, request.answerIndex);
-		const structuredSearch = extractStructuredSearchEvidence(
-			answer,
-			request.searchEvidence,
-			isDomElementVisible,
-			readVisibleDomText,
-		);
+		const structuredSearch = await readStructuredSearchEvidence(answer, request.searchEvidence);
 		const answerSnapshot = snapshotVisibleAnswer(answer);
 		return {
 			text: answerSnapshot.text,
@@ -359,6 +359,10 @@ export function isDomElementVisible(element: Element): boolean {
 	if (getComputedStyle(element).display === "contents") return hasRenderedDisplayContents(element);
 	const rect = element.getBoundingClientRect();
 	return rect.width > 0 && rect.height > 0 && hasPositiveEffectiveIntersection(rect, element.parentElement);
+}
+
+export function isSearchEvidenceElementVisible(element: Element): boolean {
+	return withTemporarilyRevealedSearchElement(element, () => isDomElementVisible(element));
 }
 
 function isComposedElementRendered(element: Element): boolean {
@@ -762,6 +766,136 @@ function snapshotVisibleAnswer(answer: Element): { text: string; html: string } 
 
 export function readVisibleDomText(element: Element): string {
 	return snapshotVisibleAnswer(element).text;
+}
+
+export function readVisibleSearchEvidenceText(element: Element): string {
+	return withTemporarilyRevealedSearchElement(element, () => readVisibleDomText(element));
+}
+
+export async function readStructuredSearchEvidence(
+	answer: Element,
+	contract: SearchEvidenceContract | null,
+): Promise<StructuredSearchEvidence> {
+	if (!contract) return extractStructuredSearchEvidence(answer, null);
+	let containers: Element[];
+	try {
+		containers = [...answer.querySelectorAll(contract.container)].filter(isSearchEvidenceElementVisible);
+	} catch {
+		throw new Error("Approved search evidence selector is no longer valid CSS");
+	}
+	if (containers.length !== 1) {
+		return extractStructuredSearchEvidence(
+			answer,
+			contract,
+			isSearchEvidenceElementVisible,
+			readVisibleSearchEvidenceText,
+		);
+	}
+	const container = containers[0];
+	if (!container) throw new Error("Current search evidence container disappeared");
+
+	return withTemporarilyRevealedSearchElementAsync(container, async () => {
+		const wasCollapsed = container.querySelectorAll(contract.queryItem).length === 0;
+		let disclosure: HTMLElement | null = null;
+		if (wasCollapsed) {
+			const disclosures = [...container.querySelectorAll(contract.disclosure)].filter(isDomElementVisible);
+			if (disclosures.length !== 1 || !(disclosures[0] instanceof HTMLElement)) {
+				throw new Error("Current search evidence disclosure is missing or ambiguous");
+			}
+			disclosure = disclosures[0];
+			disclosure.click();
+		}
+
+		try {
+			if (!wasCollapsed) {
+				return extractStructuredSearchEvidence(
+					answer,
+					contract,
+					isSearchEvidenceElementVisible,
+					readVisibleSearchEvidenceText,
+				);
+			}
+			return await waitForMountedStructuredSearchEvidence(answer, contract);
+		} finally {
+			if (wasCollapsed) disclosure?.click();
+		}
+	});
+}
+
+async function waitForMountedStructuredSearchEvidence(
+	answer: Element,
+	contract: SearchEvidenceContract,
+): Promise<StructuredSearchEvidence> {
+	const deadline = Date.now() + 1_500;
+	let lastError: unknown = new Error("Current search evidence did not mount after disclosure");
+	do {
+		try {
+			return extractStructuredSearchEvidence(
+				answer,
+				contract,
+				isSearchEvidenceElementVisible,
+				readVisibleSearchEvidenceText,
+			);
+		} catch (error) {
+			lastError = error;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 25));
+	} while (Date.now() < deadline);
+	throw lastError;
+}
+
+function withTemporarilyRevealedSearchElement<T>(element: Element, read: () => T): T {
+	const restore = revealSearchElement(element);
+	try {
+		return read();
+	} finally {
+		restore();
+	}
+}
+
+async function withTemporarilyRevealedSearchElementAsync<T>(element: Element, read: () => Promise<T>): Promise<T> {
+	const restore = revealSearchElement(element);
+	try {
+		return await read();
+	} finally {
+		restore();
+	}
+}
+
+function revealSearchElement(element: Element): () => void {
+	type ScrollPosition = {
+		element: Element & { scrollLeft?: number; scrollTop?: number };
+		left: number | null;
+		top: number | null;
+	};
+	const positions: ScrollPosition[] = [];
+	let ancestor = element.parentElement;
+	while (ancestor) {
+		const scrollable = ancestor as Element & { scrollLeft?: unknown; scrollTop?: unknown };
+		if (typeof scrollable.scrollLeft === "number" || typeof scrollable.scrollTop === "number") {
+			positions.push({
+				element: scrollable as ScrollPosition["element"],
+				left: typeof scrollable.scrollLeft === "number" ? scrollable.scrollLeft : null,
+				top: typeof scrollable.scrollTop === "number" ? scrollable.scrollTop : null,
+			});
+		}
+		ancestor = ancestor.parentElement;
+	}
+
+	if (typeof element.scrollIntoView === "function") {
+		element.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "instant" as ScrollBehavior });
+	}
+	for (const position of positions) {
+		if (!isRootPageScrollingElement(position.element)) continue;
+		if (position.left !== null) position.element.scrollLeft = position.left;
+		if (position.top !== null) position.element.scrollTop = position.top;
+	}
+	return () => {
+		for (const position of positions) {
+			if (position.left !== null) position.element.scrollLeft = position.left;
+			if (position.top !== null) position.element.scrollTop = position.top;
+		}
+	};
 }
 
 function pruneHiddenSnapshotDescendants(sourceRoot: Element, cloneRoot: Element): void {

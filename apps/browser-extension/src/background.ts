@@ -3,9 +3,10 @@ import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "./contr
 import { ChromeTabDriver } from "./coordinator/chrome-tabs";
 import { ExtensionCoordinator, type ExtensionRunSummary } from "./coordinator/extension-coordinator";
 import type { TaskRunResult } from "./coordinator/task-runner";
-import { type QualificationReadinessPublisher, qualifyAndRecordActiveDoubaoTab } from "./doubao-qualification-client";
 import { buildHeartbeat } from "./heartbeat";
 import { chromeDeviceStorage } from "./storage";
+import { type QualificationReadinessPublisher, qualifyAndRecordActiveSurfaceTab } from "./surface-qualification-client";
+import { extensionSurfaceDefinition } from "./surface-registry";
 
 const HEARTBEAT_ALARM = "browser-runner-heartbeat";
 const LEGACY_WORK_ALARM = "browser-runner-work";
@@ -20,7 +21,7 @@ const coordinator = new ExtensionCoordinator({
 });
 let running: Promise<ExtensionRunSummary | null> | null = null;
 let manualRecoveryRunning = false;
-let qualificationRunning: ReturnType<typeof qualifyAndRecordActiveDoubaoTab> | null = null;
+let qualificationRunning: ReturnType<typeof qualifyAndRecordActiveSurfaceTab> | null = null;
 let heartbeatTail: Promise<void> = Promise.resolve();
 let lastRun: { finishedAt: string; summary: ExtensionRunSummary | null } | null = null;
 
@@ -45,8 +46,8 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 			.catch(() => sendResponse({ ok: false }));
 		return true;
 	}
-	if (message.type === "browser-runner:qualify-doubao") {
-		void qualifyDoubao()
+	if (message.type === "browser-runner:qualify-surface" || message.type === "browser-runner:qualify-doubao") {
+		void qualifySurface()
 			.then((result) => sendResponse({ ok: true, result }))
 			.catch((error) => sendResponse({ ok: false, error: safeRuntimeError(error) }));
 		return true;
@@ -107,15 +108,15 @@ function runNow(): Promise<ExtensionRunSummary | null> {
 	return running;
 }
 
-function qualifyDoubao(): ReturnType<typeof qualifyAndRecordActiveDoubaoTab> {
+function qualifySurface(): ReturnType<typeof qualifyAndRecordActiveSurfaceTab> {
 	if (running || manualRecoveryRunning) {
-		return Promise.reject(new Error("Browser Runner is busy; check Doubao again after the current task finishes."));
+		return Promise.reject(new Error("Browser Runner is busy; check the current page after the task finishes."));
 	}
 	if (qualificationRunning) return qualificationRunning;
 	const publisher: QualificationReadinessPublisher = {
 		confirmReadiness: (readiness) => sendHeartbeat(readiness),
 	};
-	const operation = qualifyAndRecordActiveDoubaoTab(storage, undefined, publisher);
+	const operation = qualifyAndRecordActiveSurfaceTab(storage, undefined, publisher);
 	qualificationRunning = operation;
 	void operation.then(
 		() => {
@@ -148,7 +149,7 @@ function ensureAlarms(): void {
 
 async function notifyNeedsAttention(result: TaskRunResult, surface: BrowserExtensionSurface): Promise<void> {
 	if (result.status !== "needs_human" && result.status !== "incomplete") return;
-	const channel = surface === "doubao.consumer_web" ? "Doubao" : "DeepSeek";
+	const channel = extensionSurfaceDefinition(surface).label;
 	await chrome.notifications.create({
 		type: "basic",
 		iconUrl: chrome.runtime.getURL("icon.svg"),

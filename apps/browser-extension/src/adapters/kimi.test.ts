@@ -1,0 +1,58 @@
+import { describe, expect, test } from "vitest";
+import { createKimiAdapter, kimiSelectorContract } from "./kimi";
+import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
+
+describe("Kimi browser-extension adapter", () => {
+	test("declares the registered Kimi surface and adapter version", () => {
+		expect(kimiSelectorContract).toMatchObject({
+			version: "kimi-web-20260821-localpc-v1",
+			surface: "kimi.consumer_web",
+			launchUrl: "https://www.kimi.com/",
+		});
+	});
+
+	test("collects a structured answer, direct citation, and bounded screenshot region", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				newConversationLabels: ["新建会话"],
+				answer: {
+					text: "Kimi 回答",
+					html: "<article>Kimi 回答</article>",
+					citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
+				},
+			}),
+		);
+		const adapter = createKimiAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Kimi 回答",
+			webSearchObserved: null,
+			webQueries: [],
+			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
+			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
+			adapterVersion: "kimi-web-20260821-localpc-v1",
+		});
+	});
+
+	test("fails before submission when login, CAPTCHA, or account restriction is visible", async () => {
+		for (const [code, override] of [
+			["signed_out", { signedOut: true }],
+			["captcha", { captcha: true }],
+			["account_restricted", { accountRestricted: true }],
+		] as const) {
+			const port = new FixtureDomPort(
+				createAdapterFixture({
+					pageUrl: "https://www.kimi.com/",
+					conversationUrl: "https://www.kimi.com/chat/kimi-session",
+					newConversationLabels: ["新建会话"],
+					...override,
+				}),
+			);
+			await expect(createKimiAdapter(port).preflight()).rejects.toMatchObject({ code, stage: "pre_submit" });
+			expect(port.submitCount).toBe(0);
+		}
+	});
+});

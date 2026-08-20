@@ -1,25 +1,21 @@
 import { createHash, randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
 import { expect, type APIRequestContext, type BrowserContext, test } from "@playwright/test";
+import type { BrowserExtensionSurface } from "@workspace/lib/browser-extension-contract";
 import {
-  isBrowserExtensionAdapterVersionBindingSatisfied,
-  STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS,
-} from "@workspace/lib/browser-extension-contract";
+  BROWSER_EXTENSION_SURFACE_DEFINITIONS,
+  BROWSER_EXTENSION_SURFACES,
+  browserExtensionSurfaceDefinition,
+} from "@workspace/lib/browser-extension-surfaces";
 import pg from "pg";
 import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
 import { DATABASE_URL, STEPFUN_BRAND_ID, TEST_API_KEY } from "../fixtures";
 
 const AUTHORIZATION = { Authorization: `Bearer ${TEST_API_KEY}` };
-const DOUBAO_SURFACE = "doubao.consumer_web" as const;
-const DEEPSEEK_SURFACE = "deepseek.consumer_web" as const;
-const RUN_SURFACES = [DOUBAO_SURFACE] as const;
-const DECLARED_SURFACES = [DOUBAO_SURFACE, DEEPSEEK_SURFACE] as const;
-const APPROVED_DOUBAO_ADAPTER_VERSION = "doubao-web-20260819-localpc-v8";
-const UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION = "deepseek-web-stale";
+const RUN_SURFACES = BROWSER_EXTENSION_SURFACES;
 
 test.describe.configure({ mode: "serial" });
 
-test("platform Run now produces an approved Doubao 15-sample cohort while DeepSeek remains fail-closed", async ({
+test("one administrator action completes one Prompt across all six local browser surfaces", async ({
   browser,
   page: customerPage,
   request,
@@ -28,12 +24,10 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
   const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
   const scopeName = `Extension E2E ${suffix}`;
   const scope = await createProgram(request, suffix, scopeName);
-  const prompts = await Promise.all(
-    [
-      `Which companies lead China's foundation-model market? ${suffix}`,
-      `Compare practical enterprise AI platforms for developers. ${suffix}`,
-      `Which AI assistant should a Chinese team evaluate? ${suffix}`,
-    ].map((value) => createPrompt(request, scope.id, value)),
+  const prompt = await createPrompt(
+    request,
+    scope.id,
+    `Which companies lead China's foundation-model market? ${suffix}`,
   );
 
   const admin = await browser.newContext({
@@ -47,15 +41,14 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
     await adminPage.goto(`/admin/sampling?brand=${STEPFUN_BRAND_ID}`);
     await expect(adminPage.getByRole("heading", { name: "Sampling Tasks" })).toBeVisible({ timeout: 30_000 });
     await adminPage.getByLabel("Program").selectOption(scope.id);
-    await expect(adminPage.getByText(/3\s*.*\s*1\s*.*\s*5\s*=\s*15 tasks/)).toBeVisible();
-    await adminPage.getByRole("button", { name: "Run 15 tasks now" }).click();
+    await expect(adminPage.getByText(/1\s*×\s*6\s*×\s*1\s*=\s*6 tasks/)).toBeVisible();
+    await adminPage.getByRole("button", { name: "Run 6 tasks now" }).click();
     await expect(adminPage.getByRole("row").filter({ hasText: scopeName }).first()).toBeVisible({ timeout: 20_000 });
 
-    await expectDeepSeekClaimRejected(request, token);
-    await expectRetiredDoubaoV7ClaimRejected(request, token);
-    const structured = await completeOneStructuredV8Claim(scope.id);
     const completed = await drainFakeExtension(request, token);
-    expect(completed).toBe(14);
+    expect(completed.map(({ surface }) => surface)).toEqual(RUN_SURFACES);
+    const structured = completed[0];
+    if (!structured) throw new Error("Six-surface fixture did not complete a structured observation");
 
     const database = new pg.Client({ connectionString: DATABASE_URL });
     await database.connect();
@@ -95,16 +88,16 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
         [STEPFUN_BRAND_ID, scope.id],
       );
       expect(result.rows[0]).toEqual({
-        tasks: "15",
-        successes: "15",
-        runs: "15",
-        mentioned: "12",
-        ready_snapshots: "15",
-        citations: "15",
-        search_observed: "15",
-        query_runs: "15",
-        structured_v2_runs: "15",
-        attached_jpegs: "15",
+        tasks: "6",
+        successes: "6",
+        runs: "6",
+        mentioned: "6",
+        ready_snapshots: "6",
+        citations: "6",
+        search_observed: "6",
+        query_runs: "6",
+        structured_v2_runs: "6",
+        attached_jpegs: "6",
       });
     } finally {
       await database.end();
@@ -112,9 +105,9 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
 
     await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/visibility?scope=${scope.id}&lookback=1w`);
     await expect(customerPage.getByRole("heading", { name: "Visibility" })).toBeVisible({ timeout: 30_000 });
-    await expect(customerPage.getByText(prompts[0]?.value ?? "missing prompt")).toBeVisible({ timeout: 20_000 });
+    await expect(customerPage.getByText(prompt.value)).toBeVisible({ timeout: 20_000 });
 
-    await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${prompts[0]?.id}`);
+    await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${prompt.id}`);
     await customerPage.getByText("LLM Responses", { exact: true }).first().click();
     await expect(customerPage.getByText("Captured browser evidence", { exact: true }).first()).toBeVisible({
       timeout: 20_000,
@@ -139,12 +132,6 @@ test("platform Run now produces an approved Doubao 15-sample cohort while DeepSe
     expect(screenshot.status(), await screenshot.text()).toBe(200);
     expect(await screenshot.body()).toEqual(structured.jpeg);
     expect(screenshot.headers()["x-yonaris-sha256"]).toBe(createHash("sha256").update(structured.jpeg).digest("hex"));
-
-    await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${structured.promptId}`);
-    await customerPage.getByText("LLM Responses", { exact: true }).first().click();
-    await expect(customerPage.getByText("Captured browser evidence", { exact: true }).first()).toBeVisible({
-      timeout: 20_000,
-    });
   } finally {
     await closeContextWithinDeadline(admin, 5_000);
   }
@@ -233,23 +220,17 @@ async function pairFakeExtension(
   const response = await request.post("/api/internal/browser-runner/v1/pair", {
     data: {
       code,
-			extensionVersion: "0.2.3",
+      extensionVersion: "0.3.0",
       browserFamily: "chrome",
       browserVersion: "140.0.0",
       platform: "windows",
-      supportedSurfaces: [...DECLARED_SURFACES],
-      readiness: {
-        [DOUBAO_SURFACE]: {
-          status: "ready",
-          adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
-          activeConcurrency: 0,
-        },
-        [DEEPSEEK_SURFACE]: {
-          status: "ready",
-          adapterVersion: UNQUALIFIED_DEEPSEEK_ADAPTER_VERSION,
-          activeConcurrency: 0,
-        },
-      },
+      supportedSurfaces: [...RUN_SURFACES],
+      readiness: Object.fromEntries(
+        BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, adapterVersion }) => [
+          key,
+          { status: "ready", adapterVersion, activeConcurrency: 0 },
+        ]),
+      ),
     },
   });
   expect(response.status(), await response.text()).toBe(201);
@@ -259,198 +240,48 @@ async function pairFakeExtension(
   return body.deviceToken;
 }
 
-async function expectDeepSeekClaimRejected(request: APIRequestContext, token: string): Promise<void> {
-  const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
-    headers: { Authorization: `Bearer ${token}` },
-    data: { brandId: STEPFUN_BRAND_ID, surfaceTargetKeys: [DEEPSEEK_SURFACE] },
-  });
-  expect(response.status(), await response.text()).toBe(409);
-}
-
-async function completeOneStructuredV8Claim(scopeId: string): Promise<{
-  promptId: string;
-  snapshotId: string;
-  jpeg: Buffer;
-}> {
-  process.env.DATABASE_URL = DATABASE_URL;
-  process.env.APP_URL = "http://localhost:1515";
-  process.env.RESPONSE_SNAPSHOT_ENABLED = "true";
-  process.env.RESPONSE_SNAPSHOT_ROOT = fileURLToPath(new URL("../.snapshot-fixtures", import.meta.url));
-
-  const database = new pg.Client({ connectionString: DATABASE_URL });
-  await database.connect();
-  let batchId: string | undefined;
-  try {
-    const batchResult = await database.query<{ id: string }>(
-      `SELECT id::text
-       FROM delivery_batches
-       WHERE brand_id = $1 AND scope_id = $2 AND execution_mode = 'browser_runner'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [STEPFUN_BRAND_ID, scopeId],
-    );
-    batchId = batchResult.rows[0]?.id;
-  } finally {
-    await database.end();
-  }
-  if (!batchId) throw new Error("Structured v8 fixture batch was not found");
-
-  const serviceModuleUrl = new URL("../../apps/web/src/server/browser-runner-service.ts", import.meta.url).href;
-  const [service, evidence] = await Promise.all([
-    import(serviceModuleUrl),
-    import("@workspace/lib/db/evidence-artifacts"),
-  ]);
-  const adapterVersion = STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS[DOUBAO_SURFACE];
-  if (!adapterVersion) throw new Error("Doubao structured candidate version is not configured");
-  const runnerId = randomUUID();
-  const principal = {
-    kind: "browser_extension" as const,
-    id: runnerId,
-    market: "CN" as const,
-    locale: "zh-CN" as const,
-    timezone: "Asia/Shanghai" as const,
-    allowedBrandIds: [STEPFUN_BRAND_ID],
-    supportedSurfaces: [DOUBAO_SURFACE],
-    readySurfaces: [DOUBAO_SURFACE],
-  };
-  const futureV8Binding = (surface: typeof DOUBAO_SURFACE | typeof DEEPSEEK_SURFACE, requested: string | undefined) =>
-    isBrowserExtensionAdapterVersionBindingSatisfied({
-      surface,
-      requestedAdapterVersion: requested,
-      approvedAdapterVersion: surface === DOUBAO_SURFACE ? adapterVersion : undefined,
-    });
-  const dependencies = { isAdapterVersionBindingSatisfied: futureV8Binding };
-  const claim = await service.claimRunnerTask(
-    { brandId: STEPFUN_BRAND_ID, batchId, surfaceTargetKeys: [DOUBAO_SURFACE], adapterVersion },
-    principal,
-    dependencies,
-  );
-  if (!claim || claim.task.scopeId !== scopeId) throw new Error("Structured v8 fixture could not claim its task");
-  if (
-    claim.task.sessionRequirement !== "dedicated_sampling_profile" ||
-    claim.task.searchRequirement !== "platform_default"
-  ) {
-    throw new Error("Structured v8 fixture claimed an incompatible frozen protocol");
-  }
-
-  const runnerSessionId = `structured-v8-${claim.task.id}`;
-  const lease = {
-    brandId: STEPFUN_BRAND_ID,
-    leaseToken: claim.leaseToken,
-    leaseGeneration: claim.leaseGeneration,
-    runnerSessionId,
-    adapterVersion,
-  };
-  await service.recordRunnerSubmitIntent(claim.task.id, lease, principal, dependencies);
-  await service.recordRunnerSubmitConfirmed(claim.task.id, lease, principal, dependencies);
-  await service.authorizeRunnerEvidenceUpload(
-    claim.task.id,
-    STEPFUN_BRAND_ID,
-    { runnerSessionId, adapterVersion },
-    principal,
-    dependencies,
-  );
-
-  const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0xff, 0xd9]);
-  const artifact = await evidence.stageEvidenceArtifact({
-    brandId: STEPFUN_BRAND_ID,
-    claim: {
-      taskId: claim.task.id,
-      claimedBy: service.runnerClaimant(runnerId),
-      leaseToken: claim.leaseToken,
-      leaseGeneration: claim.leaseGeneration,
-    },
-    uploadedBy: service.runnerClaimant(runnerId),
-    originalFilename: `structured-${claim.task.id}.jpg`,
-    expectedKind: "screenshot",
-    content: jpeg,
-  });
-  const answerText =
-    claim.task.sampleIndex === 1
-      ? `This deterministic structured ${claim.task.surfaceTargetKey} answer does not name the monitored brand.`
-      : `StepFun is included in this deterministic structured ${claim.task.surfaceTargetKey} answer.`;
-  const completion = await service.completeRunnerTask(
-    claim.task.id,
-    {
-      ...lease,
-      browserVersion: "Chrome-140",
-      observation: {
-        schemaVersion: "browser-runner-observation.v2",
-        answerText,
-        observedAt: new Date().toISOString(),
-        pageUrl: `https://www.doubao.com/chat/${claim.task.id}`,
-        sessionMode: "dedicated_sampling_profile",
-        searchMode: "native_auto",
-        webSearchObserved: true,
-        modelVersion: "consumer-web-fixture-v2",
-        evidenceArtifactIds: [artifact.id],
-        citations: [{ url: `https://example.com/structured-source/${claim.task.id}`, title: "Structured source" }],
-        webQueries: [`structured fixture query ${claim.task.sampleIndex}`],
-        captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 1, completionCount: 1 },
-      },
-    },
-    principal,
-    dependencies,
-  );
-  if (!completion.promptRunId || !completion.snapshot || completion.snapshot.status !== "ready") {
-    throw new Error("Structured v8 fixture did not produce a ready snapshot");
-  }
-  return { promptId: claim.task.promptId, snapshotId: completion.snapshot.id, jpeg };
-}
-
-async function expectRetiredDoubaoV7ClaimRejected(request: APIRequestContext, token: string): Promise<void> {
-  const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
-    headers: { Authorization: `Bearer ${token}` },
-    data: {
-      brandId: STEPFUN_BRAND_ID,
-      surfaceTargetKeys: [DOUBAO_SURFACE],
-      adapterVersion: "doubao-web-20260818-localpc-v7",
-    },
-  });
-  expect(response.status(), await response.text()).toBe(409);
-}
-
-async function drainFakeExtension(request: APIRequestContext, token: string): Promise<number> {
+async function drainFakeExtension(
+  request: APIRequestContext,
+  token: string,
+): Promise<Array<{ surface: BrowserExtensionSurface; promptId: string; snapshotId: string; jpeg: Buffer }>> {
   const headers = { Authorization: `Bearer ${token}` };
-  let completed = 0;
-  for (let round = 0; round < 20; round += 1) {
-    const claims = (
-      await Promise.all(
-        RUN_SURFACES.flatMap((surface) =>
-          Array.from({ length: 5 }, async () => {
-            const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
-              headers,
-              data: {
-                brandId: STEPFUN_BRAND_ID,
-                surfaceTargetKeys: [surface],
-                adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
-              },
-            });
-            expect(response.status(), await response.text()).toBe(200);
-            return ((await response.json()) as { claim: RunnerClaim | null }).claim;
-          }),
-        ),
-      )
-    ).filter((claim): claim is RunnerClaim => claim !== null);
-    if (claims.length === 0) return completed;
-    await Promise.all(claims.map((claim) => completeFakeClaim(request, headers, claim)));
-    completed += claims.length;
+  const completed: Array<{
+    surface: BrowserExtensionSurface;
+    promptId: string;
+    snapshotId: string;
+    jpeg: Buffer;
+  }> = [];
+  for (const surface of RUN_SURFACES) {
+    const definition = browserExtensionSurfaceDefinition(surface);
+    const response = await request.post("/api/internal/browser-runner/v1/tasks/claim", {
+      headers,
+      data: {
+        brandId: STEPFUN_BRAND_ID,
+        surfaceTargetKeys: [surface],
+        adapterVersion: definition.adapterVersion,
+      },
+    });
+    expect(response.status(), await response.text()).toBe(200);
+    const claim = ((await response.json()) as { claim: RunnerClaim | null }).claim;
+    if (!claim) throw new Error(`Fixture extension could not claim ${surface}`);
+    completed.push(await completeFakeClaim(request, headers, claim));
   }
-  throw new Error("Fixture extension did not drain the started batch");
+  return completed;
 }
 
 async function completeFakeClaim(
   request: APIRequestContext,
   headers: Record<string, string>,
   claim: RunnerClaim,
-): Promise<void> {
+): Promise<{ surface: BrowserExtensionSurface; promptId: string; snapshotId: string; jpeg: Buffer }> {
+  const definition = browserExtensionSurfaceDefinition(claim.task.surfaceTargetKey);
   const runnerSessionId = `fixture-${claim.task.id}`;
   const lease = {
     brandId: claim.task.brandId,
     leaseToken: claim.leaseToken,
     leaseGeneration: claim.leaseGeneration,
     runnerSessionId,
-    adapterVersion: APPROVED_DOUBAO_ADAPTER_VERSION,
+    adapterVersion: definition.adapterVersion,
   };
   for (const action of ["submit-intent", "submit-confirmed"] as const) {
     const response = await request.post(`/api/internal/browser-runner/v1/tasks/${claim.task.id}/${action}`, {
@@ -472,20 +303,13 @@ async function completeFakeClaim(
       "X-Yonaris-Evidence-Kind": "screenshot",
       "X-Yonaris-Filename": encodeURIComponent(`response-${claim.task.id}.jpg`),
       "X-Yonaris-Runner-Session-Id": runnerSessionId,
-      "X-Yonaris-Adapter-Version": APPROVED_DOUBAO_ADAPTER_VERSION,
+      "X-Yonaris-Adapter-Version": definition.adapterVersion,
     },
     data: jpeg,
   });
   expect(evidence.status(), await evidence.text()).toBe(201);
   const artifactId = ((await evidence.json()) as { artifact: { id: string } }).artifact.id;
-  const mentionsBrand = claim.task.sampleIndex !== 1;
-  const answerText = mentionsBrand
-    ? `StepFun is included in this deterministic ${claim.task.surfaceTargetKey} fixture answer.`
-    : `This deterministic ${claim.task.surfaceTargetKey} fixture answer does not name the monitored brand.`;
-  const pageUrl =
-    claim.task.surfaceTargetKey === "doubao.consumer_web"
-      ? `https://www.doubao.com/chat/${claim.task.id}`
-      : `https://chat.deepseek.com/a/chat/s/${claim.task.id}`;
+  const answerText = `StepFun is included in this deterministic ${claim.task.surfaceTargetKey} fixture answer.`;
   const complete = await request.post(`/api/internal/browser-runner/v1/tasks/${claim.task.id}/complete`, {
     headers,
     data: {
@@ -495,7 +319,7 @@ async function completeFakeClaim(
         schemaVersion: "browser-runner-observation.v2",
         answerText,
         observedAt: new Date().toISOString(),
-        pageUrl,
+        pageUrl: definition.launchUrl,
         sessionMode: "dedicated_sampling_profile",
         searchMode: "native_auto",
         webSearchObserved: true,
@@ -508,14 +332,28 @@ async function completeFakeClaim(
     },
   });
   expect(complete.status(), await complete.text()).toBe(200);
+  const completion = (await complete.json()) as {
+    promptRunId?: string;
+    snapshot?: { id: string; status: string };
+  };
+  if (!completion.promptRunId || !completion.snapshot || completion.snapshot.status !== "ready") {
+    throw new Error(`${claim.task.surfaceTargetKey} did not produce a ready structured snapshot`);
+  }
+  return {
+    surface: claim.task.surfaceTargetKey,
+    promptId: claim.task.promptId,
+    snapshotId: completion.snapshot.id,
+    jpeg,
+  };
 }
 
 type RunnerClaim = {
   task: {
     id: string;
     brandId: string;
+    promptId: string;
     sampleIndex: number;
-    surfaceTargetKey: (typeof RUN_SURFACES)[number];
+    surfaceTargetKey: BrowserExtensionSurface;
   };
   leaseToken: string;
   leaseGeneration: number;
