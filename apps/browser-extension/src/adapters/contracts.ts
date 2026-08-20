@@ -51,6 +51,7 @@ export type SelectorContract = {
 
 export type SearchEvidenceContract = {
 	container: string;
+	disclosure: string;
 	summaryTextPattern: string;
 	queryItem: string;
 	queryTextPattern: string;

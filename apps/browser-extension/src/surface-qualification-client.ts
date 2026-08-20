@@ -1,12 +1,16 @@
 import type { StructuredSearchQualification } from "./adapters/search-evidence";
-import type { BrowserExtensionReadiness } from "./contracts";
+import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "./contracts";
 import { CURRENT_ADAPTER_VERSIONS } from "./surface-readiness";
+import { type ExtensionSurfaceDefinition, extensionSurfaceForUrl } from "./surface-registry";
 
 type QualificationTab = { id?: number; url?: string };
 
 export interface QualificationTabsGateway {
 	queryActive(): Promise<QualificationTab[]>;
-	sendMessage(tabId: number, command: { kind: "yonaris_adapter"; action: "inspect_search_evidence" }): Promise<unknown>;
+	sendMessage(
+		tabId: number,
+		command: { kind: "yonaris_adapter"; action: "inspect_search_evidence" | "preflight" },
+	): Promise<unknown>;
 }
 
 export interface QualificationReadinessStore {
@@ -19,6 +23,116 @@ export interface QualificationReadinessPublisher {
 }
 
 let qualificationTail: Promise<void> = Promise.resolve();
+
+export type SurfaceQualification = Omit<StructuredSearchQualification, "status"> & {
+	surface: BrowserExtensionSurface;
+	label: string;
+	status: StructuredSearchQualification["status"] | "ready";
+};
+
+export function qualifyAndRecordActiveSurfaceTab(
+	store: QualificationReadinessStore,
+	gateway: QualificationTabsGateway | undefined,
+	publisher: QualificationReadinessPublisher,
+): Promise<SurfaceQualification> {
+	const attempt = qualificationTail.then(() => performSurfaceQualification(store, gateway, publisher));
+	qualificationTail = attempt.then(
+		() => undefined,
+		() => undefined,
+	);
+	return attempt;
+}
+
+async function performSurfaceQualification(
+	store: QualificationReadinessStore,
+	gateway: QualificationTabsGateway | undefined,
+	publisher: QualificationReadinessPublisher,
+): Promise<SurfaceQualification> {
+	const tabsGateway = gateway ?? chromeQualificationTabsGateway();
+	const active = await detectActiveSurface(tabsGateway);
+	const readiness = await store.loadSurfaceReadiness();
+	const revokedReadiness: BrowserExtensionReadiness = {
+		...readiness,
+		[active.definition.surface]: {
+			status: "unavailable",
+			adapterVersion: CURRENT_ADAPTER_VERSIONS[active.definition.surface],
+			activeConcurrency: 0,
+		},
+	};
+	await store.saveSurfaceReadiness(revokedReadiness);
+	await publisher.confirmReadiness(revokedReadiness);
+	const result = await inspectActiveSurface(active, tabsGateway);
+	if (result.status !== "ready" && result.status !== "qualified") return result;
+	const readyReadiness: BrowserExtensionReadiness = {
+		...revokedReadiness,
+		[active.definition.surface]: {
+			status: "ready",
+			adapterVersion: CURRENT_ADAPTER_VERSIONS[active.definition.surface],
+			activeConcurrency: 0,
+		},
+	};
+	await store.saveSurfaceReadiness(readyReadiness);
+	try {
+		await publisher.confirmReadiness(readyReadiness);
+	} catch (error) {
+		await store.saveSurfaceReadiness(revokedReadiness);
+		await publisher.confirmReadiness(revokedReadiness).catch(() => undefined);
+		throw error;
+	}
+	return result;
+}
+
+async function detectActiveSurface(gateway: QualificationTabsGateway): Promise<{
+	tabId: number;
+	url: string;
+	definition: ExtensionSurfaceDefinition;
+}> {
+	const tabs = await gateway.queryActive();
+	const tab = tabs.length === 1 ? tabs[0] : undefined;
+	if (!tab || !Number.isSafeInteger(tab.id) || typeof tab.url !== "string") {
+		throw new Error("Open one active supported domestic AI page before checking it.");
+	}
+	let definition: ExtensionSurfaceDefinition;
+	try {
+		definition = extensionSurfaceForUrl(new URL(tab.url));
+	} catch {
+		throw new Error("Open one active supported domestic AI page before checking it.");
+	}
+	return { tabId: tab.id as number, url: tab.url, definition };
+}
+
+async function inspectActiveSurface(
+	active: { tabId: number; url: string; definition: ExtensionSurfaceDefinition },
+	gateway: QualificationTabsGateway,
+): Promise<SurfaceQualification> {
+	const structured = active.definition.contract.searchEvidence !== null;
+	if (structured && !isApprovedDoubaoConversationUrl(active.url)) {
+		throw new Error("Open one active Doubao conversation tab before checking the page.");
+	}
+	const response = await gateway.sendMessage(active.tabId, {
+		kind: "yonaris_adapter",
+		action: structured ? "inspect_search_evidence" : "preflight",
+	});
+	if (!isRecord(response) || response.ok !== true) {
+		throw new Error(adapterFailureMessage(response) ?? "The active AI page could not be checked safely.");
+	}
+	if (!structured) {
+		return {
+			surface: active.definition.surface,
+			label: active.definition.label,
+			status: "ready",
+			answerCount: 0,
+			queryCount: 0,
+			citationCount: 0,
+		};
+	}
+	if (!isRecord(response.value)) throw new Error("The active Doubao page could not be checked safely.");
+	return {
+		...parseQualification(response.value),
+		surface: active.definition.surface,
+		label: active.definition.label,
+	};
+}
 
 export function qualifyAndRecordActiveDoubaoTab(
 	store: QualificationReadinessStore,
@@ -91,9 +205,16 @@ export async function qualifyActiveDoubaoTab(
 		action: "inspect_search_evidence",
 	});
 	if (!isRecord(response) || response.ok !== true || !isRecord(response.value)) {
-		throw new Error("The active Doubao page could not be checked safely.");
+		throw new Error(adapterFailureMessage(response) ?? "The active Doubao page could not be checked safely.");
 	}
 	return parseQualification(response.value);
+}
+
+function adapterFailureMessage(value: unknown): string | null {
+	if (!isRecord(value) || value.ok !== false || !isRecord(value.error)) return null;
+	const message = value.error.message;
+	if (typeof message !== "string" || !message.trim()) return null;
+	return message.trim().slice(0, 500);
 }
 
 function chromeQualificationTabsGateway(): QualificationTabsGateway {

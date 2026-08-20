@@ -11,7 +11,7 @@
 	"answer": "div[data-message-id].relative.grid.w-full",
 	"generating": "#input-engine-container button.bg-dbx-text-highlight",
 	"completion": "button[aria-label=\"朗读\"]",
-	"completionCompanion": "button[aria-label=\"复制\"]",
+	"completionCompanion": "button:has(+ button[aria-label=\"朗读\"])",
 	"loginWall": "input[type=\"password\"],input[type=\"tel\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"],[class*=\"verify\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"],[data-testid=\"rate-limit\"]",
@@ -23,6 +23,7 @@
 	"queryItem": null,
 	"searchEvidence": {
 		"container": "[data-plugin-identifier*=\"search_query_result_block\"]",
+		"disclosure": "div.cursor-pointer",
 		"summaryTextPattern": "^搜索\\s*(?<queries>\\d+)\\s*个关键词，参考\\s*(?<citations>\\d+)\\s*篇资料$",
 		"queryItem": ".mb-8.text-sm",
 		"queryTextPattern": "[“\"](?<query>[^”\"]+)[”\"]",

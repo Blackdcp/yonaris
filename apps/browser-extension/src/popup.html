@@ -15,10 +15,7 @@
 			<section id="paired" hidden>
 				<p class="status ready">Paired and ready</p>
 				<p id="device-summary" class="muted"></p>
-				<div class="channels">
-					<p><span>Doubao</span><strong id="doubao-status">Waiting</strong></p>
-					<p><span>DeepSeek</span><strong id="deepseek-status">Waiting</strong></p>
-				</div>
+				<div id="channels" class="channels"></div>
 				<div id="manual-recovery" hidden>
 					<p class="muted">Stopped browser sessions</p>
 					<div id="manual-recovery-list" class="recovery-list"></div>
@@ -34,7 +31,7 @@
 				<input id="pairing-code" autocomplete="off" maxlength="200" required />
 				<button id="pair" type="submit">Pair this Chrome</button>
 			</form>
-			<button id="inspect-doubao" type="button" class="secondary">Check open Doubao answer (read only)</button>
+			<button id="inspect-surface" type="button" class="secondary">Check current AI page (read only)</button>
 			<p id="message" role="status" class="muted"></p>
 		</main>
 		<script src="popup.js"></script>

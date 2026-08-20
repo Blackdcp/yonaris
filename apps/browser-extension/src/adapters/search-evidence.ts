@@ -84,6 +84,7 @@ export function inspectLatestStructuredSearchEvidence(
 	readVisibleText: VisibleTextReader = renderedText,
 	generatingSelector: string | null = null,
 	completionCompanionSelector: string | null = null,
+	isSearchEvidenceVisible: (element: Element) => boolean = isAnswerVisible,
 ): StructuredSearchQualification {
 	let answers: Element[];
 	try {
@@ -106,7 +107,50 @@ export function inspectLatestStructuredSearchEvidence(
 		if (generatingSelector && [...document.querySelectorAll(generatingSelector)].some(isAnswerVisible)) {
 			return qualification("page_drift", answers.length);
 		}
-		const evidence = extractStructuredSearchEvidence(answer, contract, isAnswerVisible, readVisibleText);
+		const evidence = extractStructuredSearchEvidence(answer, contract, isSearchEvidenceVisible, readVisibleText);
+		if (evidence.searchUsedCount === 0) return qualification("no_search_evidence", answers.length);
+		if (evidence.citations.length === 0) return qualification("no_citation_evidence", answers.length);
+		return {
+			status: "qualified",
+			answerCount: answers.length,
+			queryCount: evidence.webQueries.length,
+			citationCount: evidence.citations.length,
+		};
+	} catch {
+		return qualification("page_drift", answers.length);
+	}
+}
+
+export async function inspectLatestStructuredSearchEvidenceAsync(
+	document: Document,
+	answerSelector: string,
+	contract: SearchEvidenceContract | null,
+	isAnswerVisible: (element: Element) => boolean,
+	completionSelector: string | null,
+	generatingSelector: string | null,
+	completionCompanionSelector: string | null,
+	readSearchEvidence: (answer: Element, contract: SearchEvidenceContract | null) => Promise<StructuredSearchEvidence>,
+): Promise<StructuredSearchQualification> {
+	let answers: Element[];
+	try {
+		answers = [...document.querySelectorAll(answerSelector)].filter(isAnswerVisible);
+	} catch {
+		return qualification("page_drift", 0);
+	}
+	const answer = answers.at(-1);
+	if (!answer) return qualification("no_answer", 0);
+	try {
+		if (
+			completionSelector &&
+			(!completionCompanionSelector ||
+				inspectAnswerCompletionState(answer, completionSelector, completionCompanionSelector, isAnswerVisible) !== "bound")
+		) {
+			return qualification("page_drift", answers.length);
+		}
+		if (generatingSelector && [...document.querySelectorAll(generatingSelector)].some(isAnswerVisible)) {
+			return qualification("page_drift", answers.length);
+		}
+		const evidence = await readSearchEvidence(answer, contract);
 		if (evidence.searchUsedCount === 0) return qualification("no_search_evidence", answers.length);
 		if (evidence.citations.length === 0) return qualification("no_citation_evidence", answers.length);
 		return {

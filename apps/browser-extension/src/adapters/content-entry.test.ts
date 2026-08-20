@@ -64,8 +64,8 @@ async function installContentEntryHarness(navigatedUrl: string | null): Promise<
 			</div>
 		</div>
 		<div class="answer-actions">
+			<button>复制</button>
 			<button aria-label="朗读">朗读</button>
-			<button aria-label="复制">复制</button>
 		</div>
 	</body></html>`);
 	const pageLocation = { hostname: "www.doubao.com", href: "https://www.doubao.com/chat/123" };

@@ -1,16 +1,17 @@
-import type { StructuredSearchQualification } from "./adapters/search-evidence";
 import { BrowserRunnerApiClient } from "./api-client";
-import { PORTAL_ORIGIN } from "./contracts";
+import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface, PORTAL_ORIGIN } from "./contracts";
 import { buildHeartbeat } from "./heartbeat";
 import { chromeDeviceStorage } from "./storage";
+import type { SurfaceQualification } from "./surface-qualification-client";
+import { extensionSurfaceDefinition } from "./surface-registry";
 
 type SurfaceSummary = { succeeded: number; retryScheduled: number; needsHuman: number; incomplete: number };
 type RuntimeSummary = {
-	bySurface: Partial<Record<"doubao.consumer_web" | "deepseek.consumer_web", SurfaceSummary>>;
+	bySurface: Partial<Record<BrowserExtensionSurface, SurfaceSummary>>;
 };
 type ManualRecoveryCandidate = {
 	taskId: string;
-	surfaceTargetKey: "doubao.consumer_web" | "deepseek.consumer_web";
+	surfaceTargetKey: BrowserExtensionSurface;
 	updatedAt: string;
 	canAttemptRecovery: boolean;
 	recoveryStage: "pre_submit" | "post_submit";
@@ -24,10 +25,10 @@ const pairButton = requiredElement<HTMLButtonElement>("pair");
 const disconnectButton = requiredElement<HTMLButtonElement>("disconnect");
 const refreshButton = requiredElement<HTMLButtonElement>("refresh");
 const runNowButton = requiredElement<HTMLButtonElement>("run-now");
-const inspectDoubaoButton = requiredElement<HTMLButtonElement>("inspect-doubao");
+const inspectSurfaceButton = requiredElement<HTMLButtonElement>("inspect-surface");
 const summary = requiredElement<HTMLElement>("device-summary");
-const doubaoStatus = requiredElement<HTMLElement>("doubao-status");
-const deepseekStatus = requiredElement<HTMLElement>("deepseek-status");
+const channels = requiredElement<HTMLElement>("channels");
+const surfaceStatuses = createSurfaceRows(channels);
 const manualRecovery = requiredElement<HTMLElement>("manual-recovery");
 const manualRecoveryList = requiredElement<HTMLElement>("manual-recovery-list");
 const message = requiredElement<HTMLElement>("message");
@@ -39,7 +40,7 @@ form.addEventListener("submit", (event) => {
 disconnectButton.addEventListener("click", () => void disconnect());
 refreshButton.addEventListener("click", () => void refresh());
 runNowButton.addEventListener("click", () => void runNow());
-inspectDoubaoButton.addEventListener("click", () => void inspectDoubao());
+inspectSurfaceButton.addEventListener("click", () => void inspectSurface());
 
 void render();
 
@@ -98,34 +99,38 @@ async function runNow(): Promise<void> {
 	}
 }
 
-async function inspectDoubao(): Promise<void> {
+async function inspectSurface(): Promise<void> {
 	setBusy(true);
-	setMessage("Checking the open Doubao answer without sending a prompt.");
+	setMessage("Checking the current AI page without creating a conversation or sending a prompt.");
 	try {
-		const response = (await chrome.runtime.sendMessage({ type: "browser-runner:qualify-doubao" })) as {
+		const response = (await chrome.runtime.sendMessage({ type: "browser-runner:qualify-surface" })) as {
 			ok?: boolean;
-			result?: StructuredSearchQualification;
+			result?: SurfaceQualification;
 			error?: string;
 		};
 		if (!response.ok || !response.result) {
-			throw new Error(response.error ?? "The active Doubao page could not be checked safely.");
+			throw new Error(response.error ?? "The active AI page could not be checked safely.");
 		}
 		const result = response.result;
-		if (result.status === "qualified") {
+		if (result.status === "ready") {
+			setMessage(`${result.label} page controls are ready. This platform is now enabled. No prompt was sent.`);
+		} else if (result.status === "qualified") {
 			setMessage(
-				`Doubao page structure verified and qualified locally: ${result.queryCount} quer${result.queryCount === 1 ? "y" : "ies"}, ${result.citationCount} citation${result.citationCount === 1 ? "" : "s"}. No prompt was sent.`,
+				`${result.label} search and source structure passed: ${result.queryCount} quer${result.queryCount === 1 ? "y" : "ies"}, ${result.citationCount} citation${result.citationCount === 1 ? "" : "s"}. No prompt was sent.`,
 			);
 		} else if (result.status === "no_search_evidence") {
-			setMessage("This answer has no search block. Open an existing answer that shows search sources and check again.");
+			setMessage(`${result.label} has no visible search block. Open an existing searched answer and check again.`);
 		} else if (result.status === "no_citation_evidence") {
-			setMessage("This answer has no source link to verify. Open a searched answer that shows at least one source.");
+			setMessage(
+				`${result.label} has no visible source link. Open an answer with at least one source and check again.`,
+			);
 		} else if (result.status === "no_answer") {
-			setMessage("The open Doubao conversation has no visible answer to check.");
+			setMessage(`${result.label} has no visible answer to check.`);
 		} else {
-			setMessage("The Doubao search/source structure did not pass the read-only safety check.");
+			setMessage(`${result.label} did not pass the read-only page check.`);
 		}
 	} catch (error) {
-		setMessage(error instanceof Error ? error.message : "The active Doubao page could not be checked safely.");
+		setMessage(error instanceof Error ? error.message : "The active AI page could not be checked safely.");
 	} finally {
 		setBusy(false);
 	}
@@ -194,16 +199,17 @@ async function renderRuntimeStatus(): Promise<void> {
 		lastRun?: { summary?: RuntimeSummary | null } | null;
 	};
 	if (status.running) {
-		doubaoStatus.textContent = "Running";
-		deepseekStatus.textContent = "Running";
+		for (const element of surfaceStatuses.values()) element.textContent = "Running";
 		return;
 	}
 	renderSummary(status.lastRun?.summary ?? null);
 }
 
 function renderSummary(value: RuntimeSummary | null): void {
-	doubaoStatus.textContent = channelSummary(value?.bySurface?.["doubao.consumer_web"]);
-	deepseekStatus.textContent = channelSummary(value?.bySurface?.["deepseek.consumer_web"]);
+	for (const surface of BROWSER_EXTENSION_SURFACES) {
+		const element = surfaceStatuses.get(surface);
+		if (element) element.textContent = channelSummary(value?.bySurface?.[surface]);
+	}
 }
 
 function channelSummary(value: SurfaceSummary | undefined): string {
@@ -215,7 +221,7 @@ function channelSummary(value: SurfaceSummary | undefined): string {
 }
 
 function channelName(surface: ManualRecoveryCandidate["surfaceTargetKey"]): string {
-	return surface === "doubao.consumer_web" ? "Doubao" : "DeepSeek";
+	return extensionSurfaceDefinition(surface).label;
 }
 
 function recoveryLabel(entry: ManualRecoveryCandidate): string {
@@ -228,10 +234,27 @@ function setBusy(busy: boolean): void {
 	disconnectButton.disabled = busy;
 	refreshButton.disabled = busy;
 	runNowButton.disabled = busy;
-	inspectDoubaoButton.disabled = busy;
+	inspectSurfaceButton.disabled = busy;
 	for (const button of manualRecoveryList.querySelectorAll("button")) {
 		button.disabled = busy || button.dataset.recoverable !== "true";
 	}
+}
+
+function createSurfaceRows(container: HTMLElement): Map<BrowserExtensionSurface, HTMLElement> {
+	const statuses = new Map<BrowserExtensionSurface, HTMLElement>();
+	container.replaceChildren();
+	for (const surface of BROWSER_EXTENSION_SURFACES) {
+		const row = document.createElement("p");
+		row.dataset.surface = surface;
+		const label = document.createElement("span");
+		label.textContent = extensionSurfaceDefinition(surface).label;
+		const status = document.createElement("strong");
+		status.textContent = "Waiting";
+		row.append(label, status);
+		container.append(row);
+		statuses.set(surface, status);
+	}
+	return statuses;
 }
 
 function setMessage(value: string): void {
