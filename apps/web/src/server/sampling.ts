@@ -78,7 +78,7 @@ const SAMPLING_TARGET_PRESENTATION = {
 	"deepseek.consumer_web": { label: "DeepSeek", launchUrl: "https://chat.deepseek.com/" },
 	"kimi.consumer_web": { label: "Kimi", launchUrl: "https://www.kimi.com/" },
 	"yuanbao.consumer_web": { label: "腾讯元宝", launchUrl: "https://yuanbao.tencent.com/" },
-	"qwen.consumer_web": { label: "通义千问", launchUrl: "https://qianwen.com/" },
+	"qwen.consumer_web": { label: "通义千问", launchUrl: "https://www.qianwen.com/" },
 	"wenxin.consumer_web": { label: "文心一言", launchUrl: "https://yiyan.baidu.com/" },
 	"chatgpt.consumer_web": { label: "ChatGPT", launchUrl: "https://chatgpt.com/" },
 	"perplexity.consumer_web": { label: "Perplexity", launchUrl: "https://www.perplexity.ai/" },

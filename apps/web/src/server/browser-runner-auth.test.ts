@@ -59,7 +59,7 @@ describe("Browser Runner machine authentication", () => {
 						readiness: {
 							"doubao.consumer_web": {
 								status: "ready",
-								adapterVersion: "doubao-web-20260819-localpc-v8",
+								adapterVersion: "doubao-web-20260821-localpc-v9",
 								activeConcurrency: 0,
 							},
 							"deepseek.consumer_web": {
@@ -153,7 +153,7 @@ describe("Browser Runner machine authentication", () => {
 					readiness: {
 						"doubao.consumer_web": {
 							status: "ready",
-							adapterVersion: "doubao-web-20260819-localpc-v8",
+							adapterVersion: "doubao-web-20260821-localpc-v9",
 							activeConcurrency: 0,
 						},
 					},

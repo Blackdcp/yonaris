@@ -33,11 +33,7 @@ describe("Doubao browser-extension adapter", () => {
 	test("uses the exact New conversation first line when the sidebar also renders keyboard shortcuts", async () => {
 		const port = new FixtureDomPort(
 			doubaoFixture({
-				newConversationLabels: [
-					"新工作任务\nCtrl J",
-					"新对话\nCtrl Shift K",
-					"技能 · 连接器 · 伙伴",
-				],
+				newConversationLabels: ["新工作任务\nCtrl J", "新对话\nCtrl Shift K", "技能 · 连接器 · 伙伴"],
 			}),
 		);
 		const adapter = createDoubaoAdapter(port);
@@ -265,7 +261,7 @@ describe("Doubao browser-extension adapter", () => {
 
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
 			answerText: "Current answer",
-			pageUrl: "https://www.doubao.com/chat/123456",
+			pageUrl: "https://doubao.com/chat/123456",
 		});
 	});
 
@@ -297,6 +293,22 @@ describe("Doubao browser-extension adapter", () => {
 		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({
 			code: "page_drift",
 			stage: "post_submit",
+		});
+	});
+
+	test("keeps the same conversation when Doubao canonicalizes www to the apex host", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				conversationUrl: "https://doubao.com/chat/123456",
+				conversationUrlTimeline: ["https://www.doubao.com/chat/123456", "https://doubao.com/chat/123456"],
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Current answer",
+			pageUrl: "https://doubao.com/chat/123456",
 		});
 	});
 

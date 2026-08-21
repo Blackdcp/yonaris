@@ -24,7 +24,7 @@ describe("extension surface registry", () => {
 
 	it("uses Qwen's post-login canonical origin", () => {
 		const definition = extensionSurfaceDefinition("qwen.consumer_web");
-		expect(definition.launchUrl).toBe("https://qianwen.com/");
+		expect(definition.launchUrl).toBe("https://www.qianwen.com/");
 		expect(definition.approvedUrl(new URL("https://qianwen.com/"))).toBe(true);
 		expect(definition.contentScriptMatches).toContain("https://qianwen.com/*");
 	});

@@ -1,5 +1,5 @@
 {
-	"version": "doubao-web-20260819-localpc-v8",
+	"version": "doubao-web-20260821-localpc-v9",
 	"surface": "doubao.consumer_web",
 	"launchUrl": "https://www.doubao.com/chat/",
 	"conversationPathPattern": "^/chat/(?:[0-9]+|local_[0-9]+)$",

@@ -1,5 +1,5 @@
 {
-	"version": "yuanbao-web-20260821-localpc-v2",
+	"version": "yuanbao-web-20260821-localpc-v3",
 	"surface": "yuanbao.consumer_web",
 	"launchUrl": "https://yuanbao.tencent.com/",
 	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}/?$",

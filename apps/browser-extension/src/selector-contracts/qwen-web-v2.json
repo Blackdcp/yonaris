@@ -1,7 +1,7 @@
 {
-	"version": "qwen-web-20260821-localpc-v2",
+	"version": "qwen-web-20260821-localpc-v3",
 	"surface": "qwen.consumer_web",
-	"launchUrl": "https://qianwen.com/",
+	"launchUrl": "https://www.qianwen.com/",
 	"conversationPathPattern": "^/(?:chat/[A-Za-z0-9_-]{4,200})?/?$",
 	"composer": "div[contenteditable=\"true\"][role=\"textbox\"][data-slate-editor=\"true\"]",
 	"send": "button[aria-label=\"发送消息\"]",

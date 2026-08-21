@@ -1,8 +1,9 @@
 {
-	"version": "kimi-web-20260821-localpc-v1",
+	"version": "kimi-web-20260821-localpc-v2",
 	"surface": "kimi.consumer_web",
 	"launchUrl": "https://www.kimi.com/",
 	"conversationPathPattern": "^/(?:chat/[A-Za-z0-9_-]{4,200})?/?$",
+	"allowedSearchPattern": "^\\?chat_enter_method=new_chat$",
 	"composer": "div.chat-input-editor[contenteditable=\"true\"][role=\"textbox\"]",
 	"send": ".send-button-container",
 	"newConversation": ".action-label",

@@ -28,6 +28,8 @@ export type SelectorContract = {
 	surface: BrowserExtensionSurface;
 	launchUrl: string;
 	conversationPathPattern: string;
+	allowedSearchPattern?: string | null;
+	conversationSearchPattern?: string | null;
 	composer: string;
 	send: string;
 	newConversation: string;
@@ -124,6 +126,7 @@ export type AnswerReadRequest = {
 	searchEvidence: SearchEvidenceContract | null;
 	evidenceViewport?: {
 		promptSelector: string;
+		promptText?: string;
 		completionSelector: string | null;
 		companionSelector: string | null;
 	};

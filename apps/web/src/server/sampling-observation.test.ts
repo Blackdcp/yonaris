@@ -390,7 +390,7 @@ describe("prepareSamplingObservation", () => {
 			captureActor: {
 				kind: "browser_runner",
 				id: "device-1",
-				adapterVersion: "doubao-web-20260819-localpc-v8",
+				adapterVersion: "doubao-web-20260821-localpc-v9",
 				browserVersion: "Chrome 151",
 				market: "CN",
 				locale: "zh-CN",
@@ -463,7 +463,7 @@ describe("prepareSamplingObservation", () => {
 			captureActor: {
 				kind: "browser_runner",
 				id: "device-1",
-				adapterVersion: "doubao-web-20260819-localpc-v8",
+				adapterVersion: "doubao-web-20260821-localpc-v9",
 				browserVersion: "Chrome 151",
 				market: "CN",
 				locale: "zh-CN",
@@ -473,7 +473,7 @@ describe("prepareSamplingObservation", () => {
 		});
 		expect(prepared.captureMetadata).toMatchObject({
 			responseSnapshotSchemaVersion: "response-snapshot.v2",
-			adapterVersion: "doubao-web-20260819-localpc-v8",
+			adapterVersion: "doubao-web-20260821-localpc-v9",
 			captureDiagnostics: structured.captureDiagnostics,
 		});
 	});
