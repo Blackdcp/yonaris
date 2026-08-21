@@ -186,7 +186,7 @@ class DocumentDomPort implements ConsumerDomPort {
 
 	async query(role: DomElementRole, selector: string): Promise<readonly DomElementSummary[]> {
 		return this.#select(selector).map((element) => {
-			const visible = isDomElementVisible(element);
+			const visible = role === "user_message" ? isRenderedMessageElement(element) : isDomElementVisible(element);
 			return {
 				text: role === "answer" ? (visible ? snapshotVisibleAnswer(element).text : "") : visibleText(element),
 				visible,
@@ -228,6 +228,19 @@ class DocumentDomPort implements ConsumerDomPort {
 				range.selectNodeContents(element);
 				selection.removeAllRanges();
 				selection.addRange(range);
+			}
+			const beforeInput = new InputEvent("beforeinput", {
+				bubbles: true,
+				cancelable: true,
+				composed: true,
+				inputType: "insertText",
+				data: value,
+			});
+			if (!element.dispatchEvent(beforeInput)) {
+				if (normalizeEvidenceText(visibleText(element)) !== normalizeEvidenceText(value)) {
+					throw new Error("Controlled composer did not accept the prompt");
+				}
+				return;
 			}
 			if (typeof this.#document.execCommand === "function" && this.#document.execCommand("insertText", false, value)) {
 				return;
@@ -304,7 +317,9 @@ function readEvidenceViewportRect(
 	request: AnswerReadRequest,
 ): EvidenceViewportRect | null {
 	if (!request.evidenceViewport) return null;
-	const prompts = [...document.querySelectorAll(request.evidenceViewport.promptSelector)].filter(isDomElementVisible);
+	const prompts = [...document.querySelectorAll(request.evidenceViewport.promptSelector)].filter(
+		isRenderedMessageElement,
+	);
 	const expectedPrompt = request.evidenceViewport.promptText;
 	if (
 		prompts.length < 1 ||
@@ -377,6 +392,14 @@ export function isDomElementVisible(element: Element): boolean {
 	if (getComputedStyle(element).display === "contents") return hasRenderedDisplayContents(element);
 	const rect = element.getBoundingClientRect();
 	return rect.width > 0 && rect.height > 0 && hasPositiveEffectiveIntersection(rect, element.parentElement);
+}
+
+function isRenderedMessageElement(element: Element): boolean {
+	if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return false;
+	if (!isComposedElementRendered(element)) return false;
+	if (getComputedStyle(element).display === "contents") return hasRenderedDisplayContents(element);
+	const rect = element.getBoundingClientRect();
+	return rect.width > 0 && rect.height > 0 && hasPositiveNonScrollingClipIntersection(rect, element.parentElement);
 }
 
 export function isSearchEvidenceElementVisible(element: Element): boolean {
@@ -725,6 +748,42 @@ function hasPositiveEffectiveIntersection(rect: RectEdges, clippingAncestor: Ele
 					right = Math.min(right, clip.right);
 				}
 				if (clipsY) {
+					top = Math.max(top, clip.top);
+					bottom = Math.min(bottom, clip.bottom);
+				}
+				if (!(right > left) || !(bottom > top)) return false;
+			}
+		}
+		current = current.parentElement;
+	}
+	return true;
+}
+
+function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncestor: Element | null): boolean {
+	let left = rect.left;
+	let right = rect.right;
+	let top = rect.top;
+	let bottom = rect.bottom;
+	if (!(right > left) || !(bottom > top)) return false;
+
+	let current = clippingAncestor;
+	while (current) {
+		if (!isRootPageScrollingElement(current)) {
+			const style = getComputedStyle(current);
+			const establishesClippingBox = establishesOverflowClippingBox(style);
+			const clipsPaint = establishesClippingBox && clipsByPaintContainment(style.contain);
+			const overflowX = style.overflowX.trim().toLocaleLowerCase("en-US");
+			const overflowY = style.overflowY.trim().toLocaleLowerCase("en-US");
+			const clipsX = clipsPaint || (establishesClippingBox && clipsOverflowAxis(overflowX));
+			const clipsY = clipsPaint || (establishesClippingBox && clipsOverflowAxis(overflowY));
+			if (clipsX || clipsY) {
+				const clip = current.getBoundingClientRect();
+				if ((clipsX && !(clip.right > clip.left)) || (clipsY && !(clip.bottom > clip.top))) return false;
+				if (clipsPaint || overflowX === "hidden" || overflowX === "clip") {
+					left = Math.max(left, clip.left);
+					right = Math.min(right, clip.right);
+				}
+				if (clipsPaint || overflowY === "hidden" || overflowY === "clip") {
 					top = Math.max(top, clip.top);
 					bottom = Math.min(bottom, clip.bottom);
 				}

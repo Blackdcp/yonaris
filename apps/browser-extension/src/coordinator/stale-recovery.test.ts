@@ -209,12 +209,12 @@ async function pairedStorageWithManualTask(): Promise<DeviceStorage> {
 	await storage.saveSurfaceReadiness({
 		"doubao.consumer_web": {
 			status: "ready",
-			adapterVersion: "doubao-web-20260821-localpc-v9",
+			adapterVersion: "doubao-web-20260821-localpc-v10",
 			activeConcurrency: 0,
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260821-localpc-v4",
+			adapterVersion: "deepseek-web-20260821-localpc-v5",
 			activeConcurrency: 0,
 		},
 	});

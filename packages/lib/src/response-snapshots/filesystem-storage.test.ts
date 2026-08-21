@@ -63,7 +63,7 @@ function v2Draft(): ResponseSnapshotDraftV2 {
 		brandMentioned: true,
 		competitorsMentioned: [],
 		channel: "doubao",
-		modelVersion: "doubao-web-20260821-localpc-v9",
+		modelVersion: "doubao-web-20260821-localpc-v10",
 		market: "CN",
 		locale: "zh-CN",
 		timezone: "Asia/Shanghai",
@@ -76,7 +76,7 @@ function v2Draft(): ResponseSnapshotDraftV2 {
 			sha256: "b".repeat(64),
 			bytes: 42_000,
 		},
-		adapterVersion: "doubao-web-20260821-localpc-v9",
+		adapterVersion: "doubao-web-20260821-localpc-v10",
 		captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
 	};
 }

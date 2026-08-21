@@ -147,7 +147,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
-			let completionConfirmed = generatingSeen;
+			let completionConfirmed = this.#contract.completion ? generatingSeen : true;
 			if (this.#contract.completion) {
 				if (!this.#contract.completionCompanion || !this.#port.readCompletionState) {
 					throw this.#error("page_drift", "Completion binding contract is unavailable");

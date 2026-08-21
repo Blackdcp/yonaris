@@ -1,8 +1,8 @@
 {
-	"version": "doubao-web-20260821-localpc-v9",
+	"version": "doubao-web-20260821-localpc-v10",
 	"surface": "doubao.consumer_web",
 	"launchUrl": "https://www.doubao.com/chat/",
-	"conversationPathPattern": "^/chat/(?:[0-9]+|local_[0-9]+)$",
+	"conversationPathPattern": "^/chat/[0-9]+$",
 	"composer": "div.tiptap.ProseMirror[contenteditable=\"true\"][role=\"textbox\"]",
 	"send": "#flow-end-msg-send",
 	"newConversation": "#flow_chat_sidebar .nav-link-IkIer0",

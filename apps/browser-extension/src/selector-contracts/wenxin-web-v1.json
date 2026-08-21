@@ -1,5 +1,5 @@
 {
-	"version": "wenxin-web-20260821-localpc-v2",
+	"version": "wenxin-web-20260821-localpc-v3",
 	"surface": "wenxin.consumer_web",
 	"launchUrl": "https://wenxin.baidu.com/",
 	"conversationPathPattern": "^/search/[0-9]{4,30}/?$",
@@ -8,8 +8,8 @@
 	"send": ".ci-submit-button",
 	"newConversation": ".new-dialog-container-button",
 	"newConversationLabel": "开启新对话",
-	"userMessage": "[data-message-role=\"user\"],[class*=\"user-message\"],[class*=\"user-content\"]",
-	"answer": "[data-message-role=\"assistant\"],[class*=\"assistant-message\"],[class*=\"ai-message\"]",
+	"userMessage": ".conversation-flow-question-container .cs-question-pure-text",
+	"answer": ".conversation-flow-answer-container .ai-entry",
 	"generating": "button[aria-label*=\"停止\"],[class*=\"stop-response\"],[data-testid*=\"stop\"]",
 	"completion": null,
 	"completionCompanion": null,

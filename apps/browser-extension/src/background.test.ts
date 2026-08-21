@@ -138,12 +138,12 @@ describe.sequential("Browser Runner background scheduling", () => {
 			browserRunnerSurfaceReadiness: {
 				"doubao.consumer_web": {
 					status: "signed_out",
-					adapterVersion: "doubao-web-20260821-localpc-v9",
+					adapterVersion: "doubao-web-20260821-localpc-v10",
 					activeConcurrency: 0,
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v4",
+					adapterVersion: "deepseek-web-20260821-localpc-v5",
 					activeConcurrency: 0,
 				},
 			},
@@ -187,7 +187,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v4",
+					adapterVersion: "deepseek-web-20260821-localpc-v5",
 					activeConcurrency: 0,
 				},
 			},
@@ -226,14 +226,14 @@ describe.sequential("Browser Runner background scheduling", () => {
 		expect(responses[0]).toMatchObject({ ok: true, result: { status: "qualified" } });
 		expect(events).toEqual([
 			"dom:query",
-			"portal:unavailable:doubao-web-20260821-localpc-v9",
+			"portal:unavailable:doubao-web-20260821-localpc-v10",
 			"dom:inspect",
-			"portal:ready:doubao-web-20260821-localpc-v9",
+			"portal:ready:doubao-web-20260821-localpc-v10",
 		]);
 		expect(values.browserRunnerSurfaceReadiness).toMatchObject({
 			"doubao.consumer_web": {
 				status: "ready",
-				adapterVersion: "doubao-web-20260821-localpc-v9",
+				adapterVersion: "doubao-web-20260821-localpc-v10",
 			},
 		});
 	});
@@ -548,12 +548,12 @@ function readyV8Readiness() {
 	return {
 		"doubao.consumer_web": {
 			status: "ready",
-			adapterVersion: "doubao-web-20260821-localpc-v9",
+			adapterVersion: "doubao-web-20260821-localpc-v10",
 			activeConcurrency: 0,
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260821-localpc-v4",
+			adapterVersion: "deepseek-web-20260821-localpc-v5",
 			activeConcurrency: 0,
 		},
 	};

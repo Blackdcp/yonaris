@@ -265,6 +265,24 @@ describe("Doubao browser-extension adapter", () => {
 		});
 	});
 
+	test("waits for Doubao to replace its local conversation URL with the durable numeric URL", async () => {
+		const port = new FixtureDomPort(
+			doubaoFixture({
+				conversationUrlTimeline: [
+					"https://www.doubao.com/chat/local_123456",
+					"https://www.doubao.com/chat/38438445017843202",
+				],
+			}),
+		);
+		const adapter = createDoubaoAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(1_000);
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			pageUrl: "https://doubao.com/chat/38438445017843202",
+		});
+	});
+
 	test("refuses to collect an answer after the tab navigates to another conversation", async () => {
 		const port = new FixtureDomPort(
 			doubaoFixture({
