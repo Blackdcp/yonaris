@@ -46,8 +46,8 @@ const LOCAL_SURFACE_CONFIG: Record<
 		createAdapter: createDeepSeekAdapter,
 	},
 	"qwen.consumer_web": {
-		contentScriptMatches: ["https://www.qianwen.com/*"],
-		approvedHostname: (hostname) => hostname === "www.qianwen.com",
+		contentScriptMatches: ["https://qianwen.com/*", "https://www.qianwen.com/*"],
+		approvedHostname: (hostname) => hostname === "qianwen.com" || hostname === "www.qianwen.com",
 		contract: qwenSelectorContract,
 		createAdapter: createQwenAdapter,
 	},

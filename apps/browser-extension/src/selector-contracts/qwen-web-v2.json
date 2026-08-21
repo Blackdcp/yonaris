@@ -1,7 +1,7 @@
 {
-	"version": "qwen-web-20260821-localpc-v1",
+	"version": "qwen-web-20260821-localpc-v2",
 	"surface": "qwen.consumer_web",
-	"launchUrl": "https://www.qianwen.com/",
+	"launchUrl": "https://qianwen.com/",
 	"conversationPathPattern": "^/(?:chat/[A-Za-z0-9_-]{4,200})?/?$",
 	"composer": "div[contenteditable=\"true\"][role=\"textbox\"][data-slate-editor=\"true\"]",
 	"send": "button[aria-label=\"发送消息\"]",
@@ -12,7 +12,7 @@
 	"generating": "button[aria-label*=\"停止\"],[data-testid*=\"stop\"]",
 	"completion": null,
 	"completionCompanion": null,
-	"loginWall": "button.bg-black-button,input[type=\"tel\"],input[type=\"password\"]",
+	"loginWall": "[data-testid*=\"login-dialog\"],[class*=\"login-dialog\"],input[type=\"tel\"],input[type=\"password\"]",
 	"captcha": "iframe[src*=\"captcha\"],[class*=\"captcha\"]",
 	"rateLimit": "[class*=\"rate-limit\"],[class*=\"rate_limit\"]",
 	"accountRestricted": "body",

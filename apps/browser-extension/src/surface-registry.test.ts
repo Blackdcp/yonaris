@@ -22,6 +22,13 @@ describe("extension surface registry", () => {
 		expect(definition.approvedUrl(new URL("https://yiyan.baidu.com/"))).toBe(false);
 	});
 
+	it("uses Qwen's post-login canonical origin", () => {
+		const definition = extensionSurfaceDefinition("qwen.consumer_web");
+		expect(definition.launchUrl).toBe("https://qianwen.com/");
+		expect(definition.approvedUrl(new URL("https://qianwen.com/"))).toBe(true);
+		expect(definition.contentScriptMatches).toContain("https://qianwen.com/*");
+	});
+
 	it("fails closed for credentials, insecure URLs, sibling domains, and unknown surfaces", () => {
 		for (const surface of BROWSER_EXTENSION_SURFACES) {
 			const definition = extensionSurfaceDefinition(surface);

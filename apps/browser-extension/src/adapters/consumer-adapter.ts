@@ -350,7 +350,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		const approvedHost =
 			this.surface === "doubao.consumer_web"
 				? current.hostname === "doubao.com" || current.hostname.endsWith(".doubao.com")
-				: current.hostname === launch.hostname;
+				: this.surface === "qwen.consumer_web"
+					? current.hostname === "qianwen.com" || current.hostname === "www.qianwen.com"
+					: current.hostname === launch.hostname;
 		if (
 			current.protocol !== "https:" ||
 			!approvedHost ||
@@ -360,7 +362,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			current.search ||
 			current.hash
 		) {
-			throw this.#error("page_drift", "Navigation left the approved consumer origin");
+			throw this.#error(
+				"page_drift",
+				`Navigation left the approved consumer origin (host=${current.hostname}, launchHost=${launch.hostname}, search=${current.search ? "present" : "none"}, hash=${current.hash ? "present" : "none"})`,
+			);
 		}
 		if (requireConversation && !new RegExp(this.#contract.conversationPathPattern, "u").test(current.pathname)) {
 			throw this.#error("page_drift", "Consumer page did not create a durable conversation URL");
