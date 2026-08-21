@@ -94,6 +94,7 @@ jobs:
             "https://www.kimi.com/*",
             "https://wenxin.baidu.com/*",
             "https://yuanbao.tencent.com/*",
+            "https://chatglm.cn/*",
           ];
           const expectedPermissions = ["storage", "alarms", "tabs", "scripting", "notifications"];
           if (JSON.stringify(manifest.host_permissions) !== JSON.stringify(expectedHosts)) {
