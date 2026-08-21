@@ -660,6 +660,7 @@
 										"deepseek.consumer_web",
 										"kimi.consumer_web",
 										"yuanbao.consumer_web",
+										"zhipu.consumer_web",
 										"qwen.consumer_web",
 										"wenxin.consumer_web",
 										"chatgpt.consumer_web",

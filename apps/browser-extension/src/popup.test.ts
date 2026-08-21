@@ -4,11 +4,11 @@ import { describe, expect, test } from "vitest";
 import { BROWSER_EXTENSION_SURFACES } from "./contracts";
 
 describe("Browser Runner popup", () => {
-	test("renders channel rows from the six-surface registry and exposes one generic read-only check", () => {
+	test("renders channel rows from the seven-surface registry and exposes one generic read-only check", () => {
 		const html = readFileSync(resolve(process.cwd(), "src/popup.html"), "utf8");
 		const source = readFileSync(resolve(process.cwd(), "src/popup.ts"), "utf8");
 
-		expect(BROWSER_EXTENSION_SURFACES).toHaveLength(6);
+		expect(BROWSER_EXTENSION_SURFACES).toHaveLength(7);
 		expect(html).toContain('id="channels"');
 		expect(html).toContain('id="inspect-surface"');
 		expect(html).not.toContain('id="doubao-status"');

@@ -13,12 +13,12 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.3.11");
+		expect(manifest.version).toBe("0.3.12");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});
 
-	it("grants only the approved Portal and six domestic consumer origins", () => {
+	it("grants only the approved Portal and seven domestic consumer origins", () => {
 		const manifest = JSON.parse(readFileSync(resolve(process.cwd(), "manifest.json"), "utf8")) as {
 			manifest_version: number;
 			permissions: string[];
@@ -39,9 +39,10 @@ describe("Manifest V3 permissions", () => {
 			"https://www.kimi.com/*",
 			"https://wenxin.baidu.com/*",
 			"https://yuanbao.tencent.com/*",
+			"https://chatglm.cn/*",
 		]);
 		// Chrome requires <all_urls> or a per-tab user gesture via activeTab for captureVisibleTab.
-		// The runner captures only the six explicitly matched content-script surfaces below.
+		// The runner captures only the seven explicitly matched content-script surfaces below.
 		expect(manifest.content_scripts).toEqual([
 			{
 				matches: [
@@ -53,6 +54,7 @@ describe("Manifest V3 permissions", () => {
 					"https://www.kimi.com/*",
 					"https://wenxin.baidu.com/*",
 					"https://yuanbao.tencent.com/*",
+					"https://chatglm.cn/*",
 				],
 				js: ["content-entry.js"],
 				run_at: "document_idle",

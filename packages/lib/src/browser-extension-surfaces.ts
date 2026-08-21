@@ -41,6 +41,13 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		launchUrl: "https://yuanbao.tencent.com/",
 		adapterVersion: "yuanbao-web-20260821-localpc-v6",
 	},
+	{
+		key: "zhipu.consumer_web",
+		label: "Zhipu",
+		captureRoute: "browser_extension.zhipu",
+		launchUrl: "https://chatglm.cn/",
+		adapterVersion: "zhipu-web-20260821-localpc-v1",
+	},
 ] as const;
 
 export type BrowserExtensionSurface = (typeof BROWSER_EXTENSION_SURFACE_DEFINITIONS)[number]["key"];
@@ -54,6 +61,7 @@ export const BROWSER_EXTENSION_SURFACES = [
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS[3].key,
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS[4].key,
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS[5].key,
+	BROWSER_EXTENSION_SURFACE_DEFINITIONS[6].key,
 ] as const;
 
 export function browserExtensionSurfaceDefinition(surface: BrowserExtensionSurface): BrowserExtensionSurfaceDefinition {

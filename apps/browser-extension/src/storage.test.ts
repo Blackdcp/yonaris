@@ -27,7 +27,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadDevice()).resolves.toMatchObject({ deviceId: "device-1", allowedBrandIds: ["stepfun"] });
 	});
 
-	it("keeps all six candidate surfaces unavailable by default", async () => {
+	it("keeps all seven candidate surfaces unavailable by default", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 
 		await expect(storage.loadSurfaceReadiness()).resolves.toEqual({
@@ -59,6 +59,11 @@ describe("DeviceStorage", () => {
 			"yuanbao.consumer_web": {
 				status: "unavailable",
 				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"zhipu.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "zhipu-web-20260821-localpc-v1",
 				activeConcurrency: 0,
 			},
 		});

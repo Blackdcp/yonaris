@@ -122,7 +122,7 @@ jobs:
           DELETE FROM drizzle.__drizzle_migrations
           WHERE created_at IN (1786726866790, 1786893768101, 1786985859772, 1787019758271);
           DELETE FROM drizzle.__drizzle_migrations
-          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161);
+          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161, 1787325725764);
           SQL
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
             'select count(*) from drizzle.__drizzle_migrations;')" = "22"
@@ -157,4 +157,4 @@ jobs:
           done
 
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
-             'select count(*) from drizzle.__drizzle_migrations;')" = "29"
+             'select count(*) from drizzle.__drizzle_migrations;')" = "30"

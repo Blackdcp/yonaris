@@ -22,6 +22,7 @@ const input: {
 		"kimi.consumer_web",
 		"wenxin.consumer_web",
 		"yuanbao.consumer_web",
+		"zhipu.consumer_web",
 	] as const,
 	samplesPerPrompt: 1,
 	idempotencyKey: "run-now-click-1",
@@ -41,12 +42,12 @@ describe("administrator Sampling Run now orchestration", () => {
 		expect(readScope).not.toHaveBeenCalled();
 	});
 
-	it("creates, freezes, and starts one one-pass six-surface batch without requiring an online device", async () => {
+	it("creates, freezes, and starts one one-pass seven-surface batch without requiring an online device", async () => {
 		const harness = runNowHarness();
 		const result = await executeSamplingRunNow(input, harness.dependencies);
 
 		expect(result.batch).toMatchObject({ status: "in_progress", automationStatus: "running" });
-		expect(result.tasks).toHaveLength(12);
+		expect(result.tasks).toHaveLength(14);
 		expect(harness.createDraft).toHaveBeenCalledTimes(1);
 		expect(harness.addTasks).toHaveBeenCalledTimes(1);
 		expect(harness.freeze).toHaveBeenCalledTimes(1);
@@ -66,7 +67,7 @@ describe("administrator Sampling Run now orchestration", () => {
 		const result = await executeSamplingRunNow(input, harness.dependencies);
 
 		expect(result.batch).toMatchObject({ status: "in_progress", automationStatus: "running" });
-		expect(result.tasks).toHaveLength(12);
+		expect(result.tasks).toHaveLength(14);
 		expect(harness.addTasks).toHaveBeenCalledTimes(1);
 		expect(harness.freeze).not.toHaveBeenCalled();
 		expect(harness.start).not.toHaveBeenCalled();

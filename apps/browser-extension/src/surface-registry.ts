@@ -11,6 +11,7 @@ import { createKimiAdapter, kimiSelectorContract } from "./adapters/kimi";
 import { createQwenAdapter, qwenSelectorContract } from "./adapters/qwen";
 import { createWenxinAdapter, wenxinSelectorContract } from "./adapters/wenxin";
 import { createYuanbaoAdapter, yuanbaoSelectorContract } from "./adapters/yuanbao";
+import { createZhipuAdapter, zhipuSelectorContract } from "./adapters/zhipu";
 
 export type ExtensionSurfaceDefinition = {
 	surface: BrowserExtensionSurface;
@@ -68,6 +69,12 @@ const LOCAL_SURFACE_CONFIG: Record<
 		approvedHostname: (hostname) => hostname === "yuanbao.tencent.com",
 		contract: yuanbaoSelectorContract,
 		createAdapter: createYuanbaoAdapter,
+	},
+	"zhipu.consumer_web": {
+		contentScriptMatches: ["https://chatglm.cn/*"],
+		approvedHostname: (hostname) => hostname === "chatglm.cn",
+		contract: zhipuSelectorContract,
+		createAdapter: createZhipuAdapter,
 	},
 };
 

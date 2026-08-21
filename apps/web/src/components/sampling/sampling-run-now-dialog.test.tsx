@@ -42,7 +42,7 @@ function readyDevice(): BrowserRunnerDeviceView {
 }
 
 describe("SamplingRunNowDialog", () => {
-	it("defaults the one-click monitoring action to one pass across all six channels", () => {
+	it("defaults the one-click monitoring action to one pass across all seven channels", () => {
 		const markup = renderToStaticMarkup(
 			<SamplingRunNowDialog
 				brandId="stepfun"
@@ -55,14 +55,14 @@ describe("SamplingRunNowDialog", () => {
 
 		expect(markup).toContain("Run now");
 		expect(markup).toContain("All 60 enabled Prompts");
-		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
+		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
 		expect(markup).toContain("One run per Prompt and channel");
 		for (const { label } of BROWSER_EXTENSION_SURFACE_DEFINITIONS) expect(markup).toContain(label);
 		expect(markup).not.toContain('type="number"');
 		expect(markup).not.toMatch(/samples per prompt[^<]*input/i);
 	});
 
-	it("keeps all six channels selected while devices are offline so tasks can queue", () => {
+	it("keeps all seven channels selected while devices are offline so tasks can queue", () => {
 		const offline = readyDevice();
 		offline.lastSeenAt = "2026-08-16T09:00:00.000Z";
 		const markup = renderToStaticMarkup(
@@ -76,8 +76,8 @@ describe("SamplingRunNowDialog", () => {
 		);
 
 		expect(markup).toContain("Offline · will wait in queue");
-		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
-		expect(markup).toContain("Run 360 tasks now");
+		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
+		expect(markup).toContain("Run 420 tasks now");
 	});
 
 	it("keeps an unavailable channel selected so its task waits rather than disappearing", () => {
@@ -98,15 +98,16 @@ describe("SamplingRunNowDialog", () => {
 		);
 
 		expect(markup).toContain("Unavailable · will wait in queue");
-		expect(markup).toContain("60 × 6 × 1 = 360 tasks");
-		expect(markup).toContain("Run 360 tasks now");
+		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
+		expect(markup).toContain("Run 420 tasks now");
 	});
 });
 
 describe("calculateSamplingRunNowTaskCount", () => {
-	it("uses the one-pass contract for the six domestic channels", () => {
+	it("uses the one-pass contract for the seven domestic channels", () => {
 		expect(calculateSamplingRunNowTaskCount(60, 1)).toBe(60);
 		expect(calculateSamplingRunNowTaskCount(60, 6)).toBe(360);
+		expect(calculateSamplingRunNowTaskCount(60, 7)).toBe(420);
 	});
 });
 

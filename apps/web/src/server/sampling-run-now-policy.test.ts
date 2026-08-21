@@ -32,7 +32,7 @@ describe("Sampling Run now planning", () => {
 		]);
 	});
 
-	it("plans one ordered task per Prompt across all six domestic surfaces", () => {
+	it("plans one ordered task per Prompt across all seven domestic surfaces", () => {
 		const plan = planSamplingRunNow({
 			prompts: [{ id: "p1", value: "prompt one" }],
 			surfaces: BROWSER_EXTENSION_SURFACES,
@@ -41,12 +41,12 @@ describe("Sampling Run now planning", () => {
 		});
 
 		expect(plan.samplesPerPrompt).toBe(1);
-		expect(plan.taskCount).toBe(6);
+		expect(plan.taskCount).toBe(7);
 		expect(plan.tasks.map(({ surfaceTargetKey }) => surfaceTargetKey)).toEqual(BROWSER_EXTENSION_SURFACES);
 		expect(plan.tasks.every(({ sampleIndex }) => sampleIndex === 1)).toBe(true);
 	});
 
-	it("plans sixty tasks for ten Prompts in the six-surface monitoring action", () => {
+	it("plans seventy tasks for ten Prompts in the seven-surface monitoring action", () => {
 		const plan = planSamplingRunNow({
 			prompts: Array.from({ length: 10 }, (_, index) => ({ id: `p${index}`, value: `prompt ${index}` })),
 			surfaces: BROWSER_EXTENSION_SURFACES,
@@ -54,7 +54,7 @@ describe("Sampling Run now planning", () => {
 			now: new Date("2026-08-21T08:00:00.000Z"),
 		});
 
-		expect(plan.taskCount).toBe(60);
+		expect(plan.taskCount).toBe(70);
 	});
 
 	it("rejects empty prompts, duplicate surfaces, and unsupported surfaces", () => {

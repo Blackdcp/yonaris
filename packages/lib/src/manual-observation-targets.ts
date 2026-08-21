@@ -12,6 +12,7 @@ export const MANUAL_OBSERVATION_SURFACE_TARGET_KEYS = [
 	"yuanbao.consumer_web",
 	"qwen.consumer_web",
 	"wenxin.consumer_web",
+	"zhipu.consumer_web",
 	"chatgpt.consumer_web",
 	"perplexity.consumer_web",
 	"gemini.consumer_web",
@@ -39,6 +40,7 @@ export type ManualObservationModelSlug =
 	| "yuanbao"
 	| "qwen"
 	| "wenxin"
+	| "zhipu"
 	| "chatgpt"
 	| "perplexity"
 	| "gemini"
@@ -67,6 +69,7 @@ const MANUAL_SURFACES: Record<ManualObservationSurfaceTargetKey, ManualSurfaceDe
 	"yuanbao.consumer_web": { model: "yuanbao", surfaceKind: "consumer_web" },
 	"qwen.consumer_web": { model: "qwen", surfaceKind: "consumer_web" },
 	"wenxin.consumer_web": { model: "wenxin", surfaceKind: "consumer_web" },
+	"zhipu.consumer_web": { model: "zhipu", surfaceKind: "consumer_web" },
 	"chatgpt.consumer_web": { model: "chatgpt", surfaceKind: "consumer_web" },
 	"perplexity.consumer_web": { model: "perplexity", surfaceKind: "consumer_web" },
 	"gemini.consumer_web": { model: "gemini", surfaceKind: "consumer_web" },
@@ -106,6 +109,7 @@ const SURFACE_HOSTS: Record<ManualObservationSurfaceTargetKey, readonly string[]
 	"yuanbao.consumer_web": ["yuanbao.tencent.com"],
 	"qwen.consumer_web": ["qianwen.com", "tongyi.aliyun.com"],
 	"wenxin.consumer_web": ["yiyan.baidu.com", "wenxin.baidu.com"],
+	"zhipu.consumer_web": ["chatglm.cn"],
 	"chatgpt.consumer_web": ["chatgpt.com"],
 	"perplexity.consumer_web": ["perplexity.ai"],
 	"gemini.consumer_web": ["gemini.google.com"],

@@ -23,6 +23,7 @@ describe("browser extension contract", () => {
 			"kimi.consumer_web",
 			"wenxin.consumer_web",
 			"yuanbao.consumer_web",
+			"zhipu.consumer_web",
 		]);
 		expect(BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ label }) => label)).toEqual([
 			"Doubao",
@@ -31,6 +32,7 @@ describe("browser extension contract", () => {
 			"Kimi",
 			"Wenxin",
 			"Yuanbao",
+			"Zhipu",
 		]);
 	});
 
@@ -64,6 +66,7 @@ describe("browser extension contract", () => {
 			"https://yuanbao.tencent.com/",
 			"yuanbao-web-20260821-localpc-v6",
 		],
+		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260821-localpc-v1"],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
 		expect(browserExtensionSurfaceDefinition(surface)).toEqual({
 			key: surface,
@@ -81,6 +84,7 @@ describe("browser extension contract", () => {
 		["kimi.consumer_web", "browser_extension.kimi"],
 		["wenxin.consumer_web", "browser_extension.wenxin"],
 		["yuanbao.consumer_web", "browser_extension.yuanbao"],
+		["zhipu.consumer_web", "browser_extension.zhipu"],
 	] as const)("maps %s to its exact capture route %s", (surface, route) => {
 		expect(parseBrowserExtensionSurface(surface)).toBe(surface);
 		expect(browserExtensionCaptureRoute(surface)).toBe(route);

@@ -15,7 +15,7 @@ const RUN_SURFACES = BROWSER_EXTENSION_SURFACES;
 
 test.describe.configure({ mode: "serial" });
 
-test("one administrator action completes one Prompt across all six local browser surfaces", async ({
+test("one administrator action completes one Prompt across all seven local browser surfaces", async ({
   browser,
   page: customerPage,
   request,

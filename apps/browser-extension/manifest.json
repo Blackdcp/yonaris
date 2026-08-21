@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Yonaris Browser Runner",
 	"description": "Administrator-operated domestic AI monitoring for Yonaris.",
-	"version": "0.3.11",
+	"version": "0.3.12",
 	"minimum_chrome_version": "120",
 	"permissions": ["storage", "alarms", "tabs", "scripting", "notifications"],
 	"host_permissions": [
@@ -14,7 +14,8 @@
 		"https://www.qianwen.com/*",
 		"https://www.kimi.com/*",
 		"https://wenxin.baidu.com/*",
-		"https://yuanbao.tencent.com/*"
+		"https://yuanbao.tencent.com/*",
+		"https://chatglm.cn/*"
 	],
 	"background": {
 		"service_worker": "background.js"
@@ -29,7 +30,8 @@
 				"https://www.qianwen.com/*",
 				"https://www.kimi.com/*",
 				"https://wenxin.baidu.com/*",
-				"https://yuanbao.tencent.com/*"
+				"https://yuanbao.tencent.com/*",
+				"https://chatglm.cn/*"
 			],
 			"js": ["content-entry.js"],
 			"run_at": "document_idle"

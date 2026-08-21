@@ -86,7 +86,7 @@ describe("Browser Runner machine authentication", () => {
 		});
 	});
 
-	it("projects all six exact approved adapters as ready", async () => {
+	it("projects all seven exact approved adapters as ready", async () => {
 		const readiness = Object.fromEntries(
 			BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, adapterVersion }) => [
 				key,

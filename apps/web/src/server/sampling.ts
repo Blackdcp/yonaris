@@ -80,6 +80,7 @@ const SAMPLING_TARGET_PRESENTATION = {
 	"yuanbao.consumer_web": { label: "腾讯元宝", launchUrl: "https://yuanbao.tencent.com/" },
 	"qwen.consumer_web": { label: "通义千问", launchUrl: "https://www.qianwen.com/" },
 	"wenxin.consumer_web": { label: "文心一言", launchUrl: "https://yiyan.baidu.com/" },
+	"zhipu.consumer_web": { label: "智谱清言", launchUrl: "https://chatglm.cn/" },
 	"chatgpt.consumer_web": { label: "ChatGPT", launchUrl: "https://chatgpt.com/" },
 	"perplexity.consumer_web": { label: "Perplexity", launchUrl: "https://www.perplexity.ai/" },
 	"gemini.consumer_web": { label: "Gemini", launchUrl: "https://gemini.google.com/" },

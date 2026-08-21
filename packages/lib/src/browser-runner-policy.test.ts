@@ -47,6 +47,7 @@ describe("Browser Runner retry policy", () => {
 			["kimi.consumer_web", "kimi-web-20260821-localpc-v10"],
 			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v7"],
 			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v6"],
+			["zhipu.consumer_web", "zhipu-web-20260821-localpc-v1"],
 		] as const) {
 			expect(
 				browserExtensionTaskOperationDenial({

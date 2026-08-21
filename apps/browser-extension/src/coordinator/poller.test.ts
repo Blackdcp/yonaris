@@ -103,7 +103,7 @@ describe("pollStartedWork", () => {
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
 	});
 
-	test("visits all six surfaces in registry order and isolates a Kimi retry", async () => {
+	test("visits all seven surfaces in registry order and isolates a Kimi retry", async () => {
 		const attemptedSurfaces: BrowserExtensionSurface[] = [];
 		let active = 0;
 		let maximumActive = 0;

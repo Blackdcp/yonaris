@@ -109,7 +109,7 @@ describe("browser extension device service", () => {
 		expect(JSON.stringify(result)).not.toMatch(/token|phone|account/i);
 	});
 
-	it("lets an authenticated two-surface device advertise the current six-surface capability set", async () => {
+	it("lets an authenticated two-surface device advertise the current seven-surface capability set", async () => {
 		const expandedHeartbeat = {
 			...heartbeat,
 			extensionVersion: "0.3.0",

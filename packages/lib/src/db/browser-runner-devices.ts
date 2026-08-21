@@ -69,7 +69,9 @@ export function validateDeviceHeartbeat(input: BrowserRunnerDeviceHeartbeat): Va
 		throw new BrowserRunnerDeviceError("Browser Runner devices must use Windows or macOS");
 	}
 	if (input.supportedSurfaces.length < 1 || input.supportedSurfaces.length > BROWSER_EXTENSION_SURFACES.length) {
-		throw new BrowserRunnerDeviceError("Browser Runner devices must declare between one and six supported surfaces");
+		throw new BrowserRunnerDeviceError(
+			`Browser Runner devices must declare between one and ${BROWSER_EXTENSION_SURFACES.length} supported surfaces`,
+		);
 	}
 	const supportedSurfaces: BrowserExtensionSurface[] = [];
 	for (const surface of input.supportedSurfaces) {

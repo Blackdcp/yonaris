@@ -204,6 +204,13 @@
       "when": 1787244569161,
       "tag": "0028_browser_runner_six_surfaces",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787325725764,
+      "tag": "0029_browser_runner_zhipu_surface",
+      "breakpoints": true
     }
   ]
 }

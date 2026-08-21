@@ -17,6 +17,7 @@ describe("manual observation targets", () => {
 		["yuanbao.consumer_web", "yuanbao"],
 		["qwen.consumer_web", "qwen"],
 		["wenxin.consumer_web", "wenxin"],
+		["zhipu.consumer_web", "zhipu"],
 	] as const)("resolves the domestic consumer surface %s", (surfaceTargetKey, model) => {
 		const target = resolveManualObservationTarget({
 			surfaceTargetKey,

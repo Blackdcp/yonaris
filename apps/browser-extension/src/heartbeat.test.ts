@@ -12,7 +12,7 @@ describe("buildHeartbeat", () => {
 		});
 	});
 
-	it("reports all six adapters as unavailable until qualified", () => {
+	it("reports all seven adapters as unavailable until qualified", () => {
 		const heartbeat = buildHeartbeat("Mozilla/5.0 (Windows NT 10.0) Chrome/140.0.1 Safari/537.36");
 
 		expect(heartbeat.supportedSurfaces).toEqual([
@@ -22,6 +22,7 @@ describe("buildHeartbeat", () => {
 			"kimi.consumer_web",
 			"wenxin.consumer_web",
 			"yuanbao.consumer_web",
+			"zhipu.consumer_web",
 		]);
 		expect(heartbeat.readiness).toEqual({
 			"doubao.consumer_web": {
@@ -52,6 +53,11 @@ describe("buildHeartbeat", () => {
 			"yuanbao.consumer_web": {
 				status: "unavailable",
 				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"zhipu.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "zhipu-web-20260821-localpc-v1",
 				activeConcurrency: 0,
 			},
 		});
@@ -100,6 +106,11 @@ describe("buildHeartbeat", () => {
 			"yuanbao.consumer_web": {
 				status: "unavailable",
 				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				activeConcurrency: 0,
+			},
+			"zhipu.consumer_web": {
+				status: "unavailable",
+				adapterVersion: "zhipu-web-20260821-localpc-v1",
 				activeConcurrency: 0,
 			},
 		});

@@ -21,7 +21,7 @@ describe("browser runner device pairing policy", () => {
 		);
 	});
 
-	it("accepts bounded coarse readiness for all six Chrome surfaces", () => {
+	it("accepts bounded coarse readiness for all seven Chrome surfaces", () => {
 		expect(() =>
 			validateDeviceHeartbeat({
 				extensionVersion: "0.1.0",
@@ -35,6 +35,7 @@ describe("browser runner device pairing policy", () => {
 					"kimi.consumer_web",
 					"wenxin.consumer_web",
 					"yuanbao.consumer_web",
+					"zhipu.consumer_web",
 				],
 				readiness: {
 					"doubao.consumer_web": {
@@ -51,18 +52,19 @@ describe("browser runner device pairing policy", () => {
 					"kimi.consumer_web": { status: "unavailable", adapterVersion: "kimi-web-v1", activeConcurrency: 0 },
 					"wenxin.consumer_web": { status: "unavailable", adapterVersion: "wenxin-web-v1", activeConcurrency: 0 },
 					"yuanbao.consumer_web": { status: "unavailable", adapterVersion: "yuanbao-web-v1", activeConcurrency: 0 },
+					"zhipu.consumer_web": { status: "unavailable", adapterVersion: "zhipu-web-v1", activeConcurrency: 0 },
 				},
 			}),
 		).not.toThrow();
 	});
 
-	it("declares database checks for one to six registered surfaces", () => {
+	it("declares database checks for one to seven registered surfaces", () => {
 		const dialect = new PgDialect();
 		const checks = Object.fromEntries(
 			getTableConfig(browserRunnerDevices).checks.map((check) => [check.name, dialect.sqlToQuery(check.value).sql]),
 		);
 
-		expect(checks.browser_runner_devices_valid_surface_count).toMatch(/BETWEEN 1 AND 6/);
+		expect(checks.browser_runner_devices_valid_surface_count).toMatch(/BETWEEN 1 AND 7/);
 		for (const surface of [
 			"doubao.consumer_web",
 			"deepseek.consumer_web",
@@ -70,6 +72,7 @@ describe("browser runner device pairing policy", () => {
 			"kimi.consumer_web",
 			"wenxin.consumer_web",
 			"yuanbao.consumer_web",
+			"zhipu.consumer_web",
 		]) {
 			expect(checks.browser_runner_devices_valid_surfaces).toContain(surface);
 		}

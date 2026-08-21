@@ -4,7 +4,7 @@ import { BROWSER_EXTENSION_SURFACES } from "./contracts";
 import { extensionSurfaceDefinition } from "./surface-registry";
 
 describe("extension surface registry", () => {
-	it("defines an approved launch URL and manifest match for all six surfaces", () => {
+	it("defines an approved launch URL and manifest match for all seven surfaces", () => {
 		for (const surface of BROWSER_EXTENSION_SURFACES) {
 			const definition = extensionSurfaceDefinition(surface);
 			expect(definition.surface).toBe(surface);
