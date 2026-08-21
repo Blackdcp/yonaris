@@ -132,11 +132,6 @@ export async function updateBrowserRunnerDeviceHeartbeat(
 		throw new BrowserRunnerHttpError(403, "Paired Browser Runner device required");
 	}
 	const heartbeat = browserRunnerDeviceHeartbeatSchema.parse(input);
-	for (const surface of heartbeat.supportedSurfaces) {
-		if (!principal.supportedSurfaces.includes(surface)) {
-			throw new BrowserRunnerHttpError(403, `Device is not authorized for ${surface}`);
-		}
-	}
 	const device = await (dependencies.heartbeatDevice ?? heartbeatBrowserRunnerDevice)({
 		deviceId: principal.id,
 		heartbeat,

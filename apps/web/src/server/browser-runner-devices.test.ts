@@ -109,6 +109,39 @@ describe("browser extension device service", () => {
 		expect(JSON.stringify(result)).not.toMatch(/token|phone|account/i);
 	});
 
+	it("lets an authenticated two-surface device advertise the current six-surface capability set", async () => {
+		const expandedHeartbeat = {
+			...heartbeat,
+			extensionVersion: "0.3.0",
+			supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
+			readiness: {},
+		};
+		const heartbeatDevice = vi.fn(async () => ({
+			id: "11111111-1111-4111-8111-111111111111",
+		}));
+
+		await expect(
+			updateBrowserRunnerDeviceHeartbeat(
+				{
+					kind: "browser_extension",
+					id: "11111111-1111-4111-8111-111111111111",
+					market: "CN",
+					locale: "zh-CN",
+					timezone: "Asia/Shanghai",
+					allowedBrandIds: ["ppio"],
+					supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+					readySurfaces: [],
+				},
+				expandedHeartbeat,
+				{ heartbeatDevice },
+			),
+		).resolves.toMatchObject({ deviceId: "11111111-1111-4111-8111-111111111111" });
+		expect(heartbeatDevice).toHaveBeenCalledWith({
+			deviceId: "11111111-1111-4111-8111-111111111111",
+			heartbeat: expandedHeartbeat,
+		});
+	});
+
 	it("rejects the legacy host principal from the paired-device heartbeat", async () => {
 		await expect(
 			updateBrowserRunnerDeviceHeartbeat(
