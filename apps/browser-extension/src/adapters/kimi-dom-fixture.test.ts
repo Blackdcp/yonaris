@@ -4,7 +4,8 @@ import type { ConsumerDomPort, DomElementRole, DomElementSummary } from "./contr
 import { kimiSelectorContract } from "./kimi";
 
 const KIMI_READY_FIXTURE = `
-	<div class="action-label">新建会话</div>
+	<aside hidden><div class="action-label">新建会话</div></aside>
+	<header><div class="left-actions"><a href="/"><div class="icon-button primary"><svg name="AddConversation"></svg></div></a></div></header>
 	<div class="chat-input-editor" role="textbox" contenteditable="true"></div>
 	<div class="send-button-container disabled"></div>
 	<div class="send-button-container"></div>
@@ -13,15 +14,14 @@ const KIMI_READY_FIXTURE = `
 `;
 
 describe("Kimi semantic DOM contract", () => {
-	test("matches the live anonymous-page control shape without accepting the disabled send state", async () => {
+	test("matches the visible header new-chat control instead of the collapsed sidebar label", async () => {
 		const port = cssFixturePort(KIMI_READY_FIXTURE, "https://www.kimi.com/");
 
 		expect(await visibleCount(port, "composer", kimiSelectorContract.composer)).toBe(1);
 		expect(await visibleCount(port, "send", kimiSelectorContract.send)).toBe(1);
 		const actions = await port.query("new_conversation", kimiSelectorContract.newConversation);
-		expect(
-			actions.filter((item) => item.visible && item.text === kimiSelectorContract.newConversationLabel),
-		).toHaveLength(1);
+		expect(kimiSelectorContract.newConversationLabel).toBeNull();
+		expect(actions.filter((item) => item.visible)).toHaveLength(1);
 		expect((await port.query("user_message", kimiSelectorContract.userMessage)).map((item) => item.text)).toEqual([
 			"Prompt A",
 		]);
