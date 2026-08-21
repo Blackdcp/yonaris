@@ -163,7 +163,7 @@ describe("browser extension device service", () => {
 				{
 					"doubao.consumer_web": {
 						status: "ready",
-						adapterVersion: "doubao-web-20260821-localpc-v12",
+						adapterVersion: "doubao-web-20260821-localpc-v13",
 						activeConcurrency: 5,
 					},
 					"deepseek.consumer_web": {
@@ -177,7 +177,7 @@ describe("browser extension device service", () => {
 		).toEqual({
 			"doubao.consumer_web": {
 				status: "ready",
-				adapterVersion: "doubao-web-20260821-localpc-v12",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
 				activeConcurrency: 5,
 			},
 			"deepseek.consumer_web": {

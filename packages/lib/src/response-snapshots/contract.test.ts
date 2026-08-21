@@ -58,7 +58,7 @@ function validV2Draft(overrides: Record<string, unknown> = {}) {
 		brandMentioned: false,
 		competitorsMentioned: [],
 		channel: "doubao",
-		modelVersion: "doubao-web-20260821-localpc-v12",
+		modelVersion: "doubao-web-20260821-localpc-v13",
 		market: "CN",
 		locale: "zh-CN",
 		timezone: "Asia/Shanghai",
@@ -71,7 +71,7 @@ function validV2Draft(overrides: Record<string, unknown> = {}) {
 			sha256: "a".repeat(64),
 			bytes: 12_345,
 		},
-		adapterVersion: "doubao-web-20260821-localpc-v12",
+		adapterVersion: "doubao-web-20260821-localpc-v13",
 		captureDiagnostics: {
 			answerCount: 1,
 			queryCount: 1,

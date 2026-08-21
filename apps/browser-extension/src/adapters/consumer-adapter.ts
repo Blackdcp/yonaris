@@ -406,6 +406,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		const approved = new URL(this.#port.currentUrl());
 		if (this.surface === "doubao.consumer_web") approved.hostname = "doubao.com";
 		if (this.surface === "qwen.consumer_web") approved.hostname = "www.qianwen.com";
+		if (!this.#contract.conversationSearchPattern) approved.search = "";
 		return approved.toString();
 	}
 
