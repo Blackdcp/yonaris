@@ -7,13 +7,14 @@ describe("Wenxin semantic DOM contract", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div class="new-dialog-container-button"><span>开启新对话</span></div>
 			<textarea id="chat-textarea" class="ci-textarea" data-ai-placeholder></textarea>
-			<span class="ci-submit-button"></span>
+			<span class="ci-submit-button"><img id="ci-submit-button-ai" class="ci-submit-button-ai-active"></span>
 			<div class="conversation-flow-question-container"><span class="cs-question-pure-text">Prompt A</span><div>复制</div></div>
 			<div class="conversation-flow-answer-container"><div class="ai-entry">Current answer</div><div>复制</div></div>
 		</body></html>`);
 
 		expect(document.querySelectorAll(wenxinSelectorContract.composer)).toHaveLength(1);
 		expect(document.querySelectorAll(wenxinSelectorContract.send)).toHaveLength(1);
+		expect(document.querySelector(wenxinSelectorContract.send)?.tagName).toBe("IMG");
 		const actions = [...document.querySelectorAll(wenxinSelectorContract.newConversation)];
 		expect(actions.filter((element) => element.textContent?.trim() === "开启新对话")).toHaveLength(1);
 		expect(

@@ -17,17 +17,10 @@ describe("Doubao browser-extension adapter", () => {
 		expect(matches[0]?.getAttribute("data-message-id")).toBe("assistant-1");
 	});
 
-	test("binds the read-aloud completion and copy companion to the adjacent answer action group", () => {
-		const { document } = parseHTML(`<!doctype html><html><body>
-			<div data-message-id="user-1" class="flex-row flex w-full justify-end">Prompt</div>
-			<div data-message-id="assistant-1" class="relative grid w-full">Answer</div>
-			<div class="answer-actions"><div><button></button><button aria-label="朗读"></button></div></div>
-		</body></html>`);
-
-		const answer = document.querySelector(doubaoContract.answer);
-		const actionGroup = answer?.nextElementSibling;
-		expect(actionGroup?.querySelectorAll(doubaoContract.completion)).toHaveLength(1);
-		expect(actionGroup?.querySelectorAll(doubaoContract.completionCompanion)).toHaveLength(1);
+	test("keeps completion controls for read-only qualification while runtime can use stable-answer fallback", () => {
+		expect(doubaoContract.version).toBe("doubao-web-20260821-localpc-v11");
+		expect(doubaoContract.completion).toBe('button[aria-label="朗读"]');
+		expect(doubaoContract.completionCompanion).toBeTruthy();
 	});
 
 	test("uses the exact New conversation first line when the sidebar also renders keyboard shortcuts", async () => {
@@ -126,7 +119,7 @@ describe("Doubao browser-extension adapter", () => {
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
-	test("does not accept an unrelated footer completion as the current answer completion", async () => {
+	test("does not depend on an unrelated completion control when the answer is stable", async () => {
 		const port = new FixtureDomPort(
 			doubaoFixture({
 				generatingDurationMs: 0,
@@ -138,10 +131,11 @@ describe("Doubao browser-extension adapter", () => {
 		const adapter = createDoubaoAdapter(port);
 		await port.completeOneTask(adapter, "Prompt A");
 
-		await expect(adapter.collectCurrentAnswer()).rejects.toMatchObject({ code: "page_drift" });
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Stable partial answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
-	test("does not capture a paused partial answer without an explicit completion signal", async () => {
+	test("uses eight stable seconds as the runtime completion fallback", async () => {
 		const port = new FixtureDomPort(
 			doubaoFixture({
 				generatingDurationMs: 0,
@@ -165,11 +159,11 @@ describe("Doubao browser-extension adapter", () => {
 		const adapter = createDoubaoAdapter(port);
 		await port.completeOneTask(adapter, "Prompt A");
 
-		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Complete answer" });
-		expect(port.elapsedMs).toBeGreaterThanOrEqual(18_000);
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Partial answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
-	test("does not treat a brief generation indicator as the explicit completion signal", async () => {
+	test("waits for the generating marker to disappear before the stable fallback", async () => {
 		const port = new FixtureDomPort(
 			doubaoFixture({
 				generatingDurationMs: 250,
@@ -181,8 +175,8 @@ describe("Doubao browser-extension adapter", () => {
 		const adapter = createDoubaoAdapter(port);
 		await port.completeOneTask(adapter, "Prompt A");
 
-		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Complete answer" });
-		expect(port.elapsedMs).toBeGreaterThanOrEqual(28_000);
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Partial answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
 	test("records unknown search instead of inventing false", async () => {

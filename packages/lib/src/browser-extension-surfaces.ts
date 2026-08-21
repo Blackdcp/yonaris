@@ -4,7 +4,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Doubao",
 		captureRoute: "browser_extension.doubao",
 		launchUrl: "https://www.doubao.com/chat/",
-		adapterVersion: "doubao-web-20260821-localpc-v10",
+		adapterVersion: "doubao-web-20260821-localpc-v11",
 	},
 	{
 		key: "deepseek.consumer_web",
@@ -18,28 +18,28 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Qwen",
 		captureRoute: "browser_extension.qwen",
 		launchUrl: "https://www.qianwen.com/",
-		adapterVersion: "qwen-web-20260821-localpc-v4",
+		adapterVersion: "qwen-web-20260821-localpc-v5",
 	},
 	{
 		key: "kimi.consumer_web",
 		label: "Kimi",
 		captureRoute: "browser_extension.kimi",
 		launchUrl: "https://www.kimi.com/",
-		adapterVersion: "kimi-web-20260821-localpc-v3",
+		adapterVersion: "kimi-web-20260821-localpc-v4",
 	},
 	{
 		key: "wenxin.consumer_web",
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
 		launchUrl: "https://wenxin.baidu.com/",
-		adapterVersion: "wenxin-web-20260821-localpc-v3",
+		adapterVersion: "wenxin-web-20260821-localpc-v4",
 	},
 	{
 		key: "yuanbao.consumer_web",
 		label: "Yuanbao",
 		captureRoute: "browser_extension.yuanbao",
 		launchUrl: "https://yuanbao.tencent.com/",
-		adapterVersion: "yuanbao-web-20260821-localpc-v4",
+		adapterVersion: "yuanbao-web-20260821-localpc-v5",
 	},
 ] as const;
 

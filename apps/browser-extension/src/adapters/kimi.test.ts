@@ -5,10 +5,25 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260821-localpc-v3",
+			version: "kimi-web-20260821-localpc-v4",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
+	});
+
+	test("waits for the enabled send action until after the prompt is filled", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				newConversationLabels: ["新建会话"],
+				sendMatchesBeforeFill: 0,
+				sendMatches: 1,
+			}),
+		);
+
+		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
 	});
 
 	test("collects a structured answer, direct citation, and bounded screenshot region", async () => {
@@ -33,7 +48,7 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260821-localpc-v3",
+			adapterVersion: "kimi-web-20260821-localpc-v4",
 		});
 	});
 

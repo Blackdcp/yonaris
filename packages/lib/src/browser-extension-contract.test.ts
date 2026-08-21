@@ -47,7 +47,7 @@ describe("browser extension contract", () => {
 			"doubao.consumer_web",
 			"browser_extension.doubao",
 			"https://www.doubao.com/chat/",
-			"doubao-web-20260821-localpc-v10",
+			"doubao-web-20260821-localpc-v11",
 		],
 		[
 			"deepseek.consumer_web",
@@ -55,14 +55,14 @@ describe("browser extension contract", () => {
 			"https://chat.deepseek.com/",
 			"deepseek-web-20260821-localpc-v5",
 		],
-		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v4"],
-		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v3"],
-		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v3"],
+		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v5"],
+		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v4"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v4"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
-			"yuanbao-web-20260821-localpc-v4",
+			"yuanbao-web-20260821-localpc-v5",
 		],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
 		expect(browserExtensionSurfaceDefinition(surface)).toEqual({
@@ -94,7 +94,7 @@ describe("browser extension contract", () => {
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v7")).toBe(
 			false,
 		);
-		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260821-localpc-v10")).toBe(
+		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260821-localpc-v11")).toBe(
 			true,
 		);
 		expect(isApprovedBrowserExtensionAdapterVersion("doubao.consumer_web", "doubao-web-20260818-localpc-v5")).toBe(
@@ -118,7 +118,7 @@ describe("browser extension contract", () => {
 			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260818-localpc-v7"),
 		).toBe(false);
 		expect(
-			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260821-localpc-v10"),
+			isCurrentBrowserExtensionAdapterVersionBindingSatisfied("doubao.consumer_web", "doubao-web-20260821-localpc-v11"),
 		).toBe(true);
 		expect(isCurrentBrowserExtensionAdapterVersionBindingSatisfied("deepseek.consumer_web", undefined)).toBe(false);
 	});
@@ -126,7 +126,7 @@ describe("browser extension contract", () => {
 	it("requires an explicit exact request as soon as the simulated approval advances to Doubao v8", () => {
 		const approval = {
 			surface: "doubao.consumer_web" as const,
-			approvedAdapterVersion: "doubao-web-20260821-localpc-v10",
+			approvedAdapterVersion: "doubao-web-20260821-localpc-v11",
 		};
 
 		expect(
@@ -144,7 +144,7 @@ describe("browser extension contract", () => {
 		expect(
 			isBrowserExtensionAdapterVersionBindingSatisfied({
 				...approval,
-				requestedAdapterVersion: "doubao-web-20260821-localpc-v10",
+				requestedAdapterVersion: "doubao-web-20260821-localpc-v11",
 			}),
 		).toBe(true);
 	});
@@ -164,7 +164,7 @@ describe("browser extension contract", () => {
 		expect(() =>
 			assertExtensionEvidenceProtocol({
 				captureRouteKey: "browser_extension.doubao",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				minimumArtifacts: 1,
 				kinds: ["screenshot"],
 				mediaTypes: ["image/jpeg"],
@@ -180,7 +180,7 @@ describe("browser extension contract", () => {
 			expect(() =>
 				assertExtensionEvidenceProtocol({
 					captureRouteKey: "browser_extension.doubao",
-					adapterVersion: "doubao-web-20260821-localpc-v10",
+					adapterVersion: "doubao-web-20260821-localpc-v11",
 					minimumArtifacts: 1,
 					...input,
 				}),
