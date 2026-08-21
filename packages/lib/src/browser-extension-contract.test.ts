@@ -55,14 +55,14 @@ describe("browser extension contract", () => {
 			"https://chat.deepseek.com/",
 			"deepseek-web-20260821-localpc-v2",
 		],
-		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v1"],
+		["qwen.consumer_web", "browser_extension.qwen", "https://qianwen.com/", "qwen-web-20260821-localpc-v2"],
 		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v1"],
 		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v1"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
-			"yuanbao-web-20260821-localpc-v1",
+			"yuanbao-web-20260821-localpc-v2",
 		],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
 		expect(browserExtensionSurfaceDefinition(surface)).toEqual({

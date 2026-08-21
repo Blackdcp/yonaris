@@ -13,7 +13,7 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.3.0");
+		expect(manifest.version).toBe("0.3.1");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});
@@ -33,6 +33,7 @@ describe("Manifest V3 permissions", () => {
 			"https://portal.yonaris.com/*",
 			"https://*.doubao.com/*",
 			"https://chat.deepseek.com/*",
+			"https://qianwen.com/*",
 			"https://www.qianwen.com/*",
 			"https://www.kimi.com/*",
 			"https://wenxin.baidu.com/*",
@@ -45,6 +46,7 @@ describe("Manifest V3 permissions", () => {
 					"https://doubao.com/chat/*",
 					"https://www.doubao.com/chat/*",
 					"https://chat.deepseek.com/*",
+					"https://qianwen.com/*",
 					"https://www.qianwen.com/*",
 					"https://www.kimi.com/*",
 					"https://wenxin.baidu.com/*",

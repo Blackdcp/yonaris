@@ -43,10 +43,10 @@ describe("Browser Runner retry policy", () => {
 		for (const [surfaceTargetKey, adapterVersion] of [
 			["doubao.consumer_web", "doubao-web-20260819-localpc-v8"],
 			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v2"],
-			["qwen.consumer_web", "qwen-web-20260821-localpc-v1"],
+			["qwen.consumer_web", "qwen-web-20260821-localpc-v2"],
 			["kimi.consumer_web", "kimi-web-20260821-localpc-v1"],
 			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v1"],
-			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v1"],
+			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v2"],
 		] as const) {
 			expect(
 				browserExtensionTaskOperationDenial({

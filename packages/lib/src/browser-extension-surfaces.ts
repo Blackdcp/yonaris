@@ -17,8 +17,8 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		key: "qwen.consumer_web",
 		label: "Qwen",
 		captureRoute: "browser_extension.qwen",
-		launchUrl: "https://www.qianwen.com/",
-		adapterVersion: "qwen-web-20260821-localpc-v1",
+		launchUrl: "https://qianwen.com/",
+		adapterVersion: "qwen-web-20260821-localpc-v2",
 	},
 	{
 		key: "kimi.consumer_web",
@@ -39,7 +39,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Yuanbao",
 		captureRoute: "browser_extension.yuanbao",
 		launchUrl: "https://yuanbao.tencent.com/",
-		adapterVersion: "yuanbao-web-20260821-localpc-v1",
+		adapterVersion: "yuanbao-web-20260821-localpc-v2",
 	},
 ] as const;
 

@@ -1,4 +1,4 @@
-import contract from "../selector-contracts/yuanbao-web-v1.json";
+import contract from "../selector-contracts/yuanbao-web-v2.json";
 import { createConsumerAdapter } from "./consumer-adapter";
 import type { ConsumerDomPort, ConsumerWebAdapter, SelectorContract } from "./contracts";
 

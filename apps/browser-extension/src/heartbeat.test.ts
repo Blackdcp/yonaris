@@ -36,7 +36,7 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v1",
+				adapterVersion: "qwen-web-20260821-localpc-v2",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
@@ -51,7 +51,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v1",
+				adapterVersion: "yuanbao-web-20260821-localpc-v2",
 				activeConcurrency: 0,
 			},
 		});
@@ -84,7 +84,7 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v1",
+				adapterVersion: "qwen-web-20260821-localpc-v2",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
@@ -99,7 +99,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v1",
+				adapterVersion: "yuanbao-web-20260821-localpc-v2",
 				activeConcurrency: 0,
 			},
 		});

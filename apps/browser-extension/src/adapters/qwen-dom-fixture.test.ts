@@ -11,7 +11,7 @@ const QWEN_READY_FIXTURE = `
 
 describe("Qwen semantic DOM contract", () => {
 	test("matches one composer, send control, and labeled new-conversation action", async () => {
-		const port = cssFixturePort(QWEN_READY_FIXTURE, "https://www.qianwen.com/");
+		const port = cssFixturePort(QWEN_READY_FIXTURE, "https://qianwen.com/");
 
 		expect(await visibleCount(port, "composer", qwenSelectorContract.composer)).toBe(1);
 		expect(await visibleCount(port, "send", qwenSelectorContract.send)).toBe(1);
@@ -26,6 +26,11 @@ describe("Qwen semantic DOM contract", () => {
 		expect(qwenSelectorContract.searchNotUsed).toBeNull();
 		expect(qwenSelectorContract.queryItem).toBeNull();
 		expect(qwenSelectorContract.searchEvidence).toBeNull();
+	});
+
+	test("does not classify generic black action buttons as a login wall", () => {
+		expect(qwenSelectorContract.loginWall).not.toContain("button.bg-black-button");
+		expect(qwenSelectorContract.loginWall).toContain('input[type="tel"]');
 	});
 });
 

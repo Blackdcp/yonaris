@@ -342,7 +342,7 @@ describe("registry-driven surface qualification", () => {
 			loadSurfaceReadiness: async () => ({
 				"qwen.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "qwen-web-20260821-localpc-v1",
+					adapterVersion: "qwen-web-20260821-localpc-v2",
 					activeConcurrency: 0,
 				},
 			}),
@@ -351,7 +351,7 @@ describe("registry-driven surface qualification", () => {
 			},
 		};
 		const gateway: QualificationTabsGateway = {
-			queryActive: async () => [{ id: 42, url: "https://www.qianwen.com/" }],
+			queryActive: async () => [{ id: 42, url: "https://qianwen.com/" }],
 			sendMessage: async (_tabId, command) => {
 				commands.push(command);
 				return { ok: true };
