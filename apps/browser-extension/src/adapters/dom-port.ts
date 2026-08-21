@@ -791,16 +791,20 @@ function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncest
 			const clipsPaint = establishesClippingBox && clipsByPaintContainment(style.contain);
 			const overflowX = style.overflowX.trim().toLocaleLowerCase("en-US");
 			const overflowY = style.overflowY.trim().toLocaleLowerCase("en-US");
-			const clipsX = clipsPaint || (establishesClippingBox && clipsOverflowAxis(overflowX));
-			const clipsY = clipsPaint || (establishesClippingBox && clipsOverflowAxis(overflowY));
+			const clipsX =
+				(clipsPaint && !scrollsOverflowAxis(overflowX)) ||
+				(establishesClippingBox && (overflowX === "hidden" || overflowX === "clip"));
+			const clipsY =
+				(clipsPaint && !scrollsOverflowAxis(overflowY)) ||
+				(establishesClippingBox && (overflowY === "hidden" || overflowY === "clip"));
 			if (clipsX || clipsY) {
 				const clip = current.getBoundingClientRect();
 				if ((clipsX && !(clip.right > clip.left)) || (clipsY && !(clip.bottom > clip.top))) return false;
-				if (clipsPaint || overflowX === "hidden" || overflowX === "clip") {
+				if (clipsX) {
 					left = Math.max(left, clip.left);
 					right = Math.min(right, clip.right);
 				}
-				if (clipsPaint || overflowY === "hidden" || overflowY === "clip") {
+				if (clipsY) {
 					top = Math.max(top, clip.top);
 					bottom = Math.min(bottom, clip.bottom);
 				}
@@ -814,6 +818,11 @@ function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncest
 
 function clipsOverflowAxis(value: string | null | undefined): boolean {
 	return CLIPPING_OVERFLOW_VALUES.has(value?.trim().toLocaleLowerCase("en-US") ?? "");
+}
+
+function scrollsOverflowAxis(value: string | null | undefined): boolean {
+	const normalized = value?.trim().toLocaleLowerCase("en-US") ?? "";
+	return normalized === "auto" || normalized === "scroll" || normalized === "overlay";
 }
 
 function clipsByPaintContainment(value: string | null | undefined): boolean {

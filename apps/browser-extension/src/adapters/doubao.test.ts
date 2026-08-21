@@ -18,7 +18,7 @@ describe("Doubao browser-extension adapter", () => {
 	});
 
 	test("keeps completion controls for read-only qualification while runtime can use stable-answer fallback", () => {
-		expect(doubaoContract.version).toBe("doubao-web-20260821-localpc-v12");
+		expect(doubaoContract.version).toBe("doubao-web-20260821-localpc-v13");
 		expect(doubaoContract.completion).toBe('button[aria-label="朗读"]');
 		expect(doubaoContract.completionCompanion).toBeTruthy();
 	});

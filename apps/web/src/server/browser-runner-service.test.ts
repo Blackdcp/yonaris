@@ -32,7 +32,7 @@ const futureDoubaoV8Binding = (surface: BrowserExtensionSurface, requestedAdapte
 	isBrowserExtensionAdapterVersionBindingSatisfied({
 		surface,
 		requestedAdapterVersion,
-		approvedAdapterVersion: "doubao-web-20260821-localpc-v12",
+		approvedAdapterVersion: "doubao-web-20260821-localpc-v13",
 	});
 
 type ExtensionTaskOperation =
@@ -128,7 +128,7 @@ describe("Browser Runner service contracts", () => {
 			authorizeRunnerEvidenceUpload(
 				"task-1",
 				"stepfun",
-				{ runnerSessionId: "session-current", adapterVersion: "doubao-web-20260821-localpc-v12" },
+				{ runnerSessionId: "session-current", adapterVersion: "doubao-web-20260821-localpc-v13" },
 				principal,
 				dependencies,
 			),
@@ -137,7 +137,7 @@ describe("Browser Runner service contracts", () => {
 			authorizeRunnerEvidenceUpload(
 				"task-1",
 				"stepfun",
-				{ runnerSessionId: "session-stale", adapterVersion: "doubao-web-20260821-localpc-v12" },
+				{ runnerSessionId: "session-stale", adapterVersion: "doubao-web-20260821-localpc-v13" },
 				principal,
 				dependencies,
 			),
@@ -203,7 +203,7 @@ describe("Browser Runner service contracts", () => {
 		await claimRunnerTask(
 			{
 				brandId: "stepfun",
-				adapterVersion: "doubao-web-20260821-localpc-v12",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
 			},
 			principal,
 			{ assertCapacity: async () => null, claim },
@@ -269,7 +269,7 @@ describe("Browser Runner service contracts", () => {
 				{
 					brandId: "stepfun",
 					surfaceTargetKeys: ["doubao.consumer_web"],
-					adapterVersion: "doubao-web-20260821-localpc-v12",
+					adapterVersion: "doubao-web-20260821-localpc-v13",
 				},
 				principal,
 				{ assertCapacity: async () => null, claim },
@@ -380,7 +380,7 @@ describe("Browser Runner service contracts", () => {
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
-				operation: { kind: "resume", adapterVersion: "doubao-web-20260821-localpc-v12" },
+				operation: { kind: "resume", adapterVersion: "doubao-web-20260821-localpc-v13" },
 			}),
 		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
 	});
@@ -400,7 +400,7 @@ describe("Browser Runner service contracts", () => {
 			authorizeExtensionTaskOperation({
 				surfaceTargetKey: "doubao.consumer_web",
 				readySurfaces: ["doubao.consumer_web"],
-				operation: { kind: "complete", adapterVersion: "doubao-web-20260821-localpc-v12" },
+				operation: { kind: "complete", adapterVersion: "doubao-web-20260821-localpc-v13" },
 			}),
 		).resolves.toMatchObject({ surfaceTargetKey: "doubao.consumer_web" });
 	});
@@ -442,13 +442,13 @@ describe("Browser Runner service contracts", () => {
 				brandId: lease.brandId,
 				leaseToken: lease.leaseToken,
 				leaseGeneration: lease.leaseGeneration,
-				adapterVersion: "doubao-web-20260821-localpc-v12",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
 			}).success,
 		).toBe(true);
 		expect(
 			browserRunnerSessionLeaseSchema.safeParse({
 				...lease,
-				adapterVersion: "doubao-web-20260821-localpc-v12",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
 			}).success,
 		).toBe(true);
 		expect(browserRunnerSessionLeaseSchema.safeParse({ ...lease, runnerSessionId: "" }).success).toBe(false);
@@ -609,7 +609,7 @@ describe("Browser Runner service contracts", () => {
 		const { answerHtml: _answerHtml, ...structuredFields } = legacy.observation;
 		const structured = {
 			...legacy,
-			adapterVersion: "doubao-web-20260821-localpc-v12",
+			adapterVersion: "doubao-web-20260821-localpc-v13",
 			observation: {
 				...structuredFields,
 				schemaVersion: "browser-runner-observation.v2",
@@ -622,7 +622,7 @@ describe("Browser Runner service contracts", () => {
 		expect(
 			browserRunnerObservationSchema.safeParse({
 				...legacy,
-				adapterVersion: "doubao-web-20260821-localpc-v12",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
 			}).success,
 		).toBe(false);
 		expect(
@@ -711,7 +711,7 @@ describe("Browser Runner service contracts", () => {
 				"browser_extension.doubao",
 				[{ id: guid1, kind: "screenshot", mediaType: "image/jpeg", byteSize: 512_000, sha256: "a".repeat(64) }],
 				[guid1],
-				"doubao-web-20260821-localpc-v12",
+				"doubao-web-20260821-localpc-v13",
 			),
 		).toEqual({
 			artifactId: guid1,
@@ -724,7 +724,7 @@ describe("Browser Runner service contracts", () => {
 				"browser_extension.doubao",
 				[{ id: guid1, kind: "page_snapshot", mediaType: "text/html", byteSize: 512_000, sha256: "a".repeat(64) }],
 				[guid1],
-				"doubao-web-20260821-localpc-v12",
+				"doubao-web-20260821-localpc-v13",
 			),
 		).toThrow(/bounded JPEG screenshot/i);
 	});

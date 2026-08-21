@@ -5,7 +5,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260821-localpc-v5",
+			version: "kimi-web-20260821-localpc-v6",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
@@ -48,7 +48,7 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260821-localpc-v5",
+			adapterVersion: "kimi-web-20260821-localpc-v6",
 		});
 	});
 
@@ -62,6 +62,25 @@ describe("Kimi browser-extension adapter", () => {
 		);
 
 		await expect(createKimiAdapter(port).preflight()).resolves.toBeUndefined();
+	});
+
+	test("keeps the confirmed conversation when Kimi removes its transient new-chat query", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/?chat_enter_method=new_chat",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				conversationUrlTimeline: [
+					"https://www.kimi.com/chat/kimi-session?chat_enter_method=new_chat",
+					"https://www.kimi.com/chat/kimi-session",
+				],
+				newConversationLabels: ["新建会话"],
+			}),
+		);
+		const adapter = createKimiAdapter(port);
+
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
 	});
 
 	test("fails before submission when login, CAPTCHA, or account restriction is visible", async () => {

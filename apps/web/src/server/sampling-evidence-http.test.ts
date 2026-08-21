@@ -17,7 +17,7 @@ const CLAIM_HEADERS = {
 	[SAMPLING_EVIDENCE_HEADERS.kind]: "screenshot",
 	[SAMPLING_EVIDENCE_HEADERS.fileName]: encodeURIComponent("运行证据.png"),
 	[SAMPLING_EVIDENCE_HEADERS.runnerSessionId]: "runner-session-1",
-	[SAMPLING_EVIDENCE_HEADERS.adapterVersion]: "doubao-web-20260821-localpc-v12",
+	[SAMPLING_EVIDENCE_HEADERS.adapterVersion]: "doubao-web-20260821-localpc-v13",
 };
 
 function request(headers: HeadersInit, body?: BodyInit): Request {
@@ -38,7 +38,7 @@ describe("sampling evidence HTTP contract", () => {
 			kind: "screenshot",
 			fileName: "运行证据.png",
 			runnerSessionId: "runner-session-1",
-			adapterVersion: "doubao-web-20260821-localpc-v12",
+			adapterVersion: "doubao-web-20260821-localpc-v13",
 		});
 	});
 

@@ -4,7 +4,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
 	test("uses the structured DeepSeek v2 contract", () => {
-		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v6");
+		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v7");
 	});
 	test("waits for the page composer to become ready before declaring page drift", async () => {
 		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
@@ -153,7 +153,7 @@ describe("DeepSeek browser-extension adapter", () => {
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 			citations: [{ url: "https://example.com/a", title: "Source A" }],
 			webQueries: ["国产大模型", "大模型公司"],
-			adapterVersion: "deepseek-web-20260821-localpc-v6",
+			adapterVersion: "deepseek-web-20260821-localpc-v7",
 		});
 	});
 
