@@ -21,7 +21,7 @@ describe("ExtensionCoordinator", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "deepseek-web-20260821-localpc-v3",
+				adapterVersion: "deepseek-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 		});
@@ -63,7 +63,7 @@ describe("ExtensionCoordinator", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v3",
+				adapterVersion: "deepseek-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 		});

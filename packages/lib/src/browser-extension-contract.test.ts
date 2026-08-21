@@ -53,7 +53,7 @@ describe("browser extension contract", () => {
 			"deepseek.consumer_web",
 			"browser_extension.deepseek",
 			"https://chat.deepseek.com/",
-			"deepseek-web-20260821-localpc-v3",
+			"deepseek-web-20260821-localpc-v4",
 		],
 		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v3"],
 		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v2"],
@@ -192,7 +192,7 @@ describe("browser extension contract", () => {
 		expect(() =>
 			assertExtensionEvidenceProtocol({
 				captureRouteKey: "browser_extension.deepseek",
-				adapterVersion: "deepseek-web-20260821-localpc-v3",
+				adapterVersion: "deepseek-web-20260821-localpc-v4",
 				minimumArtifacts: 1,
 				kinds: ["screenshot"],
 				mediaTypes: ["image/jpeg"],

@@ -13,7 +13,27 @@ const READY_CONTROLS = `
 	<div role="button" class="ds-button--primary ds-button--circle">发送</div>
 `;
 
+const LIVE_ICON_NEW_CONVERSATION = `
+	<div role="button" class="ds-button ds-button--iconLabelPrimary ds-button--icon ds-button--capsule ds-button--m ds-button--icon-relative-m _4f3769f">
+		<svg viewBox="0 0 16 16">
+			<path d="M8 0.599609C3.91309 0.599609 0.599609 3.91309 0.599609 8C15 8 15 15 8 15ZM7.34473 4.93945V7.34961H4.93945V8.65039H7.34473V11.0605H8.64551V8.65039H11.0605V7.34961H8.64551V4.93945H7.34473Z"></path>
+		</svg>
+	</div>
+`;
+
 describe("DeepSeek unqualified DOM fixture skeleton", () => {
+	test("recognizes the current icon-only new-conversation control", async () => {
+		const port = cssFixturePort(`
+			${LIVE_ICON_NEW_CONVERSATION}
+			<textarea class="_27c9245"></textarea>
+			<div role="button" class="ds-button--primary ds-button--circle">发送</div>
+		`);
+		const adapter = createDeepSeekAdapter(port, UNQUALIFIED_FIXTURE_CONTRACT);
+
+		await expect(adapter.preflight()).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(0);
+	});
+
 	test("collects the current completed answer, visible citation, and answer-bound evidence rectangle", async () => {
 		const port = completedAnswerFixturePort(`
 			${READY_CONTROLS}

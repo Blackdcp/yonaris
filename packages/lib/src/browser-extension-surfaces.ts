@@ -11,7 +11,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "DeepSeek",
 		captureRoute: "browser_extension.deepseek",
 		launchUrl: "https://chat.deepseek.com/",
-		adapterVersion: "deepseek-web-20260821-localpc-v3",
+		adapterVersion: "deepseek-web-20260821-localpc-v4",
 	},
 	{
 		key: "qwen.consumer_web",
