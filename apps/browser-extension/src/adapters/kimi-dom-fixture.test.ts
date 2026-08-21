@@ -5,7 +5,7 @@ import { kimiSelectorContract } from "./kimi";
 
 const KIMI_READY_FIXTURE = `
 	<aside hidden><div class="action-label">新建会话</div></aside>
-	<header><div class="left-actions"><a href="/"><div class="icon-button primary"><svg name="AddConversation"></svg></div></a></div></header>
+	<div class="layout-header"><div class="header-center"><div class="chat-header"><div class="left-actions"><a href="/"><div class="icon-button primary"><svg name="AddConversation"></svg></div></a></div></div></div></div>
 	<div class="chat-input-editor" role="textbox" contenteditable="true"></div>
 	<div class="send-button-container disabled"></div>
 	<div class="send-button-container"></div>
