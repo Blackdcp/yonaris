@@ -13,7 +13,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v3");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v4");
 		expect(adapter.surface).toBe("yuanbao.consumer_web");
 	});
 
@@ -38,7 +38,19 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260821-localpc-v3",
+			adapterVersion: "yuanbao-web-20260821-localpc-v4",
 		});
+	});
+
+	test("accepts Yuanbao's live two-segment conversation URL after the first message", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa",
+				conversationUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa/0Pmcq1IcTRo",
+				newConversationLabels: ["新建对话"],
+			}),
+		);
+
+		await expect(port.completeOneTask(createYuanbaoAdapter(port), "Prompt A")).resolves.toBeUndefined();
 	});
 });

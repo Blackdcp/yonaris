@@ -41,12 +41,12 @@ function reconcileExactTask(input: ExactTaskReconciliationInput): ExactTaskRecon
 describe("Browser Runner retry policy", () => {
 	it("authorizes an exact approved operation for every registered surface", () => {
 		for (const [surfaceTargetKey, adapterVersion] of [
-			["doubao.consumer_web", "doubao-web-20260821-localpc-v9"],
-			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v4"],
-			["qwen.consumer_web", "qwen-web-20260821-localpc-v3"],
-			["kimi.consumer_web", "kimi-web-20260821-localpc-v2"],
-			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v2"],
-			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v3"],
+			["doubao.consumer_web", "doubao-web-20260821-localpc-v10"],
+			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v5"],
+			["qwen.consumer_web", "qwen-web-20260821-localpc-v4"],
+			["kimi.consumer_web", "kimi-web-20260821-localpc-v3"],
+			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v3"],
+			["yuanbao.consumer_web", "yuanbao-web-20260821-localpc-v4"],
 		] as const) {
 			expect(
 				browserExtensionTaskOperationDenial({
@@ -77,7 +77,7 @@ describe("Browser Runner retry policy", () => {
 				isBrowserExtensionAdapterVersionBindingSatisfied({
 					surface,
 					requestedAdapterVersion,
-					approvedAdapterVersion: "doubao-web-20260821-localpc-v9",
+					approvedAdapterVersion: "doubao-web-20260821-localpc-v10",
 				}),
 		};
 		const base = {
@@ -97,7 +97,7 @@ describe("Browser Runner retry policy", () => {
 			browserExtensionTaskOperationDenial(
 				{
 					...base,
-					operation: { kind: "resume", adapterVersion: "doubao-web-20260821-localpc-v9" },
+					operation: { kind: "resume", adapterVersion: "doubao-web-20260821-localpc-v10" },
 				},
 				dependencies,
 			),
@@ -115,7 +115,7 @@ describe("Browser Runner retry policy", () => {
 					isBrowserExtensionAdapterVersionBindingSatisfied({
 						surface,
 						requestedAdapterVersion,
-						approvedAdapterVersion: "doubao-web-20260821-localpc-v9",
+						approvedAdapterVersion: "doubao-web-20260821-localpc-v10",
 					}),
 			};
 			const base = {
@@ -130,7 +130,7 @@ describe("Browser Runner retry policy", () => {
 			}
 			expect(
 				browserExtensionTaskOperationDenial(
-					{ ...base, operation: { kind, adapterVersion: "doubao-web-20260821-localpc-v9" } },
+					{ ...base, operation: { kind, adapterVersion: "doubao-web-20260821-localpc-v10" } },
 					dependencies,
 				),
 			).toBeNull();

@@ -4,7 +4,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
 	test("uses the structured DeepSeek v2 contract", () => {
-		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v4");
+		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v5");
 	});
 	test("waits for the page composer to become ready before declaring page drift", async () => {
 		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
@@ -104,6 +104,15 @@ describe("DeepSeek browser-extension adapter", () => {
 		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
 	});
 
+	test("accepts an answer that is already stable when the generation marker finished before polling", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ generatingDurationMs: 0 }));
+		const adapter = createDeepSeekAdapter(port, searchTestContract());
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(8_000);
+	});
+
 	test.each([
 		[1, 0, true],
 		[0, 1, false],
@@ -144,7 +153,7 @@ describe("DeepSeek browser-extension adapter", () => {
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 			citations: [{ url: "https://example.com/a", title: "Source A" }],
 			webQueries: ["国产大模型", "大模型公司"],
-			adapterVersion: "deepseek-web-20260821-localpc-v4",
+			adapterVersion: "deepseek-web-20260821-localpc-v5",
 		});
 	});
 

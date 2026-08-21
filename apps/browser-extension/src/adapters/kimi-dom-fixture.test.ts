@@ -6,7 +6,10 @@ import { kimiSelectorContract } from "./kimi";
 const KIMI_READY_FIXTURE = `
 	<div class="action-label">新建会话</div>
 	<div class="chat-input-editor" role="textbox" contenteditable="true"></div>
+	<div class="send-button-container disabled"></div>
 	<div class="send-button-container"></div>
+	<div class="chat-content-item chat-content-item-user"><div class="segment segment-user"><div class="segment-content-box"><div class="user-content">Prompt A</div></div><div>编辑 复制 分享</div></div></div>
+	<div class="chat-content-item chat-content-item-assistant"><div class="segment segment-assistant"><div class="segment-content-box">Current answer</div><div>复制</div></div></div>
 `;
 
 describe("Kimi semantic DOM contract", () => {
@@ -19,6 +22,12 @@ describe("Kimi semantic DOM contract", () => {
 		expect(
 			actions.filter((item) => item.visible && item.text === kimiSelectorContract.newConversationLabel),
 		).toHaveLength(1);
+		expect((await port.query("user_message", kimiSelectorContract.userMessage)).map((item) => item.text)).toEqual([
+			"Prompt A",
+		]);
+		expect((await port.query("answer", kimiSelectorContract.answer)).map((item) => item.text)).toEqual([
+			"Current answer",
+		]);
 	});
 
 	test("keeps provider search terms unavailable until a recorded source block proves them", () => {

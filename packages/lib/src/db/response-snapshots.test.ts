@@ -5,8 +5,8 @@ import {
 	type ResponseSnapshotDraftV2,
 } from "../response-snapshots/contract";
 import {
-	calculateResponseSnapshotExpiresAt,
 	buildReconstructedResponseSnapshotDraft,
+	calculateResponseSnapshotExpiresAt,
 	hydratePreparedResponseSnapshotBundle,
 	isResponseSnapshotOutboxExpired,
 	resolveResponseSnapshotEnqueueAction,
@@ -113,7 +113,7 @@ describe("response snapshot database policies", () => {
 				sha256: "a".repeat(64),
 				bytes: 1_024,
 			},
-			adapterVersion: "doubao-web-20260821-localpc-v9",
+			adapterVersion: "doubao-web-20260821-localpc-v10",
 			captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
 		};
 		const prepared = prepareResponseSnapshotBundle(draft);
@@ -174,7 +174,7 @@ describe("response snapshot database policies", () => {
 			},
 			captureMetadata: {
 				responseSnapshotSchemaVersion: "response-snapshot.v2",
-				adapterVersion: "doubao-web-20260821-localpc-v9",
+				adapterVersion: "doubao-web-20260821-localpc-v10",
 				captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
 			},
 			visualEvidence: [
@@ -191,7 +191,7 @@ describe("response snapshot database policies", () => {
 			schemaVersion: "response-snapshot.v2",
 			captureMethod: "consumer_web_browser",
 			contentSource: "rendered_from_structured_response",
-			adapterVersion: "doubao-web-20260821-localpc-v9",
+			adapterVersion: "doubao-web-20260821-localpc-v10",
 			visualEvidence: { artifactId: "44444444-4444-4444-8444-444444444444" },
 		});
 		expect(() =>
@@ -199,7 +199,7 @@ describe("response snapshot database policies", () => {
 				base: reconstructed,
 				captureMetadata: {
 					responseSnapshotSchemaVersion: "response-snapshot.v2",
-					adapterVersion: "doubao-web-20260821-localpc-v9",
+					adapterVersion: "doubao-web-20260821-localpc-v10",
 					captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
 				},
 				visualEvidence: [],

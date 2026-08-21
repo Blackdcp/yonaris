@@ -6,7 +6,10 @@ import { qwenSelectorContract } from "./qwen";
 const QWEN_READY_FIXTURE = `
 	<button>新建对话</button>
 	<div role="textbox" contenteditable="true" data-slate-editor="true"></div>
+	<button aria-label="发送消息" disabled></button>
 	<button aria-label="发送消息"></button>
+	<div class="question-text-card">Prompt A</div>
+	<div class="chat-answers-card-wrap"><div class="answer-common-card">Current answer</div></div>
 `;
 
 describe("Qwen semantic DOM contract", () => {
@@ -19,6 +22,12 @@ describe("Qwen semantic DOM contract", () => {
 		expect(
 			actions.filter((item) => item.visible && item.text === qwenSelectorContract.newConversationLabel),
 		).toHaveLength(1);
+		expect((await port.query("user_message", qwenSelectorContract.userMessage)).map((item) => item.text)).toEqual([
+			"Prompt A",
+		]);
+		expect((await port.query("answer", qwenSelectorContract.answer)).map((item) => item.text)).toEqual([
+			"Current answer",
+		]);
 	});
 
 	test("keeps provider search terms unavailable until a recorded source block proves them", () => {

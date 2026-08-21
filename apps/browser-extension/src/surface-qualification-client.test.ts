@@ -85,7 +85,7 @@ describe("Doubao read-only qualification client", () => {
 			{
 				"doubao.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "doubao-web-20260821-localpc-v9",
+					adapterVersion: "doubao-web-20260821-localpc-v10",
 					activeConcurrency: 0,
 				},
 				"deepseek.consumer_web": {
@@ -97,7 +97,7 @@ describe("Doubao read-only qualification client", () => {
 			{
 				"doubao.consumer_web": {
 					status: "ready",
-					adapterVersion: "doubao-web-20260821-localpc-v9",
+					adapterVersion: "doubao-web-20260821-localpc-v10",
 					activeConcurrency: 0,
 				},
 				"deepseek.consumer_web": {
@@ -128,7 +128,7 @@ describe("Doubao read-only qualification client", () => {
 			expect.objectContaining({
 				"doubao.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "doubao-web-20260821-localpc-v9",
+					adapterVersion: "doubao-web-20260821-localpc-v10",
 					activeConcurrency: 0,
 				},
 			}),
@@ -150,7 +150,7 @@ describe("Doubao read-only qualification client", () => {
 		).resolves.toMatchObject({ status: "page_drift" });
 		expect(writes.at(-1)?.["doubao.consumer_web"]).toEqual({
 			status: "unavailable",
-			adapterVersion: "doubao-web-20260821-localpc-v9",
+			adapterVersion: "doubao-web-20260821-localpc-v10",
 			activeConcurrency: 0,
 		});
 	});
@@ -190,7 +190,7 @@ describe("Doubao read-only qualification client", () => {
 			});
 			expect(writes.at(-1)?.["doubao.consumer_web"]).toEqual({
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v9",
+				adapterVersion: "doubao-web-20260821-localpc-v10",
 				activeConcurrency: 0,
 			});
 			expect(harness.clickCount()).toBe(0);
@@ -342,7 +342,7 @@ describe("registry-driven surface qualification", () => {
 			loadSurfaceReadiness: async () => ({
 				"qwen.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "qwen-web-20260821-localpc-v3",
+					adapterVersion: "qwen-web-20260821-localpc-v4",
 					activeConcurrency: 0,
 				},
 			}),
@@ -401,7 +401,7 @@ function qualificationStore(
 		loadSurfaceReadiness: async () => ({
 			"doubao.consumer_web": {
 				status: doubaoStatus,
-				adapterVersion: "doubao-web-20260821-localpc-v9",
+				adapterVersion: "doubao-web-20260821-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
