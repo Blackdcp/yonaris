@@ -143,7 +143,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v7",
+					adapterVersion: "deepseek-web-20260821-localpc-v8",
 					activeConcurrency: 0,
 				},
 			},
@@ -187,7 +187,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v7",
+					adapterVersion: "deepseek-web-20260821-localpc-v8",
 					activeConcurrency: 0,
 				},
 			},
@@ -553,7 +553,7 @@ function readyV8Readiness() {
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260821-localpc-v7",
+			adapterVersion: "deepseek-web-20260821-localpc-v8",
 			activeConcurrency: 0,
 		},
 	};
