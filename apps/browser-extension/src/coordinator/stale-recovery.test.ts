@@ -166,7 +166,7 @@ describe("ExtensionCoordinator stale recovery reconciliation", () => {
 		},
 	);
 
-	test("aligns a server-authoritative post-submit handoff but never resumes or claims automatically", async () => {
+	test("aligns a server-authoritative post-submit handoff without resuming it and continues polling", async () => {
 		const storage = await pairedStorageWithManualTask();
 		let claimCalls = 0;
 		let resumeCalls = 0;
@@ -191,7 +191,7 @@ describe("ExtensionCoordinator stale recovery reconciliation", () => {
 		await coordinator.runOnce();
 
 		expect(resumeCalls).toBe(0);
-		expect(claimCalls).toBe(0);
+		expect(claimCalls).toBeGreaterThan(0);
 		await expect(storage.loadJournal()).resolves.toMatchObject({
 			"manual-task": { phase: "needs_human", interruptedPhase: "submit_intent" },
 		});

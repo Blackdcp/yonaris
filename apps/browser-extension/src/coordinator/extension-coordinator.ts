@@ -159,7 +159,6 @@ export class ExtensionCoordinator {
 					continue;
 				case "resumable_pre":
 					await journal.alignNeedsHuman(entry.taskId, "pre_submit");
-					shouldStop = true;
 					continue;
 				case "resumable_post":
 					if (reconciliation.runnerSessionId !== entry.runnerSessionId) {
@@ -167,7 +166,6 @@ export class ExtensionCoordinator {
 						continue;
 					}
 					await journal.alignNeedsHuman(entry.taskId, "post_submit");
-					shouldStop = true;
 					continue;
 			}
 		}

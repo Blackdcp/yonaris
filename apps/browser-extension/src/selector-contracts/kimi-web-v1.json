@@ -3,7 +3,7 @@
 	"surface": "kimi.consumer_web",
 	"launchUrl": "https://www.kimi.com/",
 	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}/?$",
-	"allowedSearchPattern": "^\\?chat_enter_method=new_chat$",
+	"allowedSearchPattern": "^\\?chat_enter_method=(?:new_chat|home)$",
 	"composer": "div.chat-input-editor[contenteditable=\"true\"][role=\"textbox\"]",
 	"send": ".send-button-container:not(.disabled)",
 	"newConversation": ".left-actions > a[href=\"/\"]:has(svg[name=\"AddConversation\"])",

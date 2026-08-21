@@ -144,6 +144,13 @@ describe("ExtensionCoordinator", () => {
 			deviceToken: `yrd_${"a".repeat(43)}`,
 			allowedBrandIds: ["stepfun"],
 		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				activeConcurrency: 0,
+			},
+		});
 		const journal = new DurableTaskJournal(storage);
 		await journal.start(claimedTask(), {
 			tabId: 42,
@@ -175,7 +182,7 @@ describe("ExtensionCoordinator", () => {
 		await coordinator.runOnce();
 
 		expect(resumeCalls).toBe(0);
-		expect(claimCalls).toBe(0);
+		expect(claimCalls).toBe(1);
 		await expect(journal.entries()).resolves.toMatchObject({
 			"task-1": { phase: "needs_human", interruptedPhase: "submit_intent" },
 		});

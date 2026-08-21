@@ -80,6 +80,19 @@ describe("Kimi browser-extension adapter", () => {
 		await expect(createKimiAdapter(port).preflight()).resolves.toBeUndefined();
 	});
 
+	test("accepts Kimi's exact home entry parameter on the durable conversation", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session?chat_enter_method=home",
+				newConversationLabels: [],
+			}),
+		);
+
+		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
+	});
+
 	test("keeps the confirmed conversation when Kimi removes its transient new-chat query", async () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({
@@ -90,6 +103,25 @@ describe("Kimi browser-extension adapter", () => {
 					"https://www.kimi.com/chat/kimi-session",
 				],
 				newConversationLabels: ["新建会话"],
+			}),
+		);
+		const adapter = createKimiAdapter(port);
+
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+	});
+
+	test("waits for Kimi's provisional conversation id to settle before confirming", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/final-session?chat_enter_method=home",
+				conversationUrlTimeline: [
+					"https://www.kimi.com/chat/provisional-session?chat_enter_method=home",
+					"https://www.kimi.com/chat/final-session?chat_enter_method=home",
+				],
+				newConversationLabels: [],
 			}),
 		);
 		const adapter = createKimiAdapter(port);

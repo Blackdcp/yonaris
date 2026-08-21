@@ -20,6 +20,7 @@ const CONFIRM_TIMEOUT_MS = 30_000;
 const RESPONSE_TIMEOUT_MS = 180_000;
 const STABLE_ANSWER_MS = 8_000;
 const POLL_INTERVAL_MS = 250;
+const CONFIRMED_CONVERSATION_STABILITY_MS = 1_000;
 const PAGE_READY_TIMEOUT_MS = 15_000;
 const NEW_CONVERSATION_TIMEOUT_MS = 15_000;
 const SEND_APPEARS_AFTER_FILL_SURFACES = new Set(["qwen.consumer_web", "kimi.consumer_web", "yuanbao.consumer_web"]);
@@ -99,6 +100,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			throw this.#error("post_submit_unknown", "Submission intent is not present in this page session");
 		}
 		const timeoutAt = this.#port.now() + CONFIRM_TIMEOUT_MS;
+		const requiredConversationStabilityMs =
+			this.surface === "kimi.consumer_web" ? CONFIRMED_CONVERSATION_STABILITY_MS : 0;
+		let candidateConversationUrl = "";
+		let candidateStableSince = 0;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertApprovedUrl(false);
 			await this.#assertUnblocked();
@@ -116,8 +121,21 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				this.#assertApprovedUrl(true);
 			}
 			if (exactPromptVisible && durableConversationPath && this.#hasApprovedConversationSearch(currentUrl)) {
-				this.#confirmedConversationUrl = this.#approvedConversationUrl();
-				return;
+				const approvedConversationUrl = this.#approvedConversationUrl();
+				if (requiredConversationStabilityMs === 0) {
+					this.#confirmedConversationUrl = approvedConversationUrl;
+					return;
+				}
+				if (approvedConversationUrl !== candidateConversationUrl) {
+					candidateConversationUrl = approvedConversationUrl;
+					candidateStableSince = this.#port.now();
+				} else if (this.#port.now() - candidateStableSince >= CONFIRMED_CONVERSATION_STABILITY_MS) {
+					this.#confirmedConversationUrl = approvedConversationUrl;
+					return;
+				}
+			} else {
+				candidateConversationUrl = "";
+				candidateStableSince = 0;
 			}
 			await this.#port.wait(POLL_INTERVAL_MS);
 		}

@@ -48,6 +48,21 @@ describe("Zhipu semantic DOM contract", () => {
 		expect(submitted).toBe(1);
 	});
 
+	test("keeps exactly one send control discoverable while the empty composer has no inner click target", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div id="search-input-box">
+				<textarea class="scroll-display-none"></textarea>
+				<div class="enter is-main-chat"></div>
+			</div>
+		</body></html>`);
+		const outerSendControl = document.querySelector<HTMLElement>(".enter.is-main-chat");
+
+		const matchedSendControls = document.querySelectorAll<HTMLElement>(zhipuSelectorContract.send);
+
+		expect(matchedSendControls).toHaveLength(1);
+		expect(matchedSendControls[0]).toBe(outerSendControl);
+	});
+
 	test("detects the exact guest login marker and does not invent provider search terms", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div class="sidebar-avatar guest-avatar"></div>

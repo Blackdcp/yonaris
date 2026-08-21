@@ -5,7 +5,7 @@
 	"conversationPathPattern": "^/main/alltoolsdetail/?$",
 	"conversationSearchPattern": "^\\?t=[0-9]+&lang=zh&cid=[a-f0-9]{24}$",
 	"composer": "#search-input-box textarea.scroll-display-none",
-	"send": "#search-input-box .enter:not(.searching) > .enter-icon-container",
+	"send": "#search-input-box .enter:not(.searching):not(:has(> .enter-icon-container)), #search-input-box .enter:not(.searching) > .enter-icon-container",
 	"newConversation": ".new-session",
 	"newConversationLabel": "新对话",
 	"userMessage": "[id^=\"row-question-p-\"].question-txt",
