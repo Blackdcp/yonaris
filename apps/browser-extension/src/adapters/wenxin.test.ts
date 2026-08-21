@@ -5,7 +5,7 @@ import { createWenxinAdapter, wenxinSelectorContract } from "./wenxin";
 describe("Wenxin browser-extension adapter", () => {
 	test("uses the current Wenxin origin and registered adapter identity", () => {
 		expect(wenxinSelectorContract).toMatchObject({
-			version: "wenxin-web-20260821-localpc-v1",
+			version: "wenxin-web-20260821-localpc-v2",
 			surface: "wenxin.consumer_web",
 			launchUrl: "https://wenxin.baidu.com/",
 		});
@@ -15,7 +15,7 @@ describe("Wenxin browser-extension adapter", () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({
 				pageUrl: "https://wenxin.baidu.com/",
-				conversationUrl: "https://wenxin.baidu.com/chat/wenxin-session",
+				conversationUrl: "https://wenxin.baidu.com/search/7745716473774230402?enter_type=chat_url",
 				newConversationLabels: ["开启新对话"],
 				answer: {
 					text: "文心回答",
@@ -32,7 +32,34 @@ describe("Wenxin browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/wenxin", title: "文心来源" }],
-			adapterVersion: "wenxin-web-20260821-localpc-v1",
+			adapterVersion: "wenxin-web-20260821-localpc-v2",
 		});
+	});
+
+	test("accepts Wenxin's durable search conversation URL", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://wenxin.baidu.com/search/7745716473774230402?enter_type=chat_url",
+				conversationUrl: "https://wenxin.baidu.com/search/7745716473774230402?enter_type=chat_url",
+				newConversationLabels: ["开启新对话"],
+			}),
+		);
+		const adapter = createWenxinAdapter(port);
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+	});
+
+	test("rejects a Wenxin search conversation URL without the required entry query", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://wenxin.baidu.com/search/7745716473774230402",
+				conversationUrl: "https://wenxin.baidu.com/search/7745716473774230402",
+				newConversationLabels: ["开启新对话"],
+			}),
+		);
+		const adapter = createWenxinAdapter(port);
+
+		await expect(port.completeOneTask(adapter, "Prompt A")).rejects.toMatchObject({ code: "page_drift" });
 	});
 });

@@ -4,7 +4,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
 	test("uses the structured DeepSeek v2 contract", () => {
-		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v2");
+		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v3");
 	});
 	test("waits for the page composer to become ready before declaring page drift", async () => {
 		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
@@ -144,8 +144,25 @@ describe("DeepSeek browser-extension adapter", () => {
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 			citations: [{ url: "https://example.com/a", title: "Source A" }],
 			webQueries: ["国产大模型", "大模型公司"],
-			adapterVersion: "deepseek-web-20260821-localpc-v2",
+			adapterVersion: "deepseek-web-20260821-localpc-v3",
 		});
+	});
+
+	test("accepts duplicate visible DOM copies of the same submitted prompt", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ submittedPromptCopies: 2 }));
+		const adapter = createDeepSeekAdapter(port, searchTestContract());
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+	});
+
+	test("resumes when the preserved page contains duplicate exact prompt DOM copies", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({ initiallySubmitted: true, submittedPrompt: "Prompt A", submittedPromptCopies: 2 }),
+		);
+		const adapter = createDeepSeekAdapter(port, searchTestContract());
+
+		await expect(adapter.resumeSubmitted("Prompt A")).resolves.toBeUndefined();
 	});
 });
 

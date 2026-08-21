@@ -120,7 +120,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		this.#confirmedConversationUrl = this.#approvedConversationUrl();
 		await this.#assertUnblocked();
 		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
-		if (messages.length !== 1 || normalizeText(messages[0]?.element.text ?? "") !== normalizeText(prompt)) {
+		if (messages.length < 1 || messages.some(({ element }) => normalizeText(element.text) !== normalizeText(prompt))) {
 			throw this.#error("post_submit_unknown", "Preserved conversation does not contain the exact submitted prompt");
 		}
 		const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
@@ -209,6 +209,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				searchEvidence: this.#contract.searchEvidence,
 				evidenceViewport: {
 					promptSelector: this.#contract.userMessage,
+					promptText: this.#preparedPrompt ?? "",
 					completionSelector: this.#contract.completion,
 					companionSelector: this.#contract.completionCompanion,
 				},
@@ -347,6 +348,16 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			throw this.#error("page_drift", "Navigation no longer has a valid consumer URL");
 		}
 		const launch = new URL(this.#contract.launchUrl);
+		const allowedSearchPatterns = [
+			this.#contract.allowedSearchPattern,
+			this.#contract.conversationSearchPattern,
+		].filter((pattern): pattern is string => Boolean(pattern));
+		const allowedSearch =
+			current.search === "" || allowedSearchPatterns.some((pattern) => new RegExp(pattern, "u").test(current.search));
+		const approvedConversationSearch =
+			!requireConversation ||
+			!this.#contract.conversationSearchPattern ||
+			new RegExp(this.#contract.conversationSearchPattern, "u").test(current.search);
 		const approvedHost =
 			this.surface === "doubao.consumer_web"
 				? current.hostname === "doubao.com" || current.hostname.endsWith(".doubao.com")
@@ -359,7 +370,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			current.port ||
 			current.username ||
 			current.password ||
-			current.search ||
+			!allowedSearch ||
+			!approvedConversationSearch ||
 			current.hash
 		) {
 			throw this.#error(
@@ -374,7 +386,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 	#approvedConversationUrl(): string {
 		this.#assertApprovedUrl(true);
-		return this.#port.currentUrl();
+		const approved = new URL(this.#port.currentUrl());
+		if (this.surface === "doubao.consumer_web") approved.hostname = "doubao.com";
+		if (this.surface === "qwen.consumer_web") approved.hostname = "www.qianwen.com";
+		return approved.toString();
 	}
 
 	#assertConfirmedConversation(): string {
@@ -388,9 +403,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	async #assertSubmittedPromptStillCurrent(): Promise<void> {
 		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 		if (
-			messages.length !== 1 ||
+			messages.length < 1 ||
 			!this.#preparedPrompt ||
-			normalizeText(messages[0]?.element.text ?? "") !== normalizeText(this.#preparedPrompt)
+			messages.some(({ element }) => normalizeText(element.text) !== normalizeText(this.#preparedPrompt ?? ""))
 		) {
 			throw this.#error("page_drift", "Confirmed conversation no longer contains the exact submitted prompt");
 		}
@@ -412,8 +427,10 @@ function validateSelectorContract(contract: SelectorContract): SelectorContract 
 	}
 	try {
 		new RegExp(contract.accountRestrictedTextPattern, "iu");
+		if (contract.allowedSearchPattern) new RegExp(contract.allowedSearchPattern, "u");
+		if (contract.conversationSearchPattern) new RegExp(contract.conversationSearchPattern, "u");
 	} catch {
-		throw new Error("Invalid account restriction text pattern");
+		throw new Error("Invalid selector contract pattern");
 	}
 	validateSearchEvidenceContract(contract.searchEvidence);
 	const optionalSelectors = new Set([

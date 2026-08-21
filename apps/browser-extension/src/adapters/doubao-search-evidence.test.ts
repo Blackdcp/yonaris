@@ -77,9 +77,10 @@ describe("Doubao structured search evidence", () => {
 		expect(snapshot.html).not.toContain("private stale template text");
 	});
 
-	test("returns the current prompt, answer, and bound action group union without including the sidebar", async () => {
+	test("returns duplicate exact prompt copies, answer, and bound action group without including the sidebar", async () => {
 		const { document, window } = parseHTML(`<!doctype html><html><body>
 			<aside class="sidebar">Private conversation history</aside>
+			<div class="content-KTJ1Rj">Current prompt</div>
 			<div class="content-KTJ1Rj">Current prompt</div>
 			<div data-message-id="assistant-current" class="relative grid w-full">
 				<p>Current answer</p>
@@ -116,6 +117,9 @@ describe("Doubao structured search evidence", () => {
 			if (!element) throw new Error(`Evidence fixture is missing ${selector}`);
 			element.getBoundingClientRect = () => rectangle;
 		}
+		for (const prompt of document.querySelectorAll<HTMLElement>(".content-KTJ1Rj")) {
+			prompt.getBoundingClientRect = () => rectangles.get(".content-KTJ1Rj") as DOMRect;
+		}
 		const port = createDocumentDomPort(document, { href: "https://www.doubao.com/chat/123" } as Location);
 
 		const snapshot = await port.readAnswer({
@@ -128,6 +132,7 @@ describe("Doubao structured search evidence", () => {
 			searchEvidence: doubaoContract.searchEvidence,
 			evidenceViewport: {
 				promptSelector: doubaoContract.userMessage,
+				promptText: "Current prompt",
 				completionSelector: doubaoContract.completion,
 				companionSelector: doubaoContract.completionCompanion,
 			},
@@ -147,6 +152,7 @@ describe("Doubao structured search evidence", () => {
 
 	test("rejects visual evidence when a long answer pushes the bound action group below the viewport", async () => {
 		const { document, window } = parseHTML(`<!doctype html><html><body>
+			<div class="content-KTJ1Rj">Current prompt</div>
 			<div class="content-KTJ1Rj">Current prompt</div>
 			<div data-message-id="assistant-current" class="relative grid w-full">Current long answer</div>
 			<div class="answer-actions">
@@ -173,6 +179,9 @@ describe("Doubao structured search evidence", () => {
 			if (!element) throw new Error(`Long-answer evidence fixture is missing ${selector}`);
 			element.getBoundingClientRect = () => rectangle;
 		}
+		for (const prompt of document.querySelectorAll<HTMLElement>(".content-KTJ1Rj")) {
+			prompt.getBoundingClientRect = () => rectangles.get(".content-KTJ1Rj") as DOMRect;
+		}
 		const port = createDocumentDomPort(document, { href: "https://www.doubao.com/chat/123" } as Location);
 
 		await expect(
@@ -186,6 +195,7 @@ describe("Doubao structured search evidence", () => {
 				searchEvidence: doubaoContract.searchEvidence,
 				evidenceViewport: {
 					promptSelector: doubaoContract.userMessage,
+					promptText: "Current prompt",
 					completionSelector: doubaoContract.completion,
 					companionSelector: doubaoContract.completionCompanion,
 				},

@@ -107,7 +107,7 @@ describe("BrowserRunnerApiClient", () => {
 		expect(await calls[0]?.json()).toEqual({
 			brandId: "stepfun",
 			surfaceTargetKeys: ["deepseek.consumer_web"],
-			adapterVersion: "deepseek-web-20260821-localpc-v2",
+			adapterVersion: "deepseek-web-20260821-localpc-v3",
 		});
 	});
 
@@ -174,7 +174,7 @@ describe("BrowserRunnerApiClient", () => {
 		expect(await calls[0]?.json()).toEqual({
 			brandId: "stepfun",
 			stage: "pre_submit",
-			adapterVersion: "doubao-web-20260819-localpc-v8",
+			adapterVersion: "doubao-web-20260821-localpc-v9",
 		});
 	});
 
@@ -192,21 +192,21 @@ describe("BrowserRunnerApiClient", () => {
 				brandId: "stepfun",
 				leaseToken: claim.leaseToken,
 				leaseGeneration: claim.leaseGeneration,
-				adapterVersion: "doubao-web-20260819-localpc-v8",
+				adapterVersion: "doubao-web-20260821-localpc-v9",
 			},
 			{
 				brandId: "stepfun",
 				leaseToken: claim.leaseToken,
 				leaseGeneration: claim.leaseGeneration,
 				runnerSessionId: "runner-session-1",
-				adapterVersion: "doubao-web-20260819-localpc-v8",
+				adapterVersion: "doubao-web-20260821-localpc-v9",
 			},
 			{
 				brandId: "stepfun",
 				leaseToken: claim.leaseToken,
 				leaseGeneration: claim.leaseGeneration,
 				runnerSessionId: "runner-session-1",
-				adapterVersion: "doubao-web-20260819-localpc-v8",
+				adapterVersion: "doubao-web-20260821-localpc-v9",
 			},
 		]);
 	});

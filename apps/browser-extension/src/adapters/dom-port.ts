@@ -222,6 +222,16 @@ class DocumentDomPort implements ConsumerDomPort {
 		}
 		if (element instanceof HTMLElement && element.isContentEditable) {
 			element.focus();
+			const selection = this.#document.getSelection?.();
+			if (selection) {
+				const range = this.#document.createRange();
+				range.selectNodeContents(element);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			}
+			if (typeof this.#document.execCommand === "function" && this.#document.execCommand("insertText", false, value)) {
+				return;
+			}
 			element.textContent = value;
 			element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
 			return;
@@ -295,8 +305,16 @@ function readEvidenceViewportRect(
 ): EvidenceViewportRect | null {
 	if (!request.evidenceViewport) return null;
 	const prompts = [...document.querySelectorAll(request.evidenceViewport.promptSelector)].filter(isDomElementVisible);
-	if (prompts.length !== 1) throw new Error("Current prompt is missing or ambiguous for visual evidence");
-	const elements = [prompts[0] as Element, answer];
+	const expectedPrompt = request.evidenceViewport.promptText;
+	if (
+		prompts.length < 1 ||
+		(expectedPrompt
+			? prompts.some((prompt) => normalizeEvidenceText(visibleText(prompt)) !== normalizeEvidenceText(expectedPrompt))
+			: prompts.length !== 1)
+	) {
+		throw new Error("Current prompt is missing or ambiguous for visual evidence");
+	}
+	const elements = [...prompts, answer];
 	const { completionSelector, companionSelector } = request.evidenceViewport;
 	if (Boolean(completionSelector) !== Boolean(companionSelector)) {
 		throw new Error("Visual evidence completion selectors are incomplete");
@@ -325,11 +343,11 @@ function readEvidenceViewportRect(
 	if (viewport.width === null || viewport.height === null) {
 		throw new Error("Current evidence viewport has invalid geometry");
 	}
-	const answerRect = rects[1];
+	const answerRect = rects[prompts.length];
 	if (!answerRect || !hasPositiveViewportIntersection(answerRect, viewport)) {
 		throw new Error("Current answer is outside the visible viewport");
 	}
-	const actionGroupRect = rects[2];
+	const actionGroupRect = completionSelector ? rects[prompts.length + 1] : undefined;
 	if (actionGroupRect && !hasPositiveViewportIntersection(actionGroupRect, viewport)) {
 		throw new Error("Current completion action group is outside the visible viewport");
 	}
@@ -739,6 +757,10 @@ function isRootPageScrollingElement(element: Element): boolean {
 
 function visibleText(element: Element): string {
 	return (element instanceof HTMLElement ? element.innerText : (element.textContent ?? "")).trim();
+}
+
+function normalizeEvidenceText(value: string): string {
+	return value.normalize("NFKC").replace(/\s+/gu, " ").trim();
 }
 
 function setNativeValue(element: HTMLInputElement | HTMLTextAreaElement, value: string): void {
