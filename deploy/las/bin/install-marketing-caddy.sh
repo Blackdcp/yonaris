@@ -5,8 +5,9 @@ umask 077
 
 if [[ "${1:-}" == "--inside-host" ]]; then
   legacy_fragment="${2:?Missing expected legacy Caddy fragment}"
-  marketing_fragment="${3:?Missing marketing Caddy fragment}"
-  target_config="${4:?Missing target Caddy config}"
+  previous_marketing_fragment="${3:?Missing previous marketing Caddy fragment}"
+  marketing_fragment="${4:?Missing marketing Caddy fragment}"
+  target_config="${5:?Missing target Caddy config}"
   target_dir="$(cd -- "$(dirname -- "$target_config")" && pwd -P)"
   target_config="$target_dir/$(basename -- "$target_config")"
   state_dir="$(mktemp -d "$target_dir/.yonaris-caddy.XXXXXXXX")"
@@ -21,6 +22,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   backup_config="$state_dir/Caddyfile.backup"
   extracted_block="$state_dir/yonaris-apex.block"
   apex_response="$state_dir/apex-response.html"
+  agent_response="$state_dir/agent-response.txt"
   changed_config=false
   keep_state_dir=false
 
@@ -74,7 +76,7 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     fi
   }
 
-  for required_file in "$legacy_fragment" "$marketing_fragment" "$target_config"; do
+  for required_file in "$legacy_fragment" "$previous_marketing_fragment" "$marketing_fragment" "$target_config"; do
     if [[ ! -f "$required_file" ]]; then
       echo "Missing required Caddy file: $required_file" >&2
       exit 1
@@ -92,8 +94,20 @@ if [[ "${1:-}" == "--inside-host" ]]; then
   if sed -n "${start_line},/^}$/p" "$target_config" >"$extracted_block" &&
     cmp -s -- "$extracted_block" "$marketing_fragment"; then
     install -o root -g root -m 0644 -- "$target_config" "$candidate_config"
-  elif cmp -s -- "$extracted_block" "$legacy_fragment"; then
-    block_lines="$(wc -l <"$legacy_fragment" | tr -d '[:space:]')"
+  else
+    reviewed_previous_fragment=""
+    if cmp -s -- "$extracted_block" "$previous_marketing_fragment"; then
+      reviewed_previous_fragment="$previous_marketing_fragment"
+    elif cmp -s -- "$extracted_block" "$legacy_fragment"; then
+      reviewed_previous_fragment="$legacy_fragment"
+    fi
+
+    if [[ -z "$reviewed_previous_fragment" ]]; then
+      echo "The live Yonaris Caddy block does not match any reviewed state; refusing to edit it." >&2
+      exit 1
+    fi
+
+    block_lines="$(wc -l <"$reviewed_previous_fragment" | tr -d '[:space:]')"
     {
       if (( start_line > 1 )); then
         head -n "$((start_line - 1))" "$target_config"
@@ -104,9 +118,6 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     chown root:root "$candidate_config"
     chmod 0644 "$candidate_config"
     changed_config=true
-  else
-    echo "The live Yonaris Caddy block does not match either reviewed state; refusing to edit it." >&2
-    exit 1
   fi
 
   caddy validate --config "$candidate_config" --adapter caddyfile >/dev/null
@@ -135,9 +146,18 @@ if [[ "${1:-}" == "--inside-host" ]]; then
     exit 1
   fi
 
+  if ! agent_status="$(curl --insecure --silent --show-error --max-time 15 \
+    --output "$agent_response" --write-out '%{http_code}' \
+    --resolve yonaris.com:443:127.0.0.1 https://yonaris.com/agent/company)"; then
+    echo "The direct agent-route health check could not connect." >&2
+    restore_or_emergency_exit
+    exit 1
+  fi
+
   if [[ "$apex_status" != 200 ]] || ! grep -Fq "Product Truth" "$apex_response" ||
-    [[ "$portal_status" != 200 ]]; then
-    echo "Post-reload checks failed (apex=$apex_status, portal=$portal_status)." >&2
+    [[ "$portal_status" != 200 ]] || [[ "$agent_status" != 200 ]] ||
+    ! grep -Fq "AI-native MarTech" "$agent_response"; then
+    echo "Post-reload checks failed (apex=$apex_status, portal=$portal_status, agent=$agent_status)." >&2
     restore_or_emergency_exit
     exit 1
   fi
@@ -153,6 +173,7 @@ fi
 
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/yonaris}"
 legacy_fragment="${CADDY_LEGACY_FRAGMENT:-$DEPLOY_ROOT/source/deploy/las/caddy/yonaris-redirect.caddy}"
+previous_marketing_fragment="${CADDY_PREVIOUS_MARKETING_FRAGMENT:-$DEPLOY_ROOT/source/deploy/las/caddy/yonaris-marketing-v1.caddy}"
 marketing_fragment="${CADDY_MARKETING_FRAGMENT:-$DEPLOY_ROOT/source/deploy/las/caddy/yonaris-marketing.caddy}"
 target_config="${CADDY_TARGET_CONFIG:-/etc/caddy/Caddyfile}"
 helper_image="${CADDY_HELPER_IMAGE:?Set CADDY_HELPER_IMAGE to the deployed marketing image}"
@@ -164,5 +185,5 @@ docker run --rm \
   --entrypoint /bin/sh \
   --volume /:/host \
   "$helper_image" \
-  -c 'exec chroot /host /usr/bin/env bash "$1" --inside-host "$2" "$3" "$4"' \
-  sh "$script_path" "$legacy_fragment" "$marketing_fragment" "$target_config"
+  -c 'exec chroot /host /usr/bin/env bash "$1" --inside-host "$2" "$3" "$4" "$5"' \
+  sh "$script_path" "$legacy_fragment" "$previous_marketing_fragment" "$marketing_fragment" "$target_config"
