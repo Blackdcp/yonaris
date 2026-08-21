@@ -46,7 +46,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Zhipu",
 		captureRoute: "browser_extension.zhipu",
 		launchUrl: "https://chatglm.cn/",
-		adapterVersion: "zhipu-web-20260821-localpc-v1",
+		adapterVersion: "zhipu-web-20260822-localpc-v2",
 	},
 ] as const;
 

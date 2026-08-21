@@ -205,10 +205,31 @@ class DocumentDomPort implements ConsumerDomPort {
 		);
 	}
 
-	async click(_role: DomElementRole, selector: string, index: number): Promise<void> {
+	async click(role: DomElementRole, selector: string, index: number): Promise<void> {
 		const element = this.#at(selector, index);
 		if (!(element instanceof HTMLElement)) throw new Error("Selected action is not an HTML element");
-		element.click();
+		if (role !== "send") {
+			element.click();
+			return;
+		}
+		const rect = element.getBoundingClientRect();
+		const common = {
+			bubbles: true,
+			cancelable: true,
+			composed: true,
+			clientX: rect.left + rect.width / 2,
+			clientY: rect.top + rect.height / 2,
+			button: 0,
+		};
+		element.dispatchEvent(
+			new PointerEvent("pointerdown", { ...common, buttons: 1, pointerId: 1, pointerType: "mouse", isPrimary: true }),
+		);
+		element.dispatchEvent(new MouseEvent("mousedown", { ...common, buttons: 1 }));
+		element.dispatchEvent(
+			new PointerEvent("pointerup", { ...common, buttons: 0, pointerId: 1, pointerType: "mouse", isPrimary: true }),
+		);
+		element.dispatchEvent(new MouseEvent("mouseup", { ...common, buttons: 0 }));
+		element.dispatchEvent(new MouseEvent("click", { ...common, buttons: 0 }));
 	}
 
 	async fill(_role: "composer", selector: string, index: number, value: string): Promise<void> {

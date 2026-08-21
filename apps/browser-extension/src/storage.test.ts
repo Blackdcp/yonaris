@@ -63,7 +63,7 @@ describe("DeviceStorage", () => {
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260821-localpc-v1",
+				adapterVersion: "zhipu-web-20260822-localpc-v2",
 				activeConcurrency: 0,
 			},
 		});

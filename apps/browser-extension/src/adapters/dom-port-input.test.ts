@@ -3,6 +3,24 @@ import { describe, expect, test, vi } from "vitest";
 import { createDocumentDomPort } from "./dom-port";
 
 describe("Document DOM input", () => {
+	test("dispatches the complete pointer and mouse gesture required by provider send controls", async () => {
+		const { document, window } = parseHTML('<div class="send-control"></div>');
+		const sendControl = document.querySelector<HTMLElement>(".send-control");
+		if (!sendControl) throw new Error("send control fixture is missing");
+		const events: string[] = [];
+		for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) {
+			sendControl.addEventListener(type, () => events.push(type));
+		}
+		vi.stubGlobal("HTMLElement", window.HTMLElement);
+		vi.stubGlobal("PointerEvent", window.Event);
+		vi.stubGlobal("MouseEvent", window.Event);
+
+		const port = createDocumentDomPort(document, { href: "https://chatglm.cn/" } as Location);
+		await port.click("send", ".send-control", 0);
+
+		expect(events).toEqual(["pointerdown", "mousedown", "pointerup", "mouseup", "click"]);
+	});
+
 	test("uses beforeinput for Slate so the provider state enables sending", async () => {
 		const { document, window } = parseHTML(`
 			<div data-slate-editor="true" role="textbox" contenteditable="true">

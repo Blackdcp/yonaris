@@ -8,7 +8,7 @@ describe("Zhipu semantic DOM contract", () => {
 			<div class="new-session"><span>新对话</span></div>
 			<div id="search-input-box">
 				<textarea class="scroll-display-none"></textarea>
-				<div class="enter is-main-chat"><img class="enter_icon"></div>
+				<div class="enter is-main-chat"><div class="enter-icon-container"><img class="enter_icon"></div></div>
 				<div class="enter is-main-chat searching"></div>
 			</div>
 			<div id="row-question-p-0" class="question-txt"><span>Prompt A</span></div>
@@ -27,6 +27,25 @@ describe("Zhipu semantic DOM contract", () => {
 			"Current answer",
 		]);
 		expect(document.querySelectorAll(zhipuSelectorContract.generating)).toHaveLength(1);
+	});
+
+	test("targets the live inner send control that owns the click handler", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div id="search-input-box">
+				<div class="enter is-main-chat"><div class="enter-icon-container"><img class="enter_icon"></div></div>
+			</div>
+		</body></html>`);
+		const liveSendControl = document.querySelector<HTMLElement>(".enter-icon-container");
+		let submitted = 0;
+		liveSendControl?.addEventListener("click", () => {
+			submitted += 1;
+		});
+
+		const matchedSendControl = document.querySelector<HTMLElement>(zhipuSelectorContract.send);
+		matchedSendControl?.click();
+
+		expect(matchedSendControl).toBe(liveSendControl);
+		expect(submitted).toBe(1);
 	});
 
 	test("detects the exact guest login marker and does not invent provider search terms", () => {
