@@ -54,6 +54,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 
 	async openNewConversation(): Promise<void> {
 		await this.preflight();
+		if (await this.#isBlankKimiLaunch()) return;
 		const action = await this.#newConversationAction();
 		await this.#port.click("new_conversation", this.#contract.newConversation, action.index);
 		const timeoutAt = this.#port.now() + NEW_CONVERSATION_TIMEOUT_MS;
@@ -313,7 +314,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			lastComposerCount = composer.length;
 			lastSendCount = send.length;
 			lastConversationActionCount = conversationActions.length;
-			if (composer.length === 1 && send.length === 1 && conversationActions.length === 1) return;
+			const blankKimiLaunch = await this.#isBlankKimiLaunch();
+			if (composer.length === 1 && send.length === 1 && (conversationActions.length === 1 || blankKimiLaunch)) return;
 			await this.#port.wait(POLL_INTERVAL_MS);
 		}
 		throw this.#error(
@@ -349,6 +351,20 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		return expected
 			? visible.filter(({ element }) => firstVisibleTextLine(element.text) === normalizeText(expected))
 			: visible;
+	}
+
+	async #isBlankKimiLaunch(): Promise<boolean> {
+		if (this.surface !== "kimi.consumer_web") return false;
+		let current: URL;
+		try {
+			current = new URL(this.#port.currentUrl());
+		} catch {
+			return false;
+		}
+		if (current.pathname !== "/") return false;
+		const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
+		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
+		return answers.length === 0 && messages.length === 0;
 	}
 
 	#assertApprovedUrl(requireConversation: boolean): void {

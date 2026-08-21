@@ -170,6 +170,7 @@ export class FixtureDomPort implements ConsumerDomPort {
 			return;
 		}
 		if (role === "send") {
+			this.#conversationOpened = true;
 			this.#submitted = true;
 			this.submitCount += 1;
 		}
