@@ -63,6 +63,23 @@ describe("Zhipu semantic DOM contract", () => {
 		expect(matchedSendControls[0]).toBe(outerSendControl);
 	});
 
+	test("treats one answer row with split Markdown and Mermaid blocks as one answer", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div id="row-answer-0" class="answer">
+				<div class="answer-content-wrap">
+					<div class="markdown-body"><p>Answer before chart</p></div>
+					<div class="markdown-body md-code" style="display:none"><pre>hidden Mermaid source</pre></div>
+					<div class="markdown-body"><p>Answer after chart</p></div>
+				</div>
+			</div>
+		</body></html>`);
+
+		const answers = document.querySelectorAll(zhipuSelectorContract.answer);
+
+		expect(answers).toHaveLength(1);
+		expect(answers[0]?.classList.contains("answer-content-wrap")).toBe(true);
+	});
+
 	test("detects the exact guest login marker and does not invent provider search terms", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div class="sidebar-avatar guest-avatar"></div>

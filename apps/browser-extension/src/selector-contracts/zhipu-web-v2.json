@@ -9,7 +9,7 @@
 	"newConversation": ".new-session",
 	"newConversationLabel": "新对话",
 	"userMessage": "[id^=\"row-question-p-\"].question-txt",
-	"answer": "[id^=\"row-answer-\"].answer .answer-content-wrap .markdown-body",
+	"answer": "[id^=\"row-answer-\"].answer .answer-content-wrap",
 	"generating": "#search-input-box .enter.searching",
 	"completion": null,
 	"completionCompanion": null,
