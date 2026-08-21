@@ -88,6 +88,7 @@ jobs:
             "https://portal.yonaris.com/*",
             "https://*.doubao.com/*",
             "https://chat.deepseek.com/*",
+            "https://qianwen.com/*",
             "https://www.qianwen.com/*",
             "https://www.kimi.com/*",
             "https://wenxin.baidu.com/*",
