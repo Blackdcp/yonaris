@@ -13,6 +13,31 @@ cat >"$TEST_ROOT/bin/caddy" <<'EOF'
 exit 0
 EOF
 
+cat >"$TEST_ROOT/bin/chown" <<'EOF'
+#!/usr/bin/env sh
+exit 0
+EOF
+
+cat >"$TEST_ROOT/bin/install" <<'EOF'
+#!/usr/bin/env sh
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o | -g | -m)
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+cp -- "$1" "$2"
+chmod 0644 "$2"
+EOF
+
 cat >"$TEST_ROOT/bin/curl" <<'EOF'
 #!/usr/bin/env sh
 output=""
@@ -45,7 +70,7 @@ fi
 printf '200'
 EOF
 
-chmod +x "$TEST_ROOT/bin/caddy" "$TEST_ROOT/bin/curl"
+chmod +x "$TEST_ROOT/bin/caddy" "$TEST_ROOT/bin/chown" "$TEST_ROOT/bin/curl" "$TEST_ROOT/bin/install"
 
 cat >"$TEST_ROOT/legacy.caddy" <<'EOF'
 yonaris.com, www.yonaris.com {
