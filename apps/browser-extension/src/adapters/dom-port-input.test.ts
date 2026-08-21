@@ -119,7 +119,7 @@ describe("Document DOM input", () => {
 
 	test("keeps a normally scrolled user message available for submitted-prompt identity checks", async () => {
 		const { document, window } = parseHTML(`<!doctype html><html><body>
-			<div class="scroll-container"><div class="user-message">Prompt A</div></div>
+			<div class="outer-clip"><div class="scroll-container"><div class="user-message">Prompt A</div></div></div>
 		</body></html>`);
 		Object.defineProperty(document, "scrollingElement", { value: document.documentElement, configurable: true });
 		Object.defineProperty(window, "innerWidth", { value: 800, configurable: true });
@@ -148,8 +148,16 @@ describe("Document DOM input", () => {
 						transform: "none",
 						translate: "none",
 						scale: "none",
-						overflowX: element.getAttribute("class") === "scroll-container" ? "hidden" : "visible",
-						overflowY: element.getAttribute("class") === "scroll-container" ? "auto" : "visible",
+						overflowX:
+							element.getAttribute("class") === "scroll-container" || element.getAttribute("class") === "outer-clip"
+								? "hidden"
+								: "visible",
+						overflowY:
+							element.getAttribute("class") === "scroll-container"
+								? "auto"
+								: element.getAttribute("class") === "outer-clip"
+									? "hidden"
+									: "visible",
 						contain: element.getAttribute("class") === "scroll-container" ? "strict" : "none",
 						direction: "ltr",
 						clipPath: "none",

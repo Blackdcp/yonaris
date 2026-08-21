@@ -214,7 +214,7 @@ async function pairedStorageWithManualTask(): Promise<DeviceStorage> {
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260821-localpc-v7",
+			adapterVersion: "deepseek-web-20260821-localpc-v8",
 			activeConcurrency: 0,
 		},
 	});

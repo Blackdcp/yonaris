@@ -11,7 +11,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "DeepSeek",
 		captureRoute: "browser_extension.deepseek",
 		launchUrl: "https://chat.deepseek.com/",
-		adapterVersion: "deepseek-web-20260821-localpc-v7",
+		adapterVersion: "deepseek-web-20260821-localpc-v8",
 	},
 	{
 		key: "qwen.consumer_web",
@@ -25,14 +25,14 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Kimi",
 		captureRoute: "browser_extension.kimi",
 		launchUrl: "https://www.kimi.com/",
-		adapterVersion: "kimi-web-20260821-localpc-v6",
+		adapterVersion: "kimi-web-20260821-localpc-v7",
 	},
 	{
 		key: "wenxin.consumer_web",
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
 		launchUrl: "https://wenxin.baidu.com/",
-		adapterVersion: "wenxin-web-20260821-localpc-v6",
+		adapterVersion: "wenxin-web-20260821-localpc-v7",
 	},
 	{
 		key: "yuanbao.consumer_web",
