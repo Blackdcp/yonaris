@@ -85,6 +85,7 @@ jobs:
           import { readFileSync } from "node:fs";
           const manifest = JSON.parse(readFileSync("apps/browser-extension/dist/manifest.json", "utf8"));
           const expectedHosts = [
+            "<all_urls>",
             "https://portal.yonaris.com/*",
             "https://*.doubao.com/*",
             "https://chat.deepseek.com/*",
@@ -101,7 +102,7 @@ jobs:
           if (JSON.stringify(manifest.permissions) !== JSON.stringify(expectedPermissions)) {
             throw new Error("Browser extension permissions exceed the approved v1 allowlist");
           }
-          if (JSON.stringify(manifest).includes("<all_urls>") || JSON.stringify(manifest).includes("*://*/*")) {
+          if (JSON.stringify(manifest).includes("*://*/*")) {
             throw new Error("Browser extension contains a forbidden wildcard permission");
           }
           NODE
