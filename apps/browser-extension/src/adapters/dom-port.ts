@@ -236,18 +236,19 @@ class DocumentDomPort implements ConsumerDomPort {
 				inputType: "insertText",
 				data: value,
 			});
-			if (!element.dispatchEvent(beforeInput)) {
-				if (normalizeEvidenceText(visibleText(element)) !== normalizeEvidenceText(value)) {
-					throw new Error("Controlled composer did not accept the prompt");
-				}
-				return;
+			const beforeInputAccepted = element.dispatchEvent(beforeInput);
+			if (await waitForStableComposerText(element, value, 250)) return;
+			const browserEditAccepted =
+				typeof this.#document.execCommand === "function" && this.#document.execCommand("insertText", false, value);
+			if (browserEditAccepted) {
+				if (await waitForStableComposerText(element, value, 1_500)) return;
+				throw new Error("Controlled composer did not accept the prompt");
 			}
-			if (typeof this.#document.execCommand === "function" && this.#document.execCommand("insertText", false, value)) {
-				return;
-			}
+			if (!beforeInputAccepted) throw new Error("Controlled composer did not accept the prompt");
 			element.textContent = value;
 			element.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText", data: value }));
-			return;
+			if (await waitForStableComposerText(element, value, 500)) return;
+			throw new Error("Controlled composer did not accept the prompt");
 		}
 		throw new Error("Selected composer is not editable");
 	}
@@ -309,6 +310,22 @@ class DocumentDomPort implements ConsumerDomPort {
 		if (!element) throw new Error("Approved element disappeared");
 		return element;
 	}
+}
+
+async function waitForStableComposerText(element: HTMLElement, value: string, timeoutMs: number): Promise<boolean> {
+	const expected = normalizeEvidenceText(value);
+	const deadline = Date.now() + timeoutMs;
+	let exactSince: number | null = null;
+	while (Date.now() <= deadline) {
+		if (normalizeEvidenceText(visibleText(element)) === expected) {
+			exactSince ??= Date.now();
+			if (Date.now() - exactSince >= 100) return true;
+		} else {
+			exactSince = null;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 25));
+	}
+	return false;
 }
 
 function readEvidenceViewportRect(

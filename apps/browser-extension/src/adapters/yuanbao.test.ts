@@ -13,7 +13,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v5");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v6");
 		expect(adapter.surface).toBe("yuanbao.consumer_web");
 	});
 
@@ -53,7 +53,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260821-localpc-v5",
+			adapterVersion: "yuanbao-web-20260821-localpc-v6",
 		});
 	});
 
