@@ -781,6 +781,8 @@ function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncest
 	let right = rect.right;
 	let top = rect.top;
 	let bottom = rect.bottom;
+	let hasScrollingDescendantX = false;
+	let hasScrollingDescendantY = false;
 	if (!(right > left) || !(bottom > top)) return false;
 
 	let current = clippingAncestor;
@@ -792,11 +794,13 @@ function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncest
 			const overflowX = style.overflowX.trim().toLocaleLowerCase("en-US");
 			const overflowY = style.overflowY.trim().toLocaleLowerCase("en-US");
 			const clipsX =
-				(clipsPaint && !scrollsOverflowAxis(overflowX)) ||
-				(establishesClippingBox && (overflowX === "hidden" || overflowX === "clip"));
+				!hasScrollingDescendantX &&
+				((clipsPaint && !scrollsOverflowAxis(overflowX)) ||
+					(establishesClippingBox && (overflowX === "hidden" || overflowX === "clip")));
 			const clipsY =
-				(clipsPaint && !scrollsOverflowAxis(overflowY)) ||
-				(establishesClippingBox && (overflowY === "hidden" || overflowY === "clip"));
+				!hasScrollingDescendantY &&
+				((clipsPaint && !scrollsOverflowAxis(overflowY)) ||
+					(establishesClippingBox && (overflowY === "hidden" || overflowY === "clip")));
 			if (clipsX || clipsY) {
 				const clip = current.getBoundingClientRect();
 				if ((clipsX && !(clip.right > clip.left)) || (clipsY && !(clip.bottom > clip.top))) return false;
@@ -810,6 +814,8 @@ function hasPositiveNonScrollingClipIntersection(rect: RectEdges, clippingAncest
 				}
 				if (!(right > left) || !(bottom > top)) return false;
 			}
+			hasScrollingDescendantX ||= scrollsOverflowAxis(overflowX);
+			hasScrollingDescendantY ||= scrollsOverflowAxis(overflowY);
 		}
 		current = current.parentElement;
 	}
