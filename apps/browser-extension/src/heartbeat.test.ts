@@ -41,7 +41,7 @@ describe("buildHeartbeat", () => {
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v9",
+				adapterVersion: "kimi-web-20260821-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
@@ -89,7 +89,7 @@ describe("buildHeartbeat", () => {
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v9",
+				adapterVersion: "kimi-web-20260821-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {

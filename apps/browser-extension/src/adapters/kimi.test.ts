@@ -5,7 +5,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260821-localpc-v9",
+			version: "kimi-web-20260821-localpc-v10",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
@@ -23,6 +23,22 @@ describe("Kimi browser-extension adapter", () => {
 		);
 
 		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
+	});
+
+	test("uses an already blank Kimi launch page without requiring a new-conversation control", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				newConversationLabels: [],
+				sendMatchesBeforeFill: 0,
+				sendMatches: 1,
+			}),
+		);
+
+		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.clickedText).toBeNull();
 		expect(port.submitCount).toBe(1);
 	});
 
@@ -48,7 +64,7 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260821-localpc-v9",
+			adapterVersion: "kimi-web-20260821-localpc-v10",
 		});
 	});
 
