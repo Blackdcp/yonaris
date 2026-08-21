@@ -47,6 +47,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Verify marketing proxy routes
+        run: |
+          node --test deploy/las/caddy/yonaris-marketing.test.mjs
+          bash deploy/las/bin/install-marketing-caddy.test.sh
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
