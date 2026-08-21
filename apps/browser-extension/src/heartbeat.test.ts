@@ -26,7 +26,7 @@ describe("buildHeartbeat", () => {
 		expect(heartbeat.readiness).toEqual({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
@@ -36,22 +36,22 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v4",
+				adapterVersion: "qwen-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v3",
+				adapterVersion: "kimi-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v3",
+				adapterVersion: "wenxin-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v4",
+				adapterVersion: "yuanbao-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 		});
@@ -61,7 +61,7 @@ describe("buildHeartbeat", () => {
 		const heartbeat = buildHeartbeat("Mozilla/5.0 (Windows NT 10.0) Chrome/140.0.1 Safari/537.36", {
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
@@ -74,7 +74,7 @@ describe("buildHeartbeat", () => {
 		expect(heartbeat.readiness).toEqual({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
@@ -84,22 +84,22 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v4",
+				adapterVersion: "qwen-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v3",
+				adapterVersion: "kimi-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v3",
+				adapterVersion: "wenxin-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v4",
+				adapterVersion: "yuanbao-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 		});

@@ -22,6 +22,7 @@ const STABLE_ANSWER_MS = 8_000;
 const POLL_INTERVAL_MS = 250;
 const PAGE_READY_TIMEOUT_MS = 15_000;
 const NEW_CONVERSATION_TIMEOUT_MS = 15_000;
+const SEND_APPEARS_AFTER_FILL_SURFACES = new Set(["qwen.consumer_web", "kimi.consumer_web", "yuanbao.consumer_web"]);
 
 export function createConsumerAdapter(port: ConsumerDomPort, contract: SelectorContract): ConsumerWebAdapter {
 	return new ConsumerAdapter(port, validateSelectorContract(contract));
@@ -72,7 +73,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		this.#assertApprovedUrl(false);
 		await this.#assertUnblocked();
 		await this.#waitForUniqueVisible("composer", this.#contract.composer);
-		if (this.surface !== "doubao.consumer_web") await this.#waitForUniqueVisible("send", this.#contract.send);
+		if (this.surface !== "doubao.consumer_web" && !SEND_APPEARS_AFTER_FILL_SURFACES.has(this.surface)) {
+			await this.#waitForUniqueVisible("send", this.#contract.send);
+		}
 		this.#answerCountBeforeSubmit = visibleElements(await this.#port.query("answer", this.#contract.answer)).length;
 		this.#preparedPrompt = prompt;
 	}
@@ -141,14 +144,15 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		let stableText = "";
 		let stableSince = 0;
 		let answerContainersAmbiguous = false;
+		const runtimeCompletionSelector = this.surface === "doubao.consumer_web" ? null : this.#contract.completion;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertConfirmedConversation();
 			await this.#assertUnblocked();
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
-			let completionConfirmed = this.#contract.completion ? generatingSeen : true;
-			if (this.#contract.completion) {
+			let completionConfirmed = runtimeCompletionSelector ? generatingSeen : true;
+			if (runtimeCompletionSelector) {
 				if (!this.#contract.completionCompanion || !this.#port.readCompletionState) {
 					throw this.#error("page_drift", "Completion binding contract is unavailable");
 				}
@@ -156,7 +160,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				try {
 					completionState = await this.#port.readCompletionState({
 						answerSelector: this.#contract.answer,
-						completionSelector: this.#contract.completion,
+						completionSelector: runtimeCompletionSelector,
 						companionSelector: this.#contract.completionCompanion,
 					});
 				} catch {
@@ -199,6 +203,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		await this.#assertSubmittedPromptStillCurrent();
 		let snapshot: AnswerDomSnapshot;
 		try {
+			const captureCompletionSelector = this.surface === "doubao.consumer_web" ? null : this.#contract.completion;
 			snapshot = await this.#port.readAnswer({
 				answerSelector: this.#contract.answer,
 				answerIndex,
@@ -210,8 +215,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				evidenceViewport: {
 					promptSelector: this.#contract.userMessage,
 					promptText: this.#preparedPrompt ?? "",
-					completionSelector: this.#contract.completion,
-					companionSelector: this.#contract.completionCompanion,
+					completionSelector: captureCompletionSelector,
+					companionSelector: captureCompletionSelector ? this.#contract.completionCompanion : null,
 				},
 			});
 		} catch {
@@ -295,7 +300,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			await this.#assertUnblocked();
 			const composer = visibleElements(await this.#port.query("composer", this.#contract.composer));
 			const send =
-				this.surface === "doubao.consumer_web"
+				this.surface === "doubao.consumer_web" || SEND_APPEARS_AFTER_FILL_SURFACES.has(this.surface)
 					? [{ element: { text: "", visible: true }, index: 0 }]
 					: visibleElements(await this.#port.query("send", this.#contract.send));
 			const conversationActions = await this.#newConversationActions();

@@ -13,8 +13,23 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v4");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260821-localpc-v5");
 		expect(adapter.surface).toBe("yuanbao.consumer_web");
+	});
+
+	test("waits for the enabled send action until after the prompt is filled", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://yuanbao.tencent.com/chat/new-session",
+				conversationUrl: "https://yuanbao.tencent.com/chat/yuanbao-session",
+				newConversationLabels: ["新建对话"],
+				sendMatchesBeforeFill: 0,
+				sendMatches: 1,
+			}),
+		);
+
+		await expect(port.completeOneTask(createYuanbaoAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
 	});
 
 	test("collects one structured answer with direct citations and visual evidence", async () => {
@@ -38,7 +53,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260821-localpc-v4",
+			adapterVersion: "yuanbao-web-20260821-localpc-v5",
 		});
 	});
 

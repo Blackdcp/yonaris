@@ -33,7 +33,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadSurfaceReadiness()).resolves.toEqual({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {
@@ -43,22 +43,22 @@ describe("DeviceStorage", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v4",
+				adapterVersion: "qwen-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v3",
+				adapterVersion: "kimi-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v3",
+				adapterVersion: "wenxin-web-20260821-localpc-v4",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v4",
+				adapterVersion: "yuanbao-web-20260821-localpc-v5",
 				activeConcurrency: 0,
 			},
 		});
@@ -86,7 +86,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 			"doubao.consumer_web": {
 				status: "adapter_incompatible",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
@@ -113,7 +113,7 @@ describe("DeviceStorage", () => {
 			await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 				"doubao.consumer_web": {
 					status: "adapter_incompatible",
-					adapterVersion: "doubao-web-20260821-localpc-v10",
+					adapterVersion: "doubao-web-20260821-localpc-v11",
 				},
 			});
 		},
@@ -135,7 +135,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 			"doubao.consumer_web": {
 				status: "adapter_incompatible",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 			},
 		});
 	});
@@ -145,7 +145,7 @@ describe("DeviceStorage", () => {
 		await storage.saveSurfaceReadiness({
 			"doubao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "doubao-web-20260821-localpc-v10",
+				adapterVersion: "doubao-web-20260821-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"deepseek.consumer_web": {

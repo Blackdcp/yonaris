@@ -5,10 +5,25 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Qwen browser-extension adapter", () => {
 	test("declares the registered Qwen surface and adapter version", () => {
 		expect(qwenSelectorContract).toMatchObject({
-			version: "qwen-web-20260821-localpc-v4",
+			version: "qwen-web-20260821-localpc-v5",
 			surface: "qwen.consumer_web",
 			launchUrl: "https://www.qianwen.com/",
 		});
+	});
+
+	test("waits for the enabled send action until after the prompt is filled", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.qianwen.com/",
+				conversationUrl: "https://www.qianwen.com/chat/qwen-session",
+				newConversationLabels: ["新建对话"],
+				sendMatchesBeforeFill: 0,
+				sendMatches: 1,
+			}),
+		);
+
+		await expect(port.completeOneTask(createQwenAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
 	});
 
 	test("accepts both official Qwen canonical host variants", async () => {
@@ -46,7 +61,7 @@ describe("Qwen browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/qwen", title: "千问来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "qwen-web-20260821-localpc-v4",
+			adapterVersion: "qwen-web-20260821-localpc-v5",
 		});
 	});
 

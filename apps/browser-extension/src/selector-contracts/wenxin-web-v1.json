@@ -1,11 +1,11 @@
 {
-	"version": "wenxin-web-20260821-localpc-v3",
+	"version": "wenxin-web-20260821-localpc-v4",
 	"surface": "wenxin.consumer_web",
 	"launchUrl": "https://wenxin.baidu.com/",
 	"conversationPathPattern": "^/search/[0-9]{4,30}/?$",
 	"conversationSearchPattern": "^\\?enter_type=chat_url$",
 	"composer": "textarea#chat-textarea.ci-textarea[data-ai-placeholder]",
-	"send": ".ci-submit-button",
+	"send": "#ci-submit-button-ai.ci-submit-button-ai-active",
 	"newConversation": ".new-dialog-container-button",
 	"newConversationLabel": "开启新对话",
 	"userMessage": ".conversation-flow-question-container .cs-question-pure-text",

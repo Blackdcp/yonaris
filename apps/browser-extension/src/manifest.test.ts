@@ -13,7 +13,7 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.3.4");
+		expect(manifest.version).toBe("0.3.5");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});
@@ -30,6 +30,7 @@ describe("Manifest V3 permissions", () => {
 		expect(manifest.manifest_version).toBe(3);
 		expect(manifest.permissions).toEqual(["storage", "alarms", "tabs", "scripting", "notifications"]);
 		expect(manifest.host_permissions).toEqual([
+			"<all_urls>",
 			"https://portal.yonaris.com/*",
 			"https://*.doubao.com/*",
 			"https://chat.deepseek.com/*",
@@ -39,7 +40,8 @@ describe("Manifest V3 permissions", () => {
 			"https://wenxin.baidu.com/*",
 			"https://yuanbao.tencent.com/*",
 		]);
-		expect(JSON.stringify(manifest)).not.toContain("<all_urls>");
+		// Chrome requires <all_urls> or a per-tab user gesture via activeTab for captureVisibleTab.
+		// The runner captures only the six explicitly matched content-script surfaces below.
 		expect(manifest.content_scripts).toEqual([
 			{
 				matches: [
