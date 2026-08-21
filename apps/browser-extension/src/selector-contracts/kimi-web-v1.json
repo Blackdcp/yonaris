@@ -1,5 +1,5 @@
 {
-	"version": "kimi-web-20260821-localpc-v4",
+	"version": "kimi-web-20260821-localpc-v5",
 	"surface": "kimi.consumer_web",
 	"launchUrl": "https://www.kimi.com/",
 	"conversationPathPattern": "^/(?:chat/[A-Za-z0-9_-]{4,200})?/?$",

@@ -4,7 +4,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
 	test("uses the structured DeepSeek v2 contract", () => {
-		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v5");
+		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v6");
 	});
 	test("waits for the page composer to become ready before declaring page drift", async () => {
 		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
@@ -153,7 +153,7 @@ describe("DeepSeek browser-extension adapter", () => {
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 			citations: [{ url: "https://example.com/a", title: "Source A" }],
 			webQueries: ["国产大模型", "大模型公司"],
-			adapterVersion: "deepseek-web-20260821-localpc-v5",
+			adapterVersion: "deepseek-web-20260821-localpc-v6",
 		});
 	});
 
@@ -165,9 +165,30 @@ describe("DeepSeek browser-extension adapter", () => {
 		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
 	});
 
+	test("accepts the exact submitted prompt when another visible user message is also present", async () => {
+		const port = new FixtureDomPort(createAdapterFixture({ submittedPromptTexts: ["Earlier prompt", "Prompt A"] }));
+		const adapter = createDeepSeekAdapter(port, searchTestContract());
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+	});
+
 	test("resumes when the preserved page contains duplicate exact prompt DOM copies", async () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({ initiallySubmitted: true, submittedPrompt: "Prompt A", submittedPromptCopies: 2 }),
+		);
+		const adapter = createDeepSeekAdapter(port, searchTestContract());
+
+		await expect(adapter.resumeSubmitted("Prompt A")).resolves.toBeUndefined();
+	});
+
+	test("resumes when the preserved page contains the exact prompt plus another visible message", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				initiallySubmitted: true,
+				submittedPrompt: "Prompt A",
+				submittedPromptTexts: ["Earlier prompt", "Prompt A"],
+			}),
 		);
 		const adapter = createDeepSeekAdapter(port, searchTestContract());
 

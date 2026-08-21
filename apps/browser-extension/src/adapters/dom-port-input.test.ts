@@ -12,7 +12,10 @@ describe("Document DOM input", () => {
 		const composer = document.querySelector('[data-slate-editor="true"]');
 		if (!(composer instanceof window.HTMLElement)) throw new Error("Slate composer fixture is missing");
 		Object.defineProperty(composer, "isContentEditable", { value: true });
-		const execCommand = vi.fn(() => true);
+		const execCommand = vi.fn((_command: string, _showUi: boolean, value: string) => {
+			composer.textContent = value;
+			return true;
+		});
 		Object.defineProperty(document, "execCommand", { value: execCommand });
 		let beforeInputCount = 0;
 		composer.addEventListener("beforeinput", (event) => {
@@ -57,7 +60,7 @@ describe("Document DOM input", () => {
 		expect(composer.textContent).toBe("Prompt A");
 	});
 
-	test("fails closed when a controlled editor cancels beforeinput without accepting the prompt", async () => {
+	test("falls back to browser editing when a controlled editor cancels synthetic beforeinput", async () => {
 		const { document, window } = parseHTML(
 			'<div data-slate-editor="true" role="textbox" contenteditable="true"></div>',
 		);
@@ -65,7 +68,11 @@ describe("Document DOM input", () => {
 		if (!(composer instanceof window.HTMLElement)) throw new Error("Slate composer fixture is missing");
 		Object.defineProperty(composer, "isContentEditable", { value: true });
 		composer.addEventListener("beforeinput", (event) => event.preventDefault());
-		Object.defineProperty(document, "execCommand", { value: vi.fn(() => true) });
+		const execCommand = vi.fn((_command: string, _showUi: boolean, value: string) => {
+			composer.textContent = value;
+			return true;
+		});
+		Object.defineProperty(document, "execCommand", { value: execCommand });
 		vi.stubGlobal("HTMLElement", window.HTMLElement);
 		vi.stubGlobal("HTMLTextAreaElement", window.HTMLTextAreaElement);
 		vi.stubGlobal("HTMLInputElement", window.HTMLInputElement);
@@ -74,9 +81,40 @@ describe("Document DOM input", () => {
 
 		const port = createDocumentDomPort(document, { href: "https://www.qianwen.com/" } as Location);
 
-		await expect(port.fill("composer", '[data-slate-editor="true"]', 0, "Prompt A")).rejects.toThrow(
-			"Controlled composer did not accept the prompt",
+		await expect(port.fill("composer", '[data-slate-editor="true"]', 0, "Prompt A")).resolves.toBeUndefined();
+		expect(execCommand).toHaveBeenCalledWith("insertText", false, "Prompt A");
+		expect(composer.textContent).toBe("Prompt A");
+	});
+
+	test("waits for controlled editor reconciliation without dispatching a duplicate manual input", async () => {
+		const { document, window } = parseHTML(
+			'<div class="chat-input-editor" role="textbox" contenteditable="true"><p>old value</p></div>',
 		);
+		const composer = document.querySelector(".chat-input-editor");
+		if (!(composer instanceof window.HTMLElement)) throw new Error("composer fixture is missing");
+		Object.defineProperty(composer, "isContentEditable", { value: true });
+		composer.addEventListener("beforeinput", (event) => event.preventDefault());
+		composer.addEventListener("input", (event) => {
+			const data = (event as InputEvent).data;
+			if (data) setTimeout(() => (composer.textContent += data), 20);
+		});
+		const execCommand = vi.fn((_command: string, _showUi: boolean, value: string) => {
+			setTimeout(() => (composer.textContent = value), 20);
+			return true;
+		});
+		Object.defineProperty(document, "execCommand", { value: execCommand });
+		vi.stubGlobal("HTMLElement", window.HTMLElement);
+		vi.stubGlobal("HTMLTextAreaElement", window.HTMLTextAreaElement);
+		vi.stubGlobal("HTMLInputElement", window.HTMLInputElement);
+		vi.stubGlobal("InputEvent", window.InputEvent);
+		vi.stubGlobal("Event", window.Event);
+
+		const port = createDocumentDomPort(document, { href: "https://www.kimi.com/" } as Location);
+		await port.fill("composer", ".chat-input-editor", 0, "Prompt A");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+
+		expect(execCommand).toHaveBeenCalledWith("insertText", false, "Prompt A");
+		expect(composer.textContent).toBe("Prompt A");
 	});
 
 	test("keeps a normally scrolled user message available for submitted-prompt identity checks", async () => {

@@ -104,11 +104,17 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 			const latest = messages.at(-1)?.element.text;
 			const currentUrl = new URL(this.#port.currentUrl());
+			const exactPromptVisible = latest && normalizeText(latest) === normalizeText(prompt);
+			const durableConversationPath = new RegExp(this.#contract.conversationPathPattern, "u").test(currentUrl.pathname);
 			if (
-				latest &&
-				normalizeText(latest) === normalizeText(prompt) &&
-				new RegExp(this.#contract.conversationPathPattern, "u").test(currentUrl.pathname)
+				exactPromptVisible &&
+				durableConversationPath &&
+				this.#contract.conversationSearchPattern &&
+				currentUrl.search === ""
 			) {
+				this.#assertApprovedUrl(true);
+			}
+			if (exactPromptVisible && durableConversationPath && this.#hasApprovedConversationSearch(currentUrl)) {
 				this.#confirmedConversationUrl = this.#approvedConversationUrl();
 				return;
 			}
@@ -123,7 +129,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		this.#confirmedConversationUrl = this.#approvedConversationUrl();
 		await this.#assertUnblocked();
 		const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
-		if (messages.length < 1 || messages.some(({ element }) => normalizeText(element.text) !== normalizeText(prompt))) {
+		if (messages.length < 1 || !messages.some(({ element }) => normalizeText(element.text) === normalizeText(prompt))) {
 			throw this.#error("post_submit_unknown", "Preserved conversation does not contain the exact submitted prompt");
 		}
 		const answers = visibleElements(await this.#port.query("answer", this.#contract.answer));
@@ -358,11 +364,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			this.#contract.conversationSearchPattern,
 		].filter((pattern): pattern is string => Boolean(pattern));
 		const allowedSearch =
-			current.search === "" || allowedSearchPatterns.some((pattern) => new RegExp(pattern, "u").test(current.search));
-		const approvedConversationSearch =
 			!requireConversation ||
-			!this.#contract.conversationSearchPattern ||
-			new RegExp(this.#contract.conversationSearchPattern, "u").test(current.search);
+			current.search === "" ||
+			allowedSearchPatterns.some((pattern) => new RegExp(pattern, "u").test(current.search));
+		const approvedConversationSearch = !requireConversation || this.#hasApprovedConversationSearch(current);
 		const approvedHost =
 			this.surface === "doubao.consumer_web"
 				? current.hostname === "doubao.com" || current.hostname.endsWith(".doubao.com")
@@ -389,6 +394,13 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 	}
 
+	#hasApprovedConversationSearch(current: URL): boolean {
+		return (
+			!this.#contract.conversationSearchPattern ||
+			new RegExp(this.#contract.conversationSearchPattern, "u").test(current.search)
+		);
+	}
+
 	#approvedConversationUrl(): string {
 		this.#assertApprovedUrl(true);
 		const approved = new URL(this.#port.currentUrl());
@@ -410,7 +422,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		if (
 			messages.length < 1 ||
 			!this.#preparedPrompt ||
-			messages.some(({ element }) => normalizeText(element.text) !== normalizeText(this.#preparedPrompt ?? ""))
+			!messages.some(({ element }) => normalizeText(element.text) === normalizeText(this.#preparedPrompt ?? ""))
 		) {
 			throw this.#error("page_drift", "Confirmed conversation no longer contains the exact submitted prompt");
 		}

@@ -36,6 +36,7 @@ export type AdapterFixture = {
 	newAnswerCountTimeline: number[];
 	submittedPrompt: string | null;
 	submittedPromptCopies: number;
+	submittedPromptTexts: string[] | null;
 	initiallySubmitted: boolean;
 	conversationUrlDelayMs: number;
 	generatingDurationMs: number;
@@ -72,6 +73,7 @@ export function createAdapterFixture(
 		newAnswerCountTimeline: [],
 		submittedPrompt: null,
 		submittedPromptCopies: 1,
+		submittedPromptTexts: null,
 		initiallySubmitted: false,
 		conversationUrlDelayMs: 0,
 		generatingDurationMs: 2_000,
@@ -143,7 +145,8 @@ export class FixtureDomPort implements ConsumerDomPort {
 			case "user_message":
 				if (this.#oldDialogueStillVisible()) return [{ text: "Old prompt", visible: true }];
 				return this.#submitted
-					? elements(this.#fixture.submittedPromptCopies, this.#fixture.submittedPrompt ?? this.#filledPrompt)
+					? (this.#fixture.submittedPromptTexts?.map((text) => ({ text, visible: true })) ??
+							elements(this.#fixture.submittedPromptCopies, this.#fixture.submittedPrompt ?? this.#filledPrompt))
 					: [];
 			case "generating":
 				return this.#submitted && this.elapsedMs < this.#fixture.generatingDurationMs ? elements(1, "") : [];
