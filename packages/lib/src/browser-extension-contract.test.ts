@@ -56,7 +56,7 @@ describe("browser extension contract", () => {
 			"deepseek-web-20260821-localpc-v8",
 		],
 		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v6"],
-		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v8"],
+		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v9"],
 		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v7"],
 		[
 			"yuanbao.consumer_web",
