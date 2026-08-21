@@ -1,15 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { source } from "@/lib/source";
-import { getLLMText } from "@/lib/get-llm-text";
+import { renderLlmsFull } from "@/lib/marketing-content";
 
 export const Route = createFileRoute("/llms-full.txt")({
 	server: {
 		handlers: {
-			GET: async () => {
-				const scan = source.getPages().map(getLLMText);
-				const scanned = await Promise.all(scan);
-				return new Response(scanned.join("\n\n"));
-			},
+			GET: () => new Response(renderLlmsFull(), { headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=300" } }),
 		},
 	},
 });

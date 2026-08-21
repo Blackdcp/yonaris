@@ -6,7 +6,6 @@ import geistMonoFont from "@fontsource/geist-mono/files/geist-mono-latin-400-nor
 // held back by the HTML→CSS→font waterfall).
 import geistSansFont from "@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2?url";
 import geistSansMediumFont from "@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2?url";
-import titanOneFont from "@fontsource/titan-one/files/titan-one-latin-400-normal.woff2?url";
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { NotFound } from "@/components/not-found";
@@ -75,13 +74,6 @@ export const Route = createRootRoute({
 					href: geistMonoFont,
 					crossOrigin: "anonymous",
 				},
-				{
-					rel: "preload",
-					as: "font",
-					type: "font/woff2",
-					href: titanOneFont,
-					crossOrigin: "anonymous",
-				},
 				{ rel: "icon", type: "image/svg+xml", href: "/icons/yonaris-icon.svg" },
 				{ rel: "icon", type: "image/png", sizes: "96x96", href: "/icons/yonaris-icon-96.png" },
 				{ rel: "icon", type: "image/x-icon", href: "/favicon.ico" },
@@ -120,7 +112,7 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-	const language = useRouterState({ select: (state) => (state.location.pathname === "/" ? "zh-CN" : "en") });
+	const language = useRouterState({ select: (state) => (state.location.pathname === "/zh" || state.location.pathname.startsWith("/zh/") ? "zh-CN" : "en") });
 
 	return (
 		<html lang={language} suppressHydrationWarning>

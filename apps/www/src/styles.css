@@ -76,6 +76,15 @@
 	--font-geist-sans: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
 	--font-geist-mono: "Geist Mono", ui-monospace, monospace;
 	--font-titan-one: "Titan One", cursive;
+	--yonaris-ink: #0b1220;
+	--yonaris-paper: #f6f4f1;
+	--yonaris-surface: #fbfaf8;
+	--yonaris-slate: #1e2a39;
+	--yonaris-blue-gray: #2f3e50;
+	--yonaris-stone: #8a95a3;
+	--yonaris-mist: #dde2e8;
+	--yonaris-signal: #ff6a00;
+	--yonaris-signal-strong: #c94f00;
 
 	--radius: 0.625rem;
 	--background: oklch(1 0 0);
@@ -96,6 +105,73 @@
 	--border: oklch(0.92 0.004 286.32);
 	--input: oklch(0.92 0.004 286.32);
 	--ring: oklch(0.546 0.245 262.881);
+}
+
+.marketing-site {
+	font-family: "Geist Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+	font-feature-settings: "kern", "ss01", "tnum";
+}
+
+.marketing-site ::selection {
+	background: var(--yonaris-signal);
+	color: var(--yonaris-ink);
+}
+
+.marketing-display {
+	font-family: "Geist Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+	font-synthesis: none;
+}
+
+.marketing-kicker {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.66rem;
+	font-weight: 400;
+	letter-spacing: 0.16em;
+	line-height: 1.5;
+	text-transform: uppercase;
+}
+
+.marketing-hero-copy > * {
+	animation: yonaris-copy-enter 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-hero-copy > :nth-child(2) {
+	animation-delay: 70ms;
+}
+
+.marketing-hero-copy > :nth-child(3) {
+	animation-delay: 140ms;
+}
+
+.marketing-hero-copy > :nth-child(4) {
+	animation-delay: 210ms;
+}
+
+.marketing-hero-copy > :nth-child(5) {
+	animation-delay: 280ms;
+}
+
+.marketing-mobile-menu > summary::-webkit-details-marker {
+	display: none;
+}
+
+.marketing-signal-path {
+	stroke-dasharray: 1900;
+	stroke-dashoffset: 1900;
+	animation: marketing-path-reveal 1.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.marketing-condition-markers path,
+.marketing-evidence-anchors path {
+	stroke-dasharray: 120;
+	stroke-dashoffset: 120;
+	animation: marketing-path-reveal 720ms 580ms ease-out forwards;
+}
+
+@keyframes marketing-path-reveal {
+	to {
+		stroke-dashoffset: 0;
+	}
 }
 
 @utility font-titan-one {
@@ -242,7 +318,11 @@
 	.yonaris-hero-copy > *,
 	.yonaris-signal-path,
 	.yonaris-evidence-ticks path,
-	.yonaris-signal-ticks path {
+	.yonaris-signal-ticks path,
+	.marketing-hero-copy > *,
+	.marketing-signal-path,
+	.marketing-condition-markers path,
+	.marketing-evidence-anchors path {
 		animation: none;
 		opacity: 1;
 		stroke-dashoffset: 0;

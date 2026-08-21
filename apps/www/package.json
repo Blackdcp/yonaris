@@ -8,6 +8,7 @@
 		"dev": "vite dev --port 3001",
 		"build": "vite build",
 		"start": "node .output/server/index.mjs",
+		"test": "vitest run --config vitest.config.ts",
 		"check-types": "tsc --noEmit",
 		"generate-icons": "tsx scripts/generate-brand-icons.tsx"
 	},
@@ -54,6 +55,7 @@
 		"@vitejs/plugin-react": "^6.0.3",
 		"png-to-ico": "^3.0.2",
 		"typescript": "^7.0.2",
+		"vitest": "^4.1.10",
 		"vite": "^8.1.5"
 	}
 }

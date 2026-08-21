@@ -8,6 +8,9 @@ export const Route = createFileRoute("/robots.txt")({
 				const siteUrl = SITE_URL || new URL(request.url).origin;
 				const robots = `User-agent: *
 Allow: /
+Allow: /agent/
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 Sitemap: ${siteUrl}/sitemap.xml`;
 
