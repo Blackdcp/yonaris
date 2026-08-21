@@ -42,7 +42,7 @@ describe("Browser Runner retry policy", () => {
 	it("authorizes an exact approved operation for every registered surface", () => {
 		for (const [surfaceTargetKey, adapterVersion] of [
 			["doubao.consumer_web", "doubao-web-20260821-localpc-v9"],
-			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v3"],
+			["deepseek.consumer_web", "deepseek-web-20260821-localpc-v4"],
 			["qwen.consumer_web", "qwen-web-20260821-localpc-v3"],
 			["kimi.consumer_web", "kimi-web-20260821-localpc-v2"],
 			["wenxin.consumer_web", "wenxin-web-20260821-localpc-v2"],

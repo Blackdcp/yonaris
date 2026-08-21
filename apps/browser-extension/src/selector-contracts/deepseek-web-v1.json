@@ -1,11 +1,11 @@
 {
-	"version": "deepseek-web-20260821-localpc-v3",
+	"version": "deepseek-web-20260821-localpc-v4",
 	"surface": "deepseek.consumer_web",
 	"launchUrl": "https://chat.deepseek.com/",
 	"conversationPathPattern": "^/a/chat/s/[A-Za-z0-9_-]{4,200}/?$",
 	"composer": "textarea._27c9245",
 	"send": "div[role=\"button\"].ds-button--primary.ds-button--circle",
-	"newConversation": "._5a8ac7a.a084f19e",
+	"newConversation": "div[role=\"button\"].ds-button--iconLabelPrimary:has(svg path[d*=\"M7.34473 4.93945V7.34961\"])",
 	"newConversationLabel": null,
 	"userMessage": ".d29f3d7d.ds-message",
 	"answer": ".ds-assistant-message-main-content",
