@@ -77,9 +77,7 @@ describe("search evidence probe", () => {
 		expect(serialized).not.toContain("private-path");
 		expect(serialized).not.toContain("private-id");
 		expect(serialized).not.toContain("data-secret=");
-		expect(report.pageUrlShape).toBe(
-			"https://chat.deepseek.com/:segment/:segment/:segment/:segment?account&mode",
-		);
+		expect(report.pageUrlShape).toBe("https://chat.deepseek.com/:segment/:segment/:segment/:segment?account&mode");
 		expect(document.body.innerHTML).toBe(originalHtml);
 	});
 
@@ -104,5 +102,58 @@ describe("search evidence probe", () => {
 
 		expect(report.candidates).toHaveLength(2);
 		expect(report.truncated).toBe(true);
+	});
+
+	test("prioritizes the latest answer when page chrome exceeds the candidate cap", async () => {
+		const pageChrome = Array.from(
+			{ length: 201 },
+			(_, index) => `<span data-index="${index}">Source ${index}</span>`,
+		).join("");
+		const { document, window } = parseHTML(`<!doctype html><html><body>${pageChrome}
+			<div class="answer"><button class="search-evidence">Search sources</button></div>
+		</body></html>`);
+		vi.stubGlobal("HTMLElement", window.HTMLElement);
+		vi.stubGlobal("SVGElement", window.SVGElement);
+		window.HTMLElement.prototype.getBoundingClientRect = () =>
+			({ width: 100, height: 20, top: 0, bottom: 20, left: 0, right: 100 }) as DOMRect;
+
+		const report = await probeSearchEvidenceCandidates(document as unknown as Document, {
+			surface: "zhipu.consumer_web",
+			answerSelector: ".answer",
+			candidateTextPattern: "search|source",
+			maximumCandidates: 2,
+			pageUrl: "https://chatglm.cn/main/alltoolsdetail?t=1&lang=zh&cid=0123456789abcdef01234567",
+		});
+
+		expect(report.truncated).toBe(true);
+		expect(report.candidates.some((candidate) => candidate.relation === "inside_latest_answer")).toBe(true);
+	});
+
+	test("reports class-only structural evidence when the approved answer selector has drifted", async () => {
+		const { document, window } = parseHTML(`<!doctype html><html><body>
+			<div class="assistant-message markdown-container" data-tool-result="private-value">PRIVATE ANSWER</div>
+		</body></html>`);
+		vi.stubGlobal("HTMLElement", window.HTMLElement);
+		vi.stubGlobal("SVGElement", window.SVGElement);
+		window.HTMLElement.prototype.getBoundingClientRect = () =>
+			({ width: 100, height: 20, top: 0, bottom: 20, left: 0, right: 100 }) as DOMRect;
+
+		const report = await probeSearchEvidenceCandidates(document as unknown as Document, {
+			surface: "deepseek.consumer_web",
+			answerSelector: ".stale-answer-selector",
+			candidateTextPattern: "search|source|citation|reference|message|markdown|tool|result",
+			maximumCandidates: 20,
+			pageUrl: "https://chat.deepseek.com/a/chat/s/thread_123",
+		});
+
+		expect(report.answerCount).toBe(0);
+		expect(report.candidates).toContainEqual(
+			expect.objectContaining({
+				classTokens: ["assistant-message", "markdown-container"],
+				dataAttributeNames: ["data-tool-result"],
+			}),
+		);
+		expect(JSON.stringify(report)).not.toContain("PRIVATE ANSWER");
+		expect(JSON.stringify(report)).not.toContain("private-value");
 	});
 });

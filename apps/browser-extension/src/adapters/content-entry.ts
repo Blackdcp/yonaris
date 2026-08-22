@@ -68,13 +68,12 @@ async function execute(
 			if (!isApprovedSurfaceConversationUrl(surfaceDefinition, initialConversationUrl)) {
 				throw new Error("Candidate inspection requires an approved consumer conversation URL");
 			}
-			await adapter.preflight();
 			const currentConversationUrl = readPageUrl();
 			if (
 				currentConversationUrl !== initialConversationUrl ||
 				!isApprovedSurfaceConversationUrl(surfaceDefinition, currentConversationUrl)
 			) {
-				throw new Error("Candidate inspection left the approved conversation URL during preflight");
+				throw new Error("Candidate inspection left the approved conversation URL");
 			}
 			return await probeSearchEvidenceCandidates(document, {
 				surface: surfaceDefinition.surface,

@@ -27,7 +27,7 @@ export type ExtensionSurfaceDefinition = {
 };
 
 export const DOMESTIC_SEARCH_EVIDENCE_PROBE_TEXT_PATTERN =
-	"搜索|联网|资料|来源|引用|参考|网页|search|source|citation|reference";
+	"搜索|联网|资料|来源|引用|参考|网页|search|source|citation|reference|query|tool|result|message|assistant|answer|markdown";
 
 const LOCAL_SURFACE_CONFIG: Record<
 	BrowserExtensionSurface,

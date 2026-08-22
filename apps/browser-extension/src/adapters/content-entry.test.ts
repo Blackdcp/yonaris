@@ -91,7 +91,7 @@ describe("domestic content entry redacted candidate inspection", () => {
 			'<div id="row-answer-1" class="answer"><div class="answer-content-wrap"><button>Search sources</button></div></div>',
 		],
 	] as const)("returns a redacted report for %s", async (surface, pageUrl, answerHtml) => {
-		const harness = await installCandidateProbeHarness(surface, pageUrl, answerHtml);
+		const harness = await installCandidateProbeHarness(surface, pageUrl, answerHtml, true);
 
 		const response = await harness.inspectSearchCandidates();
 
@@ -100,7 +100,7 @@ describe("domestic content entry redacted candidate inspection", () => {
 			true,
 		);
 		expect(JSON.stringify(response)).not.toContain("PRIVATE ANSWER");
-		expect(harness.preflight).toHaveBeenCalledOnce();
+		expect(harness.preflight).not.toHaveBeenCalled();
 		expect(harness.document.body.innerHTML).toBe(harness.originalBodyHtml);
 	});
 
@@ -122,6 +122,7 @@ async function installCandidateProbeHarness(
 	surface: BrowserExtensionSurface,
 	pageUrl: string,
 	answerHtml: string,
+	preflightFails = false,
 ): Promise<{
 	document: Document;
 	originalBodyHtml: string;
@@ -131,7 +132,9 @@ async function installCandidateProbeHarness(
 	const { document, window } = parseHTML(`<!doctype html><html><body>${answerHtml}<p>PRIVATE ANSWER</p></body></html>`);
 	const pageLocation = { hostname: new URL(pageUrl).hostname, href: pageUrl };
 	let listener: MessageListener | undefined;
-	const preflight = vi.fn(async () => undefined);
+	const preflight = vi.fn(async () => {
+		if (preflightFails) throw new Error("Operational controls drifted");
+	});
 	const actualRegistry = await vi.importActual<typeof import("../surface-registry")>("../surface-registry");
 	vi.doMock("../surface-registry", () => ({
 		...actualRegistry,

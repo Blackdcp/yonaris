@@ -1,6 +1,6 @@
 import {
-	browserExtensionSurfaceDefinition,
 	type BrowserExtensionSurface,
+	browserExtensionSurfaceDefinition,
 } from "@workspace/lib/browser-extension-surfaces";
 import { isDomElementVisible } from "./dom-port";
 
@@ -57,21 +57,31 @@ export async function probeSearchEvidenceCandidates(
 	const elements = [...document.querySelectorAll("*")].filter(
 		(element) =>
 			isCandidateControl(element) ||
-			pattern.test(normalizedText(element)) ||
-			(element === latestAnswer && pattern.test(normalizedText(element))),
+			pattern.test(structuralNames(element)) ||
+			matchesCandidateText(element, pattern) ||
+			(element === latestAnswer && matchesCandidateText(element, pattern, true)),
 	);
 	const relevant = elements.filter((element) => {
 		if (latestAnswer?.contains(element)) return true;
 		if (previous?.contains(element) || next?.contains(element)) return true;
 		return (
-			pattern.test(normalizedText(element)) ||
+			pattern.test(structuralNames(element)) ||
+			matchesCandidateText(element, pattern) ||
 			[element.getAttribute("aria-label"), element.getAttribute("aria-description")].some(
 				(value) => value !== null && pattern.test(value),
 			)
 		);
 	});
 	const maximum = Math.max(1, Math.min(MAXIMUM_CANDIDATES, Math.trunc(input.maximumCandidates)));
-	const selected = relevant.slice(0, maximum);
+	const selected = relevant
+		.map((element, documentOrder) => ({
+			documentOrder,
+			element,
+			priority: relationPriority(relationToAnswer(element, latestAnswer, previous, next)),
+		}))
+		.sort((left, right) => left.priority - right.priority || left.documentOrder - right.documentOrder)
+		.slice(0, maximum)
+		.map(({ element }) => element);
 	const candidates = await Promise.all(
 		selected.map((element) => candidateFromElement(element, latestAnswer, previous, next, input.pageUrl)),
 	);
@@ -85,6 +95,30 @@ export async function probeSearchEvidenceCandidates(
 		candidates,
 		truncated: relevant.length > selected.length,
 	};
+}
+
+function matchesCandidateText(element: Element, pattern: RegExp, allowLargeContainer = false): boolean {
+	const tag = element.tagName.toLowerCase();
+	if (["html", "head", "body", "script", "style", "svg"].includes(tag)) return false;
+	if (!allowLargeContainer && element.childElementCount > 3 && tag !== "a" && tag !== "button") return false;
+	const text = normalizedText(element);
+	return text.length > 0 && text.length <= 5_000 && pattern.test(text);
+}
+
+function structuralNames(element: Element): string {
+	return [
+		...element.classList,
+		...element.getAttributeNames().filter((name) => name.startsWith("data-")),
+		element.getAttribute("role") ?? "",
+	]
+		.filter((value) => SAFE_TOKEN.test(value))
+		.join(" ");
+}
+
+function relationPriority(relation: SearchEvidenceProbeCandidate["relation"]): number {
+	if (relation === "inside_latest_answer") return 0;
+	if (relation === "adjacent_to_latest_answer") return 1;
+	return 2;
 }
 
 function approvedPattern(value: string): RegExp {
@@ -113,7 +147,10 @@ async function candidateFromElement(
 		relation: relationToAnswer(element, latestAnswer, previous, next),
 		tag: element.tagName.toLowerCase(),
 		role: safeRole(element.getAttribute("role")),
-		classTokens: [...element.classList].filter((token) => SAFE_TOKEN.test(token)).sort().slice(0, 20),
+		classTokens: [...element.classList]
+			.filter((token) => SAFE_TOKEN.test(token))
+			.sort()
+			.slice(0, 20),
 		ariaNames: safeAriaNames(element),
 		dataAttributeNames: element
 			.getAttributeNames()
