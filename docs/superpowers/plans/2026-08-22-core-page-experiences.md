@@ -160,41 +160,48 @@ git commit -m "build the product evidence workbench"
 **Files:**
 - Modify: `apps/www/src/content/site/approach.ts`
 - Create: `apps/www/src/content/site/approach.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
 - Create: `apps/www/src/components/site/pages/approach-page.tsx`
 - Create: `apps/www/src/components/site/pages/evidence-loop.tsx`
 - Create: `apps/www/src/routes/approach.tsx`
 - Create: `apps/www/src/routes/zh/approach.tsx`
+- Modify (generated only by the route build): `apps/www/src/routeTree.gen.ts`
 - Modify: `apps/www/src/styles/pages/approach.css`
 - Create: `e2e/www-tests/approach.spec.ts`
+- Create: `.changeset/<approach-evidence-loop>.md`
 
 **Interfaces:**
 
 ```ts
 export type EvidenceLoopStepId = "frame" | "question-set" | "sample" | "compare" | "inspect" | "repeat";
-export interface EvidenceLoopStep { id: EvidenceLoopStepId; title: string; summary: string; evidenceLabel: string; evidenceValue: string; claims: readonly FactualClaim[] }
+export type ApproachClaim = FactualClaim & { limitation: string };
+export interface EvidenceLoopStep { id: EvidenceLoopStepId; title: string; summary: string; evidenceLabel: string; evidenceValue: string; claimIds: readonly ApproachClaim["id"][] }
 export interface ApproachHomePreview { title: string; summary: string; steps: readonly [string, string, string] }
 export function EvidenceLoop(props: { content: ApproachContent["loop"] }): React.ReactNode;
 ```
 
 - [ ] **Step 1: Write RED content tests**
 
-Assert headline `A repeatable evidence loop, not a generic score.` and its independently written Chinese equivalent, six steps in the exact order above, a three-step `homePreview`, `Repeated observations show change over time; they do not by themselves prove what caused the change.`, and Recursive Forest only as a working method. Run the focused Vitest test and observe FAIL.
+Assert headline `A repeatable evidence loop, not a generic score.` and its independently written Chinese equivalent, six steps in the exact order above, a three-step `homePreview`, `Repeated observations show change over time; they do not by themselves prove what caused the change.`, and Recursive Forest only as a working method. Every externally visible scope, method, evidence, step, and Home-preview assertion must reference a stable `ApproachClaim` carrying both `status` and a non-empty `limitation`; the top-level claim registry contains those claims exactly once and EN/ZH use the same IDs/statuses while their labels and prose are independently localized. Generic evidence may be represented directly; anything that resembles a customer or product observation must be visibly illustrative. Assert absence of causal, autonomous, real-time, universal, `Product Truth Graph`, and unverified `0 → 93.3%` claims. Run the focused Vitest and parity tests and observe FAIL.
 
 - [ ] **Step 2: Write RED interaction tests**
 
-Assert semantic `<ol>`, native buttons, `aria-current="step"`, roving focus, Up/Left and Down/Right without wrap, Home/End, sticky evidence on desktop/tablet, document-flow evidence on mobile, and no running motion under reduced motion.
+Assert semantic `<ol>`/`<li>` with six native buttons, exactly one roving `tabIndex=0`, `aria-current="step"`, reciprocal button `aria-controls` and evidence-panel `aria-labelledby`, auto activation, click-to-focus, Up/Left and Down/Right stopping at the ends without wrap, and Home/End. Essential step copy remains readable in the ordered document regardless of active state. Assert the evidence record is actually sticky below the site header at 768, 1024, 1280, and 1440 widths (including scroll-position behavior), returns to normal document flow at 320, 360, and 390 widths, passes Axe/WCAG AA in both locales and every active state, and leaves no running transition or animation when reduced motion is emulated before navigation and then the active state changes. Assert canonical/hreflang metadata and zero horizontal overflow at all seven widths.
 
 - [ ] **Step 3: Implement content, loop, route, and layout**
 
-All six steps remain in the DOM. Active state changes the adjacent record but does not hide essential copy. No SignalField or second animation system is added. Both route modules use `corePageHead("approach", locale)`.
+All six steps remain in the DOM. Active state changes the adjacent record but does not hide essential copy. Use the established Paper/Ink/Mist/Stone/Signal Orange system and shared Paper focus treatment; do not add SignalField, a second animation system, or Product-style tabs. Desktop/tablet use the ordered process plus a sticky evidence record; mobile uses one linear reading flow. Both route modules use `corePageHead("approach", locale)`, every destination comes from the manifest, and the generated route tree is inspected rather than hand-edited. Do not modify the site manifest, shared shell, Task 0 helpers, Product experience, Agent documents, or legacy redirects. Add one short `@workspace/www` patch changeset for this user-facing page.
 
 - [ ] **Step 4: Verify and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/approach.test.ts
+pnpm.cmd --filter @workspace/www exec vitest run src/content/site/approach.test.ts src/content/site/content-parity.test.ts
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/approach.spec.ts --project=chromium
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/content/site/approach* apps/www/src/components/site/pages/approach-page.tsx apps/www/src/components/site/pages/evidence-loop.tsx apps/www/src/routes/approach.tsx apps/www/src/routes/zh/approach.tsx apps/www/src/styles/pages/approach.css e2e/www-tests/approach.spec.ts
+pnpm.cmd --filter e2e check-types
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/content/site/approach* apps/www/src/content/site/content-parity.test.ts apps/www/src/components/site/pages/approach-page.tsx apps/www/src/components/site/pages/evidence-loop.tsx apps/www/src/routes/approach.tsx apps/www/src/routes/zh/approach.tsx apps/www/src/routeTree.gen.ts apps/www/src/styles/pages/approach.css e2e/www-tests/approach.spec.ts .changeset/<approach-evidence-loop>.md
 git commit -m "show the repeatable evidence loop"
 ```
 
