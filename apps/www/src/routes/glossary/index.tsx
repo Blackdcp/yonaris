@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
+import { PublicationShell } from "@/components/site/publication-shell";
 import { GLOSSARY_GROUPS, glossaryTerms } from "@/data/glossary";
-import { breadcrumbJsonLd, canonicalUrl, definedTermSetJsonLd, ogMeta } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
 
 const title = "AI Search & AEO Glossary · Yonaris";
 const description =
@@ -10,27 +10,12 @@ const description =
 
 export const Route = createFileRoute("/glossary/")({
 	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/glossary" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/glossary") }],
+		...siteRouteHead("glossary", { canonicalPath: "/glossary", title, description }),
 		scripts: [
 			breadcrumbJsonLd([
 				{ name: "Home", path: "/" },
 				{ name: "Glossary", path: "/glossary" },
 			]),
-			definedTermSetJsonLd({
-				name: "AI Search & AEO Glossary",
-				description,
-				path: "/glossary",
-				terms: glossaryTerms.map((t) => ({
-					term: t.term,
-					definition: t.short,
-					url: `/glossary/${t.slug}`,
-				})),
-			}),
 		],
 	}),
 	component: GlossaryIndex,
@@ -38,50 +23,56 @@ export const Route = createFileRoute("/glossary/")({
 
 function GlossaryIndex() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<section className="border-b border-zinc-200 bg-white py-12 lg:py-20">
-					<div className="mx-auto max-w-6xl px-4 md:px-6">
-						<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ Glossary</p>
-						<h1 className="font-heading mt-2 text-4xl text-balance text-zinc-950 md:text-5xl">
-							The AI search glossary
-						</h1>
-						<p className="mt-4 max-w-3xl text-lg text-balance text-zinc-600">
-							The vocabulary of AI search and answer engine optimization, defined in plain English and cross-linked.
-							Start anywhere.
+		<PublicationShell section="glossary">
+			<div className="publication-page">
+				<header className="publication-masthead">
+					<div className="publication-masthead__grid">
+						<div>
+							<p className="publication-kicker">Reference language</p>
+							<h1 className="publication-title">The AI market glossary</h1>
+							<p className="publication-deck">
+								The vocabulary of AI search and answer engine optimization, defined in plain English and cross-linked.
+								Start anywhere.
+							</p>
+						</div>
+						<p className="publication-masthead__note">
+							A working reference archive. Entries are descriptive, not current product claims.
 						</p>
 					</div>
-				</section>
+				</header>
 
-				{GLOSSARY_GROUPS.map((group) => {
-					const terms = glossaryTerms.filter((t) => t.group === group);
-					if (terms.length === 0) return null;
-					return (
-						<section key={group} className="border-b border-zinc-200 bg-white py-10">
-							<div className="mx-auto max-w-6xl px-4 md:px-6">
-								<h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">{group}</h2>
-								<dl className="mt-5 grid gap-5 md:grid-cols-2">
-									{terms.map((t) => (
-										<div key={t.slug} className="rounded-md border border-zinc-200 bg-white p-5">
-											<dt>
-												<a href={`/glossary/${t.slug}`} className="font-semibold text-zinc-950 hover:text-blue-700">
-													{t.term}
-												</a>
-												{t.aka && t.aka.length > 0 && (
-													<span className="ml-2 text-sm text-zinc-400">{t.aka.join(", ")}</span>
-												)}
-											</dt>
-											<dd className="mt-1.5 text-sm leading-relaxed text-zinc-600">{t.short}</dd>
+				<div className="publication-ledger">
+					{GLOSSARY_GROUPS.map((group) => {
+						const terms = glossaryTerms.filter((term) => term.group === group);
+						if (terms.length === 0) return null;
+
+						return (
+							<section key={group} className="publication-ledger__group">
+								<h2 className="publication-ledger__group-label">{group}</h2>
+								<dl className="publication-ledger__items">
+									{terms.map((term) => (
+										<div key={term.slug} className="publication-ledger__entry">
+											<div className="publication-ledger__date">Term</div>
+											<div>
+												<dt>
+													<a href={`/glossary/${term.slug}`} className="publication-ledger__link">
+														{term.term}
+														{term.aka?.length ? <small> — {term.aka.join(", ")}</small> : null}
+													</a>
+												</dt>
+												<dd>{term.short}</dd>
+											</div>
+											<span className="publication-ledger__arrow" aria-hidden="true">
+												↗
+											</span>
 										</div>
 									))}
 								</dl>
-							</div>
-						</section>
-					);
-				})}
-			</main>
-			<Footer />
-		</div>
+							</section>
+						);
+					})}
+				</div>
+			</div>
+		</PublicationShell>
 	);
 }

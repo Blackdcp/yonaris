@@ -33,6 +33,8 @@ describe("site stylesheet boundaries", () => {
 			'@import "./styles/pages/company.css";',
 			'@import "./styles/pages/geo.css";',
 			'@import "./styles/pages/diagnostic.css";',
+			'@import "./styles/pages/publication.css";',
+			'@import "./styles/pages/utility.css";',
 		];
 
 		const positions = expectedImports.map((statement) => stylesheet.indexOf(statement));
@@ -46,6 +48,40 @@ describe("site stylesheet boundaries", () => {
 		expect(read("styles/site-core.css")).toMatch(/:root\s*{/);
 		expect(read("styles/site-core.css")).toContain("@layer base");
 		expect(read("styles/site-core.css")).toContain(".prose code::before");
+	});
+
+	it("keeps Publication and Utility presentation inside their focused files without gradients", () => {
+		const safeRead = (path: string): string | undefined => {
+			try {
+				return read(path);
+			} catch {
+				return undefined;
+			}
+		};
+		const publication = safeRead("styles/pages/publication.css");
+		const utility = safeRead("styles/pages/utility.css");
+		expect(publication, "publication.css must exist").toBeDefined();
+		expect(utility, "utility.css must exist").toBeDefined();
+		if (!publication || !utility) return;
+		const otherStyles = [
+			"styles.css",
+			"styles/site-core.css",
+			...filesUnder("styles/pages", [".css"]).filter(
+				(path) => !path.endsWith("publication.css") && !path.endsWith("utility.css"),
+			),
+		]
+			.map((path) => (isAbsolute(path) ? readFileSync(path, "utf8") : read(path)))
+			.join("\n");
+
+		for (const selector of [".publication-page", ".publication-ledger", ".publication-article"]) {
+			expect(publication).toContain(selector);
+			expect(otherStyles).not.toContain(selector);
+		}
+		for (const selector of [".utility-page", ".utility-docs-layout", ".utility-status-ledger", ".utility-brand-page"]) {
+			expect(utility).toContain(selector);
+			expect(otherStyles).not.toContain(selector);
+		}
+		expect(`${publication}\n${utility}`).not.toMatch(/(?:linear|radial|conic)-gradient/i);
 	});
 
 	it("isolates every homepage composition selector in pages/home.css", () => {

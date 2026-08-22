@@ -18,7 +18,10 @@ const sectionLabels = {
 export function PublicationShell({ section, children, archiveContext }: PublicationShellProps): React.ReactNode {
 	return (
 		<SiteShell locale="en" mainClassName="site-publication-shell">
-			<div className="site-publication-context">{sectionLabels[section]}</div>
+			<section className="site-publication-context" aria-label={sectionLabels[section]}>
+				<span>{sectionLabels[section]}</span>
+				<span aria-hidden="true">Publication / Yonaris</span>
+			</section>
 			{archiveContext ? <LegacyArchiveContext kind={archiveContext} /> : null}
 			{children}
 		</SiteShell>

@@ -44,14 +44,14 @@ export const Route = createFileRoute("/blog/rss.xml")({
   <channel>
     <title>${escapeXml(`${SITE_NAME} Blog`)}</title>
     <link>${canonicalUrl("/blog")}</link>
-    <description>${escapeXml(SITE_DESCRIPTION)}</description>
+    <description>${escapeXml(`${SITE_DESCRIPTION} Yonaris publication archive.`)}</description>
     <atom:link href="${feedUrl}" rel="self" type="application/rss+xml" />
 ${items}
   </channel>
 </rss>`;
 
 				return new Response(rss, {
-					headers: { "Content-Type": "application/xml" },
+					headers: { "Content-Type": "application/xml", "X-Robots-Tag": "noindex, follow" },
 				});
 			},
 		},

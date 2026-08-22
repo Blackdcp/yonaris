@@ -131,8 +131,31 @@ describe("shared public shells", () => {
 		const upstream = renderToStaticMarkup(<LegacyArchiveContext kind="upstream-comparison" />);
 
 		expect(occurrences(publication, "<main")).toBe(1);
+		expect(publication).toContain('<section class="site-publication-context"');
+		expect(publication).toContain('aria-label="AI Search archive"');
 		expect(publication).toContain("Legacy research archive");
+		expect(occurrences(utility, "<main")).toBe(1);
+		expect(utility).toContain('<section class="site-utility-context"');
+		expect(utility).toContain('aria-label="Open-source Documentation"');
 		expect(utility).toContain("Open-source Documentation");
 		expect(upstream).toContain("upstream Elmo comparison archive");
+	});
+
+	it("keeps publication and utility children inside SiteShell's sole main landmark", () => {
+		const publication = renderToStaticMarkup(
+			<PublicationShell section="blog">
+				<article aria-label="Publication body">Publication</article>
+			</PublicationShell>,
+		);
+		const utility = renderToStaticMarkup(
+			<UtilityShell section="status">
+				<section aria-label="Utility body">Utility</section>
+			</UtilityShell>,
+		);
+
+		expect(occurrences(publication, "<main")).toBe(1);
+		expect(occurrences(utility, "<main")).toBe(1);
+		expect(publication).toMatch(/<main[^>]*site-publication-shell[^>]*>.*Publication body/s);
+		expect(utility).toMatch(/<main[^>]*site-utility-shell[^>]*>.*Utility body/s);
 	});
 });

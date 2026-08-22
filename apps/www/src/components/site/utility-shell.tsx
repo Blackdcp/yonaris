@@ -8,7 +8,7 @@ interface UtilityShellProps {
 
 const sectionLabels = {
 	docs: "Open-source Documentation",
-	status: "Operational Status",
+	status: "Operational checks",
 	brand: "Brand resources",
 	changelog: "Open-source changelog",
 	roadmap: "Open-source roadmap",
@@ -18,7 +18,10 @@ const sectionLabels = {
 export function UtilityShell({ section, children }: UtilityShellProps): React.ReactNode {
 	return (
 		<SiteShell locale="en" mainClassName="site-utility-shell">
-			<div className="site-utility-context">{sectionLabels[section]}</div>
+			<section className="site-utility-context" aria-label={sectionLabels[section]}>
+				<span>{sectionLabels[section]}</span>
+				<span aria-hidden="true">Utility / Yonaris</span>
+			</section>
 			{children}
 		</SiteShell>
 	);

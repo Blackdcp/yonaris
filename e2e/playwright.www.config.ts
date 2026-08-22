@@ -39,6 +39,7 @@ export default defineConfig({
 			VITE_PLAUSIBLE_DOMAIN: "",
 			VITE_POSTHOG_KEY: "",
 			VITE_POSTHOG_HOST: "",
+			WWW_E2E_OFFLINE: "true",
 		},
 		url: baseURL,
 		reuseExistingServer: process.env.WWW_E2E_REUSE_SERVER === "true",

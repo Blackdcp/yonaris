@@ -1,10 +1,12 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { getPageImage } from "@/lib/og";
-import { SITE_NAME, ogMeta, canonicalUrl, articleJsonLd, breadcrumbJsonLd } from "@/lib/seo";
-import { DocsPageLayout } from "@/components/docs-page-layout";
-import type { ClientApiPageProps } from "fumadocs-openapi/ui/create-client";
 import type { SerializedPageTree } from "fumadocs-core/source/client";
+import type { ClientApiPageProps } from "fumadocs-openapi/ui/create-client";
+import { DocsPageLayout } from "@/components/docs-page-layout";
+import { DOCS_IDENTITY_DISCLOSURE } from "@/lib/docs-context";
+import { getPageImage } from "@/lib/og";
+import { breadcrumbJsonLd, SITE_NAME } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
 
 const DOCS_DIR = "packages/docs/content/docs";
 
@@ -29,7 +31,7 @@ interface OpenApiLoaderData {
 
 type LoaderData = DocsLoaderData | OpenApiLoaderData;
 
-export type { DocsLoaderData, OpenApiLoaderData, LoaderData };
+export type { DocsLoaderData, LoaderData, OpenApiLoaderData };
 
 export const Route = createFileRoute("/docs/$")({
 	component: Page,
@@ -37,27 +39,21 @@ export const Route = createFileRoute("/docs/$")({
 		const data = loaderData as LoaderData | undefined;
 		if (!data) return {};
 
-		const { title, description, slugs } = data;
+		const { title, slugs } = data;
 		const pageTitle = `${title} · ${SITE_NAME} Docs`;
-		const pageDescription = description || `${title} documentation for ${SITE_NAME}.`;
 		const path = `/docs/${slugs.join("/")}`;
 		const image = getPageImage(slugs).url;
+		const head = siteRouteHead("docs", {
+			canonicalPath: path as `/${string}`,
+			title: pageTitle,
+			description: DOCS_IDENTITY_DISCLOSURE,
+			image,
+			type: "article",
+		});
 
 		return {
-			meta: [
-				{ title: pageTitle },
-				{ name: "description", content: pageDescription },
-				...ogMeta({
-					title: pageTitle,
-					description: pageDescription,
-					path,
-					image,
-					type: "article",
-				}),
-			],
-			links: [{ rel: "canonical", href: canonicalUrl(path) }],
+			...head,
 			scripts: [
-				articleJsonLd({ title, description: pageDescription, path }),
 				breadcrumbJsonLd([
 					{ name: "Home", path: "/" },
 					{ name: "Docs", path: "/docs" },

@@ -25,6 +25,7 @@ test("publishes the complete bilingual core route and viewport matrices", () => 
 	expect(CORE_ROUTE_PAIRS.flatMap(({ en, zh }) => [en, zh])).toHaveLength(14);
 	expect(QA_VIEWPORTS).toEqual({
 		desktop: { width: 1440, height: 900 },
+		micro: { width: 280, height: 720 },
 		wide: { width: 1280, height: 800 },
 		tabletLandscape: { width: 1024, height: 768 },
 		tabletPortrait: { width: 768, height: 1024 },

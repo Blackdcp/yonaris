@@ -15,9 +15,9 @@ import type { ClientApiPageProps } from "fumadocs-openapi/ui/create-client";
 import { RootProvider } from "fumadocs-ui/provider/tanstack";
 import { Suspense } from "react";
 import { ClientAPIPage } from "@/components/api-page";
-import { Footer } from "@/components/footer";
 import { useMDXComponents } from "@/components/mdx";
-import { Navbar } from "@/components/navbar";
+import { UtilityShell } from "@/components/site/utility-shell";
+import { DOCS_IDENTITY_DISCLOSURE } from "@/lib/docs-context";
 import type { LoaderData } from "@/routes/docs/$";
 
 // /docs/foo → /docs/foo.md  (/docs index → /docs.md). The same markdown the
@@ -42,7 +42,7 @@ export const clientLoader = browserCollections.docs.createClientLoader({
 			const mdxComponents = useMDXComponents();
 
 			return (
-				<div className="flex gap-10">
+				<div className="utility-docs-embedded">
 					<article className="prose min-w-0 max-w-none flex-1">
 						<h1>{frontmatter.title}</h1>
 						{frontmatter.description && <p className="lead text-muted-foreground">{frontmatter.description}</p>}
@@ -53,7 +53,7 @@ export const clientLoader = browserCollections.docs.createClientLoader({
 					</article>
 
 					{toc.length > 0 && (
-						<aside className="hidden w-48 shrink-0 lg:block">
+						<aside className="utility-docs-toc">
 							<div className="sticky top-20">
 								<DocsToc toc={toc} />
 							</div>
@@ -69,13 +69,8 @@ export const clientLoader = browserCollections.docs.createClientLoader({
 
 function DocsPageActions({ mdUrl }: { mdUrl: string }) {
 	return (
-		<div className="mt-10 border-t pt-4 text-sm text-muted-foreground">
-			<a
-				href={mdUrl}
-				target="_blank"
-				rel="noopener"
-				className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
-			>
+		<div className="utility-docs-actions">
+			<a href={mdUrl} target="_blank" rel="noopener" className="utility-action">
 				<svg
 					aria-hidden="true"
 					className="size-3.5"
@@ -133,27 +128,29 @@ export function DocsPageLayout({ loaderData }: { loaderData: LoaderData }) {
 
 	return (
 		<RootProvider theme={{ defaultTheme: "light", forcedTheme: "light" }} search={{ enabled: false }}>
-			<div className="min-h-screen">
-				<Navbar />
-				<div className="mx-auto max-w-6xl px-4 py-8 md:px-6 lg:px-8">
-					<div className="flex gap-10">
-						<aside className="hidden w-56 shrink-0 md:block">
-							<div className="sticky top-20">
-								<DocsSidebar tree={data.pageTree} />
-							</div>
-						</aside>
-
-						<main className="min-w-0 flex-1">
-							{data.type === "openapi" ? (
-								<OpenApiContent title={data.title} description={data.description} apiProps={data.apiProps} />
-							) : (
-								<MarkdownContent path={data.path} slugs={data.slugs} />
-							)}
-						</main>
+			<UtilityShell section="docs">
+				<p className="utility-docs-context">{DOCS_IDENTITY_DISCLOSURE}</p>
+				<details className="utility-docs-mobile-nav">
+					<summary>Browse and search documentation</summary>
+					<div>
+						<DocsSidebar tree={data.pageTree} />
+					</div>
+				</details>
+				<div className="utility-docs-layout">
+					<aside className="utility-docs-sidebar" aria-label="Documentation navigation">
+						<div>
+							<DocsSidebar tree={data.pageTree} />
+						</div>
+					</aside>
+					<div className="utility-docs-content">
+						{data.type === "openapi" ? (
+							<OpenApiContent title={data.title} description={data.description} apiProps={data.apiProps} />
+						) : (
+							<MarkdownContent path={data.path} slugs={data.slugs} />
+						)}
 					</div>
 				</div>
-				<Footer />
-			</div>
+			</UtilityShell>
 		</RootProvider>
 	);
 }

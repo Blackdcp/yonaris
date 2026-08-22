@@ -1,18 +1,8 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { BlogPostLayout } from "@/components/blog-post-layout";
-import { resolveAuthor } from "@/data/authors";
-import {
-	blogPostingJsonLd,
-	breadcrumbJsonLd,
-	canonicalUrl,
-	definedTermSetJsonLd,
-	faqJsonLd,
-	howToJsonLd,
-	itemListJsonLd,
-	ogMeta,
-	SITE_NAME,
-} from "@/lib/seo";
+import { breadcrumbJsonLd, SITE_NAME } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
 
 export interface BlogPostFaqItem {
 	question: string;
@@ -31,13 +21,13 @@ export interface BlogPostLoaderData {
 	tags: string[];
 	/** SEO <title> override; falls back to `${title} · Elmo` (see source.config.ts). */
 	metaTitle?: string;
-	/** Rendered at the foot of the post and emitted as FAQPage JSON-LD. */
+	/** Rendered at the foot of the post as visible editorial content. */
 	faq?: BlogPostFaqItem[];
-	/** Emitted as ItemList JSON-LD on roundup posts. */
+	/** Retained as unpublished editorial metadata for roundup posts. */
 	itemList?: { name: string; url?: string; description?: string }[];
-	/** Emitted as DefinedTermSet JSON-LD on the glossary. */
+	/** Retained as unpublished editorial metadata for glossary content. */
 	definedTerms?: { term: string; definition: string; href?: string }[];
-	/** Emitted as HowTo JSON-LD on step-by-step guides. */
+	/** Retained as unpublished editorial metadata for step-by-step guides. */
 	howTo?: { name?: string; description?: string; steps: { name: string; text: string }[] };
 }
 
@@ -47,57 +37,30 @@ export const Route = createFileRoute("/blog/$")({
 		const data = loaderData as BlogPostLoaderData | undefined;
 		if (!data) return {};
 
-		const { title, description, date, updated, author, slugs, metaTitle, faq, itemList, definedTerms, howTo } = data;
+		const { title, description, date, updated, slugs, metaTitle } = data;
 		const pageTitle = metaTitle ?? `${title} · ${SITE_NAME}`;
 		const pageDescription = description || `${title} — from the ${SITE_NAME} blog.`;
 		const path = `/blog/${slugs.join("/")}`;
-		const resolved = resolveAuthor(author);
-		const authorName =
-			resolved.kind === "team" ? resolved.author.name : resolved.kind === "unknown" ? resolved.name : undefined;
+		const head = siteRouteHead("blog", {
+			canonicalPath: path as `/${string}`,
+			title: pageTitle,
+			description: pageDescription,
+			type: "article",
+		});
 
 		return {
 			meta: [
-				{ title: pageTitle },
-				{ name: "description", content: pageDescription },
+				...head.meta,
 				{ property: "article:published_time", content: date },
 				...(updated ? [{ property: "article:modified_time", content: updated }] : []),
-				...ogMeta({
-					title: pageTitle,
-					description: pageDescription,
-					path,
-					type: "article",
-				}),
 			],
-			links: [{ rel: "canonical", href: canonicalUrl(path) }],
+			links: head.links,
 			scripts: [
-				blogPostingJsonLd({
-					title,
-					description: pageDescription,
-					path,
-					datePublished: date,
-					dateModified: updated,
-					authorName,
-				}),
 				breadcrumbJsonLd([
 					{ name: "Home", path: "/" },
 					{ name: "Blog", path: "/blog" },
 					{ name: title, path },
 				]),
-				...(faq && faq.length > 0 ? [faqJsonLd(faq)] : []),
-				...(itemList && itemList.length > 0 ? [itemListJsonLd(itemList)] : []),
-				...(definedTerms && definedTerms.length > 0
-					? [
-							definedTermSetJsonLd({
-								name: title,
-								description: pageDescription,
-								path,
-								terms: definedTerms.map((t) => ({ term: t.term, definition: t.definition, url: t.href })),
-							}),
-						]
-					: []),
-				...(howTo
-					? [howToJsonLd({ name: howTo.name ?? title, description: howTo.description, steps: howTo.steps })]
-					: []),
 			],
 		};
 	},

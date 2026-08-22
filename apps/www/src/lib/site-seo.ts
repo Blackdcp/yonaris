@@ -27,6 +27,8 @@ export function siteRouteHead(
 		title: string;
 		description: string;
 		locale?: Locale;
+		image?: string;
+		type?: "website" | "article";
 	},
 ): { meta: object[]; links: object[] } {
 	const robots = routeRobotsMeta(routeKey);
@@ -41,6 +43,8 @@ export function siteRouteHead(
 				description: options.description,
 				path: options.canonicalPath,
 				locale: options.locale === "zh" ? "zh_CN" : "en_US",
+				image: options.image,
+				type: options.type,
 			}),
 		],
 		links: [{ rel: "canonical", href: siteHref(options.canonicalPath) }],

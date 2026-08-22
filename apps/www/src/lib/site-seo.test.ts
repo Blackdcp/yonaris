@@ -224,6 +224,37 @@ describe("manifest-driven site SEO", () => {
 		expect(subject.routeRobotsMeta("docs")).toBeUndefined();
 	});
 
+	test("applies the approved Publication and Utility index policies", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		expect(subject.routeRobotsMeta("blog")).toEqual({ name: "robots", content: "noindex,follow" });
+		expect(subject.routeRobotsMeta("glossary")).toEqual({ name: "robots", content: "noindex,follow" });
+		expect(subject.routeRobotsMeta("roadmap")).toEqual({ name: "robots", content: "noindex,follow" });
+		for (const key of ["docs", "status", "brand", "changelog"] as const) {
+			expect(subject.routeRobotsMeta(key)).toBeUndefined();
+		}
+	});
+
+	test("supports route-specific OG art without reimplementing manifest policy", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		const head = subject.siteRouteHead("docs", {
+			canonicalPath: "/docs/getting-started",
+			title: "Getting started | Yonaris",
+			description: "Open-source infrastructure documentation.",
+			image: "/og/docs/getting-started/image.png",
+			type: "article",
+		});
+		expect(head.meta).toEqual(
+			expect.arrayContaining([
+				{ property: "og:type", content: "article" },
+				{ property: "og:image", content: "/og/docs/getting-started/image.png" },
+			]),
+		);
+	});
+
 	test("keeps Organization and WebSite structured data Yonaris-only", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;

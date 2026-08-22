@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { serverLoader, type LoaderData } from "./$";
-import { getPageImage } from "@/lib/og";
-import { SITE_NAME, ogMeta, canonicalUrl, breadcrumbJsonLd } from "@/lib/seo";
 import { DocsPageLayout } from "@/components/docs-page-layout";
+import { DOCS_IDENTITY_DISCLOSURE } from "@/lib/docs-context";
+import { getPageImage } from "@/lib/og";
+import { breadcrumbJsonLd, SITE_NAME } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
+import { type LoaderData, serverLoader } from "./$";
 
 export const Route = createFileRoute("/docs/")({
 	component: Page,
@@ -11,21 +13,17 @@ export const Route = createFileRoute("/docs/")({
 		if (!data) return {};
 
 		const pageTitle = `Documentation · ${SITE_NAME}`;
-		const pageDescription = data.description || `${SITE_NAME} documentation and guides.`;
 		const image = getPageImage([]).url;
+		const head = siteRouteHead("docs", {
+			canonicalPath: "/docs",
+			title: pageTitle,
+			description: DOCS_IDENTITY_DISCLOSURE,
+			image,
+			type: "article",
+		});
 
 		return {
-			meta: [
-				{ title: pageTitle },
-				{ name: "description", content: pageDescription },
-				...ogMeta({
-					title: pageTitle,
-					description: pageDescription,
-					path: "/docs",
-					image,
-				}),
-			],
-			links: [{ rel: "canonical", href: canonicalUrl("/docs") }],
+			...head,
 			scripts: [
 				breadcrumbJsonLd([
 					{ name: "Home", path: "/" },

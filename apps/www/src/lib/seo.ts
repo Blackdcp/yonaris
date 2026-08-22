@@ -37,7 +37,9 @@ export function ogMeta({
 }) {
 	const url = canonicalUrl(path);
 	const resolvedImage = image ?? getMarketingOgImage({ title, description });
-	const absoluteImage = resolvedImage.startsWith("http") ? resolvedImage : canonicalUrl(resolvedImage);
+	const absoluteImage = resolvedImage.startsWith("http")
+		? resolvedImage
+		: (canonicalUrl(resolvedImage) ?? resolvedImage);
 
 	return [
 		{ property: "og:title", content: title },

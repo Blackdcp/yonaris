@@ -1,10 +1,5 @@
-import { Redis } from "@upstash/redis";
 import { createServerFn } from "@tanstack/react-start";
-
-const redis = new Redis({
-	url: process.env.UPSTASH_REDIS_REST_URL!,
-	token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
+import { Redis } from "@upstash/redis";
 
 const CACHE_KEY = "gh:releases:elmohq/elmo";
 const TTL_SECONDS = 60 * 60;
@@ -21,8 +16,12 @@ export interface ReleaseEntry {
 }
 
 export const getGitHubReleases = createServerFn({ method: "GET" }).handler(async (): Promise<ReleaseEntry[]> => {
+	if (process.env.WWW_E2E_OFFLINE === "true") return [];
+	const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+	const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+	const redis = url && token ? new Redis({ url, token }) : undefined;
 	try {
-		const cached = await redis.get<ReleaseEntry[]>(CACHE_KEY);
+		const cached = await redis?.get<ReleaseEntry[]>(CACHE_KEY);
 		if (Array.isArray(cached)) return cached;
 
 		const res = await fetch("https://api.github.com/repos/elmohq/elmo/releases?per_page=50", {
@@ -33,9 +32,7 @@ export const getGitHubReleases = createServerFn({ method: "GET" }).handler(async
 		});
 
 		if (!res.ok) {
-			await redis.set(CACHE_KEY, [] as ReleaseEntry[], {
-				ex: ERROR_TTL_SECONDS,
-			});
+			await redis?.set(CACHE_KEY, [] as ReleaseEntry[], { ex: ERROR_TTL_SECONDS });
 			return [];
 		}
 
@@ -62,7 +59,7 @@ export const getGitHubReleases = createServerFn({ method: "GET" }).handler(async
 				prerelease: r.prerelease,
 			}));
 
-		await redis.set(CACHE_KEY, releases, { ex: TTL_SECONDS });
+		await redis?.set(CACHE_KEY, releases, { ex: TTL_SECONDS });
 		return releases;
 	} catch {
 		return [];
