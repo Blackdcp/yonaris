@@ -12,40 +12,48 @@ interface MarketingShellProps {
 export function MarketingShell({ locale, page = "home", children }: MarketingShellProps) {
 	const content = getMarketingContent(locale);
 	const navigation = getMarketingNavigation(locale, page);
+	const isHome = page === "home";
+	const navigationText = isHome
+		? "text-[var(--yonaris-slate)]/74 hover:text-[var(--yonaris-ink)] focus-visible:text-[var(--yonaris-signal-strong)]"
+		: "text-[var(--yonaris-paper)]/68 hover:text-[var(--yonaris-paper)] focus-visible:text-[var(--yonaris-signal)]";
 
 	return (
 		<div className="marketing-site min-h-[100svh] bg-[var(--yonaris-paper)] text-[var(--yonaris-ink)]" lang={locale === "zh" ? "zh-CN" : "en"}>
-			<header className="sticky top-0 z-50 border-b border-white/10 bg-[var(--yonaris-ink)]/95 text-[var(--yonaris-paper)] backdrop-blur-sm">
-				<div className="mx-auto flex h-[4.5rem] max-w-[90rem] items-center justify-between px-5 sm:px-8 lg:px-12">
+			<header className={`marketing-header sticky top-0 z-50 border-b backdrop-blur-sm ${isHome ? "marketing-header--home border-[var(--yonaris-ink)]/10 bg-[var(--yonaris-paper)] text-[var(--yonaris-ink)]" : "border-white/10 bg-[var(--yonaris-ink)]/95 text-[var(--yonaris-paper)]"}`}>
+				<div className="mx-auto flex h-16 max-w-[90rem] items-center justify-between px-5 sm:h-[4.5rem] sm:px-8 lg:px-12">
 					<a href={navigation.home} aria-label={locale === "zh" ? "Yonaris 中文首页" : "Yonaris home"} className="inline-flex min-h-11 items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)]">
-						<Logo variant="white" className="h-[1.65rem] sm:h-7" />
+						<Logo variant={isHome ? "navy" : "white"} className="h-[1.65rem] sm:h-7" />
 					</a>
 
 					<nav aria-label={locale === "zh" ? "主导航" : "Primary navigation"} className="hidden items-center gap-6 lg:flex">
 						{navigation.items.map((item) => (
-							<a key={item.path} href={item.path} className="inline-flex min-h-11 items-center text-[11px] font-medium tracking-[0.04em] text-[var(--yonaris-paper)]/68 transition-colors hover:text-[var(--yonaris-paper)] focus-visible:outline-none focus-visible:text-[var(--yonaris-signal)]">
+							<a key={item.path} href={item.path} className={`inline-flex min-h-11 items-center text-[11px] font-medium tracking-[0.04em] transition-colors focus-visible:outline-none ${navigationText}`}>
 								{item.label}
 							</a>
 						))}
 					</nav>
 
 					<div className="hidden items-center gap-3 lg:flex">
-						<a href={navigation.language.path} lang={locale === "zh" ? "en" : "zh-CN"} className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[11px] font-medium text-[var(--yonaris-paper)]/68 hover:text-[var(--yonaris-paper)] focus-visible:outline-none focus-visible:text-[var(--yonaris-signal)]">
+						<a href={navigation.language.path} lang={locale === "zh" ? "en" : "zh-CN"} className={`inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[11px] font-medium focus-visible:outline-none ${navigationText}`}>
 							{navigation.language.label}
 						</a>
-						<MarketingLink href={navigation.diagnostic.path} className="min-h-10 px-3.5" showArrow={false}>{navigation.diagnostic.label}</MarketingLink>
+						{isHome ? (
+							<a href={navigation.diagnostic.path} className="inline-flex min-h-11 items-center justify-center rounded-[0.45rem] bg-[var(--yonaris-ink)] px-4 text-xs font-medium text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal-strong)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--yonaris-paper)]">{navigation.diagnostic.label}</a>
+						) : (
+							<MarketingLink href={navigation.diagnostic.path} className="min-h-10 px-3.5" showArrow={false}>{navigation.diagnostic.label}</MarketingLink>
+						)}
 					</div>
 
 					<details className="marketing-mobile-menu relative lg:hidden">
-						<summary className="inline-flex min-h-11 min-w-11 list-none items-center justify-center border border-white/18 text-[10px] font-medium tracking-[0.12em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)]">MENU</summary>
-						<div className="absolute top-[calc(100%+0.75rem)] right-0 w-[min(21rem,calc(100vw-2.5rem))] border border-white/12 bg-[var(--yonaris-ink)] p-4 shadow-2xl shadow-black/30">
+						<summary className={`inline-flex min-h-11 min-w-11 list-none items-center justify-center border text-[10px] font-medium tracking-[0.12em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)] ${isHome ? "border-[var(--yonaris-ink)]/18" : "border-white/18"}`}>MENU</summary>
+						<div className={`absolute top-[calc(100%+0.75rem)] right-0 w-[min(21rem,calc(100vw-2.5rem))] border p-4 shadow-2xl shadow-black/20 ${isHome ? "border-[var(--yonaris-ink)]/12 bg-[var(--yonaris-paper)]" : "border-white/12 bg-[var(--yonaris-ink)]"}`}>
 							<nav aria-label={locale === "zh" ? "移动端导航" : "Mobile navigation"} className="flex flex-col">
 								{navigation.items.map((item) => (
-									<a key={item.path} href={item.path} className="flex min-h-12 items-center border-b border-white/10 text-sm text-[var(--yonaris-paper)]/78">{item.label}</a>
+									<a key={item.path} href={item.path} className={`flex min-h-12 items-center border-b text-sm ${isHome ? "border-[var(--yonaris-ink)]/10 text-[var(--yonaris-slate)]" : "border-white/10 text-[var(--yonaris-paper)]/78"}`}>{item.label}</a>
 								))}
-								<a href={navigation.language.path} lang={locale === "zh" ? "en" : "zh-CN"} className="flex min-h-12 items-center text-sm text-[var(--yonaris-paper)]/78">{navigation.language.label}</a>
+								<a href={navigation.language.path} lang={locale === "zh" ? "en" : "zh-CN"} className={`flex min-h-12 items-center text-sm ${isHome ? "text-[var(--yonaris-slate)]" : "text-[var(--yonaris-paper)]/78"}`}>{navigation.language.label}</a>
 							</nav>
-							<MarketingLink href={navigation.diagnostic.path} className="mt-4 w-full" showArrow={false}>{navigation.diagnostic.label}</MarketingLink>
+							<MarketingLink href={navigation.diagnostic.path} tone={isHome ? "paper" : "ink"} className="mt-4 w-full" showArrow={false}>{navigation.diagnostic.label}</MarketingLink>
 						</div>
 					</details>
 				</div>

@@ -1,4 +1,5 @@
 import { getMarketingContent, type Locale } from "@/lib/marketing-content";
+import { HomeHero } from "./home-hero";
 import { MarketingLink } from "./marketing-link";
 import { MarketingSection, SectionIntro } from "./section";
 import { MarketingShell } from "./marketing-shell";
@@ -11,41 +12,13 @@ export function MarketingHomePage({ locale }: { locale: Locale }) {
 
 	return (
 		<MarketingShell locale={locale} page="home">
-			<MarketingSection tone="ink" className="relative min-h-[calc(100svh-4.5rem)] overflow-hidden" innerClassName="relative grid min-h-[calc(100svh-4.5rem)] items-center py-20 sm:py-28 lg:grid-cols-12 lg:py-32">
-				<div className="pointer-events-none absolute inset-y-0 right-0 hidden w-[61%] lg:block">
-					<SignalField />
-				</div>
-				<div className="marketing-hero-copy relative z-10 lg:col-span-7">
-					<p className="marketing-kicker text-[var(--yonaris-paper)]/56">{content.hero.eyebrow}</p>
-					<h1 className="marketing-display mt-7 max-w-[10ch] text-[clamp(3.15rem,7.4vw,7.25rem)] leading-[0.91] font-medium tracking-[-0.062em] text-balance">
-						{content.hero.title.map((line) => <span key={line} className="block">{line}</span>)}
-					</h1>
-					<div className="mt-8 h-px w-10 bg-[var(--yonaris-signal)] sm:mt-10" />
-					<p className="mt-8 max-w-[38rem] text-base leading-7 text-[var(--yonaris-paper)]/68 sm:text-lg sm:leading-8">{content.hero.body}</p>
-					<div className="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3">
-						<MarketingLink href={diagnosticPath}>{content.cta.primary}</MarketingLink>
-						<MarketingLink href="/agent" variant="text">{content.cta.agent}</MarketingLink>
-					</div>
-				</div>
-				<div className="pointer-events-none relative mt-14 h-64 overflow-hidden sm:h-80 lg:hidden">
-					<SignalField className="absolute inset-0" />
-				</div>
-			</MarketingSection>
+			<HomeHero locale={locale} content={content.homeHero} previewLabel={content.preview.label} />
 
-			<MarketingSection tone="paper" className="border-b border-[var(--yonaris-ink)]/12" innerClassName="py-24 sm:py-32 lg:py-40">
-				<SectionIntro {...content.marketShift} />
-				<div className="mt-20 grid border-t border-[var(--yonaris-ink)]/16 sm:grid-cols-3 lg:ml-[33.333%] lg:mt-28">
-					{[
-						[isZh ? "发现" : "Discover", isZh ? "谁进入候选范围" : "What enters the field"],
-						[isZh ? "比较" : "Compare", isZh ? "差异如何被解释" : "How difference is framed"],
-						[isZh ? "选择" : "Choose", isZh ? "什么最终被推荐" : "What earns recommendation"],
-					].map(([label, note], index) => (
-						<div key={label} className="border-b border-[var(--yonaris-ink)]/12 py-6 sm:border-r sm:border-b-0 sm:px-6 first:sm:pl-0 last:sm:border-r-0">
-							<p className="font-mono text-[10px] text-[var(--yonaris-signal-strong)]">0{index + 1}</p>
-							<p className="mt-10 text-2xl font-medium tracking-[-0.03em]">{label}</p>
-							<p className="mt-2 text-sm text-[var(--yonaris-slate)]/62">{note}</p>
-						</div>
-					))}
+			<MarketingSection id="company" tone="paper" className="border-b border-[var(--yonaris-ink)]/12" innerClassName="grid gap-7 py-20 sm:py-24 lg:grid-cols-12 lg:gap-10 lg:py-28">
+				<p className="marketing-kicker text-[var(--yonaris-slate)]/70 lg:col-span-3">{content.navigation[3].label}</p>
+				<div className="lg:col-span-8 lg:col-start-5">
+					<h2 className="marketing-display max-w-[17ch] text-[clamp(2.35rem,5vw,5.25rem)] leading-[0.98] font-medium tracking-[-0.045em] text-balance">{content.brandThesis}</h2>
+					<p className="mt-7 max-w-[46rem] text-base leading-7 text-[var(--yonaris-slate)]/78 sm:text-lg sm:leading-8">{content.companyDefinition}</p>
 				</div>
 			</MarketingSection>
 
