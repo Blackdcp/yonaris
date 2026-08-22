@@ -84,17 +84,6 @@ export const MARKETING_ROUTES: readonly MarketingRoute[] = [
 	{ key: "diagnostic", en: "/diagnostic", zh: "/zh/diagnostic" },
 ] as const;
 
-export const MARKETING_SITEMAP_PATHS = [
-	...MARKETING_ROUTES.flatMap((route) => [route.en, route.zh]),
-	"/agent",
-	"/agent/company",
-	"/agent/platform",
-	"/agent/methodology",
-	"/agent/results",
-	"/llms.txt",
-	"/llms-full.txt",
-] as const;
-
 const en = {
 	locale: "en" as const,
 	category: "AI-native MarTech",

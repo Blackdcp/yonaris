@@ -1,6 +1,6 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { isMarkdownPreferred, rewritePath } from "fumadocs-core/negotiation";
-import { appendVary } from "@/lib/machine-response";
+import { appendVary, preserveApplicationVary } from "@/lib/machine-response";
 import { resolveMarkdownRequest, rewriteMarkdownRequest } from "@/lib/markdown-negotiation";
 
 function configuredPosthogOrigin(): string | undefined {
@@ -82,7 +82,10 @@ export default createServerEntry({
 		const response = await handler.fetch(req);
 		// A bare docs URL can resolve to either HTML or markdown depending on
 		// the Accept header, so shared caches must key on it.
-		if (negotiable || coreMarkdown.variesOnAccept) appendVary(response.headers, "Accept");
+		if (negotiable || coreMarkdown.variesOnAccept) {
+			appendVary(response.headers, "Accept");
+			preserveApplicationVary(response);
+		}
 		return addSecurityHeaders(response);
 	},
 });

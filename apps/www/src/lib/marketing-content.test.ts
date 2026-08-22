@@ -9,7 +9,6 @@ import {
 	getMarketingPageMeta,
 	getProductContent,
 	MARKETING_ROUTES,
-	MARKETING_SITEMAP_PATHS,
 } from "./marketing-content";
 
 describe("marketing content", () => {
@@ -60,23 +59,6 @@ describe("marketing content", () => {
 		expect(MARKETING_ROUTES.every((route) => route.en && route.zh)).toBe(true);
 		expect(getLocalizedPath("/methodology", "zh")).toBe("/zh/methodology");
 		expect(getLocalizedPath("/zh/results", "en")).toBe("/results");
-	});
-
-	it("publishes every core human and agent route exactly once", () => {
-		expect(MARKETING_SITEMAP_PATHS).toHaveLength(19);
-		expect(new Set(MARKETING_SITEMAP_PATHS).size).toBe(MARKETING_SITEMAP_PATHS.length);
-		expect(MARKETING_SITEMAP_PATHS).toEqual(
-			expect.arrayContaining([
-				"/",
-				"/zh",
-				"/platform",
-				"/zh/platform",
-				"/agent",
-				"/agent/company",
-				"/llms.txt",
-				"/llms-full.txt",
-			]),
-		);
 	});
 
 	it("builds a localized homepage navigation model with real conversion and section targets", () => {

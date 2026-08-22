@@ -36,6 +36,17 @@ describe("machine responses", () => {
 		}
 	});
 
+	test("identifies a bilingual aggregate with both represented languages", () => {
+		const responseHelpers = requireSubject();
+		if (!responseHelpers) return;
+
+		const response = responseHelpers.machineDocumentResponse("# English\n\n# 中文", {
+			language: ["en", "zh"],
+			contentType: "text/plain; charset=utf-8",
+		});
+		expect(response.headers.get("content-language")).toBe("en, zh-CN");
+	});
+
 	test("merges Accept into Vary without discarding or duplicating existing dimensions", () => {
 		const responseHelpers = requireSubject();
 		if (!responseHelpers) return;
@@ -46,5 +57,18 @@ describe("machine responses", () => {
 
 		responseHelpers.appendVary(headers, "Next-Router-State-Tree");
 		expect(headers.get("vary")).toBe("RSC, Accept-Encoding, accept, Next-Router-State-Tree");
+	});
+
+	test("restores every application Vary dimension after Nitro prepares its own", () => {
+		const responseHelpers = requireSubject();
+		if (!responseHelpers) return;
+
+		const response = new Response("ok", { headers: { Vary: "RSC, Accept" } });
+		responseHelpers.preserveApplicationVary(response);
+		response.headers.set("Vary", "Accept-Encoding");
+		responseHelpers.restoreApplicationVary(response);
+
+		expect(response.headers.get("vary")).toBe("Accept-Encoding, RSC, Accept");
+		expect(response.headers.has("x-yonaris-application-vary")).toBe(false);
 	});
 });

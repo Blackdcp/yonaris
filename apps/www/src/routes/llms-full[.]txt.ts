@@ -5,7 +5,11 @@ import { machineDocumentResponse } from "@/lib/machine-response";
 export const Route = createFileRoute("/llms-full.txt")({
 	server: {
 		handlers: {
-			GET: () => machineDocumentResponse(renderLlmsFull(), { contentType: "text/plain; charset=utf-8" }),
+			GET: () =>
+				machineDocumentResponse(renderLlmsFull(), {
+					language: ["en", "zh"],
+					contentType: "text/plain; charset=utf-8",
+				}),
 		},
 	},
 });
