@@ -33,7 +33,7 @@ jobs:
   e2e:
     name: E2E Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     env:
       # One file set for every `docker compose` invocation below, so no step
@@ -69,7 +69,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: Type check
         run: pnpm turbo check-types
@@ -148,7 +148,20 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Playwright browsers
-        run: pnpm -C apps/web exec playwright install chromium --with-deps
+        run: pnpm -C e2e exec playwright install chromium --with-deps
+
+      - name: Run public-site browser tests
+        id: public-site-tests
+        run: pnpm --filter e2e run test:www
+
+      - name: Upload public-site failure results
+        if: ${{ failure() && steps.public-site-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-site-test-results
+          path: e2e/test-results-www/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Storybook tests
         run: pnpm -C apps/web test:storybook
@@ -244,7 +257,7 @@ jobs:
           E2E_SKIP_AUTH_SETUP: "true"
 
       - name: Dump service logs
-        if: failure()
+        if: ${{ failure() && hashFiles('e2e/.elmo/elmo.yaml') != '' }}
         run: docker compose logs web worker
 
       - name: Upload Playwright report
