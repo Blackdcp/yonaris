@@ -177,6 +177,66 @@ test("mobile diagnostic evidence remains readable", async ({ page }) => {
 	expect(fontSizes.source).toBeGreaterThanOrEqual(11);
 });
 
+test("mobile diagnostic chain reaches the localized next move without overflow", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	const locales = [
+		{
+			route: "/",
+			answers: ["Illustrative answer", "Company narrative", "Observed mismatch"],
+			finalLabel: "Next move",
+			finalValue: "Align company, product and portal metadata.",
+		},
+		{
+			route: "/zh",
+			answers: ["示例答案", "公司叙事", "观察到的不一致"],
+			finalLabel: "下一步",
+			finalValue: "统一公司、产品与门户元数据。",
+		},
+	] as const;
+
+	for (const locale of locales) {
+		await page.goto(locale.route);
+		await page.evaluate(() => document.fonts.ready);
+		const preview = page.locator(".marketing-product-preview");
+		const answers = preview.locator(".marketing-product-preview__answers article");
+		await expect(answers).toHaveCount(3);
+
+		for (const [index, answerLabel] of locale.answers.entries()) {
+			await expect(answers.nth(index)).toContainText(answerLabel);
+			await answers.nth(index).scrollIntoViewIfNeeded();
+			await expect(answers.nth(index)).toBeVisible();
+		}
+
+		const finalMove = preview.getByText(locale.finalValue, { exact: true });
+		await finalMove.scrollIntoViewIfNeeded();
+		await expect(preview.getByText(locale.finalLabel, { exact: true })).toBeVisible();
+		await expect(finalMove).toBeVisible();
+
+		const presentation = await finalMove.evaluate((element) => {
+			const bounds = element.getBoundingClientRect();
+			return {
+				fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+				left: bounds.left,
+				right: bounds.right,
+				viewportWidth: window.innerWidth,
+			};
+		});
+		expect(presentation.fontSize).toBeGreaterThanOrEqual(11);
+		expect(presentation.left).toBeGreaterThanOrEqual(0);
+		expect(presentation.right).toBeLessThanOrEqual(presentation.viewportWidth);
+
+		const overflow = await page.evaluate(() => {
+			const preview = document.querySelector<HTMLElement>(".marketing-product-preview")!;
+			return {
+				document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+				body: document.body.scrollWidth - document.body.clientWidth,
+				preview: preview.scrollWidth - preview.clientWidth,
+			};
+		});
+		expect(overflow).toEqual({ document: 0, body: 0, preview: 0 });
+	}
+});
+
 test("supporting marketing pages retain the dark shell", async ({ page }) => {
 	await page.goto("/platform");
 	const [red, green, blue, alpha] = await backgroundPixel(page, ".marketing-site > header");
