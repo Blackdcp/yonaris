@@ -11,6 +11,7 @@ export interface ScrapeResult {
 	textContent: string;
 	rawOutput: unknown;
 	webQueries: string[];
+	webSearchObserved?: boolean | null;
 	citations: Citation[];
 	modelVersion?: string;
 	providerSubmissionId?: string;

@@ -115,6 +115,7 @@ async function runGoogleAiMode(prompt: string): Promise<ScrapeResult> {
 	return {
 		rawOutput: sanitizeForJson(response),
 		webQueries: citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
+		webSearchObserved: citations.length > 0 ? true : null,
 		textContent: extractTextFromGoogle(response),
 		citations,
 		modelVersion: "dataforseo",
@@ -150,6 +151,7 @@ async function runGoogleAiOverview(prompt: string): Promise<ScrapeResult> {
 				return {
 					rawOutput: sanitizeForJson(response),
 					webQueries: citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
+					webSearchObserved: citations.length > 0 ? true : null,
 					textContent: extractTextFromGoogle(response),
 					citations,
 					modelVersion: "dataforseo",
@@ -257,10 +259,18 @@ async function runLlmResponse(model: string, prompt: string, options?: ProviderO
 	return {
 		rawOutput: raw,
 		webQueries: webSearch ? (fanOut.length > 0 ? fanOut : citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : []) : [],
+		webSearchObserved: fanOut.length > 0 || citations.length > 0 ? true : explicitSearchObservation(result),
 		textContent: extractTextFromDataforseoLlm(raw),
 		citations,
 		modelVersion: result.model_name ?? modelName,
 	};
+}
+
+function explicitSearchObservation(result: Record<string, any>): boolean | null {
+	for (const key of ["web_search_triggered", "web_search_used", "search_performed"]) {
+		if (typeof result[key] === "boolean") return result[key];
+	}
+	return null;
 }
 
 export const dataforseo: Provider = {

@@ -237,6 +237,7 @@ export function toBrightDataScrapeResult(
 	options: {
 		captureMethod: "brightdata_dataset" | "brightdata_serp";
 		webSearch: boolean;
+		model?: string;
 		modelVersion?: string;
 		providerSubmissionId?: string;
 	},
@@ -265,6 +266,7 @@ export function toBrightDataScrapeResult(
 					? [WEB_QUERIES_UNAVAILABLE]
 					: []
 			: [],
+		webSearchObserved: resolveBrightDataSearchObservation(record, options, citations),
 		citations,
 		modelVersion: options.modelVersion ?? (typeof record.model === "string" ? record.model : undefined),
 		providerSubmissionId: options.providerSubmissionId,
@@ -275,6 +277,19 @@ export function toBrightDataScrapeResult(
 			sourcePayloadSha256: createHash("sha256").update(JSON.stringify(payload)).digest("hex"),
 		},
 	};
+}
+
+function resolveBrightDataSearchObservation(
+	record: Record<string, any>,
+	options: { captureMethod: "brightdata_dataset" | "brightdata_serp"; model?: string },
+	citations: Citation[],
+): boolean | null {
+	for (const key of ["web_search_triggered", "web_search_used", "search_performed"]) {
+		if (typeof record[key] === "boolean") return record[key];
+	}
+	if (citations.length === 0) return null;
+	if (options.captureMethod === "brightdata_serp") return true;
+	return options.model === "google-ai-mode" || options.model === AI_OVERVIEW_MODEL ? true : null;
 }
 
 function firstNonemptyString(...values: unknown[]): string | undefined {
@@ -381,6 +396,7 @@ export const brightdata: Provider = {
 			return toBrightDataScrapeResult(payload, {
 				captureMethod: "brightdata_dataset",
 				webSearch: options?.webSearch ?? false,
+				model,
 				providerSubmissionId: snapshotId,
 			});
 		} finally {

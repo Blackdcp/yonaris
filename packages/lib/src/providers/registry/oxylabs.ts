@@ -212,6 +212,7 @@ export const oxylabs: Provider = {
 						: citations.length > 0
 							? ["unavailable"]
 							: [],
+			webSearchObserved: webQueries.length > 0 || citations.length > 0 ? true : null,
 			citations,
 			modelVersion:
 				typeof content.llm_model === "string"

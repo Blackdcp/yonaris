@@ -114,7 +114,7 @@ describe("dataforseo provider", () => {
 		// country isn't a ProviderOptions field (intentionally not exposed); force it
 		// through to prove DataForSEO never forwards it as web_search_country_iso_code.
 		const options = { webSearch: true, country: "GB" } as unknown as Parameters<typeof dataforseo.run>[2];
-		await dataforseo.run("chatgpt", "What is a well-reviewed laptop this month?", options);
+		const result = await dataforseo.run("chatgpt", "What is a well-reviewed laptop this month?", options);
 
 		const [payload] = dataforseoClient.chatgptLlmResponsesLive.mock.calls[0];
 		expect(payload[0]).not.toHaveProperty("web_search_country_iso_code");
@@ -123,6 +123,7 @@ describe("dataforseo provider", () => {
 			model_name: "gpt-5.5",
 			web_search: true,
 		});
+		expect(result.webSearchObserved).toBe(true);
 	});
 
 	it("fetches Google AI Overview from the organic SERP endpoint with async loading on", async () => {
@@ -143,6 +144,28 @@ describe("dataforseo provider", () => {
 		expect(result.citations).toHaveLength(1);
 		expect(result.citations[0].domain).toBe("whathifi.com");
 		expect(result.webQueries).toEqual(["unavailable"]);
+		expect(result.webSearchObserved).toBe(true);
+	});
+
+	it("does not infer observed search from the requested LLM toggle alone", async () => {
+		dataforseoClient.chatgptLlmResponsesLive.mockResolvedValueOnce({
+			tasks: [
+				{
+					status_code: 20000,
+					status_message: "Ok.",
+					result: [
+						{
+							model_name: "gpt-5.5",
+							items: [{ type: "message", sections: [{ type: "text", text: "Answer without search evidence." }] }],
+						},
+					],
+				},
+			],
+		});
+
+		const result = await dataforseo.run("chatgpt", "Question", { webSearch: true });
+
+		expect(result.webSearchObserved).toBeNull();
 	});
 
 	it("retries the AI Overview request when DataForSEO returns a transient server error", async () => {
