@@ -41,14 +41,14 @@ test("one administrator action completes one Prompt across all seven local brows
     await adminPage.goto(`/admin/sampling?brand=${STEPFUN_BRAND_ID}`);
     await expect(adminPage.getByRole("heading", { name: "Sampling Tasks" })).toBeVisible({ timeout: 30_000 });
     await adminPage.getByLabel("Program").selectOption(scope.id);
-    await expect(adminPage.getByText(/1\s*×\s*6\s*×\s*1\s*=\s*6 tasks/)).toBeVisible();
-    await adminPage.getByRole("button", { name: "Run 6 tasks now" }).click();
+    await expect(adminPage.getByText(/1\s*×\s*7\s*×\s*1\s*=\s*7 tasks/)).toBeVisible();
+    await adminPage.getByRole("button", { name: "Run 7 tasks now" }).click();
     await expect(adminPage.getByRole("row").filter({ hasText: scopeName }).first()).toBeVisible({ timeout: 20_000 });
 
     const completed = await drainFakeExtension(request, token);
     expect(completed.map(({ surface }) => surface)).toEqual(RUN_SURFACES);
     const structured = completed[0];
-    if (!structured) throw new Error("Six-surface fixture did not complete a structured observation");
+    if (!structured) throw new Error("Seven-surface fixture did not complete a structured observation");
 
     const database = new pg.Client({ connectionString: DATABASE_URL });
     await database.connect();
@@ -88,16 +88,16 @@ test("one administrator action completes one Prompt across all seven local brows
         [STEPFUN_BRAND_ID, scope.id],
       );
       expect(result.rows[0]).toEqual({
-        tasks: "6",
-        successes: "6",
-        runs: "6",
-        mentioned: "6",
-        ready_snapshots: "6",
-        citations: "6",
-        search_observed: "6",
-        query_runs: "6",
-        structured_v2_runs: "6",
-        attached_jpegs: "6",
+        tasks: "7",
+        successes: "7",
+        runs: "7",
+        mentioned: "7",
+        ready_snapshots: "7",
+        citations: "7",
+        search_observed: "7",
+        query_runs: "7",
+        structured_v2_runs: "7",
+        attached_jpegs: "7",
       });
     } finally {
       await database.end();
