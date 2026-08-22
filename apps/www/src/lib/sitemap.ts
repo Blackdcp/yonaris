@@ -71,8 +71,8 @@ ${entries
 			)
 			.join("\n");
 		return `  <url>
-    <loc>${escapeXml(absoluteUrl(origin, entry.path))}</loc>${lastmod}${alternates ? `\n${alternates}` : ""}
-    <priority>${entry.priority}</priority>
+    <loc>${escapeXml(absoluteUrl(origin, entry.path))}</loc>${lastmod}
+    <priority>${entry.priority}</priority>${alternates ? `\n${alternates}` : ""}
   </url>`;
 	})
 	.join("\n")}

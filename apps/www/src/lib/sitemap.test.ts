@@ -127,6 +127,21 @@ describe("manifest-driven sitemap", () => {
 		expect(xml.match(/<lastmod>2026-08-22<\/lastmod>/g)).toHaveLength(14);
 	});
 
+	test("renders core sitemap elements before XHTML alternate extensions", () => {
+		const subject = requireSitemap();
+		if (!subject) return;
+
+		const xml = subject.renderSitemap("https://yonaris.example/");
+		const entriesWithAlternates = [...xml.matchAll(/<url>[\s\S]*?<\/url>/g)]
+			.map(([entry]) => entry)
+			.filter((entry) => entry.includes("<xhtml:link"));
+
+		expect(entriesWithAlternates).toHaveLength(14);
+		for (const entry of entriesWithAlternates) {
+			expect(entry.indexOf("<priority>")).toBeLessThan(entry.indexOf("<xhtml:link"));
+		}
+	});
+
 	test("renders a crawlable robots policy pointing at the sitemap", () => {
 		const subject = requireSitemap();
 		if (!subject) return;
