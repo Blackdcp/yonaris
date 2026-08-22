@@ -14,8 +14,40 @@ interface StatusDataBoundary {
 function parseStatusEntry(value: unknown): StatusEntry | undefined {
 	try {
 		const parsed = typeof value === "string" ? JSON.parse(value) : value;
-		if (!parsed || typeof parsed !== "object") return undefined;
-		return parsed as StatusEntry;
+		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
+
+		const entry = parsed as Record<string, unknown>;
+		const timestamp = typeof entry.ts === "string" ? Date.parse(entry.ts) : Number.NaN;
+		const numericFields = [
+			entry.latency,
+			entry.retries,
+			entry.textLength,
+			entry.rawOutputBytes,
+			entry.citations,
+			entry.webQueries,
+		];
+		if (
+			!Number.isFinite(timestamp) ||
+			(entry.status !== "pass" && entry.status !== "fail") ||
+			numericFields.some((field) => typeof field !== "number" || !Number.isFinite(field) || field < 0) ||
+			typeof entry.webSearch !== "boolean" ||
+			(entry.error !== null && typeof entry.error !== "string")
+		) {
+			return undefined;
+		}
+
+		return {
+			ts: entry.ts as string,
+			status: entry.status,
+			latency: entry.latency as number,
+			retries: entry.retries as number,
+			textLength: entry.textLength as number,
+			rawOutputBytes: entry.rawOutputBytes as number,
+			citations: entry.citations as number,
+			webQueries: entry.webQueries as number,
+			webSearch: entry.webSearch,
+			error: entry.error,
+		};
 	} catch {
 		return undefined;
 	}

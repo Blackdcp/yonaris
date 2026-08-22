@@ -48,4 +48,20 @@ describe("status truth and failure semantics", () => {
 		});
 		expect(result).toEqual([{ target: "chatgpt:openai-api:gpt", entries: [] }]);
 	});
+
+	test("filters malformed provider records instead of presenting them as check evidence", async () => {
+		const subject = await import("./status");
+		const result = await subject.loadStatusDataWith({
+			now: () => new Date("2026-08-22T12:00:00.000Z").getTime(),
+			targets: ["chatgpt:openai-api:gpt"],
+			read: async () => [
+				{},
+				{ ts: "not-a-date", status: "pass", latency: 1200 },
+				{ ...passingEntry, status: "unknown" },
+				{ ...passingEntry, latency: Number.NaN },
+			],
+		});
+
+		expect(result).toEqual([{ target: "chatgpt:openai-api:gpt", entries: [] }]);
+	});
 });

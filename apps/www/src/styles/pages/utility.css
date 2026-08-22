@@ -209,6 +209,11 @@
 	color: var(--yonaris-slate);
 }
 
+.utility-docs-content :is(button, [role="button"]) {
+	min-width: 2.75rem;
+	min-height: 2.75rem;
+}
+
 .utility-status-ledger {
 	width: min(100% - 2.5rem, 90rem);
 	margin: 0 auto clamp(5rem, 9vw, 8rem);

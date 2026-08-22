@@ -19,7 +19,7 @@ export interface BlogPostLoaderData {
 	updated?: string;
 	author: string;
 	tags: string[];
-	/** SEO <title> override; falls back to `${title} · Elmo` (see source.config.ts). */
+	/** SEO <title> override; falls back to `${title} · Yonaris` (see source.config.ts). */
 	metaTitle?: string;
 	/** Rendered at the foot of the post as visible editorial content. */
 	faq?: BlogPostFaqItem[];

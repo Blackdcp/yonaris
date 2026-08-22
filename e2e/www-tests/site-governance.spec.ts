@@ -210,6 +210,18 @@ test("Publication and Utility interactions expose Signal focus and 44px targets"
 	await expectSignalFocusVisible(page, back);
 	const backBox = await back.boundingBox();
 	expect(backBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+	await page.goto("/docs");
+	await waitForHydration(page);
+	for (const label of ["Yes", "No"]) {
+		const feedback = page.getByRole("button", { name: label, exact: true });
+		const feedbackBox = await feedback.boundingBox();
+		expect(feedbackBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+	}
+	await page.getByRole("button", { name: "Yes", exact: true }).click();
+	const submitFeedback = page.getByRole("button", { name: "Submit Feedback" });
+	const submitBox = await submitFeedback.boundingBox();
+	expect(submitBox?.height ?? 0).toBeGreaterThanOrEqual(44);
 });
 
 test("Publication and Utility routes leave no running motion under reduced motion", async ({ page }) => {
