@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface CompanyPrinciple {
 	id: string;
@@ -95,7 +95,7 @@ export const pageZh = {
 	category: "AI 原生营销科技",
 	vision: "重构 MarTech，同时面向人，也面向智能体。",
 	marketShift: "越来越多的发现、比较与选择发生在 AI 生成的回答里，早于网站访问或销售沟通。",
-	stage: "Yonaris 目前是一款处于早期、以服务驱动，并拥有真实证据平台的产品。",
+	stage: "Yonaris 目前是一家处于早期、以服务驱动的公司，拥有真实可用的证据平台。",
 	brandThesis: "“递归森林”表达的是一种工作信念：有限且明确的事实，可以支撑不断生长的市场问题与证据。",
 	openSourceRelationship:
 		"与 Elmo 兼容的开源基础设施为系统的部分能力提供技术基础，但它不是 Yonaris 的公司身份、客户承诺或所属品类。",
@@ -132,11 +132,11 @@ export const pageZh = {
 	],
 } as const satisfies CompanyContent;
 
-export const companyContentByLocale: Readonly<Record<Locale, CompanyContent>> = Object.freeze({
+export const companyContentByLocale: DeepReadonly<Record<Locale, CompanyContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getCompanyContent(locale: Locale): CompanyContent {
+export function getCompanyContent(locale: Locale): DeepReadonly<CompanyContent> {
 	return companyContentByLocale[locale];
 }

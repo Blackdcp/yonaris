@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface ResourceLinkContent {
 	id: string;
@@ -86,11 +86,11 @@ export const pageZh = {
 	limitations: ["尚未完成身份与事实审核的历史内容，可能继续保持不被索引。"],
 } as const satisfies ResourcesContent;
 
-export const resourcesContentByLocale: Readonly<Record<Locale, ResourcesContent>> = Object.freeze({
+export const resourcesContentByLocale: DeepReadonly<Record<Locale, ResourcesContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getResourcesContent(locale: Locale): ResourcesContent {
+export function getResourcesContent(locale: Locale): DeepReadonly<ResourcesContent> {
 	return resourcesContentByLocale[locale];
 }

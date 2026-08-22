@@ -1,4 +1,4 @@
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface PageMeta {
 	title: string;
@@ -44,7 +44,7 @@ export const pageEn = {
 		{
 			id: "home-human-agent-vision",
 			status: "direction",
-			text: "Yonaris is building MarTech that serves human teams and software agents from a shared factual core.",
+			text: "Yonaris intends to build MarTech that serves human teams and software agents from a shared factual core.",
 			limitation: "This is the company direction, not a claim that every envisioned module exists today.",
 		},
 	],
@@ -81,7 +81,7 @@ export const pageZh = {
 		{
 			id: "home-human-agent-vision",
 			status: "direction",
-			text: "Yonaris 正在建设一套让人类团队与软件智能体共享同一事实基础的 MarTech。",
+			text: "Yonaris 计划构建一套让人类团队与软件智能体共享同一事实基础的 MarTech。",
 			limitation: "这是公司的发展方向，并不表示设想中的每个模块都已上线。",
 		},
 	],
@@ -91,8 +91,11 @@ export const pageZh = {
 	],
 } as const satisfies GlobalContent;
 
-export const globalContentByLocale: Readonly<Record<Locale, GlobalContent>> = Object.freeze({ en: pageEn, zh: pageZh });
+export const globalContentByLocale: DeepReadonly<Record<Locale, GlobalContent>> = deepFreeze({
+	en: pageEn,
+	zh: pageZh,
+});
 
-export function getGlobalContent(locale: Locale): GlobalContent {
+export function getGlobalContent(locale: Locale): DeepReadonly<GlobalContent> {
 	return globalContentByLocale[locale];
 }

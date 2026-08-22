@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface GeoQuestion {
 	id: string;
@@ -135,8 +135,11 @@ export const pageZh = {
 	limitations: ["Yonaris 不承诺排名、流量、全量可见度或自动修复。", "样本间的变化不能独立证明因果影响。"],
 } as const satisfies GeoContent;
 
-export const geoContentByLocale: Readonly<Record<Locale, GeoContent>> = Object.freeze({ en: pageEn, zh: pageZh });
+export const geoContentByLocale: DeepReadonly<Record<Locale, GeoContent>> = deepFreeze({
+	en: pageEn,
+	zh: pageZh,
+});
 
-export function getGeoContent(locale: Locale): GeoContent {
+export function getGeoContent(locale: Locale): DeepReadonly<GeoContent> {
 	return geoContentByLocale[locale];
 }

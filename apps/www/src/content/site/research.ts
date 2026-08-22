@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface EvidenceRecord {
 	label: string;
@@ -141,11 +141,11 @@ export const pageZh = {
 	limitations: ["重复观察不能独立证明变化由某项干预造成。", "本版本不包含客户结果、标志、引语或匿名业绩数据。"],
 } as const satisfies ResearchContent;
 
-export const researchContentByLocale: Readonly<Record<Locale, ResearchContent>> = Object.freeze({
+export const researchContentByLocale: DeepReadonly<Record<Locale, ResearchContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getResearchContent(locale: Locale): ResearchContent {
+export function getResearchContent(locale: Locale): DeepReadonly<ResearchContent> {
 	return researchContentByLocale[locale];
 }

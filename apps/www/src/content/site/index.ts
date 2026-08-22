@@ -5,7 +5,7 @@ import { type GeoContent, geoContentByLocale, getGeoContent } from "./geo";
 import { type GlobalContent, getGlobalContent, globalContentByLocale } from "./global";
 import { getProductContent, type ProductContent, productContentByLocale } from "./product";
 import { getResearchContent, type ResearchContent, researchContentByLocale } from "./research";
-import type { CorePageKey, FactualClaim, Locale } from "./types";
+import { type CorePageKey, type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export const CORE_PAGE_KEYS = [
 	"home",
@@ -18,10 +18,10 @@ export const CORE_PAGE_KEYS = [
 ] as const satisfies readonly CorePageKey[];
 
 export interface CoreFacts {
-	title: string;
-	currentScope: string;
-	claims: readonly FactualClaim[];
-	limitations: readonly string[];
+	readonly title: string;
+	readonly currentScope: string;
+	readonly claims: readonly DeepReadonly<FactualClaim>[];
+	readonly limitations: readonly string[];
 }
 
 export interface CorePageContentMap {
@@ -42,25 +42,25 @@ const corePageContent = {
 	company: companyContentByLocale,
 	geo: geoContentByLocale,
 	diagnostic: diagnosticContentByLocale,
-} satisfies { [K in CorePageKey]: Readonly<Record<Locale, CorePageContentMap[K]>> };
+} satisfies { [K in CorePageKey]: DeepReadonly<Record<Locale, CorePageContentMap[K]>> };
 
-export function getCorePageContent<K extends CorePageKey>(key: K, locale: Locale): CorePageContentMap[K] {
-	return corePageContent[key][locale] as CorePageContentMap[K];
+export function getCorePageContent<K extends CorePageKey>(key: K, locale: Locale): DeepReadonly<CorePageContentMap[K]> {
+	return corePageContent[key][locale] as DeepReadonly<CorePageContentMap[K]>;
 }
 
-export function getCoreFacts(key: CorePageKey, locale: Locale): CoreFacts {
+export function getCoreFacts(key: CorePageKey, locale: Locale): DeepReadonly<CoreFacts> {
 	const content = getCorePageContent(key, locale);
-	return {
+	return deepFreeze({
 		title: content.meta.title,
 		currentScope: content.currentScope,
 		claims: content.claims,
 		limitations: content.limitations,
-	};
+	});
 }
 
 export type { ResourcesContent } from "./resources";
 export { getResourcesContent } from "./resources";
-export type { CorePageKey, FactualClaim, Locale } from "./types";
+export type { CorePageKey, DeepReadonly, FactualClaim, Locale } from "./types";
 export type {
 	ApproachContent,
 	CompanyContent,

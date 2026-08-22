@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface ApproachStep {
 	id: string;
@@ -99,9 +99,9 @@ export const pageZh = {
 	currentScope: "Yonaris 将已配置的软件证据与人工审核结合，用来界定、观察、检查并重复一项明确的市场测试。",
 	steps: [
 		{ id: "frame", title: "确定决策问题", description: "选择一个市场，以及一个真正影响决策的问题。" },
-		{ id: "questions", title: "建立问题集合", description: "在采集前共同审核品牌词与非品牌词问题。" },
+		{ id: "questions", title: "建立问题集合", description: "在采集前共同审核品牌相关与非品牌相关的问题。" },
 		{ id: "sample", title: "声明范围并采样", description: "写明要观察的 AI 界面、市场、语言、时间与样本集合。" },
-		{ id: "compare", title: "比较证据", description: "比较品牌提及、竞品声量、引用，以及可见的查询扩展。" },
+		{ id: "compare", title: "比较证据", description: "比较品牌提及、竞品声量、引用，以及可见的查询改写。" },
 		{ id: "inspect", title: "阅读原始回答", description: "先查看回答全文与未知状态，再形成判断。" },
 		{ id: "repeat", title: "改变一个有限变量", description: "完成边界清楚的干预后，用相同定义再观察一次。" },
 	],
@@ -131,11 +131,11 @@ export const pageZh = {
 	],
 } as const satisfies ApproachContent;
 
-export const approachContentByLocale: Readonly<Record<Locale, ApproachContent>> = Object.freeze({
+export const approachContentByLocale: DeepReadonly<Record<Locale, ApproachContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getApproachContent(locale: Locale): ApproachContent {
+export function getApproachContent(locale: Locale): DeepReadonly<ApproachContent> {
 	return approachContentByLocale[locale];
 }

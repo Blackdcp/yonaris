@@ -10,6 +10,7 @@ import {
 	getGlobalContent,
 	getProductContent,
 	getResearchContent,
+	getResourcesContent,
 } from "./index";
 
 function structureOf(value: unknown): unknown {
@@ -47,6 +48,148 @@ describe("core site content", () => {
 			expect(english.limitations.length).toBeGreaterThan(0);
 			expect(chinese.limitations.length).toBeGreaterThan(0);
 		}
+	});
+
+	it("keeps Resources structurally compatible with stable claim identities and statuses", () => {
+		const english = getResourcesContent("en");
+		const chinese = getResourcesContent("zh");
+
+		expect(structureOf(chinese)).toEqual(structureOf(english));
+		expect(chinese.claims.map(({ id, status }) => ({ id, status }))).toEqual(
+			english.claims.map(({ id, status }) => ({ id, status })),
+		);
+		expect(english.limitations.length).toBeGreaterThan(0);
+		expect(chinese.limitations.length).toBeGreaterThan(0);
+	});
+
+	it("expresses the English direction claim as future intent", () => {
+		expect(getGlobalContent("en").claims.find(({ status }) => status === "direction")?.text).toBe(
+			"Yonaris intends to build MarTech that serves human teams and software agents from a shared factual core.",
+		);
+	});
+
+	it("expresses the Chinese direction claim as future intent", () => {
+		expect(getGlobalContent("zh").claims.find(({ status }) => status === "direction")?.text).toBe(
+			"Yonaris 计划构建一套让人类团队与软件智能体共享同一事实基础的 MarTech。",
+		);
+	});
+
+	it("prevents nested page object mutations from changing later getter results", () => {
+		const product = getProductContent("en");
+		const originalDescription = product.activities[0].description;
+		let objectWriteThrew = false;
+		try {
+			(product.activities[0] as { description: string }).description = "corrupted description";
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			objectWriteThrew = true;
+		}
+		const laterDescription = getProductContent("en").activities[0].description;
+		if (!objectWriteThrew) {
+			(product.activities[0] as { description: string }).description = originalDescription;
+		}
+
+		expect({ objectWriteThrew, laterDescription }).toEqual({
+			objectWriteThrew: true,
+			laterDescription: originalDescription,
+		});
+	});
+
+	it("prevents nested page array mutations from changing later getter results", () => {
+		const research = getResearchContent("en");
+		const originalCitationCount = research.record.citations.length;
+		let arrayWriteThrew = false;
+		try {
+			(research.record.citations as string[]).push("corrupted citation");
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			arrayWriteThrew = true;
+		}
+		const laterCitationCount = getResearchContent("en").record.citations.length;
+		if (!arrayWriteThrew) {
+			(research.record.citations as string[]).pop();
+		}
+
+		expect({ arrayWriteThrew, laterCitationCount }).toEqual({
+			arrayWriteThrew: true,
+			laterCitationCount: originalCitationCount,
+		});
+	});
+
+	it("makes the projected core facts object immutable", () => {
+		const facts = getCoreFacts("product", "en");
+		const originalScope = facts.currentScope;
+		let scopeWriteThrew = false;
+		try {
+			(facts as { currentScope: string }).currentScope = "corrupted scope";
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			scopeWriteThrew = true;
+		}
+
+		expect(scopeWriteThrew).toBe(true);
+		expect(getCoreFacts("product", "en").currentScope).toBe(originalScope);
+	});
+
+	it("prevents projected claim mutations from changing canonical claims", () => {
+		const facts = getCoreFacts("product", "en");
+		const originalClaimText = facts.claims[0].text;
+		let claimWriteThrew = false;
+		try {
+			(facts.claims[0] as { text: string }).text = "corrupted claim";
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			claimWriteThrew = true;
+		}
+		const laterClaimText = getCoreFacts("product", "en").claims[0].text;
+		if (!claimWriteThrew) {
+			(facts.claims[0] as { text: string }).text = originalClaimText;
+		}
+
+		expect({ claimWriteThrew, laterClaimText }).toEqual({
+			claimWriteThrew: true,
+			laterClaimText: originalClaimText,
+		});
+	});
+
+	it("prevents projected limitation mutations from changing canonical limitations", () => {
+		const facts = getCoreFacts("product", "en");
+		const originalLimitationCount = facts.limitations.length;
+		let limitationWriteThrew = false;
+		try {
+			(facts.limitations as string[]).push("corrupted limitation");
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			limitationWriteThrew = true;
+		}
+		const laterLimitationCount = getCoreFacts("product", "en").limitations.length;
+		if (!limitationWriteThrew) {
+			(facts.limitations as string[]).pop();
+		}
+
+		expect({ limitationWriteThrew, laterLimitationCount }).toEqual({
+			limitationWriteThrew: true,
+			laterLimitationCount: originalLimitationCount,
+		});
+	});
+
+	it("describes the Chinese company stage as a company", () => {
+		expect(getCompanyContent("zh").stage).toBe(
+			"Yonaris 目前是一家处于早期、以服务驱动的公司，拥有真实可用的证据平台。",
+		);
+	});
+
+	it("uses the approved Chinese wording for branded and non-branded questions", () => {
+		expect(getApproachContent("zh").steps.find(({ id }) => id === "questions")?.description).toContain(
+			"品牌相关与非品牌相关的问题",
+		);
+	});
+
+	it("uses 查询改写 consistently for query rewrites", () => {
+		expect(getApproachContent("zh").steps.find(({ id }) => id === "compare")?.description).toContain("查询改写");
+		expect(getProductContent("zh").claims.find(({ id }) => id === "product-reviewable-evidence")?.text).toContain(
+			"查询改写",
+		);
 	});
 
 	it("models the approved present scope and evidence boundaries", () => {

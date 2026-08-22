@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface ProductActivity {
 	id: string;
@@ -152,7 +152,7 @@ export const pageZh = {
 		{
 			id: "product-reviewable-evidence",
 			status: "current-software",
-			text: "用户可以检查回答样本、提及指标、指定竞品集合内的声量份额，以及可用的引用和查询扩展。",
+			text: "用户可以检查回答样本、提及指标、指定竞品集合内的声量份额，以及可用的引用和查询改写。",
 			limitation: "引用或查询字段为空，只表示证据不可用，不能据此认定服务商没有搜索。",
 		},
 		{
@@ -168,11 +168,11 @@ export const pageZh = {
 	],
 } as const satisfies ProductContent;
 
-export const productContentByLocale: Readonly<Record<Locale, ProductContent>> = Object.freeze({
+export const productContentByLocale: DeepReadonly<Record<Locale, ProductContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getProductContent(locale: Locale): ProductContent {
+export function getProductContent(locale: Locale): DeepReadonly<ProductContent> {
 	return productContentByLocale[locale];
 }

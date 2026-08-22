@@ -1,5 +1,5 @@
 import type { PageMeta } from "./global";
-import type { FactualClaim, Locale } from "./types";
+import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
 
 export interface DiagnosticStage {
 	id: string;
@@ -105,11 +105,11 @@ export const pageZh = {
 	],
 } as const satisfies DiagnosticContent;
 
-export const diagnosticContentByLocale: Readonly<Record<Locale, DiagnosticContent>> = Object.freeze({
+export const diagnosticContentByLocale: DeepReadonly<Record<Locale, DiagnosticContent>> = deepFreeze({
 	en: pageEn,
 	zh: pageZh,
 });
 
-export function getDiagnosticContent(locale: Locale): DiagnosticContent {
+export function getDiagnosticContent(locale: Locale): DeepReadonly<DiagnosticContent> {
 	return diagnosticContentByLocale[locale];
 }

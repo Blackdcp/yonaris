@@ -13,6 +13,27 @@ export interface FactualClaim {
 	limitation?: string;
 }
 
+export type DeepReadonly<T> = T extends (...args: never[]) => unknown
+	? T
+	: T extends readonly (infer Item)[]
+		? readonly DeepReadonly<Item>[]
+		: T extends object
+			? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+			: T;
+
+export function deepFreeze<T>(value: T): DeepReadonly<T> {
+	if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
+		return value as DeepReadonly<T>;
+	}
+
+	Object.freeze(value);
+	for (const key of Reflect.ownKeys(value)) {
+		deepFreeze(Reflect.get(value, key));
+	}
+
+	return value as DeepReadonly<T>;
+}
+
 export type SiteRouteClass = "core" | "resource" | "utility" | "legacy" | "machine";
 
 export type IndexPolicy = "index,follow" | "noindex,follow";
