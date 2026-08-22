@@ -116,6 +116,18 @@ test("Chinese homepage localizes the Product Stage and destinations", async ({ p
 	await expect(page.locator("h1 br")).toHaveCount(0);
 });
 
+test("illustrative previews avoid model-coverage and rejected hero claims", async ({ page }) => {
+	for (const locale of [
+		{ route: "/", prohibited: "across AI models" },
+		{ route: "/zh", prohibited: "在 AI 模型中" },
+	] as const) {
+		await page.goto(locale.route);
+		const previewText = await page.locator(".marketing-product-preview").innerText();
+		expect(previewText).not.toContain(locale.prohibited);
+		expect(previewText).not.toContain("AI-NATIVE MARTECH");
+	}
+});
+
 test("Chinese mobile explanation avoids an orphan final line", async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto("/zh");
@@ -144,6 +156,16 @@ test("homepage domain entry hands off to a prefilled diagnostic", async ({ page 
 
 	await expect(page).toHaveURL(/\/diagnostic\?website=https%3A%2F%2Fexample\.com$/);
 	await expect(page.getByLabel("Website")).toHaveValue("https://example.com");
+});
+
+test("Chinese homepage domain entry hands off to a prefilled diagnostic", async ({ page }) => {
+	await page.goto("/zh");
+	const heroForm = page.locator("main form").first();
+	await heroForm.getByLabel("官网").fill("https://example.com");
+	await heroForm.getByRole("button", { name: "获取免费诊断" }).click();
+
+	await expect(page).toHaveURL(/\/zh\/diagnostic\?website=https%3A%2F%2Fexample\.com$/);
+	await expect(page.getByLabel("官网")).toHaveValue("https://example.com");
 });
 
 test("homepage mobile menu works without horizontal overflow", async ({ page }) => {

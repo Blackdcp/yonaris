@@ -32,6 +32,14 @@ describe("marketing content", () => {
 		expect(getMarketingContent("zh").cta.primary).toBe("获取免费诊断");
 	});
 
+	it("does not expose the removed hero copy through localized marketing content", () => {
+		for (const locale of ["en", "zh"] as const) {
+			const content = getMarketingContent(locale);
+			expect(content).not.toHaveProperty("hero");
+			expect(JSON.stringify(content)).not.toContain("AI-NATIVE MARTECH");
+		}
+	});
+
 	it("provides localized page metadata with reciprocal canonical paths", () => {
 		expect(getMarketingPageMeta("en", "home")).toEqual({
 			title: "See how AI is shaping your market. | Yonaris",

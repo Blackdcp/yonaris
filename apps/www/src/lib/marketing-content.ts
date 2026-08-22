@@ -108,11 +108,6 @@ const en = {
 	preview: {
 		label: "Illustrative diagnostic",
 	} satisfies DiagnosticPreviewContent,
-	hero: {
-		eyebrow: "AI-NATIVE MARTECH",
-		title: ["MarTech, rebuilt.", "For humans and agents."],
-		body: "Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in an AI-mediated market.",
-	},
 	marketShift: {
 		eyebrow: "A NEW DECISION SURFACE",
 		title: "The market is forming an opinion before the click.",
@@ -251,11 +246,6 @@ const zh: MarketingContent = {
 	brandThesis: "重构 MarTech，同时面向人，也面向智能体",
 	preview: {
 		label: "示例诊断",
-	},
-	hero: {
-		eyebrow: "AI 原生营销科技",
-		title: ["重构 MarTech", "同时面向人，也面向智能体"],
-		body: "Yonaris 帮助品牌理解并改善自己在 AI 介入的市场中，如何被发现、理解、比较与选择。",
 	},
 	marketShift: {
 		eyebrow: "新的决策界面",

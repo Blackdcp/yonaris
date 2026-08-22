@@ -202,7 +202,7 @@
 	padding: 0.375rem;
 	border: 1px solid color-mix(in srgb, var(--yonaris-ink) 17%, transparent);
 	border-radius: 0.625rem;
-	background: color-mix(in srgb, var(--yonaris-surface) 88%, transparent);
+	background: color-mix(in srgb, var(--yonaris-paper) 78%, var(--yonaris-mist));
 	box-shadow: 0 1rem 3rem color-mix(in srgb, var(--yonaris-ink) 8%, transparent);
 }
 
@@ -260,7 +260,7 @@
 	overflow: hidden;
 	border: 1px solid color-mix(in srgb, var(--yonaris-ink) 16%, transparent);
 	border-radius: 0.875rem;
-	background: color-mix(in srgb, var(--yonaris-surface) 94%, transparent);
+	background: color-mix(in srgb, var(--yonaris-paper) 90%, var(--yonaris-mist));
 	box-shadow: 0 2.125rem 5.625rem color-mix(in srgb, var(--yonaris-ink) 14%, transparent), 0 0.1875rem 0.625rem color-mix(in srgb, var(--yonaris-ink) 5%, transparent);
 	transform: perspective(81.25rem) rotateY(-2.25deg) rotateX(0.75deg);
 	transform-origin: center;
@@ -306,7 +306,7 @@
 	border: 1px solid var(--yonaris-mist);
 	border-radius: 0.3125rem;
 	padding: 0.3125rem 0.4375rem;
-	color: var(--yonaris-blue-gray);
+	color: var(--yonaris-slate);
 	font-size: 0.5625rem;
 	font-weight: 700;
 	letter-spacing: 0.08em;
@@ -348,7 +348,7 @@
 	margin-bottom: 0.1875rem;
 	border-radius: 0.375rem;
 	padding: 0.625rem 0.55rem;
-	color: var(--yonaris-blue-gray);
+	color: var(--yonaris-slate);
 	font-size: 0.6875rem;
 }
 
@@ -367,7 +367,7 @@
 }
 
 .marketing-product-preview__canvas {
-	background: var(--yonaris-surface);
+	background: var(--yonaris-paper);
 	padding: 1.55rem 1.35rem;
 }
 
@@ -398,7 +398,7 @@
 .marketing-product-preview__answers article {
 	border: 1px solid var(--yonaris-mist);
 	border-radius: 0.5625rem;
-	background: var(--yonaris-surface);
+	background: var(--yonaris-paper);
 	padding: 0.75rem 0.8rem 0.7rem;
 }
 
@@ -423,7 +423,7 @@
 }
 
 .marketing-product-preview__answers article strong {
-	color: var(--yonaris-blue-gray);
+	color: var(--yonaris-slate);
 	font-weight: 650;
 }
 
@@ -432,7 +432,7 @@
 	border-radius: 0.25rem;
 	background: color-mix(in srgb, var(--yonaris-mist) 58%, var(--yonaris-paper));
 	padding: 0.1875rem 0.375rem;
-	color: var(--yonaris-blue-gray);
+	color: var(--yonaris-slate);
 	font-size: 0.5rem;
 }
 
@@ -466,7 +466,7 @@
 
 .marketing-product-preview__readout {
 	border-left: 1px solid color-mix(in srgb, var(--yonaris-ink) 10%, transparent);
-	background: color-mix(in srgb, var(--yonaris-surface) 72%, var(--yonaris-mist));
+	background: color-mix(in srgb, var(--yonaris-paper) 72%, var(--yonaris-mist));
 	padding: 1.35rem 1rem;
 }
 
