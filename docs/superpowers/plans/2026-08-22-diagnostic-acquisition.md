@@ -91,7 +91,7 @@ export const DIAGNOSTIC_FALLBACK_RECIPIENT = "black.dcp@outlook.com";
 - The scope schema contains exactly `website`, `brand`, `market`, and `question`.
 - The complete lead requires `locale`, scope fields, `name`, `email`, and literal `consent: true`; `competitors` and `companyUrl` normalize from missing to `""`, but `null` and non-strings fail.
 - Trim before validation. Bounds: website 1–300, brand 1–120, market 1–160, question 10–2000, competitors 0–600, name 1–120, email 1–254, honeypot exactly empty.
-- Website accepts only absolute HTTP(S) URLs and rejects credentials. “Work email” is a label; validation claims only syntax and length.
+- Website requires the trimmed raw value to begin with exact `http://` or `https://`, contain no whitespace/control characters, parse to a non-empty hostname, and contain no credentials. This rejects browser-normalized malformed forms such as `https:example.com`, `https:/example.com`, or embedded newline/tab characters. “Work email” is a label; validation claims only syntax and length.
 - `parseDiagnosticSearch()` accepts one validated website string and returns an empty prefill for absent, array, malformed, credentialed, or non-HTTP values.
 - `buildDiagnosticMailto()` revalidates its unknown input, returns `null` for invalid input, sends only to the fallback recipient, normalizes CR/LF from subject fields, includes every visible field plus locale/consent, excludes `companyUrl`, and only creates an encoded `mailto:` URL.
 
@@ -148,21 +148,23 @@ interface DiagnosticContent {
 
 Stages are exactly `scope | contact`; success is a result state, not a stage. Ordered stage copy is pinned as `1 / Scope — Frame the question`, `2 / Contact — Contact and review`, `1 / 范围 — 界定问题`, and `2 / 联系 — 联系信息与确认`. English actions are `Continue`, `Back to scope`, `Request the diagnostic`, `Submitting request…`, `Try again`; Chinese actions are `继续`, `返回范围`, `申请免费诊断`, `正在提交申请…`, `重试`.
 
-Success is exactly `Request accepted for review` / `申请已进入审核` and explains that acceptance begins team scope review, not an instant diagnostic result. Failure is exactly `Delivery could not be confirmed` / `未能确认送达`, says the entries remain on the page, and offers `Send by email instead` / `改用邮件发送` with the disclosure that opening a draft does not send it. Consent copy is `I agree that Yonaris may use these details to review and respond to this diagnostic request.` / `我同意 Yonaris 使用这些信息审核并回复本次诊断申请。`; the adjacent links are `Read Diagnostic privacy` / `查看诊断隐私说明`.
+Success is exactly `Request submitted for review` / `申请已提交审核`. It says the request was submitted for Yonaris review, the team confirms scope before evidence collection, and this is not an instant diagnostic result; it never claims that human review has begun. Failure is exactly `We couldn’t confirm delivery` / `我们无法确认申请是否送达`, says the entries remain on the page, and offers `Open email draft` / `打开邮件草稿` with the disclosure that opening a draft sends nothing. Consent copy is `I agree that Yonaris may use these details to review my request and contact me.` / `我同意 Yonaris 使用这些信息审核本次申请并与我联系。`; the adjacent links are `How we handle diagnostic request data` / `我们如何处理诊断申请信息`.
 
 Field copy is exact and independently authored; each slash below separates label / placeholder / validation error:
 
 | Field | English | 中文 |
 |---|---|---|
-| website | `Website` / `https://example.com` / `Enter an absolute http or https website.` | `官网` / `https://example.com` / `请输入以 http 或 https 开头的完整网址。` |
+| website | `Website` / `https://example.com` / `Enter the full website URL, including http:// or https://.` | `官网` / `https://example.com` / `请输入完整网址，包括 http:// 或 https://。` |
 | brand | `Brand` / `Your brand or company` / `Enter the brand or company name.` | `品牌` / `你的品牌或公司` / `请输入品牌或公司名称。` |
 | market | `Market or category` / `What market are you competing in?` / `Enter the market or category.` | `市场或品类` / `你正在参与哪个市场的竞争？` / `请输入市场或品类。` |
-| question | `One question that matters` / `What market decision should the diagnostic begin with?` / `Enter a decision question of at least 10 characters.` | `一个真正重要的问题` / `这次诊断应该从哪个市场决策问题开始？` / `请输入至少 10 个字符的决策问题。` |
-| competitors | `Known competitors` / `Optional names or URLs, separated by commas` / `Keep competitor context within 600 characters.` | `已知竞品` / `选填：名称或网址，用逗号分隔` / `竞品信息请控制在 600 个字符以内。` |
+| question | `Market question` / `What do you need to understand before your next market decision?` / `Add a little more detail so we can understand the decision.` | `市场问题` / `下一步市场决策前，你最需要看清什么？` / `请再具体一些，帮助我们理解这个决策问题。` |
+| competitors | `Competitors to include` / `Names or URLs (optional)` / `Keep competitor context within 600 characters.` | `需要纳入的竞品` / `名称或网址（选填）` / `竞品信息请控制在 600 个字符以内。` |
 | name | `Your name` / `Name` / `Enter your name.` | `你的姓名` / `姓名` / `请输入姓名。` |
 | email | `Work email` / `you@company.com` / `Enter a valid email address.` | `工作邮箱` / `you@company.com` / `请输入有效的邮箱地址。` |
 
-Tests pin every key and reject raw Zod messages in rendered output. `homeOffer` is pinned to `Start with one market question that matters.` / `从一个真正影响决策的市场问题开始`, explains one brand/market/question plus scope confirmation, and discloses that submit creates no instant scan, score, or evidence result.
+Tests pin every key and reject raw Zod messages in rendered output. Validation summary is `Check the highlighted fields and try again.` / `请检查标出的信息后重试。`; consent error is `Confirm that we may use these details to review the request and contact you.` / `请确认我们可以使用这些信息审核申请并与你联系。`; the Privacy lead-in is `Privacy:` / `隐私说明：`. `homeOffer` is pinned to `Start with the question behind your next market move.` / `从决定下一步市场行动的问题开始`, explains one brand/market/question plus scope confirmation, and discloses that submit creates no instant scan, score, or evidence result.
+
+`likelyOutput` is pinned to `What the diagnostic can clarify` / `诊断可以帮你看清什么`, introduced by `If we confirm a workable scope, the diagnostic is designed to return:` / `如果范围可执行，诊断预计会包括：`, followed by: an agreed-question baseline, selected AI answers and available source evidence, the clearest observed gaps, and three bounded next tests (with natural Chinese equivalents). Failure is `We couldn’t confirm delivery` / `我们无法确认申请是否送达`; it says entries remain, offers `Open email draft` / `打开邮件草稿`, and explicitly says a draft sends nothing until the user sends it.
 
 Define and freeze the following `PrivacyContent` in `diagnostic.ts` and export `getPrivacyContent()` through `content/site/index.ts`:
 
@@ -212,7 +214,7 @@ Expected RED is missing module/contract and missing rendered behavior, never a p
 
 - [ ] **Step 2: Implement the minimum shared contract**
 
-Use Zod issue paths as the only source of field errors. Move all user-facing copy out of the component. Add the consent control, empty honeypot, and separate `/privacy` link to the existing temporary form without yet replacing mailto submission; this keeps every intermediate commit buildable and truthful. Preserve current canonical routes and SEO while adding Diagnostic-specific parity assertions.
+Use Zod issue paths as the only source of field errors. Move all user-facing copy out of the component. Add the consent control, empty honeypot, and separate `/privacy` link to the existing temporary form without yet replacing mailto submission. Because this intermediate form only opens `mailto:`, its CTA and disclosure must render `form.failure.fallbackLabel` and `form.failure.fallbackDisclosure`; it must never render the future API submit action or claim the request has been submitted. Use only approved VI tokens for validation treatment. This keeps every intermediate commit buildable and truthful. Preserve current canonical routes and SEO while adding Diagnostic-specific parity assertions.
 
 - [ ] **Step 3: Run GREEN, browser-safety gates, and commit**
 
@@ -433,7 +435,7 @@ test("diagnostic reports success only after a 202 response", async ({ page }) =>
   await page.route("**/api/diagnostic", (route) => route.fulfill({ status: 202, contentType: "application/json", body: '{"ok":true}' }));
   await completeDiagnosticForm(page);
   await page.getByRole("button", { name: "Request the diagnostic" }).click();
-  await expect(page.getByRole("status")).toContainText("Request accepted for review");
+  await expect(page.getByRole("status")).toContainText("Request submitted for review");
 });
 
 test("delivery failure offers the encoded email fallback", async ({ page }) => {
