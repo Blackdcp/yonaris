@@ -22,14 +22,19 @@ export type DeepReadonly<T> = T extends (...args: never[]) => unknown
 			: T;
 
 export function deepFreeze<T>(value: T): DeepReadonly<T> {
-	if (value === null || typeof value !== "object" || Object.isFrozen(value)) {
-		return value as DeepReadonly<T>;
+	const visited = new WeakSet<object>();
+
+	function freezeNested(candidate: unknown): void {
+		if (candidate === null || typeof candidate !== "object" || visited.has(candidate)) return;
+
+		visited.add(candidate);
+		Object.freeze(candidate);
+		for (const key of Reflect.ownKeys(candidate)) {
+			freezeNested(Reflect.get(candidate, key));
+		}
 	}
 
-	Object.freeze(value);
-	for (const key of Reflect.ownKeys(value)) {
-		deepFreeze(Reflect.get(value, key));
-	}
+	freezeNested(value);
 
 	return value as DeepReadonly<T>;
 }

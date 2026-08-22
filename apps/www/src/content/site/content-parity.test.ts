@@ -12,6 +12,7 @@ import {
 	getResearchContent,
 	getResourcesContent,
 } from "./index";
+import { deepFreeze } from "./types";
 
 function structureOf(value: unknown): unknown {
 	if (Array.isArray(value)) return value.map(structureOf);
@@ -170,6 +171,47 @@ describe("core site content", () => {
 		expect({ limitationWriteThrew, laterLimitationCount }).toEqual({
 			limitationWriteThrew: true,
 			laterLimitationCount: originalLimitationCount,
+		});
+	});
+
+	it("freezes mutable descendants of an already frozen wrapper", () => {
+		const nested = { description: "mutable child" };
+		const wrapper = Object.freeze({ nested });
+
+		deepFreeze(wrapper);
+
+		let nestedWriteThrew = false;
+		try {
+			nested.description = "corrupted child";
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			nestedWriteThrew = true;
+		}
+
+		expect({ nestedWriteThrew, description: nested.description }).toEqual({
+			nestedWriteThrew: true,
+			description: "mutable child",
+		});
+	});
+
+	it("freezes cyclic descendants of an already frozen wrapper", () => {
+		const nested: { wrapper?: object; description: string } = { description: "cyclic child" };
+		const wrapper = Object.freeze({ nested });
+		nested.wrapper = wrapper;
+
+		expect(() => deepFreeze(wrapper)).not.toThrow();
+
+		let nestedWriteThrew = false;
+		try {
+			nested.description = "corrupted child";
+		} catch (error) {
+			if (!(error instanceof TypeError)) throw error;
+			nestedWriteThrew = true;
+		}
+
+		expect({ nestedWriteThrew, description: nested.description }).toEqual({
+			nestedWriteThrew: true,
+			description: "cyclic child",
 		});
 	});
 
