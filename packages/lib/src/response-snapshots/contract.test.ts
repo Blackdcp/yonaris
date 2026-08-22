@@ -1,6 +1,11 @@
 import { gunzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { prepareResponseSnapshotBundle, type ResponseSnapshotDraft, ResponseSnapshotValidationError } from "./contract";
+import {
+	prepareResponseSnapshotBundle,
+	type ResponseSnapshotDraft,
+	type ResponseSnapshotDraftV2,
+	ResponseSnapshotValidationError,
+} from "./contract";
 
 function validDraft(overrides: Partial<ResponseSnapshotDraft> = {}): ResponseSnapshotDraft {
 	return {
@@ -36,7 +41,7 @@ function validDraft(overrides: Partial<ResponseSnapshotDraft> = {}): ResponseSna
 	};
 }
 
-function validV2Draft(overrides: Record<string, unknown> = {}) {
+function validV2Draft(overrides: Record<string, unknown> = {}): ResponseSnapshotDraftV2 {
 	return {
 		schemaVersion: "response-snapshot.v2",
 		runId: "11111111-1111-4111-8111-111111111111",
@@ -77,9 +82,14 @@ function validV2Draft(overrides: Record<string, unknown> = {}) {
 			queryCount: 1,
 			citationCount: 1,
 			completionCount: 1,
+			extractorVersion: "doubao-search-evidence.v1",
+			evidenceSource: "dom",
+			searchBlockCount: 1,
+			queryCandidateCount: 1,
+			citationCandidateCount: 1,
 		},
 		...overrides,
-	} as Parameters<typeof prepareResponseSnapshotBundle>[0];
+	} as ResponseSnapshotDraftV2;
 }
 
 describe("response snapshot contract", () => {
@@ -98,6 +108,11 @@ describe("response snapshot contract", () => {
 			mediaType: "image/jpeg",
 			sha256: "a".repeat(64),
 			bytes: 12_345,
+		});
+		expect(json.captureDiagnostics).toMatchObject({
+			extractorVersion: "doubao-search-evidence.v1",
+			evidenceSource: "dom",
+			searchBlockCount: 1,
 		});
 		expect(manifest.schemaVersion).toBe("response-snapshot-manifest.v2");
 		expect(manifest.visualEvidence).toEqual(json.visualEvidence);
@@ -156,14 +171,35 @@ describe("response snapshot contract", () => {
 	});
 
 	it("rejects v2 capture diagnostics that do not match the structured result", () => {
+		const validDiagnostics = validV2Draft().captureDiagnostics;
 		for (const captureDiagnostics of [
-			{ answerCount: 0, queryCount: 1, citationCount: 1, completionCount: 1 },
-			{ answerCount: 1, queryCount: 0, citationCount: 1, completionCount: 1 },
-			{ answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
-			{ answerCount: 1, queryCount: 1, citationCount: 1, completionCount: 2 },
+			{ ...validDiagnostics, answerCount: 0 },
+			{ ...validDiagnostics, queryCount: 0 },
+			{ ...validDiagnostics, citationCount: 0 },
+			{ ...validDiagnostics, completionCount: 2 },
+			{ ...validDiagnostics, extractorVersion: " " },
+			{ ...validDiagnostics, evidenceSource: "unsupported" },
+			{ ...validDiagnostics, searchBlockCount: -1 },
 		]) {
 			expect(() => prepareResponseSnapshotBundle(validV2Draft({ captureDiagnostics }))).toThrow(/captureDiagnostics/);
 		}
+	});
+
+	it.each(["not_searched", "unknown"] as const)("serializes the %s v2 query state", (queryAvailability) => {
+		const bundle = prepareResponseSnapshotBundle(
+			validV2Draft({
+				webQueries: [],
+				queryAvailability,
+				captureDiagnostics: {
+					...validV2Draft().captureDiagnostics,
+					queryCount: 0,
+					queryCandidateCount: 0,
+				},
+			}),
+		);
+		const json = JSON.parse(gunzipSync(bundle.jsonGzip).toString("utf8"));
+
+		expect(json.queryFanout).toEqual({ availability: queryAvailability, queries: [] });
 	});
 
 	it("requires v2 adapter identity and screenshot evidence", () => {

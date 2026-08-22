@@ -1,4 +1,9 @@
 import type { BrowserExtensionSurface } from "../contracts";
+import type {
+	SearchEvidenceDiagnostics,
+	SearchEvidenceQueryAvailability,
+	SearchEvidenceReadContext,
+} from "./search-evidence-adapter";
 
 export type AdapterFailureCode =
 	| "signed_out"
@@ -80,8 +85,10 @@ export type CollectedAnswer = {
 	pageUrl: string;
 	observedAt: string;
 	webSearchObserved: boolean | null;
+	queryAvailability: SearchEvidenceQueryAvailability;
 	webQueries: string[];
 	citations: CollectedCitation[];
+	searchEvidenceDiagnostics: SearchEvidenceDiagnostics;
 	adapterVersion: string;
 };
 
@@ -124,6 +131,7 @@ export type AnswerReadRequest = {
 	citationLinkSelector: string | null;
 	queryItemSelector: string | null;
 	searchEvidence: SearchEvidenceContract | null;
+	deferSearchEvidence?: boolean;
 	evidenceViewport?: {
 		promptSelector: string;
 		promptText?: string;
@@ -140,6 +148,7 @@ export type AnswerDomSnapshot = {
 	searchNotUsedCount: number;
 	webQueries: string[];
 	citations: CollectedCitation[];
+	searchEvidenceContext?: SearchEvidenceReadContext;
 };
 
 export type CompletionReadRequest = {

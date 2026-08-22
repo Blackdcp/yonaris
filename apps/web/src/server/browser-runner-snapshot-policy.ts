@@ -121,7 +121,7 @@ export function buildBrowserRunnerResponseSnapshotDraftV2(input: {
 	answerText: string;
 	citations: ResponseSnapshotDraftV2["citations"];
 	webQueries: string[];
-	webSearchEnabled: boolean;
+	queryAvailability: "exposed" | "unavailable" | "not_searched" | "unknown";
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
 	channel: string;
@@ -144,11 +144,12 @@ export function buildBrowserRunnerResponseSnapshotDraftV2(input: {
 		answerText: input.answerText,
 		citations: input.citations,
 		webQueries: input.webQueries,
-		queryAvailability: input.webSearchEnabled
-			? input.webQueries.length > 0
-				? "available"
-				: "unavailable"
-			: "not_applicable",
+		queryAvailability: {
+			exposed: "available" as const,
+			unavailable: "unavailable" as const,
+			not_searched: "not_searched" as const,
+			unknown: "unknown" as const,
+		}[input.queryAvailability],
 		brandMentioned: input.brandMentioned,
 		competitorsMentioned: input.competitorsMentioned,
 		channel: input.channel,

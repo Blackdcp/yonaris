@@ -76,6 +76,7 @@ export const browserRunnerLegacyObservationSchema = samplingObservationBaseSchem
 export const browserRunnerStructuredObservationSchema = samplingObservationBaseSchema
 	.extend({
 		schemaVersion: z.literal("browser-runner-observation.v2"),
+		queryAvailability: z.enum(["exposed", "unavailable", "not_searched", "unknown"]),
 		citations: z.array(structuredCitationSchema).max(200).default([]),
 		captureDiagnostics: z
 			.object({
@@ -83,6 +84,11 @@ export const browserRunnerStructuredObservationSchema = samplingObservationBaseS
 				queryCount: z.number().int().min(0).max(100),
 				citationCount: z.number().int().min(0).max(200),
 				completionCount: z.literal(1),
+				extractorVersion: z.string().trim().min(1).max(100),
+				evidenceSource: z.enum(["dom", "network", "dom_and_network", "none"]),
+				searchBlockCount: z.number().int().min(0).max(10_000),
+				queryCandidateCount: z.number().int().min(0).max(10_000),
+				citationCandidateCount: z.number().int().min(0).max(10_000),
 			})
 			.strict(),
 	})
@@ -95,6 +101,21 @@ export const browserRunnerStructuredObservationSchema = samplingObservationBaseS
 				code: "custom",
 				path: ["captureDiagnostics", "citationCount"],
 				message: "Citation count mismatch",
+			});
+		}
+		const expectedAvailability =
+			observation.queryAvailability === "exposed"
+				? observation.webSearchObserved === true && observation.webQueries.length > 0
+				: observation.queryAvailability === "unavailable"
+					? observation.webSearchObserved === true && observation.webQueries.length === 0
+					: observation.queryAvailability === "not_searched"
+						? observation.webSearchObserved === false && observation.webQueries.length === 0
+						: observation.webSearchObserved === null && observation.webQueries.length === 0;
+		if (!expectedAvailability) {
+			context.addIssue({
+				code: "custom",
+				path: ["queryAvailability"],
+				message: "Query availability is inconsistent with observed search evidence",
 			});
 		}
 		const citationUrls = new Set<string>();
@@ -179,6 +200,7 @@ export function prepareSamplingObservation(input: {
 		operatorAttested?: true;
 		answerHtml?: string;
 		schemaVersion?: "browser-runner-observation.v2";
+		queryAvailability?: BrowserRunnerStructuredObservation["queryAvailability"];
 		captureDiagnostics?: BrowserRunnerStructuredObservation["captureDiagnostics"];
 	};
 	captureActor?:
@@ -258,8 +280,15 @@ export function prepareSamplingObservation(input: {
 		input.observation.schemaVersion === "browser-runner-observation.v2"
 			? input.observation.captureDiagnostics
 			: undefined;
-	if (input.observation.schemaVersion === "browser-runner-observation.v2" && !structuredCaptureDiagnostics) {
-		throw new Error("Structured Browser Runner observations require capture diagnostics");
+	const structuredQueryAvailability =
+		input.observation.schemaVersion === "browser-runner-observation.v2"
+			? input.observation.queryAvailability
+			: undefined;
+	if (
+		input.observation.schemaVersion === "browser-runner-observation.v2" &&
+		(!structuredCaptureDiagnostics || !structuredQueryAvailability)
+	) {
+		throw new Error("Structured Browser Runner observations require search evidence metadata");
 	}
 	const captureMetadata = {
 		measurementEligibility:
@@ -293,6 +322,7 @@ export function prepareSamplingObservation(input: {
 		...(input.observation.schemaVersion === "browser-runner-observation.v2"
 			? {
 					responseSnapshotSchemaVersion: "response-snapshot.v2",
+					queryAvailability: structuredQueryAvailability,
 					captureDiagnostics: structuredCaptureDiagnostics,
 				}
 			: {}),

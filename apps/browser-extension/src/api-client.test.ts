@@ -279,8 +279,16 @@ describe("BrowserRunnerApiClient", () => {
 				pageUrl: "https://chat.deepseek.com/a/chat/s/1",
 				observedAt: "2026-08-17T00:00:00.000Z",
 				webSearchObserved: true,
+				queryAvailability: "exposed",
 				webQueries: ["国产 GPU API", "AI inference pricing"],
 				citations: [{ url: "https://source.example/report", title: "Source report" }],
+				searchEvidenceDiagnostics: {
+					extractorVersion: "provider-search-v1",
+					evidenceSource: "dom",
+					searchBlockCount: 1,
+					queryCandidateCount: 2,
+					citationCandidateCount: 1,
+				},
 				adapterVersion: "adapter-v1",
 			},
 			evidenceArtifactId: artifactId,
@@ -300,13 +308,58 @@ describe("BrowserRunnerApiClient", () => {
 				sessionMode: "dedicated_sampling_profile",
 				searchMode: "native_auto",
 				webSearchObserved: true,
+				queryAvailability: "exposed",
 				webQueries: ["国产 GPU API", "AI inference pricing"],
 				citations: [{ url: "https://source.example/report", title: "Source report" }],
 				evidenceArtifactIds: ["artifact-1"],
-				captureDiagnostics: { answerCount: 1, queryCount: 2, citationCount: 1, completionCount: 1 },
+				captureDiagnostics: {
+					answerCount: 1,
+					queryCount: 2,
+					citationCount: 1,
+					completionCount: 1,
+					extractorVersion: "provider-search-v1",
+					evidenceSource: "dom",
+					searchBlockCount: 1,
+					queryCandidateCount: 2,
+					citationCandidateCount: 1,
+				},
 			},
 		});
 		expect(JSON.stringify(completion)).not.toContain("answerHtml");
+	});
+
+	it("rejects inconsistent search evidence before contacting the Portal", async () => {
+		const calls: Request[] = [];
+		const client = authenticatedClient(calls, async () => Response.json({ duplicate: false }));
+		const claim = claimedTask();
+
+		await expect(
+			client.completeTask(claim, {
+				runnerSessionId: "session-1",
+				adapterVersion: "adapter-v1",
+				browserVersion: "Chrome/140",
+				answer: {
+					answerText: "answer",
+					evidenceViewportRect: { x: 0, y: 0, width: 800, height: 500, devicePixelRatio: 1 },
+					pageUrl: "https://chat.deepseek.com/a/chat/s/1",
+					observedAt: "2026-08-17T00:00:00.000Z",
+					webSearchObserved: false,
+					queryAvailability: "exposed",
+					webQueries: ["query"],
+					citations: [],
+					searchEvidenceDiagnostics: {
+						extractorVersion: "provider-search-v1",
+						evidenceSource: "dom",
+						searchBlockCount: 1,
+						queryCandidateCount: 1,
+						citationCandidateCount: 0,
+					},
+					adapterVersion: "adapter-v1",
+				},
+				evidenceArtifactId: "artifact-1",
+			}),
+		).rejects.toThrow(/search evidence/i);
+		expect(calls).toHaveLength(0);
 	});
 });
 

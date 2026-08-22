@@ -613,8 +613,20 @@ describe("Browser Runner service contracts", () => {
 			observation: {
 				...structuredFields,
 				schemaVersion: "browser-runner-observation.v2",
+				webSearchObserved: false,
+				queryAvailability: "not_searched",
 				evidenceArtifactIds: [guid1],
-				captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+				captureDiagnostics: {
+					answerCount: 1,
+					queryCount: 0,
+					citationCount: 0,
+					completionCount: 1,
+					extractorVersion: "doubao-search-evidence.v1",
+					evidenceSource: "dom",
+					searchBlockCount: 1,
+					queryCandidateCount: 0,
+					citationCandidateCount: 0,
+				},
 			},
 		};
 

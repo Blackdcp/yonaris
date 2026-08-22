@@ -177,6 +177,7 @@ export class BrowserRunnerApiClient {
 					sessionMode: "dedicated_sampling_profile",
 					searchMode: "native_auto",
 					webSearchObserved: input.answer.webSearchObserved,
+					queryAvailability: input.answer.queryAvailability,
 					evidenceArtifactIds: [input.evidenceArtifactId],
 					citations: input.answer.citations,
 					webQueries: input.answer.webQueries,
@@ -185,6 +186,7 @@ export class BrowserRunnerApiClient {
 						queryCount: input.answer.webQueries.length,
 						citationCount: input.answer.citations.length,
 						completionCount: 1,
+						...input.answer.searchEvidenceDiagnostics,
 					},
 				},
 			},
@@ -337,6 +339,26 @@ function assertCollectedAnswer(answer: CollectedAnswer): void {
 	}
 	const pageUrl = new URL(answer.pageUrl);
 	if (pageUrl.protocol !== "https:") throw new BrowserRunnerApiError("Browser Runner answer URL is invalid");
+	const availabilityMatches =
+		answer.queryAvailability === "exposed"
+			? answer.webSearchObserved === true && answer.webQueries.length > 0
+			: answer.queryAvailability === "unavailable"
+				? answer.webSearchObserved === true && answer.webQueries.length === 0
+				: answer.queryAvailability === "not_searched"
+					? answer.webSearchObserved === false && answer.webQueries.length === 0
+					: answer.webSearchObserved === null && answer.webQueries.length === 0;
+	const diagnostics = answer.searchEvidenceDiagnostics;
+	if (
+		!availabilityMatches ||
+		!diagnostics.extractorVersion.trim() ||
+		diagnostics.extractorVersion.length > 100 ||
+		!["dom", "network", "dom_and_network", "none"].includes(diagnostics.evidenceSource) ||
+		![diagnostics.searchBlockCount, diagnostics.queryCandidateCount, diagnostics.citationCandidateCount].every(
+			(count) => Number.isSafeInteger(count) && count >= 0 && count <= 10_000,
+		)
+	) {
+		throw new BrowserRunnerApiError("Browser Runner search evidence is invalid");
+	}
 }
 
 async function readJson(response: Response): Promise<unknown> {

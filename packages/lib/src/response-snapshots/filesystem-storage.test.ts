@@ -77,7 +77,17 @@ function v2Draft(): ResponseSnapshotDraftV2 {
 			bytes: 42_000,
 		},
 		adapterVersion: "doubao-web-20260821-localpc-v13",
-		captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+		captureDiagnostics: {
+			answerCount: 1,
+			queryCount: 0,
+			citationCount: 0,
+			completionCount: 1,
+			extractorVersion: "doubao-search-evidence.v1",
+			evidenceSource: "dom",
+			searchBlockCount: 1,
+			queryCandidateCount: 0,
+			citationCandidateCount: 0,
+		},
 	};
 }
 

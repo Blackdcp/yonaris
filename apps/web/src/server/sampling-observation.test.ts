@@ -13,6 +13,30 @@ import {
 	samplingObservationInputSchema,
 } from "./sampling-observation";
 
+function searchEvidenceDiagnostics(
+	overrides: Partial<{
+		queryCount: number;
+		citationCount: number;
+		evidenceSource: "dom" | "network" | "dom_and_network" | "none";
+		searchBlockCount: number;
+		queryCandidateCount: number;
+		citationCandidateCount: number;
+	}> = {},
+) {
+	return {
+		answerCount: 1 as const,
+		queryCount: 0,
+		citationCount: 0,
+		completionCount: 1 as const,
+		extractorVersion: "test-search-evidence.v1",
+		evidenceSource: "none" as const,
+		searchBlockCount: 0,
+		queryCandidateCount: 0,
+		citationCandidateCount: 0,
+		...overrides,
+	};
+}
+
 const frozenTask: DeliveryManifestTaskSnapshot = {
 	id: "10000000-0000-4000-8000-000000000001",
 	brandId: "brand-1",
@@ -423,10 +447,16 @@ describe("prepareSamplingObservation", () => {
 			sessionMode: "dedicated_sampling_profile" as const,
 			searchMode: "native_auto" as const,
 			webSearchObserved: true,
+			queryAvailability: "exposed" as const,
 			evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
 			citations: [],
 			webQueries: ["PPIO 云服务"],
-			captureDiagnostics: { answerCount: 1 as const, queryCount: 1, citationCount: 0, completionCount: 1 as const },
+			captureDiagnostics: searchEvidenceDiagnostics({
+				queryCount: 1,
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 1,
+			}),
 		};
 
 		expect(browserRunnerStructuredObservationSchema.safeParse(structured).success).toBe(true);
@@ -438,6 +468,34 @@ describe("prepareSamplingObservation", () => {
 				...structured,
 				captureDiagnostics: { ...structured.captureDiagnostics, queryCount: 0 },
 			}).success,
+		).toBe(false);
+		for (const variant of [
+			structured,
+			{
+				...structured,
+				webQueries: [],
+				queryAvailability: "unavailable" as const,
+				captureDiagnostics: searchEvidenceDiagnostics({ evidenceSource: "dom", searchBlockCount: 1 }),
+			},
+			{
+				...structured,
+				webSearchObserved: false,
+				webQueries: [],
+				queryAvailability: "not_searched" as const,
+				captureDiagnostics: searchEvidenceDiagnostics({ evidenceSource: "dom", searchBlockCount: 1 }),
+			},
+			{
+				...structured,
+				webSearchObserved: null,
+				webQueries: [],
+				queryAvailability: "unknown" as const,
+				captureDiagnostics: searchEvidenceDiagnostics(),
+			},
+		]) {
+			expect(browserRunnerStructuredObservationSchema.safeParse(variant).success).toBe(true);
+		}
+		expect(
+			browserRunnerStructuredObservationSchema.safeParse({ ...structured, queryAvailability: "unknown" }).success,
 		).toBe(false);
 
 		const extensionTask = {
@@ -474,6 +532,7 @@ describe("prepareSamplingObservation", () => {
 		expect(prepared.captureMetadata).toMatchObject({
 			responseSnapshotSchemaVersion: "response-snapshot.v2",
 			adapterVersion: "doubao-web-20260821-localpc-v13",
+			queryAvailability: "exposed",
 			captureDiagnostics: structured.captureDiagnostics,
 		});
 	});
@@ -489,10 +548,11 @@ describe("prepareSamplingObservation", () => {
 				sessionMode: "dedicated_sampling_profile" as const,
 				searchMode: "native_auto" as const,
 				webSearchObserved: null,
+				queryAvailability: "unknown" as const,
 				evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
 				citations: [],
 				webQueries: [],
-				captureDiagnostics: { answerCount: 1 as const, queryCount: 0, citationCount: 0, completionCount: 1 as const },
+				captureDiagnostics: searchEvidenceDiagnostics(),
 			};
 			const extensionTask = {
 				...task,
@@ -530,6 +590,7 @@ describe("prepareSamplingObservation", () => {
 			expect(prepared.captureMetadata).toMatchObject({
 				responseSnapshotSchemaVersion: "response-snapshot.v2",
 				adapterVersion,
+				queryAvailability: "unknown",
 				captureDiagnostics: structured.captureDiagnostics,
 			});
 			expect(prepared.target).toMatchObject({
@@ -549,9 +610,17 @@ describe("prepareSamplingObservation", () => {
 			sessionMode: "dedicated_sampling_profile" as const,
 			searchMode: "native_auto" as const,
 			webSearchObserved: true,
+			queryAvailability: "exposed" as const,
 			evidenceArtifactIds: ["11111111-1111-4111-8111-111111111111"],
 			webQueries: ["PPIO 云服务"],
-			captureDiagnostics: { answerCount: 1 as const, queryCount: 1, citationCount: 1, completionCount: 1 as const },
+			captureDiagnostics: searchEvidenceDiagnostics({
+				queryCount: 1,
+				citationCount: 1,
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 1,
+				citationCandidateCount: 1,
+			}),
 		};
 		const validCitation = { url: "https://source.example/report", title: "Source report" };
 

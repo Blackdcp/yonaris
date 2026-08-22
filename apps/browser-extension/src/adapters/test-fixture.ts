@@ -191,6 +191,17 @@ export class FixtureDomPort implements ConsumerDomPort {
 			webQueries: request.queryItemSelector || request.searchEvidence ? [...(this.#fixture.answer.queries ?? [])] : [],
 			citations:
 				request.citationLinkSelector || request.searchEvidence ? [...(this.#fixture.answer.citations ?? [])] : [],
+			searchEvidenceContext: {
+				acceptedAnswer: {} as Element,
+				document: {} as Document,
+				isVisible: () => true,
+				readVisibleText: () => this.#fixture.answer.text,
+				readStructuredEvidence: async () => ({
+					searchUsedCount: this.#fixture.searchUsedCount,
+					webQueries: [...(this.#fixture.answer.queries ?? [])],
+					citations: [...(this.#fixture.answer.citations ?? [])],
+				}),
+			},
 		};
 	}
 
