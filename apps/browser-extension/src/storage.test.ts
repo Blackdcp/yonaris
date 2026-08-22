@@ -48,7 +48,7 @@ describe("DeviceStorage", () => {
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260822-localpc-v11",
+				adapterVersion: "kimi-web-20260822-localpc-v12",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {

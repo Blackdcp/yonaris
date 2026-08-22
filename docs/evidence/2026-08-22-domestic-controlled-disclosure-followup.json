@@ -19,8 +19,10 @@
         "searchObservedProof": "visible_answer_scoped_search_tool"
       },
       "queryEvidence": {
-        "availability": "unavailable",
-        "reason": "no_distinct_query_item_or_quoted_segment",
+		"availability": "exposed",
+		"queryItem": ".toolcall-title-container-text",
+		"queryItemCount": 1,
+		"reason": "distinct_visible_provider_search_argument",
         "toolTextMatchesLatestPrompt": false
       },
       "citationEvidence": "visible_answer_links_only"

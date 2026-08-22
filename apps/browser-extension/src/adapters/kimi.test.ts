@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260822-localpc-v11",
+			version: "kimi-web-20260822-localpc-v12",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
@@ -65,16 +65,17 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260822-localpc-v11",
+			adapterVersion: "kimi-web-20260822-localpc-v12",
 		});
 	});
 
-	test("observes an answer-scoped Kimi web-search tool without inventing query terms", async () => {
+	test("extracts the visible provider-generated query from the answer-scoped Kimi search tool", async () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
 			<div class="toolcall-container toolcall-web_search">Unrelated page search</div>
 			<div class="segment-content-box" id="accepted-answer">
 				<p>Current answer</p>
-				<div class="toolcall-container toolcall-web_search" hidden>Provider search metadata</div>
+				<div class="toolcall-container toolcall-web_search"><span class="toolcall-title-container-text">provider generated query</span></div>
+				<div class="toolcall-container toolcall-web_search" hidden><span class="toolcall-title-container-text">hidden query</span></div>
 				<a class="pua-ref-cite-tag pua-ref-cite-tag--text" data-site-name="Hidden source" href="https://hidden.example/source" hidden>Hidden source</a>
 				<a class="pua-ref-cite-tag pua-ref-cite-tag--text" data-site-name="Visible source" href="https://source.example/kimi">Visible source</a>
 			</div>
@@ -91,16 +92,40 @@ describe("Kimi browser-extension adapter", () => {
 			}),
 		).resolves.toEqual({
 			webSearchObserved: true,
-			queryAvailability: "unavailable",
-			webQueries: [],
+			queryAvailability: "exposed",
+			webQueries: ["provider generated query"],
 			citations: [{ url: "https://source.example/kimi", title: "Visible source" }],
 			diagnostics: {
-				extractorVersion: "kimi-search-evidence-20260822-v1",
+				extractorVersion: "kimi-search-evidence-20260822-v2",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
-				queryCandidateCount: 0,
+				queryCandidateCount: 1,
 				citationCandidateCount: 2,
 			},
+		});
+	});
+
+	test("does not treat a hidden Kimi search tool or hidden query as evidence", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="segment-content-box" id="accepted-answer">
+				<p>Current answer</p>
+				<div class="toolcall-container toolcall-web_search" hidden><span class="toolcall-title-container-text">hidden query</span></div>
+			</div>
+		</body></html>`);
+
+		await expect(
+			kimiSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: null,
+			queryAvailability: "unknown",
+			webQueries: [],
+			diagnostics: { searchBlockCount: 0, queryCandidateCount: 0 },
 		});
 	});
 
