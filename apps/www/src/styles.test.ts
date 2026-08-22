@@ -83,6 +83,13 @@ describe("site stylesheet boundaries", () => {
 	});
 
 	it("uses only approved palette tokens and no gradients across first-party site styles and marketing consumers", () => {
+		const paletteDefinition = join(sourceRoot, "styles/site-core.css");
+		const legacySignalField = join(sourceRoot, "components/marketing/signal-field.tsx");
+		const approvedPaletteColors = new Set(
+			[...readFileSync(paletteDefinition, "utf8").matchAll(/--yonaris-[\w-]+:\s*(#[\da-f]{6})/gi)].map((match) =>
+				match[1].toLowerCase(),
+			),
+		);
 		const files = [
 			...filesUnder("styles", [".css"]),
 			...filesUnder("components/marketing", [".ts", ".tsx"]),
@@ -93,7 +100,15 @@ describe("site stylesheet boundaries", () => {
 		for (const file of files) {
 			const source = readFileSync(file, "utf8");
 			expect(source, file).not.toMatch(/--yonaris-(?:surface|signal-strong)/);
-			expect(source, file).not.toMatch(/radial-gradient/i);
+			expect(source, file).not.toMatch(/(?:linear|radial|conic)-gradient/i);
+			if (file === legacySignalField) {
+				for (const [color] of source.matchAll(/#[\da-f]{6}\b/gi)) {
+					expect(approvedPaletteColors, `${file}: ${color}`).toContain(color.toLowerCase());
+				}
+			} else if (file !== paletteDefinition) {
+				expect(source, file).not.toMatch(/#[\da-f]{3,8}\b/i);
+				expect(source, file).not.toMatch(/(?:rgb|hsl|oklab|oklch|lab|lch)a?\(/i);
+			}
 		}
 	});
 
