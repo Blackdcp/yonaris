@@ -229,6 +229,12 @@ git commit -m "drive site discovery from the manifest"
 - Create: `apps/www/src/styles/pages/geo.css`
 - Create: `apps/www/src/styles/pages/diagnostic.css`
 - Modify: `apps/www/src/components/marketing/marketing-shell.tsx`
+- Modify: `apps/www/src/components/marketing/detail-page.tsx`
+- Modify: `apps/www/src/components/marketing/diagnostic-form.tsx`
+- Modify: `apps/www/src/components/marketing/diagnostic-page.tsx`
+- Modify: `apps/www/src/components/marketing/home-page.tsx`
+- Modify: `apps/www/src/components/marketing/marketing-link.tsx`
+- Modify: `apps/www/src/components/marketing/section.tsx`
 - Modify: `apps/www/src/components/navbar.tsx`
 - Modify: `apps/www/src/components/footer.tsx`
 - Modify: `apps/www/src/styles.css`
@@ -238,19 +244,23 @@ git commit -m "drive site discovery from the manifest"
 **Interfaces:**
 
 ```ts
-export function SiteShell(props: { locale: Locale; activeKey?: string; children: React.ReactNode; mainClassName?: string }): React.ReactNode;
+export function SiteHeader(props: { locale: Locale; activeKey?: CorePageKey }): React.ReactNode;
+export function SiteFooter(props: { locale: Locale }): React.ReactNode;
+export function SiteShell(props: { locale: Locale; activeKey?: CorePageKey; children: React.ReactNode; mainClassName?: string }): React.ReactNode;
 export function PublicationShell(props: { section: "blog" | "glossary" | "ai-search" | "aeo-for"; children: React.ReactNode; archiveContext?: "legacy-research" }): React.ReactNode;
 export function UtilityShell(props: { section: "docs" | "status" | "brand" | "changelog" | "roadmap" | "open-source"; children: React.ReactNode }): React.ReactNode;
 export function LegacyArchiveContext(props: { kind: "legacy-research" | "upstream-comparison" }): React.ReactNode;
 ```
 
+`SiteShell` owns the only `<main>` landmark. `PublicationShell` composes `LegacyArchiveContext`; the `/ai-visibility-tools/**` migration later uses the same primitive with `kind="upstream-comparison"`. `site-navigation.ts` derives canonical links from `SITE_MANIFEST`/`getCorePath()` and exposes the tested Portal constant `https://portal.yonaris.com`; it must not read legacy alias navigation from `marketing-content.ts`.
+
 - [ ] **Step 1: Write failing rendered-shell and style-token tests**
 
-Render `SiteHeader`/`SiteFooter` primitives without TanStack Link context and assert primary canonical paths, secondary Portal, one diagnostic action, localized navigation, active page state, Resources/Open Source/Status/Privacy/Agent/llms footer links, and absence of Provider Status/Docs-first identity. Add Playwright RED behavior for keyboard opening, Escape close with focus restoration, and link-selection close in the mobile menu. Assert `styles.css` imports focused CSS and contains no radial gradient or unapproved `surface/signal-strong` tokens.
+Render `SiteHeader`/`SiteFooter` primitives without TanStack Link context and assert ordered primary canonical paths, secondary Portal, one visible diagnostic action per presentation, localized navigation, active page state, Resources/Open Source/Status/Privacy/Agent/llms footer links, and absence of Provider Status/Docs-first identity. Static-render zero-prop `Navbar`/`Footer` wrappers to prove router independence. Add Playwright RED behavior at 390px for Enter/Space opening, Escape close with focus restoration, link-selection close without relying on navigation, a 44px minimum trigger, and zero horizontal overflow. Replace stale homepage assertions for `/platform`, `/methodology`, `/results` with `/product`, `/approach`, `/research`; remove the obsolete dark-supporting-header contract and do not navigate to not-yet-created routes. Assert `styles.css` imports every focused stylesheet, Product Stage selectors live only in `pages/home.css`, and all first-party site CSS/marketing consumers contain no radial gradient or unapproved `surface/signal-strong` tokens.
 
 - [ ] **Step 2: Implement shell primitives and compatibility wrappers**
 
-Header uses semantic navigation, `aria-current`, keyboard-safe mobile disclosure, locale preservation, secondary Portal, and the sole primary diagnostic action. Old Navbar/Footer become wrappers immediately. `styles.css` retains third-party/Tailwind entry only; Product Stage rules move to `home.css`.
+Header uses plain anchors, semantic navigation, `aria-current`, a deterministically closed SSR mobile disclosure, Escape focus restoration, link-selection close, locale preservation, secondary Portal, and the sole visible primary diagnostic action in desktop/mobile presentations. Old zero-prop Navbar/Footer become English wrappers immediately. `MarketingShell` maps the legacy page keys `platform→product`, `methodology→approach`, and `results→research` without preserving alias hrefs. `styles.css` remains the Tailwind/third-party entry manifest; shared tokens/base/prose move to `site-core.css`, Product Stage selectors and their responsive/reduced-motion behavior move to `home.css`, and every existing consumer is migrated from Surface/Signal Strong to approved Paper/Mist/Signal Orange tokens. Keep shared shell CSS namespaced so Fumadocs and publication prose are not disturbed.
 
 - [ ] **Step 3: Verify unit and homepage browser GREEN**
 
@@ -262,7 +272,7 @@ pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts hom
 - [ ] **Step 4: Commit**
 
 ```powershell
-git add apps/www/src/components/site apps/www/src/components/marketing/marketing-shell.tsx apps/www/src/components/navbar.tsx apps/www/src/components/footer.tsx apps/www/src/lib/site-navigation.ts apps/www/src/styles.css apps/www/src/styles/site-core.css apps/www/src/styles/pages apps/www/src/styles.test.ts e2e/www-tests/homepage.spec.ts
+git add apps/www/src/components/site apps/www/src/components/marketing/detail-page.tsx apps/www/src/components/marketing/diagnostic-form.tsx apps/www/src/components/marketing/diagnostic-page.tsx apps/www/src/components/marketing/home-page.tsx apps/www/src/components/marketing/marketing-link.tsx apps/www/src/components/marketing/marketing-shell.tsx apps/www/src/components/marketing/section.tsx apps/www/src/components/navbar.tsx apps/www/src/components/footer.tsx apps/www/src/lib/site-navigation.ts apps/www/src/styles.css apps/www/src/styles/site-core.css apps/www/src/styles/pages apps/www/src/styles.test.ts e2e/www-tests/homepage.spec.ts
 git commit -m "unify the public site shell"
 ```
 
