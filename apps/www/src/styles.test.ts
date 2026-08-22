@@ -48,7 +48,7 @@ describe("site stylesheet boundaries", () => {
 		expect(read("styles/site-core.css")).toContain(".prose code::before");
 	});
 
-	it("isolates every Product Stage selector in pages/home.css", () => {
+	it("isolates every homepage composition selector in pages/home.css", () => {
 		const home = read("styles/pages/home.css");
 		const otherStyles = [
 			"styles.css",
@@ -59,13 +59,26 @@ describe("site stylesheet boundaries", () => {
 			.join("\n");
 
 		for (const selector of [
+			".home-page",
+			".home-product-stage",
+			".home-diagnostic-preview",
+			".home-domain-form",
+			".home-hero-copy",
+			".home-stage--product",
+			".home-stage--approach",
+			".home-stage--research",
+			".home-stage--diagnostic",
+		]) {
+			expect(home).toContain(selector);
+			expect(otherStyles).not.toContain(selector);
+		}
+		for (const retiredSelector of [
 			".marketing-product-stage",
 			".marketing-product-preview",
 			".marketing-domain-form",
 			".marketing-hero-copy",
 		]) {
-			expect(home).toContain(selector);
-			expect(otherStyles).not.toContain(selector);
+			expect(home).not.toContain(retiredSelector);
 		}
 	});
 
@@ -73,6 +86,7 @@ describe("site stylesheet boundaries", () => {
 		const files = [
 			...filesUnder("styles", [".css"]),
 			...filesUnder("components/marketing", [".ts", ".tsx"]),
+			...filesUnder("components/site/pages", [".ts", ".tsx"]),
 			join(sourceRoot, "styles.css"),
 		];
 

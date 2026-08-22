@@ -8,6 +8,7 @@ import {
 	getDiagnosticContent,
 	getGeoContent,
 	getGlobalContent,
+	getHomeComposition,
 	getPrivacyContent,
 	getProductContent,
 	getResearchContent,
@@ -74,6 +75,21 @@ describe("core site content", () => {
 		expect(getGlobalContent("zh").claims.find(({ status }) => status === "direction")?.text).toBe(
 			"Yonaris 计划构建一套让人类团队与软件智能体共享同一事实基础的 MarTech。",
 		);
+	});
+
+	it("keeps the bilingual homepage sequence and destination facts aligned by reference", () => {
+		for (const locale of ["en", "zh"] as const) {
+			const global = getGlobalContent(locale);
+			const composition = getHomeComposition(locale);
+
+			expect(global.home.stageOrder).toEqual(["product", "approach", "research", "diagnostic"]);
+			expect(global.preview.claimIds).toEqual(["home-illustrative-diagnostic"]);
+			expect(global.claims.find(({ id }) => id === "home-illustrative-diagnostic")?.status).toBe("illustrative");
+			expect(composition.product).toBe(getProductContent(locale).homePreview);
+			expect(composition.approach).toBe(getApproachContent(locale).homePreview);
+			expect(composition.research).toBe(getResearchContent(locale).homePreview);
+			expect(composition.diagnostic).toBe(getDiagnosticContent(locale).homeOffer);
+		}
 	});
 
 	it("prevents nested page object mutations from changing later getter results", () => {

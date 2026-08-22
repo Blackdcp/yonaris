@@ -75,7 +75,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 							key={item.key}
 							href={item.path}
 							aria-current={activeKey === item.key ? "page" : undefined}
-							className="inline-flex min-h-11 items-center text-xs font-medium tracking-[0.04em] text-[var(--yonaris-slate)]/74 transition-colors hover:text-[var(--yonaris-ink)] focus-visible:text-[var(--yonaris-ink)] aria-[current=page]:text-[var(--yonaris-ink)] aria-[current=page]:underline aria-[current=page]:decoration-[var(--yonaris-signal)] aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
+							className="inline-flex min-h-11 items-center text-xs font-medium tracking-[0.04em] text-[var(--yonaris-slate)]/74 transition-colors motion-reduce:transition-none hover:text-[var(--yonaris-ink)] focus-visible:text-[var(--yonaris-ink)] aria-[current=page]:text-[var(--yonaris-ink)] aria-[current=page]:underline aria-[current=page]:decoration-[var(--yonaris-signal)] aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
 						>
 							{item.label}
 						</a>
@@ -99,7 +99,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 					<a
 						href={diagnostic.path}
 						data-site-diagnostic-action="desktop"
-						className="inline-flex min-h-11 items-center justify-center rounded-[0.45rem] bg-[var(--yonaris-ink)] px-4 text-xs font-medium text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
+						className="inline-flex min-h-11 items-center justify-center rounded-[0.45rem] bg-[var(--yonaris-ink)] px-4 text-xs font-medium text-[var(--yonaris-paper)] transition-colors motion-reduce:transition-none hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
 					>
 						{diagnostic.label}
 					</a>
@@ -154,7 +154,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 							href={diagnostic.path}
 							data-site-diagnostic-action="mobile"
 							onClick={closeMobileMenu}
-							className="mt-4 inline-flex min-h-11 w-full items-center justify-center border border-[var(--yonaris-signal)] bg-[var(--yonaris-ink)] px-4 text-xs font-semibold text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
+							className="mt-4 inline-flex min-h-11 w-full items-center justify-center border border-[var(--yonaris-signal)] bg-[var(--yonaris-ink)] px-4 text-xs font-semibold text-[var(--yonaris-paper)] transition-colors motion-reduce:transition-none hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
 						>
 							{diagnostic.label}
 						</a>

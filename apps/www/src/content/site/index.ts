@@ -8,7 +8,17 @@ import {
 	type PrivacyContent,
 } from "./diagnostic";
 import { type GeoContent, geoContentByLocale, getGeoContent } from "./geo";
-import { type GlobalContent, getGlobalContent, globalContentByLocale } from "./global";
+import {
+	type GlobalContent,
+	getGlobalContent,
+	getHomeComposition,
+	globalContentByLocale,
+	type HomeComposition,
+	type HomeDiagnosticPreviewContent,
+	type HomeHeroContent,
+	type HomeStageId,
+	type HomeStructureContent,
+} from "./global";
 import { getProductContent, type ProductContent, productContentByLocale } from "./product";
 import { getResearchContent, type ResearchContent, researchContentByLocale } from "./research";
 import { type CorePageKey, type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from "./types";
@@ -73,6 +83,11 @@ export type {
 	DiagnosticContent,
 	GeoContent,
 	GlobalContent,
+	HomeComposition,
+	HomeDiagnosticPreviewContent,
+	HomeHeroContent,
+	HomeStageId,
+	HomeStructureContent,
 	PrivacyContent,
 	ProductContent,
 	ResearchContent,
@@ -83,6 +98,7 @@ export {
 	getDiagnosticContent,
 	getGeoContent,
 	getGlobalContent,
+	getHomeComposition,
 	getPrivacyContent,
 	getProductContent,
 	getResearchContent,
