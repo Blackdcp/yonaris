@@ -165,6 +165,24 @@ describe("manifest-driven site SEO", () => {
 		expect(linkPaths(head)).toEqual({ canonical: "/resources" });
 	});
 
+	test("publishes the Privacy content metadata under one canonical without language alternates", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		const head = subject.supportingPageHead("privacy");
+		expect(head.meta).toEqual(
+			expect.arrayContaining([
+				{ title: "How we handle diagnostic request data | Yonaris" },
+				{
+					name: "description",
+					content: "How Yonaris handles information submitted with a diagnostic request.",
+				},
+			]),
+		);
+		expect(linkPaths(head)).toEqual({ canonical: "/privacy" });
+		expect(head.links).not.toEqual(expect.arrayContaining([expect.objectContaining({ rel: "alternate" })]));
+	});
+
 	test("adds the exact manifest robots policy without replacing publication metadata", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;

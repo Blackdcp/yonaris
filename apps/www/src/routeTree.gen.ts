@@ -24,6 +24,7 @@ import { Route as OffSiteAeoRouteImport } from './routes/off-site-aeo'
 import { Route as OgDotpngRouteImport } from './routes/og[.]png'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
 import { Route as ResearchRouteImport } from './routes/research'
@@ -153,6 +154,11 @@ const PlatformRoute = PlatformRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductRoute = ProductRouteImport.update({
@@ -457,6 +463,7 @@ export interface FileRoutesByFullPath {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
@@ -529,6 +536,7 @@ export interface FileRoutesByTo {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
@@ -602,6 +610,7 @@ export interface FileRoutesById {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
@@ -676,6 +685,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
@@ -748,6 +758,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
@@ -820,6 +831,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
@@ -893,6 +905,7 @@ export interface RootRouteChildren {
   OgDotpngRoute: typeof OgDotpngRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
   ResearchRoute: typeof ResearchRoute
@@ -1055,6 +1068,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/product': {
@@ -1461,6 +1481,7 @@ const rootRouteChildren: RootRouteChildren = {
   OgDotpngRoute: OgDotpngRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
   ResearchRoute: ResearchRoute,

@@ -571,3 +571,121 @@ for (const fixture of locales) {
 		}
 	}
 }
+
+test("both diagnostic locales link the same canonical privacy disclosure", async ({ page }) => {
+	for (const fixture of locales) {
+		await openScope(page, fixture);
+		await completeScope(page, fixture);
+		const privacy = page.locator(".diagnostic-privacy a");
+		await expect(privacy).toHaveAttribute("href", "/privacy");
+		await expect(privacy).not.toHaveAttribute("target", "_blank");
+		await privacy.click();
+		await expect(page).toHaveURL(/\/privacy$/);
+		await expect(page.getByRole("heading", { level: 1, name: /Privacy \/ 隐私说明/ })).toBeVisible();
+	}
+});
+
+test("privacy disclosure publishes both languages under one canonical route", async ({ page }) => {
+	await page.goto("/privacy");
+	await waitForHydration(page);
+
+	await expect(page.locator('head link[rel="canonical"]')).toHaveCount(1);
+	await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute("href", "/privacy");
+	await expect(page.locator('head link[rel="alternate"]')).toHaveCount(0);
+	await expect(page.locator("#privacy-en")).toHaveAttribute("lang", "en");
+	await expect(page.locator("#privacy-zh")).toHaveAttribute("lang", "zh-CN");
+	await expect(page.locator("#privacy-en h2")).toHaveText("How we handle diagnostic request data");
+	await expect(page.locator("#privacy-zh h2")).toHaveText("我们如何处理诊断申请信息");
+	await expect(page.getByRole("link", { name: "Return to the diagnostic", exact: true })).toHaveAttribute(
+		"href",
+		"/diagnostic",
+	);
+	await expect(page.getByRole("link", { name: "返回诊断申请", exact: true })).toHaveAttribute(
+		"href",
+		"/zh/diagnostic",
+	);
+	await expect(page.getByRole("link", { name: "black.dcp@outlook.com", exact: true })).toHaveCount(2);
+
+	const ids = await page.locator("[id]").evaluateAll((elements) => elements.map((element) => element.id));
+	expect(new Set(ids).size).toBe(ids.length);
+
+	const missing = await page.goto("/zh/privacy");
+	expect(missing?.status()).toBe(404);
+});
+
+test("privacy disclosure stays accessible and usable at all seven acceptance widths", async ({ page }) => {
+	test.setTimeout(180_000);
+	for (const width of qaWidths) {
+		await page.setViewportSize({ width, height: width >= 1024 ? 900 : 844 });
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/privacy");
+		await waitForHydration(page);
+
+		await expect(page.locator("main")).toHaveCount(1);
+		await expect(page.locator("body > div .site-header")).toHaveCount(1);
+		await expect(page.locator("body > div .site-footer")).toHaveCount(1);
+		await expect(page.locator("#privacy-zh h2")).toHaveText("我们如何处理诊断申请信息");
+		await expectNoHorizontalOverflow(page);
+		await expectNoRunningAnimations(page);
+		await runWcagAa(page);
+
+		const englishJump = page.locator('.privacy-jump a[href="#privacy-en"]');
+		const chineseJump = page.locator('.privacy-jump a[href="#privacy-zh"]');
+		await expectMinimumTarget(englishJump, `English privacy jump at ${width}px`);
+		await expectMinimumTarget(chineseJump, `Chinese privacy jump at ${width}px`);
+		await expectSignalFocusFromCleanState(page, englishJump);
+		await expectSignalFocusFromCleanState(page, chineseJump);
+		await chineseJump.click();
+		await expect(page).toHaveURL(/#privacy-zh$/);
+		await expect(page.locator("#privacy-zh")).toBeInViewport();
+	}
+});
+
+test("privacy disclosure keeps the Chinese contact address and closing punctuation on one line at 280px", async ({
+	page,
+}) => {
+	await page.setViewportSize({ width: 280, height: 720 });
+	await page.goto("/privacy");
+	await waitForHydration(page);
+
+	const lineMetrics = await page.locator("#privacy-zh-contact .privacy-fact__body p").evaluate((paragraph) => {
+		const address = paragraph.querySelector("a");
+		const punctuation = address?.nextSibling;
+		const addressText = address?.firstChild;
+		if (!(addressText instanceof Text) || !(punctuation instanceof Text)) {
+			throw new Error("Expected the contact address followed by its closing punctuation");
+		}
+		const addressRange = document.createRange();
+		addressRange.selectNodeContents(addressText);
+		const punctuationRange = document.createRange();
+		punctuationRange.selectNodeContents(punctuation);
+		return {
+			addressBottom: addressRange.getBoundingClientRect().bottom,
+			punctuationBottom: punctuationRange.getBoundingClientRect().bottom,
+		};
+	});
+
+	expect(Math.abs(lineMetrics.addressBottom - lineMetrics.punctuationBottom)).toBeLessThanOrEqual(1);
+});
+
+for (const viewport of [
+	{ name: "desktop", width: 1440, height: 900 },
+	{ name: "mobile", width: 390, height: 844 },
+	{ name: "minimum", width: 280, height: 720 },
+] as const) {
+	test(`privacy ${viewport.name} visual evidence`, { tag: "@visual" }, async ({ page }, testInfo) => {
+		await page.setViewportSize({ width: viewport.width, height: viewport.height });
+		await page.emulateMedia({ reducedMotion: "reduce" });
+		await page.goto("/privacy");
+		await waitForHydration(page);
+		await expect(page.getByRole("heading", { level: 1, name: "Privacy / 隐私说明", exact: true })).toBeVisible();
+		await page.addStyleTag({ content: ".site-header { position: static !important; }" });
+		await page.evaluate(() => window.scrollTo(0, 0));
+		await page.screenshot({
+			animations: "disabled",
+			caret: "hide",
+			fullPage: true,
+			path: testInfo.outputPath(`privacy-${viewport.width}.png`),
+		});
+	});
+}
