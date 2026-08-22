@@ -103,6 +103,28 @@ describe("GEO content truth model", () => {
 		expect(zhTruth).toMatch(/采集前.*确认范围/);
 	});
 
+	test("makes diagnostic review timing and the absence of an immediate result visible", () => {
+		const english = getGeoContent("en");
+		const chinese = getGeoContent("zh");
+
+		expect(english.diagnostic.disclosure).toMatch(/scope review.*before collection/i);
+		expect(english.diagnostic.disclosure).toMatch(/does not produce an immediate evidence result/i);
+		expect(chinese.diagnostic.disclosure).toMatch(/范围审核.*再开始采集/);
+		expect(chinese.diagnostic.disclosure).toMatch(/不会立即产生证据结果/);
+	});
+
+	test("writes the direction claim as future intent rather than present activity", () => {
+		const english = getGeoContent("en").claims.find(({ id }) => id === "geo-broader-martech-direction");
+		const chinese = getGeoContent("zh").claims.find(({ id }) => id === "geo-broader-martech-direction");
+
+		expect(english?.status).toBe("direction");
+		expect(english?.text).toMatch(/Yonaris intends to build/i);
+		expect(english?.text).not.toMatch(/Yonaris is (?:building|developing)/i);
+		expect(chinese?.status).toBe("direction");
+		expect(chinese?.text).toMatch(/Yonaris 计划构建/);
+		expect(chinese?.text).not.toMatch(/Yonaris 正在/);
+	});
+
 	test("rejects maturity theatre, fake outcomes, and autonomous performance claims", () => {
 		for (const locale of ["en", "zh"] as const) {
 			const serialized = JSON.stringify(getGeoContent(locale));

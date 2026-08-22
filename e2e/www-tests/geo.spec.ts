@@ -14,6 +14,8 @@ const locales = [
 		canonicalPath: "/geo",
 		companyLabel: "Read the category thesis",
 		diagnosticLabel: "Get a Free Diagnostic",
+		diagnosticTimingBoundary:
+			"Submitting a request begins a scope review with the Yonaris team before collection. It does not produce an immediate evidence result.",
 		evidenceBoundary: "Evidence has edges.",
 		headline: "GEO, grounded in evidence.",
 		productLabel: "See the evidence product",
@@ -26,6 +28,7 @@ const locales = [
 		canonicalPath: "/zh/geo",
 		companyLabel: "阅读品类主张",
 		diagnosticLabel: "获取免费诊断",
+		diagnosticTimingBoundary: "提交请求会先进入范围审核，再开始采集，不会立即产生证据结果",
 		evidenceBoundary: "证据有它的边界",
 		headline: "让 GEO 建立在证据之上",
 		productLabel: "查看证据产品",
@@ -130,6 +133,7 @@ for (const locale of locales) {
 			"href",
 			locale.route.startsWith("/zh") ? "/zh/diagnostic" : "/diagnostic",
 		);
+		await expect(page.getByText(locale.diagnosticTimingBoundary, { exact: true })).toBeVisible();
 
 		await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute("href", locale.canonicalPath);
 		await expect(page.locator('head link[rel="alternate"][hreflang="en"]')).toHaveAttribute("href", "/geo");

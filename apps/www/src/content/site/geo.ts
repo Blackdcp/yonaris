@@ -119,7 +119,7 @@ const enDiagnosticScopeConfirmation = {
 const enBroaderMartechDirection = {
 	id: "geo-broader-martech-direction",
 	status: "direction",
-	text: "Yonaris is building toward broader AI-native MarTech for markets shaped by people and software agents.",
+	text: "Yonaris intends to build broader AI-native MarTech for markets shaped by people and software agents.",
 	limitation: "That broader company direction is not presented as a completed set of software modules.",
 } as const satisfies GeoClaim;
 
@@ -232,7 +232,8 @@ export const pageEn = {
 		title: "Begin with one market question.",
 		summary:
 			"Give us one brand, one market, and one question that matters. Yonaris confirms the measurement scope before collecting evidence.",
-		disclosure: "Submitting a request begins a scope review with the Yonaris team before any collection starts.",
+		disclosure:
+			"Submitting a request begins a scope review with the Yonaris team before collection. It does not produce an immediate evidence result.",
 		label: "Get a Free Diagnostic",
 		claimIds: [enDiagnosticScopeConfirmation.id],
 	},
@@ -298,7 +299,7 @@ const zhDiagnosticScopeConfirmation = {
 const zhBroaderMartechDirection = {
 	id: "geo-broader-martech-direction",
 	status: "direction",
-	text: "Yonaris 正在构建面向人类与软件智能体共同参与市场的、更广泛的 AI 原生营销科技",
+	text: "Yonaris 计划构建面向人类与软件智能体共同参与市场的、更广泛的 AI 原生营销科技",
 	limitation: "这一公司方向不会被描述成一组已经完成的软件模块",
 } as const satisfies GeoClaim;
 
@@ -405,7 +406,7 @@ export const pageZh = {
 		eyebrow: "免费诊断",
 		title: "从一个真正重要的市场问题开始",
 		summary: "给我们一个品牌、一个市场和一个真正重要的问题。Yonaris 会先确认测量范围，再开始收集证据",
-		disclosure: "提交请求后，Yonaris 团队会先审核范围，再开始任何采集工作",
+		disclosure: "提交请求会先进入范围审核，再开始采集，不会立即产生证据结果",
 		label: "获取免费诊断",
 		claimIds: [zhDiagnosticScopeConfirmation.id],
 	},
