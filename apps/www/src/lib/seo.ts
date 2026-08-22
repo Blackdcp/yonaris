@@ -14,6 +14,12 @@ export function canonicalUrl(path: string): string | undefined {
 	return SITE_URL ? `${SITE_URL}${normalizedPath}` : undefined;
 }
 
+export function siteHref(path: string): string {
+	if (path.startsWith("http")) return path;
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	return canonicalUrl(normalizedPath) ?? normalizedPath;
+}
+
 export function ogMeta({
 	title,
 	description,
