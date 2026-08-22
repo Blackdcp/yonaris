@@ -165,6 +165,25 @@ describe("manifest-driven site SEO", () => {
 		expect(linkPaths(head)).toEqual({ canonical: "/resources" });
 	});
 
+	test("publishes Open Source metadata from its factual content under one English canonical", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		const head = subject.supportingPageHead("openSource");
+		expect(head.meta).toEqual(
+			expect.arrayContaining([
+				{ title: "Open-source infrastructure | Yonaris" },
+				{
+					name: "description",
+					content:
+						"How Yonaris uses and extends Elmo-compatible infrastructure while keeping the upstream project distinct from the company and its product promise.",
+				},
+			]),
+		);
+		expect(linkPaths(head)).toEqual({ canonical: "/open-source" });
+		expect(head.links).not.toEqual(expect.arrayContaining([expect.objectContaining({ rel: "alternate" })]));
+	});
+
 	test("publishes the Privacy content metadata under one canonical without language alternates", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;

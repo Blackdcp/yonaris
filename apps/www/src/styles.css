@@ -12,6 +12,7 @@
 @import "./styles/pages/geo.css";
 @import "./styles/pages/diagnostic.css";
 @import "./styles/pages/privacy.css";
+@import "./styles/pages/resources.css";
 
 @source "../src";
 @source "../../../packages/ui/src";

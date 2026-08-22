@@ -1,4 +1,4 @@
-import { getCorePageContent, getPrivacyContent, getResourcesContent } from "@/content/site";
+import { getCorePageContent, getOpenSourceContent, getPrivacyContent, getResourcesContent } from "@/content/site";
 import type { CorePageKey, IndexPolicy, Locale, SiteRouteKey } from "@/content/site/types";
 import { ogMeta, organizationJsonLd, siteHref, websiteJsonLd } from "./seo";
 import { getCorePath, getSiteRoute } from "./site-manifest";
@@ -10,17 +10,6 @@ interface SiteHead {
 }
 
 type SupportingPageKey = Extract<SiteRouteKey, "resources" | "openSource" | "privacy">;
-
-const supportingPageMeta: Record<
-	Exclude<SupportingPageKey, "resources" | "privacy">,
-	{ title: string; description: string }
-> = {
-	openSource: {
-		title: "Open Source",
-		description:
-			"Learn how Elmo-compatible open-source infrastructure supports Yonaris without defining the company identity or product promise.",
-	},
-};
 
 function pageTitle(title: string): string {
 	return title.endsWith("| Yonaris") ? title : `${title} | Yonaris`;
@@ -92,7 +81,7 @@ export function supportingPageHead(routeKey: SupportingPageKey): { meta: object[
 			? getResourcesContent("en").meta
 			: routeKey === "privacy"
 				? getPrivacyContent().meta
-				: supportingPageMeta[routeKey];
+				: getOpenSourceContent().meta;
 
 	return siteRouteHead(routeKey, {
 		canonicalPath,

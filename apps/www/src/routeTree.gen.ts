@@ -22,12 +22,14 @@ import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as OffSiteAeoRouteImport } from './routes/off-site-aeo'
 import { Route as OgDotpngRouteImport } from './routes/og[.]png'
+import { Route as OpenSourceRouteImport } from './routes/open-source'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
 import { Route as ResearchRouteImport } from './routes/research'
+import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -152,6 +154,11 @@ const OgDotpngRoute = OgDotpngRouteImport.update({
   path: '/og.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpenSourceRoute = OpenSourceRouteImport.update({
+  id: '/open-source',
+  path: '/open-source',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlatformRoute = PlatformRouteImport.update({
   id: '/platform',
   path: '/platform',
@@ -180,6 +187,11 @@ const RepoActivityDotsvgRoute = RepoActivityDotsvgRouteImport.update({
 const ResearchRoute = ResearchRouteImport.update({
   id: '/research',
   path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -497,12 +509,14 @@ export interface FileRoutesByFullPath {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -576,12 +590,14 @@ export interface FileRoutesByTo {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -656,12 +672,14 @@ export interface FileRoutesById {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -737,12 +755,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -816,12 +836,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -895,12 +917,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
     | '/privacy'
     | '/product'
     | '/repo-activity.svg'
     | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -975,12 +999,14 @@ export interface RootRouteChildren {
   MethodologyRoute: typeof MethodologyRoute
   OffSiteAeoRoute: typeof OffSiteAeoRoute
   OgDotpngRoute: typeof OgDotpngRoute
+  OpenSourceRoute: typeof OpenSourceRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
   ResearchRoute: typeof ResearchRoute
+  ResourcesRoute: typeof ResourcesRoute
   ResultsRoute: typeof ResultsRoute
   RoadmapRoute: typeof RoadmapRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -1134,6 +1160,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/open-source': {
+      id: '/open-source'
+      path: '/open-source'
+      fullPath: '/open-source'
+      preLoaderRoute: typeof OpenSourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/platform': {
       id: '/platform'
       path: '/platform'
@@ -1174,6 +1207,13 @@ declare module '@tanstack/react-router' {
       path: '/research'
       fullPath: '/research'
       preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -1599,12 +1639,14 @@ const rootRouteChildren: RootRouteChildren = {
   MethodologyRoute: MethodologyRoute,
   OffSiteAeoRoute: OffSiteAeoRoute,
   OgDotpngRoute: OgDotpngRoute,
+  OpenSourceRoute: OpenSourceRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
   ResearchRoute: ResearchRoute,
+  ResourcesRoute: ResourcesRoute,
   ResultsRoute: ResultsRoute,
   RoadmapRoute: RoadmapRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,

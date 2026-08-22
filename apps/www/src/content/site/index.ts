@@ -74,8 +74,8 @@ export function getCoreFacts(key: CorePageKey, locale: Locale): DeepReadonly<Cor
 	});
 }
 
-export type { ResourcesContent } from "./resources";
-export { getResourcesContent } from "./resources";
+export type { OpenSourceContent, ResourcesContent } from "./resources";
+export { getOpenSourceContent, getResourcesContent } from "./resources";
 export type { CorePageKey, DeepReadonly, FactualClaim, Locale } from "./types";
 export type {
 	ApproachContent,
