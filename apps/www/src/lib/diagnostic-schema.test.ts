@@ -98,12 +98,23 @@ describe("diagnostic request schema", () => {
 	});
 
 	it("accepts absolute HTTP(S) websites and rejects credentials, malformed values, and other protocols", () => {
-		for (const website of ["http://acme.example", "https://acme.example/path?market=global"]) {
+		for (const website of [
+			"http://acme.example",
+			"https://acme.example/path?market=global",
+			"https://acme.example/%20market",
+		]) {
 			expect(parseDiagnosticScope({ ...validScope, website }).success).toBe(true);
 		}
 		for (const website of [
 			"acme.example",
 			"/relative",
+			"https:acme.example",
+			"https:/acme.example",
+			"HTTP://acme.example",
+			"https://acme.example/market research",
+			"https://acme.example/market\nresearch",
+			"https://acme.example/market\tresearch",
+			"https://acme.example/market\u0000research",
 			"ftp://acme.example",
 			"mailto:hello@acme.example",
 			"https://user@acme.example",
@@ -153,6 +164,9 @@ describe("diagnostic search prefill", () => {
 			undefined,
 			["https://acme.example"],
 			"acme.example",
+			"https:acme.example",
+			"https:/acme.example",
+			"https://acme.example/market\nresearch",
 			"ftp://acme.example",
 			"https://user:secret@acme.example",
 		]) {
@@ -187,8 +201,8 @@ describe("diagnostic email fallback", () => {
 		expect(body).toContain("Website: https://acme.example");
 		expect(body).toContain("Brand: Acme Bcc: injected@example.com");
 		expect(body).toContain("Market or category: Enterprise software");
-		expect(body).toContain("One question that matters: Which platform should a global team choose?");
-		expect(body).toContain("Known competitors: Northwind, Contoso");
+		expect(body).toContain("Market question: Which platform should a global team choose?");
+		expect(body).toContain("Competitors to include: Northwind, Contoso");
 		expect(body).toContain("Name: Ava Chen");
 		expect(body).toContain("Email: ava@acme.example");
 		expect(body).toContain("Consent: yes");

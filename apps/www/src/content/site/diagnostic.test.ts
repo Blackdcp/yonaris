@@ -3,28 +3,28 @@ import { getDiagnosticContent, getPrivacyContent } from "./diagnostic";
 
 const expectedFieldCopy = {
 	en: {
-		website: ["Website", "https://example.com", "Enter an absolute http or https website."],
+		website: ["Website", "https://example.com", "Enter the full website URL, including http:// or https://."],
 		brand: ["Brand", "Your brand or company", "Enter the brand or company name."],
 		market: ["Market or category", "What market are you competing in?", "Enter the market or category."],
 		question: [
 			"Market question",
 			"What do you need to understand before your next market decision?",
-			"Enter a market question of at least 10 characters.",
+			"Add a little more detail so we can understand the decision.",
 		],
 		competitors: [
-			"Known competitors",
-			"Optional names or URLs, separated by commas",
+			"Competitors to include",
+			"Names or URLs (optional)",
 			"Keep competitor context within 600 characters.",
 		],
 		name: ["Your name", "Name", "Enter your name."],
 		email: ["Work email", "you@company.com", "Enter a valid email address."],
 	},
 	zh: {
-		website: ["官网", "https://example.com", "请输入以 http 或 https 开头的完整网址。"],
+		website: ["官网", "https://example.com", "请输入完整网址，包括 http:// 或 https://。"],
 		brand: ["品牌", "你的品牌或公司", "请输入品牌或公司名称。"],
 		market: ["市场或品类", "你正在参与哪个市场的竞争？", "请输入市场或品类。"],
-		question: ["市场问题", "下一步市场决策前，你最需要看清什么？", "请输入至少 10 个字符的市场问题。"],
-		competitors: ["已知竞品", "选填：名称或网址，用逗号分隔", "竞品信息请控制在 600 个字符以内。"],
+		question: ["市场问题", "下一步市场决策前，你最需要看清什么？", "请再具体一些，帮助我们理解这个决策问题。"],
+		competitors: ["需要纳入的竞品", "名称或网址（选填）", "竞品信息请控制在 600 个字符以内。"],
 		name: ["你的姓名", "姓名", "请输入姓名。"],
 		email: ["工作邮箱", "you@company.com", "请输入有效的邮箱地址。"],
 	},
@@ -51,13 +51,13 @@ describe("diagnostic content", () => {
 			{
 				id: "scope",
 				progressLabel: "1 / Scope",
-				title: "Frame the market question",
+				title: "Frame the question",
 				fields: ["website", "brand", "market", "question"],
 			},
 			{
 				id: "contact",
 				progressLabel: "2 / Contact",
-				title: "Add context and submit",
+				title: "Contact and review",
 				fields: ["competitors", "name", "email", "consent"],
 			},
 		]);
@@ -65,13 +65,13 @@ describe("diagnostic content", () => {
 			{
 				id: "scope",
 				progressLabel: "1 / 范围",
-				title: "界定市场问题",
+				title: "界定问题",
 				fields: ["website", "brand", "market", "question"],
 			},
 			{
 				id: "contact",
 				progressLabel: "2 / 联系",
-				title: "补充背景并提交",
+				title: "联系信息与确认",
 				fields: ["competitors", "name", "email", "consent"],
 			},
 		]);
@@ -101,26 +101,32 @@ describe("diagnostic content", () => {
 		const chinese = getDiagnosticContent("zh").form;
 		expect(english.actions).toEqual({
 			continue: "Continue",
-			back: "Back",
-			submit: "Request a free diagnostic",
-			submitting: "Submitting…",
+			back: "Back to scope",
+			submit: "Request the diagnostic",
+			submitting: "Submitting request…",
 			retry: "Try again",
 		});
 		expect(chinese.actions).toEqual({
 			continue: "继续",
-			back: "返回上一步",
+			back: "返回范围",
 			submit: "申请免费诊断",
-			submitting: "正在提交…",
+			submitting: "正在提交申请…",
 			retry: "重试",
 		});
 		expect(english.consent).toMatchObject({
 			label: "I agree that Yonaris may use these details to review my request and contact me.",
+			error: "Confirm that we may use these details to review the request and contact you.",
+			privacyLeadIn: "Privacy:",
 			privacyLinkLabel: "How we handle diagnostic request data",
 		});
 		expect(chinese.consent).toMatchObject({
 			label: "我同意 Yonaris 使用这些信息审核本次申请并与我联系。",
+			error: "请确认我们可以使用这些信息审核申请并与你联系。",
+			privacyLeadIn: "隐私说明：",
 			privacyLinkLabel: "我们如何处理诊断申请信息",
 		});
+		expect(english.validationSummary).toBe("Check the highlighted fields and try again.");
+		expect(chinese.validationSummary).toBe("请检查标出的信息后重试。");
 		expect(english.success).toEqual({
 			title: "Request submitted for review",
 			body: "Your request has been submitted for Yonaris review. The team reviews the scope before any evidence collection begins. This is not an instant diagnostic result.",
@@ -132,18 +138,45 @@ describe("diagnostic content", () => {
 		expect(`${english.success.body} ${chinese.success.body}`).toMatch(
 			/not an instant diagnostic result|不是即时诊断结果/,
 		);
-		expect(english.failure).toMatchObject({
+		expect(english.failure).toEqual({
 			title: "We couldn’t confirm delivery",
+			body: "Your entries remain on this page. Try again, or open an email draft.",
 			fallbackLabel: "Open email draft",
+			fallbackDisclosure: "Opening a draft sends nothing until you send it from your email client.",
 		});
-		expect(chinese.failure).toMatchObject({
+		expect(chinese.failure).toEqual({
 			title: "我们无法确认申请是否送达",
+			body: "你填写的信息仍保留在本页。你可以重试，或打开邮件草稿。",
 			fallbackLabel: "打开邮件草稿",
+			fallbackDisclosure: "打开草稿不会发送任何信息；只有你在邮件客户端中主动发送后，邮件才会发出。",
 		});
 		expect(`${english.failure.body} ${chinese.failure.body}`).toMatch(/remain on this page|仍保留在本页/);
 		expect(`${english.failure.fallbackDisclosure} ${chinese.failure.fallbackDisclosure}`).toMatch(
-			/opening an email draft does not send it|打开邮件草稿并不代表已经发送/,
+			/sends nothing|不会发送任何信息/,
 		);
+	});
+
+	it("pins the scoped likely output without promising a fixed report", () => {
+		expect(getDiagnosticContent("en").likelyOutput).toMatchObject({
+			title: "What the diagnostic can clarify",
+			introduction: "If we confirm a workable scope, the diagnostic is designed to return:",
+			items: [
+				"A baseline framed around the agreed question",
+				"Selected AI answers and available source evidence",
+				"The clearest observed gaps",
+				"Three bounded next tests",
+			],
+		});
+		expect(getDiagnosticContent("zh").likelyOutput).toMatchObject({
+			title: "诊断可以帮你看清什么",
+			introduction: "如果范围可执行，诊断预计会包括：",
+			items: [
+				"围绕已确认问题形成的基线",
+				"选取的 AI 回答与可用来源证据",
+				"最清晰的已观察缺口",
+				"三项边界明确的下一步测试",
+			],
+		});
 	});
 
 	it("references only the two managed diagnostic claims from every promise surface", () => {

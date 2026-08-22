@@ -8,15 +8,30 @@ export const DIAGNOSTIC_LEAD_FIELDS = [...DIAGNOSTIC_SCOPE_FIELDS, ...DIAGNOSTIC
 export type DiagnosticLeadField = (typeof DIAGNOSTIC_LEAD_FIELDS)[number];
 export type DiagnosticStageId = "scope" | "contact";
 
+function containsWhitespaceOrControl(value: string): boolean {
+	for (const character of value) {
+		const codePoint = character.codePointAt(0);
+		if (/\s/u.test(character) || (codePoint !== undefined && (codePoint <= 0x1f || codePoint === 0x7f))) {
+			return true;
+		}
+	}
+	return false;
+}
+
 const websiteSchema = z
 	.string()
 	.trim()
 	.min(1)
 	.max(300)
 	.superRefine((value, context) => {
+		if (!/^(?:http|https):\/\//.test(value) || containsWhitespaceOrControl(value)) {
+			context.addIssue({ code: "custom", message: "invalid_website" });
+			return;
+		}
+
 		try {
 			const url = new URL(value);
-			if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+			if (!["http:", "https:"].includes(url.protocol) || !url.hostname || url.username || url.password) {
 				context.addIssue({ code: "custom", message: "invalid_website" });
 			}
 		} catch {
@@ -71,14 +86,14 @@ function oneLine(value: string): string {
 function diagnosticMailBody(lead: DiagnosticLead): string {
 	const labels =
 		lead.locale === "zh"
-			? ["语言", "官网", "品牌", "市场或品类", "一个真正重要的问题", "已知竞品", "姓名", "邮箱", "同意"]
+			? ["语言", "官网", "品牌", "市场或品类", "市场问题", "需要纳入的竞品", "姓名", "邮箱", "同意"]
 			: [
 					"Locale",
 					"Website",
 					"Brand",
 					"Market or category",
-					"One question that matters",
-					"Known competitors",
+					"Market question",
+					"Competitors to include",
 					"Name",
 					"Email",
 					"Consent",

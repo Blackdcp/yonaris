@@ -98,7 +98,10 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 									className={inputClass}
 								/>
 							)}
-							<span id={errorId} className={`mt-2 text-xs leading-5 text-[#9f290f] ${invalid ? "block" : "hidden"}`}>
+							<span
+								id={errorId}
+								className={`mt-2 border-l-2 border-[var(--yonaris-signal)] pl-3 text-xs leading-5 text-[var(--yonaris-ink)] ${invalid ? "block" : "hidden"}`}
+							>
 								{fieldCopy.error}
 							</span>
 						</label>
@@ -134,7 +137,7 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 					</p>
 					<p
 						id="diagnostic-consent-error"
-						className={`mt-2 pl-7 text-xs leading-5 text-[#9f290f] ${invalidFields.includes("consent") ? "block" : "hidden"}`}
+						className={`ml-7 mt-2 border-l-2 border-[var(--yonaris-signal)] pl-3 text-xs leading-5 text-[var(--yonaris-ink)] ${invalidFields.includes("consent") ? "block" : "hidden"}`}
 					>
 						{copy.consent.error}
 					</p>
@@ -156,7 +159,7 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 			<p
 				id="diagnostic-error"
 				role="alert"
-				className={`mt-6 text-sm text-[#9f290f] ${validationFailed ? "block" : "hidden"}`}
+				className={`mt-6 border-l-2 border-[var(--yonaris-signal)] pl-3 text-sm text-[var(--yonaris-ink)] ${validationFailed ? "block" : "hidden"}`}
 			>
 				{copy.validationSummary}
 			</p>
@@ -165,13 +168,13 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 					type="submit"
 					className="marketing-paper-focus inline-flex min-h-12 items-center justify-center gap-3 border border-[var(--yonaris-signal)] bg-[var(--yonaris-signal)] px-5 text-xs font-medium text-[var(--yonaris-ink)] transition-colors hover:border-[var(--yonaris-ink)] hover:bg-[var(--yonaris-ink)] hover:text-[var(--yonaris-paper)]"
 				>
-					{copy.actions.submit}
+					{copy.failure.fallbackLabel}
 					<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="size-3.5">
 						<path d="M4 12 12 4M6.5 4H12v5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
 					</svg>
 				</button>
 				<p id="diagnostic-disclosure" className="max-w-md text-xs leading-5 text-[var(--yonaris-slate)]/58">
-					{copy.disclosure}
+					{copy.failure.fallbackDisclosure}
 				</p>
 			</div>
 		</form>

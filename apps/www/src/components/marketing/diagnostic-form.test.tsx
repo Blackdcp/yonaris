@@ -26,18 +26,27 @@ describe("DiagnosticForm", () => {
 		expect(privacyLink).toBeGreaterThan(consentLabelClose);
 	});
 
-	it("renders independently authored validation and submission copy without raw Zod messages", () => {
+	it("renders independently authored validation and honest mailto-only copy without raw Zod messages", () => {
 		const english = renderToStaticMarkup(<DiagnosticForm locale="en" />);
 		const chinese = renderToStaticMarkup(<DiagnosticForm locale="zh" />);
 
-		expect(english).toContain("Enter an absolute http or https website.");
-		expect(english).toContain("Request a free diagnostic");
+		expect(english).toContain("Enter the full website URL, including http:// or https://.");
+		expect(english).toContain("Open email draft");
+		expect(english).toContain("Opening a draft sends nothing until you send it from your email client.");
 		expect(english).toContain("How we handle diagnostic request data");
-		expect(chinese).toContain("请输入以 http 或 https 开头的完整网址。");
-		expect(chinese).toContain("申请免费诊断");
+		expect(english).not.toContain("Request the diagnostic");
+		expect(english).not.toContain("Submitting requests a Yonaris team scope review");
+		expect(chinese).toContain("请输入完整网址，包括 http:// 或 https://。");
+		expect(chinese).toContain("打开邮件草稿");
+		expect(chinese).toContain("打开草稿不会发送任何信息；只有你在邮件客户端中主动发送后，邮件才会发出。");
 		expect(chinese).toContain("我们如何处理诊断申请信息");
+		expect(chinese).not.toContain("提交后将由 Yonaris 团队审核范围");
 		for (const markup of [english, chinese]) {
 			expect(markup).not.toMatch(/Invalid input|Too small|Invalid URL|Invalid email|invalid_website/);
+			expect(markup).not.toContain("#9f290f");
+			const websiteErrorClass = markup.match(/id="diagnostic-website-error" class="([^"]+)"/)?.[1];
+			expect(websiteErrorClass).toContain("border-[var(--yonaris-signal)]");
+			expect(websiteErrorClass).toContain("text-[var(--yonaris-ink)]");
 		}
 	});
 });
