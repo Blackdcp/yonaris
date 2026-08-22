@@ -210,42 +210,52 @@ git commit -m "show the repeatable evidence loop"
 **Files:**
 - Modify: `apps/www/src/content/site/research.ts`
 - Create: `apps/www/src/content/site/research.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
 - Create: `apps/www/src/components/site/pages/research-page.tsx`
 - Create: `apps/www/src/components/site/pages/research-ledger.tsx`
 - Create: `apps/www/src/components/site/pages/metric-method-card.tsx`
 - Create: `apps/www/src/routes/research.tsx`
 - Create: `apps/www/src/routes/zh/research.tsx`
+- Modify (generated only by the route build): `apps/www/src/routeTree.gen.ts`
 - Modify: `apps/www/src/styles/pages/research.css`
 - Create: `e2e/www-tests/research.spec.ts`
+- Create: `.changeset/auditable-research-ledger.md`
 
 **Interfaces:**
 
 ```ts
 export type EvidenceAvailability<T> = { state: "known"; value: T } | { state: "unknown"; reason: string };
-export interface MetricDefinition { id: "visibility" | "share-of-voice"; label: string; definition: string; numerator: string; denominator: string; limitation: string; claims: readonly FactualClaim[] }
-export interface IllustrativeEvidenceRecord { status: "illustrative"; question: string; surface: string; observedAt: string; sampleCount: number; answer: string; citations: EvidenceAvailability<readonly string[]>; exposedQueries: EvidenceAvailability<readonly string[]>; findings: readonly string[]; unknowns: readonly string[]; claims: readonly FactualClaim[] }
-export interface ResearchHomePreview { title: string; scope: string; denominator: string; limitation: string }
+export type ResearchClaim = FactualClaim & { limitation: string };
+export interface ResearchItem { id: string; text: string }
+export interface MetricDefinition { id: "visibility" | "share-of-voice"; label: string; definition: string; numerator: string; denominator: string; limitation: string; claimIds: readonly ResearchClaim["id"][] }
+export interface IllustrativeEvidenceRecord { id: "illustrative-record-01"; status: "illustrative"; label: string; title: string; scope: string; observedAtIso: string; observedAtLabel: string; sampleCount: number; question: string; surface: string; answer: string; citations: EvidenceAvailability<readonly ResearchItem[]>; exposedQueries: EvidenceAvailability<readonly ResearchItem[]>; findings: readonly ResearchItem[]; unknowns: readonly ResearchItem[]; claimIds: readonly ResearchClaim["id"][] }
+export interface ResearchHomePreview { title: string; scope: string; denominator: string; limitation: string; claimIds: readonly ResearchClaim["id"][] }
 ```
 
 - [ ] **Step 1: Write RED metric and evidence tests**
 
-Assert headline `Every finding should show its scope.` and its independently written Chinese equivalent. Assert Visibility denominator is all valid sampled answers in the active filter; SOV denominator is tracked-brand plus configured-competitor mentions in the same cohort. Require `homePreview`, question, surface, date, sample count, answer, citation state, query state, knowns, unknowns, and non-causality. Require every metric/evidence assertion to map to a statused `FactualClaim` with an explicit limitation. Reject `93.3%`, customer-result language, and unknown-as-no-search.
+Assert headline `Every finding should show its scope.` and its independently written Chinese equivalent. Assert Visibility numerator is valid sampled answers mentioning the tracked brand and its denominator is all valid sampled answers in the active declared filter; configured-cohort SOV numerator is tracked-brand mentions and its denominator is tracked-brand plus configured-competitor mentions in the same cohort. Require `homePreview`, question, surface, ISO date plus localized label, numeric sample count, answer, citation state, query state, findings, unknowns, and non-causality. Use stable EN/ZH claim IDs/statuses: `research-declared-scope`, `research-visibility-definition`, `research-configured-sov-definition`, and `research-repeat-observation` are `current-software`; `research-illustrative-record` is `illustrative`. Every claim has an explicit limitation, appears once in the top-level registry, and nested content references it by ID. V1 contains no `verified-evidence` or `direction` claim. Extend parity tests across metric IDs, claim references, item IDs, availability states, record status, and claim order. Reject percentages, customer-result assertions, lifts/rankings, causal claims, and unknown-as-no-search while allowing an explicit disclosure that no customer outcome is published.
 
 - [ ] **Step 2: Write RED route tests**
 
-Assert the bilingual page renders the measurement design, two metric cards, visible Illustrative label, exact known/unknown states, no dashboard scorecard, no result claim, and no overflow at seven widths.
+Assert the bilingual page renders one H1, measurement design, two semantic metric `<article>` elements with `<dl>` fields, and one `<article data-record-status="illustrative">` with metadata `<dl>`, `<time dateTime>`, labelled answer, citations, exposed-query, findings, and unknown sections. The whole fictional record is visibly `Illustrative` / `示例`; citations use reserved `.example` domains and exposed queries are unknown with a reason stating that unavailable data does not establish that no search occurred. Known/Unknown is visible text, not color alone. There are no tabs, accordions, record selectors, dashboard charts, KPI tiles, scorecards, or hidden evidence states. Assert canonical/hreflang, Axe AA, reduced motion, CJK font/tracking/casing, and zero overflow in both locales at all seven widths. At 1024 assert real readable two-column grid geometry; at 768 and below assert one-column document order. Capture EN/ZH at 1440, 1024, 390, and 320.
 
 - [ ] **Step 3: Implement the ledger and page**
 
-Use a fictional company and visibly simulated data. The page reads like an auditable record with one editorial hierarchy, not a KPI dashboard. Both routes use `corePageHead("research", locale)`.
+Use a fictional company and visibly simulated data with `sampleCount: 1`. The page reads like an auditable record with one editorial hierarchy, not a KPI dashboard. Research is intentionally non-stateful; Product and Approach remain the stateful core experiences. Signal Orange is limited to rules, status markers, and focus; small text uses Ink/Slate. Both routes use `corePageHead("research", locale)`, links are manifest-derived, and the route tree is build-generated and inspected rather than hand-edited. Keep the site manifest, shared shell, Task 0 helpers, Product, Approach, Agent documents, and legacy redirects out of scope. Add one short `@workspace/www` patch changeset.
 
 - [ ] **Step 4: Verify and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/research.test.ts
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/research.spec.ts --project=chromium
+pnpm.cmd --filter @workspace/www exec vitest run src/content/site/research.test.ts src/content/site/content-parity.test.ts src/styles.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/research.spec.ts --project=chromium --grep-invert @visual
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/research.spec.ts --project=chromium --grep @visual --workers=1
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/content/site/research* apps/www/src/components/site/pages/research-* apps/www/src/components/site/pages/metric-method-card.tsx apps/www/src/routes/research.tsx apps/www/src/routes/zh/research.tsx apps/www/src/styles/pages/research.css e2e/www-tests/research.spec.ts
+pnpm.cmd --filter e2e check-types
+pnpm.cmd --filter @workspace/www audit:site-manifest
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/content/site/research* apps/www/src/content/site/content-parity.test.ts apps/www/src/components/site/pages/research-* apps/www/src/components/site/pages/metric-method-card.tsx apps/www/src/routes/research.tsx apps/www/src/routes/zh/research.tsx apps/www/src/routeTree.gen.ts apps/www/src/styles/pages/research.css e2e/www-tests/research.spec.ts .changeset/auditable-research-ledger.md
 git commit -m "publish an auditable research ledger"
 ```
 
