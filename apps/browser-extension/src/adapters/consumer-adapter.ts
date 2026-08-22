@@ -116,7 +116,9 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		const timeoutAt = this.#port.now() + CONFIRM_TIMEOUT_MS;
 		const requiredConversationStabilityMs =
-			this.surface === "kimi.consumer_web" ? CONFIRMED_CONVERSATION_STABILITY_MS : 0;
+			this.surface === "kimi.consumer_web" || this.surface === "yuanbao.consumer_web"
+				? CONFIRMED_CONVERSATION_STABILITY_MS
+				: 0;
 		let candidateConversationUrl = "";
 		let candidateStableSince = 0;
 		while (this.#port.now() < timeoutAt) {
@@ -144,7 +146,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				if (approvedConversationUrl !== candidateConversationUrl) {
 					candidateConversationUrl = approvedConversationUrl;
 					candidateStableSince = this.#port.now();
-				} else if (this.#port.now() - candidateStableSince >= CONFIRMED_CONVERSATION_STABILITY_MS) {
+				} else if (this.#port.now() - candidateStableSince >= requiredConversationStabilityMs) {
 					this.#confirmedConversationUrl = approvedConversationUrl;
 					return;
 				}
