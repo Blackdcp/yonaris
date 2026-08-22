@@ -55,7 +55,7 @@ describe("manifest-driven site SEO", () => {
 
 		expect(subject.corePageHead("product", "zh").meta).toEqual(
 			expect.arrayContaining([
-				{ title: "让 AI 市场回答变得可观察。 | Yonaris" },
+				{ title: "让 AI 形成的市场答案变得可观察 | Yonaris" },
 				{
 					name: "description",
 					content: "先界定市场范围，再检查 AI 回答样本及其可用证据，最后选择一个边界清晰的下一步测试。",

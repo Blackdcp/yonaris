@@ -22,6 +22,7 @@ import { Route as OffSiteAeoRouteImport } from './routes/off-site-aeo'
 import { Route as OgDotpngRouteImport } from './routes/og[.]png'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as ProductRouteImport } from './routes/product'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
@@ -55,6 +56,7 @@ import { Route as ZhDiagnosticRouteImport } from './routes/zh/diagnostic'
 import { Route as ZhGeoRouteImport } from './routes/zh/geo'
 import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
 import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
+import { Route as ZhProductRouteImport } from './routes/zh/product'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as AiVisibilityToolsAlternativesIndexRouteImport } from './routes/ai-visibility-tools/alternatives/index'
 import { Route as AiVisibilityToolsAlternativesSlugRouteImport } from './routes/ai-visibility-tools/alternatives/$slug'
@@ -134,6 +136,11 @@ const PlatformRoute = PlatformRouteImport.update({
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductRoute = ProductRouteImport.update({
+  id: '/product',
+  path: '/product',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RepoActivityDotsvgRoute = RepoActivityDotsvgRouteImport.update({
@@ -301,6 +308,11 @@ const ZhPlatformRoute = ZhPlatformRouteImport.update({
   path: '/zh/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhProductRoute = ZhProductRouteImport.update({
+  id: '/zh/product',
+  path: '/zh/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhResultsRoute = ZhResultsRouteImport.update({
   id: '/zh/results',
   path: '/zh/results',
@@ -401,6 +413,7 @@ export interface FileRoutesByFullPath {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
@@ -426,6 +439,7 @@ export interface FileRoutesByFullPath {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -464,6 +478,7 @@ export interface FileRoutesByTo {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
@@ -489,6 +504,7 @@ export interface FileRoutesByTo {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for': typeof AeoForIndexRoute
   '/agent': typeof AgentIndexRoute
@@ -528,6 +544,7 @@ export interface FileRoutesById {
   '/og.png': typeof OgDotpngRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
@@ -553,6 +570,7 @@ export interface FileRoutesById {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -593,6 +611,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/product'
     | '/repo-activity.svg'
     | '/results'
     | '/roadmap'
@@ -618,6 +637,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -656,6 +676,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/product'
     | '/repo-activity.svg'
     | '/results'
     | '/roadmap'
@@ -681,6 +702,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
     | '/zh/results'
     | '/aeo-for'
     | '/agent'
@@ -719,6 +741,7 @@ export interface FileRouteTypes {
     | '/og.png'
     | '/platform'
     | '/pricing'
+    | '/product'
     | '/repo-activity.svg'
     | '/results'
     | '/roadmap'
@@ -744,6 +767,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -783,6 +807,7 @@ export interface RootRouteChildren {
   OgDotpngRoute: typeof OgDotpngRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
+  ProductRoute: typeof ProductRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
   ResultsRoute: typeof ResultsRoute
   RoadmapRoute: typeof RoadmapRoute
@@ -808,6 +833,7 @@ export interface RootRouteChildren {
   ZhGeoRoute: typeof ZhGeoRoute
   ZhMethodologyRoute: typeof ZhMethodologyRoute
   ZhPlatformRoute: typeof ZhPlatformRoute
+  ZhProductRoute: typeof ZhProductRoute
   ZhResultsRoute: typeof ZhResultsRoute
   AeoForIndexRoute: typeof AeoForIndexRoute
   AgentIndexRoute: typeof AgentIndexRoute
@@ -924,6 +950,13 @@ declare module '@tanstack/react-router' {
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product': {
+      id: '/product'
+      path: '/product'
+      fullPath: '/product'
+      preLoaderRoute: typeof ProductRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/repo-activity.svg': {
@@ -1157,6 +1190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhPlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/product': {
+      id: '/zh/product'
+      path: '/zh/product'
+      fullPath: '/zh/product'
+      preLoaderRoute: typeof ZhProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/results': {
       id: '/zh/results'
       path: '/zh/results'
@@ -1279,6 +1319,7 @@ const rootRouteChildren: RootRouteChildren = {
   OgDotpngRoute: OgDotpngRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
+  ProductRoute: ProductRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
   ResultsRoute: ResultsRoute,
   RoadmapRoute: RoadmapRoute,
@@ -1304,6 +1345,7 @@ const rootRouteChildren: RootRouteChildren = {
   ZhGeoRoute: ZhGeoRoute,
   ZhMethodologyRoute: ZhMethodologyRoute,
   ZhPlatformRoute: ZhPlatformRoute,
+  ZhProductRoute: ZhProductRoute,
   ZhResultsRoute: ZhResultsRoute,
   AeoForIndexRoute: AeoForIndexRoute,
   AgentIndexRoute: AgentIndexRoute,

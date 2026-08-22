@@ -77,23 +77,48 @@ describe("core site content", () => {
 
 	it("prevents nested page object mutations from changing later getter results", () => {
 		const product = getProductContent("en");
-		const originalDescription = product.activities[0].description;
+		const originalSummary = product.activities[0].summary;
 		let objectWriteThrew = false;
 		try {
-			(product.activities[0] as { description: string }).description = "corrupted description";
+			(product.activities[0] as { summary: string }).summary = "corrupted summary";
 		} catch (error) {
 			if (!(error instanceof TypeError)) throw error;
 			objectWriteThrew = true;
 		}
-		const laterDescription = getProductContent("en").activities[0].description;
+		const laterSummary = getProductContent("en").activities[0].summary;
 		if (!objectWriteThrew) {
-			(product.activities[0] as { description: string }).description = originalDescription;
+			(product.activities[0] as { summary: string }).summary = originalSummary;
 		}
 
-		expect({ objectWriteThrew, laterDescription }).toEqual({
+		expect({ objectWriteThrew, laterSummary }).toEqual({
 			objectWriteThrew: true,
-			laterDescription: originalDescription,
+			laterSummary: originalSummary,
 		});
+	});
+
+	it("keeps Product workbench identities and claim statuses aligned across independently authored locales", () => {
+		const english = getProductContent("en");
+		const chinese = getProductContent("zh");
+		const shape = (content: typeof english | typeof chinese) => ({
+			activities: content.activities.map((activity) => ({
+				id: activity.id,
+				claims: activity.claims.map(({ id, status }) => ({ id, status })),
+			})),
+			views: content.workbench.views.map((view) => ({
+				id: view.id,
+				claims: view.claims.map(({ id, status }) => ({ id, status })),
+				fieldStates: view.fields.map(({ state }) => state),
+			})),
+			workspace: [content.workspaceBoundary.customer, content.workspaceBoundary.yonaris].map((section) =>
+				section.claims.map(({ id, status }) => ({ id, status })),
+			),
+			coverage: content.coverage.claims.map(({ id, status }) => ({ id, status })),
+			homePreview: content.homePreview.claims.map(({ id, status }) => ({ id, status })),
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.headline).not.toBe(english.headline);
+		expect(chinese.workbench.ui.tabListLabel).not.toBe(english.workbench.ui.tabListLabel);
 	});
 
 	it("prevents nested page array mutations from changing later getter results", () => {
