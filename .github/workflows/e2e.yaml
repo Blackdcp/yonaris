@@ -154,12 +154,25 @@ jobs:
         id: public-site-tests
         run: pnpm --filter e2e run test:www
 
+      - name: Run public-site analytics privacy test
+        id: public-site-analytics-tests
+        run: pnpm --filter e2e run test:www:analytics
+
       - name: Upload public-site failure results
         if: ${{ failure() && steps.public-site-tests.outcome == 'failure' }}
         uses: actions/upload-artifact@v7
         with:
           name: public-site-test-results
           path: e2e/test-results-www/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload public-site analytics failure results
+        if: ${{ failure() && steps.public-site-analytics-tests.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: public-site-analytics-test-results
+          path: e2e/test-results-www/analytics/
           if-no-files-found: warn
           retention-days: 7
 

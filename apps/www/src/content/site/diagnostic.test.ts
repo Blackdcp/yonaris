@@ -40,7 +40,7 @@ describe("diagnostic content", () => {
 		});
 		expect(getDiagnosticContent("zh")).toMatchObject({
 			eyebrow: "免费市场诊断",
-			headline: "先看见 AI 看见了什么，再决定改变什么",
+			headline: "先看见 AI 看见了什么 再决定改变什么",
 			offer: "一个品牌，一个市场，一个决策问题",
 			confirmation: "采集证据前，我们会先和你确认范围",
 		});
@@ -99,6 +99,8 @@ describe("diagnostic content", () => {
 	it("pins localized actions, consent, privacy, and honest result states", () => {
 		const english = getDiagnosticContent("en").form;
 		const chinese = getDiagnosticContent("zh").form;
+		expect(english.requestLabel).toBe("Diagnostic request");
+		expect(chinese.requestLabel).toBe("诊断申请");
 		expect(english.actions).toEqual({
 			continue: "Continue",
 			back: "Back to scope",

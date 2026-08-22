@@ -13,6 +13,7 @@ const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
 	testDir: "./www-tests",
+	testIgnore: "diagnostic-analytics.spec.ts",
 	outputDir: "test-results-www",
 	fullyParallel: true,
 	forbidOnly: Boolean(process.env.CI),
@@ -33,6 +34,12 @@ export default defineConfig({
 	],
 	webServer: {
 		command: `${pnpm} --filter @workspace/www exec vite dev --host 127.0.0.1 --port ${port} --strictPort`,
+		env: {
+			...process.env,
+			VITE_PLAUSIBLE_DOMAIN: "",
+			VITE_POSTHOG_KEY: "",
+			VITE_POSTHOG_HOST: "",
+		},
 		url: baseURL,
 		reuseExistingServer: process.env.WWW_E2E_REUSE_SERVER === "true",
 		timeout: 120_000,

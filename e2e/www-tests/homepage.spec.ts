@@ -242,7 +242,7 @@ test("Paper-side focus indicators retain Signal Orange with an Ink contrast edge
 		.toBeGreaterThanOrEqual(3);
 	expect.soft(paperLinkPresentation.hasSignal).toBe(true);
 	await page.goto("/diagnostic");
-	for (const control of [page.getByLabel("Work email"), page.getByRole("button", { name: "Get a Free Diagnostic" })]) {
+	for (const control of [page.getByLabel("Website"), page.getByRole("button", { name: "Continue" })]) {
 		const presentation = await focusPresentation(control, control, "section");
 		expect.soft(presentation.hasVisibleGeometry).toBe(true);
 		expect.soft(presentation.indicatorContrast, JSON.stringify(presentation)).toBeGreaterThanOrEqual(3);
@@ -344,7 +344,7 @@ test("homepage domain entry hands off to a prefilled diagnostic", async ({ page 
 	await heroForm.getByLabel("Website").fill("https://example.com");
 	await heroForm.getByRole("button", { name: "Get a Free Diagnostic" }).click();
 
-	await expect(page).toHaveURL(/\/diagnostic\?website=https%3A%2F%2Fexample\.com$/);
+	await expect(page).toHaveURL(/\/diagnostic$/);
 	await expect(page.getByLabel("Website")).toHaveValue("https://example.com");
 });
 
@@ -354,7 +354,7 @@ test("Chinese homepage domain entry hands off to a prefilled diagnostic", async 
 	await heroForm.getByLabel("官网").fill("https://example.com");
 	await heroForm.getByRole("button", { name: "获取免费诊断" }).click();
 
-	await expect(page).toHaveURL(/\/zh\/diagnostic\?website=https%3A%2F%2Fexample\.com$/);
+	await expect(page).toHaveURL(/\/zh\/diagnostic$/);
 	await expect(page.getByLabel("官网")).toHaveValue("https://example.com");
 });
 

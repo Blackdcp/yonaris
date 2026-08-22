@@ -33,6 +33,7 @@ export interface DiagnosticContent {
 		claimIds: readonly string[];
 	};
 	form: {
+		requestLabel: string;
 		fields: Record<Exclude<DiagnosticLeadField, "consent">, DiagnosticFieldCopy>;
 		consent: {
 			label: string;
@@ -135,6 +136,7 @@ export const pageEn = {
 		claimIds: ["diagnostic-likely-output"],
 	},
 	form: {
+		requestLabel: "Diagnostic request",
 		fields: {
 			website: {
 				label: "Website",
@@ -228,7 +230,7 @@ export const pageZh = {
 		description: "申请一次免费诊断工作会；Yonaris 会在采集证据前先确认测量范围。",
 	},
 	eyebrow: "免费市场诊断",
-	headline: "先看见 AI 看见了什么，再决定改变什么",
+	headline: "先看见 AI 看见了什么 再决定改变什么",
 	offer: "一个品牌，一个市场，一个决策问题",
 	confirmation: "采集证据前，我们会先和你确认范围",
 	currentScope: "提交申请只会进入审核队列，不会触发扫描，也不会立即开始证据采集。",
@@ -262,6 +264,7 @@ export const pageZh = {
 		claimIds: ["diagnostic-likely-output"],
 	},
 	form: {
+		requestLabel: "诊断申请",
 		fields: {
 			website: {
 				label: "官网",

@@ -12,6 +12,10 @@ interface ImportMeta {
 	readonly env: ImportMetaEnv;
 }
 
+interface Window {
+	__YONARIS_DIAGNOSTIC_PREFILL_SEARCH__?: string;
+}
+
 // App version injected by Vite `define` (see vite.config.ts) from this
 // package's package.json, which shares the fixed workspace release version.
 declare const __APP_VERSION__: string;

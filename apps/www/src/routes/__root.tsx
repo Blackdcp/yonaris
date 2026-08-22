@@ -9,6 +9,7 @@ import geistSansMediumFont from "@fontsource/geist-sans/files/geist-sans-latin-5
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
 import { type ReactNode, useEffect } from "react";
 import { NotFound } from "@/components/not-found";
+import { buildDiagnosticAnalyticsBootstrapScript } from "@/lib/diagnostic-analytics-privacy";
 import { getMarketingOgImage } from "@/lib/og";
 import { initPostHog } from "@/lib/posthog";
 import { canonicalUrl, organizationJsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL, websiteJsonLd } from "@/lib/seo";
@@ -81,6 +82,7 @@ export const Route = createRootRoute({
 				{ rel: "manifest", href: "/site.webmanifest" },
 			],
 			scripts: [
+				{ children: buildDiagnosticAnalyticsBootstrapScript() },
 				websiteJsonLd(),
 				organizationJsonLd(),
 				...(plausibleDomain
@@ -112,7 +114,10 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
-	const language = useRouterState({ select: (state) => (state.location.pathname === "/zh" || state.location.pathname.startsWith("/zh/") ? "zh-CN" : "en") });
+	const language = useRouterState({
+		select: (state) =>
+			state.location.pathname === "/zh" || state.location.pathname.startsWith("/zh/") ? "zh-CN" : "en",
+	});
 
 	return (
 		<html lang={language} suppressHydrationWarning>

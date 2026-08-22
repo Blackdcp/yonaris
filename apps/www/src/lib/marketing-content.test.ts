@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-	buildDiagnosticMailto,
 	CONTACT_EMAIL,
-	DIAGNOSTIC_FALLBACK_RECIPIENT,
 	getCoreFacts,
 	getLocalizedPath,
 	getMarketingContent,
@@ -16,8 +14,6 @@ import {
 	renderAgentIndex,
 	renderLlmsFull,
 	renderLlmsIndex,
-	validateDiagnosticInput,
-	validateDiagnosticSearch,
 } from "./marketing-content";
 
 describe("marketing content", () => {
@@ -73,7 +69,18 @@ describe("marketing content", () => {
 	it("publishes every core human and agent route exactly once", () => {
 		expect(MARKETING_SITEMAP_PATHS).toHaveLength(19);
 		expect(new Set(MARKETING_SITEMAP_PATHS).size).toBe(MARKETING_SITEMAP_PATHS.length);
-		expect(MARKETING_SITEMAP_PATHS).toEqual(expect.arrayContaining(["/", "/zh", "/platform", "/zh/platform", "/agent", "/agent/company", "/llms.txt", "/llms-full.txt"]));
+		expect(MARKETING_SITEMAP_PATHS).toEqual(
+			expect.arrayContaining([
+				"/",
+				"/zh",
+				"/platform",
+				"/zh/platform",
+				"/agent",
+				"/agent/company",
+				"/llms.txt",
+				"/llms-full.txt",
+			]),
+		);
 	});
 
 	it("builds a localized homepage navigation model with real conversion and section targets", () => {
@@ -143,50 +150,7 @@ describe("marketing content", () => {
 		expect(renderLlmsFull()).toContain("# Yonaris results evidence");
 	});
 
-	it("aliases the canonical recipient and re-exports the validated diagnostic fallback", () => {
-		expect(CONTACT_EMAIL).toBe(DIAGNOSTIC_FALLBACK_RECIPIENT);
-		const mailto = buildDiagnosticMailto({
-			locale: "en",
-			brand: "Acme & Co",
-			website: "https://acme.example",
-			market: "Enterprise software",
-			competitors: "Northwind, Contoso",
-			question: "Which platform should a global team choose?",
-			name: "Ava Chen",
-			email: "ava@acme.example",
-			consent: true,
-			companyUrl: "",
-		});
-
-		expect(mailto).toMatch(/^mailto:black\.dcp%40outlook\.com\?/);
-		expect(mailto).toContain("Acme%20%26%20Co");
-		expect(mailto).toContain("Which%20platform%20should%20a%20global%20team%20choose%3F");
-	});
-
-	it("derives legacy field validation and search prefill from the shared schemas", () => {
-		expect(
-			validateDiagnosticInput({
-				brand: " ",
-				website: "acme",
-				market: "",
-				competitors: "",
-				question: "",
-				name: "",
-				email: "not-an-email",
-			}),
-		).toEqual(["website", "brand", "market", "question", "name", "email"]);
-		expect(
-			validateDiagnosticInput({
-				brand: "Acme",
-				website: "https://acme.example",
-				market: "Enterprise software",
-				competitors: "",
-				question: "Which option fits us?",
-				name: "Ava",
-				email: "ava@acme.example",
-			}),
-		).toEqual([]);
-		expect(validateDiagnosticSearch({ website: "https://acme.example" })).toEqual({ website: "https://acme.example" });
-		expect(validateDiagnosticSearch({ website: "https://user:secret@acme.example" })).toEqual({ website: "" });
+	it("keeps the public contact address stable", () => {
+		expect(CONTACT_EMAIL).toBe("black.dcp@outlook.com");
 	});
 });
