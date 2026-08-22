@@ -116,6 +116,26 @@ test("Chinese homepage localizes the Product Stage and destinations", async ({ p
 	await expect(page.locator("h1 br")).toHaveCount(0);
 });
 
+test("Chinese mobile explanation avoids an orphan final line", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/zh");
+	await page.evaluate(() => document.fonts.ready);
+
+	const lines = await page.locator(".marketing-product-stage__lead").evaluate((lead) => {
+		const text = lead.textContent ?? "";
+		const groups = new Map<number, string>();
+		for (let index = 0; index < text.length; index += 1) {
+			const range = document.createRange();
+			range.setStart(lead.firstChild!, index);
+			range.setEnd(lead.firstChild!, index + 1);
+			const top = Math.round(range.getBoundingClientRect().top);
+			groups.set(top, `${groups.get(top) ?? ""}${text[index]}`);
+		}
+		return [...groups.values()];
+	});
+	expect(lines.at(-1)?.trim().length).toBeGreaterThanOrEqual(2);
+});
+
 test("homepage domain entry hands off to a prefilled diagnostic", async ({ page }) => {
 	await page.goto("/");
 	const heroForm = page.locator("main form").first();

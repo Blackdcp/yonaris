@@ -188,6 +188,10 @@
 	letter-spacing: -0.018em;
 }
 
+[lang="zh-CN"] .marketing-product-stage__lead {
+	text-wrap: pretty;
+}
+
 .marketing-domain-form {
 	display: flex;
 	align-items: center;
