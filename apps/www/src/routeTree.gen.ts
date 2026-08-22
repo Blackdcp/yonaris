@@ -44,6 +44,7 @@ import { Route as AiSearchIndexRouteImport } from './routes/ai-search/index'
 import { Route as AiSearchSlugRouteImport } from './routes/ai-search/$slug'
 import { Route as AiVisibilityToolsIndexRouteImport } from './routes/ai-visibility-tools/index'
 import { Route as AiVisibilityToolsSlugRouteImport } from './routes/ai-visibility-tools/$slug'
+import { Route as ApiDiagnosticRouteImport } from './routes/api/diagnostic'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -252,6 +253,11 @@ const AiVisibilityToolsIndexRoute = AiVisibilityToolsIndexRouteImport.update({
 const AiVisibilityToolsSlugRoute = AiVisibilityToolsSlugRouteImport.update({
   id: '/ai-visibility-tools/$slug',
   path: '/ai-visibility-tools/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDiagnosticRoute = ApiDiagnosticRouteImport.update({
+  id: '/api/diagnostic',
+  path: '/api/diagnostic',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
@@ -467,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -610,6 +618,7 @@ export interface FileRoutesById {
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -683,6 +692,7 @@ export interface FileRouteTypes {
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -754,6 +764,7 @@ export interface FileRouteTypes {
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -825,6 +836,7 @@ export interface FileRouteTypes {
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -897,6 +909,7 @@ export interface RootRouteChildren {
   AgentResultsRoute: typeof AgentResultsRoute
   AiSearchSlugRoute: typeof AiSearchSlugRoute
   AiVisibilityToolsSlugRoute: typeof AiVisibilityToolsSlugRoute
+  ApiDiagnosticRoute: typeof ApiDiagnosticRoute
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   ApiSearchRoute: typeof ApiSearchRoute
   BlogSplatRoute: typeof BlogSplatRoute
@@ -1184,6 +1197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AiVisibilityToolsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/diagnostic': {
+      id: '/api/diagnostic'
+      path: '/api/diagnostic'
+      fullPath: '/api/diagnostic'
+      preLoaderRoute: typeof ApiDiagnosticRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/openapi.json': {
       id: '/api/openapi.json'
       path: '/api/openapi.json'
@@ -1457,6 +1477,7 @@ const rootRouteChildren: RootRouteChildren = {
   AgentResultsRoute: AgentResultsRoute,
   AiSearchSlugRoute: AiSearchSlugRoute,
   AiVisibilityToolsSlugRoute: AiVisibilityToolsSlugRoute,
+  ApiDiagnosticRoute: ApiDiagnosticRoute,
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   ApiSearchRoute: ApiSearchRoute,
   BlogSplatRoute: BlogSplatRoute,

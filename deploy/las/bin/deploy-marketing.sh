@@ -44,6 +44,19 @@ set -a
 source "$ENV_FILE"
 set +a
 
+required_marketing_env=(RESEND_API_KEY RESEND_FROM_EMAIL MARKETING_LEAD_RECIPIENT)
+missing_marketing_env=()
+for variable_name in "${required_marketing_env[@]}"; do
+  variable_value="${!variable_name-}"
+  if [[ -z "${variable_value//[[:space:]]/}" ]]; then
+    missing_marketing_env+=("$variable_name")
+  fi
+done
+if (( ${#missing_marketing_env[@]} > 0 )); then
+  echo "Missing required marketing configuration: ${missing_marketing_env[*]}" >&2
+  exit 1
+fi
+
 previous_tag=""
 if [[ -f "$RELEASE_FILE" ]]; then
   previous_tag="$(tr -d '[:space:]' <"$RELEASE_FILE")"

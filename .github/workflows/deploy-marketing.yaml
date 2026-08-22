@@ -17,6 +17,7 @@ on:
       - deploy/las/compose.marketing.yaml
       - deploy/las/caddy/**
       - deploy/las/bin/deploy-marketing.sh
+      - deploy/las/bin/deploy-marketing.test.sh
       - deploy/las/bin/install-marketing-caddy.sh
       - package.json
       - pnpm-lock.yaml
@@ -50,6 +51,7 @@ jobs:
       - name: Verify marketing proxy routes
         run: |
           node --test deploy/las/caddy/yonaris-marketing.test.mjs
+          bash deploy/las/bin/deploy-marketing.test.sh
           bash deploy/las/bin/install-marketing-caddy.test.sh
 
       - name: Set up Docker Buildx
