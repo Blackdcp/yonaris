@@ -120,6 +120,34 @@ describe("manifest-driven site SEO", () => {
 		});
 	});
 
+	test("publishes Diagnostic metadata and reciprocal bilingual canonicals from the shared offer", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		expect(subject.corePageHead("diagnostic", "en").meta).toEqual(
+			expect.arrayContaining([
+				{ title: "See what AI sees before you decide what to change. | Yonaris" },
+				{
+					name: "description",
+					content:
+						"Request a free diagnostic working session; Yonaris confirms scope before evidence collection begins.",
+				},
+			]),
+		);
+		expect(linkPaths(subject.corePageHead("diagnostic", "en"))).toEqual({
+			canonical: "/diagnostic",
+			en: "/diagnostic",
+			"zh-CN": "/zh/diagnostic",
+			"x-default": "/diagnostic",
+		});
+		expect(linkPaths(subject.corePageHead("diagnostic", "zh"))).toEqual({
+			canonical: "/zh/diagnostic",
+			en: "/diagnostic",
+			"zh-CN": "/zh/diagnostic",
+			"x-default": "/diagnostic",
+		});
+	});
+
 	test("keeps supporting page metadata and canonicals specific to the route", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
-	MARKETING_ROUTES,
-	MARKETING_SITEMAP_PATHS,
 	buildDiagnosticMailto,
+	CONTACT_EMAIL,
+	DIAGNOSTIC_FALLBACK_RECIPIENT,
 	getCoreFacts,
 	getLocalizedPath,
 	getMarketingContent,
@@ -10,11 +10,14 @@ import {
 	getMarketingNavigation,
 	getMarketingPageMeta,
 	getProductContent,
+	MARKETING_ROUTES,
+	MARKETING_SITEMAP_PATHS,
 	renderAgentDocument,
 	renderAgentIndex,
 	renderLlmsFull,
 	renderLlmsIndex,
 	validateDiagnosticInput,
+	validateDiagnosticSearch,
 } from "./marketing-content";
 
 describe("marketing content", () => {
@@ -140,26 +143,27 @@ describe("marketing content", () => {
 		expect(renderLlmsFull()).toContain("# Yonaris results evidence");
 	});
 
-	it("builds an encoded diagnostic email without pretending to submit it", () => {
-		const mailto = buildDiagnosticMailto(
-			{
-				brand: "Acme & Co",
-				website: "https://acme.example",
-				market: "Enterprise software",
-				competitors: "Northwind, Contoso",
-				question: "Which platform should a global team choose?",
-				name: "Ava Chen",
-				email: "ava@acme.example",
-			},
-			"en",
-		);
+	it("aliases the canonical recipient and re-exports the validated diagnostic fallback", () => {
+		expect(CONTACT_EMAIL).toBe(DIAGNOSTIC_FALLBACK_RECIPIENT);
+		const mailto = buildDiagnosticMailto({
+			locale: "en",
+			brand: "Acme & Co",
+			website: "https://acme.example",
+			market: "Enterprise software",
+			competitors: "Northwind, Contoso",
+			question: "Which platform should a global team choose?",
+			name: "Ava Chen",
+			email: "ava@acme.example",
+			consent: true,
+			companyUrl: "",
+		});
 
 		expect(mailto).toMatch(/^mailto:black\.dcp%40outlook\.com\?/);
 		expect(mailto).toContain("Acme%20%26%20Co");
 		expect(mailto).toContain("Which%20platform%20should%20a%20global%20team%20choose%3F");
 	});
 
-	it("blocks incomplete or malformed diagnostic requests before opening email", () => {
+	it("derives legacy field validation and search prefill from the shared schemas", () => {
 		expect(
 			validateDiagnosticInput({
 				brand: " ",
@@ -170,17 +174,19 @@ describe("marketing content", () => {
 				name: "",
 				email: "not-an-email",
 			}),
-		).toEqual(["brand", "website", "question", "name", "email"]);
+		).toEqual(["website", "brand", "market", "question", "name", "email"]);
 		expect(
 			validateDiagnosticInput({
 				brand: "Acme",
 				website: "https://acme.example",
-				market: "",
+				market: "Enterprise software",
 				competitors: "",
 				question: "Which option fits us?",
 				name: "Ava",
 				email: "ava@acme.example",
 			}),
 		).toEqual([]);
+		expect(validateDiagnosticSearch({ website: "https://acme.example" })).toEqual({ website: "https://acme.example" });
+		expect(validateDiagnosticSearch({ website: "https://user:secret@acme.example" })).toEqual({ website: "" });
 	});
 });

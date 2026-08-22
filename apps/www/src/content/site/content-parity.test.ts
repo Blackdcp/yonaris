@@ -8,6 +8,7 @@ import {
 	getDiagnosticContent,
 	getGeoContent,
 	getGlobalContent,
+	getPrivacyContent,
 	getProductContent,
 	getResearchContent,
 	getResourcesContent,
@@ -214,6 +215,34 @@ describe("core site content", () => {
 		expect(chinese.workflow.ui.workflowLabel).not.toBe(english.workflow.ui.workflowLabel);
 	});
 
+	it("keeps Diagnostic stages, fields, states, offers, and claim references aligned across authored locales", () => {
+		const english = getDiagnosticContent("en");
+		const chinese = getDiagnosticContent("zh");
+		const shape = (content: typeof english | typeof chinese) => ({
+			claims: content.claims.map(({ id, status }) => ({ id, status })),
+			currentScopeClaimIds: content.currentScopeClaimIds,
+			stages: content.stages.map(({ id, fields }) => ({ id, fields })),
+			fieldIds: Object.keys(content.form.fields),
+			actionIds: Object.keys(content.form.actions),
+			resultIds: ["success", "failure"].filter((id) => id in content.form),
+			likelyOutputClaimIds: content.likelyOutput.claimIds,
+			homeOfferClaimIds: content.homeOffer.claimIds,
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.headline).not.toBe(english.headline);
+		expect(chinese.form.validationSummary).not.toBe(english.form.validationSummary);
+	});
+
+	it("keeps the combined Privacy disclosure structurally aligned without translating by reuse", () => {
+		const [english, chinese] = getPrivacyContent().languages;
+		expect(chinese.sections.map(({ id, body }) => ({ id, paragraphs: body.length }))).toEqual(
+			english.sections.map(({ id, body }) => ({ id, paragraphs: body.length })),
+		);
+		expect(chinese.title).not.toBe(english.title);
+		expect(chinese.sections[0].body[0]).not.toBe(english.sections[0].body[0]);
+	});
+
 	it("prevents nested page array mutations from changing later getter results", () => {
 		const research = getResearchContent("en");
 		const originalFindingCount = research.record.findings.length;
@@ -376,9 +405,7 @@ describe("core site content", () => {
 		expect(getCompanyContent("en").stage.summary).toContain("early company");
 		expect(getCompanyContent("en").stage.summary).toContain("service-led model");
 		expect(getGeoContent("en").boundary.summary).toContain("first applied workflow");
-		expect(getDiagnosticContent("en").confirmation).toContain(
-			"confirms the measurement scope before collecting evidence",
-		);
+		expect(getDiagnosticContent("en").confirmation).toBe("We confirm the scope before we collect evidence.");
 	});
 
 	it("excludes prohibited claims from every core page", () => {

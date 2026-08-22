@@ -1,63 +1,58 @@
 import { useState } from "react";
+import { getDiagnosticContent, type Locale } from "@/content/site";
 import {
 	buildDiagnosticMailto,
-	type DiagnosticInput,
-	type Locale,
-	validateDiagnosticInput,
-} from "@/lib/marketing-content";
+	DIAGNOSTIC_LEAD_FIELDS,
+	type DiagnosticLeadField,
+	parseDiagnosticLead,
+} from "@/lib/diagnostic-schema";
 
-const fieldCopy = {
-	en: {
-		brand: ["Brand", "Your brand or company"],
-		website: ["Website", "https://example.com"],
-		market: ["Market or category", "What market are you competing in?"],
-		competitors: ["Known competitors", "Names or URLs, separated by commas"],
-		question: ["One question that matters", "What should an AI system be able to answer about your market or brand?"],
-		name: ["Your name", "Name"],
-		email: ["Work email", "you@company.com"],
-		error: "Complete the required fields with a valid website and email.",
-		submit: "Get a Free Diagnostic",
-	},
-	zh: {
-		brand: ["品牌", "你的品牌或公司"],
-		website: ["官网", "https://example.com"],
-		market: ["市场或品类", "你正在参与哪个市场的竞争？"],
-		competitors: ["主要竞品", "名称或网址，用逗号分隔"],
-		question: ["一个真正重要的问题", "你希望 AI 能够正确回答哪个关于市场或品牌的问题？"],
-		name: ["你的姓名", "姓名"],
-		email: ["工作邮箱", "you@company.com"],
-		error: "请完整填写必填项，并检查官网和邮箱格式。",
-		submit: "获取免费诊断",
-	},
-} as const;
+const FORM_FIELD_ORDER = DIAGNOSTIC_LEAD_FIELDS.filter(
+	(field): field is Exclude<DiagnosticLeadField, "consent"> => field !== "consent",
+);
 
-function inputFromForm(form: HTMLFormElement): DiagnosticInput {
+function inputFromForm(form: HTMLFormElement, locale: Locale) {
 	const data = new FormData(form);
 	return {
-		brand: String(data.get("brand") ?? ""),
+		locale,
 		website: String(data.get("website") ?? ""),
+		brand: String(data.get("brand") ?? ""),
 		market: String(data.get("market") ?? ""),
-		competitors: String(data.get("competitors") ?? ""),
 		question: String(data.get("question") ?? ""),
+		competitors: String(data.get("competitors") ?? ""),
 		name: String(data.get("name") ?? ""),
 		email: String(data.get("email") ?? ""),
+		consent: data.get("consent") === "true",
+		companyUrl: String(data.get("companyUrl") ?? ""),
 	};
 }
 
+function issueFields(issues: readonly { path: PropertyKey[] }[]): DiagnosticLeadField[] {
+	const paths = new Set(issues.map((issue) => issue.path[0]));
+	return DIAGNOSTIC_LEAD_FIELDS.filter((field) => paths.has(field));
+}
+
 export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale; initialWebsite?: string }) {
-	const copy = fieldCopy[locale];
-	const [invalidFields, setInvalidFields] = useState<(keyof DiagnosticInput)[]>([]);
+	const content = getDiagnosticContent(locale);
+	const copy = content.form;
+	const [invalidFields, setInvalidFields] = useState<DiagnosticLeadField[]>([]);
+	const [validationFailed, setValidationFailed] = useState(false);
 
 	function submit(event: React.FormEvent<HTMLFormElement>) {
 		event.preventDefault();
-		const input = inputFromForm(event.currentTarget);
-		const errors = validateDiagnosticInput(input);
-		setInvalidFields(errors);
-		if (errors.length > 0) {
-			requestAnimationFrame(() => document.getElementById(`diagnostic-${errors[0]}`)?.focus());
+		const result = parseDiagnosticLead(inputFromForm(event.currentTarget, locale));
+		if (!result.success) {
+			const fields = issueFields(result.error.issues);
+			setInvalidFields(fields);
+			setValidationFailed(true);
+			requestAnimationFrame(() => document.getElementById(`diagnostic-${fields[0]}`)?.focus());
 			return;
 		}
-		window.location.href = buildDiagnosticMailto(input, locale);
+
+		setInvalidFields([]);
+		setValidationFailed(false);
+		const mailto = buildDiagnosticMailto(result.data);
+		if (mailto) window.location.href = mailto;
 	}
 
 	const inputClass =
@@ -71,74 +66,112 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 			aria-describedby="diagnostic-disclosure diagnostic-error"
 		>
 			<div className="grid gap-x-6 gap-y-7 sm:grid-cols-2">
-				{(["brand", "website", "market", "competitors"] as const).map((field) => (
-					<label key={field} className="text-xs font-medium text-[var(--yonaris-slate)]">
-						{copy[field][0]}
-						{field === "brand" || field === "website" ? (
-							<span className="ml-1 text-[var(--yonaris-signal)]">*</span>
-						) : null}
+				{FORM_FIELD_ORDER.map((field) => {
+					const fieldCopy = copy.fields[field];
+					const required = field !== "competitors";
+					const invalid = invalidFields.includes(field);
+					const errorId = `diagnostic-${field}-error`;
+					const commonProps = {
+						id: `diagnostic-${field}`,
+						name: field,
+						required,
+						placeholder: fieldCopy.placeholder,
+						"aria-invalid": invalid,
+						"aria-describedby": errorId,
+					};
+
+					return (
+						<label
+							key={field}
+							htmlFor={`diagnostic-${field}`}
+							className={`text-xs font-medium text-[var(--yonaris-slate)] ${field === "question" ? "sm:col-span-2" : ""}`}
+						>
+							{fieldCopy.label}
+							{required ? <span className="ml-1 text-[var(--yonaris-signal)]">*</span> : null}
+							{field === "question" ? (
+								<textarea {...commonProps} rows={5} className={`${inputClass} resize-y py-3`} />
+							) : (
+								<input
+									{...commonProps}
+									type={field === "website" ? "url" : field === "email" ? "email" : "text"}
+									defaultValue={field === "website" ? initialWebsite : undefined}
+									className={inputClass}
+								/>
+							)}
+							<span id={errorId} className={`mt-2 text-xs leading-5 text-[#9f290f] ${invalid ? "block" : "hidden"}`}>
+								{fieldCopy.error}
+							</span>
+						</label>
+					);
+				})}
+				<div className="sm:col-span-2">
+					<label
+						htmlFor="diagnostic-consent"
+						className="flex items-start gap-3 text-sm leading-6 text-[var(--yonaris-slate)]"
+					>
 						<input
-							id={`diagnostic-${field}`}
-							name={field}
-							type={field === "website" ? "url" : "text"}
-							required={field === "brand" || field === "website"}
-							defaultValue={field === "website" ? initialWebsite : undefined}
-							placeholder={copy[field][1]}
-							aria-invalid={invalidFields.includes(field)}
-							className={inputClass}
-						/>
-					</label>
-				))}
-				<label className="text-xs font-medium text-[var(--yonaris-slate)] sm:col-span-2">
-					{copy.question[0]}
-					<span className="ml-1 text-[var(--yonaris-signal)]">*</span>
-					<textarea
-						id="diagnostic-question"
-						name="question"
-						required
-						rows={5}
-						placeholder={copy.question[1]}
-						aria-invalid={invalidFields.includes("question")}
-						className={`${inputClass} resize-y py-3`}
-					/>
-				</label>
-				{(["name", "email"] as const).map((field) => (
-					<label key={field} className="text-xs font-medium text-[var(--yonaris-slate)]">
-						{copy[field][0]}
-						<span className="ml-1 text-[var(--yonaris-signal)]">*</span>
-						<input
-							id={`diagnostic-${field}`}
-							name={field}
-							type={field === "email" ? "email" : "text"}
+							id="diagnostic-consent"
+							name="consent"
+							type="checkbox"
+							value="true"
 							required
-							placeholder={copy[field][1]}
-							aria-invalid={invalidFields.includes(field)}
-							className={inputClass}
+							aria-invalid={invalidFields.includes("consent")}
+							aria-describedby="diagnostic-consent-error"
+							className="marketing-paper-focus mt-1 size-4 shrink-0 accent-[var(--yonaris-signal)]"
+						/>
+						<span>{copy.consent.label}</span>
+					</label>
+					<p className="mt-2 pl-7 text-xs leading-5 text-[var(--yonaris-slate)]/68">
+						{copy.consent.privacyLeadIn}{" "}
+						<a
+							href="/privacy"
+							target="_blank"
+							rel="noreferrer"
+							className="marketing-paper-focus underline decoration-[var(--yonaris-signal)] underline-offset-4"
+						>
+							{copy.consent.privacyLinkLabel}
+						</a>
+					</p>
+					<p
+						id="diagnostic-consent-error"
+						className={`mt-2 pl-7 text-xs leading-5 text-[#9f290f] ${invalidFields.includes("consent") ? "block" : "hidden"}`}
+					>
+						{copy.consent.error}
+					</p>
+				</div>
+				<div hidden aria-hidden="true">
+					<label htmlFor="diagnostic-company-url">
+						{copy.honeypotLabel}
+						<input
+							id="diagnostic-company-url"
+							name="companyUrl"
+							type="text"
+							defaultValue=""
+							autoComplete="off"
+							tabIndex={-1}
 						/>
 					</label>
-				))}
+				</div>
 			</div>
 			<p
 				id="diagnostic-error"
 				role="alert"
-				className={`mt-6 text-sm text-[#9f290f] ${invalidFields.length > 0 ? "block" : "hidden"}`}
+				className={`mt-6 text-sm text-[#9f290f] ${validationFailed ? "block" : "hidden"}`}
 			>
-				{copy.error}
+				{copy.validationSummary}
 			</p>
 			<div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<button
 					type="submit"
 					className="marketing-paper-focus inline-flex min-h-12 items-center justify-center gap-3 border border-[var(--yonaris-signal)] bg-[var(--yonaris-signal)] px-5 text-xs font-medium text-[var(--yonaris-ink)] transition-colors hover:border-[var(--yonaris-ink)] hover:bg-[var(--yonaris-ink)] hover:text-[var(--yonaris-paper)]"
 				>
-					{copy.submit}
+					{copy.actions.submit}
 					<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="size-3.5">
 						<path d="M4 12 12 4M6.5 4H12v5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
 					</svg>
 				</button>
 				<p id="diagnostic-disclosure" className="max-w-md text-xs leading-5 text-[var(--yonaris-slate)]/58">
-					{locale === "zh"
-						? "提交后会打开你的邮件客户端；只有你发送邮件后，申请才会真正发出。"
-						: "This opens your email client. Nothing is sent until you send the email."}
+					{copy.disclosure}
 				</p>
 			</div>
 		</form>

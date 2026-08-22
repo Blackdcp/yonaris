@@ -1,3 +1,12 @@
+import {
+	buildDiagnosticMailto,
+	DIAGNOSTIC_FALLBACK_RECIPIENT,
+	DIAGNOSTIC_LEAD_FIELDS,
+	type DiagnosticLead,
+	parseDiagnosticLead,
+	parseDiagnosticSearch,
+} from "./diagnostic-schema";
+
 export type Locale = "en" | "zh";
 
 export type {
@@ -24,19 +33,12 @@ export {
 	getResearchContent,
 	getResourcesContent,
 } from "@/content/site/index";
+export { buildDiagnosticMailto, DIAGNOSTIC_FALLBACK_RECIPIENT };
 export type MarketingPageKey = "home" | "platform" | "methodology" | "results" | "geo" | "diagnostic";
 export type MarketingDetailPageKey = Exclude<MarketingPageKey, "home" | "diagnostic">;
 export type AgentSection = "company" | "platform" | "methodology" | "results";
 
-export interface DiagnosticInput {
-	brand: string;
-	website: string;
-	market: string;
-	competitors: string;
-	question: string;
-	name: string;
-	email: string;
-}
+export type DiagnosticInput = Omit<DiagnosticLead, "locale" | "consent" | "companyUrl">;
 
 interface MarketingRoute {
 	key: MarketingPageKey;
@@ -83,7 +85,7 @@ export interface DiagnosticPreviewContent {
 }
 
 export const MARKETING_LAST_UPDATED = "2026-08-21";
-export const CONTACT_EMAIL = "black.dcp@outlook.com";
+export const CONTACT_EMAIL = DIAGNOSTIC_FALLBACK_RECIPIENT;
 
 export const MARKETING_ROUTES: readonly MarketingRoute[] = [
 	{ key: "home", en: "/", zh: "/zh" },
@@ -434,44 +436,22 @@ export function getMarketingPageMeta(locale: Locale, page: MarketingPageKey) {
 	};
 }
 
-function diagnosticBody(input: DiagnosticInput, locale: Locale): string {
-	const labels =
-		locale === "zh"
-			? ["品牌", "官网", "市场 / 品类", "主要竞品", "希望 AI 回答的关键问题", "联系人", "邮箱"]
-			: ["Brand", "Website", "Market / category", "Known competitors", "One important AI question", "Contact", "Email"];
-	const values = [input.brand, input.website, input.market, input.competitors, input.question, input.name, input.email];
-	return labels.map((label, index) => `${label}: ${values[index]?.trim() || "—"}`).join("\n");
-}
-
-export function buildDiagnosticMailto(input: DiagnosticInput, locale: Locale): string {
-	const subject = locale === "zh" ? `Yonaris 免费诊断申请 / ${input.brand.trim()}` : `Yonaris free diagnostic / ${input.brand.trim()}`;
-	return `mailto:${encodeURIComponent(CONTACT_EMAIL)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(diagnosticBody(input, locale))}`;
-}
-
 export function validateDiagnosticInput(input: DiagnosticInput): (keyof DiagnosticInput)[] {
-	const errors: (keyof DiagnosticInput)[] = [];
-	for (const field of ["brand", "question", "name"] as const) {
-		if (!input[field].trim()) errors.push(field);
-	}
-	try {
-		const website = new URL(input.website.trim());
-		if (website.protocol !== "http:" && website.protocol !== "https:") errors.push("website");
-	} catch {
-		errors.push("website");
-	}
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) errors.push("email");
-	return ["brand", "website", "question", "name", "email"].filter((field) => errors.includes(field as keyof DiagnosticInput)) as (keyof DiagnosticInput)[];
+	const result = parseDiagnosticLead({
+		locale: "en",
+		...input,
+		consent: true,
+		companyUrl: "",
+	});
+	if (result.success) return [];
+
+	const invalid = new Set(result.error.issues.map((issue) => issue.path[0]));
+	return DIAGNOSTIC_LEAD_FIELDS.filter(
+		(field): field is keyof DiagnosticInput => field !== "consent" && invalid.has(field),
+	);
 }
 
-export function validateDiagnosticSearch(search: Record<string, unknown>): { website: string } {
-	if (typeof search.website !== "string") return { website: "" };
-	try {
-		const website = new URL(search.website);
-		return website.protocol === "http:" || website.protocol === "https:" ? { website: search.website } : { website: "" };
-	} catch {
-		return { website: "" };
-	}
-}
+export const validateDiagnosticSearch = parseDiagnosticSearch;
 
 const agentDocuments: Record<AgentSection, { canonical: string; title: string; scope: string; body: () => string }> = {
 	company: {

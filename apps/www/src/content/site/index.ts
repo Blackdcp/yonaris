@@ -1,6 +1,12 @@
 import { type ApproachContent, approachContentByLocale, getApproachContent } from "./approach";
 import { type CompanyContent, companyContentByLocale, getCompanyContent } from "./company";
-import { type DiagnosticContent, diagnosticContentByLocale, getDiagnosticContent } from "./diagnostic";
+import {
+	type DiagnosticContent,
+	diagnosticContentByLocale,
+	getDiagnosticContent,
+	getPrivacyContent,
+	type PrivacyContent,
+} from "./diagnostic";
 import { type GeoContent, geoContentByLocale, getGeoContent } from "./geo";
 import { type GlobalContent, getGlobalContent, globalContentByLocale } from "./global";
 import { getProductContent, type ProductContent, productContentByLocale } from "./product";
@@ -67,6 +73,7 @@ export type {
 	DiagnosticContent,
 	GeoContent,
 	GlobalContent,
+	PrivacyContent,
 	ProductContent,
 	ResearchContent,
 };
@@ -76,6 +83,7 @@ export {
 	getDiagnosticContent,
 	getGeoContent,
 	getGlobalContent,
+	getPrivacyContent,
 	getProductContent,
 	getResearchContent,
 };
