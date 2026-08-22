@@ -21,9 +21,13 @@ export type ExtensionSurfaceDefinition = {
 	adapterVersion: string;
 	contentScriptMatches: readonly string[];
 	approvedUrl: (url: URL) => boolean;
+	probeTextPattern: string;
 	contract: SelectorContract;
 	createAdapter: (port: ConsumerDomPort) => ConsumerWebAdapter;
 };
+
+export const DOMESTIC_SEARCH_EVIDENCE_PROBE_TEXT_PATTERN =
+	"搜索|联网|资料|来源|引用|参考|网页|search|source|citation|reference";
 
 const LOCAL_SURFACE_CONFIG: Record<
 	BrowserExtensionSurface,
@@ -91,6 +95,7 @@ export function extensionSurfaceDefinition(surface: BrowserExtensionSurface): Ex
 		contentScriptMatches: local.contentScriptMatches,
 		approvedUrl: (url) =>
 			url.protocol === "https:" && url.username === "" && url.password === "" && local.approvedHostname(url.hostname),
+		probeTextPattern: DOMESTIC_SEARCH_EVIDENCE_PROBE_TEXT_PATTERN,
 		contract: local.contract,
 		createAdapter: local.createAdapter,
 	};
