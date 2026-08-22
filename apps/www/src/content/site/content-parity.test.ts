@@ -195,6 +195,25 @@ describe("core site content", () => {
 		expect(chinese.marketShift.groupLabel).not.toBe(english.marketShift.groupLabel);
 	});
 
+	it("keeps GEO workflow lanes and claim references aligned across independently authored locales", () => {
+		const english = getGeoContent("en");
+		const chinese = getGeoContent("zh");
+		const shape = (content: typeof english | typeof chinese) => ({
+			claims: content.claims.map(({ id, status }) => ({ id, status })),
+			boundaryClaimIds: content.boundary.claimIds,
+			currentScopeClaimIds: content.currentScopeClaimIds,
+			workflowClaimIds: content.workflow.claimIds,
+			stages: content.workflow.stages.map(({ id, claimIds }) => ({ id, claimIds })),
+			evidenceBoundaryClaimIds: content.evidenceBoundary.claimIds,
+			broaderCategoryClaimIds: content.broaderCategory.claimIds,
+			diagnosticClaimIds: content.diagnostic.claimIds,
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.headline).not.toBe(english.headline);
+		expect(chinese.workflow.ui.workflowLabel).not.toBe(english.workflow.ui.workflowLabel);
+	});
+
 	it("prevents nested page array mutations from changing later getter results", () => {
 		const research = getResearchContent("en");
 		const originalFindingCount = research.record.findings.length;
@@ -356,7 +375,7 @@ describe("core site content", () => {
 		);
 		expect(getCompanyContent("en").stage.summary).toContain("early company");
 		expect(getCompanyContent("en").stage.summary).toContain("service-led model");
-		expect(getGeoContent("en").boundary).toContain("first applied workflow");
+		expect(getGeoContent("en").boundary.summary).toContain("first applied workflow");
 		expect(getDiagnosticContent("en").confirmation).toContain(
 			"confirms the measurement scope before collecting evidence",
 		);

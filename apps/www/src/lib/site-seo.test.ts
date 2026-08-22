@@ -92,6 +92,34 @@ describe("manifest-driven site SEO", () => {
 		});
 	});
 
+	test("publishes GEO metadata and reciprocal bilingual canonicals", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		expect(subject.corePageHead("geo", "en").meta).toEqual(
+			expect.arrayContaining([
+				{ title: "GEO, grounded in evidence. | Yonaris" },
+				{
+					name: "description",
+					content:
+						"Observe how configured AI systems discover, describe, compare, cite, and recommend a brand—then choose a bounded, human-reviewed next test.",
+				},
+			]),
+		);
+		expect(linkPaths(subject.corePageHead("geo", "en"))).toEqual({
+			canonical: "/geo",
+			en: "/geo",
+			"zh-CN": "/zh/geo",
+			"x-default": "/geo",
+		});
+		expect(linkPaths(subject.corePageHead("geo", "zh"))).toEqual({
+			canonical: "/zh/geo",
+			en: "/geo",
+			"zh-CN": "/zh/geo",
+			"x-default": "/geo",
+		});
+	});
+
 	test("keeps supporting page metadata and canonicals specific to the route", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;
