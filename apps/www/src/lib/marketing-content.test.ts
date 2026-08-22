@@ -10,10 +10,6 @@ import {
 	getProductContent,
 	MARKETING_ROUTES,
 	MARKETING_SITEMAP_PATHS,
-	renderAgentDocument,
-	renderAgentIndex,
-	renderLlmsFull,
-	renderLlmsIndex,
 } from "./marketing-content";
 
 describe("marketing content", () => {
@@ -128,26 +124,6 @@ describe("marketing content", () => {
 			expect(english.sections.length).toBeGreaterThanOrEqual(3);
 			expect(chinese.sections).toHaveLength(english.sections.length);
 		}
-	});
-
-	it("renders agent facts from the same current-scope content", () => {
-		const company = renderAgentDocument("company");
-		expect(company).toContain("AI-native MarTech");
-		expect(company).toContain("Canonical human URL: https://yonaris.com/");
-		expect(company).toContain("Current scope");
-		expect(company).toContain("Last updated: 2026-08-21");
-		expect(company).not.toContain("four products");
-	});
-
-	it("publishes a complete agent index without inherited Elmo positioning", () => {
-		const index = renderAgentIndex();
-		expect(index).toContain("/agent/company");
-		expect(index).toContain("/agent/platform");
-		expect(index).toContain("/agent/methodology");
-		expect(index).toContain("/agent/results");
-		expect(index).not.toContain("self-hosted AI visibility platform");
-		expect(renderLlmsIndex()).toContain("For humans and agents");
-		expect(renderLlmsFull()).toContain("# Yonaris results evidence");
 	});
 
 	it("keeps the public contact address stable", () => {

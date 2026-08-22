@@ -1,11 +1,4 @@
-import {
-	SITE_ROUTE_KEYS,
-	type CorePageKey,
-	type Locale,
-	type RedirectRule,
-	type SiteRouteDefinition,
-	type SiteRouteKey,
-} from "@/content/site/types";
+import type { CorePageKey, Locale, RedirectRule, SiteRouteDefinition, SiteRouteKey } from "@/content/site/types";
 
 export { SITE_ROUTE_KEYS } from "@/content/site/types";
 
@@ -256,7 +249,7 @@ export const SITE_MANIFEST = [
 		key: "markdownInternal",
 		routeClass: "machine",
 		canonicals: { en: "/llms.mdx/docs" },
-		patterns: ["/llms.mdx/docs/*"],
+		patterns: ["/llms.mdx/docs/*", "/llms.mdx/site/*"],
 		navigation: [],
 		indexPolicy: "noindex,follow",
 		sitemap: false,
@@ -324,6 +317,6 @@ export function getRedirect(pathname: string): RedirectRule | undefined {
 
 export function getCoreLastVerified(key: CorePageKey): `${number}-${number}-${number}` {
 	const sitemap = getSiteRoute(key).sitemap;
-	if (!sitemap || !sitemap.lastVerified) throw new Error(`Missing last-verified date for core route: ${key}`);
+	if (sitemap === false || !sitemap.lastVerified) throw new Error(`Missing last-verified date for core route: ${key}`);
 	return sitemap.lastVerified;
 }

@@ -1,4 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { renderAgentDocument } from "@/lib/marketing-content";
+import { permanentRedirectResponse } from "@/lib/permanent-redirect";
+import { getRedirect } from "@/lib/site-manifest";
 
-export const Route = createFileRoute("/agent/results")({ server: { handlers: { GET: () => new Response(renderAgentDocument("results"), { headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "public, max-age=300" } }) } } });
+const redirect = getRedirect("/agent/results");
+if (!redirect) throw new Error("Missing manifest redirect for /agent/results");
+
+export const Route = createFileRoute("/agent/results")({
+	server: { handlers: { GET: ({ request }) => permanentRedirectResponse(request, redirect.to) } },
+});

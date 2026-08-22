@@ -132,6 +132,7 @@ describe("site manifest", () => {
 		expect(subject.findSiteRoute("/ai-visibility-tools/elmo-vs-example")?.indexPolicy).toBe("noindex,follow");
 		expect(subject.findSiteRoute("/docs/getting-started")?.key).toBe("docs");
 		expect(subject.findSiteRoute("/api/search")?.key).toBe("api");
+		expect(subject.findSiteRoute("/llms.mdx/site/en/product")?.key).toBe("markdownInternal");
 	});
 
 	test("keeps redirect targets classified and redirect chains acyclic", () => {
@@ -145,8 +146,8 @@ describe("site manifest", () => {
 			let path: string | undefined = redirect.from;
 			while (path) {
 				expect(seen.has(path), `redirect cycle includes ${path}`).toBe(false);
-			seen.add(path);
-			path = subject.getRedirect(path)?.to;
+				seen.add(path);
+				path = subject.getRedirect(path)?.to;
 			}
 		}
 	});

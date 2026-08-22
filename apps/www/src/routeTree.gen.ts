@@ -37,9 +37,14 @@ import { Route as VisionRouteImport } from './routes/vision'
 import { Route as AeoForIndexRouteImport } from './routes/aeo-for/index'
 import { Route as AeoForSlugRouteImport } from './routes/aeo-for/$slug'
 import { Route as AgentIndexRouteImport } from './routes/agent/index'
+import { Route as AgentApproachRouteImport } from './routes/agent/approach'
 import { Route as AgentCompanyRouteImport } from './routes/agent/company'
+import { Route as AgentDiagnosticRouteImport } from './routes/agent/diagnostic'
+import { Route as AgentGeoRouteImport } from './routes/agent/geo'
 import { Route as AgentMethodologyRouteImport } from './routes/agent/methodology'
 import { Route as AgentPlatformRouteImport } from './routes/agent/platform'
+import { Route as AgentProductRouteImport } from './routes/agent/product'
+import { Route as AgentResearchRouteImport } from './routes/agent/research'
 import { Route as AgentResultsRouteImport } from './routes/agent/results'
 import { Route as AiSearchIndexRouteImport } from './routes/ai-search/index'
 import { Route as AiSearchSlugRouteImport } from './routes/ai-search/$slug'
@@ -77,6 +82,7 @@ import { Route as AiVisibilityToolsFeaturesIndexRouteImport } from './routes/ai-
 import { Route as AiVisibilityToolsFeaturesSlugRouteImport } from './routes/ai-visibility-tools/features/$slug'
 import { Route as ApiRepoActivityRefreshRouteImport } from './routes/api/repo-activity/refresh'
 import { Route as LlmsDotmdxDocsSplatRouteImport } from './routes/llms[.]mdx.docs.$'
+import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
@@ -221,9 +227,24 @@ const AgentIndexRoute = AgentIndexRouteImport.update({
   path: '/agent/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentApproachRoute = AgentApproachRouteImport.update({
+  id: '/agent/approach',
+  path: '/agent/approach',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentCompanyRoute = AgentCompanyRouteImport.update({
   id: '/agent/company',
   path: '/agent/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentDiagnosticRoute = AgentDiagnosticRouteImport.update({
+  id: '/agent/diagnostic',
+  path: '/agent/diagnostic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentGeoRoute = AgentGeoRouteImport.update({
+  id: '/agent/geo',
+  path: '/agent/geo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentMethodologyRoute = AgentMethodologyRouteImport.update({
@@ -234,6 +255,16 @@ const AgentMethodologyRoute = AgentMethodologyRouteImport.update({
 const AgentPlatformRoute = AgentPlatformRouteImport.update({
   id: '/agent/platform',
   path: '/agent/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentProductRoute = AgentProductRouteImport.update({
+  id: '/agent/product',
+  path: '/agent/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentResearchRoute = AgentResearchRouteImport.update({
+  id: '/agent/research',
+  path: '/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentResultsRoute = AgentResultsRouteImport.update({
@@ -430,6 +461,11 @@ const LlmsDotmdxDocsSplatRoute = LlmsDotmdxDocsSplatRouteImport.update({
   path: '/llms.mdx/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsDotmdxSiteSplatRoute = LlmsDotmdxSiteSplatRouteImport.update({
+  id: '/llms.mdx/site/$',
+  path: '/llms.mdx/site/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   id: '/og/docs/$',
   path: '/og/docs/$',
@@ -474,9 +510,14 @@ export interface FileRoutesByFullPath {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
@@ -512,6 +553,7 @@ export interface FileRoutesByFullPath {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives/': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category/': typeof AiVisibilityToolsCategoryIndexRoute
@@ -547,9 +589,14 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
@@ -585,6 +632,7 @@ export interface FileRoutesByTo {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category': typeof AiVisibilityToolsCategoryIndexRoute
@@ -621,9 +669,14 @@ export interface FileRoutesById {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
@@ -659,6 +712,7 @@ export interface FileRoutesById {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives/': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category/': typeof AiVisibilityToolsCategoryIndexRoute
@@ -696,9 +750,14 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
@@ -734,6 +793,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives/'
     | '/ai-visibility-tools/category/'
@@ -769,9 +829,14 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
@@ -807,6 +872,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives'
     | '/ai-visibility-tools/category'
@@ -842,9 +908,14 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
@@ -880,6 +951,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives/'
     | '/ai-visibility-tools/category/'
@@ -916,9 +988,14 @@ export interface RootRouteChildren {
   StatusRoute: typeof StatusRoute
   VisionRoute: typeof VisionRoute
   AeoForSlugRoute: typeof AeoForSlugRoute
+  AgentApproachRoute: typeof AgentApproachRoute
   AgentCompanyRoute: typeof AgentCompanyRoute
+  AgentDiagnosticRoute: typeof AgentDiagnosticRoute
+  AgentGeoRoute: typeof AgentGeoRoute
   AgentMethodologyRoute: typeof AgentMethodologyRoute
   AgentPlatformRoute: typeof AgentPlatformRoute
+  AgentProductRoute: typeof AgentProductRoute
+  AgentResearchRoute: typeof AgentResearchRoute
   AgentResultsRoute: typeof AgentResultsRoute
   AiSearchSlugRoute: typeof AiSearchSlugRoute
   AiVisibilityToolsSlugRoute: typeof AiVisibilityToolsSlugRoute
@@ -954,6 +1031,7 @@ export interface RootRouteChildren {
   AiVisibilityToolsFeaturesSlugRoute: typeof AiVisibilityToolsFeaturesSlugRoute
   ApiRepoActivityRefreshRoute: typeof ApiRepoActivityRefreshRoute
   LlmsDotmdxDocsSplatRoute: typeof LlmsDotmdxDocsSplatRoute
+  LlmsDotmdxSiteSplatRoute: typeof LlmsDotmdxSiteSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
   AiVisibilityToolsAlternativesIndexRoute: typeof AiVisibilityToolsAlternativesIndexRoute
   AiVisibilityToolsCategoryIndexRoute: typeof AiVisibilityToolsCategoryIndexRoute
@@ -1161,11 +1239,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/approach': {
+      id: '/agent/approach'
+      path: '/agent/approach'
+      fullPath: '/agent/approach'
+      preLoaderRoute: typeof AgentApproachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agent/company': {
       id: '/agent/company'
       path: '/agent/company'
       fullPath: '/agent/company'
       preLoaderRoute: typeof AgentCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/diagnostic': {
+      id: '/agent/diagnostic'
+      path: '/agent/diagnostic'
+      fullPath: '/agent/diagnostic'
+      preLoaderRoute: typeof AgentDiagnosticRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/geo': {
+      id: '/agent/geo'
+      path: '/agent/geo'
+      fullPath: '/agent/geo'
+      preLoaderRoute: typeof AgentGeoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/methodology': {
@@ -1180,6 +1279,20 @@ declare module '@tanstack/react-router' {
       path: '/agent/platform'
       fullPath: '/agent/platform'
       preLoaderRoute: typeof AgentPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/product': {
+      id: '/agent/product'
+      path: '/agent/product'
+      fullPath: '/agent/product'
+      preLoaderRoute: typeof AgentProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/research': {
+      id: '/agent/research'
+      path: '/agent/research'
+      fullPath: '/agent/research'
+      preLoaderRoute: typeof AgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/results': {
@@ -1441,6 +1554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LlmsDotmdxDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/llms.mdx/site/$': {
+      id: '/llms.mdx/site/$'
+      path: '/llms.mdx/site/$'
+      fullPath: '/llms.mdx/site/$'
+      preLoaderRoute: typeof LlmsDotmdxSiteSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/og/docs/$': {
       id: '/og/docs/$'
       path: '/og/docs/$'
@@ -1492,9 +1612,14 @@ const rootRouteChildren: RootRouteChildren = {
   StatusRoute: StatusRoute,
   VisionRoute: VisionRoute,
   AeoForSlugRoute: AeoForSlugRoute,
+  AgentApproachRoute: AgentApproachRoute,
   AgentCompanyRoute: AgentCompanyRoute,
+  AgentDiagnosticRoute: AgentDiagnosticRoute,
+  AgentGeoRoute: AgentGeoRoute,
   AgentMethodologyRoute: AgentMethodologyRoute,
   AgentPlatformRoute: AgentPlatformRoute,
+  AgentProductRoute: AgentProductRoute,
+  AgentResearchRoute: AgentResearchRoute,
   AgentResultsRoute: AgentResultsRoute,
   AiSearchSlugRoute: AiSearchSlugRoute,
   AiVisibilityToolsSlugRoute: AiVisibilityToolsSlugRoute,
@@ -1532,6 +1657,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiVisibilityToolsFeaturesSlugRoute: AiVisibilityToolsFeaturesSlugRoute,
   ApiRepoActivityRefreshRoute: ApiRepoActivityRefreshRoute,
   LlmsDotmdxDocsSplatRoute: LlmsDotmdxDocsSplatRoute,
+  LlmsDotmdxSiteSplatRoute: LlmsDotmdxSiteSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
   AiVisibilityToolsAlternativesIndexRoute:
     AiVisibilityToolsAlternativesIndexRoute,
