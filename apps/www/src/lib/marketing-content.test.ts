@@ -3,19 +3,28 @@ import {
 	MARKETING_ROUTES,
 	MARKETING_SITEMAP_PATHS,
 	buildDiagnosticMailto,
+	getCoreFacts,
 	getLocalizedPath,
 	getMarketingContent,
 	getMarketingDetailPage,
 	getMarketingNavigation,
 	getMarketingPageMeta,
-	renderAgentIndex,
+	getProductContent,
 	renderAgentDocument,
+	renderAgentIndex,
 	renderLlmsFull,
 	renderLlmsIndex,
 	validateDiagnosticInput,
 } from "./marketing-content";
 
 describe("marketing content", () => {
+	it("exposes the truthful site-content model while legacy consumers migrate", () => {
+		expect(getProductContent("en").meta.title).toBe("Make AI market answers observable.");
+		expect(getCoreFacts("company", "en").claims).toContainEqual(
+			expect.objectContaining({ id: "company-stage", status: "managed-delivery" }),
+		);
+	});
+
 	it("separates the bilingual homepage conversion from the long-term brand thesis", () => {
 		expect(getMarketingContent("en").homeHero).toMatchObject({
 			headline: "See how AI is shaping your market.",

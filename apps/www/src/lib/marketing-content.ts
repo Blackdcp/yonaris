@@ -1,4 +1,29 @@
 export type Locale = "en" | "zh";
+
+export type {
+	ApproachContent,
+	CompanyContent,
+	CoreFacts,
+	CorePageContentMap,
+	DiagnosticContent,
+	GeoContent,
+	GlobalContent,
+	ProductContent,
+	ResearchContent,
+	ResourcesContent,
+} from "@/content/site/index";
+export {
+	getApproachContent,
+	getCompanyContent,
+	getCoreFacts,
+	getCorePageContent,
+	getDiagnosticContent,
+	getGeoContent,
+	getGlobalContent,
+	getProductContent,
+	getResearchContent,
+	getResourcesContent,
+} from "@/content/site/index";
 export type MarketingPageKey = "home" | "platform" | "methodology" | "results" | "geo" | "diagnostic";
 export type MarketingDetailPageKey = Exclude<MarketingPageKey, "home" | "diagnostic">;
 export type AgentSection = "company" | "platform" | "methodology" | "results";
