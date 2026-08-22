@@ -1,5 +1,7 @@
 # Yonaris Homepage Product Stage Implementation Plan
 
+> **Superseded implementation plan — visual baseline only.** The approved Hero and Product Stage visual direction remain inputs to `2026-08-22-core-page-experiences.md`. Do not execute this plan's mailto-only diagnostic or old lower-page tasks. The full-site rebuild and `POST /api/diagnostic` contract are owned by the four `2026-08-22-*` full-site plans, especially `2026-08-22-diagnostic-acquisition.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the current Yonaris homepage hero with the approved bilingual Product Stage experience, delete the two rejected visual modules, and connect its domain entry to the existing honest diagnostic request flow.
