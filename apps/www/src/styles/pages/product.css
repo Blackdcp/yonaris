@@ -17,10 +17,28 @@
 	}
 
 	.product-kicker:lang(zh-CN),
-	.product-workbench__eyebrow:lang(zh-CN) {
+	.product-workbench__eyebrow:lang(zh-CN),
+	.product-claim__status:lang(zh-CN),
+	.product-workbench__claim-status:lang(zh-CN),
+	.product-workbench__illustrative:lang(zh-CN),
+	.product-workbench__record-heading p:lang(zh-CN),
+	.product-workbench__field dt:lang(zh-CN),
+	.product-workbench__field-state:lang(zh-CN) {
 		font-family: "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
-		letter-spacing: 0.02em;
+		letter-spacing: normal;
 		text-transform: none;
+	}
+
+	.product-hero h1:lang(zh-CN),
+	.product-section-heading h2:lang(zh-CN),
+	.product-activities__list h3:lang(zh-CN),
+	.product-workbench__heading h2:lang(zh-CN),
+	.product-workbench__record-heading h3:lang(zh-CN),
+	.product-boundary__grid h3:lang(zh-CN),
+	.product-coverage h3:lang(zh-CN),
+	.product-next h2:lang(zh-CN) {
+		font-family: "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+		letter-spacing: normal;
 	}
 
 	.product-hero {
@@ -114,9 +132,16 @@
 
 	.product-hero__rail span,
 	.product-activities__index {
-		color: var(--yonaris-signal);
 		font-family: "Geist Mono", ui-monospace, monospace;
 		font-size: 0.7rem;
+	}
+
+	.product-hero__rail span {
+		color: var(--yonaris-signal);
+	}
+
+	.product-activities__index {
+		color: var(--yonaris-slate);
 	}
 
 	.product-activities,
@@ -320,7 +345,7 @@
 	}
 
 	.product-workbench__tab span {
-		color: var(--yonaris-stone);
+		color: var(--yonaris-slate);
 		font-family: "Geist Mono", ui-monospace, monospace;
 		font-size: 0.65rem;
 	}

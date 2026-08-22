@@ -5,6 +5,7 @@ import {
 	expectNoRunningAnimations,
 	expectSignalFocusVisible,
 	QA_VIEWPORTS,
+	runWcagAa,
 } from "./helpers/core-site";
 
 const locales = [
@@ -66,6 +67,21 @@ async function expectAutomaticSelection(tabs: Locator, page: Page, index: number
 	await expect(activePanel).toHaveAttribute("tabindex", "0");
 	await expect(page.locator('[role="tabpanel"]:visible')).toHaveCount(1);
 	return activePanel;
+}
+
+async function readTypography(locator: Locator): Promise<{
+	fontFamily: string;
+	letterSpacing: number;
+	textTransform: string;
+}> {
+	return locator.evaluate((element) => {
+		const styles = getComputedStyle(element);
+		return {
+			fontFamily: styles.fontFamily.replaceAll('"', "").split(",")[0]?.trim() ?? "",
+			letterSpacing: styles.letterSpacing === "normal" ? 0 : Number.parseFloat(styles.letterSpacing),
+			textTransform: styles.textTransform,
+		};
+	});
 }
 
 for (const locale of locales) {
@@ -191,11 +207,53 @@ test("Product has no running animation when reduced motion is requested", async 
 
 test("Chinese Product labels use locale-appropriate tracking", async ({ page }) => {
 	await page.goto("/zh/product");
-	const letterSpacing = await page.locator(".product-kicker").first().evaluate((element) =>
-		Number.parseFloat(getComputedStyle(element).letterSpacing),
-	);
-	expect(letterSpacing).toBeLessThanOrEqual(0.5);
+	await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
+
+	const headingSelectors = [
+		".product-hero h1",
+		".product-section-heading h2",
+		".product-workbench__heading h2",
+		".product-workbench__record-heading h3",
+	];
+	const labelSelectors = [
+		".product-kicker",
+		".product-claim__status",
+		".product-workbench__illustrative",
+		".product-workbench__record-heading p",
+		".product-workbench__field dt",
+		".product-workbench__field-state",
+	];
+
+	for (const selector of headingSelectors) {
+		const typography = await readTypography(page.locator(selector).first());
+		expect.soft(typography.fontFamily, `${selector} should prefer a CJK sans face`).toBe("PingFang SC");
+		expect.soft(Math.abs(typography.letterSpacing), `${selector} should use natural CJK tracking`).toBeLessThanOrEqual(0.5);
+		expect.soft(typography.textTransform, `${selector} should preserve natural Chinese casing`).toBe("none");
+	}
+
+	for (const selector of labelSelectors) {
+		const typography = await readTypography(page.locator(selector).first());
+		expect.soft(typography.fontFamily, `${selector} should prefer a CJK sans face`).toBe("PingFang SC");
+		expect.soft(Math.abs(typography.letterSpacing), `${selector} should use natural CJK tracking`).toBeLessThanOrEqual(0.5);
+		expect.soft(typography.textTransform, `${selector} should preserve natural Chinese casing`).toBe("none");
+	}
 });
+
+for (const locale of locales) {
+	for (const viewport of ["desktop", "mobile"] as const) {
+		for (const [tabIndex, tabLabel] of locale.tabLabels.entries()) {
+			test(`${locale.route} ${viewport} ${tabLabel} tab meets WCAG AA`, async ({ page }) => {
+				await page.setViewportSize(QA_VIEWPORTS[viewport]);
+				await page.goto(locale.route);
+				await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
+				const tabs = page.getByRole("tablist", { name: locale.tabListLabel }).getByRole("tab");
+				await tabs.nth(tabIndex).click();
+				await expectAutomaticSelection(tabs, page, tabIndex);
+				await runWcagAa(page);
+			});
+		}
+	}
+}
 
 for (const locale of locales) {
 	for (const viewport of ["desktop", "mobile", "narrow"] as const) {
