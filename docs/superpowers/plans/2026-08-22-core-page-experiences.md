@@ -264,31 +264,52 @@ git commit -m "publish an auditable research ledger"
 **Files:**
 - Modify: `apps/www/src/content/site/company.ts`
 - Create: `apps/www/src/content/site/company.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
+- Modify: `apps/www/src/lib/site-seo.test.ts`
 - Create: `apps/www/src/components/site/pages/company-page.tsx`
+- Create: `apps/www/src/components/site/pages/company-reader-field.tsx`
 - Create: `apps/www/src/routes/company.tsx`
 - Create: `apps/www/src/routes/zh/company.tsx`
+- Modify (generated only by the route build): `apps/www/src/routeTree.gen.ts`
 - Modify: `apps/www/src/styles/pages/company.css`
 - Create: `e2e/www-tests/company.spec.ts`
+- Create: `.changeset/company-category-thesis.md`
+
+**Interfaces:**
+
+```ts
+export type CompanyReaderId = "human" | "agent";
+export type CompanyClaim = FactualClaim & { limitation: string };
+export interface CompanyReader { id: CompanyReaderId; label: string; summary: string; annotation: string }
+export function CompanyReaderField(props: { locale: Locale; content: CompanyContent["marketShift"] }): React.ReactNode;
+```
+
+`CompanyContent` owns claim-backed `vision`, `stage`, `forest`, `openSource`, and `currentScope`; a dual-reader `marketShift`; four prescriptive principles; and a contact close. Claims appear exactly once in the top-level registry and sections reference them by ID.
 
 - [ ] **Step 1: Write RED truth tests**
 
-Require category, vision, AI-mediated market shift, `early, service-led product with a real evidence platform`, concise Recursive Forest thesis, evidence-over-theatre/declared-scope/human-review/durable-product-truth principles, open-source relationship, contact, and diagnostic. Require each externally visible stage, capability, and open-source relationship assertion to resolve to a stable `FactualClaim` with status and limitation from `content/site/company.ts`. Reject invented locations, team biographies, investors, customers, certifications, and funding status.
+Require exact category `AI-native MarTech`, H1 `MarTech, rebuilt. For humans and agents.`, and independently authored Chinese. Keep the sharp anchors `The market now has two readers.`, `A real platform. A service-led beginning.`, `Don’t enumerate every question. Build what generates the answers.`, `Foundation, not identity.`, and `Start with one question that matters.` with natural Chinese equivalents. State plainly that Yonaris is an early company delivering a real evidence product through a service-led model: configured evidence is customer-visible while parts of collection and recommendations remain Yonaris-operated and human-reviewed. Require stable EN/ZH reader/principle/claim IDs and statuses, every referenced claim resolving exactly once, and every claim carrying a non-empty limitation. Map `company-human-agent-direction` to `direction`, `company-service-led-stage` to `managed-delivery`, `company-evidence-platform` to `current-software`, `company-recursive-forest-method` to `managed-delivery`, and `company-open-source-foundation` to `current-software`. Principles are prescriptive commitments, not certification claims. Require exact contact email `black.dcp@outlook.com`. Reject B2B-only, GEO-company, mature SaaS, autonomous, real-time, universal, Product Truth Graph, Commercial Feedback, invented customer/team/location/investor/funding/certification, and `0 → 93.3%` implications without rendering a defensive list of absent claims.
 
 - [ ] **Step 2: Write RED route tests**
 
-Assert the page has one H1, no cards or fake social proof, visible stage disclosure, links to `/open-source` and localized diagnostic, natural Chinese breaks, and zero overflow at seven widths.
+Assert one H1, logical headings, a labelled two-button Human/Agent group with exactly one `aria-pressed="true"`, native Enter/Space activation, click-to-focus, a restrained state-dependent annotation, and both essential reader descriptions visible in every state. The group has no tab semantics, no hidden thesis, no auto-advance, and no continuous animation. Assert visible stage disclosure, manifest-derived `/open-source`, localized Diagnostic, and `mailto:black.dcp@outlook.com` links; canonical/hreflang/x-default; Signal+Paper focus on the Ink field; reduced-motion state change with no running animation; Axe AA and zero overflow in both reader states/locales at 320, 360, 390, 768, 1024, 1280, and 1440. Assert CJK-first font, natural tracking/casing, no forced `<br>`, and native visual captures at 1440, 1024, 390, and 320 for both locales.
 
 - [ ] **Step 3: Implement thesis composition and route**
 
-Use large type, deliberate negative space, one short orange rule, and no product UI. Mount both routes with `corePageHead("company", locale)`.
+Use a near-full-height Paper hero with oversized type and a plain category label; a full-bleed Ink dual-reader field; honest stage and concise Recursive Forest sections; four ruled editorial principle rows (not cards); and an open-source/contact close. Selection moves only a restrained orange hinge and supplemental annotation. Use only VI colors with no gradients, glass, neon, path/forest artwork, product UI, cards, social proof, metrics, or stock imagery. Mount both routes with `corePageHead("company", locale)`, derive paths from the manifest, generate/inspect the route tree, and keep the site manifest, shared shell, Task0 helpers, Product, Approach, Research, Agent documents, and redirects out of scope. Add one short `@workspace/www` patch changeset.
 
 - [ ] **Step 4: Verify and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/company.test.ts
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/company.spec.ts --project=chromium
+pnpm.cmd --filter @workspace/www exec vitest run --config vitest.config.ts src/content/site/company.test.ts src/content/site/content-parity.test.ts src/lib/site-seo.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/company.spec.ts --project=chromium --grep-invert @visual
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/company.spec.ts --project=chromium --grep @visual --workers=1
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/content/site/company* apps/www/src/components/site/pages/company-page.tsx apps/www/src/routes/company.tsx apps/www/src/routes/zh/company.tsx apps/www/src/styles/pages/company.css e2e/www-tests/company.spec.ts
+pnpm.cmd --filter e2e check-types
+pnpm.cmd --filter @workspace/www audit:site-manifest
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/content/site/company* apps/www/src/content/site/content-parity.test.ts apps/www/src/lib/site-seo.test.ts apps/www/src/components/site/pages/company-page.tsx apps/www/src/components/site/pages/company-reader-field.tsx apps/www/src/routes/company.tsx apps/www/src/routes/zh/company.tsx apps/www/src/routeTree.gen.ts apps/www/src/styles/pages/company.css e2e/www-tests/company.spec.ts .changeset/company-category-thesis.md
 git commit -m "state the Yonaris category thesis"
 ```
 
