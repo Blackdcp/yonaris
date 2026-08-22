@@ -86,6 +86,7 @@ test("Resources is one semantic editorial index with the six approved destinatio
 });
 
 test("Open Source separates infrastructure compatibility from Yonaris identity and promise", async ({ page }) => {
+	await page.setViewportSize(SUPPORTING_VIEWPORTS.wide);
 	await page.goto("/open-source");
 	await waitForHydration(page);
 
@@ -112,6 +113,14 @@ test("Open Source separates infrastructure compatibility from Yonaris identity a
 	for (const [label, href] of sourceLinks) {
 		await expect(page.getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
 	}
+	const sourceRows = page.locator(".open-source-sources li");
+	const firstSourceBox = await sourceRows.nth(0).boundingBox();
+	const secondSourceBox = await sourceRows.nth(1).boundingBox();
+	expect(firstSourceBox, "the first source row should be measurable").toBeTruthy();
+	expect(secondSourceBox, "the second source row should be measurable").toBeTruthy();
+	expect(secondSourceBox?.y ?? 0, "primary sources must form one vertical editorial ledger").toBeGreaterThanOrEqual(
+		(firstSourceBox?.y ?? 0) + (firstSourceBox?.height ?? 0) - 1,
+	);
 	await expect(page.locator("main")).not.toContainText(/\bstars?\b|\busers?\b|roadmap/i);
 	await expect(page.locator(".open-source-page")).not.toHaveCSS("background-image", /gradient/i);
 });
