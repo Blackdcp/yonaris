@@ -1,3 +1,4 @@
+import type { SearchEvidenceProbeReport } from "./adapters/evidence-probe";
 import { BrowserRunnerApiClient } from "./api-client";
 import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface, PORTAL_ORIGIN } from "./contracts";
 import { buildHeartbeat } from "./heartbeat";
@@ -26,12 +27,18 @@ const disconnectButton = requiredElement<HTMLButtonElement>("disconnect");
 const refreshButton = requiredElement<HTMLButtonElement>("refresh");
 const runNowButton = requiredElement<HTMLButtonElement>("run-now");
 const inspectSurfaceButton = requiredElement<HTMLButtonElement>("inspect-surface");
+const inspectSearchEvidenceButton = requiredElement<HTMLButtonElement>("inspect-search-evidence");
+const searchEvidenceReport = requiredElement<HTMLElement>("search-evidence-report");
+const searchEvidenceSummary = requiredElement<HTMLElement>("search-evidence-summary");
+const searchEvidenceCandidates = requiredElement<HTMLElement>("search-evidence-candidates");
+const copySearchEvidenceButton = requiredElement<HTMLButtonElement>("copy-search-evidence");
 const summary = requiredElement<HTMLElement>("device-summary");
 const channels = requiredElement<HTMLElement>("channels");
 const surfaceStatuses = createSurfaceRows(channels);
 const manualRecovery = requiredElement<HTMLElement>("manual-recovery");
 const manualRecoveryList = requiredElement<HTMLElement>("manual-recovery-list");
 const message = requiredElement<HTMLElement>("message");
+let lastSearchEvidenceReport: SearchEvidenceProbeReport | null = null;
 
 form.addEventListener("submit", (event) => {
 	event.preventDefault();
@@ -41,6 +48,8 @@ disconnectButton.addEventListener("click", () => void disconnect());
 refreshButton.addEventListener("click", () => void refresh());
 runNowButton.addEventListener("click", () => void runNow());
 inspectSurfaceButton.addEventListener("click", () => void inspectSurface());
+inspectSearchEvidenceButton.addEventListener("click", () => void inspectSearchEvidence());
+copySearchEvidenceButton.addEventListener("click", () => void copySearchEvidence());
 
 void render();
 
@@ -134,6 +143,53 @@ async function inspectSurface(): Promise<void> {
 	} finally {
 		setBusy(false);
 	}
+}
+
+async function inspectSearchEvidence(): Promise<void> {
+	setBusy(true);
+	setMessage("Inspecting the active conversation without sending a prompt.");
+	searchEvidenceReport.hidden = true;
+	try {
+		const response = (await chrome.runtime.sendMessage({
+			type: "browser-runner:inspect-active-search-evidence",
+		})) as { ok?: boolean; report?: SearchEvidenceProbeReport; error?: string };
+		if (!response.ok || !response.report) throw new Error(response.error ?? "The evidence probe failed safely.");
+		lastSearchEvidenceReport = response.report;
+		renderSearchEvidenceReport(response.report);
+		setMessage("Read-only evidence inspection finished. No prompt was sent.");
+	} catch (error) {
+		lastSearchEvidenceReport = null;
+		setMessage(error instanceof Error ? error.message : "The evidence probe failed safely.");
+	} finally {
+		setBusy(false);
+	}
+}
+
+function renderSearchEvidenceReport(report: SearchEvidenceProbeReport): void {
+	searchEvidenceSummary.textContent = `${extensionSurfaceDefinition(report.surface).label} · ${report.adapterVersion} · ${report.answerCount} answer(s) · ${report.candidates.length} candidate(s)${report.truncated ? " · truncated" : ""} · ${report.pageUrlShape}`;
+	searchEvidenceCandidates.replaceChildren();
+	for (const candidate of report.candidates) {
+		const item = document.createElement("li");
+		const structural = [
+			candidate.relation,
+			candidate.textCategory,
+			candidate.tag,
+			candidate.role,
+			...candidate.classTokens,
+			...candidate.ariaNames,
+			...candidate.dataAttributeNames,
+			candidate.hrefHostname,
+		].filter((value): value is string => Boolean(value));
+		item.textContent = structural.join(" · ");
+		searchEvidenceCandidates.append(item);
+	}
+	searchEvidenceReport.hidden = false;
+}
+
+async function copySearchEvidence(): Promise<void> {
+	if (!lastSearchEvidenceReport) return;
+	await navigator.clipboard.writeText(JSON.stringify(lastSearchEvidenceReport, null, 2));
+	setMessage("Redacted evidence report copied.");
 }
 
 async function render(): Promise<void> {
@@ -235,6 +291,8 @@ function setBusy(busy: boolean): void {
 	refreshButton.disabled = busy;
 	runNowButton.disabled = busy;
 	inspectSurfaceButton.disabled = busy;
+	inspectSearchEvidenceButton.disabled = busy;
+	copySearchEvidenceButton.disabled = busy;
 	for (const button of manualRecoveryList.querySelectorAll("button")) {
 		button.disabled = busy || button.dataset.recoverable !== "true";
 	}

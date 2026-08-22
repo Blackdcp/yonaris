@@ -98,6 +98,26 @@ button.secondary {
 	font-size: 12px;
 }
 
+.evidence-report {
+	border: 1px solid #d5d9e2;
+	border-radius: 8px;
+	background: #fff;
+	padding: 10px;
+}
+
+.evidence-report p {
+	margin: 0 0 8px;
+	overflow-wrap: anywhere;
+}
+
+.evidence-report ul {
+	max-height: 180px;
+	margin: 0 0 8px;
+	overflow: auto;
+	padding-left: 18px;
+	font-size: 11px;
+}
+
 button:disabled {
 	cursor: wait;
 	opacity: 0.6;

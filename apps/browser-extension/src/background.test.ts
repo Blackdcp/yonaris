@@ -126,6 +126,75 @@ describe.sequential("Browser Runner background scheduling", () => {
 		expect(storageGetCalls).toBeGreaterThan(0);
 	});
 
+	test("forwards a read-only evidence probe to the one active supported conversation without state writes", async () => {
+		const report = {
+			schemaVersion: 1,
+			surface: "deepseek.consumer_web",
+			adapterVersion: "deepseek-web-20260821-localpc-v8",
+			pageUrlShape: "https://chat.deepseek.com/:segment/:segment/:segment/:segment",
+			answerCount: 1,
+			candidates: [],
+			truncated: false,
+		};
+		tabsQueryImplementation = async () => [{ id: 42, url: "https://chat.deepseek.com/a/chat/s/thread_123" }];
+		tabsSendMessageImplementation = async (tabId, message) => {
+			expect(tabId).toBe(42);
+			expect(message).toEqual({ kind: "yonaris_adapter", action: "inspect_search_candidates" });
+			return { ok: true, value: report };
+		};
+		const writesBefore = storageGetCalls;
+
+		const response = await new Promise<unknown>((resolve) => {
+			const handled = runtimeMessageListener?.({ type: "browser-runner:inspect-active-search-evidence" }, {}, resolve);
+			expect(handled).toBe(true);
+		});
+
+		expect(response).toEqual({ ok: true, report });
+		expect(storageGetCalls).toBe(writesBefore);
+	});
+
+	test.each([
+		["no supported", [{ id: 1, url: "https://example.com/" }], /no supported/i],
+		[
+			"multiple matching",
+			[
+				{ id: 1, url: "https://chat.deepseek.com/a/chat/s/thread_123" },
+				{ id: 2, url: "https://www.kimi.com/chat/thread_456" },
+			],
+			/multiple/i,
+		],
+	] as const)("fails clearly when there are %s active conversation tabs", async (_label, tabs, errorPattern) => {
+		tabsQueryImplementation = async () => [...tabs];
+		const response = await new Promise<unknown>((resolve) => {
+			const handled = runtimeMessageListener?.({ type: "browser-runner:inspect-active-search-evidence" }, {}, resolve);
+			expect(handled).toBe(true);
+		});
+
+		expect(response).toMatchObject({ ok: false, error: expect.stringMatching(errorPattern) });
+	});
+
+	test("rejects a probe report that contains a raw URL path or query value", async () => {
+		tabsQueryImplementation = async () => [{ id: 42, url: "https://chat.deepseek.com/a/chat/s/thread_123" }];
+		tabsSendMessageImplementation = async () => ({
+			ok: true,
+			value: {
+				schemaVersion: 1,
+				surface: "deepseek.consumer_web",
+				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				pageUrlShape: "https://chat.deepseek.com/a/chat/s/private-token?secret=value",
+				answerCount: 1,
+				candidates: [],
+				truncated: false,
+			},
+		});
+
+		const response = await new Promise<unknown>((resolve) => {
+			runtimeMessageListener?.({ type: "browser-runner:inspect-active-search-evidence" }, {}, resolve);
+		});
+
+		expect(response).toMatchObject({ ok: false, error: expect.stringMatching(/invalid report/i) });
+	});
+
 	test("heartbeats the persisted per-surface qualification without promoting DeepSeek", async () => {
 		const requests: unknown[] = [];
 		storageGetImplementation = async () => ({

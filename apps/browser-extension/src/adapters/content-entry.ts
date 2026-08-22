@@ -1,5 +1,9 @@
 import { isApprovedDoubaoConversationUrl } from "../surface-qualification-client";
-import { type ExtensionSurfaceDefinition, extensionSurfaceForUrl } from "../surface-registry";
+import {
+	type ExtensionSurfaceDefinition,
+	extensionSurfaceForUrl,
+	isApprovedSurfaceConversationUrl,
+} from "../surface-registry";
 import type { AdapterError, ConsumerWebAdapter } from "./contracts";
 import { createDocumentDomPort, isDomElementVisible, readStructuredSearchEvidence } from "./dom-port";
 import { doubaoSelectorContract } from "./doubao";
@@ -128,27 +132,4 @@ function isAdapterCommand(value: unknown): value is AdapterCommand {
 		!["prepare", "submit_once", "confirm_submitted", "resume_submitted"].includes(value.action) ||
 		("promptText" in value && typeof value.promptText === "string")
 	);
-}
-
-export function isApprovedSurfaceConversationUrl(definition: ExtensionSurfaceDefinition, value: string): boolean {
-	let url: URL;
-	try {
-		url = new URL(value);
-	} catch {
-		return false;
-	}
-	if (!definition.approvedUrl(url) || url.port || url.hash) return false;
-	try {
-		if (!new RegExp(definition.contract.conversationPathPattern, "u").test(url.pathname)) return false;
-		if (definition.contract.conversationSearchPattern) {
-			return new RegExp(definition.contract.conversationSearchPattern, "u").test(url.search);
-		}
-		if (url.search === "") return true;
-		return Boolean(
-			definition.contract.allowedSearchPattern &&
-				new RegExp(definition.contract.allowedSearchPattern, "u").test(url.search),
-		);
-	} catch {
-		return false;
-	}
 }

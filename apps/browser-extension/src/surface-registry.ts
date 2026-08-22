@@ -108,3 +108,26 @@ export function extensionSurfaceForUrl(url: URL): ExtensionSurfaceDefinition {
 	if (!match) throw new Error("Browser adapter is not approved for this URL");
 	return match;
 }
+
+export function isApprovedSurfaceConversationUrl(definition: ExtensionSurfaceDefinition, value: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return false;
+	}
+	if (!definition.approvedUrl(url) || url.port || url.hash) return false;
+	try {
+		if (!new RegExp(definition.contract.conversationPathPattern, "u").test(url.pathname)) return false;
+		if (definition.contract.conversationSearchPattern) {
+			return new RegExp(definition.contract.conversationSearchPattern, "u").test(url.search);
+		}
+		if (url.search === "") return true;
+		return Boolean(
+			definition.contract.allowedSearchPattern &&
+				new RegExp(definition.contract.allowedSearchPattern, "u").test(url.search),
+		);
+	} catch {
+		return false;
+	}
+}

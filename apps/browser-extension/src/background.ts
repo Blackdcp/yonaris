@@ -1,3 +1,4 @@
+import type { SearchEvidenceProbeCandidate, SearchEvidenceProbeReport } from "./adapters/evidence-probe";
 import { BrowserRunnerApiClient } from "./api-client";
 import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "./contracts";
 import { ChromeTabDriver } from "./coordinator/chrome-tabs";
@@ -6,7 +7,12 @@ import type { TaskRunResult } from "./coordinator/task-runner";
 import { buildHeartbeat } from "./heartbeat";
 import { chromeDeviceStorage } from "./storage";
 import { type QualificationReadinessPublisher, qualifyAndRecordActiveSurfaceTab } from "./surface-qualification-client";
-import { extensionSurfaceDefinition } from "./surface-registry";
+import {
+	type ExtensionSurfaceDefinition,
+	extensionSurfaceDefinition,
+	extensionSurfaceForUrl,
+	isApprovedSurfaceConversationUrl,
+} from "./surface-registry";
 
 const HEARTBEAT_ALARM = "browser-runner-heartbeat";
 const LEGACY_WORK_ALARM = "browser-runner-work";
@@ -52,6 +58,12 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 			.catch((error) => sendResponse({ ok: false, error: safeRuntimeError(error) }));
 		return true;
 	}
+	if (message.type === "browser-runner:inspect-active-search-evidence") {
+		void inspectActiveSearchEvidence()
+			.then((report) => sendResponse({ ok: true, report }))
+			.catch((error) => sendResponse({ ok: false, error: safeRuntimeError(error) }));
+		return true;
+	}
 	if (message.type === "browser-runner:status") {
 		sendResponse({
 			ok: true,
@@ -85,6 +97,158 @@ function sendHeartbeat(readiness?: BrowserExtensionReadiness): Promise<void> {
 	const operation = heartbeatTail.then(() => sendHeartbeatNow(readiness));
 	heartbeatTail = operation.catch(() => undefined);
 	return operation;
+}
+
+async function inspectActiveSearchEvidence(): Promise<SearchEvidenceProbeReport> {
+	const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+	const supported: Array<{ id: number; definition: ExtensionSurfaceDefinition }> = [];
+	for (const tab of tabs) {
+		if (!Number.isSafeInteger(tab.id) || typeof tab.url !== "string") continue;
+		try {
+			const definition = extensionSurfaceForUrl(new URL(tab.url));
+			if (isApprovedSurfaceConversationUrl(definition, tab.url)) {
+				supported.push({ id: tab.id as number, definition });
+			}
+		} catch {
+			// Unsupported active tabs are ignored; the caller receives a bounded diagnostic below.
+		}
+	}
+	if (supported.length === 0) throw new Error("No supported domestic AI conversation tab is active.");
+	if (supported.length > 1) throw new Error("Multiple supported domestic AI conversation tabs are active.");
+	const active = supported[0];
+	if (!active) throw new Error("No supported domestic AI conversation tab is active.");
+	const response = await chrome.tabs.sendMessage(active.id, {
+		kind: "yonaris_adapter",
+		action: "inspect_search_candidates",
+	});
+	if (!isRecord(response) || response.ok !== true) {
+		throw new Error(adapterRuntimeFailure(response) ?? "The active page rejected the read-only evidence probe.");
+	}
+	return parseProbeReport(response.value, active.definition);
+}
+
+function parseProbeReport(value: unknown, definition: ExtensionSurfaceDefinition): SearchEvidenceProbeReport {
+	if (!isRecord(value) || value.schemaVersion !== 1) throw new Error("The evidence probe returned an invalid report.");
+	if (value.surface !== definition.surface || value.adapterVersion !== definition.adapterVersion) {
+		throw new Error("The evidence probe returned a mismatched platform report.");
+	}
+	if (
+		typeof value.pageUrlShape !== "string" ||
+		!Number.isSafeInteger(value.answerCount) ||
+		(value.answerCount as number) < 0 ||
+		(value.answerCount as number) > 1_000 ||
+		!Array.isArray(value.candidates) ||
+		value.candidates.length > 200 ||
+		typeof value.truncated !== "boolean"
+	) {
+		throw new Error("The evidence probe returned an invalid report.");
+	}
+	const candidates = value.candidates.map(parseProbeCandidate);
+	const pageUrlShape = safeProbePageUrlShape(value.pageUrlShape, definition);
+	return {
+		schemaVersion: 1,
+		surface: definition.surface,
+		adapterVersion: definition.adapterVersion,
+		pageUrlShape,
+		answerCount: value.answerCount as number,
+		candidates,
+		truncated: value.truncated,
+	};
+}
+
+function safeProbePageUrlShape(value: string, definition: ExtensionSurfaceDefinition): string {
+	if (value.length > 1_000) throw new Error("The evidence probe returned an invalid report.");
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		throw new Error("The evidence probe returned an invalid report.");
+	}
+	const safePath = url.pathname
+		.split("/")
+		.filter(Boolean)
+		.every((segment) => segment === ":segment");
+	const safeSearch = [...url.searchParams].every(
+		([key, entryValue]) => /^[\p{L}_][\p{L}\p{N}_-]{0,79}$/u.test(key) && entryValue === "",
+	);
+	if (!definition.approvedUrl(url) || url.port || url.hash || !safePath || !safeSearch) {
+		throw new Error("The evidence probe returned an invalid report.");
+	}
+	return value;
+}
+
+function parseProbeCandidate(value: unknown): SearchEvidenceProbeCandidate {
+	if (!isRecord(value)) throw new Error("The evidence probe returned an invalid candidate.");
+	const relation = oneOf(value.relation, ["inside_latest_answer", "adjacent_to_latest_answer", "page_other"] as const);
+	const textCategory = oneOf(value.textCategory, ["search", "source", "citation", "reference", "unknown"] as const);
+	const tag = safeProbeToken(value.tag, false);
+	const role = value.role === null ? null : safeProbeToken(value.role, false);
+	const classTokens = safeProbeTokenArray(value.classTokens);
+	const ariaNames = safeProbeTokenArray(value.ariaNames);
+	const dataAttributeNames = safeProbeTokenArray(value.dataAttributeNames);
+	const hrefHostname = value.hrefHostname === null ? null : safeProbeHostname(value.hrefHostname);
+	if (
+		typeof value.visible !== "boolean" ||
+		!Number.isSafeInteger(value.textLength) ||
+		(value.textLength as number) < 0 ||
+		(value.textLength as number) > 1_000_000 ||
+		typeof value.textSha256 !== "string" ||
+		!/^[a-f0-9]{64}$/u.test(value.textSha256)
+	) {
+		throw new Error("The evidence probe returned an invalid candidate.");
+	}
+	return {
+		relation,
+		tag,
+		role,
+		classTokens,
+		ariaNames,
+		dataAttributeNames,
+		hrefHostname,
+		visible: value.visible,
+		textCategory,
+		textLength: value.textLength as number,
+		textSha256: value.textSha256,
+	};
+}
+
+function oneOf<const T extends readonly string[]>(value: unknown, allowed: T): T[number] {
+	if (typeof value !== "string" || !allowed.includes(value)) {
+		throw new Error("The evidence probe returned an invalid candidate.");
+	}
+	return value as T[number];
+}
+
+function safeProbeToken(value: unknown, allowDataPrefix: boolean): string {
+	if (
+		typeof value !== "string" ||
+		value.length > 80 ||
+		!(allowDataPrefix ? /^data-[\p{L}\p{N}_-]+$/u : /^[\p{L}_][\p{L}\p{N}_-]*$/u).test(value)
+	) {
+		throw new Error("The evidence probe returned an invalid structural token.");
+	}
+	return value;
+}
+
+function safeProbeTokenArray(value: unknown): string[] {
+	if (!Array.isArray(value) || value.length > 20) {
+		throw new Error("The evidence probe returned an invalid structural token list.");
+	}
+	return value.map((item) => safeProbeToken(item, typeof item === "string" && item.startsWith("data-")));
+}
+
+function safeProbeHostname(value: unknown): string {
+	if (typeof value !== "string" || value.length > 253 || !/^[a-z0-9.-]+$/u.test(value)) {
+		throw new Error("The evidence probe returned an invalid hostname.");
+	}
+	return value;
+}
+
+function adapterRuntimeFailure(value: unknown): string | null {
+	if (!isRecord(value) || value.ok !== false || !isRecord(value.error)) return null;
+	return typeof value.error.message === "string" && value.error.message.trim()
+		? value.error.message.trim().slice(0, 500)
+		: null;
 }
 
 async function sendHeartbeatNow(readiness?: BrowserExtensionReadiness): Promise<void> {
