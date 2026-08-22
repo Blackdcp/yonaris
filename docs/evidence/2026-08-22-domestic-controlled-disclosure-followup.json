@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-08-22T15:05:00+08:00",
+  "collectionMode": "read_only_redacted_controlled_disclosure_probe",
+  "privacy": {
+    "promptSubmitted": false,
+    "rawHtmlStored": false,
+    "rawTextStored": false,
+    "fullUrlsStored": false,
+    "accountDataStored": false,
+    "disclosuresRestored": true
+  },
+  "reports": [
+    {
+      "surface": "kimi.consumer_web",
+      "qualified": {
+        "searchBlock": ".toolcall-container.toolcall-web_search",
+        "disclosure": ".toolcall-title-container",
+        "searchObservedProof": "visible_answer_scoped_search_tool"
+      },
+      "queryEvidence": {
+        "availability": "unavailable",
+        "reason": "no_distinct_query_item_or_quoted_segment",
+        "toolTextMatchesLatestPrompt": false
+      },
+      "citationEvidence": "visible_answer_links_only"
+    },
+    {
+      "surface": "qwen.consumer_web",
+      "qualified": {
+        "latestTurn": ".chat-round.last-message-item",
+        "disclosure": ".reference-wrap-iEjeb3 .search-content-iMifAk",
+        "sourceItem": "[data-click-extra][data-log-click-name][data-log-exposure-name]",
+        "metadataAttribute": "data-click-extra",
+        "metadataKeys": [
+          "display_scene",
+          "ref_url",
+          "refer_num",
+          "req_id",
+          "source_type",
+          "title",
+          "url"
+        ],
+        "citationUrlKey": "url",
+        "citationTitleKey": "title"
+      },
+      "queryEvidence": {
+        "availability": "unavailable",
+        "reason": "source_rows_are_not_provider_rewrite_queries"
+      }
+    },
+    {
+      "surface": "wenxin.consumer_web",
+      "qualified": {
+        "thinkingBlock": ".ai-entry-block.ai-thinking-steps",
+        "disclosure": ".root-header",
+        "searchIcon": ".cos-icon-search",
+        "sourceItem": "[data-long-press-ext-info][data-long-press-menu][data-long-press-menu-buttons]",
+        "metadataAttribute": "data-long-press-ext-info",
+        "metadataKeys": [
+          "link",
+          "linkTitle",
+          "logInfo",
+          "logInfo.longpress_content"
+        ],
+        "citationUrlKey": "link",
+        "citationTitleKey": "linkTitle"
+      },
+      "queryEvidence": {
+        "availability": "unavailable",
+        "reason": "reference_rows_are_sources_not_query_items"
+      }
+    },
+    {
+      "surface": "yuanbao.consumer_web",
+      "qualified": {
+        "referenceList": ".hyc-common-markdown__ref-list",
+        "referenceTrigger": ".hyc-common-markdown__ref-list__trigger[data-idx-list]",
+        "searchObservedProof": "visible_answer_scoped_reference_list"
+      },
+      "unqualified": [
+        "hover_popup_citation_visibility_boundary",
+        "query_item_boundary"
+      ],
+      "diagnosticOnly": {
+        "popupContainsDataUrl": true,
+        "popupWasNotProgrammaticallyRendered": true
+      }
+    },
+    {
+      "surface": "zhipu.consumer_web",
+      "qualified": {
+        "thinkingBlock": ".advance-thinking",
+        "thinkingDisclosure": ".advance-thinking-status",
+        "sourceCountControl": ".sources-tab-container",
+        "searchObservedProof": "visible_answer_bound_source_count_control"
+      },
+      "unqualified": [
+        "source_card_url_boundary",
+        "query_item_boundary"
+      ]
+    }
+  ]
+}

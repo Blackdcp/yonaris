@@ -312,6 +312,7 @@ class DocumentDomPort implements ConsumerDomPort {
 				isVisible: isSearchEvidenceElementVisible,
 				readVisibleText: readVisibleSearchEvidenceText,
 				readStructuredEvidence: (contract) => readStructuredSearchEvidence(answer, contract),
+				wait: (milliseconds) => this.wait(milliseconds),
 			},
 		};
 	}

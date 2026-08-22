@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Qwen browser-extension adapter", () => {
 	test("declares the registered Qwen surface and adapter version", () => {
 		expect(qwenSelectorContract).toMatchObject({
-			version: "qwen-web-20260822-localpc-v7",
+			version: "qwen-web-20260822-localpc-v8",
 			surface: "qwen.consumer_web",
 			launchUrl: "https://www.qianwen.com/",
 		});
@@ -62,7 +62,7 @@ describe("Qwen browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/qwen", title: "千问来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "qwen-web-20260822-localpc-v7",
+			adapterVersion: "qwen-web-20260822-localpc-v8",
 		});
 	});
 
@@ -77,7 +77,11 @@ describe("Qwen browser-extension adapter", () => {
 					<div class="reference-wrap-iEjeb3"><div class="search-content-iMifAk">参考来源</div></div>
 				</div>
 			</div>
+			<div id="source-panel" hidden><div data-log-click-name="source" data-log-exposure-name="source" data-click-extra='{"url":"https://panel.example/qwen","title":"Panel source"}'>Panel source</div></div>
 		</body></html>`);
+		const indicator = requiredElement(document, "#latest-turn .search-content-iMifAk");
+		const panel = requiredElement(document, "#source-panel");
+		indicator.addEventListener("click", () => panel.toggleAttribute("hidden"));
 
 		await expect(
 			qwenSearchEvidenceAdapter.read({
@@ -86,20 +90,98 @@ describe("Qwen browser-extension adapter", () => {
 				isVisible: (element) => !element.closest("[hidden]"),
 				readVisibleText: (element) => (element.textContent ?? "").trim(),
 				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
 			}),
 		).resolves.toEqual({
 			webSearchObserved: true,
 			queryAvailability: "unavailable",
 			webQueries: [],
-			citations: [{ url: "https://source.example/qwen", title: "千问来源" }],
+			citations: [
+				{ url: "https://source.example/qwen", title: "千问来源" },
+				{ url: "https://panel.example/qwen", title: "Panel source" },
+			],
 			diagnostics: {
-				extractorVersion: "qwen-search-evidence-20260822-v1",
+				extractorVersion: "qwen-search-evidence-20260822-v2",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
 				queryCandidateCount: 0,
-				citationCandidateCount: 1,
+				citationCandidateCount: 2,
 			},
 		});
+	});
+
+	test("opens the current source panel, extracts structured source metadata, and restores the page", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="chat-round last-message-item" id="latest-turn">
+				<div class="chat-answers-card-wrap">
+					<div class="answer-common-card" id="accepted-answer">
+						<p>Current answer</p><a href="https://direct.example/qwen">Direct source</a>
+					</div>
+					<div class="reference-wrap-iEjeb3"><div class="search-content-iMifAk" id="source-trigger">参考来源</div></div>
+				</div>
+			</div>
+			<div id="source-panel" hidden>
+				<div class="source-item-mqZd08" data-log-click-name="source" data-log-exposure-name="source" data-click-extra='{"url":"https://source.example/one","ref_url":"https://source.example/one","title":"Source one"}'>Source one</div>
+				<div class="source-item-mqZd08" data-log-click-name="source" data-log-exposure-name="source" data-click-extra='{"url":"https://second.example/two","ref_url":"https://second.example/two","title":"Source two"}'>Source two</div>
+			</div>
+		</body></html>`);
+		const panel = requiredElement(document, "#source-panel");
+		let clickCount = 0;
+		requiredElement(document, "#source-trigger").addEventListener("click", () => {
+			clickCount += 1;
+			panel.toggleAttribute("hidden");
+		});
+
+		await expect(
+			qwenSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			citations: [
+				{ url: "https://direct.example/qwen", title: "Direct source" },
+				{ url: "https://source.example/one", title: "Source one" },
+				{ url: "https://second.example/two", title: "Source two" },
+			],
+			diagnostics: { citationCandidateCount: 3 },
+		});
+		expect(clickCount).toBe(2);
+		expect(panel.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("rejects malformed source metadata without leaving the Qwen panel open", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="chat-round last-message-item"><div class="chat-answers-card-wrap">
+				<div class="answer-common-card" id="accepted-answer">Current answer</div>
+				<div class="reference-wrap-iEjeb3"><div class="search-content-iMifAk" id="source-trigger">参考来源</div></div>
+			</div></div>
+			<div id="source-panel" hidden><div data-log-click-name="source" data-log-exposure-name="source" data-click-extra='{"url":"https://user:secret@source.example/one","title":"Unsafe"}'>Unsafe</div></div>
+		</body></html>`);
+		const panel = requiredElement(document, "#source-panel");
+		let clickCount = 0;
+		requiredElement(document, "#source-trigger").addEventListener("click", () => {
+			clickCount += 1;
+			panel.toggleAttribute("hidden");
+		});
+
+		await expect(
+			qwenSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
+			}),
+		).rejects.toThrow(/structured citation URL is invalid/i);
+		expect(clickCount).toBe(2);
+		expect(panel.hasAttribute("hidden")).toBe(true);
 	});
 
 	test("keeps Qwen search state unknown when only an older turn has a source indicator", async () => {

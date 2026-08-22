@@ -18,7 +18,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Qwen",
 		captureRoute: "browser_extension.qwen",
 		launchUrl: "https://www.qianwen.com/",
-		adapterVersion: "qwen-web-20260822-localpc-v7",
+		adapterVersion: "qwen-web-20260822-localpc-v8",
 	},
 	{
 		key: "kimi.consumer_web",
@@ -32,7 +32,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
 		launchUrl: "https://wenxin.baidu.com/",
-		adapterVersion: "wenxin-web-20260822-localpc-v8",
+		adapterVersion: "wenxin-web-20260822-localpc-v9",
 	},
 	{
 		key: "yuanbao.consumer_web",
