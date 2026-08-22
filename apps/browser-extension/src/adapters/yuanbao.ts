@@ -9,6 +9,7 @@ import {
 } from "./search-evidence-adapter";
 
 const YUANBAO_REFERENCE_LIST_SELECTOR = ".hyc-common-markdown__ref-list";
+const YUANBAO_ANSWER_BUBBLE_SELECTOR = ".agent-chat__bubble--ai";
 const YUANBAO_REFERENCE_TRIGGER_SELECTOR = ".hyc-common-markdown__ref-list__trigger[data-idx-list]";
 const YUANBAO_REFERENCE_POPUP_SELECTOR = ".hyc-common-markdown__ref-list__popup";
 const YUANBAO_REFERENCE_CARD_SELECTOR = ".hyc-common-markdown__ref_card[data-idx][data-url]";
@@ -18,10 +19,11 @@ const YUANBAO_CITATION_SELECTOR = "a[href]";
 export const yuanbaoSelectorContract = contract as SelectorContract;
 
 export const yuanbaoSearchEvidenceAdapter: SearchEvidenceAdapter = {
-	version: "yuanbao-search-evidence-20260822-v3",
+	version: "yuanbao-search-evidence-20260822-v4",
 	settleTimeoutMs: 60_000,
 	async read(context) {
-		const referenceLists = [...context.acceptedAnswer.querySelectorAll(YUANBAO_REFERENCE_LIST_SELECTOR)].filter(
+		const referenceScope = context.acceptedAnswer.closest(YUANBAO_ANSWER_BUBBLE_SELECTOR) ?? context.acceptedAnswer;
+		const referenceLists = [...referenceScope.querySelectorAll(YUANBAO_REFERENCE_LIST_SELECTOR)].filter(
 			context.isVisible,
 		);
 		const citationCandidates = [...context.acceptedAnswer.querySelectorAll(YUANBAO_CITATION_SELECTOR)];

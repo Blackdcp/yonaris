@@ -59,12 +59,12 @@ describe("browser extension contract", () => {
 		],
 		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260822-localpc-v10"],
 		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260822-localpc-v13"],
-		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260822-localpc-v11"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260822-localpc-v12"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
-			"yuanbao-web-20260822-localpc-v10",
+			"yuanbao-web-20260822-localpc-v11",
 		],
 		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v5"],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {

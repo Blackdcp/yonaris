@@ -14,9 +14,9 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260822-localpc-v10");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260822-localpc-v11");
 		expect(yuanbaoSearchEvidenceAdapter).toMatchObject({
-			version: "yuanbao-search-evidence-20260822-v3",
+			version: "yuanbao-search-evidence-20260822-v4",
 			settleTimeoutMs: 60_000,
 		});
 		expect(adapter.surface).toBe("yuanbao.consumer_web");
@@ -58,7 +58,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260822-localpc-v10",
+			adapterVersion: "yuanbao-web-20260822-localpc-v11",
 		});
 	});
 
@@ -100,12 +100,51 @@ describe("Yuanbao browser-extension adapter", () => {
 				{ url: "https://source-two.example/b", title: "来源二" },
 			],
 			diagnostics: {
-				extractorVersion: "yuanbao-search-evidence-20260822-v3",
+				extractorVersion: "yuanbao-search-evidence-20260822-v4",
 				evidenceSource: "dom",
 				searchBlockCount: 2,
 				queryCandidateCount: 0,
 				citationCandidateCount: 3,
 			},
+		});
+	});
+
+	test("reads live Yuanbao reference markers beside the answer text inside the same AI bubble", async () => {
+		const { document, window } = parseHTML(`<!doctype html><html><body>
+			<div class="hyc-common-markdown__ref-list"><span class="hyc-common-markdown__ref-list__trigger" data-idx-list="99"></span></div>
+			<div class="agent-chat__bubble--ai" id="accepted-bubble">
+				<div class="agent-chat__speech-card__text" id="accepted-answer"><p>Current answer</p></div>
+				<div class="hyc-common-markdown__ref-list hyc-common-markdown__ref-list--merged">
+					<span class="hyc-common-markdown__ref-list__trigger" data-idx-list="3,7"></span>
+				</div>
+			</div>
+		</body></html>`);
+		installYuanbaoSourcePopup(
+			document,
+			window,
+			new Map([
+				[3, { url: "https://source-three.example/a", title: "来源三" }],
+				[7, { url: "https://source-seven.example/b", title: "来源七" }],
+			]),
+		);
+
+		await expect(
+			yuanbaoSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			citations: [
+				{ url: "https://source-three.example/a", title: "来源三" },
+				{ url: "https://source-seven.example/b", title: "来源七" },
+			],
+			diagnostics: { searchBlockCount: 1, citationCandidateCount: 2 },
 		});
 	});
 
@@ -147,7 +186,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				{ url: "https://source-ten.example/d", title: "来源十" },
 			],
 			diagnostics: {
-				extractorVersion: "yuanbao-search-evidence-20260822-v3",
+				extractorVersion: "yuanbao-search-evidence-20260822-v4",
 				searchBlockCount: 2,
 				citationCandidateCount: 4,
 			},

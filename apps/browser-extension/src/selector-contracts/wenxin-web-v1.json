@@ -1,5 +1,5 @@
 {
-	"version": "wenxin-web-20260822-localpc-v11",
+	"version": "wenxin-web-20260822-localpc-v12",
 	"surface": "wenxin.consumer_web",
 	"launchUrl": "https://wenxin.baidu.com/",
 	"conversationPathPattern": "^/search/[0-9]{4,30}/?$",

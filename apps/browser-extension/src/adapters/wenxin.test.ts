@@ -6,12 +6,12 @@ import { createWenxinAdapter, wenxinSearchEvidenceAdapter, wenxinSelectorContrac
 describe("Wenxin browser-extension adapter", () => {
 	test("uses the current Wenxin origin and registered adapter identity", () => {
 		expect(wenxinSelectorContract).toMatchObject({
-			version: "wenxin-web-20260822-localpc-v11",
+			version: "wenxin-web-20260822-localpc-v12",
 			surface: "wenxin.consumer_web",
 			launchUrl: "https://wenxin.baidu.com/",
 		});
 		expect(wenxinSearchEvidenceAdapter).toMatchObject({
-			version: "wenxin-search-evidence-20260822-v4",
+			version: "wenxin-search-evidence-20260822-v5",
 			settleTimeoutMs: 60_000,
 		});
 	});
@@ -37,7 +37,7 @@ describe("Wenxin browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/wenxin", title: "文心来源" }],
-			adapterVersion: "wenxin-web-20260822-localpc-v11",
+			adapterVersion: "wenxin-web-20260822-localpc-v12",
 		});
 	});
 
@@ -81,7 +81,7 @@ describe("Wenxin browser-extension adapter", () => {
 				{ url: "https://structured.example/wenxin", title: "Structured source" },
 			],
 			diagnostics: {
-				extractorVersion: "wenxin-search-evidence-20260822-v4",
+				extractorVersion: "wenxin-search-evidence-20260822-v5",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
 				queryCandidateCount: 0,
@@ -89,6 +89,68 @@ describe("Wenxin browser-extension adapter", () => {
 			},
 		});
 		expect(clickCount).toBe(2);
+		expect(referenceList.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("opens Wenxin's live nested global-search step and restores both collapsed layers", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ai-entry" id="accepted-answer">
+				<div class="ai-entry-block ai-thinking-steps" id="thinking-block">
+					<header class="root-header"><div class="_main-header_fixture _could-expand_fixture" id="root-trigger"><i class="cos-icon cos-icon-search"></i>调用 全球搜检索25篇资料</div></header>
+					<main id="root-content" hidden>
+						<div id="search-step">
+							<header class="step-header"><div class="_main-header_fixture _could-expand_fixture" id="step-trigger">搜索全球1篇资料</div></header>
+							<ol id="reference-list" hidden>
+								<li data-long-press-menu="link" data-long-press-menu-buttons="longPressMenuButtons" data-long-press-ext-info='{"link":"https://structured.example/wenxin-live","linkTitle":"Live structured source"}'>Live structured source</li>
+							</ol>
+						</div>
+					</main>
+				</div>
+			</div>
+		</body></html>`);
+		const rootContent = requiredElement(document, "#root-content");
+		const referenceList = requiredElement(document, "#reference-list");
+		let rootClicks = 0;
+		let stepClicks = 0;
+		let stepAnimating = false;
+		let settledWaits = 0;
+		requiredElement(document, "#root-trigger").addEventListener("click", () => {
+			rootClicks += 1;
+			rootContent.toggleAttribute("hidden");
+		});
+		requiredElement(document, "#step-trigger").addEventListener("click", () => {
+			if (!referenceList.hasAttribute("hidden") && stepAnimating) return;
+			stepClicks += 1;
+			referenceList.toggleAttribute("hidden");
+			if (!referenceList.hasAttribute("hidden")) {
+				stepAnimating = true;
+				settledWaits = 0;
+			}
+		});
+
+		await expect(
+			wenxinSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => {
+					if (stepAnimating) {
+						settledWaits += 1;
+						if (settledWaits >= 2) stepAnimating = false;
+					}
+				},
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			citations: [{ url: "https://structured.example/wenxin-live", title: "Live structured source" }],
+			diagnostics: { searchBlockCount: 1, citationCandidateCount: 1 },
+		});
+		expect(rootClicks).toBe(2);
+		expect(stepClicks).toBe(2);
+		expect(rootContent.hasAttribute("hidden")).toBe(true);
 		expect(referenceList.hasAttribute("hidden")).toBe(true);
 	});
 
