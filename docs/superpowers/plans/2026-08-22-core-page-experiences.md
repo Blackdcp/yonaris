@@ -28,19 +28,21 @@
 
 **Files:**
 - Create: `e2e/www-tests/helpers/core-site.ts`
+- Create: `e2e/www-tests/helpers/core-site.spec.ts`
 - Modify: `e2e/package.json`
 - Modify: `pnpm-lock.yaml`
 - Modify: `e2e/playwright.www.config.ts`
+- Modify: `e2e/tsconfig.json`
 - Modify: `.gitignore`
 - Modify: `.github/workflows/e2e.yaml`
 
 **Interfaces:**
-- Produces: `CORE_ROUTE_PAIRS`, `QA_VIEWPORTS`, `expectNoHorizontalOverflow()`, `expectNoRunningAnimations()`, `expectSignalFocusVisible()`, `runWcagAa()`, `captureQa()`.
+- Produces: exactly seven `CORE_ROUTE_PAIRS` (Home, Product, Approach, Research, Company, GEO, Diagnostic = fourteen URLs), `QA_VIEWPORTS`, `expectNoHorizontalOverflow()`, `expectNoRunningAnimations()`, `expectSignalFocusVisible()`, `runWcagAa()`, `captureQa()`.
 
 - [ ] **Step 1: Prove the missing scripts**
 
 ```powershell
-pnpm.cmd --filter e2e run test:www -- --list
+pnpm.cmd --filter e2e run test:www --list
 ```
 
 Expected RED: `test:www` does not exist.
@@ -59,14 +61,19 @@ export const QA_VIEWPORTS = {
 } as const;
 ```
 
-Add `@axe-core/playwright` as an E2E dev dependency. Add `test:www` for all non-`@visual` tests and `test:www:visual` for `@visual` tests with one worker. Set Playwright output to `test-results-www`, start Vite with `--strictPort`, install Chromium in CI, run public-site tests before Storybook, and upload `e2e/test-results-www/` on failure. `runWcagAa()` runs Axe against WCAG 2 A/AA rules and fails on any violation. `expectSignalFocusVisible()` tabs to the provided control, asserts it is the active element, and verifies its computed outline/box-shadow visibly uses Signal Orange rather than transparent/default focus.
+Add `@axe-core/playwright` as an E2E dev dependency. Add `test:www` with `--grep-invert @visual` and `test:www:visual` with `--grep @visual --workers=1`; visual tests use Playwright's explicit `tag: "@visual"` API. Include `www-tests/**/*.ts` in E2E type-checking and make the helper contract spec executable so broken helpers cannot pass as dead code.
+
+Set top-level Playwright output to `test-results-www`. In the TypeScript config parse `process.env.WWW_E2E_PORT ?? "3001"`, use that same validated port for `baseURL`, and build the explicit command `pnpm --filter @workspace/www exec vite dev --host 127.0.0.1 --port ${port} --strictPort`; server reuse is opt-in rather than silently reusing an arbitrary local process. CI installs Chromium from the E2E package, runs public-site tests before Storybook, gives the expanded matrix enough timeout budget, uploads `e2e/test-results-www/` immediately on failure, and does not invoke Compose log dumping before its generated stack file exists.
+
+`runWcagAa()` runs Axe against WCAG 2.0/2.1 A+AA and WCAG 2.2 AA tags and formats violation IDs, impact, targets, and help URLs. `expectSignalFocusVisible()` reaches the requested `Locator` through keyboard traversal, proves it is `document.activeElement`, composites RGBA indicator colors over the actual adjacent background, and requires both a visible Signal Orange component and a painted edge at least 3:1; translucent colors may not be treated as opaque. `expectNoHorizontalOverflow()` waits for fonts, hydration, and layout stability. `expectNoRunningAnimations()` establishes reduced motion before navigation and waits a render tick. `captureQa()` waits for fonts, hides the caret, disables screenshot-time animations, captures full-page, and writes collision-proof route/locale/viewport/state names directly beneath `test-results-www/visual-qa`, not a per-test `outputPath()` subdirectory.
 
 - [ ] **Step 3: Verify GREEN and commit**
 
 ```powershell
-pnpm.cmd --filter e2e run test:www -- --list
+pnpm.cmd --filter e2e run test:www --list
 pnpm.cmd --filter e2e run test:www
-git add e2e/package.json pnpm-lock.yaml e2e/playwright.www.config.ts e2e/www-tests/helpers/core-site.ts .gitignore .github/workflows/e2e.yaml
+pnpm.cmd --filter e2e run test:www:visual --list
+git add e2e/package.json pnpm-lock.yaml e2e/playwright.www.config.ts e2e/tsconfig.json e2e/www-tests/helpers/core-site.ts e2e/www-tests/helpers/core-site.spec.ts .gitignore .github/workflows/e2e.yaml
 git commit -m "connect public site browser testing"
 ```
 
