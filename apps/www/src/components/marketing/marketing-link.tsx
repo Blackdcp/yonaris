@@ -28,7 +28,7 @@ export function MarketingLink({
 	return (
 		<Link
 			to={href}
-			className={`group inline-flex min-h-11 items-center justify-center gap-3 border px-4 text-xs font-medium tracking-[0.01em] transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)] focus-visible:ring-offset-3 ${tone === "ink" ? "focus-visible:ring-offset-[var(--yonaris-ink)]" : "focus-visible:ring-offset-[var(--yonaris-paper)]"} ${variants[variant]} ${className}`}
+			className={`group inline-flex min-h-11 items-center justify-center gap-3 border px-4 text-xs font-medium tracking-[0.01em] transition-colors duration-200 ${tone === "ink" ? "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)] focus-visible:ring-offset-3 focus-visible:ring-offset-[var(--yonaris-ink)]" : "marketing-paper-focus"} ${variants[variant]} ${className}`}
 		>
 			<span>{children}</span>
 			{showArrow ? (

@@ -70,11 +70,11 @@ export function MarketingHomePage({ locale }: { locale: Locale }) {
 								className="group min-h-60 border-b border-white/12 py-7 lg:border-r lg:px-8 lg:odd:pl-0 lg:even:border-r-0"
 							>
 								<div className="flex items-center justify-between gap-5">
-									<p className="marketing-kicker text-[var(--yonaris-paper)]/44">0{index + 1}</p>
+									<p className="marketing-kicker text-[var(--yonaris-paper)]/55">0{index + 1}</p>
 									<span className="size-1.5 bg-[var(--yonaris-signal)]" />
 								</div>
 								<h3 className="mt-12 text-2xl font-medium tracking-[-0.035em]">{foundation.name}</h3>
-								<p className="mt-2 text-xs text-[var(--yonaris-paper)]/42">{foundation.label}</p>
+								<p className="mt-2 text-xs text-[var(--yonaris-paper)]/55">{foundation.label}</p>
 								<p className="mt-5 max-w-sm text-sm leading-6 text-[var(--yonaris-paper)]/62">
 									{foundation.description}
 								</p>
@@ -124,7 +124,7 @@ export function MarketingHomePage({ locale }: { locale: Locale }) {
 							className="border-b border-[var(--yonaris-ink)]/14 py-6 sm:border-r sm:border-b-0 sm:px-5 first:sm:pl-0 last:sm:border-r-0"
 						>
 							<p className="text-[clamp(2.4rem,4vw,4.2rem)] leading-none font-medium tracking-[-0.05em]">{value}</p>
-							<p className="mt-4 text-[10px] leading-4 uppercase tracking-[0.08em] text-[var(--yonaris-slate)]/58">
+							<p className="mt-4 text-[10px] leading-4 uppercase tracking-[0.08em] text-[var(--yonaris-slate)]/70">
 								{content.evidence.labels[index]}
 							</p>
 						</div>
@@ -132,10 +132,10 @@ export function MarketingHomePage({ locale }: { locale: Locale }) {
 				</div>
 				<div className="mt-14 grid gap-6 border-l-2 border-[var(--yonaris-signal)] pl-6 lg:ml-[25%] lg:grid-cols-2 lg:items-end">
 					<div>
-						<p className="marketing-kicker text-[var(--yonaris-slate)]/60">{content.evidence.outcomeLabel}</p>
+						<p className="marketing-kicker text-[var(--yonaris-slate)]/70">{content.evidence.outcomeLabel}</p>
 						<p className="mt-4 text-4xl font-medium tracking-[-0.04em] sm:text-5xl">{content.evidence.outcome}</p>
 					</div>
-					<p className="max-w-md text-xs leading-5 text-[var(--yonaris-slate)]/58">{content.evidence.note}</p>
+					<p className="max-w-md text-xs leading-5 text-[var(--yonaris-slate)]/70">{content.evidence.note}</p>
 				</div>
 				<div className="mt-10 lg:ml-[25%]">
 					<MarketingLink href={isZh ? "/zh/research" : "/research"} variant="text" tone="paper">

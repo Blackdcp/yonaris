@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 const rejectedLabels = [
 	"AI-NATIVE MARTECH",
@@ -19,6 +19,99 @@ async function backgroundPixel(page: import("@playwright/test").Page, selector: 
 		context.fillRect(0, 0, 1, 1);
 		return [...context.getImageData(0, 0, 1, 1).data];
 	});
+}
+
+async function contrastAgainstClosest(foreground: Locator, backgroundSelector: string) {
+	return foreground.evaluate((element, selector) => {
+		const background = element.closest(selector);
+		if (!(background instanceof HTMLElement)) throw new Error(`Missing contrast background: ${selector}`);
+
+		const canvas = document.createElement("canvas");
+		canvas.width = 1;
+		canvas.height = 1;
+		const context = canvas.getContext("2d", { willReadFrequently: true });
+		if (!context) throw new Error("Canvas is unavailable");
+
+		const rgba = (value: string) => {
+			context.clearRect(0, 0, 1, 1);
+			context.fillStyle = value;
+			context.fillRect(0, 0, 1, 1);
+			const [red, green, blue, alpha] = context.getImageData(0, 0, 1, 1).data;
+			return { red, green, blue, alpha: alpha / 255 };
+		};
+		const backgroundColor = rgba(getComputedStyle(background).backgroundColor);
+		const foregroundColor = rgba(getComputedStyle(element).color);
+		const composited = {
+			red: foregroundColor.red * foregroundColor.alpha + backgroundColor.red * (1 - foregroundColor.alpha),
+			green: foregroundColor.green * foregroundColor.alpha + backgroundColor.green * (1 - foregroundColor.alpha),
+			blue: foregroundColor.blue * foregroundColor.alpha + backgroundColor.blue * (1 - foregroundColor.alpha),
+		};
+		const luminance = ({ red, green, blue }: { red: number; green: number; blue: number }) => {
+			const channels = [red, green, blue].map((channel) => {
+				const value = channel / 255;
+				return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+			});
+			return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+		};
+		const lighter = Math.max(luminance(composited), luminance(backgroundColor));
+		const darker = Math.min(luminance(composited), luminance(backgroundColor));
+
+		return (lighter + 0.05) / (darker + 0.05);
+	}, backgroundSelector);
+}
+
+async function focusPresentation(focusTarget: Locator, indicator: Locator, backgroundSelector: string) {
+	await focusTarget.focus();
+
+	return indicator.evaluate((element, selector) => {
+		const background = element.closest(selector);
+		if (!(background instanceof HTMLElement)) throw new Error(`Missing focus background: ${selector}`);
+
+		const canvas = document.createElement("canvas");
+		canvas.width = 1;
+		canvas.height = 1;
+		const context = canvas.getContext("2d", { willReadFrequently: true });
+		if (!context) throw new Error("Canvas is unavailable");
+		const rgb = (value: string) => {
+			context.clearRect(0, 0, 1, 1);
+			context.fillStyle = value;
+			context.fillRect(0, 0, 1, 1);
+			return [...context.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+		};
+		const luminance = (color: number[]) => {
+			const channels = color.map((channel) => {
+				const value = channel / 255;
+				return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+			});
+			return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722;
+		};
+		const ratio = (first: number[], second: number[]) => {
+			const lighter = Math.max(luminance(first), luminance(second));
+			const darker = Math.min(luminance(first), luminance(second));
+			return (lighter + 0.05) / (darker + 0.05);
+		};
+		const style = getComputedStyle(element);
+		const signal = rgb(getComputedStyle(document.documentElement).getPropertyValue("--yonaris-signal"));
+		const outlineVisible = style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) >= 2;
+		const indicatorColors = [
+			...(outlineVisible ? [style.outlineColor] : []),
+			...(style.boxShadow.match(/rgba?\([^)]*\)/g) ?? []),
+		].map(rgb);
+		const backgroundColor = rgb(getComputedStyle(background).backgroundColor);
+
+		return {
+			backgroundColor: getComputedStyle(background).backgroundColor,
+			className: element.className,
+			hasSignal: indicatorColors.some((color) => color.every((channel, index) => channel === signal[index])),
+			hasVisibleGeometry: indicatorColors.length > 0,
+			indicatorContrast: Math.max(...indicatorColors.map((color) => ratio(color, backgroundColor))),
+			matchesPaperFocus: element.matches(".marketing-paper-focus:focus-visible"),
+			outlineColor: style.outlineColor,
+			outlineContrast: ratio(rgb(style.outlineColor), rgb(getComputedStyle(background).backgroundColor)),
+			outlineStyle: style.outlineStyle,
+			outlineWidth: Number.parseFloat(style.outlineWidth),
+		};
+	}, backgroundSelector);
 }
 
 test("Product Stage content remains visible at the start of entrance motion", async ({ page }) => {
@@ -102,6 +195,101 @@ test("English homepage presents the Product Stage and real destinations", async 
 	}
 
 	await expect(page.locator("#company")).toContainText("MarTech, rebuilt. For humans and agents.");
+});
+
+test("Paper-side focus indicators retain Signal Orange with an Ink contrast edge", async ({ page }) => {
+	await page.setViewportSize({ width: 1440, height: 900 });
+	await page.goto("/");
+	const header = page.locator(".site-header");
+	const primaryNavigationLink = header
+		.getByRole("navigation", { name: "Primary navigation" })
+		.getByRole("link", { name: "Product" });
+	const desktopControls = [
+		{ label: "home", control: header.getByRole("link", { name: "Yonaris home" }) },
+		{ label: "primary navigation", control: primaryNavigationLink },
+		{
+			label: "portal",
+			control: header.locator('.site-header__desktop-actions a[href="https://portal.yonaris.com"]'),
+		},
+		{ label: "locale switch", control: header.locator(".site-header__desktop-actions a[lang]") },
+		{ label: "diagnostic", control: header.locator('[data-site-diagnostic-action="desktop"]') },
+	];
+
+	for (const { label, control } of desktopControls) {
+		const presentation = await focusPresentation(control, control, ".site-header");
+		const evidence = `${label}: ${JSON.stringify(presentation)}`;
+		expect.soft(presentation.hasVisibleGeometry, evidence).toBe(true);
+		expect.soft(presentation.indicatorContrast, evidence).toBeGreaterThanOrEqual(3);
+		expect.soft(presentation.hasSignal, evidence).toBe(true);
+	}
+	await page.reload();
+	await page.keyboard.press("Tab");
+	await page.keyboard.press("Tab");
+	await expect(primaryNavigationLink).toBeFocused();
+	expect(await contrastAgainstClosest(primaryNavigationLink, ".site-header")).toBeGreaterThanOrEqual(4.5);
+
+	const domainInput = page.getByLabel("Website");
+	const domainForm = page.locator(".marketing-domain-form");
+	const domainPresentation = await focusPresentation(domainInput, domainForm, ".marketing-product-stage");
+	expect.soft(domainPresentation.hasVisibleGeometry).toBe(true);
+	expect.soft(domainPresentation.indicatorContrast).toBeGreaterThanOrEqual(3);
+	expect.soft(domainPresentation.hasSignal).toBe(true);
+	const paperLink = page.getByRole("link", { name: "Explore Recursive Forest" });
+	const paperLinkPresentation = await focusPresentation(paperLink, paperLink, "section");
+	expect.soft(paperLinkPresentation.hasVisibleGeometry).toBe(true);
+	expect
+		.soft(paperLinkPresentation.indicatorContrast, JSON.stringify(paperLinkPresentation))
+		.toBeGreaterThanOrEqual(3);
+	expect.soft(paperLinkPresentation.hasSignal).toBe(true);
+	await page.goto("/diagnostic");
+	for (const control of [page.getByLabel("Work email"), page.getByRole("button", { name: "Get a Free Diagnostic" })]) {
+		const presentation = await focusPresentation(control, control, "section");
+		expect.soft(presentation.hasVisibleGeometry).toBe(true);
+		expect.soft(presentation.indicatorContrast, JSON.stringify(presentation)).toBeGreaterThanOrEqual(3);
+		expect.soft(presentation.hasSignal).toBe(true);
+	}
+
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/");
+	const menuTrigger = page.getByRole("button", { name: "Open menu" });
+	const menuPresentation = await focusPresentation(menuTrigger, menuTrigger, ".site-header");
+	expect.soft(menuPresentation.hasVisibleGeometry).toBe(true);
+	expect.soft(menuPresentation.indicatorContrast).toBeGreaterThanOrEqual(3);
+	expect.soft(menuPresentation.hasSignal).toBe(true);
+});
+
+test("meaningful small text meets normal-text contrast", async ({ page }) => {
+	await page.goto("/");
+	const foundations = page
+		.getByRole("heading", { level: 2, name: "Four forms of intelligence. One compounding system." })
+		.locator("xpath=ancestor::section[1]");
+	const checks = [
+		{
+			label: "illustrative diagnostic finding",
+			text: page.getByText("The broader MarTech position is not carrying.", { exact: true }),
+			background: ".marketing-product-preview__readout",
+		},
+		{ label: "foundation index", text: foundations.getByText("01", { exact: true }), background: "section" },
+		{ label: "foundation status", text: foundations.getByText("What is true", { exact: true }), background: "section" },
+		{
+			label: "engagement outcome label",
+			text: page.getByText("DeepSeek brand mention", { exact: true }),
+			background: "section",
+		},
+		{
+			label: "engagement note",
+			text: page.getByText(
+				"An anonymized engagement. Scope and outcome are drawn from completed delivery evidence; results vary by market and starting point.",
+				{ exact: true },
+			),
+			background: "section",
+		},
+	] as const;
+
+	for (const check of checks) {
+		const ratio = await contrastAgainstClosest(check.text, check.background);
+		expect.soft(ratio, check.label).toBeGreaterThanOrEqual(4.5);
+	}
 });
 
 test("Chinese homepage localizes the Product Stage and destinations", async ({ page }) => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CorePageKey, Locale } from "@/content/site/types";
+import { getCorePath } from "@/lib/site-manifest";
 import { getDiagnosticNavigation, getLocaleSwitchPath, getPrimaryNavigation, PORTAL_URL } from "@/lib/site-navigation";
 import { Logo } from "../logo";
 
@@ -35,7 +36,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 	const text = copy[locale];
 	const primary = getPrimaryNavigation(locale);
 	const diagnostic = getDiagnosticNavigation(locale);
-	const homePath = locale === "zh" ? "/zh" : "/";
+	const homePath = getCorePath("home", locale);
 	const menuId = `site-mobile-navigation-${locale}`;
 
 	useEffect(() => {
@@ -63,7 +64,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 					href={homePath}
 					aria-label={text.home}
 					aria-current={activeKey === "home" ? "page" : undefined}
-					className="inline-flex min-h-11 items-center focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--yonaris-signal)]"
+					className="inline-flex min-h-11 items-center"
 				>
 					<Logo variant="navy" className="h-[1.65rem] sm:h-7" />
 				</a>
@@ -74,7 +75,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 							key={item.key}
 							href={item.path}
 							aria-current={activeKey === item.key ? "page" : undefined}
-							className="inline-flex min-h-11 items-center text-[11px] font-medium tracking-[0.04em] text-[var(--yonaris-slate)]/74 transition-colors hover:text-[var(--yonaris-ink)] focus-visible:text-[var(--yonaris-signal)] focus-visible:outline-none aria-[current=page]:text-[var(--yonaris-ink)] aria-[current=page]:underline aria-[current=page]:decoration-[var(--yonaris-signal)] aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
+							className="inline-flex min-h-11 items-center text-xs font-medium tracking-[0.04em] text-[var(--yonaris-slate)]/74 transition-colors hover:text-[var(--yonaris-ink)] focus-visible:text-[var(--yonaris-ink)] aria-[current=page]:text-[var(--yonaris-ink)] aria-[current=page]:underline aria-[current=page]:decoration-[var(--yonaris-signal)] aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8"
 						>
 							{item.label}
 						</a>
@@ -84,21 +85,21 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 				<div className="site-header__desktop-actions hidden items-center gap-3 lg:flex">
 					<a
 						href={PORTAL_URL}
-						className="inline-flex min-h-11 items-center px-2 text-[11px] font-medium text-[var(--yonaris-slate)]/74 hover:text-[var(--yonaris-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yonaris-signal)]"
+						className="inline-flex min-h-11 items-center px-2 text-xs font-medium text-[var(--yonaris-slate)]/74 hover:text-[var(--yonaris-ink)]"
 					>
 						Portal
 					</a>
 					<a
 						href={getLocaleSwitchPath(locale, activeKey)}
 						lang={text.languageCode}
-						className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-[11px] font-medium text-[var(--yonaris-slate)]/74 hover:text-[var(--yonaris-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yonaris-signal)]"
+						className="inline-flex min-h-11 min-w-11 items-center justify-center px-2 text-xs font-medium text-[var(--yonaris-slate)]/74 hover:text-[var(--yonaris-ink)]"
 					>
 						{text.language}
 					</a>
 					<a
 						href={diagnostic.path}
 						data-site-diagnostic-action="desktop"
-						className="inline-flex min-h-11 items-center justify-center rounded-[0.45rem] bg-[var(--yonaris-ink)] px-4 text-xs font-medium text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yonaris-signal)]"
+						className="inline-flex min-h-11 items-center justify-center rounded-[0.45rem] bg-[var(--yonaris-ink)] px-4 text-xs font-medium text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
 					>
 						{diagnostic.label}
 					</a>
@@ -112,7 +113,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 						aria-expanded={mobileOpen}
 						aria-controls={menuId}
 						onClick={() => setMobileOpen((open) => !open)}
-						className="site-header__menu-trigger inline-flex min-h-11 min-w-11 items-center justify-center border border-[var(--yonaris-ink)]/18 text-[10px] font-medium tracking-[0.1em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yonaris-signal)]"
+						className="site-header__menu-trigger inline-flex min-h-11 min-w-11 items-center justify-center border border-[var(--yonaris-ink)]/18 text-[10px] font-medium tracking-[0.1em]"
 					>
 						{mobileOpen ? "CLOSE" : "MENU"}
 					</button>
@@ -153,7 +154,7 @@ export function SiteHeader({ locale, activeKey }: SiteHeaderProps): React.ReactN
 							href={diagnostic.path}
 							data-site-diagnostic-action="mobile"
 							onClick={closeMobileMenu}
-							className="mt-4 inline-flex min-h-11 w-full items-center justify-center bg-[var(--yonaris-signal)] px-4 text-xs font-semibold text-[var(--yonaris-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--yonaris-ink)]"
+							className="mt-4 inline-flex min-h-11 w-full items-center justify-center border border-[var(--yonaris-signal)] bg-[var(--yonaris-ink)] px-4 text-xs font-semibold text-[var(--yonaris-paper)] transition-colors hover:bg-[var(--yonaris-signal)] hover:text-[var(--yonaris-ink)]"
 						>
 							{diagnostic.label}
 						</a>

@@ -212,6 +212,24 @@
 	min-height: 2.75rem;
 }
 
+.site-header :is(a, button):focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--yonaris-signal),
+		0 0 0 4px var(--yonaris-ink);
+}
+
+.marketing-site .marketing-paper-focus:focus-visible {
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--yonaris-signal),
+		0 0 0 4px var(--yonaris-ink);
+}
+
+.site-footer .marketing-kicker {
+	font-size: 0.75rem;
+}
+
 .site-archive-context,
 .site-publication-context,
 .site-utility-context {

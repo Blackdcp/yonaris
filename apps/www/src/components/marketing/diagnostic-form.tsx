@@ -61,7 +61,7 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 	}
 
 	const inputClass =
-		"mt-3 min-h-12 w-full border border-[var(--yonaris-ink)]/18 bg-transparent px-4 text-base text-[var(--yonaris-ink)] outline-none transition-colors placeholder:text-[var(--yonaris-stone)] focus:border-[var(--yonaris-signal)] focus:ring-1 focus:ring-[var(--yonaris-signal)]";
+		"marketing-paper-focus mt-3 min-h-12 w-full border border-[var(--yonaris-ink)]/18 bg-transparent px-4 text-base text-[var(--yonaris-ink)] outline-none transition-colors placeholder:text-[var(--yonaris-stone)] focus:border-[var(--yonaris-signal)]";
 
 	return (
 		<form
@@ -128,7 +128,7 @@ export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale
 			<div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<button
 					type="submit"
-					className="inline-flex min-h-12 items-center justify-center gap-3 border border-[var(--yonaris-signal)] bg-[var(--yonaris-signal)] px-5 text-xs font-medium text-[var(--yonaris-ink)] transition-colors hover:border-[var(--yonaris-ink)] hover:bg-[var(--yonaris-ink)] hover:text-[var(--yonaris-paper)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--yonaris-signal)] focus-visible:ring-offset-3"
+					className="marketing-paper-focus inline-flex min-h-12 items-center justify-center gap-3 border border-[var(--yonaris-signal)] bg-[var(--yonaris-signal)] px-5 text-xs font-medium text-[var(--yonaris-ink)] transition-colors hover:border-[var(--yonaris-ink)] hover:bg-[var(--yonaris-ink)] hover:text-[var(--yonaris-paper)]"
 				>
 					{copy.submit}
 					<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="size-3.5">

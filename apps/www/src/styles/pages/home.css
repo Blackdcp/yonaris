@@ -85,7 +85,11 @@
 
 .marketing-domain-form:focus-within {
 	border-color: var(--yonaris-signal);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--yonaris-signal) 28%, transparent);
+	outline: 2px solid var(--yonaris-ink);
+	outline-offset: 2px;
+	box-shadow:
+		0 0 0 4px var(--yonaris-signal),
+		0 1rem 3rem color-mix(in srgb, var(--yonaris-ink) 8%, transparent);
 }
 
 .marketing-domain-form button {
@@ -364,7 +368,7 @@
 .marketing-product-preview__readout .is-finding {
 	position: relative;
 	padding-left: 0.625rem;
-	color: var(--yonaris-signal);
+	color: var(--yonaris-ink);
 }
 
 .marketing-product-preview__readout .is-finding::before {
