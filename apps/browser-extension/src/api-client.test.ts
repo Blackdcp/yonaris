@@ -107,7 +107,7 @@ describe("BrowserRunnerApiClient", () => {
 		expect(await calls[0]?.json()).toEqual({
 			brandId: "stepfun",
 			surfaceTargetKeys: ["deepseek.consumer_web"],
-			adapterVersion: "deepseek-web-20260821-localpc-v8",
+			adapterVersion: "deepseek-web-20260822-localpc-v9",
 		});
 	});
 

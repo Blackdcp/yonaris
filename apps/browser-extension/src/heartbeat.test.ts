@@ -32,7 +32,7 @@ describe("buildHeartbeat", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"qwen.consumer_web": {
@@ -52,7 +52,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				adapterVersion: "yuanbao-web-20260822-localpc-v7",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
@@ -72,7 +72,7 @@ describe("buildHeartbeat", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 		});
@@ -85,7 +85,7 @@ describe("buildHeartbeat", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"qwen.consumer_web": {
@@ -105,7 +105,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				adapterVersion: "yuanbao-web-20260822-localpc-v7",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {

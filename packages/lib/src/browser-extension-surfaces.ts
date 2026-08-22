@@ -11,7 +11,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "DeepSeek",
 		captureRoute: "browser_extension.deepseek",
 		launchUrl: "https://chat.deepseek.com/",
-		adapterVersion: "deepseek-web-20260821-localpc-v8",
+		adapterVersion: "deepseek-web-20260822-localpc-v9",
 	},
 	{
 		key: "qwen.consumer_web",
@@ -39,7 +39,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Yuanbao",
 		captureRoute: "browser_extension.yuanbao",
 		launchUrl: "https://yuanbao.tencent.com/",
-		adapterVersion: "yuanbao-web-20260821-localpc-v6",
+		adapterVersion: "yuanbao-web-20260822-localpc-v7",
 	},
 	{
 		key: "zhipu.consumer_web",

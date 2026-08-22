@@ -130,7 +130,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 		const report = {
 			schemaVersion: 1,
 			surface: "deepseek.consumer_web",
-			adapterVersion: "deepseek-web-20260821-localpc-v8",
+			adapterVersion: "deepseek-web-20260822-localpc-v9",
 			pageUrlShape: "https://chat.deepseek.com/:segment/:segment/:segment/:segment",
 			answerCount: 1,
 			candidates: [],
@@ -180,7 +180,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 			value: {
 				schemaVersion: 1,
 				surface: "deepseek.consumer_web",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				pageUrlShape: "https://chat.deepseek.com/a/chat/s/private-token?secret=value",
 				answerCount: 1,
 				candidates: [],
@@ -212,7 +212,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v8",
+					adapterVersion: "deepseek-web-20260822-localpc-v9",
 					activeConcurrency: 0,
 				},
 			},
@@ -256,7 +256,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				"deepseek.consumer_web": {
 					status: "unavailable",
-					adapterVersion: "deepseek-web-20260821-localpc-v8",
+					adapterVersion: "deepseek-web-20260822-localpc-v9",
 					activeConcurrency: 0,
 				},
 			},
@@ -622,7 +622,7 @@ function readyV8Readiness() {
 		},
 		"deepseek.consumer_web": {
 			status: "unavailable",
-			adapterVersion: "deepseek-web-20260821-localpc-v8",
+			adapterVersion: "deepseek-web-20260822-localpc-v9",
 			activeConcurrency: 0,
 		},
 	};

@@ -1,10 +1,10 @@
 # DeepSeek Search Evidence Adapter Plan
 
-**Evidence:** `docs/evidence/2026-08-22-domestic-search-evidence-probes.json`
+**Evidence:** `docs/evidence/2026-08-22-domestic-search-evidence-probes.json`, `docs/evidence/2026-08-22-deepseek-yuanbao-search-evidence-followup.json`
 
 ## Qualification status
 
-Not qualified for implementation. The approved conversation URL was stable, but the live report returned `answerCount: 0`. The only search-shaped candidate was the selected composer toggle `.ds-toggle-button.ds-toggle-button--m.ds-toggle-button--selected`; it is page chrome and must not be treated as answer evidence.
+Qualified for a bounded DOM adapter after the read-only follow-up. Five completed conversation tabs exposed one accepted answer and a visible answer-scoped external citation marker `a[href] .ds-markdown-cite`. This proves search observed and visible direct citations. It does not expose a stable query-item boundary, so `queryAvailability` remains `unavailable` and `webQueries` remains empty.
 
 ## Bounded read-only follow-up
 
@@ -21,4 +21,3 @@ Not qualified for implementation. The approved conversation URL was stable, but 
 - Focused command: `pnpm --filter @workspace/browser-extension test -- src/adapters/deepseek.test.ts src/adapters/search-evidence-adapter.test.ts`.
 - Canary: one Prompt with search enabled; require one accepted answer and no `page_drift`.
 - Production validation: ten Prompts; report search observed, query availability, citation count, and drift independently.
-

@@ -1,10 +1,10 @@
 # Yuanbao Search Evidence Adapter Plan
 
-**Evidence:** `docs/evidence/2026-08-22-domestic-search-evidence-probes.json`
+**Evidence:** `docs/evidence/2026-08-22-domestic-search-evidence-probes.json`, `docs/evidence/2026-08-22-deepseek-yuanbao-search-evidence-followup.json`
 
 ## Qualification status
 
-Not qualified for search evidence. The completed answer produced no answer-scoped search, query, source, or citation candidates. The only match was page navigation `.yb-common-nav__tool` with an ARIA search label; it must never be treated as answer evidence.
+Qualified for a bounded DOM adapter after the read-only follow-up. The accepted answer contains a visible `.hyc-common-markdown__ref-list`, while the global `.yb-common-nav__tool` search control remains explicitly excluded. This proves search observed. The visible list does not expose a stable query-item or citation-URL boundary, so queries remain unavailable and only independently visible direct HTTP links are collected as citations.
 
 ## Bounded follow-up
 
@@ -19,4 +19,3 @@ Not qualified for search evidence. The completed answer produced no answer-scope
 - Bump `yuanbao-web-20260821-localpc-v6` to `yuanbao-web-20260822-localpc-v7` only after evidence exists.
 - Focused command: `pnpm --filter @workspace/browser-extension test -- src/adapters/yuanbao.test.ts src/adapters/search-evidence-adapter.test.ts`.
 - Canary: one Prompt. Production validation: ten Prompts after the one-Prompt evidence gate passes.
-

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-08-22T14:13:00+08:00",
+  "collectionMode": "read_only_redacted_multi_tab_dom_probe",
+  "privacy": {
+    "rawHtmlStored": false,
+    "rawTextStored": false,
+    "fullUrlsStored": false,
+    "accountDataStored": false
+  },
+  "reports": [
+    {
+      "surface": "deepseek.consumer_web",
+      "adapterVersionBefore": "deepseek-web-20260821-localpc-v8",
+      "candidateTabCount": 5,
+      "successfulProbeCount": 5,
+      "answerCount": 1,
+      "qualifiedBoundary": {
+        "acceptedAnswer": ".ds-assistant-message-main-content.ds-markdown",
+        "citationMarker": "a[href] .ds-markdown-cite",
+        "searchObservedProof": "visible_answer_scoped_external_citation_marker",
+        "queryAvailability": "unavailable"
+      },
+      "unqualified": [
+        "query_item_boundary",
+        "source_title_boundary"
+      ]
+    },
+    {
+      "surface": "yuanbao.consumer_web",
+      "adapterVersionBefore": "yuanbao-web-20260821-localpc-v6",
+      "candidateTabCount": 1,
+      "successfulProbeCount": 1,
+      "answerCount": 1,
+      "qualifiedBoundary": {
+        "acceptedAnswer": ".agent-chat__bubble--ai .agent-chat__speech-card__text",
+        "referenceList": ".hyc-common-markdown__ref-list",
+        "referenceTrigger": ".hyc-common-markdown__ref-list__trigger[data-idx-list]",
+        "searchObservedProof": "visible_answer_scoped_reference_list",
+        "queryAvailability": "unavailable"
+      },
+      "explicitlyExcluded": [
+        ".yb-common-nav__tool"
+      ],
+      "unqualified": [
+        "query_item_boundary",
+        "reference_list_citation_url_boundary"
+      ]
+    }
+  ]
+}
