@@ -80,6 +80,22 @@ test("homepage mobile menu works without horizontal overflow", async ({ page }) 
 	expect(overflow).toEqual({ document: 0, body: 0 });
 });
 
+test("mobile diagnostic evidence remains readable", async ({ page }) => {
+	await page.setViewportSize({ width: 390, height: 844 });
+	await page.goto("/");
+
+	const firstAnswer = page.locator(".marketing-product-preview__answers article").first();
+	const fontSizes = await firstAnswer.evaluate((answer) => ({
+		status: Number.parseFloat(getComputedStyle(answer.querySelector("small")!).fontSize),
+		body: Number.parseFloat(getComputedStyle(answer.querySelector(":scope > p")!).fontSize),
+		source: Number.parseFloat(getComputedStyle(answer.querySelector("footer span")!).fontSize),
+	}));
+
+	expect(fontSizes.status).toBeGreaterThanOrEqual(12);
+	expect(fontSizes.body).toBeGreaterThanOrEqual(13);
+	expect(fontSizes.source).toBeGreaterThanOrEqual(11);
+});
+
 test("supporting marketing pages retain the dark shell", async ({ page }) => {
 	await page.goto("/platform");
 	const [red, green, blue, alpha] = await backgroundPixel(page, ".marketing-site > header");
