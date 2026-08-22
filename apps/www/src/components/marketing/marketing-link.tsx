@@ -12,9 +12,8 @@ interface MarketingLinkProps {
 
 const variants = {
 	primary:
-		"border-[var(--yonaris-signal-strong)] bg-[var(--yonaris-signal-strong)] text-white hover:border-[var(--yonaris-paper)] hover:bg-[var(--yonaris-paper)] hover:text-[var(--yonaris-ink)]",
-	outline:
-		"border-current bg-transparent hover:border-[var(--yonaris-signal)] hover:text-[var(--yonaris-signal)]",
+		"border-[var(--yonaris-signal)] bg-[var(--yonaris-signal)] text-[var(--yonaris-ink)] hover:border-[var(--yonaris-paper)] hover:bg-[var(--yonaris-paper)] hover:text-[var(--yonaris-ink)]",
+	outline: "border-current bg-transparent hover:border-[var(--yonaris-signal)] hover:text-[var(--yonaris-signal)]",
 	text: "border-transparent bg-transparent px-0 hover:text-[var(--yonaris-signal)]",
 };
 
@@ -33,8 +32,19 @@ export function MarketingLink({
 		>
 			<span>{children}</span>
 			{showArrow ? (
-				<svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="size-3.5 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px">
-					<path d="M4 12 12 4M6.5 4H12v5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" strokeLinejoin="miter" />
+				<svg
+					aria-hidden="true"
+					viewBox="0 0 16 16"
+					fill="none"
+					className="size-3.5 transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px"
+				>
+					<path
+						d="M4 12 12 4M6.5 4H12v5.5"
+						stroke="currentColor"
+						strokeWidth="1.5"
+						strokeLinecap="square"
+						strokeLinejoin="miter"
+					/>
 				</svg>
 			) : null}
 		</Link>

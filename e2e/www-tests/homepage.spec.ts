@@ -90,10 +90,12 @@ test("English homepage presents the Product Stage and real destinations", async 
 	expect(await backgroundPixel(page, ".marketing-site > header")).toEqual([246, 244, 241, 255]);
 
 	const navigation = page.getByRole("navigation", { name: "Primary navigation" });
-	await expect(navigation.getByRole("link", { name: "Product" })).toHaveAttribute("href", "/platform");
-	await expect(navigation.getByRole("link", { name: "Approach" })).toHaveAttribute("href", "/methodology");
-	await expect(navigation.getByRole("link", { name: "Research" })).toHaveAttribute("href", "/results");
-	await expect(navigation.getByRole("link", { name: "Company" })).toHaveAttribute("href", "/#company");
+	await expect(navigation.getByRole("link", { name: "Product" })).toHaveAttribute("href", "/product");
+	await expect(navigation.getByRole("link", { name: "Approach" })).toHaveAttribute("href", "/approach");
+	await expect(navigation.getByRole("link", { name: "Research" })).toHaveAttribute("href", "/research");
+	await expect(navigation.getByRole("link", { name: "Company" })).toHaveAttribute("href", "/company");
+	await expect(page.locator("header [data-site-diagnostic-action]:visible")).toHaveCount(1);
+	await expect(page.getByRole("link", { name: "Portal" })).toBeVisible();
 
 	for (const label of rejectedLabels) {
 		await expect(page.getByText(label, { exact: true })).toHaveCount(0);
@@ -109,10 +111,10 @@ test("Chinese homepage localizes the Product Stage and destinations", async ({ p
 	await expect(page.getByText("示例诊断", { exact: true })).toBeVisible();
 
 	const navigation = page.getByRole("navigation", { name: "主导航" });
-	await expect(navigation.getByRole("link", { name: "产品" })).toHaveAttribute("href", "/zh/platform");
-	await expect(navigation.getByRole("link", { name: "方法" })).toHaveAttribute("href", "/zh/methodology");
-	await expect(navigation.getByRole("link", { name: "研究" })).toHaveAttribute("href", "/zh/results");
-	await expect(navigation.getByRole("link", { name: "公司" })).toHaveAttribute("href", "/zh#company");
+	await expect(navigation.getByRole("link", { name: "产品" })).toHaveAttribute("href", "/zh/product");
+	await expect(navigation.getByRole("link", { name: "方法" })).toHaveAttribute("href", "/zh/approach");
+	await expect(navigation.getByRole("link", { name: "研究" })).toHaveAttribute("href", "/zh/research");
+	await expect(navigation.getByRole("link", { name: "公司" })).toHaveAttribute("href", "/zh/company");
 	await expect(page.locator("h1 br")).toHaveCount(0);
 });
 
@@ -168,13 +170,38 @@ test("Chinese homepage domain entry hands off to a prefilled diagnostic", async 
 	await expect(page.getByLabel("官网")).toHaveValue("https://example.com");
 });
 
-test("homepage mobile menu works without horizontal overflow", async ({ page }) => {
+test("homepage mobile menu supports keyboard open, predictable close, and no overflow", async ({ page }) => {
 	await page.setViewportSize({ width: 390, height: 844 });
 	await page.goto("/");
+	await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
 
-	await page.getByText("MENU", { exact: true }).click();
+	await expect(page.getByRole("button", { name: "Open menu" })).toBeVisible();
+	const trigger = page.locator('button[aria-controls="site-mobile-navigation-en"]');
+	const triggerSize = await trigger.evaluate((element) => {
+		const bounds = element.getBoundingClientRect();
+		return { height: bounds.height, width: bounds.width };
+	});
+	expect(triggerSize.height).toBeGreaterThanOrEqual(44);
+	expect(triggerSize.width).toBeGreaterThanOrEqual(44);
+
+	await trigger.focus();
+	await trigger.press("Enter");
+	await expect(trigger).toHaveAttribute("aria-expanded", "true");
 	await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
-	await expect(page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Product" })).toHaveAttribute("href", "/platform");
+	await expect(page.locator("header [data-site-diagnostic-action]:visible")).toHaveCount(1);
+
+	await page.keyboard.press("Escape");
+	await expect(trigger).toHaveAttribute("aria-expanded", "false");
+	await expect(trigger).toBeFocused();
+
+	await trigger.press("Space");
+	await expect(trigger).toHaveAttribute("aria-expanded", "true");
+	const productLink = page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: "Product" });
+	await expect(productLink).toHaveAttribute("href", "/product");
+	await productLink.evaluate((link) => link.addEventListener("click", (event) => event.preventDefault(), { once: true }));
+	await productLink.click();
+	await expect(trigger).toHaveAttribute("aria-expanded", "false");
+	await expect(page).toHaveURL(/\/$/);
 
 	const overflow = await page.evaluate(() => ({
 		document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -257,11 +284,4 @@ test("mobile diagnostic chain reaches the localized next move without overflow",
 		});
 		expect(overflow).toEqual({ document: 0, body: 0, preview: 0 });
 	}
-});
-
-test("supporting marketing pages retain the dark shell", async ({ page }) => {
-	await page.goto("/platform");
-	const [red, green, blue, alpha] = await backgroundPixel(page, ".marketing-site > header");
-	expect(Math.max(red, green, blue)).toBeLessThan(50);
-	expect(alpha).toBeGreaterThan(240);
 });
