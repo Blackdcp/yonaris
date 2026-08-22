@@ -7,7 +7,8 @@ export default defineConfig({
 		},
 	},
 	test: {
-		include: ["src/lib/marketing-content.test.ts", "src/components/marketing/diagnostic-form.test.tsx", "src/styles.test.ts"],
+		include: ["src/**/*.test.{ts,tsx}"],
+		exclude: ["src/lib/status-helpers.test.ts"],
 		environment: "node",
 	},
 });

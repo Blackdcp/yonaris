@@ -9,6 +9,7 @@
 		"build": "vite build",
 		"start": "node .output/server/index.mjs",
 		"test": "vitest run --config vitest.config.ts",
+		"audit:site-manifest": "tsx scripts/audit-site-manifest.ts",
 		"check-types": "tsc --noEmit",
 		"generate-icons": "tsx scripts/generate-brand-icons.tsx"
 	},
