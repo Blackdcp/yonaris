@@ -570,6 +570,10 @@
 		border-color: var(--yonaris-signal);
 	}
 
+	.approach-semantic-phrase {
+		white-space: nowrap;
+	}
+
 	.approach-kicker:lang(zh-CN),
 	.approach-hero__scope-heading:lang(zh-CN),
 	.approach-hero__scope-limit > span:lang(zh-CN),
@@ -593,6 +597,9 @@
 	.approach-next h2:lang(zh-CN) {
 		font-family: "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
 		letter-spacing: normal;
+		line-break: strict;
+		overflow-wrap: normal;
+		word-break: normal;
 	}
 
 	@media (min-width: 48rem) {

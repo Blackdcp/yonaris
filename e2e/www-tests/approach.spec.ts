@@ -40,6 +40,60 @@ async function waitForHydration(page: Page): Promise<void> {
 	await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
 }
 
+async function expectPhraseOnOneLine(
+	locator: Locator,
+	phrase: string,
+	occurrence = 0,
+): Promise<void> {
+	const measurement = await locator.evaluate(
+		(element, target) => {
+			const textNodes: Text[] = [];
+			const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+			let node = walker.nextNode();
+			while (node) {
+				textNodes.push(node as Text);
+				node = walker.nextNode();
+			}
+
+			const text = textNodes.map((textNode) => textNode.data).join("");
+			let start = -1;
+			let fromIndex = 0;
+			for (let index = 0; index <= target.occurrence; index += 1) {
+				start = text.indexOf(target.phrase, fromIndex);
+				if (start < 0) break;
+				fromIndex = start + target.phrase.length;
+			}
+			if (start < 0) return { lineTops: [], text };
+
+			const locateOffset = (offset: number): { node: Text; offset: number } | null => {
+				let cursor = 0;
+				for (const textNode of textNodes) {
+					const end = cursor + textNode.data.length;
+					if (offset <= end) return { node: textNode, offset: offset - cursor };
+					cursor = end;
+				}
+				return null;
+			};
+
+			const startPoint = locateOffset(start);
+			const endPoint = locateOffset(start + target.phrase.length);
+			if (!startPoint || !endPoint) return { lineTops: [], text };
+
+			const range = document.createRange();
+			range.setStart(startPoint.node, startPoint.offset);
+			range.setEnd(endPoint.node, endPoint.offset);
+			const lineTops = Array.from(range.getClientRects())
+				.filter((rect) => rect.width > 0 && rect.height > 0)
+				.map((rect) => Math.round(rect.top));
+			return { lineTops: [...new Set(lineTops)], text };
+		},
+		{ occurrence, phrase },
+	);
+
+	expect(measurement.text).toContain(phrase);
+	expect(measurement.lineTops, `${phrase} split across ${measurement.lineTops.length} lines`).toHaveLength(1);
+}
+
 async function expectActiveStep(buttons: Locator, record: Locator, index: number): Promise<void> {
 	await expect(buttons).toHaveCount(6);
 	expect(await buttons.evaluateAll((elements) => elements.filter((element) => element.getAttribute("aria-current") === "step").length)).toBe(1);
@@ -210,6 +264,19 @@ test("Approach recomposes without horizontal overflow at all seven QA widths", a
 			await expect(page.getByRole("heading", { level: 1, name: locale.headline, exact: true })).toBeVisible();
 			await expectNoHorizontalOverflow(page);
 		}
+	}
+});
+
+test("Chinese display headings keep semantic phrases and punctuation on one line", async ({ page }) => {
+	for (const viewportName of ["desktop", "mobile", "narrow"] as const) {
+		await page.setViewportSize(QA_VIEWPORTS[viewportName]);
+		await page.goto("/zh/approach");
+		await waitForHydration(page);
+
+		await expectPhraseOnOneLine(page.locator(".approach-hero h1"), "一个");
+		await expectPhraseOnOneLine(page.locator(".approach-method__copy h2"), "一个问题，");
+		await expectPhraseOnOneLine(page.locator(".approach-method__copy h2"), "而是治理问题");
+		await expectPhraseOnOneLine(page.locator(".approach-next h2"), "影响市场决策");
 	}
 });
 

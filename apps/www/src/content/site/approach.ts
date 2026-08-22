@@ -4,6 +4,12 @@ import { type DeepReadonly, deepFreeze, type FactualClaim, type Locale } from ".
 export type EvidenceLoopStepId = "frame" | "question-set" | "sample" | "compare" | "inspect" | "repeat";
 export type ApproachClaim = FactualClaim & { limitation: string };
 
+export interface ApproachLineBreakPhrases {
+	headline: readonly string[];
+	methodTitle: readonly string[];
+	nextTitle: readonly string[];
+}
+
 export interface EvidenceLoopStep {
 	id: EvidenceLoopStepId;
 	title: string;
@@ -431,6 +437,23 @@ export const approachContentByLocale: DeepReadonly<Record<Locale, ApproachConten
 	zh: pageZh,
 });
 
+const approachLineBreakPhrasesByLocale: DeepReadonly<Record<Locale, ApproachLineBreakPhrases>> = deepFreeze({
+	en: {
+		headline: [],
+		methodTitle: [],
+		nextTitle: [],
+	},
+	zh: {
+		headline: ["一个"],
+		methodTitle: ["一个问题，", "而是治理问题"],
+		nextTitle: ["影响市场决策"],
+	},
+});
+
 export function getApproachContent(locale: Locale): DeepReadonly<ApproachContent> {
 	return approachContentByLocale[locale];
+}
+
+export function getApproachLineBreakPhrases(locale: Locale): DeepReadonly<ApproachLineBreakPhrases> {
+	return approachLineBreakPhrasesByLocale[locale];
 }

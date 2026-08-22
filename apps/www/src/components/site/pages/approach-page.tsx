@@ -1,4 +1,4 @@
-import { type ApproachClaim, getApproachContent } from "@/content/site/approach";
+import { type ApproachClaim, getApproachContent, getApproachLineBreakPhrases } from "@/content/site/approach";
 import type { Locale } from "@/content/site/types";
 import { getCorePath } from "@/lib/site-manifest";
 import { SiteShell } from "../site-shell";
@@ -10,8 +10,29 @@ function findClaim(claims: readonly ApproachClaim[], id: string): ApproachClaim 
 	return claim;
 }
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function renderSemanticPhrases(text: string, phrases: readonly string[]): React.ReactNode {
+	const authoredPhrases = phrases.filter((phrase) => phrase.length > 0);
+	if (authoredPhrases.length === 0) return text;
+
+	const pattern = new RegExp(`(${authoredPhrases.map(escapeRegExp).join("|")})`, "g");
+	return text.split(pattern).map((part) =>
+		authoredPhrases.includes(part) ? (
+			<span className="approach-semantic-phrase" key={part}>
+				{part}
+			</span>
+		) : (
+			part
+		),
+	);
+}
+
 export function ApproachPage({ locale }: { locale: Locale }): React.ReactNode {
 	const content = getApproachContent(locale);
+	const lineBreakPhrases = getApproachLineBreakPhrases(locale);
 	const scopeClaim = findClaim(content.claims, content.currentScopeClaimIds[0]);
 	const productPath = getCorePath("product", locale);
 	const diagnosticPath = getCorePath("diagnostic", locale);
@@ -22,7 +43,7 @@ export function ApproachPage({ locale }: { locale: Locale }): React.ReactNode {
 				<div className="approach-hero__inner">
 					<div className="approach-hero__copy">
 						<p className="approach-kicker">{content.eyebrow}</p>
-						<h1>{content.headline}</h1>
+						<h1>{renderSemanticPhrases(content.headline, lineBreakPhrases.headline)}</h1>
 					</div>
 					<aside className="approach-hero__scope" data-claim-status={scopeClaim.status}>
 						<div className="approach-hero__scope-heading">
@@ -75,7 +96,9 @@ export function ApproachPage({ locale }: { locale: Locale }): React.ReactNode {
 						</div>
 					</div>
 					<div className="approach-method__copy">
-						<h2 id="approach-method-title">{content.method.title}</h2>
+						<h2 id="approach-method-title">
+							{renderSemanticPhrases(content.method.title, lineBreakPhrases.methodTitle)}
+						</h2>
 						<p className="approach-method__summary">{content.method.summary}</p>
 						<p className="approach-method__boundary">
 							<span>{content.labels.limitation}</span>
@@ -88,7 +111,7 @@ export function ApproachPage({ locale }: { locale: Locale }): React.ReactNode {
 			<section className="approach-next" aria-labelledby="approach-next-title">
 				<div>
 					<p className="approach-kicker">{content.next.eyebrow}</p>
-					<h2 id="approach-next-title">{content.next.title}</h2>
+					<h2 id="approach-next-title">{renderSemanticPhrases(content.next.title, lineBreakPhrases.nextTitle)}</h2>
 				</div>
 				<div className="approach-next__links">
 					<a href={productPath} className="marketing-paper-focus">
