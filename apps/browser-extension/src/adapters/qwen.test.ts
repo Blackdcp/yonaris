@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Qwen browser-extension adapter", () => {
 	test("declares the registered Qwen surface and adapter version", () => {
 		expect(qwenSelectorContract).toMatchObject({
-			version: "qwen-web-20260822-localpc-v9",
+			version: "qwen-web-20260822-localpc-v10",
 			surface: "qwen.consumer_web",
 			launchUrl: "https://www.qianwen.com/",
 		});
@@ -62,7 +62,7 @@ describe("Qwen browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/qwen", title: "千问来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "qwen-web-20260822-localpc-v9",
+			adapterVersion: "qwen-web-20260822-localpc-v10",
 		});
 	});
 
@@ -222,6 +222,22 @@ describe("Qwen browser-extension adapter", () => {
 			await expect(createQwenAdapter(port).preflight()).rejects.toMatchObject({ code, stage: "pre_submit" });
 			expect(port.submitCount).toBe(0);
 		}
+	});
+
+	test("does not discard a submitted Qwen answer because its transient risk iframe is still mounted", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.qianwen.com/",
+				conversationUrl: "https://www.qianwen.com/chat/qwen-session",
+				newConversationLabels: ["新建对话"],
+				captchaDurationAfterSubmitMs: 750,
+			}),
+		);
+		const adapter = createQwenAdapter(port);
+
+		await expect(port.completeOneTask(adapter, "Prompt A")).resolves.toBeUndefined();
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+		expect(port.submitCount).toBe(1);
 	});
 });
 

@@ -43,7 +43,7 @@ describe("DeviceStorage", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260822-localpc-v9",
+				adapterVersion: "qwen-web-20260822-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {

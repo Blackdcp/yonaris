@@ -1,5 +1,5 @@
 {
-	"version": "qwen-web-20260822-localpc-v9",
+	"version": "qwen-web-20260822-localpc-v10",
 	"surface": "qwen.consumer_web",
 	"launchUrl": "https://www.qianwen.com/",
 	"conversationPathPattern": "^/(?:chat/[A-Za-z0-9_-]{4,200})?/?$",

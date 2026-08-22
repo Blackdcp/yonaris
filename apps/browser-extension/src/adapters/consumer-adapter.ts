@@ -123,7 +123,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		let candidateStableSince = 0;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertApprovedUrl(false);
-			await this.#assertUnblocked();
+			if (!(await this.#assertUnblocked())) {
+				await this.#port.wait(POLL_INTERVAL_MS);
+				continue;
+			}
 			const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 			const latest = messages.at(-1)?.element.text;
 			const currentUrl = new URL(this.#port.currentUrl());
@@ -190,7 +193,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		const runtimeCompletionSelector = this.surface === "doubao.consumer_web" ? null : this.#contract.completion;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertConfirmedConversation();
-			await this.#assertUnblocked();
+			if (!(await this.#assertUnblocked())) {
+				await this.#port.wait(POLL_INTERVAL_MS);
+				continue;
+			}
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
@@ -396,7 +402,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		return null;
 	}
 
-	async #assertUnblocked(): Promise<void> {
+	async #assertUnblocked(): Promise<boolean> {
 		const restrictedPattern = new RegExp(this.#contract.accountRestrictedTextPattern, "iu");
 		const restricted = visibleElements(await this.#port.query("account_restricted", this.#contract.accountRestricted));
 		if (restricted.some(({ element }) => restrictedPattern.test(element.text))) {
@@ -408,9 +414,11 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			["login_wall", this.#contract.loginWall, "signed_out"],
 		] as const) {
 			if (visibleElements(await this.#port.query(role, selector)).length > 0) {
+				if (code === "captcha" && this.surface === "qwen.consumer_web" && this.#submitted) return false;
 				throw this.#error(code, `Consumer page reported ${code}`);
 			}
 		}
+		return true;
 	}
 
 	async #waitForPageReady(): Promise<void> {
