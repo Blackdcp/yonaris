@@ -25,6 +25,7 @@ import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as ProductRouteImport } from './routes/product'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
+import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -59,6 +60,7 @@ import { Route as ZhGeoRouteImport } from './routes/zh/geo'
 import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
 import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
 import { Route as ZhProductRouteImport } from './routes/zh/product'
+import { Route as ZhResearchRouteImport } from './routes/zh/research'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as AiVisibilityToolsAlternativesIndexRouteImport } from './routes/ai-visibility-tools/alternatives/index'
 import { Route as AiVisibilityToolsAlternativesSlugRouteImport } from './routes/ai-visibility-tools/alternatives/$slug'
@@ -153,6 +155,11 @@ const ProductRoute = ProductRouteImport.update({
 const RepoActivityDotsvgRoute = RepoActivityDotsvgRouteImport.update({
   id: '/repo-activity.svg',
   path: '/repo-activity.svg',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -325,6 +332,11 @@ const ZhProductRoute = ZhProductRouteImport.update({
   path: '/zh/product',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhResearchRoute = ZhResearchRouteImport.update({
+  id: '/zh/research',
+  path: '/zh/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhResultsRoute = ZhResultsRouteImport.update({
   id: '/zh/results',
   path: '/zh/results',
@@ -428,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -454,6 +467,7 @@ export interface FileRoutesByFullPath {
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -495,6 +509,7 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -521,6 +536,7 @@ export interface FileRoutesByTo {
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for': typeof AeoForIndexRoute
   '/agent': typeof AgentIndexRoute
@@ -563,6 +579,7 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -589,6 +606,7 @@ export interface FileRoutesById {
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -632,6 +650,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/product'
     | '/repo-activity.svg'
+    | '/research'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -658,6 +677,7 @@ export interface FileRouteTypes {
     | '/zh/methodology'
     | '/zh/platform'
     | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -699,6 +719,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/product'
     | '/repo-activity.svg'
+    | '/research'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -725,6 +746,7 @@ export interface FileRouteTypes {
     | '/zh/methodology'
     | '/zh/platform'
     | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for'
     | '/agent'
@@ -766,6 +788,7 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/product'
     | '/repo-activity.svg'
+    | '/research'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -792,6 +815,7 @@ export interface FileRouteTypes {
     | '/zh/methodology'
     | '/zh/platform'
     | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -834,6 +858,7 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   ProductRoute: typeof ProductRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
+  ResearchRoute: typeof ResearchRoute
   ResultsRoute: typeof ResultsRoute
   RoadmapRoute: typeof RoadmapRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -860,6 +885,7 @@ export interface RootRouteChildren {
   ZhMethodologyRoute: typeof ZhMethodologyRoute
   ZhPlatformRoute: typeof ZhPlatformRoute
   ZhProductRoute: typeof ZhProductRoute
+  ZhResearchRoute: typeof ZhResearchRoute
   ZhResultsRoute: typeof ZhResultsRoute
   AeoForIndexRoute: typeof AeoForIndexRoute
   AgentIndexRoute: typeof AgentIndexRoute
@@ -997,6 +1023,13 @@ declare module '@tanstack/react-router' {
       path: '/repo-activity.svg'
       fullPath: '/repo-activity.svg'
       preLoaderRoute: typeof RepoActivityDotsvgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -1237,6 +1270,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhProductRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/research': {
+      id: '/zh/research'
+      path: '/zh/research'
+      fullPath: '/zh/research'
+      preLoaderRoute: typeof ZhResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/results': {
       id: '/zh/results'
       path: '/zh/results'
@@ -1362,6 +1402,7 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   ProductRoute: ProductRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
+  ResearchRoute: ResearchRoute,
   ResultsRoute: ResultsRoute,
   RoadmapRoute: RoadmapRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1388,6 +1429,7 @@ const rootRouteChildren: RootRouteChildren = {
   ZhMethodologyRoute: ZhMethodologyRoute,
   ZhPlatformRoute: ZhPlatformRoute,
   ZhProductRoute: ZhProductRoute,
+  ZhResearchRoute: ZhResearchRoute,
   ZhResultsRoute: ZhResultsRoute,
   AeoForIndexRoute: AeoForIndexRoute,
   AgentIndexRoute: AgentIndexRoute,

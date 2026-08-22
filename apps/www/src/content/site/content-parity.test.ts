@@ -139,24 +139,59 @@ describe("core site content", () => {
 		expect(chinese.loop.ui.processLabel).not.toBe(english.loop.ui.processLabel);
 	});
 
+	it("keeps Research metric, evidence, and claim identities aligned across independently authored locales", () => {
+		const english = getResearchContent("en");
+		const chinese = getResearchContent("zh");
+		const availabilityShape = <T,>(availability: { state: "known"; value: readonly T[] } | { state: "unknown"; reason: string }) =>
+			availability.state === "known"
+				? { state: availability.state, itemIds: availability.value.map((item) => (item as { id: string }).id) }
+				: { state: availability.state };
+		const shape = (content: typeof english | typeof chinese) => ({
+			claims: content.claims.map(({ id, status }) => ({ id, status })),
+			currentScopeClaimIds: content.currentScopeClaimIds,
+			measurementClaimIds: content.measurement.claimIds,
+			measurementItemIds: content.measurement.scopeItems.map(({ id }) => id),
+			metrics: content.metrics.map(({ id, claimIds }) => ({ id, claimIds })),
+			comparisonClaimIds: content.comparison.claimIds,
+			nonCausalityClaimIds: content.nonCausalityClaimIds,
+			record: {
+				id: content.record.id,
+				status: content.record.status,
+				claimIds: content.record.claimIds,
+				citations: availabilityShape(content.record.citations),
+				exposedQueries: availabilityShape(content.record.exposedQueries),
+				findingIds: content.record.findings.map(({ id }) => id),
+				unknownIds: content.record.unknowns.map(({ id }) => id),
+			},
+			homePreviewClaimIds: content.homePreview.claimIds,
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.headline).not.toBe(english.headline);
+		expect(chinese.labels.known).not.toBe(english.labels.known);
+	});
+
 	it("prevents nested page array mutations from changing later getter results", () => {
 		const research = getResearchContent("en");
-		const originalCitationCount = research.record.citations.length;
+		const originalFindingCount = research.record.findings.length;
 		let arrayWriteThrew = false;
 		try {
-			(research.record.citations as string[]).push("corrupted citation");
+			(research.record.findings as { id: string; text: string }[]).push({
+				id: "corrupted-finding",
+				text: "corrupted finding",
+			});
 		} catch (error) {
 			if (!(error instanceof TypeError)) throw error;
 			arrayWriteThrew = true;
 		}
-		const laterCitationCount = getResearchContent("en").record.citations.length;
+		const laterFindingCount = getResearchContent("en").record.findings.length;
 		if (!arrayWriteThrew) {
-			(research.record.citations as string[]).pop();
+			(research.record.findings as { id: string; text: string }[]).pop();
 		}
 
-		expect({ arrayWriteThrew, laterCitationCount }).toEqual({
+		expect({ arrayWriteThrew, laterFindingCount }).toEqual({
 			arrayWriteThrew: true,
-			laterCitationCount: originalCitationCount,
+			laterFindingCount: originalFindingCount,
 		});
 	});
 
@@ -292,7 +327,9 @@ describe("core site content", () => {
 			"do not by themselves prove what caused the change",
 		);
 		expect(getResearchContent("en").record.label).toBe("Illustrative");
-		expect(getResearchContent("en").claims.every((claim) => claim.status === "illustrative")).toBe(true);
+		expect(getResearchContent("en").claims.find(({ id }) => id === "research-illustrative-record")?.status).toBe(
+			"illustrative",
+		);
 		expect(getCompanyContent("en").stage).toContain("early, service-led product");
 		expect(getGeoContent("en").boundary).toContain("first applied workflow");
 		expect(getDiagnosticContent("en").confirmation).toContain(
