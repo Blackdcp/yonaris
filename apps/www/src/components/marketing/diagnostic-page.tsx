@@ -4,7 +4,7 @@ import { MarketingSection } from "./section";
 import { MarketingShell } from "./marketing-shell";
 import { SignalField } from "./signal-field";
 
-export function DiagnosticPage({ locale }: { locale: Locale }) {
+export function DiagnosticPage({ locale, initialWebsite }: { locale: Locale; initialWebsite?: string }) {
 	const content = getMarketingContent(locale);
 	return (
 		<MarketingShell locale={locale} page="diagnostic">
@@ -25,7 +25,7 @@ export function DiagnosticPage({ locale }: { locale: Locale }) {
 				</aside>
 				<div className="lg:col-span-7 lg:col-start-6">
 					<h2 className="marketing-display text-[clamp(2.2rem,4vw,4.2rem)] leading-[0.98] font-medium tracking-[-0.045em]">{locale === "zh" ? "从一个真正重要的问题开始" : "Start with one question that matters."}</h2>
-					<DiagnosticForm locale={locale} />
+					<DiagnosticForm locale={locale} initialWebsite={initialWebsite} />
 				</div>
 			</MarketingSection>
 		</MarketingShell>

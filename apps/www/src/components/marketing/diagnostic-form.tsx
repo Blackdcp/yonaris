@@ -39,7 +39,7 @@ function inputFromForm(form: HTMLFormElement): DiagnosticInput {
 	};
 }
 
-export function DiagnosticForm({ locale }: { locale: Locale }) {
+export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale; initialWebsite?: string }) {
 	const copy = fieldCopy[locale];
 	const [invalidFields, setInvalidFields] = useState<(keyof DiagnosticInput)[]>([]);
 
@@ -63,7 +63,7 @@ export function DiagnosticForm({ locale }: { locale: Locale }) {
 				{(["brand", "website", "market", "competitors"] as const).map((field) => (
 					<label key={field} className="text-xs font-medium text-[var(--yonaris-slate)]">
 						{copy[field][0]}{field === "brand" || field === "website" ? <span className="ml-1 text-[var(--yonaris-signal-strong)]">*</span> : null}
-						<input id={`diagnostic-${field}`} name={field} type={field === "website" ? "url" : "text"} required={field === "brand" || field === "website"} placeholder={copy[field][1]} aria-invalid={invalidFields.includes(field)} className={inputClass} />
+						<input id={`diagnostic-${field}`} name={field} type={field === "website" ? "url" : "text"} required={field === "brand" || field === "website"} defaultValue={field === "website" ? initialWebsite : undefined} placeholder={copy[field][1]} aria-invalid={invalidFields.includes(field)} className={inputClass} />
 					</label>
 				))}
 				<label className="text-xs font-medium text-[var(--yonaris-slate)] sm:col-span-2">

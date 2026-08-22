@@ -16,18 +16,27 @@ import {
 } from "./marketing-content";
 
 describe("marketing content", () => {
-	it("keeps the approved thesis and primary conversion in both languages", () => {
-		expect(getMarketingContent("en").hero.title).toEqual(["MarTech, rebuilt.", "For humans and agents."]);
+	it("separates the bilingual homepage conversion from the long-term brand thesis", () => {
+		expect(getMarketingContent("en").homeHero).toMatchObject({
+			headline: "See how AI is shaping your market.",
+			explanation:
+				"Yonaris reveals how AI describes and compares your brand, which sources shape the answer, and where the market narrative can move.",
+		});
+		expect(getMarketingContent("zh").homeHero).toMatchObject({
+			headline: "看清 AI 如何塑造你的市场",
+			explanation: "Yonaris 揭示 AI 如何描述与比较你的品牌、哪些信息源正在影响答案，以及市场叙事还能向哪里生长",
+		});
+		expect(getMarketingContent("en").brandThesis).toBe("MarTech, rebuilt. For humans and agents.");
+		expect(getMarketingContent("zh").brandThesis).toBe("重构 MarTech，同时面向人，也面向智能体");
 		expect(getMarketingContent("en").category).toBe("AI-native MarTech");
 		expect(getMarketingContent("zh").cta.primary).toBe("获取免费诊断");
-		expect(getMarketingContent("zh").hero.title).toEqual(["重构 MarTech", "同时面向人，也面向智能体"]);
 	});
 
 	it("provides localized page metadata with reciprocal canonical paths", () => {
 		expect(getMarketingPageMeta("en", "home")).toEqual({
-			title: "MarTech, rebuilt. For humans and agents. | Yonaris",
+			title: "See how AI is shaping your market. | Yonaris",
 			description:
-				"Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in an AI-mediated market.",
+				"Yonaris reveals how AI describes and compares your brand, which sources shape the answer, and where the market narrative can move.",
 			canonicalPath: "/",
 			alternatePath: "/zh",
 		});
@@ -47,14 +56,26 @@ describe("marketing content", () => {
 		expect(MARKETING_SITEMAP_PATHS).toEqual(expect.arrayContaining(["/", "/zh", "/platform", "/zh/platform", "/agent", "/agent/company", "/llms.txt", "/llms-full.txt"]));
 	});
 
-	it("builds a localized navigation model with one conversion target", () => {
+	it("builds a localized homepage navigation model with real conversion and section targets", () => {
 		expect(getMarketingNavigation("en")).toMatchObject({
-		home: "/",
-		language: { label: "中文", path: "/zh" },
-		diagnostic: { label: "Get a Free Diagnostic", path: "/diagnostic" },
-	});
+			home: "/",
+			items: [
+				{ label: "Product", path: "/platform" },
+				{ label: "Approach", path: "/methodology" },
+				{ label: "Research", path: "/results" },
+				{ label: "Company", path: "/#company" },
+			],
+			language: { label: "中文", path: "/zh" },
+			diagnostic: { label: "Get a Free Diagnostic", path: "/diagnostic" },
+		});
 		expect(getMarketingNavigation("zh")).toMatchObject({
 			home: "/zh",
+			items: [
+				{ label: "产品", path: "/zh/platform" },
+				{ label: "方法", path: "/zh/methodology" },
+				{ label: "研究", path: "/zh/results" },
+				{ label: "公司", path: "/zh#company" },
+			],
 			language: { label: "EN", path: "/" },
 			diagnostic: { label: "获取免费诊断", path: "/zh/diagnostic" },
 		});

@@ -45,6 +45,18 @@ interface DetailPageContent {
 	sections: MarketingSectionContent[];
 }
 
+export interface HomeHeroContent {
+	headline: string;
+	explanation: string;
+	websiteLabel: string;
+	websitePlaceholder: string;
+	submitLabel: string;
+}
+
+export interface DiagnosticPreviewContent {
+	label: string;
+}
+
 export const MARKETING_LAST_UPDATED = "2026-08-21";
 export const CONTACT_EMAIL = "black.dcp@outlook.com";
 
@@ -79,12 +91,23 @@ const en = {
 		contact: "Contact",
 	},
 	navigation: [
-		{ label: "Platform", path: "/platform" },
-		{ label: "Methodology", path: "/methodology" },
-		{ label: "Results", path: "/results" },
-		{ label: "GEO", path: "/geo" },
-		{ label: "Agent View", path: "/agent" },
+		{ label: "Product", path: "/platform" },
+		{ label: "Approach", path: "/methodology" },
+		{ label: "Research", path: "/results" },
+		{ label: "Company", path: "/#company" },
 	],
+	homeHero: {
+		headline: "See how AI is shaping your market.",
+		explanation:
+			"Yonaris reveals how AI describes and compares your brand, which sources shape the answer, and where the market narrative can move.",
+		websiteLabel: "Website",
+		websitePlaceholder: "https://example.com",
+		submitLabel: "Get a Free Diagnostic",
+	} satisfies HomeHeroContent,
+	brandThesis: "MarTech, rebuilt. For humans and agents.",
+	preview: {
+		label: "Illustrative diagnostic",
+	} satisfies DiagnosticPreviewContent,
 	hero: {
 		eyebrow: "AI-NATIVE MARTECH",
 		title: ["MarTech, rebuilt.", "For humans and agents."],
@@ -213,12 +236,22 @@ const zh: MarketingContent = {
 	companyDefinition: "Yonaris 是一家 AI 原生营销科技公司，帮助品牌理解并改善自己在 AI 介入的市场中，如何被发现、理解、比较与选择。",
 	cta: { primary: "获取免费诊断", agent: "Agent 视图", contact: "联系我们" },
 	navigation: [
-		{ label: "平台", path: "/zh/platform" },
+		{ label: "产品", path: "/zh/platform" },
 		{ label: "方法", path: "/zh/methodology" },
-		{ label: "结果", path: "/zh/results" },
-		{ label: "GEO", path: "/zh/geo" },
-		{ label: "Agent View", path: "/agent" },
+		{ label: "研究", path: "/zh/results" },
+		{ label: "公司", path: "/zh#company" },
 	],
+	homeHero: {
+		headline: "看清 AI 如何塑造你的市场",
+		explanation: "Yonaris 揭示 AI 如何描述与比较你的品牌、哪些信息源正在影响答案，以及市场叙事还能向哪里生长",
+		websiteLabel: "官网",
+		websitePlaceholder: "https://example.com",
+		submitLabel: "获取免费诊断",
+	},
+	brandThesis: "重构 MarTech，同时面向人，也面向智能体",
+	preview: {
+		label: "示例诊断",
+	},
 	hero: {
 		eyebrow: "AI 原生营销科技",
 		title: ["重构 MarTech", "同时面向人，也面向智能体"],
@@ -371,12 +404,12 @@ export function getMarketingPageMeta(locale: Locale, page: MarketingPageKey) {
 	const route = MARKETING_ROUTES.find((entry) => entry.key === page) ?? MARKETING_ROUTES[0];
 	const title =
 		page === "home"
-			? `${content.hero.title.join(" ")} | Yonaris`
+			? `${content.homeHero.headline} | Yonaris`
 			: page === "diagnostic"
 				? `${content.diagnostic.title} | Yonaris`
 				: `${content.pages[page].title} | Yonaris`;
 	const description =
-		page === "home" ? content.hero.body : page === "diagnostic" ? content.diagnostic.body : content.pages[page].description;
+		page === "home" ? content.homeHero.explanation : page === "diagnostic" ? content.diagnostic.body : content.pages[page].description;
 
 	return {
 		title,
@@ -415,12 +448,22 @@ export function validateDiagnosticInput(input: DiagnosticInput): (keyof Diagnost
 	return ["brand", "website", "question", "name", "email"].filter((field) => errors.includes(field as keyof DiagnosticInput)) as (keyof DiagnosticInput)[];
 }
 
+export function validateDiagnosticSearch(search: Record<string, unknown>): { website: string } {
+	if (typeof search.website !== "string") return { website: "" };
+	try {
+		const website = new URL(search.website);
+		return website.protocol === "http:" || website.protocol === "https:" ? { website: search.website } : { website: "" };
+	} catch {
+		return { website: "" };
+	}
+}
+
 const agentDocuments: Record<AgentSection, { canonical: string; title: string; scope: string; body: () => string }> = {
 	company: {
 		canonical: "/",
 		title: "Yonaris company facts",
 		scope: "Yonaris is currently an early-stage AI-native MarTech company with GEO and AI-market perception diagnosis as its first commercial application.",
-		body: () => `${en.companyDefinition}\n\nBrand thesis: ${en.hero.title.join(" ")}\n\nThe four intelligence foundations are ${en.foundations.map((item) => item.name).join(", ")}. They are data foundations, not separate product SKUs.`,
+		body: () => `${en.companyDefinition}\n\nBrand thesis: ${en.brandThesis}\n\nThe four intelligence foundations are ${en.foundations.map((item) => item.name).join(", ")}. They are data foundations, not separate product SKUs.`,
 	},
 	platform: {
 		canonical: "/platform",
@@ -467,7 +510,7 @@ Last updated: ${MARKETING_LAST_UPDATED}
 export function renderLlmsIndex(): string {
 	return `# Yonaris
 
-> Yonaris is an AI-native MarTech company. MarTech, rebuilt. For humans and agents.
+> Yonaris is an AI-native MarTech company. ${en.brandThesis}
 
 Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in AI-mediated markets.
 
