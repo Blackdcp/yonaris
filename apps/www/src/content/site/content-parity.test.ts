@@ -142,7 +142,9 @@ describe("core site content", () => {
 	it("keeps Research metric, evidence, and claim identities aligned across independently authored locales", () => {
 		const english = getResearchContent("en");
 		const chinese = getResearchContent("zh");
-		const availabilityShape = <T,>(availability: { state: "known"; value: readonly T[] } | { state: "unknown"; reason: string }) =>
+		const availabilityShape = <T>(
+			availability: { state: "known"; value: readonly T[] } | { state: "unknown"; reason: string },
+		) =>
 			availability.state === "known"
 				? { state: availability.state, itemIds: availability.value.map((item) => (item as { id: string }).id) }
 				: { state: availability.state };
@@ -169,6 +171,28 @@ describe("core site content", () => {
 		expect(shape(chinese)).toEqual(shape(english));
 		expect(chinese.headline).not.toBe(english.headline);
 		expect(chinese.labels.known).not.toBe(english.labels.known);
+	});
+
+	it("keeps Company reader, principle, and claim references aligned across independently authored locales", () => {
+		const english = getCompanyContent("en");
+		const chinese = getCompanyContent("zh");
+		const shape = (content: typeof english | typeof chinese) => ({
+			claims: content.claims.map(({ id, status }) => ({ id, status })),
+			visionClaimIds: content.vision.claimIds,
+			marketShift: {
+				claimIds: content.marketShift.claimIds,
+				readerIds: content.marketShift.readers.map(({ id }) => id),
+			},
+			stageClaimIds: content.stage.claimIds,
+			forestClaimIds: content.forest.claimIds,
+			principleIds: content.principles.items.map(({ id }) => id),
+			openSourceClaimIds: content.openSource.claimIds,
+			currentScopeClaimIds: content.currentScopeClaimIds,
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.vision.headline).not.toBe(english.vision.headline);
+		expect(chinese.marketShift.groupLabel).not.toBe(english.marketShift.groupLabel);
 	});
 
 	it("prevents nested page array mutations from changing later getter results", () => {
@@ -294,8 +318,8 @@ describe("core site content", () => {
 	});
 
 	it("describes the Chinese company stage as a company", () => {
-		expect(getCompanyContent("zh").stage).toBe(
-			"Yonaris 目前是一家处于早期、以服务驱动的公司，拥有真实可用的证据平台。",
+		expect(getCompanyContent("zh").stage.summary).toBe(
+			"Yonaris 是一家早期公司，正以服务驱动的方式交付一套真实可用的市场证据产品",
 		);
 	});
 
@@ -330,7 +354,8 @@ describe("core site content", () => {
 		expect(getResearchContent("en").claims.find(({ id }) => id === "research-illustrative-record")?.status).toBe(
 			"illustrative",
 		);
-		expect(getCompanyContent("en").stage).toContain("early, service-led product");
+		expect(getCompanyContent("en").stage.summary).toContain("early company");
+		expect(getCompanyContent("en").stage.summary).toContain("service-led model");
 		expect(getGeoContent("en").boundary).toContain("first applied workflow");
 		expect(getDiagnosticContent("en").confirmation).toContain(
 			"confirms the measurement scope before collecting evidence",

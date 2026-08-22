@@ -21,7 +21,7 @@ describe("marketing content", () => {
 	it("exposes the truthful site-content model while legacy consumers migrate", () => {
 		expect(getProductContent("en").meta.title).toBe("Make AI market answers observable.");
 		expect(getCoreFacts("company", "en").claims).toContainEqual(
-			expect.objectContaining({ id: "company-stage", status: "managed-delivery" }),
+			expect.objectContaining({ id: "company-service-led-stage", status: "managed-delivery" }),
 		);
 	});
 

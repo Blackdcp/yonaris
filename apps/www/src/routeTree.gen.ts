@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApproachRouteImport } from './routes/approach'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as CompanyRouteImport } from './routes/company'
 import { Route as DiagnosticRouteImport } from './routes/diagnostic'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as GeoRouteImport } from './routes/geo'
@@ -55,6 +56,7 @@ import { Route as GlossarySlugRouteImport } from './routes/glossary/$slug'
 import { Route as OgStatusDotpngRouteImport } from './routes/og/status[.]png'
 import { Route as ZhIndexRouteImport } from './routes/zh/index'
 import { Route as ZhApproachRouteImport } from './routes/zh/approach'
+import { Route as ZhCompanyRouteImport } from './routes/zh/company'
 import { Route as ZhDiagnosticRouteImport } from './routes/zh/diagnostic'
 import { Route as ZhGeoRouteImport } from './routes/zh/geo'
 import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
@@ -95,6 +97,11 @@ const BrandRoute = BrandRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompanyRoute = CompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnosticRoute = DiagnosticRouteImport.update({
@@ -307,6 +314,11 @@ const ZhApproachRoute = ZhApproachRouteImport.update({
   path: '/zh/approach',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhCompanyRoute = ZhCompanyRouteImport.update({
+  id: '/zh/company',
+  path: '/zh/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhDiagnosticRoute = ZhDiagnosticRouteImport.update({
   id: '/zh/diagnostic',
   path: '/zh/diagnostic',
@@ -428,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -462,6 +475,7 @@ export interface FileRoutesByFullPath {
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
@@ -497,6 +511,7 @@ export interface FileRoutesByTo {
   '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -531,6 +546,7 @@ export interface FileRoutesByTo {
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
@@ -567,6 +583,7 @@ export interface FileRoutesById {
   '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -601,6 +618,7 @@ export interface FileRoutesById {
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
@@ -638,6 +656,7 @@ export interface FileRouteTypes {
     | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -672,6 +691,7 @@ export interface FileRouteTypes {
     | '/glossary/$slug'
     | '/og/status.png'
     | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
@@ -707,6 +727,7 @@ export interface FileRouteTypes {
     | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -741,6 +762,7 @@ export interface FileRouteTypes {
     | '/glossary/$slug'
     | '/og/status.png'
     | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
@@ -776,6 +798,7 @@ export interface FileRouteTypes {
     | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -810,6 +833,7 @@ export interface FileRouteTypes {
     | '/glossary/$slug'
     | '/og/status.png'
     | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
@@ -846,6 +870,7 @@ export interface RootRouteChildren {
   ApproachRoute: typeof ApproachRoute
   BrandRoute: typeof BrandRoute
   ChangelogRoute: typeof ChangelogRoute
+  CompanyRoute: typeof CompanyRoute
   DiagnosticRoute: typeof DiagnosticRoute
   FeaturesRoute: typeof FeaturesRoute
   GeoRoute: typeof GeoRoute
@@ -880,6 +905,7 @@ export interface RootRouteChildren {
   GlossarySlugRoute: typeof GlossarySlugRoute
   OgStatusDotpngRoute: typeof OgStatusDotpngRoute
   ZhApproachRoute: typeof ZhApproachRoute
+  ZhCompanyRoute: typeof ZhCompanyRoute
   ZhDiagnosticRoute: typeof ZhDiagnosticRoute
   ZhGeoRoute: typeof ZhGeoRoute
   ZhMethodologyRoute: typeof ZhMethodologyRoute
@@ -939,6 +965,13 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/company': {
+      id: '/company'
+      path: '/company'
+      fullPath: '/company'
+      preLoaderRoute: typeof CompanyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diagnostic': {
@@ -1235,6 +1268,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhApproachRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/company': {
+      id: '/zh/company'
+      path: '/zh/company'
+      fullPath: '/zh/company'
+      preLoaderRoute: typeof ZhCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/diagnostic': {
       id: '/zh/diagnostic'
       path: '/zh/diagnostic'
@@ -1390,6 +1430,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApproachRoute: ApproachRoute,
   BrandRoute: BrandRoute,
   ChangelogRoute: ChangelogRoute,
+  CompanyRoute: CompanyRoute,
   DiagnosticRoute: DiagnosticRoute,
   FeaturesRoute: FeaturesRoute,
   GeoRoute: GeoRoute,
@@ -1424,6 +1465,7 @@ const rootRouteChildren: RootRouteChildren = {
   GlossarySlugRoute: GlossarySlugRoute,
   OgStatusDotpngRoute: OgStatusDotpngRoute,
   ZhApproachRoute: ZhApproachRoute,
+  ZhCompanyRoute: ZhCompanyRoute,
   ZhDiagnosticRoute: ZhDiagnosticRoute,
   ZhGeoRoute: ZhGeoRoute,
   ZhMethodologyRoute: ZhMethodologyRoute,

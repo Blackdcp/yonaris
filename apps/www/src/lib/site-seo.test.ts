@@ -64,6 +64,34 @@ describe("manifest-driven site SEO", () => {
 		);
 	});
 
+	test("publishes Company metadata and reciprocal bilingual canonicals", () => {
+		const subject = requireSiteSeo();
+		if (!subject) return;
+
+		expect(subject.corePageHead("company", "en").meta).toEqual(
+			expect.arrayContaining([
+				{ title: "MarTech, rebuilt. For humans and agents. | Yonaris" },
+				{
+					name: "description",
+					content:
+						"Yonaris is an early, service-led AI-native MarTech company building a real evidence platform for AI-mediated markets.",
+				},
+			]),
+		);
+		expect(linkPaths(subject.corePageHead("company", "en"))).toEqual({
+			canonical: "/company",
+			en: "/company",
+			"zh-CN": "/zh/company",
+			"x-default": "/company",
+		});
+		expect(linkPaths(subject.corePageHead("company", "zh"))).toEqual({
+			canonical: "/zh/company",
+			en: "/company",
+			"zh-CN": "/zh/company",
+			"x-default": "/company",
+		});
+	});
+
 	test("keeps supporting page metadata and canonicals specific to the route", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;
