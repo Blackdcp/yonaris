@@ -21,11 +21,72 @@ async function backgroundPixel(page: import("@playwright/test").Page, selector: 
 	});
 }
 
+test("Product Stage content remains visible at the start of entrance motion", async ({ page }) => {
+	await page.goto("/");
+	await page.evaluate(() => {
+		for (const animation of document.getAnimations()) {
+			const target = (animation.effect as KeyframeEffect | null)?.target;
+			if (!(target instanceof HTMLElement)) continue;
+			if (target.matches(".marketing-hero-copy > *, .marketing-product-preview")) {
+				animation.currentTime = 0;
+				animation.pause();
+			}
+		}
+	});
+
+	const opacities = await page.locator(".marketing-product-stage").evaluate((stage) => ({
+		headline: getComputedStyle(stage.querySelector("h1")!).opacity,
+		form: getComputedStyle(stage.querySelector("form")!).opacity,
+		preview: getComputedStyle(stage.querySelector("figure")!).opacity,
+	}));
+	expect(opacities).toEqual({ headline: "1", form: "1", preview: "1" });
+});
+
+test("Product Stage content remains visible after entrance motion finishes", async ({ page }) => {
+	await page.goto("/");
+	await page.evaluate(async () => {
+		const relevantAnimations = document.getAnimations().filter((animation) => {
+			const target = (animation.effect as KeyframeEffect | null)?.target;
+			return target instanceof HTMLElement && target.matches(".marketing-hero-copy > *, .marketing-product-preview");
+		});
+		await Promise.all(relevantAnimations.map((animation) => animation.finished));
+	});
+
+	const opacities = await page.locator(".marketing-product-stage").evaluate((stage) => ({
+		headline: getComputedStyle(stage.querySelector("h1")!).opacity,
+		form: getComputedStyle(stage.querySelector("form")!).opacity,
+		preview: getComputedStyle(stage.querySelector("figure")!).opacity,
+	}));
+	expect(opacities).toEqual({ headline: "1", form: "1", preview: "1" });
+});
+
+test("Product Stage content remains visible with reduced motion", async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.goto("/");
+
+	const presentation = await page.locator(".marketing-product-stage").evaluate((stage) => {
+		const read = (selector: string) => {
+			const style = getComputedStyle(stage.querySelector(selector)!);
+			return { opacity: style.opacity, transform: style.transform };
+		};
+		return { headline: read("h1"), form: read("form"), preview: read("figure") };
+	});
+	expect(presentation).toEqual({
+		headline: { opacity: "1", transform: "none" },
+		form: { opacity: "1", transform: "none" },
+		preview: { opacity: "1", transform: "none" },
+	});
+});
+
 test("English homepage presents the Product Stage and real destinations", async ({ page }) => {
 	await page.goto("/");
 
 	await expect(page.getByRole("heading", { level: 1, name: "See how AI is shaping your market." })).toBeVisible();
 	await expect(page.getByText("Illustrative diagnostic", { exact: true })).toBeVisible();
+	const diagnosticViews = page.getByRole("complementary", { name: "Diagnostic views" });
+	await expect(diagnosticViews).toBeVisible();
+	await expect(diagnosticViews.getByRole("listitem")).toHaveCount(4);
+	await expect(page.getByRole("navigation", { name: "Diagnostic views" })).toHaveCount(0);
 	expect(await backgroundPixel(page, ".marketing-site > header")).toEqual([246, 244, 241, 255]);
 
 	const navigation = page.getByRole("navigation", { name: "Primary navigation" });

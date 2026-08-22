@@ -3,10 +3,10 @@ import { createServer } from "node:http";
 import test from "node:test";
 import { runMarketingSmoke } from "./smoke-marketing.mjs";
 
-test("release smoke rejects a stylesheet referenced by HTML when it returns 404", async () => {
+test("release smoke rejects homepages missing the approved conversion headlines", async () => {
 	const server = createServer((request, response) => {
 		if (request.url === "/assets/site.css") {
-			response.writeHead(404).end("missing");
+			response.writeHead(200, { "Content-Type": "text/css" }).end("body { color: black; }");
 			return;
 		}
 		const bodies = {
@@ -15,7 +15,43 @@ test("release smoke rejects a stylesheet referenced by HTML when it returns 404"
 			"/platform": "Market understanding, made observable.",
 			"/diagnostic": "Start with one question that matters.",
 			"/agent": "One set of facts. Two readable surfaces.",
-			"/agent/company": "AI-native MarTech",
+			"/agent/company": "AI-native MarTech Current scope",
+			"/llms.txt": "For humans and agents",
+		};
+		const body = bodies[request.url];
+		if (!body) {
+			response.writeHead(404).end("missing");
+			return;
+		}
+		response.writeHead(200, { "Content-Type": request.url.startsWith("/agent/") ? "text/markdown" : request.url === "/llms.txt" ? "text/plain" : "text/html" }).end(body);
+	});
+
+	await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+	const address = server.address();
+	assert.equal(typeof address, "object");
+	try {
+		await assert.rejects(
+			() => runMarketingSmoke(`http://127.0.0.1:${address.port}/`),
+			/See how AI is shaping your market\.[\s\S]*看清 AI 如何塑造你的市场|看清 AI 如何塑造你的市场[\s\S]*See how AI is shaping your market\./,
+		);
+	} finally {
+		await new Promise((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+	}
+});
+
+test("release smoke rejects a stylesheet referenced by HTML when it returns 404", async () => {
+	const server = createServer((request, response) => {
+		if (request.url === "/assets/site.css") {
+			response.writeHead(404).end("missing");
+			return;
+		}
+		const bodies = {
+			"/": '<html><head><link rel="stylesheet" href="/assets/site.css"></head><body>See how AI is shaping your market. MarTech, rebuilt. For humans and agents.</body></html>',
+			"/zh": "看清 AI 如何塑造你的市场 重构 MarTech 同时面向人，也面向智能体",
+			"/platform": "Market understanding, made observable.",
+			"/diagnostic": "Start with one question that matters.",
+			"/agent": "One set of facts. Two readable surfaces.",
+			"/agent/company": "AI-native MarTech Current scope",
 			"/llms.txt": "For humans and agents",
 		};
 		const body = bodies[request.url];

@@ -331,7 +331,13 @@
 	text-transform: uppercase;
 }
 
-.marketing-product-preview__nav > span {
+.marketing-product-preview__nav > ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.marketing-product-preview__nav li {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
@@ -342,7 +348,7 @@
 	font-size: 0.6875rem;
 }
 
-.marketing-product-preview__nav > span.is-active {
+.marketing-product-preview__nav li.is-active {
 	background: var(--yonaris-ink);
 	color: var(--yonaris-paper);
 }
@@ -505,7 +511,6 @@
 
 @keyframes marketing-product-enter {
 	from {
-		opacity: 0;
 		transform: perspective(81.25rem) rotateY(-2.25deg) rotateX(0.75deg) translateY(1rem);
 	}
 }
@@ -661,7 +666,6 @@
 
 @keyframes marketing-product-enter-mobile {
 	from {
-		opacity: 0;
 		transform: translateY(1rem);
 	}
 }
@@ -817,11 +821,9 @@
 
 @keyframes yonaris-copy-enter {
 	from {
-		opacity: 0;
 		transform: translateY(14px);
 	}
 	to {
-		opacity: 1;
 		transform: translateY(0);
 	}
 }

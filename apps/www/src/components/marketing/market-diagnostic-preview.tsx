@@ -105,10 +105,17 @@ export function MarketDiagnosticPreview({ locale, label }: { locale: Locale; lab
 			</div>
 
 			<div className="marketing-product-preview__workbench">
-				<nav className="marketing-product-preview__nav" aria-label={copy.navigationLabel}>
+				<aside className="marketing-product-preview__nav" aria-label={copy.navigationLabel}>
 					<p>{copy.navigationTitle}</p>
-					{copy.navigation.map((item, index) => <span key={item} className={index === 0 ? "is-active" : undefined}><i />{item}</span>)}
-				</nav>
+					<ul>
+						{copy.navigation.map((item, index) => (
+							<li key={item} className={index === 0 ? "is-active" : undefined}>
+								<i />
+								{item}
+							</li>
+						))}
+					</ul>
+				</aside>
 
 				<section className="marketing-product-preview__canvas" aria-labelledby={`preview-question-${locale}`}>
 					<p className="marketing-product-preview__kicker">{copy.context}</p>

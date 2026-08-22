@@ -3,8 +3,16 @@
 import { pathToFileURL } from "node:url";
 
 export const REQUIRED_ROUTES = [
-	{ path: "/", copy: ["MarTech, rebuilt.", "For humans and agents."], contentType: "text/html" },
-	{ path: "/zh", copy: ["重构 MarTech", "同时面向人，也面向智能体"], contentType: "text/html" },
+	{
+		path: "/",
+		copy: ["See how AI is shaping your market.", "MarTech, rebuilt.", "For humans and agents."],
+		contentType: "text/html",
+	},
+	{
+		path: "/zh",
+		copy: ["看清 AI 如何塑造你的市场", "重构 MarTech", "同时面向人，也面向智能体"],
+		contentType: "text/html",
+	},
 	{ path: "/platform", copy: ["Market understanding, made observable."], contentType: "text/html" },
 	{ path: "/diagnostic", copy: ["Start with one question that matters."], contentType: "text/html" },
 	{ path: "/agent", copy: ["One set of facts.", "Two readable surfaces."], contentType: "text/html" },
