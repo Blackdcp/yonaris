@@ -13,6 +13,15 @@ import { normalizeResponseSnapshotQueryEvidence } from "../response-snapshot-que
 
 type SnapshotSource = NonNullable<ScrapeResult["snapshotSource"]>;
 
+export function buildPromptObservationSearchEvidence(
+	result: Pick<ScrapeResult, "webQueries" | "webSearchObserved">,
+): { webQueries: string[]; webSearchObserved: boolean | null } {
+	return {
+		webQueries: result.webQueries,
+		webSearchObserved: result.webSearchObserved ?? null,
+	};
+}
+
 export function assertPromptSnapshotCaptureConfiguration(input: {
 	enabled: boolean;
 	provider: string;
@@ -48,6 +57,7 @@ export function buildPromptResponseSnapshotDraft(input: {
 	citations: ScrapeResult["citations"];
 	webQueries: string[];
 	webSearchEnabled: boolean;
+	webSearchObserved?: boolean | null;
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
 	channel: string;

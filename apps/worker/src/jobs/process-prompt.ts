@@ -25,6 +25,7 @@ import { trackWorkerEvent } from "../telemetry";
 import {
 	archivePromptResponseSnapshotBestEffort,
 	assertPromptSnapshotCaptureConfiguration,
+	buildPromptObservationSearchEvidence,
 	buildPromptResponseSnapshotDraft,
 	resolvePromptSnapshotCapturePolicy,
 } from "./process-prompt-snapshot-policy";
@@ -191,7 +192,8 @@ export async function runModelIteration({
 		// fan-out page excludes verbatim repeats at read time as a display rule;
 		// providers whose query field is fabricated (DataForSEO) write the
 		// `unavailable` sentinel in their own extractor instead.
-		const { rawOutput, textContent, webQueries, citations: extractedCitations, modelVersion } = result;
+		const { rawOutput, textContent, citations: extractedCitations, modelVersion } = result;
+		const searchEvidence = buildPromptObservationSearchEvidence(result);
 		console.log(`${logPrefix} AI call completed, textContent length: ${textContent?.length ?? "null"}`);
 		const snapshotCapture = resolvePromptSnapshotCapturePolicy({
 			enabled: snapshotCaptureEnabled,
@@ -217,7 +219,7 @@ export async function runModelIteration({
 			recordedVersion,
 			answerText: safeTextContent,
 			rawOutput,
-			webQueries,
+			...searchEvidence,
 			brandMentioned,
 			competitorsMentioned,
 			extractedCitations,
@@ -239,7 +241,7 @@ export async function runModelIteration({
 						promptText: promptValue,
 						answerText: safeTextContent,
 						citations: extractedCitations,
-						webQueries,
+						...searchEvidence,
 						webSearchEnabled: config.webSearch,
 						brandMentioned,
 						competitorsMentioned,

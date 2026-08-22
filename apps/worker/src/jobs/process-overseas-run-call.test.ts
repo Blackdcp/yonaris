@@ -85,3 +85,22 @@ test("does not invoke a provider for an already claimed or terminal call", async
 	assert.equal(result, "skipped");
 	assert.equal(executions, 0);
 });
+
+test("preserves the provider-observed search state for persistence", async () => {
+	const { buildPromptObservationSearchEvidence } = await import("./process-prompt-snapshot-policy.js");
+
+	assert.deepEqual(
+		buildPromptObservationSearchEvidence({
+			webQueries: ["expanded query"],
+			webSearchObserved: true,
+		}),
+		{
+			webQueries: ["expanded query"],
+			webSearchObserved: true,
+		},
+	);
+	assert.deepEqual(buildPromptObservationSearchEvidence({ webQueries: [] }), {
+		webQueries: [],
+		webSearchObserved: null,
+	});
+});
