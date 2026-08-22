@@ -3,6 +3,7 @@ import {
 	isBrowserExtensionCaptureRoute,
 	isBrowserExtensionSurface,
 } from "@workspace/lib/browser-extension-contract";
+import { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-surfaces";
 
 type SamplingExecutionMode = "manual" | "browser_runner";
 
@@ -34,7 +35,7 @@ export function assertSamplingBrowserRunnerProtocol(
 		const extensionSurfaces = new Set<string>();
 		const extensionProtocol =
 			targets.length >= 1 &&
-			targets.length <= 2 &&
+			targets.length <= BROWSER_EXTENSION_SURFACES.length &&
 			targets.every((candidate) => {
 				if (
 					!isBrowserExtensionSurface(candidate.surfaceTargetKey) ||
@@ -51,7 +52,7 @@ export function assertSamplingBrowserRunnerProtocol(
 			});
 		if (extensionProtocol) return;
 		throw new Error(
-			"Browser Runner batches require exact Doubao/DeepSeek routes with a dedicated sampling profile and platform default search",
+			"Browser Runner batches require exact approved extension routes with a dedicated sampling profile and platform default search",
 		);
 	}
 	if (targets.some(({ captureRouteKey }) => isBrowserExtensionCaptureRoute(captureRouteKey))) {

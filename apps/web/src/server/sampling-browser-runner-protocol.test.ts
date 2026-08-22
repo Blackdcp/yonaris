@@ -1,3 +1,4 @@
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import { describe, expect, it } from "vitest";
 import { assertSamplingBrowserRunnerProtocol } from "./sampling-browser-runner-protocol";
 
@@ -23,19 +24,16 @@ describe("sampling Browser Runner protocol", () => {
 		}
 	});
 
-	it("accepts one extension batch containing Doubao and DeepSeek", () => {
+	it("accepts one extension batch containing every approved local surface", () => {
 		expect(() =>
-			assertSamplingBrowserRunnerProtocol("browser_runner", [
-				{
+			assertSamplingBrowserRunnerProtocol(
+				"browser_runner",
+				BROWSER_EXTENSION_SURFACE_DEFINITIONS.map((definition) => ({
 					...dedicatedNativeAuto,
-					captureRouteKey: "browser_extension.doubao",
-				},
-				{
-					...dedicatedNativeAuto,
-					surfaceTargetKey: "deepseek.consumer_web",
-					captureRouteKey: "browser_extension.deepseek",
-				},
-			]),
+					surfaceTargetKey: definition.key,
+					captureRouteKey: definition.captureRoute,
+				})),
+			),
 		).not.toThrow();
 	});
 
