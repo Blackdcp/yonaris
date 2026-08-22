@@ -121,6 +121,24 @@ describe("core site content", () => {
 		expect(chinese.workbench.ui.tabListLabel).not.toBe(english.workbench.ui.tabListLabel);
 	});
 
+	it("keeps Approach loop identities and claim references aligned across independently authored locales", () => {
+		const english = getApproachContent("en");
+		const chinese = getApproachContent("zh");
+		const shape = (content: typeof english | typeof chinese) => ({
+			claims: content.claims.map(({ id, status }) => ({ id, status })),
+			currentScopeClaimIds: content.currentScopeClaimIds,
+			methodClaimIds: content.method.claimIds,
+			loopClaimIds: content.loop.claimIds,
+			nonCausalityClaimIds: content.nonCausalityClaimIds,
+			steps: content.loop.steps.map(({ id, claimIds }) => ({ id, claimIds })),
+			homePreviewClaimIds: content.homePreview.claimIds,
+		});
+
+		expect(shape(chinese)).toEqual(shape(english));
+		expect(chinese.headline).not.toBe(english.headline);
+		expect(chinese.loop.ui.processLabel).not.toBe(english.loop.ui.processLabel);
+	});
+
 	it("prevents nested page array mutations from changing later getter results", () => {
 		const research = getResearchContent("en");
 		const originalCitationCount = research.record.citations.length;
@@ -247,13 +265,13 @@ describe("core site content", () => {
 	});
 
 	it("uses the approved Chinese wording for branded and non-branded questions", () => {
-		expect(getApproachContent("zh").steps.find(({ id }) => id === "questions")?.description).toContain(
+		expect(getApproachContent("zh").loop.steps.find(({ id }) => id === "question-set")?.summary).toContain(
 			"品牌相关与非品牌相关的问题",
 		);
 	});
 
 	it("uses 查询改写 consistently for query rewrites", () => {
-		expect(getApproachContent("zh").steps.find(({ id }) => id === "compare")?.description).toContain("查询改写");
+		expect(getApproachContent("zh").loop.steps.find(({ id }) => id === "compare")?.summary).toContain("查询改写");
 		expect(getProductContent("zh").claims.find(({ id }) => id === "product-reviewable-evidence")?.text).toContain(
 			"查询改写",
 		);
@@ -270,7 +288,9 @@ describe("core site content", () => {
 			{ id: "product-reviewable-evidence", status: "current-software" },
 			{ id: "product-reviewed-opportunities", status: "managed-delivery" },
 		]);
-		expect(getApproachContent("en").limitations.join(" ")).toContain("does not independently prove causation");
+		expect(getApproachContent("en").limitations.join(" ")).toContain(
+			"do not by themselves prove what caused the change",
+		);
 		expect(getResearchContent("en").record.label).toBe("Illustrative");
 		expect(getResearchContent("en").claims.every((claim) => claim.status === "illustrative")).toBe(true);
 		expect(getCompanyContent("en").stage).toContain("early, service-led product");
