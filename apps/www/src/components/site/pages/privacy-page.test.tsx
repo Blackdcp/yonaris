@@ -21,9 +21,11 @@ describe("PrivacyPage", () => {
 		expect(markup).toContain('class="privacy-page"');
 		expect(markup).toContain('id="privacy-en" lang="en"');
 		expect(markup).toContain('id="privacy-zh" lang="zh-CN"');
-		expect(markup).toContain('aria-label="Language / 语言"');
+		expect(markup).toContain('aria-label="Language selection"');
+		expect(markup).toContain('<span lang="zh-CN">诊断申请信息</span>');
+		expect(markup).toContain('<span lang="zh-CN">隐私说明</span>');
 		expect(markup).toContain('href="#privacy-en"');
-		expect(markup).toContain('href="#privacy-zh"');
+		expect(markup).toContain('href="#privacy-zh" lang="zh-CN"');
 	});
 
 	it("renders every approved Task 1 fact once per language without adding policy claims", () => {

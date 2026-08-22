@@ -635,9 +635,23 @@ test("privacy disclosure stays accessible and usable at all seven acceptance wid
 		await expectMinimumTarget(chineseJump, `Chinese privacy jump at ${width}px`);
 		await expectSignalFocusFromCleanState(page, englishJump);
 		await expectSignalFocusFromCleanState(page, chineseJump);
-		await chineseJump.click();
+		await chineseJump.focus();
+		await page.keyboard.press("Enter");
 		await expect(page).toHaveURL(/#privacy-zh$/);
-		await expect(page.locator("#privacy-zh")).toBeInViewport();
+		const chineseDisclosure = page.locator("#privacy-zh");
+		await expect(chineseDisclosure).toBeFocused();
+		await expect(chineseDisclosure).toBeInViewport();
+		const targetFocus = await chineseDisclosure.evaluate((element) => {
+			const style = getComputedStyle(element);
+			return {
+				outlineColor: style.outlineColor,
+				outlineStyle: style.outlineStyle,
+				outlineWidth: style.outlineWidth,
+			};
+		});
+		expect(targetFocus.outlineStyle).not.toBe("none");
+		expect(Number.parseFloat(targetFocus.outlineWidth)).toBeGreaterThanOrEqual(2);
+		expect(targetFocus.outlineColor).toBe("rgb(255, 106, 0)");
 	}
 });
 

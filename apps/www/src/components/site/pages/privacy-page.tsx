@@ -72,10 +72,14 @@ export function PrivacyPage() {
 		<SiteShell locale="en" mainClassName="privacy-page">
 			<section className="privacy-hero" aria-labelledby="privacy-title">
 				<div className="privacy-hero__inner">
-					<p className="privacy-kicker">Diagnostic request data / 诊断申请信息</p>
-					<h1 id="privacy-title">Privacy / 隐私说明</h1>
+					<p className="privacy-kicker">
+						Diagnostic request data / <span lang="zh-CN">诊断申请信息</span>
+					</p>
+					<h1 id="privacy-title">
+						Privacy / <span lang="zh-CN">隐私说明</span>
+					</h1>
 					<p className="privacy-hero__description">{content.meta.description}</p>
-					<nav className="privacy-jump" aria-label={content.jumpLabel}>
+					<nav className="privacy-jump" aria-label="Language selection">
 						<a href="#privacy-en">
 							<span>01</span>
 							English

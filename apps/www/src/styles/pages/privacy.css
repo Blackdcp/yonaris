@@ -123,8 +123,9 @@
 		border-top: 1px solid var(--yonaris-mist);
 	}
 
-	.privacy-language:focus {
-		outline: none;
+	.privacy-language:focus-visible {
+		outline: 2px solid var(--yonaris-signal);
+		outline-offset: -2px;
 	}
 
 	.privacy-language__introduction {
