@@ -318,39 +318,51 @@ git commit -m "state the Yonaris category thesis"
 **Files:**
 - Modify: `apps/www/src/content/site/geo.ts`
 - Create: `apps/www/src/content/site/geo.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
+- Modify: `apps/www/src/lib/site-seo.test.ts`
 - Create: `apps/www/src/components/site/pages/geo-page.tsx`
 - Create: `apps/www/src/components/site/pages/geo-applied-workflow.tsx`
 - Modify: `apps/www/src/routes/geo.tsx`
 - Modify: `apps/www/src/routes/zh/geo.tsx`
+- Modify (generated only by the route build, if changed): `apps/www/src/routeTree.gen.ts`
 - Modify: `apps/www/src/styles/pages/geo.css`
 - Create: `e2e/www-tests/geo.spec.ts`
+- Create: `.changeset/geo-evidence-workflow.md`
 
 **Interfaces:**
 
 ```ts
 export type GeoWorkflowStageId = "discovery" | "description" | "comparison" | "citation" | "verification";
-export interface GeoWorkflowStage { id: GeoWorkflowStageId; title: string; observedSignal: string; boundedAction: string; claims: readonly FactualClaim[] }
+export type GeoClaim = FactualClaim & { limitation: string };
+export interface GeoWorkflowStage { id: GeoWorkflowStageId; title: string; question: string; observedSignal: string; boundedAction: string; claimIds: readonly GeoClaim["id"][] }
+export interface GeoWorkflowUi { workflowLabel: string; observedSignalLabel: string; boundedActionLabel: string; capabilityContextLabel: string; currentSoftwareLabel: string; managedDeliveryLabel: string; limitationLabel: string }
+export interface GeoEvidenceBoundary { title: string; summary: string; claimIds: readonly GeoClaim["id"][] }
 ```
 
 - [ ] **Step 1: Write RED content tests**
 
-Require all five stages, the phrase `GEO is the first applied workflow`, and the broader AI-native MarTech link. Reject ranking, traffic, universal visibility, and automated-optimization claims.
+Require the exact five-stage tuple above, H1 `GEO, grounded in evidence.` with independently authored Chinese `让 GEO 建立在证据之上`, the visible boundary `GEO is the first applied workflow—not Yonaris's category ceiling.`, and broader AI-native MarTech/Product/Diagnostic handoffs. Use one canonical claim registry with exact EN/ZH IDs/status/order and non-empty limitations: `geo-first-applied-workflow`, `geo-configured-sampling`, `geo-human-reviewed-verification`, and `geo-diagnostic-scope-confirmation` are `managed-delivery`; `geo-reviewable-answers`, `geo-configured-comparison`, and `geo-available-source-evidence` are `current-software`; `geo-broader-martech-direction` is `direction`. Every boundary, current-scope, stage, evidence, broader-category, and diagnostic assertion references resolvable IDs; no orphan/duplicate claims and no `illustrative`/`verified-evidence` statuses in V1. Assert configured-cohort, available-source, unknown-evidence, non-causality, human-review, and scope-confirmation boundaries. Reject ranking/traffic/guarantee, universal/all-model/real-time/continuous coverage, instant scan/score, self-service runs, automated fixes/publishing/optimization, causal lift, Product Truth Graph, unaudited `0 → 93.3%`, fake customers/live samples, and before/after results.
 
 - [ ] **Step 2: Write RED route tests**
 
-Assert one H1, a static five-stage workflow, exact evidence boundary, localized diagnostic CTA, no second interaction system, and no overflow at seven widths.
+Assert one H1, logical headings, five semantic always-visible stages with observation/action/capability/limitation text, exact evidence/category boundaries, and manifest-derived localized Product, Company, and Diagnostic links. There are no main-page buttons, tabs, `aria-current="step"`, hidden workflow state, sticky record, accordion, selector, hooks, or second interaction system. Assert canonical/hreflang/x-default, shared Paper focus on contextual links, Axe AA in both locales at all seven QA widths, readable multi-column field geometry at 1024, complete linear lane order on mobile, no overflow, no running reduced-motion animation, and CJK-first typography/natural tracking/casing for every heading/label family. Capture both locales at 1440, 1024, 390, and 320.
 
 - [ ] **Step 3: Implement the applied workflow**
 
-Use one structured field with observation/action pairs. GEO has direct high-intent copy but closes by expanding to AI-mediated markets. Both route modules use `corePageHead("geo", locale)`.
+Use a Paper hero with direct high-intent copy and one full-width Ink applied-evidence field with five continuous horizontal lanes. Desktop/tablet columns are stage/question → observed evidence → bounded next move → truthful capability context; mobile makes each lane a linear block without hiding content. One restrained Signal Orange rail/marker may connect lanes; small text stays Paper/Slate. No gradients, cards, fake dashboard, Product circles/tabs, Approach branch/sticky motif, or SignalField. Close by expanding to the broader AI-native MarTech category and stating that scope is confirmed before collection—no instant result. Derive destinations with `getCorePath()`, use `corePageHead("geo", locale)`, inspect generated routes, and keep manifest/shared shell/Task0/Product/Approach/Research/Company/Diagnostic/Agent/legacy files out of scope. Add one short `@workspace/www` patch changeset.
 
 - [ ] **Step 4: Verify and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/geo.test.ts
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/geo.spec.ts --project=chromium
+pnpm.cmd --filter @workspace/www exec vitest run src/content/site/geo.test.ts src/content/site/content-parity.test.ts src/lib/site-seo.test.ts src/styles.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/geo.spec.ts --project=chromium --grep-invert @visual
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/geo.spec.ts --project=chromium --grep @visual --workers=1
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/content/site/geo* apps/www/src/components/site/pages/geo-* apps/www/src/routes/geo.tsx apps/www/src/routes/zh/geo.tsx apps/www/src/styles/pages/geo.css e2e/www-tests/geo.spec.ts
+pnpm.cmd --filter e2e check-types
+pnpm.cmd --filter @workspace/www audit:site-manifest
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/content/site/geo* apps/www/src/content/site/content-parity.test.ts apps/www/src/lib/site-seo.test.ts apps/www/src/components/site/pages/geo-* apps/www/src/routes/geo.tsx apps/www/src/routes/zh/geo.tsx apps/www/src/routeTree.gen.ts apps/www/src/styles/pages/geo.css e2e/www-tests/geo.spec.ts .changeset/geo-evidence-workflow.md
 git commit -m "frame GEO as the first applied workflow"
 ```
 
