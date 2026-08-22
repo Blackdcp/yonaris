@@ -156,6 +156,10 @@ export function visibleCitationFromJsonAttribute(
 	if (typeof rawUrl !== "string" || typeof rawTitle !== "string") {
 		throw new Error("Structured citation URL or title is missing");
 	}
+	return citationFromMetadataValues(rawUrl, rawTitle);
+}
+
+export function citationFromMetadataValues(rawUrl: string, rawTitle: string): CollectedCitation {
 	const url = new URL(rawUrl);
 	if (
 		(url.protocol !== "http:" && url.protocol !== "https:") ||
