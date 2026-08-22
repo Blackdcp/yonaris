@@ -32,14 +32,14 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
 		launchUrl: "https://wenxin.baidu.com/",
-		adapterVersion: "wenxin-web-20260822-localpc-v10",
+		adapterVersion: "wenxin-web-20260822-localpc-v11",
 	},
 	{
 		key: "yuanbao.consumer_web",
 		label: "Yuanbao",
 		captureRoute: "browser_extension.yuanbao",
 		launchUrl: "https://yuanbao.tencent.com/",
-		adapterVersion: "yuanbao-web-20260822-localpc-v8",
+		adapterVersion: "yuanbao-web-20260822-localpc-v9",
 	},
 	{
 		key: "zhipu.consumer_web",

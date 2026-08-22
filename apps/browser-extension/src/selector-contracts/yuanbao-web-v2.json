@@ -1,8 +1,8 @@
 {
-	"version": "yuanbao-web-20260822-localpc-v8",
+	"version": "yuanbao-web-20260822-localpc-v9",
 	"surface": "yuanbao.consumer_web",
 	"launchUrl": "https://yuanbao.tencent.com/",
-	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}(?:/[A-Za-z0-9_-]{4,200})?/?$",
+	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}/[A-Za-z0-9_-]{4,200}/?$",
 	"composer": ".ql-editor[contenteditable=\"true\"]",
 	"send": "#yuanbao-send-btn[aria-label=\"发送\"]:not([class*=\"disabled\"])",
 	"newConversation": "[data-desc=\"new-chat\"]",

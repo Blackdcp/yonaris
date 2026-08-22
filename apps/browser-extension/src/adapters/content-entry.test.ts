@@ -82,7 +82,7 @@ describe("domestic content entry redacted candidate inspection", () => {
 		],
 		[
 			"yuanbao.consumer_web",
-			"https://yuanbao.tencent.com/chat/thread_123",
+			"https://yuanbao.tencent.com/chat/workspace_123/thread_123",
 			'<div class="agent-chat__bubble--ai"><div class="agent-chat__speech-card__text"><button>Search sources</button></div></div>',
 		],
 		[

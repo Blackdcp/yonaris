@@ -14,7 +14,11 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260822-localpc-v8");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260822-localpc-v9");
+		expect(yuanbaoSearchEvidenceAdapter).toMatchObject({
+			version: "yuanbao-search-evidence-20260822-v3",
+			settleTimeoutMs: 60_000,
+		});
 		expect(adapter.surface).toBe("yuanbao.consumer_web");
 	});
 
@@ -22,7 +26,7 @@ describe("Yuanbao browser-extension adapter", () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({
 				pageUrl: "https://yuanbao.tencent.com/chat/new-session",
-				conversationUrl: "https://yuanbao.tencent.com/chat/yuanbao-session",
+				conversationUrl: "https://yuanbao.tencent.com/chat/workspace/yuanbao-session",
 				newConversationLabels: ["新建对话"],
 				sendMatchesBeforeFill: 0,
 				sendMatches: 1,
@@ -37,7 +41,7 @@ describe("Yuanbao browser-extension adapter", () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({
 				pageUrl: "https://yuanbao.tencent.com/chat/new-session",
-				conversationUrl: "https://yuanbao.tencent.com/chat/yuanbao-session",
+				conversationUrl: "https://yuanbao.tencent.com/chat/workspace/yuanbao-session",
 				newConversationLabels: ["新建对话"],
 				answer: {
 					text: "元宝回答",
@@ -54,7 +58,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260822-localpc-v8",
+			adapterVersion: "yuanbao-web-20260822-localpc-v9",
 		});
 	});
 
@@ -96,7 +100,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				{ url: "https://source-two.example/b", title: "来源二" },
 			],
 			diagnostics: {
-				extractorVersion: "yuanbao-search-evidence-20260822-v2",
+				extractorVersion: "yuanbao-search-evidence-20260822-v3",
 				evidenceSource: "dom",
 				searchBlockCount: 2,
 				queryCandidateCount: 0,
@@ -143,7 +147,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				{ url: "https://source-ten.example/d", title: "来源十" },
 			],
 			diagnostics: {
-				extractorVersion: "yuanbao-search-evidence-20260822-v2",
+				extractorVersion: "yuanbao-search-evidence-20260822-v3",
 				searchBlockCount: 2,
 				citationCandidateCount: 4,
 			},
@@ -207,6 +211,26 @@ describe("Yuanbao browser-extension adapter", () => {
 		);
 
 		await expect(port.completeOneTask(createYuanbaoAdapter(port), "Prompt A")).resolves.toBeUndefined();
+	});
+
+	test("does not confirm Yuanbao's workspace URL before the prompt-specific conversation URL appears", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa",
+				conversationUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa/0Pmcq1IcTRo",
+				conversationUrlDelayMs: 3_000,
+				generatingDurationMs: 4_000,
+				newConversationLabels: ["新建对话"],
+			}),
+		);
+		const adapter = createYuanbaoAdapter(port);
+
+		await port.completeOneTask(adapter, "Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Current answer",
+			pageUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa/0Pmcq1IcTRo",
+		});
 	});
 });
 

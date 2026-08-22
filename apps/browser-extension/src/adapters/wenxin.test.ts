@@ -6,9 +6,13 @@ import { createWenxinAdapter, wenxinSearchEvidenceAdapter, wenxinSelectorContrac
 describe("Wenxin browser-extension adapter", () => {
 	test("uses the current Wenxin origin and registered adapter identity", () => {
 		expect(wenxinSelectorContract).toMatchObject({
-			version: "wenxin-web-20260822-localpc-v10",
+			version: "wenxin-web-20260822-localpc-v11",
 			surface: "wenxin.consumer_web",
 			launchUrl: "https://wenxin.baidu.com/",
+		});
+		expect(wenxinSearchEvidenceAdapter).toMatchObject({
+			version: "wenxin-search-evidence-20260822-v4",
+			settleTimeoutMs: 60_000,
 		});
 	});
 
@@ -33,7 +37,7 @@ describe("Wenxin browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/wenxin", title: "文心来源" }],
-			adapterVersion: "wenxin-web-20260822-localpc-v10",
+			adapterVersion: "wenxin-web-20260822-localpc-v11",
 		});
 	});
 
@@ -77,7 +81,7 @@ describe("Wenxin browser-extension adapter", () => {
 				{ url: "https://structured.example/wenxin", title: "Structured source" },
 			],
 			diagnostics: {
-				extractorVersion: "wenxin-search-evidence-20260822-v3",
+				extractorVersion: "wenxin-search-evidence-20260822-v4",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
 				queryCandidateCount: 0,

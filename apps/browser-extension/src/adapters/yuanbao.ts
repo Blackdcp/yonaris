@@ -18,7 +18,8 @@ const YUANBAO_CITATION_SELECTOR = "a[href]";
 export const yuanbaoSelectorContract = contract as SelectorContract;
 
 export const yuanbaoSearchEvidenceAdapter: SearchEvidenceAdapter = {
-	version: "yuanbao-search-evidence-20260822-v2",
+	version: "yuanbao-search-evidence-20260822-v3",
+	settleTimeoutMs: 60_000,
 	async read(context) {
 		const referenceLists = [...context.acceptedAnswer.querySelectorAll(YUANBAO_REFERENCE_LIST_SELECTOR)].filter(
 			context.isVisible,

@@ -47,12 +47,12 @@ describe("buildHeartbeat", () => {
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260822-localpc-v10",
+				adapterVersion: "wenxin-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260822-localpc-v8",
+				adapterVersion: "yuanbao-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
@@ -100,12 +100,12 @@ describe("buildHeartbeat", () => {
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260822-localpc-v10",
+				adapterVersion: "wenxin-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260822-localpc-v8",
+				adapterVersion: "yuanbao-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
