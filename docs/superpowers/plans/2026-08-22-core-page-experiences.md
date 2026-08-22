@@ -82,10 +82,13 @@ git commit -m "connect public site browser testing"
 **Files:**
 - Modify: `apps/www/src/content/site/product.ts`
 - Create: `apps/www/src/content/site/product.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
+- Modify: `apps/www/src/lib/site-seo.test.ts`
 - Create: `apps/www/src/components/site/pages/product-page.tsx`
 - Create: `apps/www/src/components/site/pages/evidence-workbench.tsx`
 - Create: `apps/www/src/routes/product.tsx`
 - Create: `apps/www/src/routes/zh/product.tsx`
+- Modify (generated, never hand-edit): `apps/www/src/routeTree.gen.ts`
 - Modify: `apps/www/src/styles/pages/product.css`
 - Create: `e2e/www-tests/product.spec.ts`
 
@@ -93,17 +96,20 @@ git commit -m "connect public site browser testing"
 
 ```ts
 export type ProductWorkbenchViewId = "scope" | "answer" | "sources" | "next-test";
+export type ProductActivityId = "define-scope" | "observe-answer" | "inspect-evidence" | "choose-next-test";
+export type ProductClaim = FactualClaim & { limitation: string };
+export interface ProductWorkbenchUi { tabListLabel: string; illustrativeLabel: string; knownLabel: string; unknownLabel: string; currentSoftwareLabel: string; managedDeliveryLabel: string }
 export interface ProductWorkbenchView {
   id: ProductWorkbenchViewId;
   tabLabel: string;
   title: string;
   description: string;
   status: "illustrative";
-  claims: readonly FactualClaim[];
+  claims: readonly ProductClaim[];
   fields: readonly ({ label: string; state: "known"; value: string } | { label: string; state: "unknown"; reason: string })[];
 }
-export interface ProductActivity { id: "define-scope" | "observe-answer" | "inspect-evidence" | "choose-next-test"; title: string; summary: string; claims: readonly FactualClaim[] }
-export interface ProductHomePreview { title: string; summary: string; evidenceLabel: string; limitation: string }
+export interface ProductActivity { id: ProductActivityId; title: string; summary: string; claims: readonly ProductClaim[] }
+export interface ProductHomePreview { title: string; summary: string; evidenceLabel: string; limitation: string; claims: readonly ProductClaim[] }
 export function EvidenceWorkbench(props: { content: ProductContent["workbench"] }): React.ReactNode;
 export function ProductPage(props: { locale: Locale }): React.ReactNode;
 ```
@@ -120,29 +126,32 @@ expect(content.homePreview).toMatchObject({ evidenceLabel: expect.any(String), l
 expect(content.workbench.views.flatMap((view) => view.fields).some((field) => field.state === "unknown" && "value" in field)).toBe(false);
 for (const activity of content.activities) expect(activity.claims.every((claim) => claim.status && claim.limitation)).toBe(true);
 for (const view of content.workbench.views) expect(view.claims.every((claim) => claim.status && claim.limitation)).toBe(true);
+expect(content.homePreview.claims.every((claim) => claim.status && claim.limitation)).toBe(true);
 expect(JSON.stringify(content)).toContain("Coverage depends on the providers");
 expect(JSON.stringify(content)).toContain("unknown");
 expect(JSON.stringify(content)).not.toContain("Product Truth Graph");
-expect(JSON.stringify(content)).not.toContain("real-time");
+expect(content.claims.map((claim) => claim.text).join(" ")).not.toMatch(/\breal[- ]time\b/i);
 ```
 
-Run `pnpm.cmd --filter @workspace/www test -- src/content/site/product.test.ts`; expected FAIL because the finalized content shape is absent.
+Run `pnpm.cmd --filter @workspace/www exec vitest run --config vitest.config.ts src/content/site/product.test.ts`; expected FAIL because the finalized content shape is absent.
 
 - [ ] **Step 2: Write the failing route and keyboard tests**
 
-In `product.spec.ts`, expect `/product` and `/zh/product` to expose one H1, a visible Illustrative label, Customer workspace/Yonaris-operated split, and a four-tab workbench. Assert Right/Left wrap, Home/End, one `tabIndex=0`, correct `aria-controls`, readable panels with reduced motion, and visible tabs at 1024px. Expected RED because `/product` is absent.
+In `product.spec.ts`, expect `/product` and `/zh/product` to expose one H1, a visible Illustrative label, Customer workspace/Yonaris-operated split, contextual manifest-derived GEO/Diagnostic links, and a four-tab workbench. Use the shared Task 0 helpers across all seven QA viewports. The horizontal tablist uses automatic activation: exactly one `[role=tab]` has `tabIndex=0`; selected/unselected `aria-selected`, `aria-controls`, `tabpanel`/`aria-labelledby`, and the focusable active panel are reciprocal. Right/Left wrap, Home/End jump, click focuses and activates, and Tab exits the roving tablist to the active panel. Assert reduced motion, Signal+Ink focus, no horizontal overflow, readable mobile recomposition, and all four tabs visible at 1024px. Expected RED because `/product` is absent.
 
 - [ ] **Step 3: Implement content, Workbench, page, route, and CSS**
 
-The four views show: declared scope; one exact sampled answer with surface/model/date; citations and exposed-query known/unknown states; one human-reviewed managed-delivery next test. Every externally visible activity, coverage, workspace, and managed-delivery assertion renders from a `FactualClaim` record with status and limitation; structural UI labels need no claim. Do not present numeric sample data as live. Mount routes with `corePageHead("product", locale)`.
+The four views show: declared scope; one exact fictional sampled answer with illustrative surface/model/date; citations and exposed-query known/unknown states; one human-reviewed managed-delivery next test. Workbench UI labels are independently localized in content. Every externally visible activity, coverage, workspace, home-preview, and managed-delivery assertion renders from a `ProductClaim` record with required status and limitation; structural UI labels need no claim. Keep the illustrative sample separate from current-software/managed-delivery capability status. Unknown fields never carry a value or imply absence. Coverage explicitly depends on configured providers and consumer surfaces. Do not present sample data as live, self-service, causal, or autonomous. Include localized GEO and Diagnostic links derived with `getCorePath()`. Mount routes with `corePageHead("product", locale)` and align bilingual metadata with the new H1.
 
 - [ ] **Step 4: Verify and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/product.test.ts
+pnpm.cmd --filter @workspace/www exec vitest run --config vitest.config.ts src/content/site/product.test.ts
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/product.spec.ts --project=chromium
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/content/site/product* apps/www/src/components/site/pages/product-page.tsx apps/www/src/components/site/pages/evidence-workbench.tsx apps/www/src/routes/product.tsx apps/www/src/routes/zh/product.tsx apps/www/src/styles/pages/product.css e2e/www-tests/product.spec.ts
+pnpm.cmd --filter @workspace/www build
+git diff -- apps/www/src/routeTree.gen.ts
+git add apps/www/src/content/site/product* apps/www/src/content/site/content-parity.test.ts apps/www/src/lib/site-seo.test.ts apps/www/src/components/site/pages/product-page.tsx apps/www/src/components/site/pages/evidence-workbench.tsx apps/www/src/routes/product.tsx apps/www/src/routes/zh/product.tsx apps/www/src/routeTree.gen.ts apps/www/src/styles/pages/product.css e2e/www-tests/product.spec.ts
 git commit -m "build the product evidence workbench"
 ```
 
