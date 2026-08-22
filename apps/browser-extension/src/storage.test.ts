@@ -43,17 +43,17 @@ describe("DeviceStorage", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260822-localpc-v8",
+				adapterVersion: "qwen-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260822-localpc-v12",
+				adapterVersion: "kimi-web-20260822-localpc-v13",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260822-localpc-v9",
+				adapterVersion: "wenxin-web-20260822-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
@@ -63,7 +63,7 @@ describe("DeviceStorage", () => {
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260822-localpc-v4",
+				adapterVersion: "zhipu-web-20260822-localpc-v5",
 				activeConcurrency: 0,
 			},
 		});

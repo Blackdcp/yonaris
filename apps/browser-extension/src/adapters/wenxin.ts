@@ -17,7 +17,8 @@ const WENXIN_SOURCE_ITEM_SELECTOR = "[data-long-press-ext-info][data-long-press-
 export const wenxinSelectorContract = contract as SelectorContract;
 
 export const wenxinSearchEvidenceAdapter: SearchEvidenceAdapter = {
-	version: "wenxin-search-evidence-20260822-v2",
+	version: "wenxin-search-evidence-20260822-v3",
+	settleTimeoutMs: 15_000,
 	async read(context) {
 		const thinkingBlocks = [...context.acceptedAnswer.querySelectorAll(WENXIN_THINKING_BLOCK_SELECTOR)].filter(
 			context.isVisible,

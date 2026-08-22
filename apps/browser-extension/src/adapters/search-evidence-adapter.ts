@@ -32,6 +32,7 @@ export type SearchEvidenceReadContext = {
 
 export interface SearchEvidenceAdapter {
 	readonly version: string;
+	readonly settleTimeoutMs?: number;
 	read(context: SearchEvidenceReadContext): Promise<SearchEvidenceResult>;
 }
 

@@ -18,21 +18,21 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Qwen",
 		captureRoute: "browser_extension.qwen",
 		launchUrl: "https://www.qianwen.com/",
-		adapterVersion: "qwen-web-20260822-localpc-v8",
+		adapterVersion: "qwen-web-20260822-localpc-v9",
 	},
 	{
 		key: "kimi.consumer_web",
 		label: "Kimi",
 		captureRoute: "browser_extension.kimi",
 		launchUrl: "https://www.kimi.com/",
-		adapterVersion: "kimi-web-20260822-localpc-v12",
+		adapterVersion: "kimi-web-20260822-localpc-v13",
 	},
 	{
 		key: "wenxin.consumer_web",
 		label: "Wenxin",
 		captureRoute: "browser_extension.wenxin",
 		launchUrl: "https://wenxin.baidu.com/",
-		adapterVersion: "wenxin-web-20260822-localpc-v9",
+		adapterVersion: "wenxin-web-20260822-localpc-v10",
 	},
 	{
 		key: "yuanbao.consumer_web",
@@ -46,7 +46,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Zhipu",
 		captureRoute: "browser_extension.zhipu",
 		launchUrl: "https://chatglm.cn/",
-		adapterVersion: "zhipu-web-20260822-localpc-v4",
+		adapterVersion: "zhipu-web-20260822-localpc-v5",
 	},
 ] as const;
 

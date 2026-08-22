@@ -1,5 +1,5 @@
 {
-	"version": "zhipu-web-20260822-localpc-v4",
+	"version": "zhipu-web-20260822-localpc-v5",
 	"surface": "zhipu.consumer_web",
 	"launchUrl": "https://chatglm.cn/",
 	"conversationPathPattern": "^/main/alltoolsdetail/?$",

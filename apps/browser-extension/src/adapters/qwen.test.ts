@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Qwen browser-extension adapter", () => {
 	test("declares the registered Qwen surface and adapter version", () => {
 		expect(qwenSelectorContract).toMatchObject({
-			version: "qwen-web-20260822-localpc-v8",
+			version: "qwen-web-20260822-localpc-v9",
 			surface: "qwen.consumer_web",
 			launchUrl: "https://www.qianwen.com/",
 		});
@@ -62,7 +62,7 @@ describe("Qwen browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/qwen", title: "千问来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "qwen-web-20260822-localpc-v8",
+			adapterVersion: "qwen-web-20260822-localpc-v9",
 		});
 	});
 
@@ -101,7 +101,7 @@ describe("Qwen browser-extension adapter", () => {
 				{ url: "https://panel.example/qwen", title: "Panel source" },
 			],
 			diagnostics: {
-				extractorVersion: "qwen-search-evidence-20260822-v2",
+				extractorVersion: "qwen-search-evidence-20260822-v3",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
 				queryCandidateCount: 0,

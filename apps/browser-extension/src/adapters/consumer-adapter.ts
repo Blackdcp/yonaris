@@ -24,7 +24,10 @@ const QUERY_MAX_COUNT = 32;
 const CITATION_MAX_COUNT = 100;
 const CONFIRM_TIMEOUT_MS = 30_000;
 const RESPONSE_TIMEOUT_MS = 180_000;
+const ZHIPU_RESPONSE_TIMEOUT_MS = 12 * 60_000;
 const STABLE_ANSWER_MS = 8_000;
+const EVIDENCE_STABLE_MS = 2_000;
+const EVIDENCE_POLL_INTERVAL_MS = 500;
 const POLL_INTERVAL_MS = 250;
 const CONFIRMED_CONVERSATION_STABILITY_MS = 1_000;
 const PAGE_READY_TIMEOUT_MS = 15_000;
@@ -176,7 +179,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		if (!this.#confirmedConversationUrl || !this.#preparedPrompt) {
 			throw this.#error("post_submit_unknown", "Submitted conversation identity is not confirmed");
 		}
-		const timeoutAt = this.#port.now() + RESPONSE_TIMEOUT_MS;
+		const timeoutAt =
+			this.#port.now() + (this.surface === "zhipu.consumer_web" ? ZHIPU_RESPONSE_TIMEOUT_MS : RESPONSE_TIMEOUT_MS);
 		let generatingSeen = false;
 		let stableText = "";
 		let stableSince = 0;
@@ -277,14 +281,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		let evidence: SearchEvidenceResult;
 		if (this.#evidenceAdapter) {
-			try {
-				evidence = validateSearchEvidenceResult(
-					await this.#evidenceAdapter.read(requiredSearchEvidenceContext(snapshot)),
-					this.#evidenceAdapter.version,
-				);
-			} catch {
-				evidence = fallbackUnknownSearchEvidence(this.#evidenceAdapter.version, legacyCitations);
-			}
+			evidence = await this.#readSettledSearchEvidence(snapshot, legacyCitations);
 		} else {
 			const webSearchObserved = this.#classifySearch(snapshot);
 			const webQueries = uniqueStrings(snapshot.webQueries, QUERY_MAX_COUNT, 2_000, "query");
@@ -337,6 +334,45 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			searchEvidenceDiagnostics: evidence.diagnostics,
 			adapterVersion: this.adapterVersion,
 		};
+	}
+
+	async #readSettledSearchEvidence(
+		snapshot: AnswerDomSnapshot,
+		legacyCitations: CollectedCitation[],
+	): Promise<SearchEvidenceResult> {
+		const adapter = this.#evidenceAdapter;
+		if (!adapter) throw new Error("Search evidence adapter is unavailable");
+		const settleTimeoutMs = adapter.settleTimeoutMs ?? 0;
+		const deadline = this.#port.now() + settleTimeoutMs;
+		let stableSignature = "";
+		let stableSince = this.#port.now();
+		let latest = fallbackUnknownSearchEvidence(adapter.version, legacyCitations);
+		while (true) {
+			try {
+				latest = validateSearchEvidenceResult(
+					await adapter.read(requiredSearchEvidenceContext(snapshot)),
+					adapter.version,
+				);
+			} catch {
+				latest = fallbackUnknownSearchEvidence(adapter.version, legacyCitations);
+			}
+			const signature = searchEvidenceSignature(latest);
+			if (signature !== stableSignature) {
+				stableSignature = signature;
+				stableSince = this.#port.now();
+			}
+			const searchStateIsDefinitive = latest.webSearchObserved !== null || latest.queryAvailability !== "unknown";
+			if (
+				settleTimeoutMs === 0 ||
+				(searchStateIsDefinitive && this.#port.now() - stableSince >= EVIDENCE_STABLE_MS) ||
+				this.#port.now() >= deadline
+			) {
+				return latest;
+			}
+			await this.#port.wait(Math.min(EVIDENCE_POLL_INTERVAL_MS, deadline - this.#port.now()));
+			this.#assertConfirmedConversation();
+			await this.#assertSubmittedPromptStillCurrent();
+		}
 	}
 
 	#classifySearch(snapshot: AnswerDomSnapshot): boolean | null {
@@ -609,6 +645,16 @@ function validateSearchEvidenceContract(contract: SelectorContract["searchEviden
 	if (contract.queryTextPattern.includes("(?<query>") === false) {
 		throw new Error("Search evidence query pattern must expose a query");
 	}
+}
+
+function searchEvidenceSignature(evidence: SearchEvidenceResult): string {
+	return JSON.stringify({
+		webSearchObserved: evidence.webSearchObserved,
+		queryAvailability: evidence.queryAvailability,
+		webQueries: evidence.webQueries,
+		citations: evidence.citations,
+		diagnostics: evidence.diagnostics,
+	});
 }
 
 function visibleElements(elements: readonly DomElementSummary[]): Array<{ element: DomElementSummary; index: number }> {

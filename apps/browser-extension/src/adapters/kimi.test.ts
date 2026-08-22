@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260822-localpc-v12",
+			version: "kimi-web-20260822-localpc-v13",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
@@ -65,7 +65,7 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260822-localpc-v12",
+			adapterVersion: "kimi-web-20260822-localpc-v13",
 		});
 	});
 
@@ -96,12 +96,34 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: ["provider generated query"],
 			citations: [{ url: "https://source.example/kimi", title: "Visible source" }],
 			diagnostics: {
-				extractorVersion: "kimi-search-evidence-20260822-v2",
+				extractorVersion: "kimi-search-evidence-20260822-v3",
 				evidenceSource: "dom",
 				searchBlockCount: 1,
 				queryCandidateCount: 1,
 				citationCandidateCount: 2,
 			},
+		});
+	});
+
+	test("uses Kimi's visible citation marker metadata when the anchor has no text node", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="segment-content-box" id="accepted-answer">
+				<div class="toolcall-container toolcall-web_search"><span class="toolcall-title-container-text">provider query</span></div>
+				<a class="pua-ref-cite-tag pua-ref-cite-tag--text" data-site-name="Visible provider source" href="https://source.example/kimi"></a>
+			</div>
+		</body></html>`);
+
+		await expect(
+			kimiSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: () => true,
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: true,
+			citations: [{ url: "https://source.example/kimi", title: "Visible provider source" }],
 		});
 	});
 

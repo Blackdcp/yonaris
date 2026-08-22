@@ -132,6 +132,60 @@ describe("surface-specific search evidence adapter boundary", () => {
 			searchEvidenceDiagnostics: { queryCandidateCount: 2, citationCandidateCount: 2 },
 		});
 	});
+
+	test("waits for delayed provider search evidence to stabilize after the answer text is complete", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				initiallySubmitted: true,
+				pageUrl: "https://chat.deepseek.com/a/chat/s/test-session",
+				submittedPrompt: "Prompt A",
+				generatingDurationMs: 0,
+				completionReadyDelayMs: 0,
+			}),
+		);
+		const delayedEvidence = {
+			version: "delayed-evidence-v1",
+			settleTimeoutMs: 15_000,
+			read: async (): Promise<SearchEvidenceResult> =>
+				port.elapsedMs < 14_000
+					? {
+							webSearchObserved: null,
+							queryAvailability: "unknown",
+							webQueries: [],
+							citations: [],
+							diagnostics: {
+								extractorVersion: "delayed-evidence-v1",
+								evidenceSource: "none",
+								searchBlockCount: 0,
+								queryCandidateCount: 0,
+								citationCandidateCount: 0,
+							},
+						}
+					: {
+							webSearchObserved: true,
+							queryAvailability: "exposed",
+							webQueries: ["late provider rewrite"],
+							citations: [{ url: "https://example.com/late", title: "Late source" }],
+							diagnostics: {
+								extractorVersion: "delayed-evidence-v1",
+								evidenceSource: "dom",
+								searchBlockCount: 1,
+								queryCandidateCount: 1,
+								citationCandidateCount: 1,
+							},
+						},
+		} satisfies SearchEvidenceAdapter & { settleTimeoutMs: number };
+		const adapter = createConsumerAdapter(port, deepSeekContract as SelectorContract, delayedEvidence);
+		await adapter.resumeSubmitted("Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			webSearchObserved: true,
+			queryAvailability: "exposed",
+			webQueries: ["late provider rewrite"],
+			citations: [{ url: "https://example.com/late", title: "Late source" }],
+		});
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(16_000);
+	});
 });
 
 function fixedEvidenceAdapter(partial: {

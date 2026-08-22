@@ -17,7 +17,8 @@ const QWEN_SOURCE_ITEM_SELECTOR = "[data-click-extra][data-log-click-name][data-
 export const qwenSelectorContract = contract as SelectorContract;
 
 export const qwenSearchEvidenceAdapter: SearchEvidenceAdapter = {
-	version: "qwen-search-evidence-20260822-v2",
+	version: "qwen-search-evidence-20260822-v3",
+	settleTimeoutMs: 15_000,
 	async read(context) {
 		const latestTurns = [...context.document.querySelectorAll(QWEN_LATEST_TURN_SELECTOR)].filter(context.isVisible);
 		if (latestTurns.length !== 1) throw new Error("Qwen latest turn is ambiguous");

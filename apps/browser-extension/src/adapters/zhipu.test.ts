@@ -6,7 +6,7 @@ import { createZhipuAdapter, zhipuSearchEvidenceAdapter, zhipuSelectorContract }
 describe("Zhipu browser-extension adapter", () => {
 	test("uses the qualified ChatGLM origin and adapter identity", () => {
 		expect(zhipuSelectorContract).toMatchObject({
-			version: "zhipu-web-20260822-localpc-v4",
+			version: "zhipu-web-20260822-localpc-v5",
 			surface: "zhipu.consumer_web",
 			launchUrl: "https://chatglm.cn/",
 		});
@@ -33,8 +33,25 @@ describe("Zhipu browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/zhipu", title: "智谱来源" }],
-			adapterVersion: "zhipu-web-20260822-localpc-v4",
+			adapterVersion: "zhipu-web-20260822-localpc-v5",
 		});
+	});
+
+	test("allows a Zhipu deep-search response to finish after the generic three-minute boundary", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				initiallySubmitted: true,
+				pageUrl: "https://chatglm.cn/main/alltoolsdetail?t=1787328959157&lang=zh&cid=6a886af324c8dfed1eba5c18",
+				conversationUrl: "https://chatglm.cn/main/alltoolsdetail?t=1787328959157&lang=zh&cid=6a886af324c8dfed1eba5c18",
+				submittedPrompt: "Prompt A",
+				generatingDurationMs: 180_500,
+			}),
+		);
+		const adapter = createZhipuAdapter(port);
+		await adapter.resumeSubmitted("Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+		expect(port.elapsedMs).toBeGreaterThan(180_000);
 	});
 
 	test("binds one collapsed source panel only when it is directly adjacent to the accepted answer", async () => {
