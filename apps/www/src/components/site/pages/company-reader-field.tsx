@@ -7,6 +7,26 @@ interface CompanyReaderFieldProps {
 	content: DeepReadonly<CompanyContent["marketShift"]>;
 }
 
+interface CompanySemanticTextProps {
+	locale: Locale;
+	text: string;
+	phrase: string;
+}
+
+export function CompanySemanticText({ locale, text, phrase }: CompanySemanticTextProps): React.ReactNode {
+	if (locale !== "zh") return text;
+	const phraseIndex = text.indexOf(phrase);
+	if (phraseIndex < 0) return text;
+
+	return (
+		<>
+			{text.slice(0, phraseIndex)}
+			<span className="company-semantic-unit">{phrase}</span>
+			{text.slice(phraseIndex + phrase.length)}
+		</>
+	);
+}
+
 export function CompanyReaderField({ locale, content }: CompanyReaderFieldProps): React.ReactNode {
 	const [activeId, setActiveId] = useState<CompanyReaderId>("human");
 	const activeReader = content.readers.find(({ id }) => id === activeId) ?? content.readers[0];
@@ -54,7 +74,9 @@ export function CompanyReaderField({ locale, content }: CompanyReaderFieldProps)
 
 				<div className="company-reader-field__annotation" aria-live="polite" aria-atomic="true">
 					<p className="company-reader-field__annotation-label">{content.annotationLabel}</p>
-					<p data-company-reader-annotation>{activeReader.annotation}</p>
+					<p data-company-reader-annotation>
+						<CompanySemanticText locale={locale} text={activeReader.annotation} phrase="测试" />
+					</p>
 				</div>
 			</div>
 		</section>

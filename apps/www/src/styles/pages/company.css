@@ -320,7 +320,7 @@
 		grid-column: 4 / -1;
 	}
 
-	.company-nowrap {
+	.company-semantic-unit {
 		display: inline-block;
 	}
 

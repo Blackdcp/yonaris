@@ -2,7 +2,7 @@ import { getCompanyContent } from "@/content/site/company";
 import type { Locale } from "@/content/site/types";
 import { getCorePath, getSiteRoute } from "@/lib/site-manifest";
 import { SiteShell } from "../site-shell";
-import { CompanyReaderField } from "./company-reader-field";
+import { CompanyReaderField, CompanySemanticText } from "./company-reader-field";
 
 function renderStageTitle(title: string, locale: Locale): React.ReactNode {
 	if (locale === "zh") {
@@ -11,9 +11,9 @@ function renderStageTitle(title: string, locale: Locale): React.ReactNode {
 
 		return (
 			<>
-				<span className="company-nowrap">{title.slice(0, separatorIndex + 1)}</span>
+				<span className="company-semantic-unit">{title.slice(0, separatorIndex + 1)}</span>
 				<wbr />
-				<span className="company-nowrap">{title.slice(separatorIndex + 1)}</span>
+				<span className="company-semantic-unit">{title.slice(separatorIndex + 1)}</span>
 			</>
 		);
 	}
@@ -24,7 +24,7 @@ function renderStageTitle(title: string, locale: Locale): React.ReactNode {
 	return (
 		<>
 			{title.slice(0, compound.index)}
-			<span className="company-nowrap">{compound[0]}</span>
+			<span className="company-semantic-unit">{compound[0]}</span>
 			{title.slice(compound.index + compound[0].length)}
 		</>
 	);
@@ -79,7 +79,9 @@ export function CompanyPage({ locale }: { locale: Locale }): React.ReactNode {
 						<p>{content.forest.name}</p>
 					</div>
 					<div className="company-forest__statement">
-						<h2 id="company-forest-title">{content.forest.title}</h2>
+						<h2 id="company-forest-title">
+							<CompanySemanticText locale={locale} text={content.forest.title} phrase="答案" />
+						</h2>
 						<div className="company-forest__copy">
 							<p>{content.forest.summary}</p>
 							<p>{content.forest.boundary}</p>
@@ -111,7 +113,9 @@ export function CompanyPage({ locale }: { locale: Locale }): React.ReactNode {
 					<section className="company-open-source" aria-labelledby="company-open-source-title">
 						<p className="company-kicker">{content.openSource.eyebrow}</p>
 						<div>
-							<h2 id="company-open-source-title">{content.openSource.title}</h2>
+							<h2 id="company-open-source-title">
+								<CompanySemanticText locale={locale} text={content.openSource.title} phrase="不是" />
+							</h2>
 							<p>{content.openSource.summary}</p>
 							<p className="company-open-source__boundary">{content.openSource.boundary}</p>
 							<a href={openSourcePath} className="company-ink-focus">
@@ -124,7 +128,9 @@ export function CompanyPage({ locale }: { locale: Locale }): React.ReactNode {
 					<section className="company-contact" aria-labelledby="company-contact-title">
 						<p className="company-kicker">{content.contact.eyebrow}</p>
 						<div className="company-contact__copy">
-							<h2 id="company-contact-title">{content.contact.title}</h2>
+							<h2 id="company-contact-title">
+								<CompanySemanticText locale={locale} text={content.contact.title} phrase="真正" />
+							</h2>
 							<p>{content.contact.summary}</p>
 						</div>
 						<div className="company-contact__actions">

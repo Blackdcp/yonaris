@@ -286,6 +286,45 @@ test("Company stage thesis keeps meaningful English and Chinese phrases intact",
 	}
 });
 
+for (const semanticUnit of [
+	{
+		canonicalText: "不穷举每一个问题，构建答案生长的根系",
+		fragment: "答案",
+		name: "Forest answer",
+		selector: "#company-forest-title",
+	},
+	{
+		canonicalText: "从一个真正重要的问题开始",
+		fragment: "真正",
+		name: "Contact real",
+		selector: "#company-contact-title",
+	},
+	{
+		canonicalText: "技术基础，不是公司身份",
+		fragment: "不是",
+		name: "Open Source negation",
+		selector: "#company-open-source-title",
+	},
+	{
+		canonicalText: "人可以追问证据、检查范围，并判断下一步值得测试什么",
+		fragment: "测试",
+		name: "reader annotation test",
+		selector: "[data-company-reader-annotation]",
+	},
+] as const) {
+	test(`Chinese Company keeps ${semanticUnit.name} intact across editorial display widths`, async ({ page }) => {
+		test.setTimeout(120_000);
+		for (const viewportName of ["desktop", "tabletLandscape", "mobile", "narrow"] as const) {
+			await page.setViewportSize(QA_VIEWPORTS[viewportName]);
+			await page.goto("/zh/company");
+			await waitForHydration(page);
+			const target = page.locator(semanticUnit.selector);
+			await expect(target).toHaveText(semanticUnit.canonicalText);
+			await expectTextFragmentOnOneLine(target, semanticUnit.fragment);
+		}
+	});
+}
+
 for (const locale of locales) {
 	for (const viewport of ["desktop", "tabletLandscape", "mobile", "narrow"] as const) {
 		test(`${locale.route} ${viewport} visual evidence`, { tag: "@visual" }, async ({ page }) => {
