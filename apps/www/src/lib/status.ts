@@ -17,7 +17,7 @@ function parseStatusEntry(value: unknown): StatusEntry | undefined {
 		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return undefined;
 
 		const entry = parsed as Record<string, unknown>;
-		const timestamp = typeof entry.ts === "string" ? Date.parse(entry.ts) : Number.NaN;
+		const timestamp = typeof entry.ts === "string" ? new Date(entry.ts) : null;
 		const numericFields = [
 			entry.latency,
 			entry.retries,
@@ -27,9 +27,11 @@ function parseStatusEntry(value: unknown): StatusEntry | undefined {
 			entry.webQueries,
 		];
 		if (
-			!Number.isFinite(timestamp) ||
+			!timestamp ||
+			!Number.isFinite(timestamp.getTime()) ||
+			timestamp.toISOString() !== entry.ts ||
 			(entry.status !== "pass" && entry.status !== "fail") ||
-			numericFields.some((field) => typeof field !== "number" || !Number.isFinite(field) || field < 0) ||
+			numericFields.some((field) => typeof field !== "number" || !Number.isSafeInteger(field) || field < 0) ||
 			typeof entry.webSearch !== "boolean" ||
 			(entry.error !== null && typeof entry.error !== "string")
 		) {

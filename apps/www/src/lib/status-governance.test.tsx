@@ -64,4 +64,22 @@ describe("status truth and failure semantics", () => {
 
 		expect(result).toEqual([{ target: "chatgpt:openai-api:gpt", entries: [] }]);
 	});
+
+	test("requires canonical timestamps and safe integer producer measurements", async () => {
+		const subject = await import("./status");
+		const numericFields = ["latency", "retries", "textLength", "rawOutputBytes", "citations", "webQueries"] as const;
+		const result = await subject.loadStatusDataWith({
+			now: () => new Date("2026-08-22T12:00:00.000Z").getTime(),
+			targets: ["chatgpt:openai-api:gpt"],
+			read: async () => [
+				{ ...passingEntry, ts: "2026-02-30T00:00:00.000Z" },
+				{ ...passingEntry, ts: "2026-08-22T08:00:00+08:00" },
+				...numericFields.flatMap((field) =>
+					[0.5, -1, Number.MAX_SAFE_INTEGER + 1].map((value) => ({ ...passingEntry, [field]: value })),
+				),
+			],
+		});
+
+		expect(result).toEqual([{ target: "chatgpt:openai-api:gpt", entries: [] }]);
+	});
 });
