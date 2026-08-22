@@ -262,7 +262,7 @@ Expected RED is missing route/proxy/parity coverage and the absent Caddy-backed 
 
 - [ ] **Step 2: Implement redirect-aware, asset-closure smoke**
 
-Keep the existing same-origin asset collector. Add `redirect: "manual"` for redirects and separate content-type/copy assertions. Diagnostic probe sends an invalid or filled-honeypot payload so rejection occurs before environment lookup or email delivery. Include RSS, OpenAPI, nested OG, and repo-activity endpoints in the route closure.
+Keep the existing same-origin asset collector. Add `redirect: "manual"` for redirects and separate content-type/copy assertions. The Caddy-backed Diagnostic probe must be valid at every envelope layer: public `Origin: https://yonaris.com`, `Sec-Fetch-Site: same-origin`, `Content-Type: application/json`, identity encoding, and a valid UUID `Idempotency-Key`. Its lead body is otherwise schema-valid and differs only by a filled honeypot. Assert direct `400` JSON with `{ ok: false, code: "invalid_request" }`, proving Caddy origin reconstruction and header forwarding work while rejection still occurs before environment lookup or email delivery. A 403 or other generic failure must fail the smoke. Include RSS, OpenAPI, nested OG, and repo-activity endpoints in the route closure.
 
 Copy the pre-rebuild `yonaris-marketing.caddy` byte-for-byte to `yonaris-marketing-v2.caddy` before changing the active fragment. Build the final public path set from the manifest contract: all core/resource/utility/publication/legacy canonicals and patterns, every redirect source, Agent/llms/sitemap/robots/RSS/OpenAPI/OG/repo-activity/API endpoints, and static asset families are proxied; `/llms.mdx/site/*` and other internal-only routes stay blocked. `caddy-policy.test.ts` imports `SITE_MANIFEST`/`SITE_REDIRECTS`, reads the fragment, and proves that contract rather than relying on a hand-copied subset.
 
@@ -307,6 +307,7 @@ pnpm.cmd --filter @workspace/www check-types
 pnpm.cmd --filter @workspace/www build
 node --test apps/www/scripts/smoke-marketing.test.mjs
 pnpm.cmd --filter e2e run test:www
+pnpm.cmd --filter e2e run test:www:analytics
 pnpm.cmd --filter e2e run test:www:visual
 docker build --file docker/Dockerfile.www --target www --tag yonaris-www:full-site-review .
 node apps/www/scripts/smoke-marketing-caddy.mjs yonaris-www:full-site-review

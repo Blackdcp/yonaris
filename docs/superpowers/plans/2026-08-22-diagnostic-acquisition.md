@@ -24,230 +24,351 @@
 
 ---
 
-### Task 1: Define one diagnostic schema and fallback contract
+### Task 1: Define one diagnostic request, content, and fallback contract
 
 **Files:**
 - Create: `apps/www/src/lib/diagnostic-schema.ts`
 - Create: `apps/www/src/lib/diagnostic-schema.test.ts`
-- Modify: `apps/www/src/content/site/diagnostic.ts`
 - Create: `apps/www/src/content/site/diagnostic.test.ts`
+- Modify: `apps/www/src/content/site/diagnostic.ts`
+- Modify: `apps/www/src/content/site/index.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
+- Modify: `apps/www/src/lib/site-seo.test.ts`
 - Modify: `apps/www/src/lib/marketing-content.ts`
 - Modify: `apps/www/src/lib/marketing-content.test.ts`
+- Modify: `apps/www/src/components/marketing/diagnostic-form.tsx`
 - Modify: `apps/www/src/components/marketing/diagnostic-form.test.tsx`
 
+Task 1 does not edit the routes, API, Resend, deployment, analytics, homepage composition, or `/privacy` presentation. Task 3 owns the single user-facing changeset for the complete diagnostic experience.
+
 **Interfaces:**
-- Produces: `DiagnosticLead`, `DiagnosticLeadField`, `diagnosticLeadSchema`, `parseDiagnosticLead()`, `parseDiagnosticSearch()`, `buildDiagnosticMailto()`, `getPrivacyContent()`.
-- Consumes: `Locale`.
-
-- [ ] **Step 1: Write failing schema tests**
 
 ```ts
-import { describe, expect, it } from "vitest";
-import { buildDiagnosticMailto, parseDiagnosticLead } from "./diagnostic-schema";
+export const DIAGNOSTIC_SCOPE_FIELDS = ["website", "brand", "market", "question"] as const;
+export const DIAGNOSTIC_CONTACT_FIELDS = ["competitors", "name", "email", "consent"] as const;
+export const DIAGNOSTIC_LEAD_FIELDS = [...DIAGNOSTIC_SCOPE_FIELDS, ...DIAGNOSTIC_CONTACT_FIELDS] as const;
 
-const valid = {
-  locale: "en", brand: "Acme", website: "https://acme.example", market: "Enterprise software",
-  question: "Which platform fits a global team?", competitors: "Contoso", name: "Ava Chen",
-  email: "ava@acme.example", consent: true, companyUrl: "",
-} as const;
+export type DiagnosticLeadField = (typeof DIAGNOSTIC_LEAD_FIELDS)[number];
+export type DiagnosticStageId = "scope" | "contact";
 
-describe("diagnostic lead schema", () => {
-  it("requires brand, absolute http website, market, question, name, work email, and consent", () => {
-    expect(parseDiagnosticLead(valid).success).toBe(true);
-    expect(parseDiagnosticLead({ ...valid, market: "", consent: false }).success).toBe(false);
-    expect(parseDiagnosticLead({ ...valid, website: "javascript:alert(1)" }).success).toBe(false);
-    expect(() => parseDiagnosticLead({ ...valid, website: "acme" })).not.toThrow();
-    expect(parseDiagnosticLead({ ...valid, website: "acme" }).success).toBe(false);
-  });
-
-  it("bounds fields and rejects a filled honeypot", () => {
-    expect(parseDiagnosticLead({ ...valid, question: "x".repeat(2001) }).success).toBe(false);
-    expect(parseDiagnosticLead({ ...valid, companyUrl: "https://bot.example" }).success).toBe(false);
-  });
-
-  it("builds a complete encoded fallback addressed to the founder", () => {
-    const href = buildDiagnosticMailto(valid);
-    expect(href).toMatch(/^mailto:black\.dcp%40outlook\.com\?/);
-    expect(decodeURIComponent(href)).toContain("Market: Enterprise software");
-    expect(decodeURIComponent(href)).toContain("Which platform fits a global team?");
-  });
-});
-```
-
-Run `pnpm.cmd --filter @workspace/www test -- diagnostic-schema.test.ts src/content/site/diagnostic.test.ts`; expected FAIL because the schema and finalized offer contract do not exist.
-
-- [ ] **Step 2: Implement the bounded Zod contract**
-
-```ts
-export const diagnosticLeadSchema = z.object({
-  locale: z.enum(["en", "zh"]),
-  brand: z.string().trim().min(1).max(120),
-  website: z.string().trim().max(300).superRefine((value, context) => {
-    try {
-      if (!["http:", "https:"].includes(new URL(value).protocol)) context.addIssue({ code: "custom", message: "Use an http or https website" });
-    } catch {
-      context.addIssue({ code: "custom", message: "Use an absolute website URL" });
+const websiteSchema = z.string().trim().min(1).max(300).superRefine((value, context) => {
+  try {
+    const url = new URL(value);
+    if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) {
+      context.addIssue({ code: "custom", message: "invalid_website" });
     }
-  }),
+  } catch {
+    context.addIssue({ code: "custom", message: "invalid_website" });
+  }
+});
+const scopeShape = {
+  website: websiteSchema,
+  brand: z.string().trim().min(1).max(120),
   market: z.string().trim().min(1).max(160),
   question: z.string().trim().min(10).max(2000),
-  competitors: z.string().trim().max(600),
+} as const;
+export const diagnosticScopeSchema = z.strictObject(scopeShape);
+export type DiagnosticScope = z.output<typeof diagnosticScopeSchema>;
+export const diagnosticLeadSchema = z.strictObject({
+  locale: z.enum(["en", "zh"]),
+  ...scopeShape,
+  competitors: z.string().trim().max(600).default(""),
   name: z.string().trim().min(1).max(120),
-  email: z.string().trim().email().max(254),
+  email: z.string().trim().min(1).max(254).pipe(z.email()),
   consent: z.literal(true),
-  companyUrl: z.string().trim().max(0),
+  companyUrl: z.string().trim().max(0).default(""),
 });
-export type DiagnosticLead = z.infer<typeof diagnosticLeadSchema>;
+export type DiagnosticLead = z.output<typeof diagnosticLeadSchema>;
+export function parseDiagnosticScope(input: unknown): z.ZodSafeParseResult<DiagnosticScope>;
+export function parseDiagnosticLead(input: unknown): z.ZodSafeParseResult<DiagnosticLead>;
+export function parseDiagnosticSearch(search: Record<string, unknown>): { website: string };
+export function buildDiagnosticMailto(input: unknown): string | null;
+export const DIAGNOSTIC_FALLBACK_RECIPIENT = "black.dcp@outlook.com";
 ```
 
-Move validator and mailto generation out of `marketing-content.ts`; keep compatibility re-exports until all imports move. Finalize `diagnostic.ts` with the one-brand/one-market/one-question contract, bilingual `homeOffer`, likely output, disclosure, success, failure, and fallback copy.
+- `diagnostic-schema.ts` is browser-safe: it imports only `zod` and type-only `Locale`; no `node:*`, `process`, env, logging, or server code.
+- Both schemas use `z.strictObject()`. Unknown fields fail.
+- The scope schema contains exactly `website`, `brand`, `market`, and `question`.
+- The complete lead requires `locale`, scope fields, `name`, `email`, and literal `consent: true`; `competitors` and `companyUrl` normalize from missing to `""`, but `null` and non-strings fail.
+- Trim before validation. Bounds: website 1–300, brand 1–120, market 1–160, question 10–2000, competitors 0–600, name 1–120, email 1–254, honeypot exactly empty.
+- Website accepts only absolute HTTP(S) URLs and rejects credentials. “Work email” is a label; validation claims only syntax and length.
+- `parseDiagnosticSearch()` accepts one validated website string and returns an empty prefill for absent, array, malformed, credentialed, or non-HTTP values.
+- `buildDiagnosticMailto()` revalidates its unknown input, returns `null` for invalid input, sends only to the fallback recipient, normalizes CR/LF from subject fields, includes every visible field plus locale/consent, excludes `companyUrl`, and only creates an encoded `mailto:` URL.
 
-Add `parseDiagnosticSearch(search)` to accept only one absolute HTTP(S) website string and otherwise return `{ website: "" }`; its tests retain the current absent/array/malformed prefill regression without calling `new URL()` outside a guarded block.
+`DiagnosticContent` becomes the single bilingual source for every field label, placeholder, validation message, action, disclosure, success/failure state, home offer, and privacy fact:
 
-- [ ] **Step 3: Run GREEN and commit**
+```ts
+interface DiagnosticStage {
+  id: DiagnosticStageId;
+  progressLabel: string;
+  title: string;
+  summary: string;
+  fields: readonly DiagnosticLeadField[];
+}
+interface DiagnosticFieldCopy { label: string; placeholder: string; error: string }
+interface DiagnosticContent {
+  meta: PageMeta;
+  eyebrow: string;
+  headline: string;
+  offer: string;
+  confirmation: string;
+  currentScope: string;
+  currentScopeClaimIds: readonly string[];
+  stages: readonly [DiagnosticStage, DiagnosticStage];
+  likelyOutput: {
+    eyebrow: string;
+    title: string;
+    introduction: string;
+    items: readonly string[];
+    claimIds: readonly string[];
+  };
+  form: {
+    fields: Record<Exclude<DiagnosticLeadField, "consent">, DiagnosticFieldCopy>;
+    consent: { label: string; error: string; privacyLeadIn: string; privacyLinkLabel: string };
+    honeypotLabel: string;
+    validationSummary: string;
+    reviewLabel: string;
+    actions: { continue: string; back: string; submit: string; submitting: string; retry: string };
+    success: { title: string; body: string };
+    failure: { title: string; body: string; fallbackLabel: string; fallbackDisclosure: string };
+    disclosure: string;
+  };
+  homeOffer: {
+    eyebrow: string;
+    title: string;
+    body: string;
+    actionLabel: string;
+    disclosure: string;
+    claimIds: readonly string[];
+  };
+  claims: readonly FactualClaim[];
+  limitations: readonly string[];
+}
+```
+
+Stages are exactly `scope | contact`; success is a result state, not a stage. Ordered stage copy is pinned as `1 / Scope — Frame the question`, `2 / Contact — Contact and review`, `1 / 范围 — 界定问题`, and `2 / 联系 — 联系信息与确认`. English actions are `Continue`, `Back to scope`, `Request the diagnostic`, `Submitting request…`, `Try again`; Chinese actions are `继续`, `返回范围`, `申请免费诊断`, `正在提交申请…`, `重试`.
+
+Success is exactly `Request accepted for review` / `申请已进入审核` and explains that acceptance begins team scope review, not an instant diagnostic result. Failure is exactly `Delivery could not be confirmed` / `未能确认送达`, says the entries remain on the page, and offers `Send by email instead` / `改用邮件发送` with the disclosure that opening a draft does not send it. Consent copy is `I agree that Yonaris may use these details to review and respond to this diagnostic request.` / `我同意 Yonaris 使用这些信息审核并回复本次诊断申请。`; the adjacent links are `Read Diagnostic privacy` / `查看诊断隐私说明`.
+
+Field copy is exact and independently authored; each slash below separates label / placeholder / validation error:
+
+| Field | English | 中文 |
+|---|---|---|
+| website | `Website` / `https://example.com` / `Enter an absolute http or https website.` | `官网` / `https://example.com` / `请输入以 http 或 https 开头的完整网址。` |
+| brand | `Brand` / `Your brand or company` / `Enter the brand or company name.` | `品牌` / `你的品牌或公司` / `请输入品牌或公司名称。` |
+| market | `Market or category` / `What market are you competing in?` / `Enter the market or category.` | `市场或品类` / `你正在参与哪个市场的竞争？` / `请输入市场或品类。` |
+| question | `One question that matters` / `What market decision should the diagnostic begin with?` / `Enter a decision question of at least 10 characters.` | `一个真正重要的问题` / `这次诊断应该从哪个市场决策问题开始？` / `请输入至少 10 个字符的决策问题。` |
+| competitors | `Known competitors` / `Optional names or URLs, separated by commas` / `Keep competitor context within 600 characters.` | `已知竞品` / `选填：名称或网址，用逗号分隔` / `竞品信息请控制在 600 个字符以内。` |
+| name | `Your name` / `Name` / `Enter your name.` | `你的姓名` / `姓名` / `请输入姓名。` |
+| email | `Work email` / `you@company.com` / `Enter a valid email address.` | `工作邮箱` / `you@company.com` / `请输入有效的邮箱地址。` |
+
+Tests pin every key and reject raw Zod messages in rendered output. `homeOffer` is pinned to `Start with one market question that matters.` / `从一个真正影响决策的市场问题开始`, explains one brand/market/question plus scope confirmation, and discloses that submit creates no instant scan, score, or evidence result.
+
+Define and freeze the following `PrivacyContent` in `diagnostic.ts` and export `getPrivacyContent()` through `content/site/index.ts`:
+
+```ts
+type PrivacySectionId = "submitted-data" | "abuse-control" | "delivery" | "purpose" | "browser-data" | "contact";
+interface PrivacySection { id: PrivacySectionId; title: string; body: readonly string[] }
+interface PrivacyLanguageContent {
+  id: "en" | "zh";
+  lang: "en" | "zh-CN";
+  title: string;
+  introduction: string;
+  sections: readonly [PrivacySection, PrivacySection, PrivacySection, PrivacySection, PrivacySection, PrivacySection];
+  returnLabel: string;
+  returnPath: "/diagnostic" | "/zh/diagnostic";
+}
+interface PrivacyContent {
+  meta: PageMeta;
+  jumpLabel: string;
+  languages: readonly [PrivacyLanguageContent, PrivacyLanguageContent];
+}
+```
+
+The English section is titled `Diagnostic request privacy`; the Chinese section is `诊断申请隐私说明`. Both state the same six facts: submitted fields are website, brand, market/category, one decision question, optional competitors, name, email, and consent; a trusted proxy-provided client IP is used only for coarse short-lived abuse limiting; accepted requests are sent through an email delivery service to the Yonaris team; the purpose is to review, confirm scope, and respond; diagnostic field values are not added to client analytics events or written to localStorage/cookies; Privacy questions go to `black.dcp@outlook.com`. Return links are `Return to the diagnostic` → `/diagnostic` and `返回诊断申请` → `/zh/diagnostic`.
+
+It must not invent retention periods, GDPR/legal-basis/jurisdiction/DPO/encryption guarantees, sale/sharing guarantees, or deletion SLA. Tests pin section IDs, language tags, paths, required facts, semantic EN/ZH parity, and forbidden promises.
+
+The claim registry remains exactly:
+
+```ts
+{ id: "diagnostic-scope-confirmation", status: "managed-delivery" }
+{ id: "diagnostic-likely-output", status: "managed-delivery" }
+```
+
+`currentScopeClaimIds` references the scope claim; `likelyOutput.claimIds` references the output claim; `homeOffer.claimIds` references both. Success says only that the request was accepted for team review and explicitly says it is not an instant diagnostic result.
+
+`marketing-content.ts` becomes a thin compatibility facade: legacy types/validators derive from the shared schema, constants alias the canonical recipient, and mailto generation is re-exported. It must not retain a second URL/email/required-field implementation. Task 3 removes the bridge after component migration.
+
+- [ ] **Step 1: Write and run the behavioral RED**
+
+Tests cover strict-object rejection, all bounds, credentialed/non-HTTP URLs, optional normalization, honeypot, search prefill, revalidated mailto with CR/LF sanitation, stage-one parsing, `scope/contact` IDs, ordered fields, independently authored EN/ZH form/status copy, claim references, home-offer parity, Privacy allowlist/forbidden promises, the temporary facade, and the current form’s missing consent/honeypot/Privacy link.
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- diagnostic-schema.test.ts src/content/site/diagnostic.test.ts marketing-content.test.ts diagnostic-form.test.tsx
-git add apps/www/src/lib/diagnostic-schema.ts apps/www/src/lib/diagnostic-schema.test.ts apps/www/src/content/site/diagnostic.ts apps/www/src/content/site/diagnostic.test.ts apps/www/src/lib/marketing-content.ts apps/www/src/lib/marketing-content.test.ts apps/www/src/components/marketing/diagnostic-form.test.tsx
-git commit -m "define the diagnostic lead contract"
+pnpm.cmd --filter @workspace/www test -- diagnostic-schema.test.ts diagnostic.test.ts content-parity.test.ts site-seo.test.ts marketing-content.test.ts diagnostic-form.test.tsx
 ```
 
-### Task 2: Deliver validated leads through a hardened Resend endpoint
+Expected RED is missing module/contract and missing rendered behavior, never a path-alias, TypeScript configuration, or fixture error.
+
+- [ ] **Step 2: Implement the minimum shared contract**
+
+Use Zod issue paths as the only source of field errors. Move all user-facing copy out of the component. Add the consent control, empty honeypot, and separate `/privacy` link to the existing temporary form without yet replacing mailto submission; this keeps every intermediate commit buildable and truthful. Preserve current canonical routes and SEO while adding Diagnostic-specific parity assertions.
+
+- [ ] **Step 3: Run GREEN, browser-safety gates, and commit**
+
+```powershell
+pnpm.cmd --filter @workspace/www test -- diagnostic-schema.test.ts diagnostic.test.ts content-parity.test.ts site-seo.test.ts marketing-content.test.ts diagnostic-form.test.tsx
+pnpm.cmd --filter @workspace/www check-types
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/lib/diagnostic-schema.ts apps/www/src/lib/diagnostic-schema.test.ts apps/www/src/content/site/diagnostic.ts apps/www/src/content/site/diagnostic.test.ts apps/www/src/content/site/index.ts apps/www/src/content/site/content-parity.test.ts apps/www/src/lib/site-seo.test.ts apps/www/src/lib/marketing-content.ts apps/www/src/lib/marketing-content.test.ts apps/www/src/components/marketing/diagnostic-form.tsx apps/www/src/components/marketing/diagnostic-form.test.tsx
+git commit -m "define the diagnostic request contract"
+```
+
+### Task 2: Deliver validated leads through a hardened, idempotent Resend endpoint
 
 **Files:**
+- Create: `apps/www/src/lib/diagnostic-api-protocol.ts`
+- Create: `apps/www/src/lib/diagnostic-api-protocol.test.ts`
 - Create: `apps/www/src/lib/diagnostic-delivery.server.ts`
 - Create: `apps/www/src/lib/diagnostic-delivery.server.test.ts`
 - Create: `apps/www/src/routes/api/diagnostic.ts`
 - Create: `e2e/www-tests/diagnostic-api.spec.ts`
+- Create: `deploy/las/bin/deploy-marketing.test.sh`
+- Modify: `apps/www/src/routeTree.gen.ts` only through TanStack generation
 - Modify: `deploy/las/compose.marketing.yaml`
 - Modify: `deploy/las/env.example`
 - Modify: `deploy/las/bin/deploy-marketing.sh`
-- Create: `deploy/las/bin/deploy-marketing.test.sh`
+- Modify: `deploy/las/README.md`
 - Modify: `.github/workflows/deploy-marketing.yaml`
 
-**Interfaces:**
-- Consumes: `DiagnosticLead`, `parseDiagnosticLead()`.
-- Produces: `DiagnosticDeliveryEnv`, `DiagnosticHandlerDeps`, `readJsonBodyLimited()`, `createDiagnosticLeadHandler(deps)`, `sendLeadWithResend(lead, env, fetchImpl)`.
+Do not edit any Caddy fragment or installer in this task. Production API exposure and trusted-client-IP construction belong to Governance Task 5 and must ship atomically with the rebuilt route allowlist. This task may be committed only on the unreleased feature branch; it must not reach `main` before Governance Task 5 because a `main` push can automatically deploy it.
 
-- [ ] **Step 1: Write failing handler security and delivery tests**
+**Browser-safe protocol:**
 
 ```ts
-import { describe, expect, it, vi } from "vitest";
-import { createDiagnosticLeadHandler, sendLeadWithResend } from "./diagnostic-delivery.server";
-
-const env = { RESEND_API_KEY: "re_test", RESEND_FROM_EMAIL: "Yonaris <diagnostic@yonaris.com>", MARKETING_LEAD_RECIPIENT: "black.dcp@outlook.com" };
-const lead = { locale: "en", brand: "Acme", website: "https://acme.example", market: "Enterprise", question: "Which platform should we choose?", competitors: "", name: "Ava", email: "ava@acme.example", consent: true, companyUrl: "" };
-const makeRequest = (body = lead, origin = "https://yonaris.com") => new Request("https://yonaris.com/api/diagnostic", { method: "POST", headers: { "content-type": "application/json", origin, "x-yonaris-client-ip": "203.0.113.7" }, body: JSON.stringify(body) });
-
-it("rejects cross-origin and malformed submissions before delivery", async () => {
-  const deliver = vi.fn();
-  const handler = createDiagnosticLeadHandler({ getEnv: () => env, deliver, now: () => 1_000 });
-  expect((await handler(makeRequest(lead, "https://evil.example"))).status).toBe(403);
-  expect((await handler(makeRequest({ ...lead, companyUrl: "bot" }))).status).toBe(400);
-  expect(deliver).not.toHaveBeenCalled();
-});
-
-it("returns success only after delivery resolves", async () => {
-  const deliver = vi.fn().mockResolvedValue(undefined);
-  const handler = createDiagnosticLeadHandler({ getEnv: () => env, deliver, now: () => 1_000 });
-  const response = await handler(makeRequest());
-  expect(response.status).toBe(202);
-  expect(await response.json()).toEqual({ ok: true });
-  expect(deliver).toHaveBeenCalledWith(lead, env);
-});
-
-it("returns 503 when configuration or Resend delivery fails", async () => {
-  const missing = createDiagnosticLeadHandler({ getEnv: () => ({}), deliver: vi.fn(), now: () => 1_000 });
-  expect((await missing(makeRequest())).status).toBe(503);
-  const failed = createDiagnosticLeadHandler({ getEnv: () => env, deliver: vi.fn().mockRejectedValue(new Error("upstream")), now: () => 1_000 });
-  expect((await failed(makeRequest())).status).toBe(503);
-});
-
-it("rate limits the sixth request from one IP inside ten minutes", async () => {
-  const handler = createDiagnosticLeadHandler({ getEnv: () => env, deliver: vi.fn().mockResolvedValue(undefined), now: () => 1_000 });
-  for (let index = 0; index < 5; index += 1) expect((await handler(makeRequest())).status).toBe(202);
-  expect((await handler(makeRequest())).status).toBe(429);
-});
-
-it("rejects a chunked body after 20 KiB even without Content-Length", async () => {
-  const handler = createDiagnosticLeadHandler({ getEnv: () => env, deliver: vi.fn(), now: () => 1_000 });
-  const oversized = new Request("https://yonaris.com/api/diagnostic", {
-    method: "POST",
-    headers: { "content-type": "application/json", origin: "https://yonaris.com", "x-yonaris-client-ip": "203.0.113.7" },
-    body: `{"brand":"${"x".repeat(21_000)}"}`,
-  });
-  expect(oversized.headers.has("content-length")).toBe(false);
-  expect((await handler(oversized)).status).toBe(413);
-});
-
-it("sends the exact bounded Resend request and aborts a stalled upstream", async () => {
-  const upstream = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
-  await sendLeadWithResend(lead, env, upstream);
-  expect(upstream).toHaveBeenCalledWith("https://api.resend.com/emails", expect.objectContaining({
-    method: "POST",
-    headers: expect.objectContaining({ Authorization: "Bearer re_test" }),
-    signal: expect.any(AbortSignal),
-  }));
-  const payload = JSON.parse(String(upstream.mock.calls[0][1]?.body));
-  expect(payload).toMatchObject({ to: ["black.dcp@outlook.com"], reply_to: "ava@acme.example" });
-  expect(payload.subject).not.toMatch(/[\r\n]/);
-  await expect(sendLeadWithResend(lead, env, vi.fn().mockResolvedValue(new Response("bad", { status: 500 })))).rejects.toThrow();
-});
+export const DIAGNOSTIC_API_PATH = "/api/diagnostic";
+export const DIAGNOSTIC_IDEMPOTENCY_HEADER = "Idempotency-Key";
+export type DiagnosticApiErrorCode =
+  | "invalid_request" | "invalid_idempotency_key" | "forbidden_request"
+  | "unsupported_media_type" | "payload_too_large" | "rate_limited"
+  | "service_unavailable" | "delivery_unconfirmed";
+export type DiagnosticApiResponse = { ok: true } | { ok: false; code: DiagnosticApiErrorCode };
+export function parseDiagnosticIdempotencyKey(value: string | null):
+  | { success: true; data: string }
+  | { success: false };
+export function toResendIdempotencyKey(uuid: string): `diagnostic/${string}`;
 ```
 
-Run `pnpm.cmd --filter @workspace/www test -- diagnostic-delivery.server.test.ts`; expected FAIL.
+The protocol accepts one canonical UUID only; missing, arbitrary, whitespace-padded, or comma-joined multiple values fail. Task 3 imports the path, header, and response type rather than duplicating them.
 
-After creating `e2e/www-tests/diagnostic-api.spec.ts`, also run the route RED before mounting the handler:
-
-```powershell
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic-api.spec.ts --project=chromium
-```
-
-Expected RED is a missing/non-400 endpoint, not a TypeScript, import, or fixture failure.
-
-- [ ] **Step 2: Implement the pure handler and bounded rate limiter**
-
-- Require `Content-Type: application/json`; use `Content-Length` only for early rejection, then read the actual `ReadableStream` in bounded chunks and stop once decoded bytes exceed 20 KiB before JSON parsing.
-- Require `Origin` equal to `new URL(request.url).origin`.
-- Parse the JSON once, validate with the shared schema, and never log request fields.
-- Trust only Caddy's overwritten `x-yonaris-client-ip`; validate it with `node:net.isIP()` and use `unknown` when absent/invalid. Never inspect browser-supplied `cf-connecting-ip` or `x-forwarded-for` inside the application. Governance Task 5 owns the site-scoped Cloudflare peer allowlist and direct-peer fallback that create this internal header; the application never tries to reconstruct proxy trust. Treat the resulting limiter as coarse abuse control only.
-- Permit five accepted attempts per key in a ten-minute in-process window; prune expired buckets on insert, cap the map at 10,000 buckets by evicting the oldest bucket, and return `Retry-After` on 429. Document this as best-effort abuse control, not an authentication boundary.
-- Read env only through `getEnv()` so tests remain deterministic.
-- Return JSON 202 only after `deliver()` resolves; configuration/delivery failure returns generic JSON 503 without leaking credentials or upstream response text.
-
-- [ ] **Step 3: Implement the Resend HTTP adapter**
-
-`sendLeadWithResend()` POSTs `https://api.resend.com/emails` with `Authorization: Bearer <key>`, `Content-Type: application/json`, and:
+**Server interfaces:**
 
 ```ts
-{
-  from: env.RESEND_FROM_EMAIL,
-  to: [env.MARKETING_LEAD_RECIPIENT],
-  reply_to: lead.email,
-  subject: `[Yonaris diagnostic] ${lead.brand} · ${lead.market}`,
-  text: renderLeadEmail(lead),
+export interface DiagnosticDeliveryEnv {
+  RESEND_API_KEY: string;
+  RESEND_FROM_EMAIL: string;
+  MARKETING_LEAD_RECIPIENT: string;
 }
+export type DeliverDiagnosticLead = (input: {
+  lead: DiagnosticLead;
+  env: DiagnosticDeliveryEnv;
+  idempotencyKey: string;
+}) => Promise<void>;
+export class DiagnosticDeliveryError extends Error {
+  constructor(readonly code: "service_unavailable" | "delivery_unconfirmed") {
+    super(code);
+  }
+}
+export interface DiagnosticHandlerDeps {
+  getEnv(): Record<string, string | undefined>;
+  deliver: DeliverDiagnosticLead;
+  now(): number;
+}
+export function readJsonBodyLimited(request: Request, maxBytes?: number): Promise<unknown>;
+export function createDiagnosticLeadHandler(deps: DiagnosticHandlerDeps): (request: Request) => Promise<Response>;
+export function sendLeadWithResend(input: {
+  lead: DiagnosticLead;
+  env: DiagnosticDeliveryEnv;
+  idempotencyKey: string;
+}, fetchImpl?: typeof fetch): Promise<void>;
 ```
 
-Strip CR/LF from subject fields, use plain text for all lead values, apply `AbortSignal.timeout(10_000)`, and throw on every non-2xx or timed-out Resend response. The adapter RED uses fake timers and a fetch double that rejects when its received signal aborts; advance 10,000 ms and assert the promise rejects so the timeout is behaviorally proven rather than merely checking that some signal exists.
+Every response is JSON with `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`; no branch adds CORS or reflects inputs/upstream bodies. The exact response contract is:
 
-- [ ] **Step 4: Mount the route and run GREEN**
+| Condition | Status | Code |
+|---|---:|---|
+| Resend 2xx | 202 | `{ ok: true }` |
+| invalid JSON/schema/honeypot | 400 | `invalid_request` |
+| absent/invalid UUID | 400 | `invalid_idempotency_key` |
+| absent/mismatched Origin or non-`same-origin` Fetch Metadata | 403 | `forbidden_request` |
+| actual body > 20,480 bytes | 413 | `payload_too_large` |
+| non-JSON media or compressed body | 415 | `unsupported_media_type` |
+| sixth eligible IP attempt in ten minutes | 429 | `rate_limited` plus accurate `Retry-After` |
+| missing env or explicit Resend non-2xx | 503 | `service_unavailable` |
+| timeout, abort, or network ambiguity | 503 | `delivery_unconfirmed` |
 
-`apps/www/src/routes/api/diagnostic.ts` creates one handler using `process.env`, native `fetch`, and `Date.now`, then delegates `POST` through TanStack `server.handlers`. Create `diagnostic-api.spec.ts` before the route: its request test posts invalid input to `/api/diagnostic`, uses `maxRedirects: 0`, and expects direct JSON 400 with zero redirect. Run it once before implementation and record RED (route missing/non-400), then rerun after the build-generated route tree and require GREEN.
+Handler order is fixed: Origin; `Sec-Fetch-Site`; JSON media type; identity encoding; early Content-Length; UUID; trusted internal IP bucket; bounded streaming body; strict JSON/Zod/honeypot; environment; delivery. It trusts only Caddy-overwritten `X-Yonaris-Client-IP`, validates it with `node:net.isIP()`, and ignores browser `CF-Connecting-IP` and forwarding headers. Missing/invalid internal IP uses `unknown`. The limiter allows five eligible requests per fixed ten-minute window, prunes expired buckets, caps at 10,000 by oldest eviction, and is documented as in-process best-effort abuse control.
 
-`compose.marketing.yaml` explicitly passes `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `MARKETING_LEAD_RECIPIENT`. `env.example` documents `RESEND_FROM_EMAIL='Yonaris <diagnostic@yonaris.com>'` with shell-safe quotes and the recipient. `deploy-marketing.sh` exits before pulling/starting when any value is blank; before rollout it performs the read-only Resend `GET /domains` check and requires the sender domain to be `verified` with sending enabled. Its new shell test uses a temporary fixture environment and stubbed Resend/Docker commands, proves missing/unverified/verified cases, and asserts `docker compose config` passes all three values only into the `www` runtime environment—it must never pull, start, stop, mutate the real deployment, or print the API key.
+The Resend adapter sends deterministic plain text only. Explicit non-2xx responses throw `DiagnosticDeliveryError("service_unavailable")`; aborts, timeouts, network failures, and unknown thrown failures are conservatively classified as `delivery_unconfirmed`:
 
-This task does not edit the strict Caddy fragment. Governance Task 5 owns the one final, versioned allowlist migration and exposes `/api/diagnostic` together with every rebuilt public route. The branch must not be pushed or deployed between this task and that release gate.
+```text
+POST https://api.resend.com/emails
+Authorization: Bearer <key>
+Content-Type: application/json
+Accept: application/json
+User-Agent: Yonaris-Diagnostic/1
+Idempotency-Key: diagnostic/<client UUID>
+```
+
+Payload uses the configured sender and recipient, lead email as `reply_to`, one-line CR/LF-sanitized subject, stable field order, and no timestamp. Apply a behavioral ten-second timeout, perform no server retry, never read/log an upstream error body, and never include lead/API-key values in errors. A 2xx means Resend accepted the request, not inbox delivery.
+
+- [ ] **Step 1: Write protocol, handler, and adapter RED**
+
+Cover UUID parsing, exact Resend key, origin/fetch-metadata order, media/encoding, declared and chunked limits, invalid UTF-8/JSON/schema/honeypot, five-plus-one limiter/reset/eviction, spoofed headers, env, 202 only after delivery, generic response headers, zero PII/secret logs, deterministic Resend payload, identical lead+UUID requests, explicit upstream rejection, and fake-timer timeout/network ambiguity.
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- diagnostic-delivery.server.test.ts
+pnpm.cmd --filter @workspace/www test -- diagnostic-api-protocol.test.ts diagnostic-delivery.server.test.ts
+```
+
+- [ ] **Step 2: Implement the pure protocol, handler, and adapter; run focused GREEN**
+
+Implement only the interfaces and ordering above. Run the same focused unit command and require GREEN before creating or mounting the route.
+
+- [ ] **Step 3: Write route RED, then mount the pure handler and run route GREEN**
+
+Before creating the route, `diagnostic-api.spec.ts` posts only invalid/non-delivering bodies with `maxRedirects: 0` and expects direct JSON 400/403/415 plus no-store/nosniff/no-CORS. Expected RED is 404/non-JSON, never fixture failure. The final route delegates POST through TanStack `server.handlers` using `process.env`, native fetch, and `Date.now`; the generated route-tree diff may contain only this API route.
+
+```powershell
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic-api.spec.ts --project=chromium
-pnpm.cmd --filter @workspace/www check-types
+```
+
+- [ ] **Step 4: Write deployment RED, then add configuration without broadening credentials**
+
+Create the isolated shell test first and run it against the unchanged deployment code; record RED for missing-variable preflight/compose propagation. Then implement: Compose passes the three required env variables only into `www`. The deployment script rejects blanks before pull/up and never calls Resend `/domains`; production uses a `yonaris.com` domain-scoped Sending Access key. Domain verification is a documented one-time release prerequisite in `deploy/las/README.md`, not a runtime check requiring Full Access. The shell test proves missing-variable failure, secret redaction, compose scoping, no network/domain API call, and workflow execution without mutating real deployment.
+
+```dotenv
+RESEND_API_KEY=
+RESEND_FROM_EMAIL='Yonaris <diagnostic@yonaris.com>'
+MARKETING_LEAD_RECIPIENT=black.dcp@outlook.com
+```
+
+- [ ] **Step 5: Run full GREEN and commit**
+
+```powershell
+pnpm.cmd --filter @workspace/www test -- diagnostic-schema.test.ts diagnostic-api-protocol.test.ts diagnostic-delivery.server.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic-api.spec.ts --project=chromium
 bash deploy/las/bin/deploy-marketing.test.sh
+pnpm.cmd --filter @workspace/www check-types
+pnpm.cmd --filter e2e check-types
 pnpm.cmd --filter @workspace/www build
-git add apps/www/src/lib/diagnostic-delivery.server.ts apps/www/src/lib/diagnostic-delivery.server.test.ts apps/www/src/routes/api/diagnostic.ts e2e/www-tests/diagnostic-api.spec.ts deploy/las/compose.marketing.yaml deploy/las/env.example deploy/las/bin/deploy-marketing.sh deploy/las/bin/deploy-marketing.test.sh .github/workflows/deploy-marketing.yaml
+node --test deploy/las/caddy/yonaris-marketing.test.mjs
+git diff --check
+git add apps/www/src/lib/diagnostic-api-protocol.ts apps/www/src/lib/diagnostic-api-protocol.test.ts apps/www/src/lib/diagnostic-delivery.server.ts apps/www/src/lib/diagnostic-delivery.server.test.ts apps/www/src/routes/api/diagnostic.ts apps/www/src/routeTree.gen.ts e2e/www-tests/diagnostic-api.spec.ts deploy/las/compose.marketing.yaml deploy/las/env.example deploy/las/bin/deploy-marketing.sh deploy/las/bin/deploy-marketing.test.sh deploy/las/README.md .github/workflows/deploy-marketing.yaml
 git commit -m "deliver diagnostic leads through Resend"
 ```
+
+Task 3 completes client idempotency: first valid submit generates `crypto.randomUUID()`, synchronous locking blocks double submit, ambiguous/unavailable retries of the same normalized lead reuse the key, only a materially different normalized lead gets a new key, success clears it, and neither lead nor key enters storage/cookies/analytics.
 
 ### Task 3: Replace the mailto form with a two-stage resilient client flow
 
@@ -255,14 +376,31 @@ git commit -m "deliver diagnostic leads through Resend"
 - Move: `apps/www/src/components/marketing/diagnostic-form.tsx` → `apps/www/src/components/site/pages/diagnostic-form.tsx`
 - Move: `apps/www/src/components/marketing/diagnostic-form.test.tsx` → `apps/www/src/components/site/pages/diagnostic-form.test.tsx`
 - Move: `apps/www/src/components/marketing/diagnostic-page.tsx` → `apps/www/src/components/site/pages/diagnostic-page.tsx`
+- Create: `apps/www/src/lib/diagnostic-client.ts`
+- Create: `apps/www/src/lib/diagnostic-client.test.ts`
+- Create: `apps/www/src/lib/diagnostic-analytics-privacy.ts`
+- Create: `apps/www/src/lib/diagnostic-analytics-privacy.test.ts`
 - Modify: `apps/www/src/routes/diagnostic.tsx`
 - Modify: `apps/www/src/routes/zh/diagnostic.tsx`
+- Modify: `apps/www/src/routes/__root.tsx`
+- Modify: `apps/www/src/env.d.ts`
 - Modify: `apps/www/src/styles/pages/diagnostic.css`
+- Modify: `apps/www/src/lib/marketing-content.ts`
+- Modify: `apps/www/src/lib/marketing-content.test.ts`
+- Modify: `apps/www/src/lib/posthog.ts`
+- Create: `apps/www/src/lib/posthog.test.ts`
+- Create: `e2e/playwright.analytics.config.ts`
+- Modify: `e2e/package.json`
+- Modify: `e2e/www-tests/homepage.spec.ts`
 - Create: `e2e/www-tests/diagnostic.spec.ts`
+- Create: `e2e/www-tests/diagnostic-analytics.spec.ts`
+- Modify: `.github/workflows/e2e.yaml`
+- Create: `.changeset/diagnostic-request-experience.md`
 
 **Interfaces:**
-- Consumes: `DiagnosticLead`, `parseDiagnosticLead()`, `buildDiagnosticMailto()` and `POST /api/diagnostic`.
-- Produces: stages `scope | contact | success`; statuses `idle | submitting | failed`.
+- Consumes the shared lead schema, protocol path/header/response types, bilingual Diagnostic content, and `buildDiagnosticMailto()`.
+- Produces authored stages `scope | contact`, result stage `success`, and submission states `idle | submitting | unconfirmed`.
+- `diagnostic-client.ts` owns the pure request adapter and classifies only HTTP 202 plus parsed `{ ok: true }` as success. Invalid JSON, `{ ok: false }`, network failure, and timeout remain unconfirmed.
 
 - [ ] **Step 1: Write failing rendered and browser-state tests**
 
@@ -295,41 +433,55 @@ test("diagnostic reports success only after a 202 response", async ({ page }) =>
   await page.route("**/api/diagnostic", (route) => route.fulfill({ status: 202, contentType: "application/json", body: '{"ok":true}' }));
   await completeDiagnosticForm(page);
   await page.getByRole("button", { name: "Request the diagnostic" }).click();
-  await expect(page.getByRole("status")).toContainText("Request received");
+  await expect(page.getByRole("status")).toContainText("Request accepted for review");
 });
 
 test("delivery failure offers the encoded email fallback", async ({ page }) => {
-  await page.route("**/api/diagnostic", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false}' }));
+  await page.route("**/api/diagnostic", (route) => route.fulfill({ status: 503, contentType: "application/json", body: '{"ok":false,"code":"delivery_unconfirmed"}' }));
   await completeDiagnosticForm(page);
   await page.getByRole("button", { name: "Request the diagnostic" }).click();
-  await expect(page.getByRole("alert")).toContainText("could not deliver");
+  await expect(page.getByRole("alert")).toContainText("Delivery could not be confirmed");
   await expect(page.getByRole("link", { name: "Send by email instead" })).toHaveAttribute("href", /^mailto:/);
 });
 ```
 
-Add English and Chinese matrices for: Stage 1 invalid input sends zero requests; pending disables duplicate submit; Back preserves every field; 202 alone creates success; 503 preserves values and exposes mailto; 390×844 and 320×740 have no overflow; success/failure screenshots are saved and inspected. Implement the repeated form-fill sequence as a local Playwright helper in the same test file, not production code. Run tests; expected FAIL because the current form opens mailto.
+Add English and Chinese matrices for: Stage 1 invalid input sends zero requests and focuses the first invalid field; Back preserves every field; submission uses the shared API path/header and a UUID; a synchronous lock prevents double-click races; pending exposes a live status and disables navigation/submit; only 202 + `{ok:true}` creates success; invalid 202, 503, timeout, and network ambiguity preserve values and expose the complete mailto; the same normalized lead always reuses its UUID; a materially changed normalized lead gets a new UUID; changing then restoring a value or adding trim-only whitespace reuses the original UUID; success clears it; stale request completion after a materially changed lead/unmount cannot replace current state. Implement repeated form fill only as a test helper.
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- diagnostic-form.test.tsx diagnostic-schema.test.ts
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic.spec.ts --project=chromium
+pnpm.cmd --filter @workspace/www test -- diagnostic-client.test.ts diagnostic-analytics-privacy.test.ts diagnostic-form.test.tsx diagnostic-schema.test.ts posthog.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic.spec.ts www-tests/homepage.spec.ts --project=chromium
+pnpm.cmd --filter e2e exec playwright test --config playwright.analytics.config.ts --project=chromium
 ```
 
 Record the expected behavioral REDs (no staged POST state machine, no 202-gated success, no resilient failure state), not syntax or selector failures.
 
 - [ ] **Step 2: Implement progressive fields and shared validation**
 
-Stage 1: website, brand, market/category, one decision question. Stage 2: competitors, name, work email, consent, hidden honeypot, review. Preserve typed values when moving back. Validate Stage 1 locally before advancing and the entire shared schema before POST.
+Stage 1: website, brand, market/category, one decision question. Stage 2: competitors, name, work email, consent, hidden honeypot, review. Preserve typed values when moving back. Validate Stage 1 with `parseDiagnosticScope()` before advancing and the entire shared schema before POST. Field-level messages and all status/action copy come from `DiagnosticContent`; never expose raw Zod English messages in the Chinese UI. The Privacy link is adjacent to, not nested inside, the consent label.
 
 - [ ] **Step 3: Implement request states and honest fallback**
 
-Submit JSON to `/api/diagnostic`; disable only while pending; prevent duplicate requests; announce errors and success through `role="alert"`/`role="status"`; on failure retain all values and display `buildDiagnosticMailto(lead)`. Do not fire PostHog or write lead data to browser persistence. Both route modules use `parseDiagnosticSearch()` and `corePageHead("diagnostic", locale)`.
+Generate the first UUID with `crypto.randomUUID()` only after a valid lead is ready to submit. Keep an in-memory `{ normalizedLeadFingerprint, idempotencyKey }`, where the fingerprint is deterministic JSON of the parsed `DiagnosticLead` in canonical field order. Reuse the key whenever the normalized payload is identical, including edit-then-restore and trim-only changes; generate a new key only when the parsed payload truly differs; clear after confirmed success. Do not persist the fingerprint, key, or lead. Abort in-flight work on cleanup and guard stale completions against the fingerprint that initiated them. Submit JSON through the shared protocol module; announce failures through `role="alert"` and pending/success through `role="status"`; on unconfirmed delivery retain all values and display `buildDiagnosticMailto(lead)`.
+
+`?website=` is a one-time convenience, not analytics data. A root-level synchronous bootstrap script runs before the external deferred Plausible script: on the two exact Diagnostic paths it copies the raw query to a short-lived in-memory `window.__YONARIS_DIAGNOSTIC_PREFILL_SEARCH__`, immediately calls `history.replaceState()` with the query removed, and only then allows analytics initialization. SSR seeds from route search; client hydration seeds from the in-memory value and deletes it after consumption. The value is never written to storage/cookies or attached to an event. `diagnostic-analytics-privacy.ts` produces the deterministic bootstrap script and sanitized URL/referrer helpers; `__root.tsx` emits it before Plausible and initializes PostHog only after the clean location exists.
+
+Create a dedicated `playwright.analytics.config.ts` on its own strict port (default 3002) and restrict it to `diagnostic-analytics.spec.ts`. Only this config supplies deterministic non-secret `VITE_PLAUSIBLE_DOMAIN`, `VITE_POSTHOG_KEY`, and a local/interceptable `VITE_POSTHOG_HOST`; the shared public/visual config remains analytics-free, so full-site QA cannot reach external analytics or emit test telemetry. The dedicated browser test fulfills a stub Plausible script that emits one event, intercepts the PostHog endpoint, requires at least one request from each provider, and asserts every observed URL/referrer/payload excludes the raw query and all lead values. Zero-request interception must fail the test. Add `test:www:analytics` to `e2e/package.json`, run it after `test:www` in `.github/workflows/e2e.yaml`, and keep it in the Governance final gate.
+
+Harden PostHog properties so page URLs/referrers contain no diagnostic query and no diagnostic field, domain, email, question, competitors, UUID, or response payload is included in custom events. Assert that no lead/UUID/form value—not that no analytics library metadata at all—is written to localStorage, sessionStorage, cookie, or analytics. Both route modules use `parseDiagnosticSearch()` and `corePageHead("diagnostic", locale)`.
 
 - [ ] **Step 4: Run GREEN at desktop and mobile, then commit**
 
+At 1440, 1024, 768, 390, 360, 320, and 280px, test both locales for overflow, semantic CJK phrase integrity, 44px targets, focus-visible, reduced motion, and WCAG AA in scope/contact/pending/success/unconfirmed states. Capture and inspect EN/ZH desktop plus 390/320 scope, contact, success, and unconfirmed states.
+
 ```powershell
-pnpm.cmd --filter @workspace/www test -- diagnostic-form.test.tsx diagnostic-schema.test.ts diagnostic-delivery.server.test.ts
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts diagnostic.spec.ts
-git add apps/www/src/components/site/pages/diagnostic-* apps/www/src/routes/diagnostic.tsx apps/www/src/routes/zh/diagnostic.tsx apps/www/src/styles/pages/diagnostic.css e2e/www-tests/diagnostic.spec.ts
+pnpm.cmd --filter @workspace/www test -- diagnostic-client.test.ts diagnostic-analytics-privacy.test.ts diagnostic-form.test.tsx diagnostic-schema.test.ts diagnostic-delivery.server.test.ts marketing-content.test.ts posthog.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic.spec.ts www-tests/homepage.spec.ts --project=chromium
+pnpm.cmd --filter e2e exec playwright test --config playwright.analytics.config.ts --project=chromium
+pnpm.cmd --filter @workspace/www check-types
+pnpm.cmd --filter e2e check-types
+pnpm.cmd --filter @workspace/www build
+git diff --check
+git add apps/www/src/components/marketing/diagnostic-form.tsx apps/www/src/components/marketing/diagnostic-form.test.tsx apps/www/src/components/marketing/diagnostic-page.tsx apps/www/src/components/site/pages/diagnostic-form.tsx apps/www/src/components/site/pages/diagnostic-form.test.tsx apps/www/src/components/site/pages/diagnostic-page.tsx apps/www/src/lib/diagnostic-client.ts apps/www/src/lib/diagnostic-client.test.ts apps/www/src/lib/diagnostic-analytics-privacy.ts apps/www/src/lib/diagnostic-analytics-privacy.test.ts apps/www/src/routes/diagnostic.tsx apps/www/src/routes/zh/diagnostic.tsx apps/www/src/routes/__root.tsx apps/www/src/env.d.ts apps/www/src/styles/pages/diagnostic.css apps/www/src/lib/marketing-content.ts apps/www/src/lib/marketing-content.test.ts apps/www/src/lib/posthog.ts apps/www/src/lib/posthog.test.ts e2e/playwright.analytics.config.ts e2e/package.json e2e/www-tests/homepage.spec.ts e2e/www-tests/diagnostic.spec.ts e2e/www-tests/diagnostic-analytics.spec.ts .github/workflows/e2e.yaml .changeset/diagnostic-request-experience.md
 git commit -m "build the resilient diagnostic request flow"
 ```
 
@@ -337,45 +489,45 @@ git commit -m "build the resilient diagnostic request flow"
 
 **Files:**
 - Create: `apps/www/src/components/site/pages/privacy-page.tsx`
+- Create: `apps/www/src/components/site/pages/privacy-page.test.tsx`
 - Create: `apps/www/src/routes/privacy.tsx`
-- Modify: `apps/www/src/content/site/diagnostic.test.ts`
+- Create: `apps/www/src/styles/pages/privacy.css`
+- Modify: `apps/www/src/styles.css`
+- Modify: `apps/www/src/lib/site-seo.test.ts`
+- Modify: `apps/www/src/routeTree.gen.ts` only through TanStack generation
 - Modify: `e2e/www-tests/diagnostic.spec.ts`
 
 **Interfaces:**
-- Consumes: SiteShell, site manifest, diagnostic field contract.
+- Consumes `SiteShell`, `getPrivacyContent()`, the site manifest, and the Task 1 diagnostic field contract.
 - Produces: `PrivacyPage()` and `/privacy`, containing concise English and Chinese disclosure sections under one canonical URL.
 
-- [ ] **Step 1: Write the failing pure-content privacy test**
+- [ ] **Step 1: Write the failing page and route tests**
 
-```ts
-const privacy = getPrivacyContent();
-for (const phrase of ["Diagnostic request data", "email delivery", "purpose", "black.dcp@outlook.com", "诊断申请数据"]) expect(JSON.stringify(privacy)).toContain(phrase);
-expect(JSON.stringify(privacy)).not.toContain("retained for");
-```
-
-Run tests; expected FAIL because the Privacy page and shared canonical disclosure do not exist.
+Task 1 already owns and tests the Privacy facts. Task 4 RED is the missing `PrivacyPage`/route/presentation, not missing content. Static tests require one English section with `lang="en"`, one Chinese section with `lang="zh-CN"`, a language jump navigation, contact link, and return links to both diagnostic locales. Browser RED requires `/privacy` to render directly with one canonical and no alternate language route.
 
 ```powershell
-pnpm.cmd --filter @workspace/www test -- src/content/site/diagnostic.test.ts
+pnpm.cmd --filter @workspace/www test -- privacy-page.test.tsx site-seo.test.ts
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic.spec.ts --project=chromium
 ```
 
 - [ ] **Step 2: Implement concise bilingual Privacy pages**
 
-State exactly, in English and Chinese: fields collected, email delivery to the Yonaris team, purpose of scoping/responding to the request, no client analytics use, and contact email. Do not invent retention duration, jurisdiction, DPO, certification, or legal basis. The route uses `supportingPageHead("privacy")`.
+Render exactly the approved Task 1 facts in English and Chinese. Do not invent retention duration, jurisdiction, DPO, certification, legal basis, encryption guarantees, sale/sharing guarantees, or deletion SLA. The route uses `supportingPageHead("privacy")`. There is only `/privacy`: do not add `/zh/privacy`, hreflang, Agent/Markdown, or negotiated variants.
 
 - [ ] **Step 3: Verify both diagnostic locales link the same canonical disclosure**
 
-Playwright asserts `/diagnostic` and `/zh/diagnostic` both link `/privacy`, and `/privacy` exposes both language sections with one canonical link.
+Playwright asserts `/diagnostic` and `/zh/diagnostic` both link `/privacy`; the consent link remains outside the checkbox label and provides a new-context cue; `/privacy` exposes both language sections, language jumps, diagnostic-return paths, and one canonical link. At all seven site widths assert no overflow, CJK phrase integrity, keyboard focus, WCAG AA, reduced-motion safety, and no duplicate main/header/footer. Capture/inspect desktop and mobile.
 
 - [ ] **Step 4: Run GREEN, build, and commit**
 
 ```powershell
-pnpm.cmd --filter @workspace/www test
-pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts diagnostic.spec.ts
+pnpm.cmd --filter @workspace/www test -- diagnostic.test.ts privacy-page.test.tsx site-seo.test.ts
+pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/diagnostic.spec.ts --project=chromium
 pnpm.cmd --filter @workspace/www check-types
+pnpm.cmd --filter e2e check-types
 pnpm.cmd --filter @workspace/www build
-git add apps/www/src/components/site/pages/privacy-page.tsx apps/www/src/routes/privacy.tsx apps/www/src/content/site/diagnostic.test.ts e2e/www-tests/diagnostic.spec.ts
+git diff --check
+git add apps/www/src/components/site/pages/privacy-page.tsx apps/www/src/components/site/pages/privacy-page.test.tsx apps/www/src/routes/privacy.tsx apps/www/src/styles/pages/privacy.css apps/www/src/styles.css apps/www/src/lib/site-seo.test.ts apps/www/src/routeTree.gen.ts e2e/www-tests/diagnostic.spec.ts
 git commit -m "document diagnostic request privacy"
 ```
 
