@@ -1,11 +1,12 @@
+import { parseHTML } from "linkedom";
 import { describe, expect, test } from "vitest";
 import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
-import { createZhipuAdapter, zhipuSelectorContract } from "./zhipu";
+import { createZhipuAdapter, zhipuSearchEvidenceAdapter, zhipuSelectorContract } from "./zhipu";
 
 describe("Zhipu browser-extension adapter", () => {
 	test("uses the qualified ChatGLM origin and adapter identity", () => {
 		expect(zhipuSelectorContract).toMatchObject({
-			version: "zhipu-web-20260822-localpc-v2",
+			version: "zhipu-web-20260822-localpc-v3",
 			surface: "zhipu.consumer_web",
 			launchUrl: "https://chatglm.cn/",
 		});
@@ -32,7 +33,67 @@ describe("Zhipu browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/zhipu", title: "智谱来源" }],
-			adapterVersion: "zhipu-web-20260822-localpc-v2",
+			adapterVersion: "zhipu-web-20260822-localpc-v3",
+		});
+	});
+
+	test("binds one collapsed source panel only when it is directly adjacent to the accepted answer", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="advance-thinking"><div class="advance-thinking-area"><div class="tool-result-content"><div class="sources-tab-container">Old sources</div></div></div></div>
+			<div>old-turn separator</div>
+			<div class="answer-content-wrap" id="accepted-answer">
+				<p>Current answer</p>
+				<a href="https://source.example/zhipu">智谱来源</a>
+				<a href="https://hidden.example/zhipu" hidden>隐藏来源</a>
+			</div>
+			<div class="advance-thinking collapse">
+				<div class="advance-thinking-area"><div class="tool-result-content"><div class="sources-tab-container"><span class="source-text">来源列表</span></div></div></div>
+			</div>
+		</body></html>`);
+		const acceptedAnswer = requiredElement(document, "#accepted-answer");
+
+		await expect(
+			zhipuSearchEvidenceAdapter.read({
+				acceptedAnswer,
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toEqual({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			webQueries: [],
+			citations: [{ url: "https://source.example/zhipu", title: "智谱来源" }],
+			diagnostics: {
+				extractorVersion: "zhipu-search-evidence-20260822-v1",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 0,
+				citationCandidateCount: 2,
+			},
+		});
+	});
+
+	test("ignores an unbound page-wide Zhipu source panel", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="advance-thinking"><div class="advance-thinking-area"><div class="tool-result-content"><div class="sources-tab-container">Unbound sources</div></div></div></div>
+			<div>separator</div>
+			<div class="answer-content-wrap" id="accepted-answer">Current answer</div>
+		</body></html>`);
+
+		await expect(
+			zhipuSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: () => true,
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: null,
+			queryAvailability: "unknown",
+			diagnostics: { searchBlockCount: 0, evidenceSource: "none" },
 		});
 	});
 
@@ -62,3 +123,9 @@ describe("Zhipu browser-extension adapter", () => {
 		await expect(port.completeOneTask(createZhipuAdapter(port), "Prompt A")).resolves.toBeUndefined();
 	});
 });
+
+function requiredElement(document: Document, selector: string): Element {
+	const element = document.querySelector(selector);
+	if (!element) throw new Error(`Fixture element ${selector} is missing`);
+	return element;
+}

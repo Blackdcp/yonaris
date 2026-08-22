@@ -57,16 +57,16 @@ describe("browser extension contract", () => {
 			"https://chat.deepseek.com/",
 			"deepseek-web-20260821-localpc-v8",
 		],
-		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v6"],
-		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v10"],
-		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v7"],
+		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260822-localpc-v7"],
+		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260822-localpc-v11"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260822-localpc-v8"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
 			"yuanbao-web-20260821-localpc-v6",
 		],
-		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v2"],
+		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v3"],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
 		expect(browserExtensionSurfaceDefinition(surface)).toEqual({
 			key: surface,

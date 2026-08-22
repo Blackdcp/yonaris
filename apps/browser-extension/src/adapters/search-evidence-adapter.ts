@@ -1,5 +1,7 @@
 import type { CollectedCitation, SearchEvidenceContract } from "./contracts";
-import type { StructuredSearchEvidence, VisibleTextReader } from "./search-evidence";
+import { normalizeCitationTitle, type StructuredSearchEvidence, type VisibleTextReader } from "./search-evidence";
+
+const CITATION_URL_MAX_CHARACTERS = 10_000;
 
 export type SearchEvidenceQueryAvailability = "exposed" | "unavailable" | "not_searched" | "unknown";
 
@@ -108,4 +110,22 @@ export function validateSearchEvidenceResult(
 		throw new Error("Search evidence diagnostics are invalid");
 	}
 	return value;
+}
+
+export function visibleCitationFromElement(element: Element, readVisibleText: VisibleTextReader): CollectedCitation {
+	if (element.tagName.toLocaleLowerCase("en-US") !== "a") throw new Error("Citation candidate is not a link");
+	const rawUrl = element.getAttribute("href");
+	if (!rawUrl) throw new Error("Citation link has no URL");
+	const url = new URL(rawUrl);
+	if (
+		(url.protocol !== "http:" && url.protocol !== "https:") ||
+		url.username ||
+		url.password ||
+		url.href.length > CITATION_URL_MAX_CHARACTERS
+	) {
+		throw new Error("Citation URL is invalid");
+	}
+	const title = readVisibleText(element).trim();
+	if (!title) throw new Error("Citation link has no visible title");
+	return { url: url.href, title: normalizeCitationTitle(title) };
 }

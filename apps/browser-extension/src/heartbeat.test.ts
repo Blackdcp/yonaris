@@ -37,17 +37,17 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v6",
+				adapterVersion: "qwen-web-20260822-localpc-v7",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v10",
+				adapterVersion: "kimi-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v7",
+				adapterVersion: "wenxin-web-20260822-localpc-v8",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
@@ -57,7 +57,7 @@ describe("buildHeartbeat", () => {
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260822-localpc-v2",
+				adapterVersion: "zhipu-web-20260822-localpc-v3",
 				activeConcurrency: 0,
 			},
 		});
@@ -90,17 +90,17 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v6",
+				adapterVersion: "qwen-web-20260822-localpc-v7",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v10",
+				adapterVersion: "kimi-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v7",
+				adapterVersion: "wenxin-web-20260822-localpc-v8",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
@@ -110,7 +110,7 @@ describe("buildHeartbeat", () => {
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260822-localpc-v2",
+				adapterVersion: "zhipu-web-20260822-localpc-v3",
 				activeConcurrency: 0,
 			},
 		});
