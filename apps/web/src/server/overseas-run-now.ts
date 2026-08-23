@@ -12,7 +12,11 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { dispatchOverseasRunCalls } from "./overseas-run-dispatch";
-import { assertOverseasRunNowChannelsReady, planOverseasRunNow } from "./overseas-run-now-policy";
+import {
+	assertOverseasRunNowChannelsReady,
+	assertOverseasRunNowProvidersConfigured,
+	planOverseasRunNow,
+} from "./overseas-run-now-policy";
 
 const channelKeySchema = z.enum(["chatgpt", "perplexity", "gemini", "copilot", "google-ai-mode", "google-ai-overview"]);
 
@@ -40,7 +44,6 @@ export const runOverseasNowFn = createServerFn({ method: "POST" })
 	.validator(runInputSchema)
 	.handler(async ({ data }) => {
 		const session = await requirePlatformAdmin();
-		if (!getProvider("brightdata").isConfigured()) throw new Error("Bright Data is not configured");
 		if (
 			process.env.RESPONSE_SNAPSHOT_ENABLED !== "true" ||
 			!process.env.RESPONSE_SNAPSHOT_ROOT ||
@@ -73,6 +76,7 @@ export const runOverseasNowFn = createServerFn({ method: "POST" })
 			channelKeys: data.channelKeys,
 			scope: { market: scope.market, locale: scope.locale, timezone: scope.timezone },
 		});
+		assertOverseasRunNowProvidersConfigured(plan.channels, (provider) => getProvider(provider).isConfigured());
 		await assertOverseasRunNowChannelsReady(
 			plan.channels,
 			(config) => getProvider(config.provider).validateTarget?.(config) ?? null,
