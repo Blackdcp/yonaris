@@ -12,6 +12,12 @@ import { normalizeResponseSnapshotCitations } from "../response-snapshot-citatio
 import { normalizeResponseSnapshotQueryEvidence } from "../response-snapshot-query-policy";
 
 type SnapshotSource = NonNullable<ScrapeResult["snapshotSource"]>;
+export type PromptResponseSnapshotStatus = "ready" | "already_ready" | "retry_later" | "failed";
+const SNAPSHOT_CAPABLE_PROVIDERS = new Set(["brightdata", "dataforseo"]);
+
+export function isPromptSnapshotCapableProvider(provider: string): boolean {
+	return SNAPSHOT_CAPABLE_PROVIDERS.has(provider);
+}
 
 export function buildPromptObservationSearchEvidence(result: Pick<ScrapeResult, "webQueries" | "webSearchObserved">): {
 	webQueries: string[];
@@ -27,8 +33,16 @@ export function assertPromptSnapshotCaptureConfiguration(input: {
 	enabled: boolean;
 	provider: string;
 	storageRoot: string | undefined;
+	required?: boolean;
 }): void {
-	if (!input.enabled || !["brightdata", "dataforseo"].includes(input.provider)) return;
+	const capable = isPromptSnapshotCapableProvider(input.provider);
+	if (input.required && !input.enabled) {
+		throw new Error("Response snapshot capture is required for overseas Run now");
+	}
+	if (input.required && !capable) {
+		throw new Error(`Provider ${input.provider} cannot produce the response snapshot required for overseas Run now`);
+	}
+	if (!input.enabled || !capable) return;
 	assertAbsoluteStorageRoot(input.storageRoot);
 }
 

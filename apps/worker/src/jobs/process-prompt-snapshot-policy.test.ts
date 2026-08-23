@@ -70,6 +70,16 @@ test("snapshot-capable provider configuration is rejected before a provider call
 	assert.doesNotThrow(() =>
 		assertPromptSnapshotCaptureConfiguration({ enabled: true, provider: "openai-api", storageRoot: undefined }),
 	);
+	assert.throws(
+		() =>
+			assertPromptSnapshotCaptureConfiguration({
+				enabled: false,
+				provider: "dataforseo",
+				storageRoot: undefined,
+				required: true,
+			}),
+		/required for overseas Run now/,
+	);
 });
 
 test("draft construction normalizes query evidence without exposing a sentinel", () => {

@@ -10,6 +10,7 @@ import { getProvider } from "@workspace/lib/providers";
 import { eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import { runModelIteration } from "./process-prompt";
+import type { PromptResponseSnapshotStatus } from "./process-prompt-snapshot-policy";
 
 export interface ProcessOverseasRunCallData {
 	cohortId: string;
@@ -26,7 +27,12 @@ interface ExecutionDependencies<TCall extends ClaimedCallIdentity> {
 	execute(
 		call: TCall,
 		hooks: { beforeProviderRun(): Promise<void> },
-	): Promise<{ observationAttemptId: string; promptRunId: string; providerSubmissionId?: string }>;
+	): Promise<{
+		observationAttemptId: string;
+		promptRunId: string;
+		providerSubmissionId?: string;
+		responseSnapshotStatus?: PromptResponseSnapshotStatus | null;
+	}>;
 	recordPaidIntent(callId: string): Promise<void>;
 	complete(input: {
 		callId: string;
@@ -56,7 +62,9 @@ export async function executeOverseasRunCall<TCall extends ClaimedCallIdentity>(
 		const result = await dependencies.execute(call, {
 			beforeProviderRun: async () => dependencies.recordPaidIntent(call.id),
 		});
-		await dependencies.complete({ callId: call.id, ...result });
+		assertOverseasResponseSnapshotReady(result.responseSnapshotStatus);
+		const { responseSnapshotStatus: _responseSnapshotStatus, ...completion } = result;
+		await dependencies.complete({ callId: call.id, ...completion });
 		return "succeeded";
 	} catch (error) {
 		await dependencies.fail({
@@ -106,6 +114,7 @@ const productionDependencies: ExecutionDependencies<NonNullable<Awaited<ReturnTy
 			providerImpl: getProvider(call.provider),
 			runIndex: call.sampleIndex,
 			beforeProviderRun: hooks.beforeProviderRun,
+			requireReadyResponseSnapshot: true,
 		});
 		if (!result) throw new Error("The overseas observation completed without a prompt run");
 		return result;
@@ -118,4 +127,12 @@ function errorCode(error: unknown): string {
 		if (typeof code === "string" || typeof code === "number") return String(code).slice(0, 100);
 	}
 	return "execution_failed";
+}
+
+function assertOverseasResponseSnapshotReady(status: PromptResponseSnapshotStatus | null | undefined): void {
+	if (status === "ready" || status === "already_ready") return;
+	const error = new Error(`Overseas response snapshot is not ready (${status ?? "missing"})`);
+	error.name = "ResponseSnapshotNotReadyError";
+	Object.assign(error, { code: "response_snapshot_not_ready" });
+	throw error;
 }

@@ -7,7 +7,7 @@ import {
 	markObservationFailed,
 	persistSuccessfulObservation,
 } from "@workspace/lib/db/observations";
-import { type Brand, brands, type Competitor, competitors, prompts } from "@workspace/lib/db/schema";
+import { type Brand, brands, type Competitor, competitors, prompts, responseSnapshots } from "@workspace/lib/db/schema";
 import { analyzeMentions } from "@workspace/lib/mention-analysis";
 import { assertObservationRouteSupportsScope, resolveObservationTarget } from "@workspace/lib/observation-targets";
 import {
@@ -18,7 +18,7 @@ import {
 	parseScrapeTargets,
 	selectTargetsForBrand,
 } from "@workspace/lib/providers";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Job } from "pg-boss";
 import boss from "../boss";
 import { trackWorkerEvent } from "../telemetry";
@@ -27,6 +27,8 @@ import {
 	assertPromptSnapshotCaptureConfiguration,
 	buildPromptObservationSearchEvidence,
 	buildPromptResponseSnapshotDraft,
+	isPromptSnapshotCapableProvider,
+	type PromptResponseSnapshotStatus,
 	resolvePromptSnapshotCapturePolicy,
 } from "./process-prompt-snapshot-policy";
 import { assertResponseSnapshotCapacity } from "./response-snapshot-maintenance-policy";
@@ -130,6 +132,7 @@ export async function runModelIteration({
 	providerImpl,
 	runIndex,
 	beforeProviderRun,
+	requireReadyResponseSnapshot = false,
 }: {
 	sourceJobId: string;
 	promptId: string;
@@ -141,7 +144,13 @@ export async function runModelIteration({
 	providerImpl: Provider;
 	runIndex: number;
 	beforeProviderRun?: () => Promise<void>;
-}): Promise<{ observationAttemptId: string; promptRunId: string; providerSubmissionId?: string } | null> {
+	requireReadyResponseSnapshot?: boolean;
+}): Promise<{
+	observationAttemptId: string;
+	promptRunId: string;
+	providerSubmissionId?: string;
+	responseSnapshotStatus: PromptResponseSnapshotStatus | null;
+} | null> {
 	const logPrefix = `[${config.model}_${runIndex}]`;
 	const target = resolveObservationTarget(config);
 	const snapshotCaptureEnabled = process.env.RESPONSE_SNAPSHOT_ENABLED === "true";
@@ -149,9 +158,10 @@ export async function runModelIteration({
 		enabled: snapshotCaptureEnabled,
 		provider: config.provider,
 		storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
+		required: requireReadyResponseSnapshot,
 	});
 	const capacity = await assertResponseSnapshotCapacity({
-		enabled: snapshotCaptureEnabled && config.provider === "brightdata",
+		enabled: snapshotCaptureEnabled && isPromptSnapshotCapableProvider(config.provider),
 		storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT,
 	});
 	if (capacity?.state === "warn") {
@@ -169,7 +179,15 @@ export async function runModelIteration({
 	});
 	if (attempt.state === "completed") {
 		console.log(`${logPrefix} Observation already completed; skipping duplicate execution`);
-		return attempt.promptRunId ? { observationAttemptId: attempt.id, promptRunId: attempt.promptRunId } : null;
+		return attempt.promptRunId
+			? {
+					observationAttemptId: attempt.id,
+					promptRunId: attempt.promptRunId,
+					responseSnapshotStatus: requireReadyResponseSnapshot
+						? await loadPromptResponseSnapshotStatus(attempt.promptRunId)
+						: null,
+				}
+			: null;
 	}
 	if (attempt.state === "in_progress") {
 		throw new Error(`${logPrefix} Observation is already in progress`);
@@ -228,6 +246,7 @@ export async function runModelIteration({
 		console.log(`${logPrefix} Saved prompt run ${promptRunId}`);
 
 		const snapshotSource = result.snapshotSource;
+		let responseSnapshotStatus: PromptResponseSnapshotStatus | null = null;
 		if (snapshotCapture && snapshotReservation && snapshotSource) {
 			const snapshotResult = await archivePromptResponseSnapshotBestEffort({
 				reservation: snapshotReservation,
@@ -254,6 +273,7 @@ export async function runModelIteration({
 						snapshotSource,
 					}),
 			});
+			responseSnapshotStatus = snapshotResult.status;
 			if (snapshotResult.status !== "ready" && snapshotResult.status !== "already_ready") {
 				console.warn(
 					`${logPrefix} Response snapshot ${snapshotResult.snapshotId} queued for recovery (${snapshotResult.status})`,
@@ -263,6 +283,7 @@ export async function runModelIteration({
 		return {
 			observationAttemptId: attempt.id,
 			promptRunId,
+			responseSnapshotStatus,
 			...(result.providerSubmissionId ? { providerSubmissionId: result.providerSubmissionId } : {}),
 		};
 	} catch (error) {
@@ -295,6 +316,17 @@ export async function runModelIteration({
 		});
 		throw error;
 	}
+}
+
+async function loadPromptResponseSnapshotStatus(promptRunId: string): Promise<PromptResponseSnapshotStatus | null> {
+	const snapshot = await db.query.responseSnapshots.findFirst({
+		where: and(eq(responseSnapshots.promptRunId, promptRunId), eq(responseSnapshots.isCurrent, true)),
+		columns: { status: true },
+	});
+	if (!snapshot) return null;
+	if (snapshot.status === "ready") return "already_ready";
+	if (snapshot.status === "pending") return "retry_later";
+	return "failed";
 }
 
 /**

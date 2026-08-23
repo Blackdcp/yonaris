@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { WEB_QUERIES_UNAVAILABLE } from "../constants";
 import type {
 	PreparedResponseSnapshotBundle,
 	ResponseSnapshotCaptureMethod,
@@ -624,6 +625,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 						)
 						.orderBy(asc(evidenceArtifacts.createdAt), asc(evidenceArtifacts.id))
 				: [];
+		const queryEvidence = resolveReconstructedQueryEvidence(row.webQueries, row.webSearchEnabled);
 		return buildReconstructedResponseSnapshotDraft({
 			base: {
 				runId: row.runId,
@@ -633,9 +635,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				promptText: row.promptText,
 				answerText: row.answerText,
 				citations: citationRows,
-				webQueries: row.webQueries,
-				queryAvailability:
-					row.webQueries.length > 0 ? "available" : row.webSearchEnabled ? "unavailable" : "not_applicable",
+				...queryEvidence,
 				brandMentioned: row.brandMentioned,
 				competitorsMentioned: row.competitorsMentioned,
 				channel: row.surfaceTargetKey ?? row.channel,
@@ -650,6 +650,17 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 		});
 	},
 };
+
+export function resolveReconstructedQueryEvidence(
+	webQueries: readonly string[],
+	webSearchEnabled: boolean,
+): Pick<ResponseSnapshotDraft, "webQueries" | "queryAvailability"> {
+	if (!webSearchEnabled) return { webQueries: [], queryAvailability: "not_applicable" };
+	if (webQueries.includes(WEB_QUERIES_UNAVAILABLE) || webQueries.length === 0) {
+		return { webQueries: [], queryAvailability: "unavailable" };
+	}
+	return { webQueries: [...webQueries], queryAvailability: "available" };
+}
 
 type ReconstructedResponseSnapshotBase = Omit<
 	ResponseSnapshotDraft,

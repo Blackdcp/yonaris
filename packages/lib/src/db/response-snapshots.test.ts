@@ -9,6 +9,7 @@ import {
 	calculateResponseSnapshotExpiresAt,
 	hydratePreparedResponseSnapshotBundle,
 	isResponseSnapshotOutboxExpired,
+	resolveReconstructedQueryEvidence,
 	resolveResponseSnapshotEnqueueAction,
 } from "./response-snapshots";
 
@@ -238,5 +239,20 @@ describe("response snapshot database policies", () => {
 				visualEvidence: [],
 			}),
 		).toThrow(/exactly one attached JPEG/i);
+	});
+
+	it("does not expose the unavailable query sentinel while reconstructing a stale provider snapshot", () => {
+		expect(resolveReconstructedQueryEvidence(["unavailable"], true)).toEqual({
+			webQueries: [],
+			queryAvailability: "unavailable",
+		});
+		expect(resolveReconstructedQueryEvidence(["real fan-out", "unavailable"], true)).toEqual({
+			webQueries: [],
+			queryAvailability: "unavailable",
+		});
+		expect(resolveReconstructedQueryEvidence([], false)).toEqual({
+			webQueries: [],
+			queryAvailability: "not_applicable",
+		});
 	});
 });
