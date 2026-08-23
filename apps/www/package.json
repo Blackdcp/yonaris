@@ -12,7 +12,9 @@
 		"audit:legacy-marketing": "node scripts/audit-legacy-consumers.mjs",
 		"audit:site-manifest": "tsx scripts/audit-site-manifest.ts",
 		"check-types": "tsc --noEmit",
-		"generate-icons": "tsx scripts/generate-brand-icons.tsx"
+		"generate-icons": "tsx scripts/generate-brand-icons.tsx",
+		"smoke:marketing": "node scripts/smoke-marketing.mjs",
+		"smoke:marketing:caddy": "node scripts/smoke-marketing-caddy.mjs"
 	},
 	"dependencies": {
 		"@fontsource/geist-mono": "^5.3.0",

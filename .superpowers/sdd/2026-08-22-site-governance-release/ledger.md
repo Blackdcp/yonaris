@@ -140,3 +140,28 @@ Final gates: scanner fixture `7/7`; WWW unit `29 files / 219`; public Playwright
 - [x] Run live scanner GREEN plus full unit/type/build/manifest/public/visual/Biome/diff/zero-grep gates.
 - [x] Complete independent review and close every Critical/Important finding through RED/GREEN.
 - [x] Commit the exact G5 scope without amend, push, deploy, or G6 work.
+
+## G6 — Marketing release governance
+
+**Status:** Code-complete, minimally release-verified, and Critical-only independently reviewed; no production action was performed.
+
+Exact base: `f6134b19fe1f69e47c4603212d55c496215f97c3`.
+
+The production Caddy policy is now an exact method-aware allowlist with five reviewed proxy branches, a terminal 404, thirteen query-preserving redirects, and a Cloudflare-bound diagnostic identity path proven against pinned Caddy `2.6.2` on `linux/amd64`. The byte-identical v2 predecessor is preserved at its reviewed SHA-256.
+
+Marketing deploys now share one side-effect-free secret preflight, persist a mode-700 hash-bound rollback bundle, bind the complete Caddyfile, recover explicit Caddy-75 and marker-pending states, and update the immutable release marker last. The installer accepts only reviewed predecessor states, stages and rehashes the exact restore bytes, validates before replacement, and fails closed on unconfirmed recovery. The workflow pins every action/image, builds once, smokes the exact image directly and through Caddy, preflights before source mutation, verifies the exact release SHA, and closes on apex, Portal, Status, and Changelog health.
+
+Final release-MVP gates: deploy fixture GREEN; installer `33/33`; workflow `4/4`; Caddy/helper Node `21/21`; WWW unit `30 files / 224`; WWW typecheck; manifest; production build; fresh direct image smoke `60 routes / 13 redirects / 91 assets`; fresh pinned-Caddy integration smoke; no residual owned Docker resources. Independent Critical-only review returned PASS with no remaining Critical finding.
+
+Strict production Origin-CA verification in the host installer and the exhaustive durable-metadata failure-injection matrix are explicitly deferred follow-ups under the approved release-MVP timebox. Production remains externally blocked until the three exact Resend variables are configured and `--verify-only` succeeds.
+
+### Execution checklist
+
+- [x] Preserve and verify the reviewed v2 Caddy predecessor byte-for-byte.
+- [x] Implement exact route/method, proxy, diagnostic identity, redirect, and terminal-404 policy.
+- [x] Prove the policy through direct-image and digest-pinned Caddy runtime smoke.
+- [x] Implement side-effect-free preflight plus transactional deploy, recovery, and post-success rollback.
+- [x] Implement reviewed-state Caddy install/restore with complete-file hash binding.
+- [x] Pin and order the build/test/push/preflight/deploy/post-deploy workflow.
+- [x] Run the approved release-MVP gates and complete Critical-only review.
+- [x] Commit locally without push, deployment, production reload, DNS mutation, or real lead delivery.

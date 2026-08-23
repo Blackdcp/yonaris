@@ -2,8 +2,52 @@ yonaris.com, www.yonaris.com {
 	tls /etc/caddy/certs/yonaris/yonaris-origin.pem /etc/caddy/certs/yonaris/yonaris-origin.key
 	encode zstd gzip
 	route {
-		@public path / /zh /zh/* /platform /platform/* /methodology /methodology/* /results /results/* /geo /geo/* /diagnostic /diagnostic/* /agent /agent/* /llms.txt /llms-full.txt /assets/* /brand/* /icons/* /apple-touch-icon.png /favicon.ico /site.webmanifest /og.png /robots.txt /sitemap.xml /api/plausible/*
-		reverse_proxy @public 127.0.0.1:1516
+		@diagnosticCloudflare {
+			method POST
+			path /api/diagnostic
+			remote_ip 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		}
+		reverse_proxy @diagnosticCloudflare 127.0.0.1:1516 {
+			header_up X-Yonaris-Client-IP {http.request.header.CF-Connecting-IP}
+			header_up -CF-Connecting-IP
+		}
+
+		@diagnosticDirect {
+			method POST
+			path /api/diagnostic
+		}
+		reverse_proxy @diagnosticDirect 127.0.0.1:1516 {
+			header_up X-Yonaris-Client-IP {http.request.remote.host}
+			header_up -CF-Connecting-IP
+		}
+
+		@publicApiGetHead {
+			method GET HEAD
+			path /api/openapi.json /api/search /api/plausible/js/script
+		}
+		reverse_proxy @publicApiGetHead 127.0.0.1:1516 {
+			header_up -X-Yonaris-Client-IP
+			header_up -CF-Connecting-IP
+		}
+
+		@plausibleEvent {
+			method POST
+			path /api/plausible/event
+		}
+		reverse_proxy @plausibleEvent 127.0.0.1:1516 {
+			header_up -X-Yonaris-Client-IP
+			header_up -CF-Connecting-IP
+		}
+
+		@publicGetHead {
+			method GET HEAD
+			path / /zh /product /zh/product /approach /zh/approach /research /zh/research /company /zh/company /geo /zh/geo /diagnostic /zh/diagnostic /resources /open-source /privacy /blog /blog/* /glossary /glossary/* /docs /docs/* /status /brand /changelog /roadmap /ai-search /ai-search/* /aeo-for /aeo-for/* /ai-visibility-tools /ai-visibility-tools/* /agent /agent/* /llms.txt /llms-full.txt /robots.txt /sitemap.xml /blog/rss.xml /og.png /og/* /repo-activity.svg /platform /features /zh/platform /methodology /zh/methodology /results /zh/results /vision /pricing /off-site-aeo /agent/platform /agent/methodology /agent/results /assets/* /brand/* /icons/* /authors/* /apple-touch-icon.png /favicon.ico /site.webmanifest /recordranks-logo.svg
+		}
+		reverse_proxy @publicGetHead 127.0.0.1:1516 {
+			header_up -X-Yonaris-Client-IP
+			header_up -CF-Connecting-IP
+		}
+
 		respond 404
 	}
 }
