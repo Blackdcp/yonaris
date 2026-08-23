@@ -576,6 +576,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				surfaceTargetKey: promptRuns.surfaceTargetKey,
 				modelVersion: promptRuns.version,
 				webSearchEnabled: promptRuns.webSearchEnabled,
+				webSearchObserved: promptRuns.webSearchObserved,
 				observedAt: promptRuns.observedAt,
 				market: measurementScopes.market,
 				locale: measurementScopes.locale,
@@ -625,7 +626,11 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 						)
 						.orderBy(asc(evidenceArtifacts.createdAt), asc(evidenceArtifacts.id))
 				: [];
-		const queryEvidence = resolveReconstructedQueryEvidence(row.webQueries, row.webSearchEnabled);
+		const queryEvidence = resolveReconstructedQueryEvidence(
+			row.webQueries,
+			row.webSearchEnabled,
+			row.webSearchObserved,
+		);
 		return buildReconstructedResponseSnapshotDraft({
 			base: {
 				runId: row.runId,
@@ -654,8 +659,11 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 export function resolveReconstructedQueryEvidence(
 	webQueries: readonly string[],
 	webSearchEnabled: boolean,
+	webSearchObserved: boolean | null,
 ): Pick<ResponseSnapshotDraft, "webQueries" | "queryAvailability"> {
-	if (!webSearchEnabled) return { webQueries: [], queryAvailability: "not_applicable" };
+	if (!webSearchEnabled || webSearchObserved === false) {
+		return { webQueries: [], queryAvailability: "not_applicable" };
+	}
 	if (webQueries.includes(WEB_QUERIES_UNAVAILABLE) || webQueries.length === 0) {
 		return { webQueries: [], queryAvailability: "unavailable" };
 	}

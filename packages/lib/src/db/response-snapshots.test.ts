@@ -242,15 +242,19 @@ describe("response snapshot database policies", () => {
 	});
 
 	it("does not expose the unavailable query sentinel while reconstructing a stale provider snapshot", () => {
-		expect(resolveReconstructedQueryEvidence(["unavailable"], true)).toEqual({
+		expect(resolveReconstructedQueryEvidence(["unavailable"], true, true)).toEqual({
 			webQueries: [],
 			queryAvailability: "unavailable",
 		});
-		expect(resolveReconstructedQueryEvidence(["real fan-out", "unavailable"], true)).toEqual({
+		expect(resolveReconstructedQueryEvidence(["real fan-out", "unavailable"], true, true)).toEqual({
 			webQueries: [],
 			queryAvailability: "unavailable",
 		});
-		expect(resolveReconstructedQueryEvidence([], false)).toEqual({
+		expect(resolveReconstructedQueryEvidence([], false, null)).toEqual({
+			webQueries: [],
+			queryAvailability: "not_applicable",
+		});
+		expect(resolveReconstructedQueryEvidence([], true, false)).toEqual({
 			webQueries: [],
 			queryAvailability: "not_applicable",
 		});
