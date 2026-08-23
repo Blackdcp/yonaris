@@ -23,6 +23,7 @@ export type ResponseSnapshotContentSource =
 export type ResponseSnapshotCaptureMethod =
 	| "brightdata_dataset"
 	| "brightdata_serp"
+	| "dataforseo_api"
 	| "consumer_web_browser"
 	| "historical_reconstruction";
 

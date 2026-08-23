@@ -14,6 +14,7 @@ import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { dispatchOverseasRunCalls } from "./overseas-run-dispatch";
 import {
 	assertOverseasRunNowChannelsReady,
+	assertOverseasRunNowPromptCompatibility,
 	assertOverseasRunNowProvidersConfigured,
 	planOverseasRunNow,
 } from "./overseas-run-now-policy";
@@ -77,6 +78,10 @@ export const runOverseasNowFn = createServerFn({ method: "POST" })
 			scope: { market: scope.market, locale: scope.locale, timezone: scope.timezone },
 		});
 		assertOverseasRunNowProvidersConfigured(plan.channels, (provider) => getProvider(provider).isConfigured());
+		assertOverseasRunNowPromptCompatibility(
+			plan.calls,
+			(provider, prompt) => getProvider(provider).validatePrompt?.(prompt) ?? null,
+		);
 		await assertOverseasRunNowChannelsReady(
 			plan.channels,
 			(config) => getProvider(config.provider).validateTarget?.(config) ?? null,

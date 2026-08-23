@@ -76,6 +76,8 @@ const AI_OVERVIEW_OK = {
 
 describe("dataforseo provider", () => {
 	it("rejects prompts longer than DataForSEO's 500 character limit before calling the API", async () => {
+		expect(dataforseo.validatePrompt?.("x".repeat(501))).toMatch(/500 characters or fewer/);
+		expect(dataforseo.validatePrompt?.("x".repeat(500))).toBeNull();
 		await expect(dataforseo.run("chatgpt", "x".repeat(501), { webSearch: true })).rejects.toThrow(
 			/DataForSEO prompts must be 500 characters or fewer/,
 		);
@@ -124,6 +126,11 @@ describe("dataforseo provider", () => {
 			web_search: true,
 		});
 		expect(result.webSearchObserved).toBe(true);
+		expect(result.snapshotSource).toMatchObject({
+			captureMethod: "dataforseo_api",
+			contentSource: "rendered_from_structured_response",
+		});
+		expect(result.snapshotSource?.sourcePayloadSha256).toMatch(/^[0-9a-f]{64}$/);
 	});
 
 	it("fetches Google AI Overview from the organic SERP endpoint with async loading on", async () => {
@@ -145,6 +152,11 @@ describe("dataforseo provider", () => {
 		expect(result.citations[0].domain).toBe("whathifi.com");
 		expect(result.webQueries).toEqual(["unavailable"]);
 		expect(result.webSearchObserved).toBe(true);
+		expect(result.snapshotSource).toMatchObject({
+			captureMethod: "dataforseo_api",
+			contentSource: "rendered_from_structured_response",
+		});
+		expect(result.snapshotSource?.sourcePayloadSha256).toMatch(/^[0-9a-f]{64}$/);
 	});
 
 	it("does not infer observed search from the requested LLM toggle alone", async () => {

@@ -271,6 +271,18 @@ describe("response snapshot contract", () => {
 		expect(json.contentSource).toBe("rendered_from_structured_response");
 	});
 
+	it("records DataForSEO API provenance for structured snapshots", () => {
+		const bundle = prepareResponseSnapshotBundle(
+			validDraft({
+				captureMethod: "dataforseo_api",
+				contentSource: "rendered_from_structured_response",
+				answerHtml: undefined,
+			}),
+		);
+		const json = JSON.parse(gunzipSync(bundle.jsonGzip).toString("utf8"));
+		expect(json.captureMethod).toBe("dataforseo_api");
+	});
+
 	it("changes the immutable hashes when answer content changes", () => {
 		const first = prepareResponseSnapshotBundle(validDraft());
 		const second = prepareResponseSnapshotBundle(

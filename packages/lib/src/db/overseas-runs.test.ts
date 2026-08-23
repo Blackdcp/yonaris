@@ -17,6 +17,8 @@ describe("overseas Run now persistence contract", () => {
 		expect(call.columns.map(({ name }) => name)).toEqual(
 			expect.arrayContaining(["paid_intent_at", "provider_submission_id", "observation_attempt_id", "prompt_run_id"]),
 		);
+		expect(call.checks.map(({ name }) => name)).toContain("overseas_run_calls_supported_provider");
+		expect(call.checks.map(({ name }) => name)).not.toContain("overseas_run_calls_brightdata_only");
 	});
 
 	it("derives progress only from persisted call states", () => {

@@ -13,9 +13,10 @@ import { normalizeResponseSnapshotQueryEvidence } from "../response-snapshot-que
 
 type SnapshotSource = NonNullable<ScrapeResult["snapshotSource"]>;
 
-export function buildPromptObservationSearchEvidence(
-	result: Pick<ScrapeResult, "webQueries" | "webSearchObserved">,
-): { webQueries: string[]; webSearchObserved: boolean | null } {
+export function buildPromptObservationSearchEvidence(result: Pick<ScrapeResult, "webQueries" | "webSearchObserved">): {
+	webQueries: string[];
+	webSearchObserved: boolean | null;
+} {
 	return {
 		webQueries: result.webQueries,
 		webSearchObserved: result.webSearchObserved ?? null,
@@ -27,7 +28,7 @@ export function assertPromptSnapshotCaptureConfiguration(input: {
 	provider: string;
 	storageRoot: string | undefined;
 }): void {
-	if (!input.enabled || input.provider !== "brightdata") return;
+	if (!input.enabled || !["brightdata", "dataforseo"].includes(input.provider)) return;
 	assertAbsoluteStorageRoot(input.storageRoot);
 }
 

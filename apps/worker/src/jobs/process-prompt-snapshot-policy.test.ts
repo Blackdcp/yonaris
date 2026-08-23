@@ -55,16 +55,18 @@ test("snapshot capture fails closed when enabled without an absolute storage roo
 	);
 });
 
-test("Bright Data configuration is rejected before a provider call when archive storage is unusable", () => {
-	assert.throws(
-		() =>
-			assertPromptSnapshotCaptureConfiguration({
-				enabled: true,
-				provider: "brightdata",
-				storageRoot: undefined,
-			}),
-		/Snapshot storage root must be an absolute path/,
-	);
+test("snapshot-capable provider configuration is rejected before a provider call when archive storage is unusable", () => {
+	for (const provider of ["brightdata", "dataforseo"]) {
+		assert.throws(
+			() =>
+				assertPromptSnapshotCaptureConfiguration({
+					enabled: true,
+					provider,
+					storageRoot: undefined,
+				}),
+			/Snapshot storage root must be an absolute path/,
+		);
+	}
 	assert.doesNotThrow(() =>
 		assertPromptSnapshotCaptureConfiguration({ enabled: true, provider: "openai-api", storageRoot: undefined }),
 	);

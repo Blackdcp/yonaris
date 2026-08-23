@@ -65,6 +65,21 @@ export function assertOverseasRunNowProvidersConfigured(
 	}
 }
 
+export function assertOverseasRunNowPromptCompatibility(
+	calls: readonly OverseasRunNowCall[],
+	validatePrompt: (provider: string, prompt: string) => string | null,
+): void {
+	const checked = new Set<string>();
+	for (const call of calls) {
+		const provider = call.config.provider;
+		const key = `${provider}\0${call.promptId}`;
+		if (checked.has(key)) continue;
+		checked.add(key);
+		const reason = validatePrompt(provider, call.promptText);
+		if (reason) throw new Error(`Overseas Run now prompt ${call.promptId} is unavailable for ${provider}: ${reason}`);
+	}
+}
+
 export async function assertOverseasRunNowChannelsReady(
 	channels: readonly (typeof OVERSEAS_RUN_NOW_CHANNELS)[number][],
 	validateTarget: (config: ModelConfig) => string | null,
