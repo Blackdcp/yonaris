@@ -10,9 +10,9 @@ const ACTION_PINS = [
 	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 	"actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
 	"pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996",
-	"docker/setup-buildx-action@037fe631027851001ddb9b187196cc803df7f5f0e",
+	"docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e",
 	"docker/login-action@dbcb813823bdd20940b903addbd779551569679f",
-	"docker/build-push-action@053b7df96c91f9c12dcc8a07bcb9ccacbed38856",
+	"docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a",
 ];
 
 function ordered(...needles) {
@@ -33,7 +33,7 @@ test("release supply chain uses immutable action and image references", () => {
 	);
 	assert.match(
 		workflow,
-		/docker\/build-push-action@053b7df96c91f9c12dcc8a07bcb9ccacbed38856[\s\S]*?platforms: linux\/amd64[\s\S]*?load: true[\s\S]*?push: false/u,
+		/docker\/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a[\s\S]*?platforms: linux\/amd64[\s\S]*?load: true[\s\S]*?push: false/u,
 	);
 });
 
