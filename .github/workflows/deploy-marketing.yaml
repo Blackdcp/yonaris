@@ -98,7 +98,14 @@ jobs:
         run: |
           container_id="$(docker run --rm --detach --pull never --publish 127.0.0.1:15161:3000 "$IMAGE_REF")"
           trap 'docker stop "$container_id" >/dev/null 2>&1 || true' EXIT
-          node apps/www/scripts/smoke-marketing.mjs http://127.0.0.1:15161/
+          if ! node apps/www/scripts/smoke-marketing.mjs http://127.0.0.1:15161/; then
+            docker logs "$container_id"
+            sleep 2
+            node apps/www/scripts/smoke-marketing.mjs http://127.0.0.1:15161/ || {
+              docker logs "$container_id"
+              exit 1
+            }
+          fi
 
       - name: Digest-pinned Caddy integration smoke
         env:

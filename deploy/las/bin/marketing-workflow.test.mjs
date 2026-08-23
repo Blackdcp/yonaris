@@ -47,6 +47,10 @@ test("the exact image is tested directly and through pinned Caddy before its onl
 	);
 	assert.equal((workflow.match(/docker push "\$IMAGE_REF"/gu) ?? []).length, 1);
 	assert.equal((workflow.match(/docker\/build-push-action@/gu) ?? []).length, 1);
+	assert.match(
+		workflow,
+		/if ! node apps\/www\/scripts\/smoke-marketing\.mjs[\s\S]*?docker logs "\$container_id"[\s\S]*?sleep 2[\s\S]*?node apps\/www\/scripts\/smoke-marketing\.mjs/u,
+	);
 	assert.match(workflow, /node apps\/www\/scripts\/smoke-marketing-caddy\.mjs "\$IMAGE_REF"/u);
 });
 
