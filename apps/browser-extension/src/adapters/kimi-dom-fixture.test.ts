@@ -36,6 +36,40 @@ describe("Kimi semantic DOM contract", () => {
 		expect(kimiSelectorContract.queryItem).toBeNull();
 		expect(kimiSelectorContract.searchEvidence).toBeNull();
 	});
+
+	test("keeps a search-only assistant segment generating until visible final markdown arrives", async () => {
+		const searchOnly = cssFixturePort(
+			`<div class="chat-content-item-assistant">
+				<div class="segment-content-box">
+					<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+				</div>
+			</div>`,
+			"https://www.kimi.com/chat/kimi-session",
+		);
+		const completed = cssFixturePort(
+			`<div class="chat-content-item-assistant">
+				<div class="segment-content-box">
+					<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+					<div class="markdown-container"><div class="markdown">完整正文</div></div>
+				</div>
+			</div>`,
+			"https://www.kimi.com/chat/kimi-session",
+		);
+
+		expect(await visibleCount(searchOnly, "generating", kimiSelectorContract.generating)).toBe(1);
+		expect(await visibleCount(completed, "generating", kimiSelectorContract.generating)).toBe(0);
+	});
+
+	test("accepts a search-free plain-text assistant answer as complete", async () => {
+		const plainText = cssFixturePort(
+			`<div class="chat-content-item-assistant">
+				<div class="segment-content-box">普通文本回答</div>
+			</div>`,
+			"https://www.kimi.com/chat/kimi-session",
+		);
+
+		expect(await visibleCount(plainText, "generating", kimiSelectorContract.generating)).toBe(0);
+	});
 });
 
 function cssFixturePort(fragment: string, url: string): ConsumerDomPort {

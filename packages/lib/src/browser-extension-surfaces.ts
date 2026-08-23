@@ -25,7 +25,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Kimi",
 		captureRoute: "browser_extension.kimi",
 		launchUrl: "https://www.kimi.com/",
-		adapterVersion: "kimi-web-20260822-localpc-v13",
+		adapterVersion: "kimi-web-20260823-localpc-v14",
 	},
 	{
 		key: "wenxin.consumer_web",
