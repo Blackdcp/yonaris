@@ -1,79 +1,92 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, Home } from "lucide-react";
-import { Footer } from "./footer";
-import { Navbar } from "./navbar";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { SiteShell } from "@/components/site/site-shell";
 
-const suggestedLinks = [
-	{ label: "Documentation", href: "/docs", description: "Get started and learn the API" },
-	{ label: "Features", href: "/features", description: "What Yonaris can measure for your brand" },
-	{ label: "Deployment", href: "/pricing", description: "Deployment options and commercial scope" },
-	{ label: "Provider Status", href: "/status", description: "Current AI provider availability" },
-];
+const copy = {
+	en: {
+		eyebrow: "404 / UNMAPPED ROUTE",
+		title: "This page is outside the current map",
+		body: "The address may have moved. Continue through the current Yonaris site.",
+		home: { label: "Return home", href: "/" },
+		directoryLabel: "Current map",
+		links: [
+			{ label: "Product", href: "/product" },
+			{ label: "Approach", href: "/approach" },
+			{ label: "Research", href: "/research" },
+			{ label: "Diagnostic", href: "/diagnostic" },
+			{ label: "Resources", href: "/resources" },
+		],
+		documentTitle: "Page not found | Yonaris",
+	},
+	zh: {
+		eyebrow: "404 / 路径未收录",
+		title: "这个页面不在当前地图中",
+		body: "这个地址可能已经迁移。请从当前 Yonaris 网站继续。",
+		home: { label: "返回首页", href: "/zh" },
+		directoryLabel: "当前目录",
+		links: [
+			{ label: "产品", href: "/zh/product" },
+			{ label: "方法", href: "/zh/approach" },
+			{ label: "研究", href: "/zh/research" },
+			{ label: "免费诊断", href: "/zh/diagnostic" },
+			{ label: "资源", href: "/resources" },
+		],
+		documentTitle: "页面不存在 | Yonaris",
+	},
+} as const;
 
 export function NotFound() {
+	const locale = useRouterState({
+		select: (state) => (state.location.pathname === "/zh" || state.location.pathname.startsWith("/zh/") ? "zh" : "en"),
+	});
+	const content = copy[locale];
+
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<section className="relative border-b border-zinc-200 bg-white">
-					<div
-						aria-hidden="true"
-						className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,rgb(0_0_0/0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgb(0_0_0/0.04)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
-					/>
-					<div className="relative mx-auto max-w-6xl px-4 py-20 md:px-6 lg:py-28">
-						<div className="mx-auto max-w-2xl text-center">
-							<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-blue-600 tabular-nums">
-								404 — <span className="text-zinc-500">PAGE NOT FOUND</span>
-							</p>
-							<h1 className="font-heading mt-5 text-balance text-5xl leading-[1.05] tracking-tight text-zinc-950 sm:text-6xl lg:text-[4.25rem] lg:leading-[1.0]">
-								This page doesn't exist
+		<>
+			<title>{content.documentTitle}</title>
+			<meta name="robots" content="noindex,follow" />
+			<SiteShell locale={locale} mainClassName="not-found-page">
+				<section className="not-found-hero" aria-labelledby="not-found-title">
+					<div className="not-found-frame">
+						<div className="not-found-hero__marker">
+							<p className="marketing-kicker">{content.eyebrow}</p>
+							<span aria-hidden="true">404</span>
+						</div>
+						<div className="not-found-hero__statement">
+							<h1 id="not-found-title" className="marketing-display">
+								{content.title}
 							</h1>
-							<p className="mx-auto mt-6 max-w-[58ch] text-pretty text-base text-zinc-600 md:text-lg">
-								The page you're looking for may have moved, been renamed, or never existed.
-							</p>
-							<div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-								<Link
-									to="/"
-									className="inline-flex h-8 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-sm font-medium leading-none text-white ring-1 ring-blue-600 hover:bg-blue-700"
-								>
-									<Home className="size-3.5" />
-									Back to home
-								</Link>
-								<Link
-									to="/docs"
-									className="inline-flex h-8 items-center gap-1.5 rounded-md bg-white px-3 text-sm font-medium leading-none text-zinc-900 ring-1 ring-zinc-200 hover:bg-zinc-50 hover:ring-zinc-300"
-								>
-									Read the docs
-									<ArrowRight className="size-3.5" />
+							<div className="not-found-hero__action">
+								<p>{content.body}</p>
+								<Link className="not-found-home" to={content.home.href}>
+									<span>{content.home.label}</span>
+									<span aria-hidden="true">↗</span>
 								</Link>
 							</div>
 						</div>
 					</div>
 				</section>
 
-				<section className="border-b border-zinc-200 bg-zinc-50 py-12 lg:py-16">
-					<div className="mx-auto max-w-6xl px-4 md:px-6">
-						<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ POPULAR DESTINATIONS</p>
-						<ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-							{suggestedLinks.map((link) => (
-								<li key={link.href}>
-									<a
-										href={link.href}
-										className="group flex h-full flex-col rounded-md border border-zinc-200 bg-white p-4 transition-colors hover:border-zinc-300 hover:bg-zinc-50"
-									>
-										<span className="flex items-center justify-between text-sm font-semibold text-zinc-950">
-											{link.label}
-											<ArrowUpRight className="size-3.5 text-zinc-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-zinc-700" />
+				<nav className="not-found-directory" aria-label={content.directoryLabel}>
+					<div className="not-found-frame not-found-directory__layout">
+						<p className="marketing-kicker">{content.directoryLabel}</p>
+						<ol>
+							{content.links.map((item, index) => (
+								<li key={item.href}>
+									<Link to={item.href}>
+										<span className="not-found-directory__index" aria-hidden="true">
+											{String(index + 1).padStart(2, "0")}
 										</span>
-										<span className="mt-1 text-sm text-zinc-600">{link.description}</span>
-									</a>
+										<span>{item.label}</span>
+										<span className="not-found-directory__arrow" aria-hidden="true">
+											↗
+										</span>
+									</Link>
 								</li>
 							))}
-						</ul>
+						</ol>
 					</div>
-				</section>
-			</main>
-			<Footer />
-		</div>
+				</nav>
+			</SiteShell>
+		</>
 	);
 }

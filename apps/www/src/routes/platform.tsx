@@ -1,5 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MarketingDetailPage } from "@/components/marketing/detail-page";
-import { marketingPageHead } from "@/lib/marketing-seo";
+import { permanentRedirectResponse } from "@/lib/permanent-redirect";
+import { getRedirect } from "@/lib/site-manifest";
 
-export const Route = createFileRoute("/platform")({ head: () => marketingPageHead("en", "platform"), component: () => <MarketingDetailPage locale="en" page="platform" /> });
+const redirect = getRedirect("/platform");
+if (!redirect) throw new Error("Missing manifest redirect for /platform");
+
+export const Route = createFileRoute("/platform")({
+	server: { handlers: { GET: ({ request }) => permanentRedirectResponse(request, redirect.to) } },
+});

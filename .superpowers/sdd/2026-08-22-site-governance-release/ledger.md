@@ -77,3 +77,41 @@ Final gates: expanded focused legacy `16/16`; full unit `30 files / 227`; full p
 - [x] Run focused, full unit/type/build/manifest/public/visual/Biome/diff gates.
 - [x] Complete independent final review and record the disposition.
 - [x] Create the exact-file atomic G3 commit without push/deploy or G4 redirects.
+
+## G4 — Human redirects and governed public 404
+
+**Status:** Complete, fully verified, independently reviewed, and ready for the atomic G4 commit.
+
+Exact base: `4e76ee5646eb3c5ce03b460ea23f6115e70e6cc2`.
+
+The approved design is already complete, so the brainstorming approval gate is satisfied by the explicit G4 implementation dispatch. This is bounded execution of Governance plan Task 3 under the later binding preflight.
+
+Exactly ten human aliases now use manifest-backed, bodyless server `GET` `308` responses with relative locations and lossless query preservation; the three existing Agent aliases and shared helper remained verify-only. The governed NotFound surface uses the locale-aware SiteShell, a real `404`, exact `noindex,follow`, no canonical or `og:url`, six approved destinations, and a square VI editorial ruled composition across the full bilingual seven-width accessibility matrix.
+
+Focused RED was `5 failed / 1 passed`: all missing human redirect and NotFound behaviors failed while the reviewed Agent redirects passed. Focused GREEN is helper `3/3`, routing/nonvisual `6/6`, and G4 visuals `4/4`. Final gates are WWW unit `30 files / 228`, full public `186/186` at six workers, full visual `118/118` at one worker, both typechecks, manifest, production build, authored Biome, changeset status, and diff check. Four native G4 captures were inspected individually.
+
+Independent final review reran the complete G4 file (`10/10`), unit/types/manifest/Biome/build/diff, and opened every G4 image. Result: `0 Critical / 0 Important`; PASS. No review-driven code change was required.
+
+### Preflight consistency and interface scan
+
+| Producer / consumer | Shared file or interface | Finding / ruling |
+| --- | --- | --- |
+| G1 Agent redirects / G4 human redirects | `permanentRedirectResponse`, `getRedirect`, three Agent alias handlers | Older plan asks G4 to create/replace these, but the base already contains correct bodyless query-preserving handlers. **Ruling:** verify only; change only under a failing regression. Replacing them without evidence risks breaking reviewed Agent behavior. |
+| G4 aliases / G5 legacy-consumer audit | ten legacy human route modules and manifest redirect allowlist | Compatible: G4 removes legacy bodies and leaves only manifest-backed server handlers; G5 can then treat the exact redirect allowlist as intentional. |
+| G4 redirects / G6 release smoke | `SITE_REDIRECTS`, HTTP response contract | Compatible: G4 owns runtime 308 behavior; G6 consumes the same manifest and must not hand-copy mappings. |
+| G4 404 / root document SEO | root default `og:url`, route-specific heads, router not-found status | Potential collision: a root fallback can leak `og:url` into 404 while indexed routes provide their own head. **Ruling:** write the HTTP/head RED first and make only the smallest proven root-head change. A wrong change could affect metadata on routes without their own head. |
+| G4 404 / shared shell | `SiteShell` owns the sole `<main>`, header, and footer | Compatible: `NotFound` must render sections directly inside `SiteShell`, not nest another main or legacy Navbar/Footer. |
+| G4 visual QA / existing G2-G3 suites | `styles.css`, Playwright output root | Compatible: add one focused VI stylesheet and routing suite; keep analytics isolated and visual output under the existing ignored root. |
+
+### Execution checklist
+
+- [x] Verify exact clean base and linked-worktree isolation.
+- [x] Read AGENTS, approved spec/plan, ledger, G3 report, and binding G4 preflight.
+- [x] Read mandatory Superpowers workflow, TDD, testing, review, and verification instructions.
+- [x] Dispatch the fresh implementer with the binding brief and exact report path.
+- [x] Observe focused unit/browser RED for all aliases and governed 404.
+- [x] Implement minimal redirect and 404 GREEN without changing verify-only Agent behavior.
+- [x] Capture and inspect required 404 visual evidence.
+- [x] Run full unit/public/visual/type/manifest/build/Biome/diff gates.
+- [x] Complete independent review and fix every Critical/Important finding.
+- [x] Commit the exact G4 scope without push/deploy.

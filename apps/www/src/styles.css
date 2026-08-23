@@ -16,6 +16,7 @@
 @import "./styles/pages/publication.css";
 @import "./styles/pages/utility.css";
 @import "./styles/pages/legacy-archive.css";
+@import "./styles/pages/not-found.css";
 
 @source "../src";
 @source "../../../packages/ui/src";

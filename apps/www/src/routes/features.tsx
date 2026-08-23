@@ -1,41 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CTA } from "@/components/cta";
-import { Features } from "@/components/features";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
-import { breadcrumbJsonLd, canonicalUrl, ogMeta } from "@/lib/seo";
+import { permanentRedirectResponse } from "@/lib/permanent-redirect";
+import { getRedirect } from "@/lib/site-manifest";
 
-const title = "Features — AI Visibility & Citation Tracking · Yonaris";
-const description =
-	"AI visibility tracking, citation analysis, competitor intelligence, and more. Everything you need to monitor your brand in AI search.";
+const redirect = getRedirect("/features");
+if (!redirect) throw new Error("Missing manifest redirect for /features");
 
 export const Route = createFileRoute("/features")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/features" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/features") }],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "Features", path: "/features" },
-			]),
-		],
-	}),
-	component: FeaturesPage,
+	server: { handlers: { GET: ({ request }) => permanentRedirectResponse(request, redirect.to) } },
 });
-
-function FeaturesPage() {
-	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<Features />
-				<CTA />
-			</main>
-			<Footer />
-		</div>
-	);
-}

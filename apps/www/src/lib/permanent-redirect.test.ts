@@ -41,4 +41,18 @@ describe("permanent redirects", () => {
 		);
 		expect(response.headers.get("location")).toBe("/agent/research?ref=legacy");
 	});
+
+	test("preserves repeated, empty, and percent-encoded query values byte for byte", async () => {
+		const redirects = requireSubject();
+		if (!redirects) return;
+
+		const response = redirects.permanentRedirectResponse(
+			new Request("https://yonaris.test/platform?tag=one&tag=two&encoded=a%2Fb%3Fc&empty=#ignored"),
+			"/product",
+		);
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe("/product?tag=one&tag=two&encoded=a%2Fb%3Fc&empty=");
+		expect(response.headers.get("content-type")).toBeNull();
+		expect(await response.text()).toBe("");
+	});
 });
