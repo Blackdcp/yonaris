@@ -6,6 +6,7 @@ umask 077
 REDIRECT_SHA="2f645156db46e9584cd47ad825804256d928757e462f31ea57391a11cdcc36d3"
 V1_SHA="1b4580fed8750a61b8468b00d2852f1dc8cb8cf1b1d5587effe5519c5c230d67"
 V2_SHA="6f1f6dd9f3ce91318d037f0e0328eac4c41bdd90fb942835204408ca669f09c4"
+LAST_RELEASE_SHA="8278b92f4caf06d7c7187d1c1b3b402c745fcdbc35217a91399069bf0ceaff91"
 APEX_HEADER="yonaris.com, www.yonaris.com {"
 
 sha_file() {
@@ -38,7 +39,7 @@ apex_sha() {
 
 is_reviewed_predecessor_sha() {
 	case "$1" in
-		"$REDIRECT_SHA" | "$V1_SHA" | "$V2_SHA") return 0 ;;
+		"$REDIRECT_SHA" | "$V1_SHA" | "$V2_SHA" | "$LAST_RELEASE_SHA") return 0 ;;
 		*) return 1 ;;
 	esac
 }
