@@ -1,5 +1,5 @@
 {
-	"version": "kimi-web-20260822-localpc-v13",
+	"version": "kimi-web-20260823-localpc-v14",
 	"surface": "kimi.consumer_web",
 	"launchUrl": "https://www.kimi.com/",
 	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}/?$",
@@ -10,7 +10,7 @@
 	"newConversationLabel": null,
 	"userMessage": ".chat-content-item-user .user-content",
 	"answer": ".chat-content-item-assistant .segment-content-box",
-	"generating": "button[aria-label*=\"停止\"],[class*=\"stop-button\"],[data-testid*=\"stop\"]",
+	"generating": "button[aria-label*=\"停止\"],[class*=\"stop-button\"],[data-testid*=\"stop\"],.chat-content-item-assistant .segment-content-box:has(.toolcall-container.toolcall-web_search):not(:has(.markdown-container))",
 	"completion": null,
 	"completionCompanion": null,
 	"loginWall": ".login-dialog,.login-modal,.next-sidebar-history-list__login,input[type=\"tel\"],input[type=\"password\"]",
