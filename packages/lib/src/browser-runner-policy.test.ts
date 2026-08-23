@@ -44,7 +44,7 @@ describe("Browser Runner retry policy", () => {
 			["doubao.consumer_web", "doubao-web-20260821-localpc-v13"],
 			["deepseek.consumer_web", "deepseek-web-20260822-localpc-v9"],
 			["qwen.consumer_web", "qwen-web-20260822-localpc-v10"],
-			["kimi.consumer_web", "kimi-web-20260823-localpc-v14"],
+			["kimi.consumer_web", "kimi-web-20260823-localpc-v15"],
 			["wenxin.consumer_web", "wenxin-web-20260822-localpc-v12"],
 			["yuanbao.consumer_web", "yuanbao-web-20260822-localpc-v11"],
 			["zhipu.consumer_web", "zhipu-web-20260822-localpc-v5"],
