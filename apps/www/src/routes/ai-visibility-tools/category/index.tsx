@@ -1,68 +1,43 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { DirectoryBackLink, DirectoryHero, DirectorySection, ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
-import { indexableCategories, toolsInCategory, CATEGORY_SLUGS, CATEGORY_HEADINGS } from "@/lib/competitors";
+import { LegacyArchiveShell } from "@/components/site/legacy-archive-shell";
+import { CATEGORY_HEADINGS, CATEGORY_SLUGS, indexableCategories, toolsInCategory } from "@/lib/competitors";
+import { siteRouteHead } from "@/lib/site-seo";
 
-const title = "AI Visibility Tools by Category · Elmo";
-const description =
-	"Browse AI visibility tools by category: dedicated trackers, content platforms, developer APIs, SEO suites, e-commerce, and open source.";
-
-const items = indexableCategories.map((category) => ({
-	name: CATEGORY_HEADINGS[category],
-	path: `/ai-visibility-tools/category/${CATEGORY_SLUGS[category]}`,
-}));
+const title = "AI Visibility Tools by Category | Upstream Elmo Archive";
+const description = "Archived upstream Elmo categories for AI visibility and answer-engine tools.";
 
 export const Route = createFileRoute("/ai-visibility-tools/category/")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/ai-visibility-tools/category" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/ai-visibility-tools/category") }],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "AI Visibility Tool Directory", path: "/ai-visibility-tools" },
-				{ name: "Categories", path: "/ai-visibility-tools/category" },
-			]),
-			itemListJsonLd(items),
-		],
-	}),
+	head: () => siteRouteHead("aiVisibility", { canonicalPath: "/ai-visibility-tools/category", title, description }),
 	component: CategoryHub,
 });
 
 function CategoryHub() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<DirectoryBackLink />
-				<DirectoryHero
-					eyebrow="By category"
-					title="Browse AI visibility tools by category"
-					lead="The market splits into a few distinct groups. Pick the type of tool you're after to compare the options in that category side by side."
-				/>
-				<DirectorySection>
-					<ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{indexableCategories.map((category) => (
-							<li key={category}>
-								<a
-									href={`/ai-visibility-tools/category/${CATEGORY_SLUGS[category]}`}
-									className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-								>
-									<span>{CATEGORY_HEADINGS[category]}</span>
-									<span className="font-mono text-[11px] text-zinc-400">{toolsInCategory(category).length}</span>
-								</a>
-							</li>
-						))}
-					</ul>
-				</DirectorySection>
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+		<LegacyArchiveShell>
+			<DirectoryBackLink />
+			<DirectoryHero
+				eyebrow="Category register"
+				title="AI visibility tools by category"
+				lead="The market groups preserved in the upstream Elmo comparison dataset."
+			/>
+			<DirectorySection title="Archived categories">
+				<ul className="legacy-archive-ledger">
+					{indexableCategories.map((category, index) => (
+						<li className="legacy-archive-ledger__row" key={category}>
+							<span className="legacy-archive-index">{String(index + 1).padStart(2, "0")}</span>
+							<a href={`/ai-visibility-tools/category/${CATEGORY_SLUGS[category]}`}>
+								<h3>{CATEGORY_HEADINGS[category]}</h3>
+								<p>{toolsInCategory(category).length} recorded tools</p>
+							</a>
+							<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+								↗
+							</span>
+						</li>
+					))}
+				</ul>
+			</DirectorySection>
+			<ElmoCta />
+		</LegacyArchiveShell>
 	);
 }

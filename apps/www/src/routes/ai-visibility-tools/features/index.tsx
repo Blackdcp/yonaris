@@ -1,25 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { DirectoryBackLink, DirectoryHero, DirectorySection, ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
+import { LegacyArchiveShell } from "@/components/site/legacy-archive-shell";
 import {
 	FEATURE_CATEGORIES,
 	FEATURE_SLUGS,
+	type FeatureKey,
 	getFeatureLabel,
 	indexableFeatureKeys,
 	toolsWithFeature,
-	type FeatureKey,
 } from "@/lib/competitors";
+import { siteRouteHead } from "@/lib/site-seo";
 
-const title = "AI Visibility Tools by Feature · Elmo";
-const description =
-	"Browse AI visibility tools by capability: multi-LLM tracking, citation analytics, sentiment, white-label, and more. See which tools offer each feature.";
-
+const title = "AI Visibility Tools by Feature | Upstream Elmo Archive";
+const description = "An archived upstream Elmo capability index for AI visibility tools.";
 const indexableKeys = new Set(indexableFeatureKeys());
-
-// Group the indexable features under their feature-matrix sections, keeping the
-// matrix order. Sections with no indexable feature are dropped.
 const featureGroups = Object.values(FEATURE_CATEGORIES)
 	.map((section) => ({
 		label: section.label,
@@ -27,62 +21,39 @@ const featureGroups = Object.values(FEATURE_CATEGORIES)
 	}))
 	.filter((group) => group.keys.length > 0);
 
-const items = indexableFeatureKeys().map((key) => ({
-	name: getFeatureLabel(key),
-	path: `/ai-visibility-tools/features/${FEATURE_SLUGS[key]}`,
-}));
-
 export const Route = createFileRoute("/ai-visibility-tools/features/")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/ai-visibility-tools/features" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/ai-visibility-tools/features") }],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "AI Visibility Tool Directory", path: "/ai-visibility-tools" },
-				{ name: "Features", path: "/ai-visibility-tools/features" },
-			]),
-			itemListJsonLd(items),
-		],
-	}),
+	head: () => siteRouteHead("aiVisibility", { canonicalPath: "/ai-visibility-tools/features", title, description }),
 	component: FeatureHub,
 });
 
 function FeatureHub() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<DirectoryBackLink />
-				<DirectoryHero
-					eyebrow="By feature"
-					title="Browse AI visibility tools by feature"
-					lead="Filter the field by capability. Pick a feature to see which AI visibility tools offer it and how they compare, including the open-source option you can self-host."
-				/>
-				{featureGroups.map((group) => (
-					<DirectorySection key={group.label} title={group.label}>
-						<ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{group.keys.map((key) => (
-								<li key={key}>
-									<a
-										href={`/ai-visibility-tools/features/${FEATURE_SLUGS[key]}`}
-										className="flex items-center justify-between rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-									>
-										<span>{getFeatureLabel(key)}</span>
-										<span className="font-mono text-[11px] text-zinc-400">{toolsWithFeature(key).length}</span>
-									</a>
-								</li>
-							))}
-						</ul>
-					</DirectorySection>
-				))}
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+		<LegacyArchiveShell>
+			<DirectoryBackLink />
+			<DirectoryHero
+				eyebrow="Capability register"
+				title="AI visibility tools by feature"
+				lead="A dated capability index retained from the upstream Elmo comparison project."
+			/>
+			{featureGroups.map((group) => (
+				<DirectorySection key={group.label} title={group.label}>
+					<ul className="legacy-archive-ledger">
+						{group.keys.map((key, index) => (
+							<li className="legacy-archive-ledger__row" key={key}>
+								<span className="legacy-archive-index">{String(index + 1).padStart(2, "0")}</span>
+								<a href={`/ai-visibility-tools/features/${FEATURE_SLUGS[key]}`}>
+									<h3>{getFeatureLabel(key)}</h3>
+									<p>{toolsWithFeature(key).length} recorded tools</p>
+								</a>
+								<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+									↗
+								</span>
+							</li>
+						))}
+					</ul>
+				</DirectorySection>
+			))}
+			<ElmoCta />
+		</LegacyArchiveShell>
 	);
 }

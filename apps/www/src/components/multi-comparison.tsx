@@ -1,118 +1,125 @@
-import { Badge } from "@workspace/ui/components/badge";
-import { Check, X, ExternalLink } from "lucide-react";
 import {
-	FEATURE_CATEGORIES,
-	ELMO_FEATURES,
 	CATEGORY_LABELS,
 	type Competitor,
+	ELMO_FEATURES,
+	FEATURE_CATEGORIES,
 	type FeatureKey,
 } from "@/lib/competitors";
 
-function Cell({ on, highlight }: { on: boolean; highlight?: boolean }) {
+function Mark({ value }: { value: boolean }): React.ReactNode {
 	return (
-		<td className={`px-3 py-3 text-center ${highlight ? "bg-blue-50" : ""}`}>
-			{on ? <Check className="mx-auto h-4 w-4 text-blue-600" /> : <X className="mx-auto h-4 w-4 text-zinc-300" />}
-		</td>
+		<span>
+			<span aria-hidden="true">{value ? "Yes" : "—"}</span>
+			<span className="sr-only">{value ? "Recorded as available" : "Not recorded as available"}</span>
+		</span>
 	);
 }
 
-function ToolSummary({ tool }: { tool: Competitor }) {
+function recordedPricing(pricing: Competitor["pricing"]): string {
+	if (!pricing) return "Pricing not recorded";
+	const facts = [
+		pricing.hasFree ? "Free tier" : null,
+		pricing.startingPrice ? `From ${pricing.startingPrice}` : null,
+		pricing.hasEnterprise ? "Enterprise pricing recorded" : null,
+	].filter((fact): fact is string => Boolean(fact));
+	return facts.length > 0 ? facts.join(" / ") : "Pricing details not recorded";
+}
+
+function SupplierSummary({ tool, index }: { tool: Competitor; index: number }): React.ReactNode {
 	return (
-		<div>
-			<h3 className="mb-1 text-lg font-semibold text-zinc-950">{tool.name}</h3>
-			<div className="mt-2 flex flex-wrap gap-2">
-				<Badge variant="secondary">{CATEGORY_LABELS[tool.category]}</Badge>
-				{tool.pricing?.hasFree && <Badge variant="secondary">Free tier</Badge>}
-				{tool.pricing?.startingPrice && <Badge variant="secondary">From {tool.pricing.startingPrice}</Badge>}
-			</div>
-			<p className="mt-3 text-sm text-zinc-600">{tool.tagline}</p>
-			{tool.url && tool.domain && (
-				<a
-					href={tool.url}
-					target="_blank"
-					rel="noopener noreferrer nofollow"
-					className="mt-2 inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-950"
-				>
-					Visit {tool.domain}
-					<ExternalLink className="h-3 w-3" />
+		<li className="legacy-archive-ledger__row">
+			<span className="legacy-archive-index">{String(index).padStart(2, "0")}</span>
+			<div>
+				<h3>{tool.name}</h3>
+				<p>{tool.tagline}</p>
+				<p className="legacy-archive-meta">{CATEGORY_LABELS[tool.category]}</p>
+				<p className="legacy-archive-meta" data-recorded-pricing>
+					{recordedPricing(tool.pricing)}
+				</p>
+				<a className="legacy-archive-link" href={tool.url} target="_blank" rel="noopener noreferrer nofollow">
+					Visit {tool.domain} ↗
 				</a>
-			)}
-		</div>
+			</div>
+			<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+				—
+			</span>
+		</li>
 	);
 }
 
 export function MultiComparison({ tools }: { tools: Competitor[] }) {
-	const heading = `${tools.map((t) => t.name).join(" vs ")} vs Elmo`;
-	const columnCount = tools.length + 2; // feature label + tools + Elmo
-
+	const heading = `${tools.map((tool) => tool.name).join(" vs ")} vs Elmo`;
+	const columnCount = tools.length + 2;
 	return (
 		<>
-			{/* Tool summaries, plus Elmo */}
-			<section className="border-b border-zinc-200 bg-zinc-50 py-8">
-				<div className="mx-auto grid max-w-6xl gap-8 px-4 sm:grid-cols-2 lg:grid-cols-3 md:px-6">
-					{tools.map((tool) => (
-						<ToolSummary key={tool.slug} tool={tool} />
+			<section className="legacy-archive-section" aria-labelledby="multi-summary-title">
+				<p className="legacy-archive-kicker">Recorded supplier notes</p>
+				<h2 className="legacy-archive-section__heading" id="multi-summary-title">
+					{heading}
+				</h2>
+				<ul className="legacy-archive-ledger">
+					{tools.map((tool, index) => (
+						<SupplierSummary tool={tool} index={index + 1} key={tool.slug} />
 					))}
-					<div>
-						<h3 className="mb-1 text-lg font-semibold text-zinc-950">Elmo</h3>
-						<div className="mt-2 flex flex-wrap gap-2">
-							<Badge variant="secondary">Open Source</Badge>
-							<Badge variant="secondary">Self-Hosted</Badge>
-							<Badge variant="secondary">Free</Badge>
+					<li className="legacy-archive-ledger__row">
+						<span className="legacy-archive-index">{String(tools.length + 1).padStart(2, "0")}</span>
+						<div>
+							<h3>Elmo</h3>
+							<p>The open-source reference recorded by the upstream archive.</p>
+							<p className="legacy-archive-meta">Upstream project</p>
 						</div>
-						<p className="mt-3 text-sm text-zinc-600">
-							Open-source AEO platform. Self-host for free and track AI visibility across every major answer engine with
-							full transparency.
-						</p>
-					</div>
-				</div>
+						<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+							—
+						</span>
+					</li>
+				</ul>
 			</section>
-
-			{/* N-way feature table */}
-			<section className="border-b border-zinc-200 bg-white py-12">
-				<div className="mx-auto max-w-6xl px-4 md:px-6">
-					<h2 className="font-heading mb-8 text-2xl text-zinc-950">{heading}</h2>
-					<div className="overflow-x-auto">
-						<table className="w-full text-sm">
-							<thead>
-								<tr className="border-b border-zinc-200">
-									<th className="py-3 pr-4 text-left font-semibold text-zinc-950">Feature</th>
-									{tools.map((tool) => (
-										<th key={tool.slug} className="w-28 px-3 py-3 text-center font-semibold text-zinc-950">
-											{tool.name}
-										</th>
-									))}
-									<th className="w-28 px-3 py-3 text-center font-semibold text-zinc-950">Elmo</th>
-								</tr>
-							</thead>
-							<tbody>
-								{Object.entries(FEATURE_CATEGORIES).flatMap(([catKey, cat]) => [
-									<tr key={`cat-${catKey}`}>
-										<td
-											colSpan={columnCount}
-											className="bg-zinc-50 px-0 py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500"
-										>
-											{cat.label}
-										</td>
-									</tr>,
-									...Object.entries(cat.features).map(([featureKey, featureDef]) => {
-										const k = featureKey as FeatureKey;
-										const elmo = ELMO_FEATURES[k] ?? false;
-										return (
-											<tr key={featureKey} className="border-b border-dashed border-zinc-200 last:border-solid">
-												<td className="py-3 pr-4 text-sm text-zinc-600">{featureDef.label}</td>
-												{tools.map((tool) => (
-													<Cell key={tool.slug} on={tool.features[k] ?? false} />
-												))}
-												<Cell on={elmo} highlight={elmo} />
-											</tr>
-										);
-									}),
-								])}
-							</tbody>
-						</table>
-					</div>
-				</div>
+			<section className="legacy-archive-section" aria-labelledby="multi-table-title">
+				<h2 className="legacy-archive-section__heading" id="multi-table-title">
+					Archived feature matrix
+				</h2>
+				<section
+					className="legacy-archive-scroller"
+					data-comparison-scroller="true"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need to reach and scroll the overflow region.
+					tabIndex={0}
+					aria-label={`Archived feature comparison: ${heading}`}
+				>
+					<table className="legacy-archive-table">
+						<thead>
+							<tr>
+								<th>Feature</th>
+								{tools.map((tool) => (
+									<th key={tool.slug}>{tool.name}</th>
+								))}
+								<th>Elmo</th>
+							</tr>
+						</thead>
+						<tbody>
+							{Object.entries(FEATURE_CATEGORIES).flatMap(([categoryKey, category]) => [
+								<tr key={`category-${categoryKey}`}>
+									<th colSpan={columnCount}>{category.label}</th>
+								</tr>,
+								...Object.entries(category.features).map(([featureKey, definition]) => {
+									const key = featureKey as FeatureKey;
+									return (
+										<tr data-comparison-row key={featureKey}>
+											<th scope="row">{definition.label}</th>
+											{tools.map((tool) => (
+												<td key={tool.slug}>
+													<Mark value={tool.features[key] ?? false} />
+												</td>
+											))}
+											<td>
+												<Mark value={ELMO_FEATURES[key] ?? false} />
+											</td>
+										</tr>
+									);
+								}),
+							])}
+						</tbody>
+					</table>
+				</section>
 			</section>
 		</>
 	);

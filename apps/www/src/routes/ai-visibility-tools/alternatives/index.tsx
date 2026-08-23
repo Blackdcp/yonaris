@@ -1,78 +1,45 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { DirectoryBackLink, DirectoryHero, DirectorySection, ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
-import { indexedCompetitors, indexableCategories, toolsInCategory, CATEGORY_LABELS } from "@/lib/competitors";
+import { LegacyArchiveShell } from "@/components/site/legacy-archive-shell";
+import { CATEGORY_LABELS, indexableCategories, toolsInCategory } from "@/lib/competitors";
+import { siteRouteHead } from "@/lib/site-seo";
 
-const title = "AI Visibility Tool Alternatives · Elmo";
-const description =
-	"Find open-source and self-hosted alternatives to the AI visibility tools you're evaluating. Each guide compares the closest options, with Elmo as the free, auditable pick.";
-
-const items = indexedCompetitors.map((c) => ({
-	name: `${c.name} alternatives`,
-	path: `/ai-visibility-tools/alternatives/${c.slug}`,
-}));
+const title = "AI Visibility Tool Alternatives | Upstream Elmo Archive";
+const description = "Archived upstream Elmo alternatives research for AI visibility tools.";
 
 export const Route = createFileRoute("/ai-visibility-tools/alternatives/")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({
-				title,
-				description,
-				path: "/ai-visibility-tools/alternatives",
-			}),
-		],
-		links: [
-			{
-				rel: "canonical",
-				href: canonicalUrl("/ai-visibility-tools/alternatives"),
-			},
-		],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "AI Visibility Tool Directory", path: "/ai-visibility-tools" },
-				{ name: "Alternatives", path: "/ai-visibility-tools/alternatives" },
-			]),
-			itemListJsonLd(items),
-		],
-	}),
+	head: () => siteRouteHead("aiVisibility", { canonicalPath: "/ai-visibility-tools/alternatives", title, description }),
 	component: AlternativesHub,
 });
 
 function AlternativesHub() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<DirectoryBackLink />
-				<DirectoryHero
-					eyebrow="Alternatives"
-					title="Alternatives to every AI visibility tool"
-					lead="Shopping for a replacement, or just want to know your options? Pick a tool to see its closest alternatives, including the open-source, self-hosted option you can run for free."
-				/>
-				{indexableCategories.map((category) => (
-					<DirectorySection key={category} title={CATEGORY_LABELS[category]}>
-						<ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-							{toolsInCategory(category).map((c) => (
-								<li key={c.slug}>
-									<a
-										href={`/ai-visibility-tools/alternatives/${c.slug}`}
-										className="block rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-									>
-										{c.name} alternatives
-									</a>
-								</li>
-							))}
-						</ul>
-					</DirectorySection>
-				))}
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+		<LegacyArchiveShell>
+			<DirectoryBackLink />
+			<DirectoryHero
+				eyebrow="Alternatives register"
+				title="Alternatives to AI visibility tools"
+				lead="A historical index of the adjacent tools recorded by the upstream Elmo comparison project."
+			/>
+			{indexableCategories.map((category) => (
+				<DirectorySection key={category} title={CATEGORY_LABELS[category]}>
+					<ul className="legacy-archive-ledger">
+						{toolsInCategory(category).map((competitor, index) => (
+							<li className="legacy-archive-ledger__row" key={competitor.slug}>
+								<span className="legacy-archive-index">{String(index + 1).padStart(2, "0")}</span>
+								<a href={`/ai-visibility-tools/alternatives/${competitor.slug}`}>
+									<h3>{competitor.name} alternatives</h3>
+									<p>{competitor.tagline}</p>
+								</a>
+								<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+									↗
+								</span>
+							</li>
+						))}
+					</ul>
+				</DirectorySection>
+			))}
+			<ElmoCta />
+		</LegacyArchiveShell>
 	);
 }

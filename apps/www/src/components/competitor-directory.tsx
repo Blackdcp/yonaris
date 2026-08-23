@@ -1,183 +1,142 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { Button } from "@workspace/ui/components/button";
-import { Check, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
-	sortedCompetitors,
-	FEATURE_CATEGORIES,
-	ELMO_FEATURES,
 	CATEGORY_LABELS,
-	getFeatureLabel,
-	getComparisonSlug,
-	getPopularityGrade,
 	type Competitor,
 	type CompetitorCategory,
+	ELMO_FEATURES,
+	FEATURE_CATEGORIES,
 	type FeatureKey,
+	getComparisonSlug,
+	getPopularityGrade,
+	sortedCompetitors,
 } from "@/lib/competitors";
 
-function FeatureIcon({ has }: { has: boolean }) {
-	return has ? <Check className="mx-auto h-4 w-4 text-blue-600" /> : <X className="mx-auto h-4 w-4 text-zinc-300" />;
-}
+const visibleCompetitors = sortedCompetitors.filter(
+	(competitor) => competitor.status !== "shutting-down" && competitor.category !== "other",
+);
 
-const visibleCompetitors = sortedCompetitors.filter((c) => c.status !== "shutting-down" && c.category !== "other");
-
-export function CompetitorDirectory() {
-	const [selectedCategory, setSelectedCategory] = useState<CompetitorCategory | "all">("all");
-
-	const filteredCompetitors = visibleCompetitors.filter(
-		(c) => selectedCategory === "all" || c.category === selectedCategory,
-	);
-
-	const categories = [...new Set(visibleCompetitors.map((c) => c.category))];
-
+function Mark({ value }: { value: boolean }): React.ReactNode {
 	return (
-		<>
-			{/* Hero */}
-			<section className="relative overflow-hidden border-b border-zinc-200 bg-white py-16 lg:py-28">
-				<div
-					aria-hidden="true"
-					className="pointer-events-none absolute inset-0 [background-image:linear-gradient(to_right,rgb(0_0_0/0.04)_1px,transparent_1px),linear-gradient(to_bottom,rgb(0_0_0/0.04)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
-				/>
-				<div className="relative mx-auto max-w-6xl px-4 md:px-6">
-					<p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ RESOURCES</p>
-					<h1 className="font-heading text-4xl text-balance text-zinc-950 md:text-5xl lg:text-6xl">
-						AI Visibility Tool Directory
-					</h1>
-					<p className="mt-6 max-w-3xl text-lg text-balance text-zinc-600 md:text-xl">
-						Every AI visibility and Answer Engine Optimization tool in one place. Compare features, pricing, and find
-						the right platform for your team.
-					</p>
-				</div>
-			</section>
-
-			{/* Category Filters */}
-			<section className="border-b border-zinc-200 bg-white pb-6 pt-6">
-				<div className="mx-auto max-w-6xl px-4 md:px-6">
-					<div className="flex flex-wrap gap-2">
-						<button
-							type="button"
-							onClick={() => setSelectedCategory("all")}
-							className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-								selectedCategory === "all" ? "bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-							}`}
-						>
-							All
-						</button>
-						{categories.map((cat) => (
-							<button
-								type="button"
-								key={cat}
-								onClick={() => setSelectedCategory(cat)}
-								className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-									selectedCategory === cat ? "bg-zinc-950 text-white" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-								}`}
-							>
-								{CATEGORY_LABELS[cat]}
-							</button>
-						))}
-					</div>
-				</div>
-			</section>
-
-			{/* Feature Matrix */}
-			<section className="border-b border-zinc-200 bg-white py-12 lg:py-16">
-				<div className="mx-auto max-w-6xl px-4 md:px-6">
-					<h2 className="mb-8 text-lg font-semibold text-zinc-950">{filteredCompetitors.length} tools</h2>
-					<FeatureMatrix competitors={filteredCompetitors} />
-				</div>
-			</section>
-
-			{/* Elmo CTA */}
-			<section className="border-b border-zinc-200 bg-white py-16 lg:py-24">
-				<div className="mx-auto max-w-3xl px-4 text-center md:px-6">
-					<h2 className="font-heading text-3xl text-zinc-950 md:text-4xl">Why teams choose Elmo</h2>
-					<p className="mx-auto mt-4 max-w-xl text-lg text-balance text-zinc-600">
-						Open source, self-hosted, and transparent. Track AI visibility without vendor lock-in or inflated pricing.
-					</p>
-					<div className="mt-6 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-						<Button asChild size="sm">
-							<Link to="/docs">Read the Docs</Link>
-						</Button>
-						<Button asChild variant="outline" size="sm">
-							<a href="https://github.com/elmohq/elmo" target="_blank" rel="noopener noreferrer">
-								View on GitHub
-							</a>
-						</Button>
-					</div>
-				</div>
-			</section>
-		</>
+		<span>
+			<span aria-hidden="true">{value ? "Yes" : "—"}</span>
+			<span className="sr-only">{value ? "Recorded as available" : "Not recorded as available"}</span>
+		</span>
 	);
 }
 
-function CompetitorHeader({ competitor }: { competitor: Competitor }) {
+function CompetitorHeader({ competitor }: { competitor: Competitor }): React.ReactNode {
 	return (
-		<Link
-			to="/ai-visibility-tools/$slug"
-			params={{ slug: getComparisonSlug(competitor) }}
-			className="block text-[11px] leading-tight text-zinc-500 hover:text-zinc-950 hover:underline"
-		>
+		<Link to="/ai-visibility-tools/$slug" params={{ slug: getComparisonSlug(competitor) }}>
 			{competitor.name}
 		</Link>
 	);
 }
 
-function FeatureMatrix({ competitors: items }: { competitors: Competitor[] }) {
-	const stickyCell = "sticky left-0 z-10 bg-white shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]";
+export function CompetitorDirectory() {
+	const [selectedCategory, setSelectedCategory] = useState<CompetitorCategory | "all">("all");
+	const [isInteractive, setIsInteractive] = useState(false);
+	useEffect(() => setIsInteractive(true), []);
+	const filteredCompetitors = visibleCompetitors.filter(
+		(competitor) => selectedCategory === "all" || competitor.category === selectedCategory,
+	);
+	const categories = [...new Set(visibleCompetitors.map((competitor) => competitor.category))];
 
 	return (
-		<div className="overflow-x-auto">
-			<table className="w-full min-w-[800px] text-sm">
-				<thead>
-					<tr className="border-b border-zinc-200">
-						<th className={`${stickyCell} py-3 pr-4 text-left font-semibold text-zinc-950`}>Feature</th>
-						<th className="border-x border-zinc-200 bg-blue-50 px-2 py-3 text-center font-semibold text-zinc-950">
-							Elmo
-						</th>
-						{items.map((c) => (
-							<th key={c.slug} className="px-2 py-3 text-center font-normal">
-								<CompetitorHeader competitor={c} />
-							</th>
-						))}
-					</tr>
-				</thead>
-				<tbody>
-					{Object.entries(FEATURE_CATEGORIES).flatMap(([catKey, cat]) => [
-						<tr key={`cat-${catKey}`}>
-							<td
-								className={`${stickyCell} bg-zinc-50! py-2 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500`}
-							>
-								{cat.label}
-							</td>
-							<td colSpan={1 + items.length} className="bg-zinc-50 px-0 py-2" />
-						</tr>,
-						...Object.keys(cat.features).map((featureKey) => (
-							<tr key={featureKey} className="border-b border-dashed border-zinc-200 last:border-solid">
-								<td className={`${stickyCell} py-2 pr-4 text-xs text-zinc-600`}>
-									{getFeatureLabel(featureKey as FeatureKey)}
-								</td>
-								<td className="border-x border-zinc-200 bg-blue-50 px-2 py-2">
-									<FeatureIcon has={ELMO_FEATURES[featureKey as FeatureKey] ?? false} />
-								</td>
-								{items.map((c) => (
-									<td key={c.slug} className="px-2 py-2">
-										<FeatureIcon has={c.features[featureKey as FeatureKey] ?? false} />
-									</td>
+		<>
+			<header className="legacy-archive-hero">
+				<div>
+					<p className="legacy-archive-kicker">Upstream supplier register</p>
+					<h1 className="legacy-archive-title">AI Visibility Tool Directory</h1>
+					<p className="legacy-archive-lead">
+						A dated market record of AI visibility and answer-engine tooling imported from the upstream Elmo project.
+					</p>
+				</div>
+				<p className="legacy-archive-note">
+					Feature, price, and availability claims belong to the source archive. Verify every supplier directly.
+				</p>
+			</header>
+			<section className="legacy-archive-section" aria-labelledby="supplier-register-title">
+				<p className="legacy-archive-kicker">Filter the archived dataset</p>
+				<h2 className="legacy-archive-section__heading" id="supplier-register-title">
+					{filteredCompetitors.length} recorded tools
+				</h2>
+				<fieldset className="legacy-archive-filters">
+					<legend className="sr-only">Filter archived tools by category</legend>
+					<button
+						aria-pressed={selectedCategory === "all"}
+						className="legacy-archive-filter"
+						disabled={!isInteractive}
+						onClick={() => setSelectedCategory("all")}
+						type="button"
+					>
+						All
+					</button>
+					{categories.map((category) => (
+						<button
+							aria-pressed={selectedCategory === category}
+							className="legacy-archive-filter"
+							disabled={!isInteractive}
+							key={category}
+							onClick={() => setSelectedCategory(category)}
+							type="button"
+						>
+							{CATEGORY_LABELS[category]}
+						</button>
+					))}
+				</fieldset>
+				<section
+					aria-label="Archived AI visibility supplier comparison"
+					className="legacy-archive-scroller"
+					data-comparison-scroller="true"
+					// biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need to reach and scroll the overflow region.
+					tabIndex={0}
+				>
+					<table className="legacy-archive-table">
+						<thead>
+							<tr>
+								<th>Recorded feature</th>
+								<th>Elmo</th>
+								{filteredCompetitors.map((competitor) => (
+									<th data-competitor-entry key={competitor.slug}>
+										<CompetitorHeader competitor={competitor} />
+									</th>
 								))}
 							</tr>
-						)),
-					])}
-					<tr className="border-t-2 border-zinc-200">
-						<td className={`${stickyCell} py-2 pr-4 text-xs font-semibold text-zinc-950`}>Popularity</td>
-						<td className="border-x border-zinc-200 bg-blue-50 px-2 py-2 text-center text-xs text-blue-600">♥︎</td>
-						{items.map((c) => (
-							<td key={c.slug} className="px-2 py-2 text-center text-xs tabular-nums text-zinc-600">
-								{getPopularityGrade(c)}
-							</td>
-						))}
-					</tr>
-				</tbody>
-			</table>
-		</div>
+						</thead>
+						<tbody>
+							{Object.entries(FEATURE_CATEGORIES).flatMap(([categoryKey, category]) => [
+								<tr key={`category-${categoryKey}`}>
+									<th colSpan={filteredCompetitors.length + 2}>{category.label}</th>
+								</tr>,
+								...Object.entries(category.features).map(([featureKey, definition]) => {
+									const key = featureKey as FeatureKey;
+									return (
+										<tr data-feature-row={featureKey} key={featureKey}>
+											<th scope="row">{definition.label}</th>
+											<td>
+												<Mark value={ELMO_FEATURES[key] ?? false} />
+											</td>
+											{filteredCompetitors.map((competitor) => (
+												<td key={competitor.slug}>
+													<Mark value={competitor.features[key] ?? false} />
+												</td>
+											))}
+										</tr>
+									);
+								}),
+							])}
+							<tr>
+								<th scope="row">Popularity</th>
+								<td>Upstream reference</td>
+								{filteredCompetitors.map((competitor) => (
+									<td key={competitor.slug}>{getPopularityGrade(competitor)}</td>
+								))}
+							</tr>
+						</tbody>
+					</table>
+				</section>
+			</section>
+		</>
 	);
 }

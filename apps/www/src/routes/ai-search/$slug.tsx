@@ -1,144 +1,94 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
-import { ElmoCta } from "@/components/directory-shell";
-import { Faq } from "@/components/faq";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { LegacyArchiveFaq } from "@/components/site/legacy-archive-faq";
+import { PublicationShell } from "@/components/site/publication-shell";
 import { type AiSearchEngine, aiSearchEngines, getAiSearchEngine } from "@/data/ai-search-engines";
 import type { FaqItem } from "@/lib/faqs";
-import { breadcrumbJsonLd, canonicalUrl, faqJsonLd, howToJsonLd, ogMeta } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
 
-function engineFaqs(e: AiSearchEngine): FaqItem[] {
+function engineFaqs(engine: AiSearchEngine): FaqItem[] {
 	return [
 		{
-			question: `How do I get my brand mentioned in ${e.name}?`,
-			answer: `${e.short} In short: ${e.steps[0].text} ${e.steps[1].text}`,
+			question: `How do I get my brand mentioned in ${engine.name}?`,
+			answer: `${engine.short} In short: ${engine.steps[0].text} ${engine.steps[1].text}`,
 		},
-		{
-			question: `Does Yonaris track ${e.name}?`,
-			answer: e.tracking,
-		},
+		{ question: `How did the archive describe Yonaris tracking ${engine.name}?`, answer: engine.tracking },
 	];
 }
 
 export const Route = createFileRoute("/ai-search/$slug")({
 	head: ({ params }) => {
-		const e = getAiSearchEngine(params.slug);
-		if (!e) return {};
-		const title = `How to Appear in ${e.name} · Yonaris`;
-		const description = e.short;
-		const path = `/ai-search/${e.slug}`;
-		return {
-			meta: [{ title }, { name: "description", content: description }, ...ogMeta({ title, description, path })],
-			links: [{ rel: "canonical", href: canonicalUrl(path) }],
-			scripts: [
-				breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
-					{ name: "AI Search", path: "/ai-search" },
-					{ name: e.name, path },
-				]),
-				howToJsonLd({
-					name: `How to appear in ${e.name}`,
-					description: e.short,
-					steps: e.steps,
-				}),
-				faqJsonLd(engineFaqs(e)),
-			],
-		};
+		const engine = getAiSearchEngine(params.slug);
+		if (!engine) return {};
+		return siteRouteHead("aiSearch", {
+			canonicalPath: `/ai-search/${engine.slug}`,
+			title: `How to Appear in ${engine.name} · Yonaris`,
+			description: engine.short,
+		});
 	},
 	loader: ({ params }) => {
-		const e = getAiSearchEngine(params.slug);
-		if (!e) throw notFound();
-		const related = (e.related ?? [])
-			.map((slug) => aiSearchEngines.find((x) => x.slug === slug))
-			.filter((x): x is AiSearchEngine => Boolean(x));
-		return { engine: e, related };
+		const engine = getAiSearchEngine(params.slug);
+		if (!engine) throw notFound();
+		const related = (engine.related ?? [])
+			.map((slug) => aiSearchEngines.find((candidate) => candidate.slug === slug))
+			.filter((candidate): candidate is AiSearchEngine => Boolean(candidate));
+		return { engine, related };
 	},
 	component: EnginePage,
 });
 
 function EnginePage() {
-	const { engine, related } = Route.useLoaderData() as {
-		engine: AiSearchEngine;
-		related: AiSearchEngine[];
-	};
+	const { engine, related } = Route.useLoaderData() as { engine: AiSearchEngine; related: AiSearchEngine[] };
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<div className="mx-auto max-w-6xl px-4 pt-8 md:px-6">
-					<a
-						href="/ai-search"
-						className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-950"
-					>
-						<ArrowLeft className="h-3 w-3" />
-						AI search guides
-					</a>
-				</div>
-
-				<article className="mx-auto max-w-6xl px-4 py-10 md:px-6">
-					<div className="max-w-3xl">
-						<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">{engine.vendor}</p>
-						<h1 className="font-heading mt-2 text-4xl text-balance text-zinc-950 md:text-5xl">
-							How to appear in {engine.name}
-						</h1>
-						<div className="mt-6 space-y-5 text-lg leading-relaxed text-zinc-700">
-							{engine.intro.map((p) => (
-								<p key={p.slice(0, 32)}>{p}</p>
-							))}
-						</div>
-
-						<h2 className="font-heading mt-12 text-2xl text-zinc-950">How to improve your odds</h2>
-						<ol className="mt-6 space-y-5">
-							{engine.steps.map((step, i) => (
-								<li key={step.name} className="flex gap-4">
-									<span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-blue-600 font-mono text-xs text-white tabular-nums">
-										{i + 1}
-									</span>
+		<PublicationShell section="ai-search" archiveContext="legacy-research">
+			<article className="publication-article">
+				<a className="publication-back-link" href="/ai-search">
+					← AI search archive
+				</a>
+				<header className="publication-article__header">
+					<p className="publication-kicker">{engine.vendor} / archived guide</p>
+					<h1 className="publication-article__title">How to appear in {engine.name}</h1>
+					<p className="publication-article__lead">{engine.short}</p>
+				</header>
+				<div className="publication-article__body">
+					<div className="legacy-archive-copy">
+						{engine.intro.map((paragraph) => (
+							<p key={paragraph.slice(0, 32)}>{paragraph}</p>
+						))}
+					</div>
+					<section>
+						<h2>How the archive suggested improving your odds</h2>
+						<ol className="legacy-archive-steps">
+							{engine.steps.map((step, index) => (
+								<li className="legacy-archive-step" key={step.name}>
+									<span className="legacy-archive-step__number">{String(index + 1).padStart(2, "0")}</span>
 									<div>
-										<h3 className="font-semibold text-zinc-950">{step.name}</h3>
-										<p className="mt-1 leading-relaxed text-zinc-600">{step.text}</p>
+										<h3>{step.name}</h3>
+										<p>{step.text}</p>
 									</div>
 								</li>
 							))}
 						</ol>
-
-						<div className="mt-12 rounded-md border border-zinc-200 bg-zinc-50 p-6">
-							<h2 className="font-heading text-xl text-zinc-950">Tracking your visibility in {engine.name}</h2>
-							<p className="mt-2 leading-relaxed text-zinc-600">{engine.tracking}</p>
-							<div className="mt-4">
-								<Link
-									to="/docs"
-									className="inline-flex h-9 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
-								>
-									Start tracking with Yonaris
-								</Link>
-							</div>
-						</div>
-
-						{related.length > 0 && (
-							<div className="mt-10">
-								<h2 className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">Other engines</h2>
-								<div className="mt-3 flex flex-wrap gap-2">
-									{related.map((r) => (
-										<a
-											key={r.slug}
-											href={`/ai-search/${r.slug}`}
-											className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-sm text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-										>
-											{r.name}
-										</a>
-									))}
-								</div>
-							</div>
-						)}
-					</div>
-				</article>
-
-				<Faq items={engineFaqs(engine)} eyebrow="/ FAQ" />
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+					</section>
+					<section>
+						<p className="publication-kicker">Historical product note</p>
+						<h2>Archived measurement description</h2>
+						<p>{engine.tracking}</p>
+					</section>
+					{related.length > 0 ? (
+						<section>
+							<h2>Other archived engine notes</h2>
+							<nav aria-label="Other archived engine notes">
+								{related.map((item) => (
+									<a className="publication-action" href={`/ai-search/${item.slug}`} key={item.slug}>
+										{item.name}
+									</a>
+								))}
+							</nav>
+						</section>
+					) : null}
+				</div>
+			</article>
+			<LegacyArchiveFaq items={engineFaqs(engine)} />
+		</PublicationShell>
 	);
 }

@@ -1,47 +1,31 @@
 import { Link } from "@tanstack/react-router";
-import { Badge } from "@workspace/ui/components/badge";
-import { Button } from "@workspace/ui/components/button";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 
-/** Back link to the directory, matching the competitor comparison pages. */
 export function DirectoryBackLink({ label = "AI Visibility Tool Directory" }: { label?: string }) {
 	return (
-		<div className="mx-auto max-w-6xl px-4 pt-8 md:px-6">
-			<Link
-				to="/ai-visibility-tools"
-				className="inline-flex items-center gap-1 text-sm text-zinc-500 transition-colors hover:text-zinc-950"
-			>
-				<ArrowLeft className="h-3 w-3" />
-				{label}
+		<div className="legacy-archive-back">
+			<Link className="legacy-archive-link" to="/ai-visibility-tools">
+				← {label}
 			</Link>
 		</div>
 	);
 }
 
-/**
- * Page hero with an eyebrow badge, H1, and a lead "answer block" written to be
- * lifted verbatim into an AI answer. Mirrors the comparison page hero.
- */
 export function DirectoryHero({ eyebrow, title, lead }: { eyebrow: string; title: string; lead: string }) {
 	return (
-		<section className="border-b border-zinc-200 bg-white py-12 lg:py-20">
-			<div className="mx-auto max-w-6xl px-4 md:px-6">
-				<Badge variant="outline" className="mb-4">
-					{eyebrow}
-				</Badge>
-				<h1 className="font-heading text-4xl text-balance text-zinc-950 md:text-5xl">{title}</h1>
-				<p className="mt-4 max-w-3xl text-lg text-balance text-zinc-600">{lead}</p>
+		<header className="legacy-archive-hero">
+			<div>
+				<p className="legacy-archive-kicker">{eyebrow}</p>
+				<h1 className="legacy-archive-title">{title}</h1>
+				<p className="legacy-archive-lead">{lead}</p>
 			</div>
-		</section>
+			<p className="legacy-archive-note">
+				Historical market record / supplier claims and feature coverage may have changed since publication.
+			</p>
+		</header>
 	);
 }
 
-/**
- * The Yonaris measurement banner, surfaced high on a page right
- * under the hero. `pitch` is the page-specific paragraph; `comparison` points the
- * secondary button at the matching product comparison page.
- */
 export function DirectoryElmoBanner({
 	pitch,
 	comparison,
@@ -50,56 +34,53 @@ export function DirectoryElmoBanner({
 	comparison: { slug: string; name: string };
 }) {
 	return (
-		<section className="border-b border-zinc-200 bg-zinc-50 py-10">
-			<div className="mx-auto max-w-6xl px-4 md:px-6">
-				<div className="rounded-md border border-blue-200 bg-blue-50/40 p-6">
-					<h2 className="font-heading text-xl text-zinc-950">Yonaris: repeatable AI visibility measurement</h2>
-					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-zinc-600">{pitch}</p>
-					<div className="mt-4 flex flex-wrap gap-3">
-						<Button asChild size="sm">
-							<Link to="/docs">Read the Yonaris docs</Link>
-						</Button>
-						<Button asChild variant="outline" size="sm">
-							<Link to="/ai-visibility-tools/$slug" params={{ slug: comparison.slug }}>
-								Yonaris vs {comparison.name}
-								<ArrowRight className="h-3.5 w-3.5" />
-							</Link>
-						</Button>
-					</div>
-				</div>
+		<section className="legacy-archive-section" aria-labelledby={`archive-elmo-note-${comparison.slug}`}>
+			<p className="legacy-archive-kicker">Upstream Elmo note</p>
+			<h2 className="legacy-archive-section__heading" id={`archive-elmo-note-${comparison.slug}`}>
+				Historical open-source reference
+			</h2>
+			<div className="legacy-archive-copy">
+				<p>{pitch}</p>
+				<p>
+					This text belongs to the upstream Elmo comparison archive. It is preserved as provenance for the archived
+					comparison with {comparison.name}.
+				</p>
 			</div>
 		</section>
 	);
 }
 
-/** The "Ready to track your AI visibility?" closing CTA, shared across pages. */
 export function ElmoCta() {
 	return (
-		<section className="border-b border-zinc-200 bg-white py-16 lg:py-24">
-			<div className="mx-auto max-w-3xl px-4 text-center md:px-6">
-				<h2 className="font-heading text-3xl text-zinc-950 md:text-4xl">Ready to track your AI visibility?</h2>
-				<p className="mx-auto mt-4 max-w-xl text-lg text-balance text-zinc-600">
-					Use Yonaris to establish a repeatable GEO baseline across the AI providers configured for your deployment,
-					then compare brand mentions, citations, and competitor presence over time.
-				</p>
-				<div className="mt-8 flex flex-wrap justify-center gap-3">
-					<Button asChild size="sm">
-						<Link to="/docs">Read the Yonaris docs</Link>
-					</Button>
-				</div>
-			</div>
+		<section className="legacy-archive-section" aria-labelledby="legacy-archive-endpoint">
+			<p className="legacy-archive-kicker">End of archived record</p>
+			<h2 className="legacy-archive-section__heading" id="legacy-archive-endpoint">
+				Continue in the current Yonaris scope
+			</h2>
+			<nav
+				aria-label="Continue in current Yonaris scope"
+				className="legacy-archive-current-scope"
+				data-legacy-current-scope
+			>
+				<Link className="legacy-archive-link" to="/product">
+					Current product
+				</Link>
+				<Link className="legacy-archive-link" to="/geo">
+					Current GEO work
+				</Link>
+				<Link className="legacy-archive-link" to="/open-source">
+					Open source
+				</Link>
+			</nav>
 		</section>
 	);
 }
 
-/** A simple bordered content section with an optional H2. */
 export function DirectorySection({ title, children }: { title?: string; children: ReactNode }) {
 	return (
-		<section className="border-b border-zinc-200 bg-white py-12">
-			<div className="mx-auto max-w-6xl px-4 md:px-6">
-				{title ? <h2 className="font-heading mb-8 text-2xl text-zinc-950">{title}</h2> : null}
-				{children}
-			</div>
+		<section className="legacy-archive-section">
+			{title ? <h2 className="legacy-archive-section__heading">{title}</h2> : null}
+			{children}
 		</section>
 	);
 }

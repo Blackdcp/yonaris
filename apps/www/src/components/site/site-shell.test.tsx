@@ -138,7 +138,7 @@ describe("shared public shells", () => {
 		expect(utility).toContain('<section class="site-utility-context"');
 		expect(utility).toContain('aria-label="Open-source Documentation"');
 		expect(utility).toContain("Open-source Documentation");
-		expect(upstream).toContain("upstream Elmo comparison archive");
+		expect(upstream).toContain("Upstream Elmo comparison archive");
 	});
 
 	it("keeps publication and utility children inside SiteShell's sole main landmark", () => {

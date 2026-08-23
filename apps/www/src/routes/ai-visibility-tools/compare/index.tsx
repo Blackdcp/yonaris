@@ -1,88 +1,60 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
 import { DirectoryBackLink, DirectoryHero, DirectorySection, ElmoCta } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
-import { comparePairs, comparePairSlug, compareSets, compareSetSlug } from "@/lib/competitors";
+import { LegacyArchiveShell } from "@/components/site/legacy-archive-shell";
+import { comparePairSlug, comparePairs, compareSetSlug, compareSets } from "@/lib/competitors";
+import { siteRouteHead } from "@/lib/site-seo";
 
-const title = "Compare AI Visibility Tools Head-to-Head · Elmo";
-const description =
-	"Head-to-head comparisons of the leading AI visibility platforms and SEO suites — Profound, Peec AI, Ahrefs Brand Radar, HubSpot AEO, Semrush, Scrunch, and more — feature by feature, with Elmo as the free, open-source alternative.";
-
+const title = "Compare AI Visibility Tools | Upstream Elmo Archive";
+const description = "Archived upstream Elmo comparisons of AI visibility tools and SEO suites.";
 const setItems = compareSets.map((tools) => ({
-	name: tools.map((t) => t.name).join(" vs "),
+	name: tools.map((tool) => tool.name).join(" vs "),
 	path: `/ai-visibility-tools/compare/${compareSetSlug(tools)}`,
 }));
-
-const pairItems = comparePairs.map(([a, b]) => ({
-	name: `${a.name} vs ${b.name}`,
-	path: `/ai-visibility-tools/compare/${comparePairSlug(a, b)}`,
+const pairItems = comparePairs.map(([first, second]) => ({
+	name: `${first.name} vs ${second.name}`,
+	path: `/ai-visibility-tools/compare/${comparePairSlug(first, second)}`,
 }));
 
-const items = [...setItems, ...pairItems];
+function ComparisonLedger({ items }: { items: { name: string; path: string }[] }) {
+	return (
+		<ul className="legacy-archive-ledger">
+			{items.map((item, index) => (
+				<li className="legacy-archive-ledger__row" key={item.path}>
+					<span className="legacy-archive-index">{String(index + 1).padStart(2, "0")}</span>
+					<a href={item.path}>
+						<h3>{item.name}</h3>
+						<p>Open archived comparison record</p>
+					</a>
+					<span className="legacy-archive-ledger__arrow" aria-hidden="true">
+						↗
+					</span>
+				</li>
+			))}
+		</ul>
+	);
+}
 
 export const Route = createFileRoute("/ai-visibility-tools/compare/")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/ai-visibility-tools/compare" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/ai-visibility-tools/compare") }],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "AI Visibility Tool Directory", path: "/ai-visibility-tools" },
-				{ name: "Compare", path: "/ai-visibility-tools/compare" },
-			]),
-			itemListJsonLd(items),
-		],
-	}),
+	head: () => siteRouteHead("aiVisibility", { canonicalPath: "/ai-visibility-tools/compare", title, description }),
 	component: CompareHub,
 });
 
 function CompareHub() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<DirectoryBackLink />
-				<DirectoryHero
-					eyebrow="Compare"
-					title="AI visibility tools, head-to-head"
-					lead="Weighing the AI visibility tools against each other? These side-by-side breakdowns compare tracking, analytics, and pricing across the funded AEO platforms and the SEO suites that added AI search monitoring, and show where an open-source tool like Elmo fits in."
-				/>
-				<DirectorySection title="Compare several at once">
-					<ul className="grid gap-3 sm:grid-cols-2">
-						{setItems.map((item) => (
-							<li key={item.path}>
-								<a
-									href={item.path}
-									className="block rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-								>
-									{item.name}
-								</a>
-							</li>
-						))}
-					</ul>
-				</DirectorySection>
-				<DirectorySection title="Pick a matchup">
-					<ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						{pairItems.map((item) => (
-							<li key={item.path}>
-								<a
-									href={item.path}
-									className="block rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:border-zinc-300 hover:text-zinc-950"
-								>
-									{item.name}
-								</a>
-							</li>
-						))}
-					</ul>
-				</DirectorySection>
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+		<LegacyArchiveShell>
+			<DirectoryBackLink />
+			<DirectoryHero
+				eyebrow="Comparison register"
+				title="AI visibility tools, head-to-head"
+				lead="A historical index of pair and multi-tool records imported from the upstream Elmo comparison project."
+			/>
+			<DirectorySection title="Multi-tool records">
+				<ComparisonLedger items={setItems} />
+			</DirectorySection>
+			<DirectorySection title="Pair records">
+				<ComparisonLedger items={pairItems} />
+			</DirectorySection>
+			<ElmoCta />
+		</LegacyArchiveShell>
 	);
 }
