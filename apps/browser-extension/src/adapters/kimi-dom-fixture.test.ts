@@ -37,11 +37,18 @@ describe("Kimi semantic DOM contract", () => {
 		expect(kimiSelectorContract.searchEvidence).toBeNull();
 	});
 
-	test("keeps a search-only assistant segment generating until visible final markdown arrives", async () => {
+	test("ignores hidden thinking markdown until direct final markdown arrives", async () => {
 		const searchOnly = cssFixturePort(
 			`<div class="chat-content-item-assistant">
 				<div class="segment-content-box">
-					<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+					<div class="container-block">
+						<div class="toolcall-container thinking-container">
+							<div class="resize-container" style="height: 0; opacity: 0">
+								<div class="markdown-container">隐藏的内部思考稿</div>
+							</div>
+						</div>
+						<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+					</div>
 				</div>
 			</div>`,
 			"https://www.kimi.com/chat/kimi-session",
@@ -49,7 +56,14 @@ describe("Kimi semantic DOM contract", () => {
 		const completed = cssFixturePort(
 			`<div class="chat-content-item-assistant">
 				<div class="segment-content-box">
-					<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+					<div class="container-block">
+						<div class="toolcall-container thinking-container">
+							<div class="resize-container" style="height: 0; opacity: 0">
+								<div class="markdown-container">隐藏的内部思考稿</div>
+							</div>
+						</div>
+						<div class="toolcall-container toolcall-web_search">思考已完成 搜索网页 46 个结果</div>
+					</div>
 					<div class="markdown-container"><div class="markdown">完整正文</div></div>
 				</div>
 			</div>`,
