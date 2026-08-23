@@ -1,6 +1,6 @@
 import { getCompanyContent } from "@/content/site/company";
 import type { Locale } from "@/content/site/types";
-import { getCorePath, getSiteRoute } from "@/lib/site-manifest";
+import { getCorePath } from "@/lib/site-manifest";
 import { SiteShell } from "../site-shell";
 import { CompanyReaderField, CompanySemanticText } from "./company-reader-field";
 
@@ -33,8 +33,6 @@ function renderStageTitle(title: string, locale: Locale): React.ReactNode {
 export function CompanyPage({ locale }: { locale: Locale }): React.ReactNode {
 	const content = getCompanyContent(locale);
 	const diagnosticPath = getCorePath("diagnostic", locale);
-	const openSourcePath = getSiteRoute("openSource").canonicals.en;
-	if (!openSourcePath) throw new Error("Missing Open Source canonical");
 
 	return (
 		<SiteShell locale={locale} activeKey="company" mainClassName="company-page">
@@ -110,21 +108,6 @@ export function CompanyPage({ locale }: { locale: Locale }): React.ReactNode {
 
 			<section className="company-close" aria-label={content.contact.title}>
 				<div className="company-close__inner">
-					<section className="company-open-source" aria-labelledby="company-open-source-title">
-						<p className="company-kicker">{content.openSource.eyebrow}</p>
-						<div>
-							<h2 id="company-open-source-title">
-								<CompanySemanticText locale={locale} text={content.openSource.title} phrase="不是" />
-							</h2>
-							<p>{content.openSource.summary}</p>
-							<p className="company-open-source__boundary">{content.openSource.boundary}</p>
-							<a href={openSourcePath} className="company-ink-focus">
-								{content.openSource.linkLabel}
-								<span aria-hidden="true">↗</span>
-							</a>
-						</div>
-					</section>
-
 					<section className="company-contact" aria-labelledby="company-contact-title">
 						<p className="company-kicker">{content.contact.eyebrow}</p>
 						<div className="company-contact__copy">

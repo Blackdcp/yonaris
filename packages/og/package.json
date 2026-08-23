@@ -2,7 +2,7 @@
 	"name": "@workspace/og",
 	"version": "0.2.17",
 	"private": true,
-	"license": "MIT",
+	"license": "UNLICENSED",
 	"type": "module",
 	"exports": {
 		"./render": "./src/render.ts",

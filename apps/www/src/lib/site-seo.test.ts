@@ -148,42 +148,6 @@ describe("manifest-driven site SEO", () => {
 		});
 	});
 
-	test("keeps supporting page metadata and canonicals specific to the route", () => {
-		const subject = requireSiteSeo();
-		if (!subject) return;
-
-		const head = subject.supportingPageHead("resources");
-		expect(head.meta).toEqual(
-			expect.arrayContaining([
-				{ title: "Resources | Yonaris" },
-				{
-					name: "description",
-					content: "Research notes, documentation, terminology, service status, brand assets, and open-source context.",
-				},
-			]),
-		);
-		expect(linkPaths(head)).toEqual({ canonical: "/resources" });
-	});
-
-	test("publishes Open Source metadata from its factual content under one English canonical", () => {
-		const subject = requireSiteSeo();
-		if (!subject) return;
-
-		const head = subject.supportingPageHead("openSource");
-		expect(head.meta).toEqual(
-			expect.arrayContaining([
-				{ title: "Open-source infrastructure | Yonaris" },
-				{
-					name: "description",
-					content:
-						"How Yonaris uses and extends Elmo-compatible infrastructure while keeping the upstream project distinct from the company and its product promise.",
-				},
-			]),
-		);
-		expect(linkPaths(head)).toEqual({ canonical: "/open-source" });
-		expect(head.links).not.toEqual(expect.arrayContaining([expect.objectContaining({ rel: "alternate" })]));
-	});
-
 	test("publishes the Privacy content metadata under one canonical without language alternates", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;
@@ -202,57 +166,13 @@ describe("manifest-driven site SEO", () => {
 		expect(head.links).not.toEqual(expect.arrayContaining([expect.objectContaining({ rel: "alternate" })]));
 	});
 
-	test("adds the exact manifest robots policy without replacing publication metadata", () => {
+	test("applies the approved retained utility index policies", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;
 
-		const head = subject.siteRouteHead("blog", {
-			canonicalPath: "/blog/a-content-specific-title",
-			title: "A content-specific title | Yonaris",
-			description: "A content-specific description.",
-		});
-
-		expect(head.meta).toEqual(
-			expect.arrayContaining([
-				{ title: "A content-specific title | Yonaris" },
-				{ name: "description", content: "A content-specific description." },
-				{ name: "robots", content: "noindex,follow" },
-			]),
-		);
-		expect(linkPaths(head)).toEqual({ canonical: "/blog/a-content-specific-title" });
-		expect(subject.routeRobotsMeta("blog")).toEqual({ name: "robots", content: "noindex,follow" });
-		expect(subject.routeRobotsMeta("docs")).toBeUndefined();
-	});
-
-	test("applies the approved Publication and Utility index policies", () => {
-		const subject = requireSiteSeo();
-		if (!subject) return;
-
-		expect(subject.routeRobotsMeta("blog")).toEqual({ name: "robots", content: "noindex,follow" });
-		expect(subject.routeRobotsMeta("glossary")).toEqual({ name: "robots", content: "noindex,follow" });
-		expect(subject.routeRobotsMeta("roadmap")).toEqual({ name: "robots", content: "noindex,follow" });
-		for (const key of ["docs", "status", "brand", "changelog"] as const) {
+		for (const key of ["status", "brand"] as const) {
 			expect(subject.routeRobotsMeta(key)).toBeUndefined();
 		}
-	});
-
-	test("supports route-specific OG art without reimplementing manifest policy", () => {
-		const subject = requireSiteSeo();
-		if (!subject) return;
-
-		const head = subject.siteRouteHead("docs", {
-			canonicalPath: "/docs/getting-started",
-			title: "Getting started | Yonaris",
-			description: "Open-source infrastructure documentation.",
-			image: "/og/docs/getting-started/image.png",
-			type: "article",
-		});
-		expect(head.meta).toEqual(
-			expect.arrayContaining([
-				{ property: "og:type", content: "article" },
-				{ property: "og:image", content: "/og/docs/getting-started/image.png" },
-			]),
-		);
 	});
 
 	test("keeps Organization and WebSite structured data Yonaris-only", () => {

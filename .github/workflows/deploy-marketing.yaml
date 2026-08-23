@@ -206,5 +206,5 @@ jobs:
           curl --fail --silent --show-error --max-time 15 https://yonaris.com/ >/dev/null
           curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
           curl --fail --silent --show-error --max-time 15 https://yonaris.com/status >/dev/null
-          curl --fail --silent --show-error --max-time 15 https://yonaris.com/changelog >/dev/null
+          curl --fail --silent --show-error --max-time 15 https://yonaris.com/company >/dev/null
           REMOTE

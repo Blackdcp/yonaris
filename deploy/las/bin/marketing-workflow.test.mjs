@@ -68,7 +68,7 @@ test("remote preflight precedes source mutation and exact checkout verification"
 	assert.match(workflow, /bash -s -- --verify-only sha-\$RELEASE_SHA/u);
 });
 
-test("post-deploy verification binds marker, image, apex, portal, status, and changelog", () => {
+test("post-deploy verification binds marker, image, apex, portal, status, and company", () => {
 	ordered(
 		"deploy-marketing.sh sha-$RELEASE_SHA",
 		"Verify live marker, image, and governed health",
@@ -77,7 +77,7 @@ test("post-deploy verification binds marker, image, apex, portal, status, and ch
 		"https://yonaris.com/",
 		"https://portal.yonaris.com/",
 		"https://yonaris.com/status",
-		"https://yonaris.com/changelog",
+		"https://yonaris.com/company",
 	);
 	assert.match(workflow, /ghcr\.io\/blackdcp\/yonaris-www:sha-\$RELEASE_SHA/u);
 });

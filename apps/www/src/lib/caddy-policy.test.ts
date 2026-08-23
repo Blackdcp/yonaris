@@ -125,7 +125,6 @@ describe("the production apex Caddy policy", () => {
 			"/assets/*",
 			"/brand/*",
 			"/icons/*",
-			"/authors/*",
 			"/apple-touch-icon.png",
 			"/favicon.ico",
 			"/site.webmanifest",
@@ -150,11 +149,7 @@ describe("the production apex Caddy policy", () => {
 		expect(directiveTokens(namedMatcher("diagnosticDirect"), "remote_ip")).toEqual([]);
 		expect(directiveTokens(namedMatcher("diagnosticDirect"), "header")).toEqual([]);
 		expect(directiveTokens(namedMatcher("publicApiGetHead"), "method")).toEqual(["GET", "HEAD"]);
-		expect(directiveTokens(namedMatcher("publicApiGetHead"), "path")).toEqual([
-			"/api/openapi.json",
-			"/api/search",
-			"/api/plausible/js/script",
-		]);
+		expect(directiveTokens(namedMatcher("publicApiGetHead"), "path")).toEqual(["/api/plausible/js/script"]);
 		expect(directiveTokens(namedMatcher("plausibleEvent"), "method")).toEqual(["POST"]);
 		expect(directiveTokens(namedMatcher("plausibleEvent"), "path")).toEqual(["/api/plausible/event"]);
 		const proxyMatchers = [...activeFragment.matchAll(/^\s*reverse_proxy\s+@(\S+)\s+/gmu)].map((match) => match[1]);

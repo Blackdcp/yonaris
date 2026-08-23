@@ -20,7 +20,6 @@ const locales = [
 		humanAnnotation: "A person can question the evidence, inspect its scope, and decide what to test next.",
 		humanLabel: "Human decision-maker",
 		marketTitle: "The market now has two readers.",
-		openSourceLabel: "Read the open-source relationship",
 		route: "/company",
 		stageTitle: "A real platform. A service-led beginning.",
 	},
@@ -34,7 +33,6 @@ const locales = [
 		humanAnnotation: "人可以追问证据、检查范围，并判断下一步值得测试什么",
 		humanLabel: "人类决策者",
 		marketTitle: "市场现在有两类读者",
-		openSourceLabel: "了解开源基础设施的关系",
 		route: "/zh/company",
 		stageTitle: "真实的平台，服务驱动的起点",
 	},
@@ -104,10 +102,7 @@ for (const locale of locales) {
 			/human-reviewed|人工审核/i,
 		);
 
-		await expect(page.getByRole("link", { name: locale.openSourceLabel, exact: true })).toHaveAttribute(
-			"href",
-			"/open-source",
-		);
+		await expect(page.locator("main")).not.toContainText(/\belmo\b|elmohq|open[- ]source|upstream|开源|上游/i);
 		await expect(page.getByRole("link", { name: locale.diagnosticLabel, exact: true }).last()).toHaveAttribute(
 			"href",
 			locale.route.startsWith("/zh") ? "/zh/diagnostic" : "/diagnostic",
@@ -298,12 +293,6 @@ for (const semanticUnit of [
 		fragment: "真正",
 		name: "Contact real",
 		selector: "#company-contact-title",
-	},
-	{
-		canonicalText: "技术基础，不是公司身份",
-		fragment: "不是",
-		name: "Open Source negation",
-		selector: "#company-open-source-title",
 	},
 	{
 		canonicalText: "人可以追问证据、检查范围，并判断下一步值得测试什么",

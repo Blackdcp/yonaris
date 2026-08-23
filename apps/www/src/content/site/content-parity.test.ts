@@ -12,7 +12,6 @@ import {
 	getPrivacyContent,
 	getProductContent,
 	getResearchContent,
-	getResourcesContent,
 } from "./index";
 import { deepFreeze } from "./types";
 
@@ -51,18 +50,6 @@ describe("core site content", () => {
 			expect(english.limitations.length).toBeGreaterThan(0);
 			expect(chinese.limitations.length).toBeGreaterThan(0);
 		}
-	});
-
-	it("keeps Resources structurally compatible with stable claim identities and statuses", () => {
-		const english = getResourcesContent("en");
-		const chinese = getResourcesContent("zh");
-
-		expect(structureOf(chinese)).toEqual(structureOf(english));
-		expect(chinese.claims.map(({ id, status }) => ({ id, status }))).toEqual(
-			english.claims.map(({ id, status }) => ({ id, status })),
-		);
-		expect(english.limitations.length).toBeGreaterThan(0);
-		expect(chinese.limitations.length).toBeGreaterThan(0);
 	});
 
 	it("expresses the English direction claim as future intent", () => {
@@ -203,7 +190,6 @@ describe("core site content", () => {
 			stageClaimIds: content.stage.claimIds,
 			forestClaimIds: content.forest.claimIds,
 			principleIds: content.principles.items.map(({ id }) => id),
-			openSourceClaimIds: content.openSource.claimIds,
 			currentScopeClaimIds: content.currentScopeClaimIds,
 		});
 

@@ -213,7 +213,7 @@ for state in redirect v1 v2 final; do
 	[[ -f "$META_OUT/previous-caddy-sha256" ]] && previous_binding="$(tr -d '[:space:]' <"$META_OUT/previous-caddy-sha256")"
 	[[ -f "$META_OUT/candidate-caddy-sha256" ]] && candidate_binding="$(tr -d '[:space:]' <"$META_OUT/candidate-caddy-sha256")"
 	if [[ -n "$expected_backup_sha" && "$previous_binding" == "$expected_backup_sha" && "$candidate_binding" == "$(sha256sum "$TARGET" | cut -d' ' -f1)" ]]; then pass "$state writes full-file predecessor and candidate Caddy bindings"; else fail "$state writes full-file predecessor and candidate Caddy bindings"; fi
-	for required in '/status' '/changelog' '/resources' '/privacy' '/ai-search' '/agent/company' '/llms.txt' '/api/openapi.json' '/api/search' '/blog/rss.xml' '/repo-activity.svg' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
+	for required in '/product' '/approach' '/research' '/company' '/status' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
 		if ! grep -Fq "$required" "$CURL_LOG"; then fail "$state full health includes $required"; fi
 	done
 done
@@ -275,7 +275,7 @@ if cmp -s "$CASE_ROOT/original" "$TARGET" && [[ "$(cat "$RELOAD_COUNT" 2>/dev/nu
 new_case health_failure
 write_full_config "$V2" "$TARGET"
 cp "$TARGET" "$CASE_ROOT/original"
-export CADDY_TEST_FAIL_HEALTH_PATH=/changelog
+export CADDY_TEST_FAIL_HEALTH_PATH=/company
 assert_status 1 "full-health failure returns after confirmed full rollback" run_install
 unset CADDY_TEST_FAIL_HEALTH_PATH
 if cmp -s "$CASE_ROOT/original" "$TARGET" && [[ "$(cat "$RELOAD_COUNT" 2>/dev/null || true)" == 2 ]]; then pass "health failure restores complete predecessor"; else fail "health failure restores complete predecessor"; fi

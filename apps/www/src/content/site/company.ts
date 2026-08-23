@@ -44,7 +44,6 @@ export interface CompanyContent {
 		title: string;
 		items: readonly CompanyPrinciple[];
 	};
-	openSource: CompanyClaimSection & { boundary: string; linkLabel: string };
 	contact: {
 		eyebrow: string;
 		title: string;
@@ -87,20 +86,7 @@ const enRecursiveForestMethod = {
 	limitation: "It is not an implemented graph architecture or a claim that every possible question can be covered.",
 } as const satisfies CompanyClaim;
 
-const enOpenSourceFoundation = {
-	id: "company-open-source-foundation",
-	status: "current-software",
-	text: "Elmo-compatible open-source infrastructure provides a technical foundation for parts of the Yonaris evidence platform.",
-	limitation: "It is not the Yonaris company identity, category, or complete customer promise.",
-} as const satisfies CompanyClaim;
-
-const enClaims = [
-	enHumanAgentDirection,
-	enServiceLedStage,
-	enEvidencePlatform,
-	enRecursiveForestMethod,
-	enOpenSourceFoundation,
-] as const;
+const enClaims = [enHumanAgentDirection, enServiceLedStage, enEvidencePlatform, enRecursiveForestMethod] as const;
 
 export const pageEn = {
 	meta: {
@@ -185,15 +171,6 @@ export const pageEn = {
 			},
 		],
 	},
-	openSource: {
-		eyebrow: "Open source relationship",
-		title: "Foundation, not identity.",
-		summary:
-			"Elmo-compatible open-source infrastructure is a technical foundation for parts of the Yonaris evidence platform.",
-		boundary: "It is not the Yonaris company identity, category, or complete customer promise.",
-		linkLabel: "Read the open-source relationship",
-		claimIds: [enOpenSourceFoundation.id],
-	},
 	contact: {
 		eyebrow: "Begin with evidence",
 		title: "Start with one question that matters.",
@@ -238,20 +215,7 @@ const zhRecursiveForestMethod = {
 	limitation: "它不是已经实现的图谱架构，也不表示系统能够覆盖所有可能的问题",
 } as const satisfies CompanyClaim;
 
-const zhOpenSourceFoundation = {
-	id: "company-open-source-foundation",
-	status: "current-software",
-	text: "与 Elmo 兼容的开源基础设施，为 Yonaris 证据平台的部分能力提供技术基础",
-	limitation: "它不是 Yonaris 的公司身份、所属品类或完整的客户承诺",
-} as const satisfies CompanyClaim;
-
-const zhClaims = [
-	zhHumanAgentDirection,
-	zhServiceLedStage,
-	zhEvidencePlatform,
-	zhRecursiveForestMethod,
-	zhOpenSourceFoundation,
-] as const;
+const zhClaims = [zhHumanAgentDirection, zhServiceLedStage, zhEvidencePlatform, zhRecursiveForestMethod] as const;
 
 export const pageZh = {
 	meta: {
@@ -312,14 +276,6 @@ export const pageZh = {
 			{ id: "review", title: "保留人工审核", description: "证据不完整时保留判断，并在建议变成行动之前由人复核" },
 			{ id: "truth", title: "沉淀持久的产品事实", description: "让主张边界清楚、可以复核，并同时服务于人和智能体" },
 		],
-	},
-	openSource: {
-		eyebrow: "与开源的关系",
-		title: "技术基础，不是公司身份",
-		summary: "与 Elmo 兼容的开源基础设施，为 Yonaris 证据平台的部分能力提供技术基础",
-		boundary: "它不是 Yonaris 的公司身份、所属品类或完整的客户承诺",
-		linkLabel: "了解开源基础设施的关系",
-		claimIds: [zhOpenSourceFoundation.id],
 	},
 	contact: {
 		eyebrow: "从证据开始",

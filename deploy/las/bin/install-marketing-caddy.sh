@@ -106,10 +106,8 @@ full_health() {
 
 	local path
 	for path in \
-		/product /zh/product /resources /privacy /blog /glossary /docs \
-		/status /brand /changelog /roadmap /ai-search /aeo-for /ai-visibility-tools \
-		/agent/company /llms.txt /api/openapi.json '/api/search?q=yonaris' \
-		/blog/rss.xml /repo-activity.svg /recordranks-logo.svg; do
+		/product /zh/product /approach /research /company /privacy \
+		/status /brand /agent/company /llms.txt /recordranks-logo.svg; do
 		curl_origin yonaris.com "$path" 200 "$response" || return 1
 	done
 

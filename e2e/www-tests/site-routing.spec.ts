@@ -42,7 +42,7 @@ const notFoundLocales = [
 			["Approach", "/approach"],
 			["Research", "/research"],
 			["Diagnostic", "/diagnostic"],
-			["Resources", "/resources"],
+			["Company", "/company"],
 		] as const,
 	},
 	{
@@ -57,7 +57,7 @@ const notFoundLocales = [
 			["方法", "/zh/approach"],
 			["研究", "/zh/research"],
 			["免费诊断", "/zh/diagnostic"],
-			["资源", "/resources"],
+			["公司", "/zh/company"],
 		] as const,
 	},
 ] as const;

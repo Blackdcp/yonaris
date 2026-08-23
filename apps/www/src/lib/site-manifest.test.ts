@@ -79,27 +79,15 @@ describe("site manifest", () => {
 			company: "index,follow",
 			geo: "index,follow",
 			diagnostic: "index,follow",
-			resources: "index,follow",
-			openSource: "index,follow",
 			privacy: "index,follow",
-			blog: "noindex,follow",
-			glossary: "noindex,follow",
-			docs: "index,follow",
 			status: "index,follow",
 			brand: "index,follow",
-			changelog: "index,follow",
-			roadmap: "noindex,follow",
-			aiSearch: "noindex,follow",
-			aeoFor: "noindex,follow",
-			aiVisibility: "noindex,follow",
 			agent: "noindex,follow",
 			llms: "noindex,follow",
 			sitemap: "noindex,follow",
 			robots: "noindex,follow",
-			rss: "noindex,follow",
 			api: "noindex,follow",
 			og: "noindex,follow",
-			repoActivity: "noindex,follow",
 			markdownInternal: "noindex,follow",
 		});
 	});
@@ -129,8 +117,8 @@ describe("site manifest", () => {
 		const subject = requireManifest();
 		if (!subject) return;
 
-		expect(subject.findSiteRoute("/ai-visibility-tools/elmo-vs-example")?.indexPolicy).toBe("noindex,follow");
-		expect(subject.findSiteRoute("/docs/getting-started")?.key).toBe("docs");
+		expect(subject.findSiteRoute("/ai-visibility-tools/example")).toBeUndefined();
+		expect(subject.findSiteRoute("/docs/getting-started")).toBeUndefined();
 		expect(subject.findSiteRoute("/api/search")?.key).toBe("api");
 		expect(subject.findSiteRoute("/llms.mdx/site/en/product")?.key).toBe("markdownInternal");
 	});

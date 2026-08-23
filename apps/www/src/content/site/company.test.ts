@@ -8,7 +8,6 @@ const claimContract = [
 	{ id: "company-service-led-stage", status: "managed-delivery" },
 	{ id: "company-evidence-platform", status: "current-software" },
 	{ id: "company-recursive-forest-method", status: "managed-delivery" },
-	{ id: "company-open-source-foundation", status: "current-software" },
 ] as const;
 
 function referencedClaimIds(content: ReturnType<typeof getCompanyContent>): string[] {
@@ -17,7 +16,6 @@ function referencedClaimIds(content: ReturnType<typeof getCompanyContent>): stri
 		...content.marketShift.claimIds,
 		...content.stage.claimIds,
 		...content.forest.claimIds,
-		...content.openSource.claimIds,
 		...content.currentScopeClaimIds,
 	];
 }
@@ -32,7 +30,6 @@ describe("Company content truth model", () => {
 		expect(english.marketShift.title).toBe("The market now has two readers.");
 		expect(english.stage.title).toBe("A real platform. A service-led beginning.");
 		expect(english.forest.title).toBe("Don’t enumerate every question. Build what generates the answers.");
-		expect(english.openSource.title).toBe("Foundation, not identity.");
 		expect(english.contact.title).toBe("Start with one question that matters.");
 
 		expect(chinese.category).toBe("AI 原生营销科技");
@@ -40,7 +37,6 @@ describe("Company content truth model", () => {
 		expect(chinese.marketShift.title).toBe("市场现在有两类读者");
 		expect(chinese.stage.title).toBe("真实的平台，服务驱动的起点");
 		expect(chinese.forest.title).toBe("不穷举每一个问题，构建答案生长的根系");
-		expect(chinese.openSource.title).toBe("技术基础，不是公司身份");
 		expect(chinese.contact.title).toBe("从一个真正重要的问题开始");
 		expect(chinese.vision.headline).not.toBe(english.vision.headline);
 		expect(chinese.marketShift.title).not.toBe(english.marketShift.title);
@@ -73,7 +69,6 @@ describe("Company content truth model", () => {
 			marketShiftClaimIds: content.marketShift.claimIds,
 			stageClaimIds: content.stage.claimIds,
 			forestClaimIds: content.forest.claimIds,
-			openSourceClaimIds: content.openSource.claimIds,
 			currentScopeClaimIds: content.currentScopeClaimIds,
 		});
 
@@ -101,16 +96,12 @@ describe("Company content truth model", () => {
 		expect(chinese.currentScope).toMatch(/人工审核/);
 	});
 
-	test("describes Recursive Forest as a working method and open source as a technical foundation", () => {
+	test("describes Recursive Forest as a bounded working method", () => {
 		for (const locale of ["en", "zh"] as const) {
 			const content = getCompanyContent(locale);
 			expect(content.forest.summary).toMatch(locale === "en" ? /working method/i : /工作方法/);
 			expect(content.forest.boundary).toMatch(
 				locale === "en" ? /not an implemented graph architecture/i : /不是已经实现的图谱架构/,
-			);
-			expect(content.openSource.summary).toMatch(locale === "en" ? /technical foundation/i : /技术基础/);
-			expect(content.openSource.boundary).toMatch(
-				locale === "en" ? /not the Yonaris company identity/i : /不是 Yonaris 的公司身份/,
 			);
 		}
 	});
@@ -134,6 +125,7 @@ describe("Company content truth model", () => {
 		expect(serialized).not.toMatch(/GEO company|GEO 公司|只做 GEO/i);
 		expect(serialized).not.toMatch(/Product Truth Graph|Commercial Feedback|产品事实图谱|商业反馈/);
 		expect(serialized).not.toMatch(/0\s*(?:%|％)?\s*(?:→|->)\s*93\.3\s*(?:%|％)?/);
+		expect(serialized).not.toMatch(/\belmo\b|elmohq|open[- ]source|upstream|开源|上游/i);
 		expect(publicClaims).not.toMatch(
 			/mature SaaS|autonomous|real[- ]time|universal|customer logos?|investors?|funding|certification|成熟 SaaS|自主运行|实时|无边界|客户标识|投资人|融资|认证/i,
 		);

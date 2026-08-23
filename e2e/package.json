@@ -2,7 +2,7 @@
   "name": "e2e",
   "version": "0.2.17",
   "private": true,
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "test:e2e": "playwright test --project=fixtures",

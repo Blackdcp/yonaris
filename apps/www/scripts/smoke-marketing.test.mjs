@@ -36,37 +36,7 @@ const CORE_PATHS = [
 	"/zh/diagnostic",
 ];
 
-const HTML_PATHS = [
-	...CORE_PATHS,
-	"/resources",
-	"/open-source",
-	"/privacy",
-	"/blog",
-	"/blog/ai-brand-sentiment",
-	"/glossary",
-	"/glossary/ai-visibility",
-	"/docs",
-	"/docs/getting-started",
-	"/status",
-	"/brand",
-	"/changelog",
-	"/roadmap",
-	"/ai-search",
-	"/ai-search/chatgpt",
-	"/aeo-for",
-	"/aeo-for/agencies",
-	"/ai-visibility-tools",
-	"/ai-visibility-tools/elmo-vs-profound",
-	"/ai-visibility-tools/alternatives",
-	"/ai-visibility-tools/alternatives/profound",
-	"/ai-visibility-tools/category",
-	"/ai-visibility-tools/category/tracking",
-	"/ai-visibility-tools/category/open-source",
-	"/ai-visibility-tools/compare",
-	"/ai-visibility-tools/compare/profound-vs-peec-ai",
-	"/ai-visibility-tools/features",
-	"/ai-visibility-tools/features/multi-llm-tracking",
-];
+const HTML_PATHS = [...CORE_PATHS, "/privacy", "/status", "/brand"];
 
 const MACHINE_PATHS = [
 	"/agent",
@@ -80,17 +50,33 @@ const MACHINE_PATHS = [
 	"/llms-full.txt",
 	"/robots.txt",
 	"/sitemap.xml",
-	"/blog/rss.xml",
-	"/api/openapi.json",
-	"/api/search",
 	"/api/plausible/js/script",
-	"/repo-activity.svg",
 	"/recordranks-logo.svg",
 	"/og.png",
 	"/og/status.png",
 ];
 
 const HIDDEN_PATHS = [
+	"/resources",
+	"/open-source",
+	"/blog",
+	"/blog/ai-brand-sentiment",
+	"/blog/rss.xml",
+	"/glossary",
+	"/glossary/ai-visibility",
+	"/docs",
+	"/docs/getting-started",
+	"/changelog",
+	"/roadmap",
+	"/ai-search",
+	"/ai-search/chatgpt",
+	"/aeo-for",
+	"/aeo-for/agencies",
+	"/ai-visibility-tools",
+	"/ai-visibility-tools/retired-record",
+	"/api/openapi.json",
+	"/api/search",
+	"/repo-activity.svg",
 	"/api",
 	"/api/private",
 	"/api/repo-activity/refresh",
@@ -114,10 +100,6 @@ const ALL_COPY = [
 	"Market understanding, made observable.",
 	"# Yonaris agent index",
 	"Current scope",
-	"Open-source infrastructure",
-	"Open-source Documentation",
-	"Legacy research archive",
-	"Upstream Elmo comparison archive",
 	"User-agent:",
 ].join(" ");
 
@@ -127,7 +109,6 @@ function responseType(pathname) {
 	if (pathname.endsWith(".xml")) return "application/xml";
 	if (pathname.endsWith(".svg")) return "image/svg+xml";
 	if (pathname.endsWith(".png")) return "image/png";
-	if (pathname === "/api/openapi.json" || pathname === "/api/search") return "application/json";
 	return "text/html";
 }
 

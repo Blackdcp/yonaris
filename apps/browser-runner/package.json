@@ -2,7 +2,7 @@
 	"name": "@workspace/browser-runner",
 	"version": "0.2.17",
 	"private": true,
-	"license": "MIT",
+	"license": "UNLICENSED",
 	"type": "module",
 	"scripts": {
 		"start": "tsx src/cli.ts",

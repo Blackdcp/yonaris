@@ -2,7 +2,7 @@
 	"name": "@workspace/config",
 	"version": "0.2.17",
 	"private": true,
-	"license": "MIT",
+	"license": "UNLICENSED",
 	"scripts": {
 		"test": "vitest run"
 	},

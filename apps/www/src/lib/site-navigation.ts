@@ -35,14 +35,11 @@ const labels = {
 		company: "Company",
 		geo: "GEO",
 		diagnostic: "Get a Free Diagnostic",
-		resources: "Resources",
-		openSource: "Open Source",
 		privacy: "Privacy",
 		status: "Status",
 		agent: "Agent",
 		llms: "llms.txt",
 		explore: "Explore",
-		resourceGroup: "Resources",
 		machineGroup: "Company & agents",
 	},
 	zh: {
@@ -53,14 +50,11 @@ const labels = {
 		company: "公司",
 		geo: "GEO",
 		diagnostic: "获取免费诊断",
-		resources: "资源",
-		openSource: "开源",
 		privacy: "隐私",
 		status: "状态",
 		agent: "Agent",
 		llms: "llms.txt",
 		explore: "浏览",
-		resourceGroup: "资源",
 		machineGroup: "公司与智能体",
 	},
 } as const;
@@ -104,12 +98,8 @@ export function getFooterNavigation(locale: Locale): readonly SiteFooterGroup[] 
 			items: (["product", "approach", "research", "company", "geo"] as const).map((key) => itemFor(key, locale)),
 		},
 		{
-			label: labels[locale].resourceGroup,
-			items: (["resources", "openSource", "status"] as const).map((key) => itemFor(key, locale)),
-		},
-		{
 			label: labels[locale].machineGroup,
-			items: (["privacy", "agent", "llms"] as const).map((key) => itemFor(key, locale)),
+			items: (["status", "privacy", "agent", "llms"] as const).map((key) => itemFor(key, locale)),
 		},
 	];
 }

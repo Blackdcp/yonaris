@@ -1,11 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
 import type { Locale } from "@/content/site/types";
 import { PORTAL_URL } from "@/lib/site-navigation";
-import { LegacyArchiveContext } from "./legacy-archive-context";
-import { PublicationShell } from "./publication-shell";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 import { SiteShell } from "./site-shell";
@@ -77,33 +73,12 @@ describe("shared public shells", () => {
 	it("renders footer destinations from canonical site paths", () => {
 		for (const locale of ["en", "zh"] satisfies Locale[]) {
 			const markup = renderToStaticMarkup(<SiteFooter locale={locale} />);
-			const expected = [
-				locale === "zh" ? "/zh/geo" : "/geo",
-				"/resources",
-				"/open-source",
-				"/status",
-				"/privacy",
-				"/agent",
-				"/llms.txt",
-			];
+			const expected = [locale === "zh" ? "/zh/geo" : "/geo", "/status", "/privacy", "/agent", "/llms.txt"];
 
 			for (const path of expected) expect(hrefs(markup)).toContain(path);
 			expect(markup).not.toContain("Provider Status");
 			expect(markup).not.toContain("Get Started");
 		}
-	});
-
-	it("keeps the compatibility Navbar and Footer independent of router context", () => {
-		const markup = renderToStaticMarkup(
-			<>
-				<Navbar />
-				<Footer />
-			</>,
-		);
-
-		expect(markup).toContain('aria-label="Primary navigation"');
-		expect(markup).toContain('href="/product"');
-		expect(markup).toContain('href="/resources"');
 	});
 
 	it("lets SiteShell own the only main landmark", () => {
@@ -117,45 +92,25 @@ describe("shared public shells", () => {
 		expect(markup).toContain('<main class="page-main"><h1>Product</h1></main>');
 	});
 
-	it("composes publication and utility context through the shared shell", () => {
-		const publication = renderToStaticMarkup(
-			<PublicationShell section="ai-search" archiveContext="legacy-research">
-				<article>Archived note</article>
-			</PublicationShell>,
-		);
+	it("composes utility context through the shared shell", () => {
 		const utility = renderToStaticMarkup(
-			<UtilityShell section="docs">
-				<article>Documentation</article>
+			<UtilityShell section="status">
+				<article>Status</article>
 			</UtilityShell>,
 		);
-		const upstream = renderToStaticMarkup(<LegacyArchiveContext kind="upstream-comparison" />);
-
-		expect(occurrences(publication, "<main")).toBe(1);
-		expect(publication).toContain('<section class="site-publication-context"');
-		expect(publication).toContain('aria-label="AI Search archive"');
-		expect(publication).toContain("Legacy research archive");
 		expect(occurrences(utility, "<main")).toBe(1);
 		expect(utility).toContain('<section class="site-utility-context"');
-		expect(utility).toContain('aria-label="Open-source Documentation"');
-		expect(utility).toContain("Open-source Documentation");
-		expect(upstream).toContain("Upstream Elmo comparison archive");
+		expect(utility).toContain('aria-label="Operational checks"');
 	});
 
 	it("keeps publication and utility children inside SiteShell's sole main landmark", () => {
-		const publication = renderToStaticMarkup(
-			<PublicationShell section="blog">
-				<article aria-label="Publication body">Publication</article>
-			</PublicationShell>,
-		);
 		const utility = renderToStaticMarkup(
 			<UtilityShell section="status">
 				<section aria-label="Utility body">Utility</section>
 			</UtilityShell>,
 		);
 
-		expect(occurrences(publication, "<main")).toBe(1);
 		expect(occurrences(utility, "<main")).toBe(1);
-		expect(publication).toMatch(/<main[^>]*site-publication-shell[^>]*>.*Publication body/s);
 		expect(utility).toMatch(/<main[^>]*site-utility-shell[^>]*>.*Utility body/s);
 	});
 });

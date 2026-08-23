@@ -42,13 +42,9 @@ const approvedPaths = [
 	"/zh/geo",
 	"/diagnostic",
 	"/zh/diagnostic",
-	"/resources",
-	"/open-source",
 	"/privacy",
-	"/docs",
 	"/status",
 	"/brand",
-	"/changelog",
 ] as const;
 
 describe("manifest-driven sitemap", () => {
@@ -101,7 +97,7 @@ describe("manifest-driven sitemap", () => {
 		for (const path of corePairs.flat()) {
 			expect(entries.find((entry) => entry.path === path)?.lastVerified).toBe("2026-08-22");
 		}
-		for (const path of ["/resources", "/open-source", "/privacy", "/docs", "/status", "/brand", "/changelog"]) {
+		for (const path of ["/privacy", "/status", "/brand"]) {
 			expect(entries.find((entry) => entry.path === path)?.lastVerified).toBeUndefined();
 		}
 	});

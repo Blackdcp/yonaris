@@ -129,31 +129,4 @@ test.describe("human and machine content negotiation", () => {
 		expect(unsafe.headers()["content-type"] ?? "").not.toContain("text/markdown");
 	});
 
-	test("preserves the existing Docs suffix and Accept negotiation behavior", async ({ request }) => {
-		for (const path of [
-			"/docs/getting-started.md",
-			"/docs/getting-started.mdx",
-			"/docs/getting-started",
-		]) {
-			const response = await request.get(path, { headers: { Accept: "text/markdown" } });
-			expect(response.status()).toBe(200);
-			expect(response.headers()["content-type"]).toContain("text/markdown");
-			expect(response.headers()["content-language"]).toBe("en");
-			expect(response.headers()["cache-control"]).toBe("public, max-age=300");
-			expect(response.headers()["x-robots-tag"]).toBe("noindex, follow");
-			expect(await response.text()).toContain("# Quick Start");
-		}
-
-		const html = await request.get("/docs/getting-started", { headers: { Accept: "text/html" } });
-		expect(html.status()).toBe(200);
-		expect(html.headers()["content-type"]).toContain("text/html");
-		for (const response of [html, await request.get("/docs/getting-started", { headers: { Accept: "text/markdown" } })]) {
-			const vary = response.headers().vary?.toLowerCase().split(/\s*,\s*/);
-			expect(vary).toContain("accept");
-			expect(vary).toContain("accept-encoding");
-			expect(response.headers()["x-yonaris-application-vary"]).toBeUndefined();
-		}
-
-		expect((await request.get("/llms.mdx/docs/not-a-page")).status()).toBe(404);
-	});
 });
