@@ -274,17 +274,24 @@ prerequisite; deployment intentionally performs no Resend domain API lookup.
 Set these values in `/opt/yonaris/.env`:
 
 ```dotenv
+MARKETING_DIAGNOSTIC_DELIVERY_MODE=resend
 RESEND_API_KEY=<domain-scoped-sending-access-key>
 RESEND_FROM_EMAIL='Yonaris <diagnostic@yonaris.com>'
 MARKETING_LEAD_RECIPIENT=black.dcp@outlook.com
 ```
 
-The marketing deployment fails before pulling or starting an image when any
-value is blank. Only the `www` container receives these variables. An accepted
-Resend response confirms that the request entered the delivery service; it does
-not prove inbox delivery. The endpoint's five-attempt, ten-minute client-IP
-limit is in-process, best-effort abuse control: it relies on the trusted proxy
-header, resets with the process, and is not a distributed enforcement system.
+For an explicit site-only launch before Resend is configured, use
+`MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only` and leave all three Resend
+values blank. The endpoint then returns an unconfirmed response and the form
+offers the existing email-draft fallback; it never reports delivery or inserts
+synthetic credentials. Any other mode fails the release preflight. In `resend`
+mode, the deployment fails before pulling or starting an image when any value
+is blank or invalid. Only the `www` container receives these variables. An
+accepted Resend response confirms that the request entered the delivery
+service; it does not prove inbox delivery. The endpoint's five-attempt,
+ten-minute client-IP limit is in-process, best-effort abuse control: it relies
+on the trusted proxy header, resets with the process, and is not a distributed
+enforcement system.
 
 Caddy forwards only `/`, the homepage's static assets, its OG image, and the
 single-page `robots.txt`/`sitemap.xml` endpoints. Legacy documentation, status,

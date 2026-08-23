@@ -103,7 +103,8 @@ cat >"$fixture/bin/docker" <<'STUB'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'docker %s\n' "$*" >>"$DEPLOY_TEST_CALL_LOG"
-printf 'env %s|%s|%s\n' \
+printf 'env %s|%s|%s|%s\n' \
+	"${MARKETING_DIAGNOSTIC_DELIVERY_MODE-UNSET}" \
 	"${RESEND_API_KEY-UNSET}" \
 	"${RESEND_FROM_EMAIL-UNSET}" \
 	"${MARKETING_LEAD_RECIPIENT-UNSET}" >>"$DEPLOY_TEST_ENV_LOG"
@@ -174,6 +175,13 @@ IMAGE_REGISTRY=ghcr.io
 IMAGE_NAMESPACE=blackdcp
 IMAGE_TAG=$CANDIDATE_TAG
 EOF
+	if [[ "$variant" == mailto-only ]]; then
+		printf '%s\n' 'MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only' >>"$target"
+		return
+	fi
+	if [[ "$variant" == invalid-mode ]]; then
+		printf '%s\n' 'MARKETING_DIAGNOSTIC_DELIVERY_MODE=mail-only' >>"$target"
+	fi
 	case "$variant" in
 		missing-key) ;;
 		blank-key) printf "%s\n" "RESEND_API_KEY='   '" >>"$target" ;;
@@ -275,6 +283,19 @@ if [[ "$before_digest" == "$after_digest" && ! -s "$CALL_LOG" ]]; then pass "ver
 if grep -Fq "$FAKE_SECRET" "$OUTPUT_LOG"; then fail "verify-only disables inherited xtrace before sourcing secrets"; else pass "verify-only disables inherited xtrace before sourcing secrets"; fi
 if [[ "$(grep -Ec '^(RESEND_API_KEY|RESEND_FROM_EMAIL|MARKETING_LEAD_RECIPIENT)=(ok|invalid)$' "$OUTPUT_LOG" || true)" == 3 ]]; then pass "verify-only reports only variable names and status"; else fail "verify-only reports only variable names and status"; fi
 
+new_case verify_mailto_only
+write_env "$ENV_FILE" mailto-only
+before_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+assert_success "verify-only accepts explicit mailto-only mode without Resend configuration" run_script --verify-only "$CANDIDATE_TAG"
+after_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+if [[ "$before_digest" == "$after_digest" && ! -s "$CALL_LOG" ]]; then pass "mailto-only preflight remains side-effect free"; else fail "mailto-only preflight remains side-effect free"; fi
+if grep -Fxq 'MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only' "$OUTPUT_LOG" &&
+	[[ "$(grep -Ec '^(RESEND_API_KEY|RESEND_FROM_EMAIL|MARKETING_LEAD_RECIPIENT)=not-required$' "$OUTPUT_LOG" || true)" == 3 ]]; then
+	pass "mailto-only preflight reports an explicit delivery mode without secret values"
+else
+	fail "mailto-only preflight reports an explicit delivery mode without secret values"
+fi
+
 new_case verify_absent_root
 rm -f -- "$DEPLOY_ROOT/.marketing-release"
 rmdir -- "$DEPLOY_ROOT"
@@ -282,7 +303,7 @@ if [[ -e "$DEPLOY_ROOT" ]]; then fail "verify-only absent-root fixture starts ab
 assert_success "verify-only succeeds without creating an absent deploy root" run_script --verify-only "$CANDIDATE_TAG"
 if [[ ! -e "$DEPLOY_ROOT" && ! -s "$CALL_LOG" ]]; then pass "verify-only leaves an absent deploy root absent and invokes no effectful command"; else fail "verify-only leaves an absent deploy root absent and invokes no effectful command"; fi
 
-for variant in missing-key blank-key test-key fake-key dummy-key fixture-key invalid-key demo-key mock-key not-resend-key short-key changeme-key placeholder-key example-key wrong-from wrong-recipient; do
+for variant in missing-key blank-key test-key fake-key dummy-key fixture-key invalid-key demo-key mock-key not-resend-key short-key changeme-key placeholder-key example-key wrong-from wrong-recipient invalid-mode; do
 	new_case "verify_$variant"
 	write_env "$ENV_FILE" "$variant"
 	before_digest="$(tree_snapshot "$DEPLOY_ROOT")"
@@ -309,8 +330,14 @@ case "$(uname -s)" in
 	MINGW* | MSYS*) pass "durable rollback mode check is deferred to the Linux workflow fixture" ;;
 	*) if [[ "$bundle_mode" == 700 ]]; then pass "durable rollback bundle is mode 700"; else fail "durable rollback bundle is mode 700 (mode=$bundle_mode)"; fi ;;
 esac
-if grep -Fq "env $FAKE_SECRET|Yonaris <diagnostic@yonaris.com>|black.dcp@outlook.com" "$ENV_LOG"; then pass "normal deployment exports the validated values only to Compose"; else fail "normal deployment exports the validated values only to Compose"; fi
+if grep -Fq "env UNSET|$FAKE_SECRET|Yonaris <diagnostic@yonaris.com>|black.dcp@outlook.com" "$ENV_LOG"; then pass "normal deployment exports the validated values only to Compose"; else fail "normal deployment exports the validated values only to Compose"; fi
 if grep -Eq 'api\.resend\.com|/domains([/?[:space:]]|$)' "$CALL_LOG"; then fail "deployment never contacts Resend or a domain API"; else pass "deployment never contacts Resend or a domain API"; fi
+
+new_case release_mailto_only
+write_env "$ENV_FILE" mailto-only
+assert_success "normal release accepts explicit mailto-only mode without Resend configuration" run_script "$CANDIDATE_TAG"
+if grep -Fq 'env mailto-only|||' "$ENV_LOG"; then pass "mailto-only release exports no synthetic Resend values"; else fail "mailto-only release exports no synthetic Resend values"; fi
+if grep -Eq 'api\.resend\.com|/domains([/?[:space:]]|$)' "$CALL_LOG"; then fail "mailto-only deployment never contacts Resend or a domain API"; else pass "mailto-only deployment never contacts Resend or a domain API"; fi
 
 compose_json="$test_root/compose.json"
 if env \
@@ -323,6 +350,7 @@ if env \
 const fs = require("node:fs");
 const document = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const expected = {
+  MARKETING_DIAGNOSTIC_DELIVERY_MODE: "resend",
   MARKETING_LEAD_RECIPIENT: "black.dcp@outlook.com",
   RESEND_API_KEY: "re_A7k2L9m4N6p8Q1r3S5t7V9x2Z4b6C8d0",
   RESEND_FROM_EMAIL: "Yonaris <diagnostic@yonaris.com>",
@@ -336,12 +364,38 @@ for (const [name, service] of Object.entries(services)) {
 }
 NODE
 	then
-		pass "Compose injects exactly the three diagnostic variables into www only"
+		pass "Compose injects exactly the diagnostic delivery mode and Resend variables into www only"
 	else
-		fail "Compose injects exactly the three diagnostic variables into www only"
+		fail "Compose injects exactly the diagnostic delivery mode and Resend variables into www only"
 	fi
 else
 	fail "Compose secret-scope fixture renders without contacting a daemon"
+fi
+
+mailto_compose_json="$test_root/compose-mailto-only.json"
+if env \
+	IMAGE_TAG="$CANDIDATE_TAG" \
+	MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only \
+	docker compose --project-name yonaris-marketing-mailto-test --file "$COMPOSE_FILE" config --format json >"$mailto_compose_json"; then
+	if node - "$mailto_compose_json" <<'NODE'
+const fs = require("node:fs");
+const document = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+const expected = {
+  MARKETING_DIAGNOSTIC_DELIVERY_MODE: "mailto-only",
+  MARKETING_LEAD_RECIPIENT: "",
+  RESEND_API_KEY: "",
+  RESEND_FROM_EMAIL: "",
+};
+const actual = document.services?.www?.environment ?? {};
+if (JSON.stringify(actual) !== JSON.stringify(expected)) process.exit(1);
+NODE
+	then
+		pass "Compose renders explicit mailto-only mode without synthetic Resend values"
+	else
+		fail "Compose renders explicit mailto-only mode without synthetic Resend values"
+	fi
+else
+	fail "Compose renders explicit mailto-only mode without requiring Resend values"
 fi
 
 # RED: app failures restore the marker's predecessor before Caddy mutation.

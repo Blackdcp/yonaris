@@ -75,6 +75,27 @@ is_placeholder_secret() {
 verify_marketing_configuration() {
 	load_marketing_environment
 	local invalid=0
+	local delivery_mode="${MARKETING_DIAGNOSTIC_DELIVERY_MODE:-resend}"
+
+	case "$delivery_mode" in
+		mailto-only)
+			echo "MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only"
+			echo "RESEND_API_KEY=not-required"
+			echo "RESEND_FROM_EMAIL=not-required"
+			echo "MARKETING_LEAD_RECIPIENT=not-required"
+			export RESEND_API_KEY=""
+			export RESEND_FROM_EMAIL=""
+			export MARKETING_LEAD_RECIPIENT=""
+			return 0
+			;;
+		resend)
+			echo "MARKETING_DIAGNOSTIC_DELIVERY_MODE=resend"
+			;;
+		*)
+			echo "MARKETING_DIAGNOSTIC_DELIVERY_MODE=invalid"
+			return 1
+			;;
+	esac
 
 	if is_placeholder_secret "${RESEND_API_KEY-}"; then
 		echo "RESEND_API_KEY=invalid"
