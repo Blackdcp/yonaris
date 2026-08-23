@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	responseSnapshotAccessActionEnum,
 	responseSnapshotAccessEvents,
+	responseSnapshotCaptureMethodEnum,
 	responseSnapshotContentSourceEnum,
 	responseSnapshotOutbox,
 	responseSnapshotStatusEnum,
@@ -11,7 +12,10 @@ import {
 
 describe("response snapshot archive schema", () => {
 	it("permits physical deletion only for attached v2 JPEGs whose snapshots have expired", () => {
-		const migration = readFileSync(new URL("./migrations/0027_response_snapshot_visual_evidence.sql", import.meta.url), "utf8");
+		const migration = readFileSync(
+			new URL("./migrations/0027_response_snapshot_visual_evidence.sql", import.meta.url),
+			"utf8",
+		);
 		expect(migration).toContain('CREATE OR REPLACE FUNCTION "enforce_evidence_artifact"()');
 		expect(migration).toContain("OLD.status = 'attached'");
 		expect(migration).toContain("OLD.kind = 'screenshot'");
@@ -28,6 +32,13 @@ describe("response snapshot archive schema", () => {
 			"rendered_from_structured_response",
 			"reconstructed_from_historical_run",
 		]);
+		expect(responseSnapshotCaptureMethodEnum.enumValues).toEqual([
+			"brightdata_dataset",
+			"brightdata_serp",
+			"dataforseo_api",
+			"consumer_web_browser",
+			"historical_reconstruction",
+		]);
 		expect(responseSnapshotAccessActionEnum.enumValues).toEqual([
 			"view_html",
 			"download_html",
@@ -37,6 +48,17 @@ describe("response snapshot archive schema", () => {
 			"download_screenshot",
 			"export",
 		]);
+	});
+
+	it("migrates existing archives and overseas calls to the DataForSEO contract", () => {
+		const migration = readFileSync(
+			new URL("./migrations/0030_overseas_dataforseo_provider.sql", import.meta.url),
+			"utf8",
+		);
+		expect(migration).toContain("ADD VALUE 'dataforseo_api'");
+		expect(migration).toContain('DROP CONSTRAINT "overseas_run_calls_brightdata_only"');
+		expect(migration).toContain('ADD CONSTRAINT "overseas_run_calls_supported_provider"');
+		expect(migration).toContain("IN ('brightdata', 'dataforseo')");
 	});
 
 	it("enforces one current immutable revision and complete lifecycle metadata", () => {
@@ -96,4 +118,5 @@ describe("response snapshot archive schema", () => {
 		]);
 	});
 });
+
 import { readFileSync } from "node:fs";

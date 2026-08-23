@@ -1,13 +1,18 @@
+import { parseHTML } from "linkedom";
 import { describe, expect, test } from "vitest";
 import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
-import { createWenxinAdapter, wenxinSelectorContract } from "./wenxin";
+import { createWenxinAdapter, wenxinSearchEvidenceAdapter, wenxinSelectorContract } from "./wenxin";
 
 describe("Wenxin browser-extension adapter", () => {
 	test("uses the current Wenxin origin and registered adapter identity", () => {
 		expect(wenxinSelectorContract).toMatchObject({
-			version: "wenxin-web-20260821-localpc-v7",
+			version: "wenxin-web-20260822-localpc-v12",
 			surface: "wenxin.consumer_web",
 			launchUrl: "https://wenxin.baidu.com/",
+		});
+		expect(wenxinSearchEvidenceAdapter).toMatchObject({
+			version: "wenxin-search-evidence-20260822-v5",
+			settleTimeoutMs: 60_000,
 		});
 	});
 
@@ -32,8 +37,171 @@ describe("Wenxin browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/wenxin", title: "文心来源" }],
-			adapterVersion: "wenxin-web-20260821-localpc-v7",
+			adapterVersion: "wenxin-web-20260822-localpc-v12",
 		});
+	});
+
+	test("opens the answer-scoped search trace, extracts structured source metadata, and restores the page", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ai-entry" id="accepted-answer">
+				<div class="ai-entry-block ai-thinking-steps" id="thinking-block">
+					<div class="root-header" id="thinking-trigger"><i class="cos-icon cos-icon-search"></i>搜索网页来源</div>
+					<ol id="reference-list" hidden>
+						<li data-long-press-menu="true" data-long-press-menu-buttons="copy" data-long-press-ext-info='{"link":"https://structured.example/wenxin","linkTitle":"Structured source","logInfo":{"longpress_content":"redacted"}}'>Structured source</li>
+					</ol>
+				</div>
+				<div class="ai-entry-block ai-markdown"><div class="marklang">
+					<a class="marklang-link" href="https://source.example/wenxin">文心来源</a>
+				</div></div>
+			</div>
+		</body></html>`);
+		const acceptedAnswer = requiredElement(document, "#accepted-answer");
+		const referenceList = requiredElement(document, "#reference-list");
+		let clickCount = 0;
+		requiredElement(document, "#thinking-trigger").addEventListener("click", () => {
+			clickCount += 1;
+			referenceList.toggleAttribute("hidden");
+		});
+
+		await expect(
+			wenxinSearchEvidenceAdapter.read({
+				acceptedAnswer,
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
+			}),
+		).resolves.toEqual({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			webQueries: [],
+			citations: [
+				{ url: "https://source.example/wenxin", title: "文心来源" },
+				{ url: "https://structured.example/wenxin", title: "Structured source" },
+			],
+			diagnostics: {
+				extractorVersion: "wenxin-search-evidence-20260822-v5",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 0,
+				citationCandidateCount: 2,
+			},
+		});
+		expect(clickCount).toBe(2);
+		expect(referenceList.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("opens Wenxin's live nested global-search step and restores both collapsed layers", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ai-entry" id="accepted-answer">
+				<div class="ai-entry-block ai-thinking-steps" id="thinking-block">
+					<header class="root-header"><div class="_main-header_fixture _could-expand_fixture" id="root-trigger"><i class="cos-icon cos-icon-search"></i>调用 全球搜检索25篇资料</div></header>
+					<main id="root-content" hidden>
+						<div id="search-step">
+							<header class="step-header"><div class="_main-header_fixture _could-expand_fixture" id="step-trigger">搜索全球1篇资料</div></header>
+							<ol id="reference-list" hidden>
+								<li data-long-press-menu="link" data-long-press-menu-buttons="longPressMenuButtons" data-long-press-ext-info='{"link":"https://structured.example/wenxin-live","linkTitle":"Live structured source"}'>Live structured source</li>
+							</ol>
+						</div>
+					</main>
+				</div>
+			</div>
+		</body></html>`);
+		const rootContent = requiredElement(document, "#root-content");
+		const referenceList = requiredElement(document, "#reference-list");
+		let rootClicks = 0;
+		let stepClicks = 0;
+		let stepAnimating = false;
+		let settledWaits = 0;
+		requiredElement(document, "#root-trigger").addEventListener("click", () => {
+			rootClicks += 1;
+			rootContent.toggleAttribute("hidden");
+		});
+		requiredElement(document, "#step-trigger").addEventListener("click", () => {
+			if (!referenceList.hasAttribute("hidden") && stepAnimating) return;
+			stepClicks += 1;
+			referenceList.toggleAttribute("hidden");
+			if (!referenceList.hasAttribute("hidden")) {
+				stepAnimating = true;
+				settledWaits = 0;
+			}
+		});
+
+		await expect(
+			wenxinSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => {
+					if (stepAnimating) {
+						settledWaits += 1;
+						if (settledWaits >= 2) stepAnimating = false;
+					}
+				},
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			citations: [{ url: "https://structured.example/wenxin-live", title: "Live structured source" }],
+			diagnostics: { searchBlockCount: 1, citationCandidateCount: 1 },
+		});
+		expect(rootClicks).toBe(2);
+		expect(stepClicks).toBe(2);
+		expect(rootContent.hasAttribute("hidden")).toBe(true);
+		expect(referenceList.hasAttribute("hidden")).toBe(true);
+	});
+
+	test("does not call an unrelated thinking step proof of web search", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ai-entry" id="accepted-answer">
+				<div class="ai-entry-block ai-thinking-steps"><header>分析问题</header></div>
+			</div>
+		</body></html>`);
+
+		await expect(
+			wenxinSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: () => true,
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: null,
+			queryAvailability: "unknown",
+			diagnostics: { searchBlockCount: 0, evidenceSource: "none" },
+		});
+	});
+
+	test("rejects malformed Wenxin source metadata and restores the thinking trace", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ai-entry" id="accepted-answer"><div class="ai-entry-block ai-thinking-steps">
+				<div class="root-header" id="thinking-trigger"><i class="cos-icon-search"></i>搜索</div>
+				<ol id="reference-list" hidden><li data-long-press-menu="true" data-long-press-menu-buttons="copy" data-long-press-ext-info='{"link":"javascript:alert(1)","linkTitle":"Unsafe"}'>Unsafe</li></ol>
+			</div></div>
+		</body></html>`);
+		const referenceList = requiredElement(document, "#reference-list");
+		let clickCount = 0;
+		requiredElement(document, "#thinking-trigger").addEventListener("click", () => {
+			clickCount += 1;
+			referenceList.toggleAttribute("hidden");
+		});
+
+		await expect(
+			wenxinSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+				wait: async () => undefined,
+			}),
+		).rejects.toThrow(/structured citation URL is invalid/i);
+		expect(clickCount).toBe(2);
+		expect(referenceList.hasAttribute("hidden")).toBe(true);
 	});
 
 	test("accepts Wenxin's durable search conversation URL", async () => {
@@ -81,3 +249,9 @@ describe("Wenxin browser-extension adapter", () => {
 		await expect(port.completeOneTask(adapter, "Prompt A")).rejects.toMatchObject({ code: "page_drift" });
 	});
 });
+
+function requiredElement(document: Document, selector: string): Element {
+	const element = document.querySelector(selector);
+	if (!element) throw new Error(`Fixture element ${selector} is missing`);
+	return element;
+}

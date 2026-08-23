@@ -55,26 +55,49 @@ test("snapshot capture fails closed when enabled without an absolute storage roo
 	);
 });
 
-test("Bright Data configuration is rejected before a provider call when archive storage is unusable", () => {
+test("snapshot-capable provider configuration is rejected before a provider call when archive storage is unusable", () => {
+	for (const provider of ["brightdata", "dataforseo"]) {
+		assert.throws(
+			() =>
+				assertPromptSnapshotCaptureConfiguration({
+					enabled: true,
+					provider,
+					storageRoot: undefined,
+				}),
+			/Snapshot storage root must be an absolute path/,
+		);
+	}
+	assert.doesNotThrow(() =>
+		assertPromptSnapshotCaptureConfiguration({ enabled: true, provider: "openai-api", storageRoot: undefined }),
+	);
 	assert.throws(
 		() =>
 			assertPromptSnapshotCaptureConfiguration({
-				enabled: true,
-				provider: "brightdata",
+				enabled: false,
+				provider: "dataforseo",
 				storageRoot: undefined,
+				required: true,
 			}),
-		/Snapshot storage root must be an absolute path/,
-	);
-	assert.doesNotThrow(() =>
-		assertPromptSnapshotCaptureConfiguration({ enabled: true, provider: "openai-api", storageRoot: undefined }),
+		/required for overseas Run now/,
 	);
 });
 
 test("draft construction normalizes query evidence without exposing a sentinel", () => {
-	for (const { webQueries, webSearchEnabled, expectedAvailability } of [
-		{ webQueries: ["unavailable"], webSearchEnabled: true, expectedAvailability: "unavailable" },
-		{ webQueries: [], webSearchEnabled: true, expectedAvailability: "unavailable" },
-		{ webQueries: ["unexpected query"], webSearchEnabled: false, expectedAvailability: "not_applicable" },
+	for (const { webQueries, webSearchEnabled, webSearchObserved, expectedAvailability } of [
+		{
+			webQueries: ["unavailable"],
+			webSearchEnabled: true,
+			webSearchObserved: true,
+			expectedAvailability: "unavailable",
+		},
+		{ webQueries: [], webSearchEnabled: true, webSearchObserved: null, expectedAvailability: "unavailable" },
+		{ webQueries: [], webSearchEnabled: true, webSearchObserved: false, expectedAvailability: "not_applicable" },
+		{
+			webQueries: ["unexpected query"],
+			webSearchEnabled: false,
+			webSearchObserved: null,
+			expectedAvailability: "not_applicable",
+		},
 	] as const) {
 		const draft = buildPromptResponseSnapshotDraft({
 			promptRunId: "run-1",
@@ -86,6 +109,7 @@ test("draft construction normalizes query evidence without exposing a sentinel",
 			citations: [{ url: "https://example.com/source", title: undefined, domain: "example.com", citationIndex: 0 }],
 			webQueries: [...webQueries],
 			webSearchEnabled,
+			webSearchObserved,
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
 			channel: "chatgpt.consumer_web",

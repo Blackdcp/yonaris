@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import * as client from "dataforseo-client";
 import { WEB_QUERIES_UNAVAILABLE } from "../../constants";
+import { getCredential } from "../../secrets";
 import {
 	extractCitationsFromDataforseoLlm,
 	extractCitationsFromGoogle,
@@ -7,7 +9,6 @@ import {
 	extractTextFromGoogle,
 } from "../../text-extraction";
 import type { ModelConfig, Provider, ProviderOptions, ScrapeResult } from "../types";
-import { getCredential } from "../../secrets";
 
 /**
  * Models served via the SERP Google AI Mode endpoint (SerpApi). These always
@@ -69,11 +70,25 @@ function createDfsAiApi() {
 	return new client.AiOptimizationApi("https://api.dataforseo.com", { fetch: authFetch });
 }
 
-function assertPromptLength(prompt: string) {
+function validatePrompt(prompt: string): string | null {
 	const length = Array.from(prompt).length;
 	if (length > MAX_PROMPT_CHARS) {
-		throw new Error(`DataForSEO prompts must be ${MAX_PROMPT_CHARS} characters or fewer (${length} provided)`);
+		return `DataForSEO prompts must be ${MAX_PROMPT_CHARS} characters or fewer (${length} provided)`;
 	}
+	return null;
+}
+
+function assertPromptLength(prompt: string) {
+	const reason = validatePrompt(prompt);
+	if (reason) throw new Error(reason);
+}
+
+function dataForSeoSnapshotSource(rawOutput: unknown): NonNullable<ScrapeResult["snapshotSource"]> {
+	return {
+		captureMethod: "dataforseo_api",
+		contentSource: "rendered_from_structured_response",
+		sourcePayloadSha256: createHash("sha256").update(JSON.stringify(rawOutput)).digest("hex"),
+	};
 }
 
 /** Live LLM Responses call dispatch, keyed by Elmo model id. */
@@ -107,17 +122,20 @@ async function runGoogleAiMode(prompt: string): Promise<ScrapeResult> {
 		throw new Error(`DataForSEO API Error: ${task.status_message}`);
 	}
 
-	const citations = extractCitationsFromGoogle(response);
+	const raw = sanitizeForJson(response);
+	const citations = extractCitationsFromGoogle(raw);
 	// Google AI Mode always searches, but DataForSEO doesn't expose the query
 	// strings anywhere in its response. Mark "unavailable" when citations
 	// prove a search, like the other providers; never echo the prompt (runs
 	// before this change did).
 	return {
-		rawOutput: sanitizeForJson(response),
+		rawOutput: raw,
 		webQueries: citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
-		textContent: extractTextFromGoogle(response),
+		webSearchObserved: citations.length > 0 ? true : null,
+		textContent: extractTextFromGoogle(raw),
 		citations,
 		modelVersion: "dataforseo",
+		snapshotSource: dataForSeoSnapshotSource(raw),
 	};
 }
 
@@ -146,13 +164,16 @@ async function runGoogleAiOverview(prompt: string): Promise<ScrapeResult> {
 			if (task?.status_code === 20000 && task.result?.length) {
 				// The SERP response carries the AI Overview as an items[].type
 				// "ai_overview" element, which the shared Google extractors understand.
-				const citations = extractCitationsFromGoogle(response);
+				const raw = sanitizeForJson(response);
+				const citations = extractCitationsFromGoogle(raw);
 				return {
-					rawOutput: sanitizeForJson(response),
+					rawOutput: raw,
 					webQueries: citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
-					textContent: extractTextFromGoogle(response),
+					webSearchObserved: citations.length > 0 ? true : null,
+					textContent: extractTextFromGoogle(raw),
 					citations,
 					modelVersion: "dataforseo",
+					snapshotSource: dataForSeoSnapshotSource(raw),
 				};
 			}
 			lastError = task ? `${task.status_code} ${task.status_message}` : "No response or tasks.";
@@ -257,10 +278,19 @@ async function runLlmResponse(model: string, prompt: string, options?: ProviderO
 	return {
 		rawOutput: raw,
 		webQueries: webSearch ? (fanOut.length > 0 ? fanOut : citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : []) : [],
+		webSearchObserved: fanOut.length > 0 || citations.length > 0 ? true : explicitSearchObservation(result),
 		textContent: extractTextFromDataforseoLlm(raw),
 		citations,
 		modelVersion: result.model_name ?? modelName,
+		snapshotSource: dataForSeoSnapshotSource(raw),
 	};
+}
+
+function explicitSearchObservation(result: Record<string, unknown>): boolean | null {
+	for (const key of ["web_search_triggered", "web_search_used", "search_performed"]) {
+		if (typeof result[key] === "boolean") return result[key];
+	}
+	return null;
 }
 
 export const dataforseo: Provider = {
@@ -283,6 +313,8 @@ export const dataforseo: Provider = {
 		}
 		return null;
 	},
+
+	validatePrompt,
 
 	async run(model: string, prompt: string, options?: ProviderOptions): Promise<ScrapeResult> {
 		assertPromptLength(prompt);

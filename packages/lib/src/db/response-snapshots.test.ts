@@ -9,6 +9,7 @@ import {
 	calculateResponseSnapshotExpiresAt,
 	hydratePreparedResponseSnapshotBundle,
 	isResponseSnapshotOutboxExpired,
+	resolveReconstructedQueryEvidence,
 	resolveResponseSnapshotEnqueueAction,
 } from "./response-snapshots";
 
@@ -114,7 +115,17 @@ describe("response snapshot database policies", () => {
 				bytes: 1_024,
 			},
 			adapterVersion: "doubao-web-20260821-localpc-v13",
-			captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+			captureDiagnostics: {
+				answerCount: 1,
+				queryCount: 0,
+				citationCount: 0,
+				completionCount: 1,
+				extractorVersion: "doubao-search-evidence.v1",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 0,
+				citationCandidateCount: 0,
+			},
 		};
 		const prepared = prepareResponseSnapshotBundle(draft);
 
@@ -161,8 +172,8 @@ describe("response snapshot database policies", () => {
 				promptText: "What is PPIO?",
 				answerText: "PPIO provides cloud computing services.",
 				citations: [],
-				webQueries: ["PPIO cloud"],
-				queryAvailability: "available",
+				webQueries: [],
+				queryAvailability: "unavailable",
 				brandMentioned: true,
 				competitorsMentioned: [],
 				channel: "doubao.consumer_web",
@@ -175,7 +186,18 @@ describe("response snapshot database policies", () => {
 			captureMetadata: {
 				responseSnapshotSchemaVersion: "response-snapshot.v2",
 				adapterVersion: "doubao-web-20260821-localpc-v13",
-				captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+				queryAvailability: "unknown",
+				captureDiagnostics: {
+					answerCount: 1,
+					queryCount: 0,
+					citationCount: 0,
+					completionCount: 1,
+					extractorVersion: "doubao-search-evidence.v1",
+					evidenceSource: "dom",
+					searchBlockCount: 1,
+					queryCandidateCount: 0,
+					citationCandidateCount: 0,
+				},
 			},
 			visualEvidence: [
 				{
@@ -192,6 +214,7 @@ describe("response snapshot database policies", () => {
 			captureMethod: "consumer_web_browser",
 			contentSource: "rendered_from_structured_response",
 			adapterVersion: "doubao-web-20260821-localpc-v13",
+			queryAvailability: "unknown",
 			visualEvidence: { artifactId: "44444444-4444-4444-8444-444444444444" },
 		});
 		expect(() =>
@@ -200,10 +223,40 @@ describe("response snapshot database policies", () => {
 				captureMetadata: {
 					responseSnapshotSchemaVersion: "response-snapshot.v2",
 					adapterVersion: "doubao-web-20260821-localpc-v13",
-					captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+					queryAvailability: "unknown",
+					captureDiagnostics: {
+						answerCount: 1,
+						queryCount: 0,
+						citationCount: 0,
+						completionCount: 1,
+						extractorVersion: "doubao-search-evidence.v1",
+						evidenceSource: "dom",
+						searchBlockCount: 1,
+						queryCandidateCount: 0,
+						citationCandidateCount: 0,
+					},
 				},
 				visualEvidence: [],
 			}),
 		).toThrow(/exactly one attached JPEG/i);
+	});
+
+	it("does not expose the unavailable query sentinel while reconstructing a stale provider snapshot", () => {
+		expect(resolveReconstructedQueryEvidence(["unavailable"], true, true)).toEqual({
+			webQueries: [],
+			queryAvailability: "unavailable",
+		});
+		expect(resolveReconstructedQueryEvidence(["real fan-out", "unavailable"], true, true)).toEqual({
+			webQueries: [],
+			queryAvailability: "unavailable",
+		});
+		expect(resolveReconstructedQueryEvidence([], false, null)).toEqual({
+			webQueries: [],
+			queryAvailability: "not_applicable",
+		});
+		expect(resolveReconstructedQueryEvidence([], true, false)).toEqual({
+			webQueries: [],
+			queryAvailability: "not_applicable",
+		});
 	});
 });

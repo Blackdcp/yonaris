@@ -16,7 +16,12 @@ test("records durable paid intent before invoking the provider and completes onc
 			async execute(_call, hooks) {
 				await hooks.beforeProviderRun();
 				events.push("provider");
-				return { observationAttemptId: "attempt-1", promptRunId: "run-1", providerSubmissionId: "snapshot-1" };
+				return {
+					observationAttemptId: "attempt-1",
+					promptRunId: "run-1",
+					providerSubmissionId: "snapshot-1",
+					responseSnapshotStatus: "ready" as const,
+				};
 			},
 			async recordPaidIntent() {
 				events.push("paid-intent");
@@ -84,4 +89,56 @@ test("does not invoke a provider for an already claimed or terminal call", async
 
 	assert.equal(result, "skipped");
 	assert.equal(executions, 0);
+});
+
+test("does not complete an overseas call until its response snapshot is ready", async () => {
+	const { executeOverseasRunCall } = await import("./process-overseas-run-call.js");
+	const events: string[] = [];
+	const result = await executeOverseasRunCall(
+		{ cohortId: "cohort-1", callId: "call-1" },
+		{
+			async claim() {
+				return { id: "call-1", cohortId: "cohort-1" };
+			},
+			async execute(_call, hooks) {
+				await hooks.beforeProviderRun();
+				return {
+					observationAttemptId: "attempt-1",
+					promptRunId: "run-1",
+					responseSnapshotStatus: "retry_later" as const,
+				};
+			},
+			async recordPaidIntent() {
+				events.push("paid-intent");
+			},
+			async complete() {
+				events.push("complete");
+			},
+			async fail(input) {
+				events.push(`failed:${input.failureCode}`);
+			},
+		},
+	);
+
+	assert.equal(result, "failed");
+	assert.deepEqual(events, ["paid-intent", "failed:response_snapshot_not_ready"]);
+});
+
+test("preserves the provider-observed search state for persistence", async () => {
+	const { buildPromptObservationSearchEvidence } = await import("./process-prompt-snapshot-policy.js");
+
+	assert.deepEqual(
+		buildPromptObservationSearchEvidence({
+			webQueries: ["expanded query"],
+			webSearchObserved: true,
+		}),
+		{
+			webQueries: ["expanded query"],
+			webSearchObserved: true,
+		},
+	);
+	assert.deepEqual(buildPromptObservationSearchEvidence({ webQueries: [] }), {
+		webQueries: [],
+		webSearchObserved: null,
+	});
 });

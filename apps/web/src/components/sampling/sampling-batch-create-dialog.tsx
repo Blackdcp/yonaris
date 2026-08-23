@@ -14,7 +14,11 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { captureRouteForExecution, minimumEvidenceArtifactsForExecutionMode } from "./sampling-execution";
+import {
+	captureRouteForExecution,
+	minimumEvidenceArtifactsForExecutionMode,
+	targetsForSamplingExecution,
+} from "./sampling-execution";
 import { formatZonedDateTimeInput, parseZonedDateTimeInput } from "./sampling-timezone";
 import type {
 	CreateSamplingBatchInput,
@@ -91,10 +95,7 @@ export function SamplingBatchCreateDialog({
 	const firstScopeTimezone = scopes[0]?.timezone ?? "UTC";
 	const selectedScope = scopes.find((scope) => scope.id === scopeId);
 	const availableTargets = useMemo(
-		() =>
-			executionMode === "browser_runner"
-				? context.targets.filter((target) => target.surfaceTargetKey === "doubao.consumer_web")
-				: context.targets,
+		() => targetsForSamplingExecution(executionMode, context.targets),
 		[context.targets, executionMode],
 	);
 	const prompts = useMemo(

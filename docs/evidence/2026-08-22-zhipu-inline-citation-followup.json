@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-08-22T15:34:20+08:00",
+  "collectionMode": "read_only_redacted_controlled_disclosure_probe",
+  "privacy": {
+    "promptSubmitted": false,
+    "rawHtmlStored": false,
+    "rawTextStored": false,
+    "fullUrlsStored": false,
+    "accountDataStored": false,
+    "disclosuresRestored": true
+  },
+  "surface": "zhipu.consumer_web",
+  "candidateTabCount": 1,
+  "qualifiedBoundary": {
+    "acceptedAnswer": "[id^=\"row-answer-\"].answer .answer-content-wrap",
+    "searchTrace": ".advance-thinking .advance-thinking-area .tool-result-content .sources-tab-container",
+    "citationItem": ".source-item[data-url][data-id][data-group-key]",
+    "citationTitle": ".source-item-num-name",
+    "citationUrlAttribute": "data-url",
+    "searchObservedProof": "single_answer_bound_source_count_control"
+  },
+  "redactedProbe": {
+    "acceptedAnswerCount": 1,
+    "declaredSearchResultCount": 12,
+    "visibleCitationOccurrenceCount": 14,
+    "uniqueProviderSourceIdCount": 6,
+    "allCitationItemsBoundToAcceptedAnswer": true,
+    "allCitationItemsRendered": true,
+    "externalHostnames": [
+      "m.10jqka.com.cn",
+      "m.toutiao.com",
+      "ppio.cn",
+      "ppio.com"
+    ]
+  },
+  "interpretation": {
+    "searchResultCount": "the provider drawer contains candidate search results",
+    "citationOccurrenceCount": "the accepted answer contains the provider citations actually used by the answer",
+    "deduplication": "final citations are canonicalized and deduplicated by URL after extraction"
+  },
+  "failClosedRules": [
+    "citation item must be rendered inside the accepted answer",
+    "citation item must carry provider data-id, data-group-key, and data-url",
+    "exactly one rendered source title must be present",
+    "unsafe, credentialed, overlong, untitled, or ambiguous citations reject the structured extraction"
+  ],
+  "queryAvailability": "unavailable"
+}

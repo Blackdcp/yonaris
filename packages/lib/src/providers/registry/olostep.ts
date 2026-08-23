@@ -160,6 +160,7 @@ export const olostep: Provider = {
 			// Mark as "unavailable" only when citations prove a search happened
 			// but the API didn't expose the query strings
 			webQueries: webQueries.length > 0 ? webQueries : citations.length > 0 ? [WEB_QUERIES_UNAVAILABLE] : [],
+			webSearchObserved: webQueries.length > 0 || citations.length > 0 ? true : null,
 			citations,
 			modelVersion: parsed?.model ?? undefined,
 		};

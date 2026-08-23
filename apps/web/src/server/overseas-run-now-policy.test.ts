@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
 	assertOverseasRunNowChannelsAvailable,
 	assertOverseasRunNowChannelsReady,
+	assertOverseasRunNowPromptCompatibility,
+	assertOverseasRunNowProvidersConfigured,
 	getOverseasRunNowReadiness,
 	OVERSEAS_RUN_NOW_CHANNELS,
 	OVERSEAS_RUN_NOW_SAMPLES,
@@ -13,7 +15,7 @@ const ppioPrompts = Array.from({ length: 10 }, (_, index) => ({
 	value: `PPIO overseas prompt ${index + 1}`,
 }));
 
-describe("Overseas Bright Data Run now planning", () => {
+describe("Overseas Run now planning", () => {
 	it("registers the exact six supported channels in product order", () => {
 		expect(OVERSEAS_RUN_NOW_CHANNELS.map(({ key }) => key)).toEqual([
 			"chatgpt",
@@ -23,7 +25,53 @@ describe("Overseas Bright Data Run now planning", () => {
 			"google-ai-mode",
 			"google-ai-overview",
 		]);
-		expect(OVERSEAS_RUN_NOW_CHANNELS.every(({ config }) => config.provider === "brightdata")).toBe(true);
+		expect(Object.fromEntries(OVERSEAS_RUN_NOW_CHANNELS.map(({ key, config }) => [key, config.provider]))).toEqual({
+			chatgpt: "brightdata",
+			perplexity: "dataforseo",
+			gemini: "dataforseo",
+			copilot: "brightdata",
+			"google-ai-mode": "brightdata",
+			"google-ai-overview": "brightdata",
+		});
+	});
+
+	it("checks every selected provider before creating paid calls", () => {
+		const plan = planOverseasRunNow({
+			prompts: ppioPrompts.slice(0, 1),
+			channelKeys: ["chatgpt", "gemini", "perplexity"],
+			scope: { market: "US", locale: "en-US", timezone: "UTC" },
+		});
+		const checked: string[] = [];
+
+		expect(() =>
+			assertOverseasRunNowProvidersConfigured(plan.channels, (provider) => {
+				checked.push(provider);
+				return provider === "brightdata";
+			}),
+		).toThrow(/DataForSEO is not configured/);
+		expect(checked).toEqual(["brightdata", "dataforseo"]);
+	});
+
+	it("rejects prompts outside a selected provider's limit before creating paid calls", () => {
+		const dataForSeoPlan = planOverseasRunNow({
+			prompts: [{ id: "prompt-1", value: "x".repeat(501) }],
+			channelKeys: ["gemini"],
+			scope: { market: "US", locale: "en-US", timezone: "UTC" },
+		});
+		expect(() =>
+			assertOverseasRunNowPromptCompatibility(dataForSeoPlan.calls, (provider, prompt) =>
+				provider === "dataforseo" && Array.from(prompt).length > 500
+					? "DataForSEO prompts must be 500 characters or fewer"
+					: null,
+			),
+		).toThrow(/500 characters or fewer/);
+
+		const brightDataPlan = planOverseasRunNow({
+			prompts: [{ id: "prompt-1", value: "x".repeat(501) }],
+			channelKeys: ["chatgpt"],
+			scope: { market: "US", locale: "en-US", timezone: "UTC" },
+		});
+		expect(() => assertOverseasRunNowPromptCompatibility(brightDataPlan.calls, () => null)).not.toThrow();
 	});
 
 	it("only makes Google AI Overview selectable when an explicit SERP zone is configured", () => {

@@ -11,6 +11,8 @@ describe("extension surface registry", () => {
 			expect(definition.approvedUrl(new URL(definition.launchUrl))).toBe(true);
 			expect(definition.contentScriptMatches.length).toBeGreaterThan(0);
 			expect(definition.contract.surface).toBe(surface);
+			expect(definition.probeTextPattern).toMatch(/search/iu);
+			expect(definition.probeTextPattern).toMatch(/搜索/u);
 			expect(definition.createAdapter(new FixtureDomPort(createAdapterFixture())).surface).toBe(surface);
 		}
 	});

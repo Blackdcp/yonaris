@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "collectedAt": "2026-08-22T15:21:49+08:00",
+  "collectionMode": "read_only_redacted_controlled_disclosure_probe",
+  "privacy": {
+    "rawHtmlStored": false,
+    "rawTextStored": false,
+    "fullUrlsStored": false,
+    "accountDataStored": false
+  },
+  "surface": "yuanbao.consumer_web",
+  "candidateTabCount": 1,
+  "qualifiedBoundary": {
+    "acceptedAnswer": ".agent-chat__bubble--ai .agent-chat__speech-card__text",
+    "referenceTrigger": ".hyc-common-markdown__ref-list__trigger[data-idx-list]",
+    "sourcePopup": ".hyc-common-markdown__ref-list__popup",
+    "sourceCard": ".hyc-common-markdown__ref_card[data-idx][data-url]",
+    "sourceTitle": ".hyc-common-markdown__ref_card-title",
+    "previousControl": ".icon-arrow-left closest button",
+    "nextControl": ".icon-arrow-right closest button"
+  },
+  "redactedProbe": {
+    "referenceTriggerCount": 6,
+    "sampleExpectedIndices": [1, 2, 5],
+    "sampleCollectedIndices": [1, 2, 5],
+    "sampleExternalHostnames": [
+      "ima.qq.com",
+      "cloud.tencent.com",
+      "www.morphllm.com"
+    ],
+    "complete": true,
+    "stateRestored": true
+  },
+  "failClosedRules": [
+    "every visible reference list has exactly one visible indexed trigger",
+    "every expected index is positive, unique, and bounded",
+    "carousel source indices exactly match the provider marker order",
+    "repeated source indices must preserve the same canonical URL and title",
+    "unsafe, credentialed, overlong, untitled, ambiguous, or incomplete sources reject the whole extraction",
+    "the carousel is returned to its first source before the disclosure is closed"
+  ],
+  "queryAvailability": "unavailable"
+}

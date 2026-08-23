@@ -10,9 +10,9 @@ export const OVERSEAS_RUN_NOW_CHANNELS = [
 	{
 		key: "perplexity",
 		label: "Perplexity",
-		config: { model: "perplexity", provider: "brightdata", webSearch: true },
+		config: { model: "perplexity", provider: "dataforseo", webSearch: true },
 	},
-	{ key: "gemini", label: "Gemini", config: { model: "gemini", provider: "brightdata", webSearch: true } },
+	{ key: "gemini", label: "Gemini", config: { model: "gemini", provider: "dataforseo", webSearch: true } },
 	{ key: "copilot", label: "Copilot", config: { model: "copilot", provider: "brightdata", webSearch: true } },
 	{
 		key: "google-ai-mode",
@@ -46,6 +46,37 @@ export function assertOverseasRunNowChannelsAvailable(
 	for (const channel of channels) {
 		const reason = validateTarget(channel.config);
 		if (reason) throw new Error(`Overseas Run now channel ${channel.label} is unavailable: ${reason}`);
+	}
+}
+
+export function assertOverseasRunNowProvidersConfigured(
+	channels: readonly (typeof OVERSEAS_RUN_NOW_CHANNELS)[number][],
+	isConfigured: (provider: string) => boolean,
+): void {
+	const checked = new Set<string>();
+	for (const channel of channels) {
+		const provider = channel.config.provider;
+		if (checked.has(provider)) continue;
+		checked.add(provider);
+		if (!isConfigured(provider)) {
+			const label = provider === "dataforseo" ? "DataForSEO" : provider === "brightdata" ? "Bright Data" : provider;
+			throw new Error(`${label} is not configured`);
+		}
+	}
+}
+
+export function assertOverseasRunNowPromptCompatibility(
+	calls: readonly OverseasRunNowCall[],
+	validatePrompt: (provider: string, prompt: string) => string | null,
+): void {
+	const checked = new Set<string>();
+	for (const call of calls) {
+		const provider = call.config.provider;
+		const key = `${provider}\0${call.promptId}`;
+		if (checked.has(key)) continue;
+		checked.add(key);
+		const reason = validatePrompt(provider, call.promptText);
+		if (reason) throw new Error(`Overseas Run now prompt ${call.promptId} is unavailable for ${provider}: ${reason}`);
 	}
 }
 

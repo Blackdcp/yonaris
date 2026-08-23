@@ -1,8 +1,13 @@
 import { isApprovedDoubaoConversationUrl } from "../surface-qualification-client";
-import { extensionSurfaceForUrl } from "../surface-registry";
+import {
+	type ExtensionSurfaceDefinition,
+	extensionSurfaceForUrl,
+	isApprovedSurfaceConversationUrl,
+} from "../surface-registry";
 import type { AdapterError, ConsumerWebAdapter } from "./contracts";
 import { createDocumentDomPort, isDomElementVisible, readStructuredSearchEvidence } from "./dom-port";
 import { doubaoSelectorContract } from "./doubao";
+import { probeSearchEvidenceCandidates } from "./evidence-probe";
 import { inspectLatestStructuredSearchEvidenceAsync } from "./search-evidence";
 
 type AdapterCommand =
@@ -13,14 +18,15 @@ type AdapterCommand =
 			promptText: string;
 	  }
 	| { kind: "yonaris_adapter"; action: "collect_current_answer" }
-	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" };
+	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" | "inspect_search_candidates" };
 
 const port = createDocumentDomPort(document, location);
-const adapter = extensionSurfaceForUrl(new URL(location.href)).createAdapter(port);
+const surfaceDefinition = extensionSurfaceForUrl(new URL(location.href));
+const adapter = surfaceDefinition.createAdapter(port);
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
 	if (!isAdapterCommand(message)) return false;
-	void execute(adapter, message, () => location.href)
+	void execute(adapter, surfaceDefinition, message, () => location.href)
 		.then((value) => sendResponse({ ok: true, value }))
 		.catch((error: unknown) => {
 			const adapterError = error as Partial<AdapterError>;
@@ -38,6 +44,7 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 
 async function execute(
 	adapter: ConsumerWebAdapter,
+	surfaceDefinition: ExtensionSurfaceDefinition,
 	command: AdapterCommand,
 	readPageUrl: () => string,
 ): Promise<unknown> {
@@ -56,6 +63,26 @@ async function execute(
 			return adapter.resumeSubmitted(command.promptText);
 		case "collect_current_answer":
 			return adapter.collectCurrentAnswer();
+		case "inspect_search_candidates": {
+			const initialConversationUrl = readPageUrl();
+			if (!isApprovedSurfaceConversationUrl(surfaceDefinition, initialConversationUrl)) {
+				throw new Error("Candidate inspection requires an approved consumer conversation URL");
+			}
+			const currentConversationUrl = readPageUrl();
+			if (
+				currentConversationUrl !== initialConversationUrl ||
+				!isApprovedSurfaceConversationUrl(surfaceDefinition, currentConversationUrl)
+			) {
+				throw new Error("Candidate inspection left the approved conversation URL");
+			}
+			return await probeSearchEvidenceCandidates(document, {
+				surface: surfaceDefinition.surface,
+				answerSelector: surfaceDefinition.contract.answer,
+				candidateTextPattern: surfaceDefinition.probeTextPattern,
+				maximumCandidates: 200,
+				pageUrl: currentConversationUrl,
+			});
+		}
 		case "inspect_search_evidence": {
 			const initialConversationUrl = readPageUrl();
 			if (!isApprovedDoubaoConversationUrl(initialConversationUrl)) {
@@ -96,6 +123,7 @@ function isAdapterCommand(value: unknown): value is AdapterCommand {
 			"resume_submitted",
 			"collect_current_answer",
 			"inspect_search_evidence",
+			"inspect_search_candidates",
 		].includes(value.action)
 	)
 		return false;

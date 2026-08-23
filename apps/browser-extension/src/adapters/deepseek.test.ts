@@ -1,10 +1,11 @@
+import { parseHTML } from "linkedom";
 import { describe, expect, test } from "vitest";
-import { createDeepSeekAdapter, deepSeekSelectorContract } from "./deepseek";
+import { createDeepSeekAdapter, deepSeekSearchEvidenceAdapter, deepSeekSelectorContract } from "./deepseek";
 import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 
 describe("DeepSeek browser-extension adapter", () => {
 	test("uses the structured DeepSeek v2 contract", () => {
-		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260821-localpc-v8");
+		expect(deepSeekSelectorContract.version).toBe("deepseek-web-20260822-localpc-v9");
 	});
 	test("waits for the page composer to become ready before declaring page drift", async () => {
 		const port = new FixtureDomPort(createAdapterFixture({ composerReadyDelayMs: 1_000 }));
@@ -153,7 +154,61 @@ describe("DeepSeek browser-extension adapter", () => {
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
 			citations: [{ url: "https://example.com/a", title: "Source A" }],
 			webQueries: ["国产大模型", "大模型公司"],
-			adapterVersion: "deepseek-web-20260821-localpc-v8",
+			adapterVersion: "deepseek-web-20260822-localpc-v9",
+		});
+	});
+
+	test("uses visible answer citation markers as DeepSeek search evidence without inventing queries", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<a href="https://outside.example/source"><span class="ds-markdown-cite">0</span></a>
+			<div class="ds-assistant-message-main-content" id="accepted-answer">
+				<p>Current answer</p>
+				<a href="https://source.example/deepseek"><span class="ds-markdown-cite">1</span></a>
+				<a href="https://hidden.example/deepseek" hidden><span class="ds-markdown-cite">2</span></a>
+			</div>
+		</body></html>`);
+
+		await expect(
+			deepSeekSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: (element) => !element.closest("[hidden]"),
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toEqual({
+			webSearchObserved: true,
+			queryAvailability: "unavailable",
+			webQueries: [],
+			citations: [{ url: "https://source.example/deepseek", title: "1" }],
+			diagnostics: {
+				extractorVersion: "deepseek-search-evidence-20260822-v1",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 0,
+				citationCandidateCount: 2,
+			},
+		});
+	});
+
+	test("keeps DeepSeek search state unknown for a normal answer link without a provider citation marker", async () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="ds-assistant-message-main-content" id="accepted-answer"><a href="https://example.com/">Normal link</a></div>
+		</body></html>`);
+
+		await expect(
+			deepSeekSearchEvidenceAdapter.read({
+				acceptedAnswer: requiredElement(document, "#accepted-answer"),
+				document,
+				isVisible: () => true,
+				readVisibleText: (element) => (element.textContent ?? "").trim(),
+				readStructuredEvidence: async () => ({ searchUsedCount: 0, webQueries: [], citations: [] }),
+			}),
+		).resolves.toMatchObject({
+			webSearchObserved: null,
+			queryAvailability: "unknown",
+			citations: [{ url: "https://example.com/", title: "Normal link" }],
+			diagnostics: { searchBlockCount: 0, evidenceSource: "dom" },
 		});
 	});
 
@@ -195,6 +250,12 @@ describe("DeepSeek browser-extension adapter", () => {
 		await expect(adapter.resumeSubmitted("Prompt A")).resolves.toBeUndefined();
 	});
 });
+
+function requiredElement(document: Document, selector: string): Element {
+	const element = document.querySelector(selector);
+	if (!element) throw new Error(`Fixture element ${selector} is missing`);
+	return element;
+}
 
 function searchTestContract(override: Partial<typeof deepSeekSelectorContract> = {}): typeof deepSeekSelectorContract {
 	return {

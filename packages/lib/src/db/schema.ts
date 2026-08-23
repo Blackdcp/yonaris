@@ -91,6 +91,7 @@ export const responseSnapshotContentSourceEnum = pgEnum("response_snapshot_conte
 export const responseSnapshotCaptureMethodEnum = pgEnum("response_snapshot_capture_method", [
 	"brightdata_dataset",
 	"brightdata_serp",
+	"dataforseo_api",
 	"consumer_web_browser",
 	"historical_reconstruction",
 ]);
@@ -790,7 +791,10 @@ export const overseasRunCalls = pgTable(
 			name: "overseas_run_calls_prompt_identity_fk",
 		}),
 		validSampleIndex: check("overseas_run_calls_valid_sample_index", sql`${table.sampleIndex} BETWEEN 1 AND 5`),
-		brightDataOnly: check("overseas_run_calls_brightdata_only", sql`${table.provider} = 'brightdata'`),
+		supportedProvider: check(
+			"overseas_run_calls_supported_provider",
+			sql`${table.provider} IN ('brightdata', 'dataforseo')`,
+		),
 		lifecycleConsistent: check(
 			"overseas_run_calls_lifecycle_consistent",
 			sql`(${table.status} = 'queued' AND ${table.startedAt} IS NULL AND ${table.completedAt} IS NULL AND ${table.paidIntentAt} IS NULL AND ${table.observationAttemptId} IS NULL AND ${table.promptRunId} IS NULL) OR (${table.status} = 'running' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NULL AND ${table.promptRunId} IS NULL) OR (${table.status} = 'succeeded' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NOT NULL AND ${table.paidIntentAt} IS NOT NULL AND ${table.observationAttemptId} IS NOT NULL AND ${table.promptRunId} IS NOT NULL AND ${table.failureClass} IS NULL AND ${table.failureCode} IS NULL AND ${table.failureMessage} IS NULL) OR (${table.status} = 'failed' AND ${table.startedAt} IS NOT NULL AND ${table.completedAt} IS NOT NULL AND ${table.failureClass} IS NOT NULL AND ${table.failureCode} IS NOT NULL AND ${table.failureMessage} IS NOT NULL AND ${table.promptRunId} IS NULL)`,

@@ -21,9 +21,13 @@ export type ExtensionSurfaceDefinition = {
 	adapterVersion: string;
 	contentScriptMatches: readonly string[];
 	approvedUrl: (url: URL) => boolean;
+	probeTextPattern: string;
 	contract: SelectorContract;
 	createAdapter: (port: ConsumerDomPort) => ConsumerWebAdapter;
 };
+
+export const DOMESTIC_SEARCH_EVIDENCE_PROBE_TEXT_PATTERN =
+	"搜索|联网|资料|来源|引用|参考|网页|search|source|citation|reference|query|tool|result|message|assistant|answer|markdown";
 
 const LOCAL_SURFACE_CONFIG: Record<
 	BrowserExtensionSurface,
@@ -91,6 +95,7 @@ export function extensionSurfaceDefinition(surface: BrowserExtensionSurface): Ex
 		contentScriptMatches: local.contentScriptMatches,
 		approvedUrl: (url) =>
 			url.protocol === "https:" && url.username === "" && url.password === "" && local.approvedHostname(url.hostname),
+		probeTextPattern: DOMESTIC_SEARCH_EVIDENCE_PROBE_TEXT_PATTERN,
 		contract: local.contract,
 		createAdapter: local.createAdapter,
 	};
@@ -102,4 +107,27 @@ export function extensionSurfaceForUrl(url: URL): ExtensionSurfaceDefinition {
 	);
 	if (!match) throw new Error("Browser adapter is not approved for this URL");
 	return match;
+}
+
+export function isApprovedSurfaceConversationUrl(definition: ExtensionSurfaceDefinition, value: string): boolean {
+	let url: URL;
+	try {
+		url = new URL(value);
+	} catch {
+		return false;
+	}
+	if (!definition.approvedUrl(url) || url.port || url.hash) return false;
+	try {
+		if (!new RegExp(definition.contract.conversationPathPattern, "u").test(url.pathname)) return false;
+		if (definition.contract.conversationSearchPattern) {
+			return new RegExp(definition.contract.conversationSearchPattern, "u").test(url.search);
+		}
+		if (url.search === "") return true;
+		return Boolean(
+			definition.contract.allowedSearchPattern &&
+				new RegExp(definition.contract.allowedSearchPattern, "u").test(url.search),
+		);
+	} catch {
+		return false;
+	}
 }

@@ -1,0 +1,3 @@
+ALTER TYPE "public"."response_snapshot_capture_method" ADD VALUE 'dataforseo_api' BEFORE 'consumer_web_browser';--> statement-breakpoint
+ALTER TABLE "overseas_run_calls" DROP CONSTRAINT "overseas_run_calls_brightdata_only";--> statement-breakpoint
+ALTER TABLE "overseas_run_calls" ADD CONSTRAINT "overseas_run_calls_supported_provider" CHECK ("overseas_run_calls"."provider" IN ('brightdata', 'dataforseo'));

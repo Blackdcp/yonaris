@@ -11,6 +11,12 @@ import type {
 } from "./contracts";
 import { AdapterError } from "./contracts";
 import { normalizeCitationTitle } from "./search-evidence";
+import {
+	fallbackUnknownSearchEvidence,
+	type SearchEvidenceAdapter,
+	type SearchEvidenceResult,
+	validateSearchEvidenceResult,
+} from "./search-evidence-adapter";
 
 const PROMPT_MAX_CHARACTERS = 20_000;
 const ANSWER_MAX_CHARACTERS = 500_000;
@@ -18,15 +24,22 @@ const QUERY_MAX_COUNT = 32;
 const CITATION_MAX_COUNT = 100;
 const CONFIRM_TIMEOUT_MS = 30_000;
 const RESPONSE_TIMEOUT_MS = 180_000;
+const ZHIPU_RESPONSE_TIMEOUT_MS = 12 * 60_000;
 const STABLE_ANSWER_MS = 8_000;
+const EVIDENCE_STABLE_MS = 2_000;
+const EVIDENCE_POLL_INTERVAL_MS = 500;
 const POLL_INTERVAL_MS = 250;
 const CONFIRMED_CONVERSATION_STABILITY_MS = 1_000;
 const PAGE_READY_TIMEOUT_MS = 15_000;
 const NEW_CONVERSATION_TIMEOUT_MS = 15_000;
 const SEND_APPEARS_AFTER_FILL_SURFACES = new Set(["qwen.consumer_web", "kimi.consumer_web", "yuanbao.consumer_web"]);
 
-export function createConsumerAdapter(port: ConsumerDomPort, contract: SelectorContract): ConsumerWebAdapter {
-	return new ConsumerAdapter(port, validateSelectorContract(contract));
+export function createConsumerAdapter(
+	port: ConsumerDomPort,
+	contract: SelectorContract,
+	evidenceAdapter?: SearchEvidenceAdapter,
+): ConsumerWebAdapter {
+	return new ConsumerAdapter(port, validateSelectorContract(contract), evidenceAdapter);
 }
 
 class ConsumerAdapter implements ConsumerWebAdapter {
@@ -35,14 +48,16 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	readonly adapterVersion;
 	readonly #port: ConsumerDomPort;
 	readonly #contract: SelectorContract;
+	readonly #evidenceAdapter: SearchEvidenceAdapter | undefined;
 	#answerCountBeforeSubmit = 0;
 	#preparedPrompt: string | null = null;
 	#submitted = false;
 	#confirmedConversationUrl: string | null = null;
 
-	constructor(port: ConsumerDomPort, contract: SelectorContract) {
+	constructor(port: ConsumerDomPort, contract: SelectorContract, evidenceAdapter?: SearchEvidenceAdapter) {
 		this.#port = port;
 		this.#contract = contract;
+		this.#evidenceAdapter = evidenceAdapter;
 		this.surface = contract.surface;
 		this.launchUrl = contract.launchUrl;
 		this.adapterVersion = contract.version;
@@ -101,12 +116,17 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		const timeoutAt = this.#port.now() + CONFIRM_TIMEOUT_MS;
 		const requiredConversationStabilityMs =
-			this.surface === "kimi.consumer_web" ? CONFIRMED_CONVERSATION_STABILITY_MS : 0;
+			this.surface === "kimi.consumer_web" || this.surface === "yuanbao.consumer_web"
+				? CONFIRMED_CONVERSATION_STABILITY_MS
+				: 0;
 		let candidateConversationUrl = "";
 		let candidateStableSince = 0;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertApprovedUrl(false);
-			await this.#assertUnblocked();
+			if (!(await this.#assertUnblocked())) {
+				await this.#port.wait(POLL_INTERVAL_MS);
+				continue;
+			}
 			const messages = visibleElements(await this.#port.query("user_message", this.#contract.userMessage));
 			const latest = messages.at(-1)?.element.text;
 			const currentUrl = new URL(this.#port.currentUrl());
@@ -129,7 +149,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				if (approvedConversationUrl !== candidateConversationUrl) {
 					candidateConversationUrl = approvedConversationUrl;
 					candidateStableSince = this.#port.now();
-				} else if (this.#port.now() - candidateStableSince >= CONFIRMED_CONVERSATION_STABILITY_MS) {
+				} else if (this.#port.now() - candidateStableSince >= requiredConversationStabilityMs) {
 					this.#confirmedConversationUrl = approvedConversationUrl;
 					return;
 				}
@@ -164,7 +184,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		if (!this.#confirmedConversationUrl || !this.#preparedPrompt) {
 			throw this.#error("post_submit_unknown", "Submitted conversation identity is not confirmed");
 		}
-		const timeoutAt = this.#port.now() + RESPONSE_TIMEOUT_MS;
+		const timeoutAt =
+			this.#port.now() + (this.surface === "zhipu.consumer_web" ? ZHIPU_RESPONSE_TIMEOUT_MS : RESPONSE_TIMEOUT_MS);
 		let generatingSeen = false;
 		let stableText = "";
 		let stableSince = 0;
@@ -172,7 +193,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		const runtimeCompletionSelector = this.surface === "doubao.consumer_web" ? null : this.#contract.completion;
 		while (this.#port.now() < timeoutAt) {
 			this.#assertConfirmedConversation();
-			await this.#assertUnblocked();
+			if (!(await this.#assertUnblocked())) {
+				await this.#port.wait(POLL_INTERVAL_MS);
+				continue;
+			}
 			const generating = visibleElements(await this.#port.query("generating", this.#contract.generating)).length;
 			if (generating > 1) throw this.#error("page_drift", "Generation state is ambiguous");
 			if (generating === 1) generatingSeen = true;
@@ -237,6 +261,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				citationLinkSelector: this.#contract.citationLink,
 				queryItemSelector: this.#contract.queryItem,
 				searchEvidence: this.#contract.searchEvidence,
+				deferSearchEvidence: true,
 				evidenceViewport: {
 					promptSelector: this.#contract.userMessage,
 					promptText: this.#preparedPrompt ?? "",
@@ -256,13 +281,51 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		) {
 			throw this.#error("page_drift", "Current answer container changed during capture");
 		}
+		let legacyCitations: CollectedCitation[];
+		try {
+			legacyCitations = uniqueCitations(snapshot.citations);
+		} catch {
+			throw this.#error("page_drift", "Current answer search or citation values violate the approved contract");
+		}
+		let evidence: SearchEvidenceResult;
+		if (this.#evidenceAdapter) {
+			evidence = await this.#readSettledSearchEvidence(snapshot, legacyCitations);
+		} else {
+			const webSearchObserved = this.#classifySearch(snapshot);
+			const webQueries = uniqueStrings(snapshot.webQueries, QUERY_MAX_COUNT, 2_000, "query");
+			evidence = {
+				webSearchObserved,
+				queryAvailability:
+					webSearchObserved === false
+						? "not_searched"
+						: webSearchObserved === true
+							? webQueries.length > 0
+								? "exposed"
+								: "unavailable"
+							: "unknown",
+				webQueries,
+				citations: legacyCitations,
+				diagnostics: {
+					extractorVersion: `${this.adapterVersion}:legacy`,
+					evidenceSource: webSearchObserved !== null || legacyCitations.length > 0 ? "dom" : "none",
+					searchBlockCount: snapshot.searchUsedCount + snapshot.searchNotUsedCount,
+					queryCandidateCount: webQueries.length,
+					citationCandidateCount: legacyCitations.length,
+				},
+			};
+		}
 		let webQueries: string[];
 		let citations: CollectedCitation[];
 		try {
-			webQueries = uniqueStrings(snapshot.webQueries, QUERY_MAX_COUNT, 2_000, "query");
-			citations = uniqueCitations(snapshot.citations);
+			webQueries = uniqueStrings(evidence.webQueries, QUERY_MAX_COUNT, 2_000, "query");
+			citations = uniqueCitations(evidence.citations);
 		} catch {
-			throw this.#error("page_drift", "Current answer search or citation values violate the approved contract");
+			evidence = fallbackUnknownSearchEvidence(
+				this.#evidenceAdapter?.version ?? `${this.adapterVersion}:legacy`,
+				legacyCitations,
+			);
+			webQueries = [];
+			citations = legacyCitations;
 		}
 		if (!snapshot.evidenceViewportRect) {
 			throw this.#error("page_drift", "Current answer has no verified visual evidence region");
@@ -272,11 +335,52 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			evidenceViewportRect: snapshot.evidenceViewportRect,
 			pageUrl,
 			observedAt: new Date(this.#port.now()).toISOString(),
-			webSearchObserved: this.#classifySearch(snapshot),
+			webSearchObserved: evidence.webSearchObserved,
+			queryAvailability: evidence.queryAvailability,
 			webQueries,
 			citations,
+			searchEvidenceDiagnostics: evidence.diagnostics,
 			adapterVersion: this.adapterVersion,
 		};
+	}
+
+	async #readSettledSearchEvidence(
+		snapshot: AnswerDomSnapshot,
+		legacyCitations: CollectedCitation[],
+	): Promise<SearchEvidenceResult> {
+		const adapter = this.#evidenceAdapter;
+		if (!adapter) throw new Error("Search evidence adapter is unavailable");
+		const settleTimeoutMs = adapter.settleTimeoutMs ?? 0;
+		const deadline = this.#port.now() + settleTimeoutMs;
+		let stableSignature = "";
+		let stableSince = this.#port.now();
+		let latest = fallbackUnknownSearchEvidence(adapter.version, legacyCitations);
+		while (true) {
+			try {
+				latest = validateSearchEvidenceResult(
+					await adapter.read(requiredSearchEvidenceContext(snapshot)),
+					adapter.version,
+				);
+			} catch {
+				latest = fallbackUnknownSearchEvidence(adapter.version, legacyCitations);
+			}
+			const signature = searchEvidenceSignature(latest);
+			if (signature !== stableSignature) {
+				stableSignature = signature;
+				stableSince = this.#port.now();
+			}
+			const searchStateIsDefinitive = latest.webSearchObserved !== null || latest.queryAvailability !== "unknown";
+			if (
+				settleTimeoutMs === 0 ||
+				(searchStateIsDefinitive && this.#port.now() - stableSince >= EVIDENCE_STABLE_MS) ||
+				this.#port.now() >= deadline
+			) {
+				return latest;
+			}
+			await this.#port.wait(Math.min(EVIDENCE_POLL_INTERVAL_MS, deadline - this.#port.now()));
+			this.#assertConfirmedConversation();
+			await this.#assertSubmittedPromptStillCurrent();
+		}
 	}
 
 	#classifySearch(snapshot: AnswerDomSnapshot): boolean | null {
@@ -298,7 +402,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		return null;
 	}
 
-	async #assertUnblocked(): Promise<void> {
+	async #assertUnblocked(): Promise<boolean> {
 		const restrictedPattern = new RegExp(this.#contract.accountRestrictedTextPattern, "iu");
 		const restricted = visibleElements(await this.#port.query("account_restricted", this.#contract.accountRestricted));
 		if (restricted.some(({ element }) => restrictedPattern.test(element.text))) {
@@ -310,9 +414,11 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			["login_wall", this.#contract.loginWall, "signed_out"],
 		] as const) {
 			if (visibleElements(await this.#port.query(role, selector)).length > 0) {
+				if (code === "captcha" && this.surface === "qwen.consumer_web" && this.#submitted) return false;
 				throw this.#error(code, `Consumer page reported ${code}`);
 			}
 		}
+		return true;
 	}
 
 	async #waitForPageReady(): Promise<void> {
@@ -468,6 +574,11 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	}
 }
 
+function requiredSearchEvidenceContext(snapshot: AnswerDomSnapshot) {
+	if (!snapshot.searchEvidenceContext) throw new Error("Search evidence context is unavailable");
+	return snapshot.searchEvidenceContext;
+}
+
 function validateSelectorContract(contract: SelectorContract): SelectorContract {
 	if (!/^[A-Za-z0-9._:-]{8,100}$/.test(contract.version)) throw new Error("Invalid adapter version");
 	if (
@@ -544,6 +655,16 @@ function validateSearchEvidenceContract(contract: SelectorContract["searchEviden
 	if (contract.queryTextPattern.includes("(?<query>") === false) {
 		throw new Error("Search evidence query pattern must expose a query");
 	}
+}
+
+function searchEvidenceSignature(evidence: SearchEvidenceResult): string {
+	return JSON.stringify({
+		webSearchObserved: evidence.webSearchObserved,
+		queryAvailability: evidence.queryAvailability,
+		webQueries: evidence.webQueries,
+		citations: evidence.citations,
+		diagnostics: evidence.diagnostics,
+	});
 }
 
 function visibleElements(elements: readonly DomElementSummary[]): Array<{ element: DomElementSummary; index: number }> {

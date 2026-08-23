@@ -30,4 +30,18 @@ describe("Wenxin semantic DOM contract", () => {
 		expect(wenxinSelectorContract.queryItem).toBeNull();
 		expect(wenxinSelectorContract.searchEvidence).toBeNull();
 	});
+
+	test("does not treat account-risk wording inside an answer as a provider account restriction", () => {
+		const { document } = parseHTML(`<!doctype html><html><body>
+			<div class="conversation-flow-answer-container"><div class="ai-entry">
+				<li>低价非官方接口存在账号封禁风险。</li>
+			</div></div>
+			<div role="dialog" class="account-restrict-dialog">你的账号已被限制</div>
+		</body></html>`);
+
+		const matches = [...document.querySelectorAll(wenxinSelectorContract.accountRestricted)];
+
+		expect(matches).toHaveLength(1);
+		expect(matches[0]?.getAttribute("role")).toBe("dialog");
+	});
 });

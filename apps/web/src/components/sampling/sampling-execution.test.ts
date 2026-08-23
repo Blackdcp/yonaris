@@ -1,5 +1,22 @@
+import { BROWSER_EXTENSION_SURFACE_DEFINITIONS } from "@workspace/lib/browser-extension-surfaces";
 import { describe, expect, it } from "vitest";
-import { captureRouteForExecution, minimumEvidenceArtifactsForExecutionMode } from "./sampling-execution";
+import {
+	captureRouteForExecution,
+	minimumEvidenceArtifactsForExecutionMode,
+	targetsForSamplingExecution,
+} from "./sampling-execution";
+import type { SamplingTargetOption } from "./types";
+
+const browserTargets: SamplingTargetOption[] = BROWSER_EXTENSION_SURFACE_DEFINITIONS.map((definition) => ({
+	surfaceTargetKey: definition.key,
+	captureRouteKey: definition.captureRoute,
+	model: definition.key,
+	label: definition.label,
+	launchUrl: definition.launchUrl,
+	surfaceKind: "consumer_chat",
+	defaultSessionRequirement: "dedicated_sampling_profile",
+	defaultSearchRequirement: "platform_default",
+}));
 
 describe("sampling execution evidence contract", () => {
 	it("requires both a screenshot and page snapshot for Browser Runner", () => {
@@ -7,14 +24,25 @@ describe("sampling execution evidence contract", () => {
 		expect(minimumEvidenceArtifactsForExecutionMode("browser_runner", ["browser_runner.doubao"])).toBe(2);
 	});
 
-	it("uses the one-snapshot extension contract for a new Doubao Browser Runner batch", () => {
+	it("uses the one-snapshot extension contract for every Browser Runner surface", () => {
+		for (const target of browserTargets) {
+			expect(captureRouteForExecution("browser_runner", target)).toBe(target.captureRouteKey);
+		}
 		expect(
-			captureRouteForExecution("browser_runner", {
-				surfaceTargetKey: "doubao.consumer_web",
-				captureRouteKey: "browser_runner.doubao",
-			}),
-		).toBe("browser_extension.doubao");
-		expect(minimumEvidenceArtifactsForExecutionMode("browser_runner", ["browser_extension.doubao"])).toBe(1);
+			minimumEvidenceArtifactsForExecutionMode(
+				"browser_runner",
+				browserTargets.map((target) => target.captureRouteKey),
+			),
+		).toBe(1);
+	});
+
+	it("offers all and only Browser Runner surfaces in a Browser Runner batch", () => {
+		const manualOnly = { ...browserTargets[0], surfaceTargetKey: "chatgpt.consumer_web" as const };
+		expect(targetsForSamplingExecution("browser_runner", [...browserTargets, manualOnly])).toEqual(browserTargets);
+		expect(targetsForSamplingExecution("manual", [...browserTargets, manualOnly])).toEqual([
+			...browserTargets,
+			manualOnly,
+		]);
 	});
 
 	it("preserves the single-artifact minimum for manual workbench batches", () => {

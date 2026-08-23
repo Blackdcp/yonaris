@@ -27,31 +27,34 @@ export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 		try {
 			const pool = input.pools?.[surface] ?? new AdaptiveSurfacePool();
 			if (!pool.canStart(input.now?.() ?? Date.now())) continue;
-			const [claim] = await claimRound(input.brandIds, surface, 1, input.claim);
-			if (!claim) continue;
+			for (let taskOrdinal = 0; taskOrdinal < 100; taskOrdinal += 1) {
+				const [claim] = await claimRound(input.brandIds, surface, 1, input.claim);
+				if (!claim) break;
 
-			let result: TaskRunResult;
-			try {
-				result = await input.run(claim);
-			} catch {
-				result = { status: "incomplete", code: "coordinator_unhandled" };
-			}
+				let result: TaskRunResult;
+				try {
+					result = await input.run(claim);
+				} catch {
+					result = { status: "incomplete", code: "coordinator_unhandled" };
+				}
 
-			switch (result.status) {
-				case "succeeded":
-					bySurface[surface].succeeded += 1;
-					pool.recordStableSuccess();
-					break;
-				case "retry_scheduled":
-					bySurface[surface].retryScheduled += 1;
-					break;
-				case "needs_human":
-					bySurface[surface].needsHuman += 1;
-					if (result.code === "rate_limited") pool.recordRateLimit(input.now?.() ?? Date.now());
-					break;
-				case "incomplete":
-					bySurface[surface].incomplete += 1;
-					break;
+				switch (result.status) {
+					case "succeeded":
+						bySurface[surface].succeeded += 1;
+						pool.recordStableSuccess();
+						continue;
+					case "retry_scheduled":
+						bySurface[surface].retryScheduled += 1;
+						break;
+					case "needs_human":
+						bySurface[surface].needsHuman += 1;
+						if (result.code === "rate_limited") pool.recordRateLimit(input.now?.() ?? Date.now());
+						break;
+					case "incomplete":
+						bySurface[surface].incomplete += 1;
+						break;
+				}
+				break;
 			}
 		} catch {
 			bySurface[surface].incomplete += 1;

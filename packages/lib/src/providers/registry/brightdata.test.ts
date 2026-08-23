@@ -195,6 +195,43 @@ describe("Bright Data overseas failure handling", () => {
 });
 
 describe("toBrightDataScrapeResult", () => {
+	it("uses provider-reported ChatGPT search state instead of the requested toggle", () => {
+		const searched = toBrightDataScrapeResult(
+			[{ answer_text: "Answer", web_search_triggered: true, web_search_query: ["expanded query"] }],
+			{ captureMethod: "brightdata_dataset", webSearch: true },
+		);
+		const notSearched = toBrightDataScrapeResult(
+			[{ answer_text: "Answer", web_search_triggered: false }],
+			{ captureMethod: "brightdata_dataset", webSearch: true },
+		);
+
+		expect(searched.webSearchObserved).toBe(true);
+		expect(notSearched.webSearchObserved).toBe(false);
+	});
+
+	it("does not infer observed search from generic dataset citations", () => {
+		const result = toBrightDataScrapeResult(
+			[{ answer_text: "Answer", citations: [{ url: "https://example.com/source" }] }],
+			{ captureMethod: "brightdata_dataset", webSearch: true },
+		);
+
+		expect(result.webSearchObserved).toBeNull();
+	});
+
+	it("recognizes answer-bound sources on an intrinsic Google AI search surface", () => {
+		const options = {
+			captureMethod: "brightdata_dataset",
+			webSearch: true,
+			model: "google-ai-mode",
+		} as Parameters<typeof toBrightDataScrapeResult>[1];
+		const result = toBrightDataScrapeResult(
+			[{ answer_text: "Answer", citations: [{ url: "https://example.com/source" }] }],
+			options,
+		);
+
+		expect(result.webSearchObserved).toBe(true);
+	});
+
 	it("prefers the native answer HTML and removes large provider fields from customer raw output", () => {
 		const payload = [
 			{
@@ -301,6 +338,7 @@ describe("toBrightDataScrapeResult", () => {
 		});
 		expect(result.snapshotSource).not.toHaveProperty("answerHtml");
 		expect(result.webQueries).toEqual([WEB_QUERIES_UNAVAILABLE]);
+		expect(result.webSearchObserved).toBe(true);
 		expect(result.modelVersion).toBe("brightdata-serp");
 	});
 });

@@ -1,4 +1,8 @@
-import { isBrowserExtensionCaptureRoute } from "@workspace/lib/browser-extension-contract";
+import {
+	browserExtensionCaptureRoute,
+	isBrowserExtensionCaptureRoute,
+	isBrowserExtensionSurface,
+} from "@workspace/lib/browser-extension-contract";
 import type { SamplingExecutionMode, SamplingTargetOption } from "./types";
 
 export function minimumEvidenceArtifactsForExecutionMode(
@@ -14,8 +18,17 @@ export function captureRouteForExecution(
 	target: Pick<SamplingTargetOption, "surfaceTargetKey" | "captureRouteKey">,
 ): SamplingTargetOption["captureRouteKey"] {
 	if (executionMode !== "browser_runner") return target.captureRouteKey;
-	if (target.surfaceTargetKey !== "doubao.consumer_web") {
+	if (!isBrowserExtensionSurface(target.surfaceTargetKey)) {
 		throw new Error(`Browser extension batch target ${target.surfaceTargetKey} is not available`);
 	}
-	return "browser_extension.doubao";
+	return browserExtensionCaptureRoute(target.surfaceTargetKey);
+}
+
+export function targetsForSamplingExecution(
+	executionMode: SamplingExecutionMode,
+	targets: readonly SamplingTargetOption[],
+): SamplingTargetOption[] {
+	return executionMode === "browser_runner"
+		? targets.filter((target) => isBrowserExtensionSurface(target.surfaceTargetKey))
+		: [...targets];
 }

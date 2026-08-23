@@ -725,7 +725,7 @@ export async function completeRunnerTask(
 								citationIndex: citation.citationIndex,
 							})),
 							webQueries: observation.webQueries,
-							webSearchEnabled: prepared.config.webSearch,
+							queryAvailability: observation.queryAvailability,
 							brandMentioned: prepared.mentionResult.brandMentioned,
 							competitorsMentioned: prepared.mentionResult.competitorsMentioned,
 							channel: prepared.target.surfaceTargetKey,

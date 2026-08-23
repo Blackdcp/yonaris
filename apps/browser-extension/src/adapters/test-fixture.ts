@@ -26,6 +26,7 @@ export type AdapterFixture = {
 	newConversationLabels: string[];
 	signedOut: boolean;
 	captcha: boolean;
+	captchaDurationAfterSubmitMs: number;
 	rateLimited: boolean;
 	accountRestricted: boolean;
 	blankConversationDelayMs: number;
@@ -63,6 +64,7 @@ export function createAdapterFixture(
 		sendMatchesBeforeFill: override.sendMatches ?? 1,
 		signedOut: false,
 		captcha: false,
+		captchaDurationAfterSubmitMs: 0,
 		rateLimited: false,
 		accountRestricted: false,
 		blankConversationDelayMs: 0,
@@ -135,7 +137,9 @@ export class FixtureDomPort implements ConsumerDomPort {
 			case "login_wall":
 				return this.#fixture.signedOut ? elements(1, "") : [];
 			case "captcha":
-				return this.#fixture.captcha ? elements(1, "") : [];
+				return this.#fixture.captcha || (this.#submitted && this.elapsedMs < this.#fixture.captchaDurationAfterSubmitMs)
+					? elements(1, "")
+					: [];
 			case "rate_limit":
 				return this.#fixture.rateLimited ? elements(1, "") : [];
 			case "account_restricted":
@@ -191,6 +195,17 @@ export class FixtureDomPort implements ConsumerDomPort {
 			webQueries: request.queryItemSelector || request.searchEvidence ? [...(this.#fixture.answer.queries ?? [])] : [],
 			citations:
 				request.citationLinkSelector || request.searchEvidence ? [...(this.#fixture.answer.citations ?? [])] : [],
+			searchEvidenceContext: {
+				acceptedAnswer: {} as Element,
+				document: {} as Document,
+				isVisible: () => true,
+				readVisibleText: () => this.#fixture.answer.text,
+				readStructuredEvidence: async () => ({
+					searchUsedCount: this.#fixture.searchUsedCount,
+					webQueries: [...(this.#fixture.answer.queries ?? [])],
+					citations: [...(this.#fixture.answer.citations ?? [])],
+				}),
+			},
 		};
 	}
 

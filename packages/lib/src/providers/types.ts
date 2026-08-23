@@ -11,11 +11,12 @@ export interface ScrapeResult {
 	textContent: string;
 	rawOutput: unknown;
 	webQueries: string[];
+	webSearchObserved?: boolean | null;
 	citations: Citation[];
 	modelVersion?: string;
 	providerSubmissionId?: string;
 	snapshotSource?: {
-		captureMethod: "brightdata_dataset" | "brightdata_serp";
+		captureMethod: "brightdata_dataset" | "brightdata_serp" | "dataforseo_api";
 		contentSource: "native_answer_html" | "rendered_from_structured_response";
 		answerHtml?: string;
 		sourcePayloadSha256: string;
@@ -52,6 +53,8 @@ export interface Provider {
 	/** Validate a target config. Returns an error message if invalid, null if valid.
 	 *  Omit for providers that accept any model (runtime validation only). */
 	validateTarget?(config: ModelConfig): string | null;
+	/** Validate a prompt before a paid cohort is created. */
+	validatePrompt?(prompt: string): string | null;
 	/** Verify an otherwise valid target before a paid batch is created. */
 	preflightTarget?(config: ModelConfig): Promise<string | null>;
 

@@ -38,32 +38,32 @@ describe("DeviceStorage", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260821-localpc-v6",
+				adapterVersion: "qwen-web-20260822-localpc-v10",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260821-localpc-v10",
+				adapterVersion: "kimi-web-20260822-localpc-v13",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "wenxin-web-20260821-localpc-v7",
+				adapterVersion: "wenxin-web-20260822-localpc-v12",
 				activeConcurrency: 0,
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260821-localpc-v6",
+				adapterVersion: "yuanbao-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260822-localpc-v2",
+				adapterVersion: "zhipu-web-20260822-localpc-v5",
 				activeConcurrency: 0,
 			},
 		});
@@ -81,7 +81,7 @@ describe("DeviceStorage", () => {
 					},
 					"deepseek.consumer_web": {
 						status: "unavailable",
-						adapterVersion: "deepseek-web-20260821-localpc-v8",
+						adapterVersion: "deepseek-web-20260822-localpc-v9",
 						activeConcurrency: 0,
 					},
 				},
@@ -95,7 +95,7 @@ describe("DeviceStorage", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 			},
 		});
 	});
@@ -155,7 +155,7 @@ describe("DeviceStorage", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 		});
@@ -175,7 +175,7 @@ describe("DeviceStorage", () => {
 		await expect(storage.loadSurfaceReadiness()).resolves.toMatchObject({
 			"deepseek.consumer_web": {
 				status: "adapter_incompatible",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 			},
 		});
 	});

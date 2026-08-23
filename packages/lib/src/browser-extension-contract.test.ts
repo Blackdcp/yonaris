@@ -55,18 +55,18 @@ describe("browser extension contract", () => {
 			"deepseek.consumer_web",
 			"browser_extension.deepseek",
 			"https://chat.deepseek.com/",
-			"deepseek-web-20260821-localpc-v8",
+			"deepseek-web-20260822-localpc-v9",
 		],
-		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260821-localpc-v6"],
-		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260821-localpc-v10"],
-		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260821-localpc-v7"],
+		["qwen.consumer_web", "browser_extension.qwen", "https://www.qianwen.com/", "qwen-web-20260822-localpc-v10"],
+		["kimi.consumer_web", "browser_extension.kimi", "https://www.kimi.com/", "kimi-web-20260822-localpc-v13"],
+		["wenxin.consumer_web", "browser_extension.wenxin", "https://wenxin.baidu.com/", "wenxin-web-20260822-localpc-v12"],
 		[
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
-			"yuanbao-web-20260821-localpc-v6",
+			"yuanbao-web-20260822-localpc-v11",
 		],
-		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v2"],
+		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v5"],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {
 		expect(browserExtensionSurfaceDefinition(surface)).toEqual({
 			key: surface,
@@ -196,7 +196,7 @@ describe("browser extension contract", () => {
 		expect(() =>
 			assertExtensionEvidenceProtocol({
 				captureRouteKey: "browser_extension.deepseek",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				minimumArtifacts: 1,
 				kinds: ["screenshot"],
 				mediaTypes: ["image/jpeg"],

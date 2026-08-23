@@ -86,7 +86,7 @@ describe("Browser Runner response snapshot policy", () => {
 			answerText: "PPIO 提供云服务。",
 			citations: [],
 			webQueries: ["PPIO 云服务"],
-			webSearchEnabled: true,
+			queryAvailability: "exposed",
 			brandMentioned: true,
 			competitorsMentioned: [],
 			channel: "doubao.consumer_web",
@@ -102,12 +102,23 @@ describe("Browser Runner response snapshot policy", () => {
 				sha256: "a".repeat(64),
 				bytes: 512_000,
 			},
-			captureDiagnostics: { answerCount: 1, queryCount: 1, citationCount: 0, completionCount: 1 },
+			captureDiagnostics: {
+				answerCount: 1,
+				queryCount: 1,
+				citationCount: 0,
+				completionCount: 1,
+				extractorVersion: "doubao-search-evidence.v1",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 1,
+				citationCandidateCount: 0,
+			},
 		});
 
 		expect(draft).toMatchObject({
 			schemaVersion: "response-snapshot.v2",
 			contentSource: "rendered_from_structured_response",
+			queryAvailability: "available",
 			visualEvidence: { artifactId: "11111111-1111-4111-8111-111111111111" },
 		});
 		expect(draft).not.toHaveProperty("answerHtml");
@@ -125,7 +136,7 @@ describe("Browser Runner response snapshot policy", () => {
 				answerText: `PPIO response from ${key}`,
 				citations: [],
 				webQueries: [],
-				webSearchEnabled: true,
+				queryAvailability: "unknown",
 				brandMentioned: true,
 				competitorsMentioned: [],
 				channel: key,
@@ -141,18 +152,74 @@ describe("Browser Runner response snapshot policy", () => {
 					sha256: "a".repeat(64),
 					bytes: 512_000,
 				},
-				captureDiagnostics: { answerCount: 1, queryCount: 0, citationCount: 0, completionCount: 1 },
+				captureDiagnostics: {
+					answerCount: 1,
+					queryCount: 0,
+					citationCount: 0,
+					completionCount: 1,
+					extractorVersion: `${adapterVersion}.search-evidence.v1`,
+					evidenceSource: "none",
+					searchBlockCount: 0,
+					queryCandidateCount: 0,
+					citationCandidateCount: 0,
+				},
 			});
 
 			expect(draft).toMatchObject({
 				schemaVersion: "response-snapshot.v2",
 				channel: key,
 				modelVersion: adapterVersion,
+				queryAvailability: "unknown",
 				visualEvidence: { artifactId: "11111111-1111-4111-8111-111111111111" },
 			});
 			expect(draft).not.toHaveProperty("answerHtml");
 		},
 	);
+
+	it.each([
+		["not_searched", "not_searched"],
+		["unknown", "unknown"],
+	] as const)("preserves %s as a distinct v2 query availability state", (queryAvailability, expected) => {
+		const draft = buildBrowserRunnerResponseSnapshotDraftV2({
+			promptRunId: "55555555-5555-4555-8555-555555555555",
+			brandId: "ppio",
+			scopeId: "22222222-2222-4222-8222-222222222222",
+			promptId: "33333333-3333-4333-8333-333333333333",
+			promptText: "PPIO 是什么？",
+			answerText: "PPIO 提供云服务。",
+			citations: [],
+			webQueries: [],
+			queryAvailability,
+			brandMentioned: true,
+			competitorsMentioned: [],
+			channel: "doubao.consumer_web",
+			modelVersion: "doubao-web-20260821-localpc-v13",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			observedAt: new Date("2026-08-21T01:02:03.000Z"),
+			adapterVersion: "doubao-web-20260821-localpc-v13",
+			visualEvidence: {
+				artifactId: "11111111-1111-4111-8111-111111111111",
+				mediaType: "image/jpeg",
+				sha256: "a".repeat(64),
+				bytes: 512_000,
+			},
+			captureDiagnostics: {
+				answerCount: 1,
+				queryCount: 0,
+				citationCount: 0,
+				completionCount: 1,
+				extractorVersion: "doubao-search-evidence.v1",
+				evidenceSource: "none",
+				searchBlockCount: 0,
+				queryCandidateCount: 0,
+				citationCandidateCount: 0,
+			},
+		});
+
+		expect(draft.queryAvailability).toBe(expected);
+	});
 
 	it("keeps the successful observation successful when snapshot archiving fails", async () => {
 		const record = vi.fn().mockRejectedValue(new Error("disk unavailable"));

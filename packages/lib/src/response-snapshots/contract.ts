@@ -23,6 +23,7 @@ export type ResponseSnapshotContentSource =
 export type ResponseSnapshotCaptureMethod =
 	| "brightdata_dataset"
 	| "brightdata_serp"
+	| "dataforseo_api"
 	| "consumer_web_browser"
 	| "historical_reconstruction";
 
@@ -62,14 +63,23 @@ export type ResponseSnapshotCaptureDiagnostics = {
 	queryCount: number;
 	citationCount: number;
 	completionCount: 1;
+	extractorVersion: string;
+	evidenceSource: "dom" | "network" | "dom_and_network" | "none";
+	searchBlockCount: number;
+	queryCandidateCount: number;
+	citationCandidateCount: number;
 };
 
-export type ResponseSnapshotDraftV2 = Omit<ResponseSnapshotDraft, "answerHtml" | "contentSource"> & {
+export type ResponseSnapshotDraftV2 = Omit<
+	ResponseSnapshotDraft,
+	"answerHtml" | "contentSource" | "queryAvailability"
+> & {
 	schemaVersion: "response-snapshot.v2";
 	contentSource: "rendered_from_structured_response";
 	visualEvidence: ResponseSnapshotVisualEvidence;
 	adapterVersion: string;
 	captureDiagnostics: ResponseSnapshotCaptureDiagnostics;
+	queryAvailability: "available" | "unavailable" | "not_applicable" | "not_searched" | "unknown";
 	answerHtml?: never;
 };
 
@@ -278,7 +288,9 @@ export function prepareResponseSnapshotBundle(
 			};
 }
 
-function normalizeDraft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2) {
+function normalizeDraft(
+	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2,
+): ResponseSnapshotDraft | ResponseSnapshotDraftV2 {
 	const runId = requiredText(draft.runId, "runId", 100);
 	const brandId = requiredText(draft.brandId, "brandId", 300);
 	const promptId = requiredText(draft.promptId, "promptId", 100);
@@ -346,15 +358,15 @@ function normalizeDraft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2) 
 		.sort((left, right) => left.citationIndex - right.citationIndex);
 
 	const common = {
-		...draft,
 		runId,
 		brandId,
 		scopeId: draft.scopeId === null ? null : requiredText(draft.scopeId, "scopeId", 100),
 		promptId,
 		promptText,
-		answerHtml,
+		answerText: draft.answerText,
 		citations,
 		webQueries: draft.webQueries.map((query) => requiredText(query, "webQueries", 2_000)),
+		brandMentioned: draft.brandMentioned,
 		competitorsMentioned: [...new Set(draft.competitorsMentioned.map((name) => requiredText(name, "competitor", 300)))],
 		channel: requiredText(draft.channel, "channel", 100),
 		modelVersion: requiredText(draft.modelVersion, "modelVersion", 200),
@@ -362,17 +374,26 @@ function normalizeDraft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2) 
 		locale: requiredText(draft.locale, "locale", 50),
 		timezone: requiredText(draft.timezone, "timezone", 100),
 		observedAt: observedAt.toISOString(),
+		captureMethod: draft.captureMethod,
+		sourcePayloadSha256: draft.sourcePayloadSha256,
 	};
-	return v2
-		? {
-				...common,
-				schemaVersion: "response-snapshot.v2" as const,
-				contentSource: "rendered_from_structured_response" as const,
-				visualEvidence: visualEvidence as ResponseSnapshotVisualEvidence,
-				adapterVersion: adapterVersion as string,
-				captureDiagnostics: captureDiagnostics as ResponseSnapshotCaptureDiagnostics,
-			}
-		: common;
+	if (v2) {
+		return {
+			...common,
+			schemaVersion: "response-snapshot.v2" as const,
+			contentSource: "rendered_from_structured_response" as const,
+			queryAvailability: draft.queryAvailability,
+			visualEvidence: visualEvidence as ResponseSnapshotVisualEvidence,
+			adapterVersion: adapterVersion as string,
+			captureDiagnostics: captureDiagnostics as ResponseSnapshotCaptureDiagnostics,
+		};
+	}
+	return {
+		...common,
+		answerHtml,
+		contentSource: draft.contentSource,
+		queryAvailability: draft.queryAvailability,
+	};
 }
 
 function isV2Draft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2): draft is ResponseSnapshotDraftV2 {
@@ -408,7 +429,14 @@ function normalizeCaptureDiagnostics(
 		!Number.isInteger(value.queryCount) ||
 		value.queryCount !== draft.webQueries.length ||
 		!Number.isInteger(value.citationCount) ||
-		value.citationCount !== draft.citations.length
+		value.citationCount !== draft.citations.length ||
+		typeof value.extractorVersion !== "string" ||
+		!value.extractorVersion.trim() ||
+		value.extractorVersion.length > 100 ||
+		!["dom", "network", "dom_and_network", "none"].includes(value.evidenceSource) ||
+		![value.searchBlockCount, value.queryCandidateCount, value.citationCandidateCount].every(
+			(count) => Number.isInteger(count) && count >= 0 && count <= 10_000,
+		)
 	) {
 		throw new ResponseSnapshotValidationError("captureDiagnostics must match the structured snapshot counts");
 	}

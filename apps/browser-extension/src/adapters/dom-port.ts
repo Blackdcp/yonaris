@@ -276,7 +276,9 @@ class DocumentDomPort implements ConsumerDomPort {
 
 	async readAnswer(request: AnswerReadRequest): Promise<AnswerDomSnapshot> {
 		const answer = this.#at(request.answerSelector, request.answerIndex);
-		const structuredSearch = await readStructuredSearchEvidence(answer, request.searchEvidence);
+		const structuredSearch = request.deferSearchEvidence
+			? { searchUsedCount: 0, webQueries: [], citations: [] }
+			: await readStructuredSearchEvidence(answer, request.searchEvidence);
 		const answerSnapshot = snapshotVisibleAnswer(answer);
 		return {
 			text: answerSnapshot.text,
@@ -284,14 +286,15 @@ class DocumentDomPort implements ConsumerDomPort {
 			evidenceViewportRect: readEvidenceViewportRect(this.#document, answer, request),
 			searchUsedCount: structuredSearch.searchUsedCount || scopedVisibleCount(answer, request.searchUsedSelector),
 			searchNotUsedCount: scopedVisibleCount(answer, request.searchNotUsedSelector),
-			webQueries: request.searchEvidence
-				? structuredSearch.webQueries
-				: request.queryItemSelector
-					? this.#selectWithin(answer, request.queryItemSelector).filter(isDomElementVisible).map(visibleText)
-					: [],
+			webQueries:
+				request.searchEvidence && !request.deferSearchEvidence
+					? structuredSearch.webQueries
+					: request.queryItemSelector
+						? this.#selectWithin(answer, request.queryItemSelector).filter(isDomElementVisible).map(visibleText)
+						: [],
 			citations: [
 				...structuredSearch.citations,
-				...(!request.searchEvidence && request.citationLinkSelector
+				...(request.citationLinkSelector && (!request.searchEvidence || request.deferSearchEvidence)
 					? this.#selectWithin(answer, request.citationLinkSelector)
 							.filter(
 								(element): element is HTMLAnchorElement =>
@@ -303,6 +306,14 @@ class DocumentDomPort implements ConsumerDomPort {
 							}))
 					: []),
 			],
+			searchEvidenceContext: {
+				acceptedAnswer: answer,
+				document: this.#document,
+				isVisible: isSearchEvidenceElementVisible,
+				readVisibleText: readVisibleSearchEvidenceText,
+				readStructuredEvidence: (contract) => readStructuredSearchEvidence(answer, contract),
+				wait: (milliseconds) => this.wait(milliseconds),
+			},
 		};
 	}
 

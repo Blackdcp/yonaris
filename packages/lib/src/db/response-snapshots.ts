@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { WEB_QUERIES_UNAVAILABLE } from "../constants";
 import type {
 	PreparedResponseSnapshotBundle,
 	ResponseSnapshotCaptureMethod,
@@ -352,7 +353,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				.where(eq(responseSnapshotOutbox.snapshotId, snapshotId));
 			return {
 				reservation: { snapshotId, revision: snapshot.revision, expiresAt: snapshot.expiresAt },
-					bundle: hydratePreparedResponseSnapshotBundle(snapshot, outbox),
+				bundle: hydratePreparedResponseSnapshotBundle(snapshot, outbox),
 				outboxExpiresAt: outbox.expiresAt,
 				claimedAt: now,
 			};
@@ -575,6 +576,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 				surfaceTargetKey: promptRuns.surfaceTargetKey,
 				modelVersion: promptRuns.version,
 				webSearchEnabled: promptRuns.webSearchEnabled,
+				webSearchObserved: promptRuns.webSearchObserved,
 				observedAt: promptRuns.observedAt,
 				market: measurementScopes.market,
 				locale: measurementScopes.locale,
@@ -624,26 +626,29 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 						)
 						.orderBy(asc(evidenceArtifacts.createdAt), asc(evidenceArtifacts.id))
 				: [];
+		const queryEvidence = resolveReconstructedQueryEvidence(
+			row.webQueries,
+			row.webSearchEnabled,
+			row.webSearchObserved,
+		);
 		return buildReconstructedResponseSnapshotDraft({
 			base: {
-			runId: row.runId,
-			brandId: row.brandId,
-			scopeId: row.scopeId,
-			promptId: row.promptId,
-			promptText: row.promptText,
-			answerText: row.answerText,
-			citations: citationRows,
-			webQueries: row.webQueries,
-			queryAvailability:
-				row.webQueries.length > 0 ? "available" : row.webSearchEnabled ? "unavailable" : "not_applicable",
-			brandMentioned: row.brandMentioned,
-			competitorsMentioned: row.competitorsMentioned,
-			channel: row.surfaceTargetKey ?? row.channel,
-			modelVersion: row.modelVersion,
-			market: row.market ?? "ZZ",
-			locale: row.locale ?? "und",
-			timezone: row.timezone ?? "UTC",
-			observedAt: row.observedAt.toISOString(),
+				runId: row.runId,
+				brandId: row.brandId,
+				scopeId: row.scopeId,
+				promptId: row.promptId,
+				promptText: row.promptText,
+				answerText: row.answerText,
+				citations: citationRows,
+				...queryEvidence,
+				brandMentioned: row.brandMentioned,
+				competitorsMentioned: row.competitorsMentioned,
+				channel: row.surfaceTargetKey ?? row.channel,
+				modelVersion: row.modelVersion,
+				market: row.market ?? "ZZ",
+				locale: row.locale ?? "und",
+				timezone: row.timezone ?? "UTC",
+				observedAt: row.observedAt.toISOString(),
 			},
 			captureMetadata: row.captureMetadata,
 			visualEvidence: visualEvidenceRows,
@@ -651,10 +656,26 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 	},
 };
 
+export function resolveReconstructedQueryEvidence(
+	webQueries: readonly string[],
+	webSearchEnabled: boolean,
+	webSearchObserved: boolean | null,
+): Pick<ResponseSnapshotDraft, "webQueries" | "queryAvailability"> {
+	if (!webSearchEnabled || webSearchObserved === false) {
+		return { webQueries: [], queryAvailability: "not_applicable" };
+	}
+	if (webQueries.includes(WEB_QUERIES_UNAVAILABLE) || webQueries.length === 0) {
+		return { webQueries: [], queryAvailability: "unavailable" };
+	}
+	return { webQueries: [...webQueries], queryAvailability: "available" };
+}
+
 type ReconstructedResponseSnapshotBase = Omit<
 	ResponseSnapshotDraft,
-	"answerHtml" | "captureMethod" | "contentSource" | "sourcePayloadSha256"
->;
+	"answerHtml" | "captureMethod" | "contentSource" | "queryAvailability" | "sourcePayloadSha256"
+> & {
+	queryAvailability: ResponseSnapshotDraftV2["queryAvailability"];
+};
 
 type ReconstructedVisualEvidence = {
 	artifactId: string;
@@ -669,14 +690,28 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 	visualEvidence: readonly ReconstructedVisualEvidence[];
 }): ResponseSnapshotDraft | ResponseSnapshotDraftV2 {
 	if (!isV2RecoveryMetadata(input.captureMetadata)) {
+		const legacyQueryAvailability: ResponseSnapshotDraft["queryAvailability"] = (() => {
+			switch (input.base.queryAvailability) {
+				case "available":
+				case "unavailable":
+				case "not_applicable":
+					return input.base.queryAvailability;
+				default:
+					throw new ResponseSnapshotStateError(
+						"Legacy snapshot recovery cannot represent structured query availability",
+					);
+			}
+		})();
 		return {
 			...input.base,
+			queryAvailability: legacyQueryAvailability,
 			captureMethod: "historical_reconstruction",
 			contentSource: "reconstructed_from_historical_run",
 		};
 	}
 	const adapterVersion = input.captureMetadata.adapterVersion;
 	const captureDiagnostics = input.captureMetadata.captureDiagnostics;
+	const queryAvailability = normalizeRecoveryQueryAvailability(input.captureMetadata.queryAvailability, input.base);
 	if (typeof adapterVersion !== "string" || !adapterVersion.trim() || adapterVersion.length > 100) {
 		throw new ResponseSnapshotStateError("Structured snapshot recovery metadata has no valid adapter version");
 	}
@@ -699,6 +734,7 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 	}
 	return {
 		...input.base,
+		queryAvailability,
 		schemaVersion: "response-snapshot.v2",
 		captureMethod: "consumer_web_browser",
 		contentSource: "rendered_from_structured_response",
@@ -716,6 +752,7 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 function isV2RecoveryMetadata(value: unknown): value is {
 	responseSnapshotSchemaVersion: "response-snapshot.v2";
 	adapterVersion?: unknown;
+	queryAvailability?: unknown;
 	captureDiagnostics?: unknown;
 } {
 	return (
@@ -726,6 +763,18 @@ function isV2RecoveryMetadata(value: unknown): value is {
 	);
 }
 
+function normalizeRecoveryQueryAvailability(
+	value: unknown,
+	base: Pick<ReconstructedResponseSnapshotBase, "webQueries" | "queryAvailability">,
+): ResponseSnapshotDraftV2["queryAvailability"] {
+	if (value === undefined) return base.queryAvailability;
+	if (value === "exposed" && base.webQueries.length > 0) return "available";
+	if (value === "unavailable" && base.webQueries.length === 0) return "unavailable";
+	if (value === "not_searched" && base.webQueries.length === 0) return "not_searched";
+	if (value === "unknown" && base.webQueries.length === 0) return "unknown";
+	throw new ResponseSnapshotStateError("Structured snapshot recovery query availability is invalid");
+}
+
 function isValidCaptureDiagnostics(
 	value: unknown,
 	base: Pick<ReconstructedResponseSnapshotBase, "webQueries" | "citations">,
@@ -733,11 +782,18 @@ function isValidCaptureDiagnostics(
 	if (typeof value !== "object" || value === null) return false;
 	const diagnostics = value as Record<string, unknown>;
 	return (
-		Object.keys(diagnostics).length === 4 &&
+		Object.keys(diagnostics).length === 9 &&
 		diagnostics.answerCount === 1 &&
 		diagnostics.completionCount === 1 &&
 		diagnostics.queryCount === base.webQueries.length &&
-		diagnostics.citationCount === base.citations.length
+		diagnostics.citationCount === base.citations.length &&
+		typeof diagnostics.extractorVersion === "string" &&
+		diagnostics.extractorVersion.trim().length > 0 &&
+		diagnostics.extractorVersion.length <= 100 &&
+		["dom", "network", "dom_and_network", "none"].includes(String(diagnostics.evidenceSource)) &&
+		[diagnostics.searchBlockCount, diagnostics.queryCandidateCount, diagnostics.citationCandidateCount].every(
+			(count) => Number.isInteger(count) && Number(count) >= 0 && Number(count) <= 10_000,
+		)
 	);
 }
 

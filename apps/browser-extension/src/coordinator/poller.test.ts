@@ -5,6 +5,28 @@ import { pollStartedWork } from "./poller";
 import { claimedTask } from "./test-fixture";
 
 describe("pollStartedWork", () => {
+	test("drains every started task for a ready surface after one explicit work check", async () => {
+		const runTaskIds: string[] = [];
+		const queue = [
+			claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" }),
+			claimedTask({ taskId: "doubao-2", surfaceTargetKey: "doubao.consumer_web" }),
+			claimedTask({ taskId: "doubao-3", surfaceTargetKey: "doubao.consumer_web" }),
+		];
+
+		const result = await pollStartedWork({
+			brandIds: ["ppio"],
+			surfaces: ["doubao.consumer_web"],
+			claim: async () => queue.shift() ?? null,
+			run: async (claim) => {
+				runTaskIds.push(claim.taskId);
+				return { status: "succeeded" as const };
+			},
+		});
+
+		expect(runTaskIds).toEqual(["doubao-1", "doubao-2", "doubao-3"]);
+		expect(result.bySurface["doubao.consumer_web"].succeeded).toBe(3);
+	});
+
 	test("runs claimed tasks sequentially across every ready surface", async () => {
 		const runTaskIds: string[] = [];
 		const claimSurfaces: string[] = [];
@@ -33,7 +55,12 @@ describe("pollStartedWork", () => {
 		});
 
 		expect(runTaskIds).toEqual(["doubao-1", "deepseek-1"]);
-		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web"]);
+		expect(claimSurfaces).toEqual([
+			"doubao.consumer_web",
+			"doubao.consumer_web",
+			"deepseek.consumer_web",
+			"deepseek.consumer_web",
+		]);
 		expect(maximumActive).toBe(1);
 		expect(result.bySurface["doubao.consumer_web"].succeeded).toBe(1);
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
@@ -62,7 +89,7 @@ describe("pollStartedWork", () => {
 			now: () => 1_000,
 		});
 
-		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web"]);
+		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"]);
 		expect(result.bySurface["doubao.consumer_web"][summaryKey]).toBe(1);
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
 		expect(queues["deepseek.consumer_web"]).toHaveLength(0);
@@ -70,18 +97,19 @@ describe("pollStartedWork", () => {
 
 	test("continues the global poll when claiming one surface fails", async () => {
 		const claimSurfaces: string[] = [];
+		const deepseek = [claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" })];
 		const result = await pollStartedWork({
 			brandIds: ["stepfun"],
 			surfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 			claim: async (_brandId, surface) => {
 				claimSurfaces.push(surface);
 				if (surface === "doubao.consumer_web") throw new Error("Portal timeout");
-				return claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" });
+				return deepseek.shift() ?? null;
 			},
 			run: async () => ({ status: "succeeded" as const }),
 		});
 
-		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web"]);
+		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"]);
 		expect(result.bySurface["doubao.consumer_web"].incomplete).toBe(1);
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
 	});
@@ -99,7 +127,7 @@ describe("pollStartedWork", () => {
 			run: async () => ({ status: "succeeded" as const }),
 		});
 
-		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web"]);
+		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"]);
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
 	});
 

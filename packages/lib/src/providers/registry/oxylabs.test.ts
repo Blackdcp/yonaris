@@ -68,6 +68,7 @@ describe("oxylabs provider", () => {
 		expect(result.textContent).toContain("Sonos Era 300");
 		expect(result.citations).toHaveLength(1);
 		expect(result.webQueries).toEqual(["recent speaker reviews"]);
+		expect(result.webSearchObserved).toBe(true);
 		expect(result.modelVersion).toBe("gpt-5");
 	});
 
@@ -106,6 +107,7 @@ describe("oxylabs provider", () => {
 
 		expect(fetchMock).toHaveBeenCalledTimes(5);
 		expect(result.textContent).toContain("Sonos Era 300");
+		expect(result.webSearchObserved).toBe(true);
 	});
 
 	it("fails a faulted asynchronous job without requesting results", async () => {

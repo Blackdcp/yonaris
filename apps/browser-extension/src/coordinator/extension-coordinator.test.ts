@@ -21,7 +21,7 @@ describe("ExtensionCoordinator", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 		});
@@ -63,7 +63,7 @@ describe("ExtensionCoordinator", () => {
 			},
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 		});
@@ -147,7 +147,7 @@ describe("ExtensionCoordinator", () => {
 		await storage.saveSurfaceReadiness({
 			"deepseek.consumer_web": {
 				status: "ready",
-				adapterVersion: "deepseek-web-20260821-localpc-v8",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
 				activeConcurrency: 0,
 			},
 		});

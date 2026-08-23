@@ -41,8 +41,16 @@ export function fakeAdapter(events: string[], collectFailure?: Error): ConsumerW
 		pageUrl: "https://chat.deepseek.com/a/chat/s/test-session",
 		observedAt: "2026-08-17T00:00:00.000Z",
 		webSearchObserved: null,
+		queryAvailability: "unknown",
 		webQueries: [],
 		citations: [],
+		searchEvidenceDiagnostics: {
+			extractorVersion: "deepseek-test-evidence-v1",
+			evidenceSource: "none",
+			searchBlockCount: 0,
+			queryCandidateCount: 0,
+			citationCandidateCount: 0,
+		},
 		adapterVersion: "deepseek-test-v1",
 	};
 	return {

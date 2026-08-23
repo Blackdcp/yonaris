@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "Yonaris Browser Runner",
 	"description": "Administrator-operated domestic AI monitoring for Yonaris.",
-	"version": "0.3.15",
+	"version": "0.3.21",
 	"minimum_chrome_version": "120",
 	"permissions": ["storage", "alarms", "tabs", "scripting", "notifications"],
 	"host_permissions": [
