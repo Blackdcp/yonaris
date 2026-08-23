@@ -116,25 +116,6 @@
 	text-transform: uppercase;
 }
 
-.marketing-signal-path {
-	stroke-dasharray: 1900;
-	stroke-dashoffset: 1900;
-	animation: marketing-path-reveal 1.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.marketing-condition-markers path,
-.marketing-evidence-anchors path {
-	stroke-dasharray: 120;
-	stroke-dashoffset: 120;
-	animation: marketing-path-reveal 720ms 580ms ease-out forwards;
-}
-
-@keyframes marketing-path-reveal {
-	to {
-		stroke-dashoffset: 0;
-	}
-}
-
 @utility font-titan-one {
 	font-family: var(--font-titan-one);
 }
@@ -245,13 +226,4 @@
 .site-archive-context p {
 	max-width: 72ch;
 	margin: 0.35rem 0 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	.marketing-signal-path,
-	.marketing-condition-markers path,
-	.marketing-evidence-anchors path {
-		animation: none;
-		stroke-dashoffset: 0;
-	}
 }

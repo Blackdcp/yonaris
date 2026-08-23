@@ -118,17 +118,10 @@ describe("site stylesheet boundaries", () => {
 		}
 	});
 
-	it("uses only approved palette tokens and no gradients across first-party site styles and marketing consumers", () => {
+	it("uses only approved palette tokens and no gradients across first-party site styles and current pages", () => {
 		const paletteDefinition = join(sourceRoot, "styles/site-core.css");
-		const legacySignalField = join(sourceRoot, "components/marketing/signal-field.tsx");
-		const approvedPaletteColors = new Set(
-			[...readFileSync(paletteDefinition, "utf8").matchAll(/--yonaris-[\w-]+:\s*(#[\da-f]{6})/gi)].map((match) =>
-				match[1].toLowerCase(),
-			),
-		);
 		const files = [
 			...filesUnder("styles", [".css"]),
-			...filesUnder("components/marketing", [".ts", ".tsx"]),
 			...filesUnder("components/site/pages", [".ts", ".tsx"]),
 			join(sourceRoot, "styles.css"),
 		];
@@ -137,11 +130,7 @@ describe("site stylesheet boundaries", () => {
 			const source = readFileSync(file, "utf8");
 			expect(source, file).not.toMatch(/--yonaris-(?:surface|signal-strong)/);
 			expect(source, file).not.toMatch(/(?:linear|radial|conic)-gradient/i);
-			if (file === legacySignalField) {
-				for (const [color] of source.matchAll(/#[\da-f]{6}\b/gi)) {
-					expect(approvedPaletteColors, `${file}: ${color}`).toContain(color.toLowerCase());
-				}
-			} else if (file !== paletteDefinition) {
+			if (file !== paletteDefinition) {
 				expect(source, file).not.toMatch(/#[\da-f]{3,8}\b/i);
 				expect(source, file).not.toMatch(/(?:rgb|hsl|oklab|oklch|lab|lch)a?\(/i);
 			}
@@ -153,6 +142,22 @@ describe("site stylesheet boundaries", () => {
 
 		for (const token of ["ink", "paper", "slate", "stone", "mist", "signal", "blue-gray"]) {
 			expect(core).toContain(`--yonaris-${token}:`);
+		}
+		for (const retainedSelector of [
+			".marketing-site",
+			".marketing-display",
+			".marketing-kicker",
+			".marketing-paper-focus",
+		]) {
+			expect(core).toContain(retainedSelector);
+		}
+		for (const retiredSelector of [
+			".marketing-signal-path",
+			".marketing-condition-markers",
+			".marketing-evidence-anchors",
+			"marketing-path-reveal",
+		]) {
+			expect(core).not.toContain(retiredSelector);
 		}
 		expect(core).not.toContain("--yonaris-surface:");
 		expect(core).not.toContain("--yonaris-signal-strong:");

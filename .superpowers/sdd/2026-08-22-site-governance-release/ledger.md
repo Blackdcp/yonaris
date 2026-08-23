@@ -115,3 +115,28 @@ Independent final review reran the complete G4 file (`10/10`), unit/types/manife
 - [x] Run full unit/public/visual/type/manifest/build/Biome/diff gates.
 - [x] Complete independent review and fix every Critical/Important finding.
 - [x] Commit the exact G4 scope without push/deploy.
+
+## G5 — Split marketing foundation cleanup
+
+**Status:** Complete, fully verified, independently reviewed, and ready for the atomic G5 commit.
+
+Exact base: `d67b00f23fca8c1a8adf03f435da27d452e84377`.
+
+A repository-aware scanner now enumerates cached and untracked `apps/www/src` files through the exact NUL-delimited Git contract, audits only existing production TypeScript, and emits stable normalized path/line diagnostics for retired definitions, imports, identifiers, helpers, types, module names, and page keys. Its seven fixture cases cover untracked files, multiple violations, deterministic ordering, slash normalization, exact redirect exemptions, generated/test exclusions, retired definitions, and cached deletions.
+
+The final scanner recorded `117` violations against the exact deletion-before base. They proved the approved cleanup boundary: 21 retired production modules, the colocated obsolete marketing-content test, and three dead FAQ collections. The live post-cleanup audit is GREEN. `faqs.ts` now retains only `FaqItem` and `DIRECTORY_FAQS`; only zero-consumer signal selectors and their keyframe were removed from `site-core.css`.
+
+Post-G4 proof overruled the stale instruction to remove `.marketing-display`: the governed 404 consumes it, a focused stylesheet assertion failed without it, and restoring the exact selector returned the suite GREEN. The retained selector preserves the protected G4 surface and the zero-visual-delta contract. No snapshot was updated.
+
+Final gates: scanner fixture `7/7`; WWW unit `29 files / 219`; public Playwright `186/186` at four workers; unchanged visual Playwright `118/118` at one worker; WWW/E2E typechecks; manifest; production build; authored Biome; diff check; zero legacy grep. Independent review's sole Important finding—the missing FAQ/localized-path identifier guard—was closed through a focused RED/GREEN fixture and exact-base RED regeneration. Final narrow re-review returned PASS with no remaining P0/P1/P2.
+
+### Execution checklist
+
+- [x] Verify exact clean base and linked-worktree isolation.
+- [x] Read AGENTS, approved spec/plan, ledger, G4 report, and binding G5 preflight.
+- [x] Implement scanner fixtures first and observe the absent-scanner RED.
+- [x] Capture the complete repository RED before deleting any proven legacy source.
+- [x] Delete only audit-proven retired files and reduce FAQ/CSS surfaces without visual change.
+- [x] Run live scanner GREEN plus full unit/type/build/manifest/public/visual/Biome/diff/zero-grep gates.
+- [x] Complete independent review and close every Critical/Important finding through RED/GREEN.
+- [x] Commit the exact G5 scope without amend, push, deploy, or G6 work.
