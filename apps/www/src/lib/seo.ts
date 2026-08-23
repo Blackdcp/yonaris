@@ -14,6 +14,12 @@ export function canonicalUrl(path: string): string | undefined {
 	return SITE_URL ? `${SITE_URL}${normalizedPath}` : undefined;
 }
 
+export function siteHref(path: string): string {
+	if (path.startsWith("http")) return path;
+	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+	return canonicalUrl(normalizedPath) ?? normalizedPath;
+}
+
 export function ogMeta({
 	title,
 	description,
@@ -31,7 +37,9 @@ export function ogMeta({
 }) {
 	const url = canonicalUrl(path);
 	const resolvedImage = image ?? getMarketingOgImage({ title, description });
-	const absoluteImage = resolvedImage.startsWith("http") ? resolvedImage : canonicalUrl(resolvedImage);
+	const absoluteImage = resolvedImage.startsWith("http")
+		? resolvedImage
+		: (canonicalUrl(resolvedImage) ?? resolvedImage);
 
 	return [
 		{ property: "og:title", content: title },
@@ -81,17 +89,6 @@ export function organizationJsonLd() {
 		description: SITE_DESCRIPTION,
 		...(SITE_URL ? { url: SITE_URL } : {}),
 		...(SITE_LOGO_URL ? { logo: SITE_LOGO_URL } : {}),
-	});
-}
-
-export function softwareApplicationJsonLd(description = SITE_DESCRIPTION) {
-	return jsonLd({
-		"@type": "SoftwareApplication",
-		name: SITE_NAME,
-		description,
-		applicationCategory: "BusinessApplication",
-		operatingSystem: "Any",
-		...(SITE_URL ? { url: SITE_URL } : {}),
 	});
 }
 
@@ -193,31 +190,6 @@ export function itemListJsonLd(items: { name: string; path?: string; url?: strin
 					? { url: item.url.startsWith("http") ? item.url : canonicalUrl(item.url) }
 					: {}),
 			...(item.description ? { description: item.description } : {}),
-		})),
-	});
-}
-
-/** The site's entry for a comparison ItemList. */
-export const ELMO_LISTING = { name: SITE_NAME, ...(SITE_URL ? { url: SITE_URL } : {}) };
-
-/**
- * ItemList of the software products weighed on a comparison page, each as a
- * SoftwareApplication. Honest structured data for "X vs Y" and "X vs Y vs Z"
- * pages: it names the tools compared so answer engines can parse the matchup,
- * without asserting prices or ratings we don't have for other vendors.
- */
-export function comparisonJsonLd(tools: { name: string; url?: string }[]) {
-	return jsonLd({
-		"@type": "ItemList",
-		itemListElement: tools.map((tool, index) => ({
-			"@type": "ListItem",
-			position: index + 1,
-			item: {
-				"@type": "SoftwareApplication",
-				name: tool.name,
-				applicationCategory: "BusinessApplication",
-				...(tool.url ? { url: tool.url } : {}),
-			},
 		})),
 	});
 }

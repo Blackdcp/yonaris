@@ -1,10 +1,8 @@
 import geistSans400Data from "virtual:font/geist-sans-400";
 import geistSans500Data from "virtual:font/geist-sans-500";
-import titanOne400Data from "virtual:font/titan-one-400";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { renderOgPng } from "@workspace/og/rasterize";
-import { renderOgImage } from "@workspace/og/render";
-import { SITE_NAME } from "@/lib/seo";
+import { renderDocsOgImage } from "@/lib/docs-og";
 import { source } from "@/lib/source";
 
 export const Route = createFileRoute("/og/docs/$")({
@@ -15,37 +13,24 @@ export const Route = createFileRoute("/og/docs/$")({
 				const page = source.getPage(slugs);
 				if (!page) throw notFound();
 
-				const png = await renderOgPng(
-					renderOgImage({
-						appName: SITE_NAME,
-						title: page.data.title,
-						description: page.data.description,
-					}),
-					{
-						width: 1200,
-						height: 630,
-						fonts: [
-							{
-								name: "Titan One",
-								data: titanOne400Data,
-								style: "normal" as const,
-								weight: 400 as const,
-							},
-							{
-								name: "Geist Sans",
-								data: geistSans400Data,
-								style: "normal" as const,
-								weight: 400 as const,
-							},
-							{
-								name: "Geist Sans",
-								data: geistSans500Data,
-								style: "normal" as const,
-								weight: 500 as const,
-							},
-						],
-					},
-				);
+				const png = await renderOgPng(renderDocsOgImage(page.data.title ?? "Documentation"), {
+					width: 1200,
+					height: 630,
+					fonts: [
+						{
+							name: "Geist Sans",
+							data: geistSans400Data,
+							style: "normal" as const,
+							weight: 400 as const,
+						},
+						{
+							name: "Geist Sans",
+							data: geistSans500Data,
+							style: "normal" as const,
+							weight: 500 as const,
+						},
+					],
+				});
 
 				return new Response(png, {
 					headers: {

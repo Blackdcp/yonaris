@@ -1,8 +1,4 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { Navbar } from "@/components/navbar";
-import { Footer } from "@/components/footer";
-import { Faq } from "@/components/faq";
-import { ToolGrid } from "@/components/tool-list";
 import {
 	DirectoryBackLink,
 	DirectoryElmoBanner,
@@ -10,18 +6,21 @@ import {
 	DirectorySection,
 	ElmoCta,
 } from "@/components/directory-shell";
-import { ogMeta, canonicalUrl, breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
+import { LegacyArchiveFaq } from "@/components/site/legacy-archive-faq";
+import { LegacyArchiveShell } from "@/components/site/legacy-archive-shell";
+import { ToolGrid } from "@/components/tool-list";
 import {
-	getCategoryBySlug,
-	getCategoryElmoPitch,
-	getComparisonSlug,
-	toolsInCategory,
-	getCategoryVerdict,
-	getCategoryFaqs,
 	CATEGORY_HEADINGS,
 	type Competitor,
 	type CompetitorCategory,
+	getCategoryBySlug,
+	getCategoryElmoPitch,
+	getCategoryFaqs,
+	getCategoryVerdict,
+	getComparisonSlug,
+	toolsInCategory,
 } from "@/lib/competitors";
+import { siteRouteHead } from "@/lib/site-seo";
 
 export const Route = createFileRoute("/ai-visibility-tools/category/$slug")({
 	head: ({ params }) => {
@@ -30,21 +29,11 @@ export const Route = createFileRoute("/ai-visibility-tools/category/$slug")({
 		const tools = toolsInCategory(category);
 		if (tools.length < 2) return {};
 		const heading = CATEGORY_HEADINGS[category];
-		const title = `${heading.charAt(0).toUpperCase()}${heading.slice(1)} · Elmo`;
-		const description = `A comparison of ${heading} for tracking your brand in AI search, including Elmo — the open-source, self-hosted option.`;
-		const path = `/ai-visibility-tools/category/${params.slug}`;
-		return {
-			meta: [{ title }, { name: "description", content: description }, ...ogMeta({ title, description, path })],
-			links: [{ rel: "canonical", href: canonicalUrl(path) }],
-			scripts: [
-				breadcrumbJsonLd([
-					{ name: "Home", path: "/" },
-					{ name: "AI Visibility Tool Directory", path: "/ai-visibility-tools" },
-					{ name: heading, path },
-				]),
-				faqJsonLd(getCategoryFaqs(category, tools)),
-			],
-		};
+		return siteRouteHead("aiVisibility", {
+			canonicalPath: `/ai-visibility-tools/category/${params.slug}`,
+			title: `${heading} | Upstream Elmo Archive`,
+			description: `An archived upstream Elmo comparison of ${heading.toLowerCase()}.`,
+		});
 	},
 	loader: ({ params }) => {
 		const category = getCategoryBySlug(params.slug);
@@ -57,34 +46,24 @@ export const Route = createFileRoute("/ai-visibility-tools/category/$slug")({
 });
 
 function CategoryPage() {
-	const { category, tools } = Route.useLoaderData() as {
-		category: CompetitorCategory;
-		tools: Competitor[];
-	};
+	const { category, tools } = Route.useLoaderData() as { category: CompetitorCategory; tools: Competitor[] };
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<DirectoryBackLink />
-				<DirectoryHero
-					eyebrow="Category"
-					title={CATEGORY_HEADINGS[category]}
-					lead={getCategoryVerdict(category, tools)}
-				/>
-				<DirectoryElmoBanner
-					pitch={getCategoryElmoPitch(category)}
-					comparison={{
-						slug: getComparisonSlug(tools[0]),
-						name: tools[0].name,
-					}}
-				/>
-				<DirectorySection title="Tools in this category">
-					<ToolGrid competitors={tools} />
-				</DirectorySection>
-				<Faq items={getCategoryFaqs(category, tools)} eyebrow="/ FAQ" />
-				<ElmoCta />
-			</main>
-			<Footer />
-		</div>
+		<LegacyArchiveShell>
+			<DirectoryBackLink />
+			<DirectoryHero
+				eyebrow="Category record"
+				title={CATEGORY_HEADINGS[category]}
+				lead={getCategoryVerdict(category, tools)}
+			/>
+			<DirectoryElmoBanner
+				pitch={getCategoryElmoPitch(category)}
+				comparison={{ slug: getComparisonSlug(tools[0]), name: tools[0].name }}
+			/>
+			<DirectorySection title="Tools in this category">
+				<ToolGrid competitors={tools} />
+			</DirectorySection>
+			<LegacyArchiveFaq items={getCategoryFaqs(category, tools)} />
+			<ElmoCta />
+		</LegacyArchiveShell>
 	);
 }

@@ -1,34 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MarketingHomePage } from "@/components/marketing/home-page";
-import { getMarketingPageMeta } from "@/lib/marketing-content";
-import { canonicalUrl, ogMeta, organizationJsonLd } from "@/lib/seo";
-
-const page = getMarketingPageMeta("en", "home");
+import { HomePage } from "@/components/site/pages/home-page";
+import { corePageHead } from "@/lib/site-seo";
 
 export const Route = createFileRoute("/")({
-	head: () => ({
-		meta: [
-			{ title: page.title },
-			{ name: "description", content: page.description },
-			{ name: "theme-color", content: "#0b1220" },
-			...ogMeta({
-				title: page.title,
-				description: page.description,
-				path: "/",
-				locale: "en_US",
-			}),
-		],
-		links: [
-			{ rel: "canonical", href: canonicalUrl("/") },
-			{ rel: "alternate", hrefLang: "en", href: canonicalUrl("/") },
-			{ rel: "alternate", hrefLang: "zh-CN", href: canonicalUrl("/zh") },
-			{ rel: "alternate", hrefLang: "x-default", href: canonicalUrl("/") },
-		],
-		scripts: [organizationJsonLd()],
-	}),
-	component: HomePage,
+	head: () => corePageHead("home", "en"),
+	component: () => <HomePage locale="en" />,
 });
-
-function HomePage() {
-	return <MarketingHomePage locale="en" />;
-}

@@ -1,14 +1,15 @@
 import posthog from "posthog-js";
+import { sanitizeAnalyticsProperties } from "./diagnostic-analytics-privacy";
 
 const DEFAULT_POSTHOG_HOST = "https://us.i.posthog.com";
 
 let initialized = false;
 
-export function initPostHog(): void {
+export function initPostHog(overrides?: { key?: string; host?: string }): void {
 	if (initialized || typeof window === "undefined") return;
-	const key = import.meta.env.VITE_POSTHOG_KEY?.trim();
+	const key = overrides?.key?.trim() || import.meta.env.VITE_POSTHOG_KEY?.trim();
 	if (!key) return;
-	const host = import.meta.env.VITE_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
+	const host = overrides?.host?.trim() || import.meta.env.VITE_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
 
 	posthog.init(key, {
 		api_host: host,
@@ -16,6 +17,13 @@ export function initPostHog(): void {
 		capture_pageleave: true,
 		autocapture: false,
 		disable_session_recording: true,
+		before_send: (event) =>
+			event
+				? {
+						...event,
+						properties: sanitizeAnalyticsProperties(event.properties),
+					}
+				: null,
 		// Prevent PostHog from auto-loading optional feature scripts we don't use.
 		// Without these, /static/{surveys,dead-clicks-autocapture,web-vitals}.js
 		// were being fetched even though the server returns surveys:false etc.
@@ -33,7 +41,7 @@ export function trackEvent(
 	properties?: Record<string, string | number | boolean | undefined>,
 ): void {
 	if (!initialized) return;
-	posthog.capture(eventName, properties);
+	posthog.capture(eventName, properties ? sanitizeAnalyticsProperties(properties) : undefined);
 }
 
 export function identifyByEmail(email: string): void {

@@ -1,6 +1,7 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { source } from "@/lib/source";
+import { createFileRoute } from "@tanstack/react-router";
 import { getLLMText } from "@/lib/get-llm-text";
+import { machineDocumentResponse } from "@/lib/machine-response";
+import { source } from "@/lib/source";
 
 export const Route = createFileRoute("/llms.mdx/docs/$")({
 	server: {
@@ -8,13 +9,9 @@ export const Route = createFileRoute("/llms.mdx/docs/$")({
 			GET: async ({ params }) => {
 				const slugs = params._splat?.split("/") ?? [];
 				const page = source.getPage(slugs);
-				if (!page) throw notFound();
+				if (!page) return new Response("Not Found", { status: 404 });
 
-				return new Response(await getLLMText(page), {
-					headers: {
-						"Content-Type": "text/markdown",
-					},
-				});
+				return machineDocumentResponse(await getLLMText(page));
 			},
 		},
 	},

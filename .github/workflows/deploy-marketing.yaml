@@ -17,7 +17,10 @@ on:
       - deploy/las/compose.marketing.yaml
       - deploy/las/caddy/**
       - deploy/las/bin/deploy-marketing.sh
+      - deploy/las/bin/deploy-marketing.test.sh
       - deploy/las/bin/install-marketing-caddy.sh
+      - deploy/las/bin/install-marketing-caddy.test.sh
+      - deploy/las/bin/marketing-workflow.test.mjs
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -29,7 +32,6 @@ permissions:
 
 concurrency:
   group: yonaris-production
-  queue: max
   cancel-in-progress: false
 
 env:
@@ -38,32 +40,46 @@ env:
 
 jobs:
   build:
-    name: Build marketing image
+    name: Build and prove marketing image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - name: Verify marketing proxy routes
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        with:
+          version: 11.5.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release fixtures
         run: |
-          node --test deploy/las/caddy/yonaris-marketing.test.mjs
+          bash -n deploy/las/bin/deploy-marketing.sh
+          bash -n deploy/las/bin/install-marketing-caddy.sh
+          bash deploy/las/bin/deploy-marketing.test.sh
           bash deploy/las/bin/install-marketing-caddy.test.sh
+          node --test deploy/las/bin/marketing-workflow.test.mjs
+          node --test deploy/las/caddy/yonaris-marketing.test.mjs
+          node --test apps/www/scripts/smoke-marketing.test.mjs
+          node --test apps/www/scripts/smoke-marketing-caddy.test.mjs
+          pnpm --filter @workspace/www test -- src/lib/caddy-policy.test.ts
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build release image
-        uses: docker/build-push-action@v7
+      - name: Build and load the immutable release image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: docker/Dockerfile.www
@@ -76,7 +92,7 @@ jobs:
           cache-from: type=gha,scope=www
           cache-to: type=gha,mode=max,scope=www
 
-      - name: Verify homepage and referenced assets
+      - name: Direct image smoke
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
         run: |
@@ -84,7 +100,19 @@ jobs:
           trap 'docker stop "$container_id" >/dev/null 2>&1 || true' EXIT
           node apps/www/scripts/smoke-marketing.mjs http://127.0.0.1:15161/
 
-      - name: Push verified image
+      - name: Digest-pinned Caddy integration smoke
+        env:
+          IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
+        run: node apps/www/scripts/smoke-marketing-caddy.mjs "$IMAGE_REF"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the already-verified image
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
         run: docker push "$IMAGE_REF"
@@ -101,18 +129,21 @@ jobs:
     permissions:
       contents: read
     steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_PRIVATE_KEY" >~/.ssh/yonaris_las
           chmod 600 ~/.ssh/yonaris_las
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$SSH_KNOWN_HOSTS" >~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy immutable marketing release
+      - name: Remote secret preflight before source mutation
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
@@ -122,4 +153,51 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; git fetch --depth=50 origin main; git checkout --detach $RELEASE_SHA; env DEPLOY_ROOT=/opt/yonaris MARKETING_COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.marketing.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/deploy-marketing.sh sha-$RELEASE_SHA'"
+            "env DEPLOY_ROOT=/opt/yonaris MARKETING_COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.marketing.yaml ENV_FILE=/opt/yonaris/.env bash -s -- --verify-only sha-$RELEASE_SHA" \
+            <deploy/las/bin/deploy-marketing.sh
+
+      - name: Lock source and deploy the exact release
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "env RELEASE_SHA=$RELEASE_SHA flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/yonaris/source
+          git fetch --depth=50 origin main
+          git checkout --detach "$RELEASE_SHA"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          env \
+            DEPLOY_ROOT=/opt/yonaris \
+            MARKETING_COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.marketing.yaml \
+            ENV_FILE=/opt/yonaris/.env \
+            bash /opt/yonaris/source/deploy/las/bin/deploy-marketing.sh sha-$RELEASE_SHA
+          REMOTE
+
+      - name: Verify live marker, image, and governed health
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "env RELEASE_SHA=$RELEASE_SHA bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+          test "$(tr -d '[:space:]' </opt/yonaris/.marketing-release)" = "sha-$RELEASE_SHA"
+          container_id="$(docker compose --project-name yonaris-marketing --env-file /opt/yonaris/.env --file /opt/yonaris/source/deploy/las/compose.marketing.yaml ps -q www)"
+          test -n "$container_id"
+          deployed_image="$(docker inspect --format '{{.Config.Image}}' "$container_id")"
+          test "$deployed_image" = "ghcr.io/blackdcp/yonaris-www:sha-$RELEASE_SHA"
+          curl --fail --silent --show-error --max-time 15 https://yonaris.com/ >/dev/null
+          curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
+          curl --fail --silent --show-error --max-time 15 https://yonaris.com/status >/dev/null
+          curl --fail --silent --show-error --max-time 15 https://yonaris.com/changelog >/dev/null
+          REMOTE

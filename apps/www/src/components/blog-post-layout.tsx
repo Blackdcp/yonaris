@@ -10,9 +10,8 @@ import { ArrowLeft } from "lucide-react";
 import type { ComponentPropsWithoutRef } from "react";
 import { Suspense } from "react";
 import { AuthorByline } from "@/components/author-byline";
-import { Footer } from "@/components/footer";
 import { getMDXComponents } from "@/components/mdx";
-import { Navbar } from "@/components/navbar";
+import { PublicationShell } from "@/components/site/publication-shell";
 import type { BlogPostFaqItem, BlogPostLoaderData } from "@/routes/blog/$";
 
 function isInternalHref(href: string): boolean {
@@ -63,9 +62,8 @@ export const clientLoader = browserCollections.blog.createClientLoader({
 	},
 });
 
-// Rendered from frontmatter `faq` so the visible Q&A and the FAQPage JSON-LD
-// (emitted in routes/blog/$.tsx) come from one source. Questions are h3s so
-// they nest under the post's h2 outline and pick up prose styling.
+// Rendered from frontmatter `faq` as visible editorial content. Rich search
+// markup remains withheld until the publication archive is reviewed.
 function PostFaq({ items }: { items: BlogPostFaqItem[] }) {
 	return (
 		<section className="mt-14">
@@ -83,28 +81,26 @@ function PostFaq({ items }: { items: BlogPostFaqItem[] }) {
 export function BlogPostLayout({ data }: { data: BlogPostLoaderData }) {
 	return (
 		<RootProvider theme={{ defaultTheme: "light", forcedTheme: "light" }} search={{ enabled: false }}>
-			<div className="min-h-screen">
-				<Navbar />
-				<main className="mx-auto max-w-3xl px-4 py-12 md:px-6 lg:py-16">
-					<a
-						href="/blog"
-						className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500 hover:text-zinc-950"
-					>
+			<PublicationShell section="blog">
+				<article className="publication-article">
+					<a href="/blog" className="publication-back-link">
 						<ArrowLeft className="size-3" />
-						Blog
+						Publication notes
 					</a>
-					<article className="prose mt-8 max-w-none">
-						<h1 className="mb-3 text-balance">{data.title}</h1>
-						{data.description && <p className="lead mt-0 text-zinc-600">{data.description}</p>}
-						<div className="not-prose mb-10 mt-6 border-b border-zinc-200 pb-8">
+					<header className="publication-article__header">
+						<p className="publication-kicker">Field note</p>
+						<h1 className="publication-article__title">{data.title}</h1>
+						{data.description && <p className="publication-article__lead">{data.description}</p>}
+						<div className="publication-article__byline">
 							<AuthorByline author={data.author} date={data.date} updated={data.updated} />
 						</div>
+					</header>
+					<div className="publication-article__body prose">
 						<Suspense>{clientLoader.useContent(data.path)}</Suspense>
 						{data.faq && data.faq.length > 0 && <PostFaq items={data.faq} />}
-					</article>
-				</main>
-				<Footer />
-			</div>
+					</div>
+				</article>
+			</PublicationShell>
 		</RootProvider>
 	);
 }

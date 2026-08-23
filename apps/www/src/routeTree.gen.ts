@@ -10,8 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApproachRouteImport } from './routes/approach'
 import { Route as BrandRouteImport } from './routes/brand'
 import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as CompanyRouteImport } from './routes/company'
 import { Route as DiagnosticRouteImport } from './routes/diagnostic'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as GeoRouteImport } from './routes/geo'
@@ -20,9 +22,14 @@ import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as OffSiteAeoRouteImport } from './routes/off-site-aeo'
 import { Route as OgDotpngRouteImport } from './routes/og[.]png'
+import { Route as OpenSourceRouteImport } from './routes/open-source'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ProductRouteImport } from './routes/product'
 import { Route as RepoActivityDotsvgRouteImport } from './routes/repo-activity[.]svg'
+import { Route as ResearchRouteImport } from './routes/research'
+import { Route as ResourcesRouteImport } from './routes/resources'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
@@ -32,14 +39,20 @@ import { Route as VisionRouteImport } from './routes/vision'
 import { Route as AeoForIndexRouteImport } from './routes/aeo-for/index'
 import { Route as AeoForSlugRouteImport } from './routes/aeo-for/$slug'
 import { Route as AgentIndexRouteImport } from './routes/agent/index'
+import { Route as AgentApproachRouteImport } from './routes/agent/approach'
 import { Route as AgentCompanyRouteImport } from './routes/agent/company'
+import { Route as AgentDiagnosticRouteImport } from './routes/agent/diagnostic'
+import { Route as AgentGeoRouteImport } from './routes/agent/geo'
 import { Route as AgentMethodologyRouteImport } from './routes/agent/methodology'
 import { Route as AgentPlatformRouteImport } from './routes/agent/platform'
+import { Route as AgentProductRouteImport } from './routes/agent/product'
+import { Route as AgentResearchRouteImport } from './routes/agent/research'
 import { Route as AgentResultsRouteImport } from './routes/agent/results'
 import { Route as AiSearchIndexRouteImport } from './routes/ai-search/index'
 import { Route as AiSearchSlugRouteImport } from './routes/ai-search/$slug'
 import { Route as AiVisibilityToolsIndexRouteImport } from './routes/ai-visibility-tools/index'
 import { Route as AiVisibilityToolsSlugRouteImport } from './routes/ai-visibility-tools/$slug'
+import { Route as ApiDiagnosticRouteImport } from './routes/api/diagnostic'
 import { Route as ApiOpenapiDotjsonRouteImport } from './routes/api/openapi[.]json'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as BlogIndexRouteImport } from './routes/blog/index'
@@ -51,10 +64,14 @@ import { Route as GlossaryIndexRouteImport } from './routes/glossary/index'
 import { Route as GlossarySlugRouteImport } from './routes/glossary/$slug'
 import { Route as OgStatusDotpngRouteImport } from './routes/og/status[.]png'
 import { Route as ZhIndexRouteImport } from './routes/zh/index'
+import { Route as ZhApproachRouteImport } from './routes/zh/approach'
+import { Route as ZhCompanyRouteImport } from './routes/zh/company'
 import { Route as ZhDiagnosticRouteImport } from './routes/zh/diagnostic'
 import { Route as ZhGeoRouteImport } from './routes/zh/geo'
 import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
 import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
+import { Route as ZhProductRouteImport } from './routes/zh/product'
+import { Route as ZhResearchRouteImport } from './routes/zh/research'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as AiVisibilityToolsAlternativesIndexRouteImport } from './routes/ai-visibility-tools/alternatives/index'
 import { Route as AiVisibilityToolsAlternativesSlugRouteImport } from './routes/ai-visibility-tools/alternatives/$slug'
@@ -67,6 +84,7 @@ import { Route as AiVisibilityToolsFeaturesIndexRouteImport } from './routes/ai-
 import { Route as AiVisibilityToolsFeaturesSlugRouteImport } from './routes/ai-visibility-tools/features/$slug'
 import { Route as ApiRepoActivityRefreshRouteImport } from './routes/api/repo-activity/refresh'
 import { Route as LlmsDotmdxDocsSplatRouteImport } from './routes/llms[.]mdx.docs.$'
+import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
 import { Route as OgDocsSplatRouteImport } from './routes/og/docs/$'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
@@ -74,6 +92,11 @@ import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plau
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApproachRoute = ApproachRouteImport.update({
+  id: '/approach',
+  path: '/approach',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BrandRoute = BrandRouteImport.update({
@@ -84,6 +107,11 @@ const BrandRoute = BrandRouteImport.update({
 const ChangelogRoute = ChangelogRouteImport.update({
   id: '/changelog',
   path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompanyRoute = CompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiagnosticRoute = DiagnosticRouteImport.update({
@@ -126,6 +154,11 @@ const OgDotpngRoute = OgDotpngRouteImport.update({
   path: '/og.png',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpenSourceRoute = OpenSourceRouteImport.update({
+  id: '/open-source',
+  path: '/open-source',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PlatformRoute = PlatformRouteImport.update({
   id: '/platform',
   path: '/platform',
@@ -136,9 +169,29 @@ const PricingRoute = PricingRouteImport.update({
   path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductRoute = ProductRouteImport.update({
+  id: '/product',
+  path: '/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RepoActivityDotsvgRoute = RepoActivityDotsvgRouteImport.update({
   id: '/repo-activity.svg',
   path: '/repo-activity.svg',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResearchRoute = ResearchRouteImport.update({
+  id: '/research',
+  path: '/research',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -186,9 +239,24 @@ const AgentIndexRoute = AgentIndexRouteImport.update({
   path: '/agent/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentApproachRoute = AgentApproachRouteImport.update({
+  id: '/agent/approach',
+  path: '/agent/approach',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentCompanyRoute = AgentCompanyRouteImport.update({
   id: '/agent/company',
   path: '/agent/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentDiagnosticRoute = AgentDiagnosticRouteImport.update({
+  id: '/agent/diagnostic',
+  path: '/agent/diagnostic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentGeoRoute = AgentGeoRouteImport.update({
+  id: '/agent/geo',
+  path: '/agent/geo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentMethodologyRoute = AgentMethodologyRouteImport.update({
@@ -199,6 +267,16 @@ const AgentMethodologyRoute = AgentMethodologyRouteImport.update({
 const AgentPlatformRoute = AgentPlatformRouteImport.update({
   id: '/agent/platform',
   path: '/agent/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentProductRoute = AgentProductRouteImport.update({
+  id: '/agent/product',
+  path: '/agent/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentResearchRoute = AgentResearchRouteImport.update({
+  id: '/agent/research',
+  path: '/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentResultsRoute = AgentResultsRouteImport.update({
@@ -224,6 +302,11 @@ const AiVisibilityToolsIndexRoute = AiVisibilityToolsIndexRouteImport.update({
 const AiVisibilityToolsSlugRoute = AiVisibilityToolsSlugRouteImport.update({
   id: '/ai-visibility-tools/$slug',
   path: '/ai-visibility-tools/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDiagnosticRoute = ApiDiagnosticRouteImport.update({
+  id: '/api/diagnostic',
+  path: '/api/diagnostic',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOpenapiDotjsonRoute = ApiOpenapiDotjsonRouteImport.update({
@@ -281,6 +364,16 @@ const ZhIndexRoute = ZhIndexRouteImport.update({
   path: '/zh/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhApproachRoute = ZhApproachRouteImport.update({
+  id: '/zh/approach',
+  path: '/zh/approach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhCompanyRoute = ZhCompanyRouteImport.update({
+  id: '/zh/company',
+  path: '/zh/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhDiagnosticRoute = ZhDiagnosticRouteImport.update({
   id: '/zh/diagnostic',
   path: '/zh/diagnostic',
@@ -299,6 +392,16 @@ const ZhMethodologyRoute = ZhMethodologyRouteImport.update({
 const ZhPlatformRoute = ZhPlatformRouteImport.update({
   id: '/zh/platform',
   path: '/zh/platform',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhProductRoute = ZhProductRouteImport.update({
+  id: '/zh/product',
+  path: '/zh/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhResearchRoute = ZhResearchRouteImport.update({
+  id: '/zh/research',
+  path: '/zh/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ZhResultsRoute = ZhResultsRouteImport.update({
@@ -370,6 +473,11 @@ const LlmsDotmdxDocsSplatRoute = LlmsDotmdxDocsSplatRouteImport.update({
   path: '/llms.mdx/docs/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsDotmdxSiteSplatRoute = LlmsDotmdxSiteSplatRouteImport.update({
+  id: '/llms.mdx/site/$',
+  path: '/llms.mdx/site/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OgDocsSplatRoute = OgDocsSplatRouteImport.update({
   id: '/og/docs/$',
   path: '/og/docs/$',
@@ -389,8 +497,10 @@ const ApiPlausibleJsScriptIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -399,9 +509,14 @@ export interface FileRoutesByFullPath {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -409,12 +524,18 @@ export interface FileRoutesByFullPath {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -422,10 +543,14 @@ export interface FileRoutesByFullPath {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -442,6 +567,7 @@ export interface FileRoutesByFullPath {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives/': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category/': typeof AiVisibilityToolsCategoryIndexRoute
@@ -452,8 +578,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -462,9 +590,14 @@ export interface FileRoutesByTo {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -472,12 +605,18 @@ export interface FileRoutesByTo {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -485,10 +624,14 @@ export interface FileRoutesByTo {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for': typeof AeoForIndexRoute
   '/agent': typeof AgentIndexRoute
@@ -505,6 +648,7 @@ export interface FileRoutesByTo {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category': typeof AiVisibilityToolsCategoryIndexRoute
@@ -516,8 +660,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/approach': typeof ApproachRoute
   '/brand': typeof BrandRoute
   '/changelog': typeof ChangelogRoute
+  '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
   '/geo': typeof GeoRoute
@@ -526,9 +672,14 @@ export interface FileRoutesById {
   '/methodology': typeof MethodologyRoute
   '/off-site-aeo': typeof OffSiteAeoRoute
   '/og.png': typeof OgDotpngRoute
+  '/open-source': typeof OpenSourceRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/product': typeof ProductRoute
   '/repo-activity.svg': typeof RepoActivityDotsvgRoute
+  '/research': typeof ResearchRoute
+  '/resources': typeof ResourcesRoute
   '/results': typeof ResultsRoute
   '/roadmap': typeof RoadmapRoute
   '/robots.txt': typeof RobotsDottxtRoute
@@ -536,12 +687,18 @@ export interface FileRoutesById {
   '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/aeo-for/$slug': typeof AeoForSlugRoute
+  '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
+  '/agent/diagnostic': typeof AgentDiagnosticRoute
+  '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/product': typeof AgentProductRoute
+  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/ai-search/$slug': typeof AiSearchSlugRoute
   '/ai-visibility-tools/$slug': typeof AiVisibilityToolsSlugRoute
+  '/api/diagnostic': typeof ApiDiagnosticRoute
   '/api/openapi.json': typeof ApiOpenapiDotjsonRoute
   '/api/search': typeof ApiSearchRoute
   '/blog/$': typeof BlogSplatRoute
@@ -549,10 +706,14 @@ export interface FileRoutesById {
   '/docs/$': typeof DocsSplatRoute
   '/glossary/$slug': typeof GlossarySlugRoute
   '/og/status.png': typeof OgStatusDotpngRoute
+  '/zh/approach': typeof ZhApproachRoute
+  '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/product': typeof ZhProductRoute
+  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/aeo-for/': typeof AeoForIndexRoute
   '/agent/': typeof AgentIndexRoute
@@ -569,6 +730,7 @@ export interface FileRoutesById {
   '/ai-visibility-tools/features/$slug': typeof AiVisibilityToolsFeaturesSlugRoute
   '/api/repo-activity/refresh': typeof ApiRepoActivityRefreshRoute
   '/llms.mdx/docs/$': typeof LlmsDotmdxDocsSplatRoute
+  '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/og/docs/$': typeof OgDocsSplatRoute
   '/ai-visibility-tools/alternatives/': typeof AiVisibilityToolsAlternativesIndexRoute
   '/ai-visibility-tools/category/': typeof AiVisibilityToolsCategoryIndexRoute
@@ -581,8 +743,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -591,9 +755,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
+    | '/privacy'
+    | '/product'
     | '/repo-activity.svg'
+    | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -601,12 +770,18 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -614,10 +789,14 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -634,6 +813,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives/'
     | '/ai-visibility-tools/category/'
@@ -644,8 +824,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -654,9 +836,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
+    | '/privacy'
+    | '/product'
     | '/repo-activity.svg'
+    | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -664,12 +851,18 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -677,10 +870,14 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for'
     | '/agent'
@@ -697,6 +894,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives'
     | '/ai-visibility-tools/category'
@@ -707,8 +905,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/approach'
     | '/brand'
     | '/changelog'
+    | '/company'
     | '/diagnostic'
     | '/features'
     | '/geo'
@@ -717,9 +917,14 @@ export interface FileRouteTypes {
     | '/methodology'
     | '/off-site-aeo'
     | '/og.png'
+    | '/open-source'
     | '/platform'
     | '/pricing'
+    | '/privacy'
+    | '/product'
     | '/repo-activity.svg'
+    | '/research'
+    | '/resources'
     | '/results'
     | '/roadmap'
     | '/robots.txt'
@@ -727,12 +932,18 @@ export interface FileRouteTypes {
     | '/status'
     | '/vision'
     | '/aeo-for/$slug'
+    | '/agent/approach'
     | '/agent/company'
+    | '/agent/diagnostic'
+    | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/product'
+    | '/agent/research'
     | '/agent/results'
     | '/ai-search/$slug'
     | '/ai-visibility-tools/$slug'
+    | '/api/diagnostic'
     | '/api/openapi.json'
     | '/api/search'
     | '/blog/$'
@@ -740,10 +951,14 @@ export interface FileRouteTypes {
     | '/docs/$'
     | '/glossary/$slug'
     | '/og/status.png'
+    | '/zh/approach'
+    | '/zh/company'
     | '/zh/diagnostic'
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/product'
+    | '/zh/research'
     | '/zh/results'
     | '/aeo-for/'
     | '/agent/'
@@ -760,6 +975,7 @@ export interface FileRouteTypes {
     | '/ai-visibility-tools/features/$slug'
     | '/api/repo-activity/refresh'
     | '/llms.mdx/docs/$'
+    | '/llms.mdx/site/$'
     | '/og/docs/$'
     | '/ai-visibility-tools/alternatives/'
     | '/ai-visibility-tools/category/'
@@ -771,8 +987,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApproachRoute: typeof ApproachRoute
   BrandRoute: typeof BrandRoute
   ChangelogRoute: typeof ChangelogRoute
+  CompanyRoute: typeof CompanyRoute
   DiagnosticRoute: typeof DiagnosticRoute
   FeaturesRoute: typeof FeaturesRoute
   GeoRoute: typeof GeoRoute
@@ -781,9 +999,14 @@ export interface RootRouteChildren {
   MethodologyRoute: typeof MethodologyRoute
   OffSiteAeoRoute: typeof OffSiteAeoRoute
   OgDotpngRoute: typeof OgDotpngRoute
+  OpenSourceRoute: typeof OpenSourceRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  ProductRoute: typeof ProductRoute
   RepoActivityDotsvgRoute: typeof RepoActivityDotsvgRoute
+  ResearchRoute: typeof ResearchRoute
+  ResourcesRoute: typeof ResourcesRoute
   ResultsRoute: typeof ResultsRoute
   RoadmapRoute: typeof RoadmapRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
@@ -791,12 +1014,18 @@ export interface RootRouteChildren {
   StatusRoute: typeof StatusRoute
   VisionRoute: typeof VisionRoute
   AeoForSlugRoute: typeof AeoForSlugRoute
+  AgentApproachRoute: typeof AgentApproachRoute
   AgentCompanyRoute: typeof AgentCompanyRoute
+  AgentDiagnosticRoute: typeof AgentDiagnosticRoute
+  AgentGeoRoute: typeof AgentGeoRoute
   AgentMethodologyRoute: typeof AgentMethodologyRoute
   AgentPlatformRoute: typeof AgentPlatformRoute
+  AgentProductRoute: typeof AgentProductRoute
+  AgentResearchRoute: typeof AgentResearchRoute
   AgentResultsRoute: typeof AgentResultsRoute
   AiSearchSlugRoute: typeof AiSearchSlugRoute
   AiVisibilityToolsSlugRoute: typeof AiVisibilityToolsSlugRoute
+  ApiDiagnosticRoute: typeof ApiDiagnosticRoute
   ApiOpenapiDotjsonRoute: typeof ApiOpenapiDotjsonRoute
   ApiSearchRoute: typeof ApiSearchRoute
   BlogSplatRoute: typeof BlogSplatRoute
@@ -804,10 +1033,14 @@ export interface RootRouteChildren {
   DocsSplatRoute: typeof DocsSplatRoute
   GlossarySlugRoute: typeof GlossarySlugRoute
   OgStatusDotpngRoute: typeof OgStatusDotpngRoute
+  ZhApproachRoute: typeof ZhApproachRoute
+  ZhCompanyRoute: typeof ZhCompanyRoute
   ZhDiagnosticRoute: typeof ZhDiagnosticRoute
   ZhGeoRoute: typeof ZhGeoRoute
   ZhMethodologyRoute: typeof ZhMethodologyRoute
   ZhPlatformRoute: typeof ZhPlatformRoute
+  ZhProductRoute: typeof ZhProductRoute
+  ZhResearchRoute: typeof ZhResearchRoute
   ZhResultsRoute: typeof ZhResultsRoute
   AeoForIndexRoute: typeof AeoForIndexRoute
   AgentIndexRoute: typeof AgentIndexRoute
@@ -824,6 +1057,7 @@ export interface RootRouteChildren {
   AiVisibilityToolsFeaturesSlugRoute: typeof AiVisibilityToolsFeaturesSlugRoute
   ApiRepoActivityRefreshRoute: typeof ApiRepoActivityRefreshRoute
   LlmsDotmdxDocsSplatRoute: typeof LlmsDotmdxDocsSplatRoute
+  LlmsDotmdxSiteSplatRoute: typeof LlmsDotmdxSiteSplatRoute
   OgDocsSplatRoute: typeof OgDocsSplatRoute
   AiVisibilityToolsAlternativesIndexRoute: typeof AiVisibilityToolsAlternativesIndexRoute
   AiVisibilityToolsCategoryIndexRoute: typeof AiVisibilityToolsCategoryIndexRoute
@@ -842,6 +1076,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/approach': {
+      id: '/approach'
+      path: '/approach'
+      fullPath: '/approach'
+      preLoaderRoute: typeof ApproachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/brand': {
       id: '/brand'
       path: '/brand'
@@ -854,6 +1095,13 @@ declare module '@tanstack/react-router' {
       path: '/changelog'
       fullPath: '/changelog'
       preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/company': {
+      id: '/company'
+      path: '/company'
+      fullPath: '/company'
+      preLoaderRoute: typeof CompanyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/diagnostic': {
@@ -912,6 +1160,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OgDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/open-source': {
+      id: '/open-source'
+      path: '/open-source'
+      fullPath: '/open-source'
+      preLoaderRoute: typeof OpenSourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/platform': {
       id: '/platform'
       path: '/platform'
@@ -926,11 +1181,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/product': {
+      id: '/product'
+      path: '/product'
+      fullPath: '/product'
+      preLoaderRoute: typeof ProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/repo-activity.svg': {
       id: '/repo-activity.svg'
       path: '/repo-activity.svg'
       fullPath: '/repo-activity.svg'
       preLoaderRoute: typeof RepoActivityDotsvgRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/research': {
+      id: '/research'
+      path: '/research'
+      fullPath: '/research'
+      preLoaderRoute: typeof ResearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -996,11 +1279,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/approach': {
+      id: '/agent/approach'
+      path: '/agent/approach'
+      fullPath: '/agent/approach'
+      preLoaderRoute: typeof AgentApproachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agent/company': {
       id: '/agent/company'
       path: '/agent/company'
       fullPath: '/agent/company'
       preLoaderRoute: typeof AgentCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/diagnostic': {
+      id: '/agent/diagnostic'
+      path: '/agent/diagnostic'
+      fullPath: '/agent/diagnostic'
+      preLoaderRoute: typeof AgentDiagnosticRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/geo': {
+      id: '/agent/geo'
+      path: '/agent/geo'
+      fullPath: '/agent/geo'
+      preLoaderRoute: typeof AgentGeoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/methodology': {
@@ -1015,6 +1319,20 @@ declare module '@tanstack/react-router' {
       path: '/agent/platform'
       fullPath: '/agent/platform'
       preLoaderRoute: typeof AgentPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/product': {
+      id: '/agent/product'
+      path: '/agent/product'
+      fullPath: '/agent/product'
+      preLoaderRoute: typeof AgentProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/research': {
+      id: '/agent/research'
+      path: '/agent/research'
+      fullPath: '/agent/research'
+      preLoaderRoute: typeof AgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/results': {
@@ -1050,6 +1368,13 @@ declare module '@tanstack/react-router' {
       path: '/ai-visibility-tools/$slug'
       fullPath: '/ai-visibility-tools/$slug'
       preLoaderRoute: typeof AiVisibilityToolsSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/diagnostic': {
+      id: '/api/diagnostic'
+      path: '/api/diagnostic'
+      fullPath: '/api/diagnostic'
+      preLoaderRoute: typeof ApiDiagnosticRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/openapi.json': {
@@ -1129,6 +1454,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/approach': {
+      id: '/zh/approach'
+      path: '/zh/approach'
+      fullPath: '/zh/approach'
+      preLoaderRoute: typeof ZhApproachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/company': {
+      id: '/zh/company'
+      path: '/zh/company'
+      fullPath: '/zh/company'
+      preLoaderRoute: typeof ZhCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/diagnostic': {
       id: '/zh/diagnostic'
       path: '/zh/diagnostic'
@@ -1155,6 +1494,20 @@ declare module '@tanstack/react-router' {
       path: '/zh/platform'
       fullPath: '/zh/platform'
       preLoaderRoute: typeof ZhPlatformRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/product': {
+      id: '/zh/product'
+      path: '/zh/product'
+      fullPath: '/zh/product'
+      preLoaderRoute: typeof ZhProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/research': {
+      id: '/zh/research'
+      path: '/zh/research'
+      fullPath: '/zh/research'
+      preLoaderRoute: typeof ZhResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/zh/results': {
@@ -1241,6 +1594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LlmsDotmdxDocsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/llms.mdx/site/$': {
+      id: '/llms.mdx/site/$'
+      path: '/llms.mdx/site/$'
+      fullPath: '/llms.mdx/site/$'
+      preLoaderRoute: typeof LlmsDotmdxSiteSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/og/docs/$': {
       id: '/og/docs/$'
       path: '/og/docs/$'
@@ -1267,8 +1627,10 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApproachRoute: ApproachRoute,
   BrandRoute: BrandRoute,
   ChangelogRoute: ChangelogRoute,
+  CompanyRoute: CompanyRoute,
   DiagnosticRoute: DiagnosticRoute,
   FeaturesRoute: FeaturesRoute,
   GeoRoute: GeoRoute,
@@ -1277,9 +1639,14 @@ const rootRouteChildren: RootRouteChildren = {
   MethodologyRoute: MethodologyRoute,
   OffSiteAeoRoute: OffSiteAeoRoute,
   OgDotpngRoute: OgDotpngRoute,
+  OpenSourceRoute: OpenSourceRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
+  ProductRoute: ProductRoute,
   RepoActivityDotsvgRoute: RepoActivityDotsvgRoute,
+  ResearchRoute: ResearchRoute,
+  ResourcesRoute: ResourcesRoute,
   ResultsRoute: ResultsRoute,
   RoadmapRoute: RoadmapRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
@@ -1287,12 +1654,18 @@ const rootRouteChildren: RootRouteChildren = {
   StatusRoute: StatusRoute,
   VisionRoute: VisionRoute,
   AeoForSlugRoute: AeoForSlugRoute,
+  AgentApproachRoute: AgentApproachRoute,
   AgentCompanyRoute: AgentCompanyRoute,
+  AgentDiagnosticRoute: AgentDiagnosticRoute,
+  AgentGeoRoute: AgentGeoRoute,
   AgentMethodologyRoute: AgentMethodologyRoute,
   AgentPlatformRoute: AgentPlatformRoute,
+  AgentProductRoute: AgentProductRoute,
+  AgentResearchRoute: AgentResearchRoute,
   AgentResultsRoute: AgentResultsRoute,
   AiSearchSlugRoute: AiSearchSlugRoute,
   AiVisibilityToolsSlugRoute: AiVisibilityToolsSlugRoute,
+  ApiDiagnosticRoute: ApiDiagnosticRoute,
   ApiOpenapiDotjsonRoute: ApiOpenapiDotjsonRoute,
   ApiSearchRoute: ApiSearchRoute,
   BlogSplatRoute: BlogSplatRoute,
@@ -1300,10 +1673,14 @@ const rootRouteChildren: RootRouteChildren = {
   DocsSplatRoute: DocsSplatRoute,
   GlossarySlugRoute: GlossarySlugRoute,
   OgStatusDotpngRoute: OgStatusDotpngRoute,
+  ZhApproachRoute: ZhApproachRoute,
+  ZhCompanyRoute: ZhCompanyRoute,
   ZhDiagnosticRoute: ZhDiagnosticRoute,
   ZhGeoRoute: ZhGeoRoute,
   ZhMethodologyRoute: ZhMethodologyRoute,
   ZhPlatformRoute: ZhPlatformRoute,
+  ZhProductRoute: ZhProductRoute,
+  ZhResearchRoute: ZhResearchRoute,
   ZhResultsRoute: ZhResultsRoute,
   AeoForIndexRoute: AeoForIndexRoute,
   AgentIndexRoute: AgentIndexRoute,
@@ -1322,6 +1699,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiVisibilityToolsFeaturesSlugRoute: AiVisibilityToolsFeaturesSlugRoute,
   ApiRepoActivityRefreshRoute: ApiRepoActivityRefreshRoute,
   LlmsDotmdxDocsSplatRoute: LlmsDotmdxDocsSplatRoute,
+  LlmsDotmdxSiteSplatRoute: LlmsDotmdxSiteSplatRoute,
   OgDocsSplatRoute: OgDocsSplatRoute,
   AiVisibilityToolsAlternativesIndexRoute:
     AiVisibilityToolsAlternativesIndexRoute,

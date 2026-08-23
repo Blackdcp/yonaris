@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { renderAgentDocument } from "@/lib/marketing-content";
+import { renderAgentDocument } from "@/lib/machine-documents";
+import { machineDocumentResponse } from "@/lib/machine-response";
 
-export const Route = createFileRoute("/agent/company")({ server: { handlers: { GET: () => new Response(renderAgentDocument("company"), { headers: { "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "public, max-age=300" } }) } } });
+export const Route = createFileRoute("/agent/company")({
+	server: { handlers: { GET: () => machineDocumentResponse(renderAgentDocument("company")) } },
+});

@@ -6,10 +6,15 @@
   "type": "module",
   "scripts": {
     "test:e2e": "playwright test --project=fixtures",
+    "test:www": "playwright test --config playwright.www.config.ts --grep-invert @visual",
+    "test:www:analytics": "playwright test --config playwright.analytics.config.ts",
+    "test:www:visual": "playwright test --config playwright.www.config.ts --grep @visual --workers=1",
+    "check-types": "tsc --noEmit",
     "test:api": "mkdir -p test-results && cd bruno && bru run -r --env local --reporter-junit ../test-results/api-junit.xml --reporter-json ../test-results/api-report.json",
     "seed": "tsx seed.ts"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.61.1",
     "@types/pg": "^8.20.0",
     "@usebruno/cli": "3.5.2",

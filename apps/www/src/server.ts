@@ -1,5 +1,7 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
 import { isMarkdownPreferred, rewritePath } from "fumadocs-core/negotiation";
+import { appendVary, preserveApplicationVary } from "@/lib/machine-response";
+import { resolveMarkdownRequest, rewriteMarkdownRequest } from "@/lib/markdown-negotiation";
 
 function configuredPosthogOrigin(): string | undefined {
 	if (!process.env.VITE_POSTHOG_KEY?.trim()) return undefined;
@@ -58,6 +60,7 @@ export default createServerEntry({
 	async fetch(request) {
 		const url = new URL(request.url);
 		const path = url.pathname;
+		const coreMarkdown = resolveMarkdownRequest(request);
 
 		// An explicit .md / .mdx suffix always serves markdown, ignoring Accept.
 		let target = stripMdSuffix(path) || stripMdxSuffix(path);
@@ -72,12 +75,17 @@ export default createServerEntry({
 		if (target) {
 			url.pathname = target;
 			req = new Request(url, request);
+		} else if (coreMarkdown.targetPath) {
+			req = rewriteMarkdownRequest(request, coreMarkdown.targetPath);
 		}
 
 		const response = await handler.fetch(req);
 		// A bare docs URL can resolve to either HTML or markdown depending on
 		// the Accept header, so shared caches must key on it.
-		if (negotiable) response.headers.set("Vary", "Accept");
+		if (negotiable || coreMarkdown.variesOnAccept) {
+			appendVary(response.headers, "Accept");
+			preserveApplicationVary(response);
+		}
 		return addSecurityHeaders(response);
 	},
 });

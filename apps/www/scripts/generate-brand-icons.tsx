@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderOgPng } from "@workspace/og/rasterize";
 import pngToIco from "png-to-ico";
+import React from "react";
 /**
  * Generates favicon and PWA icon assets for the Yonaris marketing site.
  *
@@ -12,21 +13,31 @@ import pngToIco from "png-to-ico";
  *   - apps/www/public/       favicon.ico, apple-touch-icon.png
  *   - apps/www/public/icons/ yonaris icon SVG and PNG variants
  *
- * The wordmark assets are maintained separately and are never overwritten.
+ * Approved wordmark geometry is preserved as an alpha mask. Generation only
+ * recolors its existing pixels to the current Ink and Paper tokens.
  *
  * Usage:
  *   pnpm -F @workspace/www generate-icons
  */
-// biome-ignore lint/correctness/noUnusedImports: the script uses the classic JSX runtime
-import React from "react";
+import { recolorRgbaAlphaMask, YONARIS_VI } from "../src/lib/brand-assets";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+const requireFromPngToIco = createRequire(require.resolve("png-to-ico"));
+const { PNG } = requireFromPngToIco("pngjs") as {
+	PNG: {
+		sync: {
+			read(input: Buffer): { width: number; height: number; data: Buffer };
+			write(input: { width: number; height: number; data: Buffer }): Buffer;
+		};
+	};
+};
 
-const BRAND_COLOR = "#0A1A2A";
-const BRAND_LIGHT = "#F8F6F3";
+const BRAND_COLOR = YONARIS_VI.ink;
+const BRAND_LIGHT = YONARIS_VI.paper;
 const PUBLIC_DIR = resolve(__dirname, "../public");
 const ICONS_DIR = resolve(PUBLIC_DIR, "icons");
+const WORDMARK_DIR = resolve(PUBLIC_DIR, "brand/logos");
 
 const STANDARD_Y_PATH = "M1 1h13l15 26L44 1h13L35 38v25H23V38L1 1Z";
 const MASKABLE_Y_PATH = "M25 28h16l23 39 23-39h16L72 80v26H56V80L25 28Z";
@@ -83,6 +94,21 @@ function MaskableIcon({ size }: { size: number }) {
 }
 
 mkdirSync(ICONS_DIR, { recursive: true });
+mkdirSync(WORDMARK_DIR, { recursive: true });
+
+const approvedWordmark = PNG.sync.read(readFileSync(resolve(WORDMARK_DIR, "yonaris-wordmark-navy.png")));
+for (const [filename, color] of [
+	["yonaris-wordmark-navy.png", YONARIS_VI.ink],
+	["yonaris-wordmark-white.png", YONARIS_VI.paper],
+] as const) {
+	const pixels = Buffer.from(approvedWordmark.data);
+	recolorRgbaAlphaMask(pixels, color);
+	writeFileSync(
+		resolve(WORDMARK_DIR, filename),
+		PNG.sync.write({ width: approvedWordmark.width, height: approvedWordmark.height, data: pixels }),
+	);
+	console.log(`  ✓ brand/logos/${filename}`);
+}
 
 const svgIcons = [
 	{ name: "yonaris-icon.svg", contents: buildStandardSvg() },
@@ -95,11 +121,11 @@ for (const { name, contents } of svgIcons) {
 }
 
 const iconPngs = [
-	{ name: "yonaris-icon-96.png", element: <StandardIcon size={96} />, size: 96 },
-	{ name: "yonaris-icon-192.png", element: <StandardIcon size={192} />, size: 192 },
-	{ name: "yonaris-icon-512.png", element: <StandardIcon size={512} />, size: 512 },
-	{ name: "yonaris-icon-maskable-192.png", element: <MaskableIcon size={192} />, size: 192 },
-	{ name: "yonaris-icon-maskable-512.png", element: <MaskableIcon size={512} />, size: 512 },
+	{ name: "yonaris-icon-96.png", element: React.createElement(StandardIcon, { size: 96 }), size: 96 },
+	{ name: "yonaris-icon-192.png", element: React.createElement(StandardIcon, { size: 192 }), size: 192 },
+	{ name: "yonaris-icon-512.png", element: React.createElement(StandardIcon, { size: 512 }), size: 512 },
+	{ name: "yonaris-icon-maskable-192.png", element: React.createElement(MaskableIcon, { size: 192 }), size: 192 },
+	{ name: "yonaris-icon-maskable-512.png", element: React.createElement(MaskableIcon, { size: 512 }), size: 512 },
 ];
 
 for (const { name, element, size } of iconPngs) {
@@ -107,13 +133,13 @@ for (const { name, element, size } of iconPngs) {
 	console.log(`  ✓ icons/${name}`);
 }
 
-const appleTouch = await renderPng(<StandardIcon bg={BRAND_LIGHT} size={180} />, 180);
+const appleTouch = await renderPng(React.createElement(StandardIcon, { bg: BRAND_LIGHT, size: 180 }), 180);
 writeFileSync(resolve(PUBLIC_DIR, "apple-touch-icon.png"), appleTouch);
 console.log("  ✓ apple-touch-icon.png");
 
 const icoPngs: Buffer[] = [];
 for (const size of [16, 32, 48]) {
-	icoPngs.push(await renderPng(<StandardIcon size={size} />, size));
+	icoPngs.push(await renderPng(React.createElement(StandardIcon, { size }), size));
 }
 writeFileSync(resolve(PUBLIC_DIR, "favicon.ico"), await pngToIco(icoPngs));
 console.log("  ✓ favicon.ico");

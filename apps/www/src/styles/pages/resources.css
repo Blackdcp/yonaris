@@ -1,0 +1,694 @@
+.resources-page,
+.open-source-page {
+	background: var(--yonaris-paper);
+	color: var(--yonaris-ink);
+}
+
+.resources-page *,
+.open-source-page * {
+	box-sizing: border-box;
+}
+
+.resources-kicker {
+	margin: 0;
+	color: var(--yonaris-slate);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.69rem;
+	font-weight: 500;
+	letter-spacing: 0.14em;
+	line-height: 1.5;
+	text-transform: uppercase;
+}
+
+.resources-hero,
+.open-source-hero {
+	border-bottom: 1px solid color-mix(in srgb, var(--yonaris-ink) 18%, transparent);
+}
+
+.resources-hero__inner,
+.resources-directory,
+.open-source-hero__inner,
+.open-source-relationship,
+.open-source-compatibility__inner,
+.open-source-sources {
+	width: min(calc(100% - 6rem), 90rem);
+	margin-inline: auto;
+}
+
+.resources-hero__inner,
+.open-source-hero__inner {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 1.5rem;
+	min-height: clamp(34rem, 69vh, 49rem);
+	padding-block: clamp(6rem, 10vw, 9rem) clamp(4.5rem, 8vw, 7rem);
+}
+
+.resources-hero__copy,
+.open-source-hero__copy {
+	grid-column: 1 / span 8;
+	align-self: end;
+	min-width: 0;
+}
+
+.resources-hero h1,
+.open-source-hero h1 {
+	max-width: 10ch;
+	margin: clamp(1.5rem, 3vw, 2.5rem) 0 0;
+	font-size: clamp(4.25rem, 7vw, 7.25rem);
+	font-weight: 500;
+	letter-spacing: -0.064em;
+	line-height: 0.92;
+	text-wrap: balance;
+}
+
+.resources-hero__introduction,
+.open-source-hero__introduction {
+	max-width: 55ch;
+	margin: clamp(2rem, 3.5vw, 3rem) 0 0;
+	color: var(--yonaris-slate);
+	font-size: clamp(1rem, 1.35vw, 1.2rem);
+	line-height: 1.68;
+}
+
+.resources-hero__scope,
+.open-source-hero__scope {
+	grid-column: 10 / -1;
+	align-self: end;
+	min-width: 0;
+	border-top: 1px solid var(--yonaris-ink);
+	padding-top: 1rem;
+}
+
+.resources-hero__index,
+.open-source-hero__index {
+	margin: 0 0 clamp(3rem, 6vw, 5.5rem);
+	color: var(--yonaris-slate);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: clamp(2.35rem, 3.6vw, 3.85rem);
+	font-weight: 400;
+	letter-spacing: -0.06em;
+	line-height: 1;
+}
+
+.resources-hero__scope > p:last-child,
+.open-source-hero__scope > p:last-child {
+	margin: 0;
+	color: var(--yonaris-slate);
+	font-size: 0.88rem;
+	line-height: 1.68;
+}
+
+.resources-directory {
+	padding-block: clamp(5rem, 8vw, 8rem);
+}
+
+.resources-directory__heading,
+.open-source-section-heading,
+.open-source-sources__heading {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 1.5rem;
+	align-items: end;
+	margin-bottom: clamp(3rem, 6vw, 5rem);
+}
+
+.resources-directory__heading .resources-kicker,
+.open-source-section-heading > .resources-kicker,
+.open-source-sources__heading > .resources-kicker {
+	grid-column: 1 / span 4;
+}
+
+.resources-directory__heading h2,
+.open-source-section-heading > div,
+.open-source-sources__heading h2 {
+	grid-column: 6 / -1;
+}
+
+.resources-directory__heading h2,
+.open-source-section-heading h2,
+.open-source-compatibility__heading h2,
+.open-source-sources__heading h2 {
+	margin: 0;
+	font-size: clamp(2.6rem, 4.8vw, 4.9rem);
+	font-weight: 500;
+	letter-spacing: -0.055em;
+	line-height: 0.98;
+	text-wrap: balance;
+}
+
+.resources-index,
+.resources-index li,
+.open-source-sources ul,
+.open-source-sources li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.resources-index {
+	border-top: 1px solid var(--yonaris-ink);
+}
+
+.resources-index li {
+	border-bottom: 1px solid color-mix(in srgb, var(--yonaris-ink) 18%, transparent);
+	border-radius: 0;
+}
+
+.resources-link {
+	position: relative;
+	display: grid;
+	grid-template-columns: 4rem minmax(12rem, 3fr) minmax(16rem, 5fr) 2rem;
+	gap: 1.5rem;
+	align-items: center;
+	min-height: 8rem;
+	padding: 1.3rem 1rem 1.3rem 0;
+	color: var(--yonaris-ink);
+	text-decoration: none;
+	transition:
+		background-color 180ms ease,
+		padding-inline-start 180ms ease;
+}
+
+.resources-link::before {
+	position: absolute;
+	top: -1px;
+	bottom: -1px;
+	left: 0;
+	width: 0.25rem;
+	background: var(--yonaris-signal);
+	content: "";
+	transform: scaleY(0);
+	transform-origin: center;
+	transition: transform 180ms ease;
+}
+
+.resources-link:hover {
+	padding-inline-start: 1rem;
+	background: color-mix(in srgb, var(--yonaris-mist) 35%, transparent);
+}
+
+.resources-link:hover::before {
+	transform: scaleY(1);
+}
+
+.resources-link__index,
+.resources-link__description {
+	color: var(--yonaris-slate);
+}
+
+.resources-link__index,
+.resources-link__arrow {
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.73rem;
+}
+
+.resources-link__title {
+	font-size: clamp(1.45rem, 2vw, 2.05rem);
+	font-weight: 500;
+	letter-spacing: -0.035em;
+	line-height: 1.05;
+}
+
+.resources-link__description {
+	max-width: 48ch;
+	font-size: 0.9rem;
+	line-height: 1.58;
+}
+
+.resources-link__arrow {
+	justify-self: end;
+	color: var(--yonaris-signal);
+	font-size: 1rem;
+}
+
+.resources-link:focus-visible,
+.open-source-sources a:focus-visible {
+	z-index: 1;
+	outline: none;
+	box-shadow:
+		0 0 0 2px var(--yonaris-signal),
+		0 0 0 4px var(--yonaris-ink);
+}
+
+.open-source-hero__copy {
+	grid-column: 1 / span 7;
+}
+
+.open-source-hero h1 {
+	max-width: 8ch;
+}
+
+.open-source-relationship {
+	padding-block: clamp(5rem, 9vw, 8.5rem);
+}
+
+.open-source-section-heading > div > p {
+	max-width: 58ch;
+	margin: 2rem 0 0;
+	color: var(--yonaris-slate);
+	font-size: 0.98rem;
+	line-height: 1.7;
+}
+
+.open-source-relationship__list {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid var(--yonaris-ink);
+	list-style: none;
+}
+
+.open-source-relationship__list li {
+	min-width: 0;
+	min-height: 20rem;
+	border-right: 1px solid color-mix(in srgb, var(--yonaris-ink) 18%, transparent);
+	padding: 1.15rem clamp(1.25rem, 2.6vw, 2.5rem) 2.5rem;
+}
+
+.open-source-relationship__list li:first-child {
+	padding-left: 0;
+}
+
+.open-source-relationship__list li:last-child {
+	border-right: 0;
+	padding-right: 0;
+}
+
+.open-source-relationship__index {
+	margin: 0 0 clamp(4rem, 8vw, 7rem);
+	color: var(--yonaris-slate);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.73rem;
+}
+
+.open-source-relationship__list h3 {
+	margin: 0;
+	font-size: clamp(1.55rem, 2.2vw, 2.3rem);
+	font-weight: 500;
+	letter-spacing: -0.04em;
+	line-height: 1.08;
+}
+
+.open-source-relationship__list li > p:last-child {
+	max-width: 42ch;
+	margin: 1.5rem 0 0;
+	color: var(--yonaris-slate);
+	font-size: 0.9rem;
+	line-height: 1.65;
+}
+
+.open-source-compatibility {
+	background: var(--yonaris-ink);
+	color: var(--yonaris-paper);
+}
+
+.open-source-compatibility__inner {
+	display: grid;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	gap: 1.5rem;
+	padding-block: clamp(5rem, 9vw, 8.5rem);
+}
+
+.open-source-compatibility__heading {
+	grid-column: 1 / span 5;
+	min-width: 0;
+}
+
+.open-source-compatibility__heading .resources-kicker,
+.open-source-compatibility__heading > p:last-child {
+	color: var(--yonaris-mist);
+}
+
+.open-source-compatibility__heading h2 {
+	max-width: 8ch;
+	margin-top: 2rem;
+}
+
+.open-source-compatibility__heading > p:last-child {
+	max-width: 46ch;
+	margin: 2rem 0 0;
+	font-size: 0.92rem;
+	line-height: 1.68;
+}
+
+.open-source-identifiers {
+	grid-column: 7 / -1;
+	margin: 0;
+	border-top: 1px solid color-mix(in srgb, var(--yonaris-mist) 48%, transparent);
+}
+
+.open-source-identifiers > div {
+	display: grid;
+	grid-template-columns: minmax(9rem, 1fr) minmax(0, 1.8fr);
+	gap: 1.5rem;
+	align-items: center;
+	min-height: 5.25rem;
+	border-bottom: 1px solid color-mix(in srgb, var(--yonaris-mist) 24%, transparent);
+	padding-block: 1rem;
+}
+
+.open-source-identifiers dt,
+.open-source-identifiers dd {
+	margin: 0;
+}
+
+.open-source-identifiers dt {
+	display: grid;
+	grid-template-columns: 2rem minmax(0, 1fr);
+	gap: 0.7rem;
+	color: var(--yonaris-mist);
+	font-size: 0.77rem;
+	line-height: 1.45;
+}
+
+.open-source-identifiers dt span {
+	color: var(--yonaris-signal);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.68rem;
+}
+
+.open-source-identifiers dd {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem 0.9rem;
+	justify-content: flex-end;
+}
+
+.open-source-identifiers code {
+	max-width: 100%;
+	color: var(--yonaris-paper);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: clamp(0.7rem, 1vw, 0.82rem);
+	line-height: 1.55;
+	overflow-wrap: anywhere;
+}
+
+.open-source-sources {
+	padding-block: clamp(5rem, 9vw, 8.5rem);
+}
+
+.open-source-sources ul {
+	border-top: 1px solid var(--yonaris-ink);
+}
+
+.open-source-sources li {
+	border-bottom: 1px solid color-mix(in srgb, var(--yonaris-ink) 18%, transparent);
+}
+
+.open-source-sources a {
+	display: grid;
+	grid-template-columns: 3rem minmax(0, 2fr) minmax(8rem, 1fr) 1rem;
+	gap: 1rem;
+	align-items: center;
+	min-height: 6rem;
+	padding: 1.1rem 0;
+	color: var(--yonaris-ink);
+	text-decoration: none;
+	transition:
+		background-color 180ms ease,
+		color 180ms ease;
+}
+
+.open-source-sources a:hover {
+	background: var(--yonaris-ink);
+	color: var(--yonaris-paper);
+}
+
+.open-source-sources a > span:last-child {
+	color: var(--yonaris-signal);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.72rem;
+}
+
+.open-source-sources a > span:first-child {
+	color: var(--yonaris-slate);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.72rem;
+}
+
+.open-source-sources a:hover > span:first-child {
+	color: var(--yonaris-mist);
+}
+
+.open-source-sources strong {
+	font-size: 1rem;
+	font-weight: 500;
+	line-height: 1.35;
+}
+
+.open-source-sources small {
+	color: var(--yonaris-slate);
+	font-family: "Geist Mono", ui-monospace, monospace;
+	font-size: 0.65rem;
+	letter-spacing: 0.06em;
+	line-height: 1.4;
+}
+
+.open-source-sources a:hover small {
+	color: var(--yonaris-mist);
+}
+
+@media (max-width: 64rem) {
+	.resources-hero__inner,
+	.resources-directory,
+	.open-source-hero__inner,
+	.open-source-relationship,
+	.open-source-compatibility__inner,
+	.open-source-sources {
+		width: min(calc(100% - 4rem), 90rem);
+	}
+
+	.resources-hero h1,
+	.open-source-hero h1 {
+		font-size: clamp(3.8rem, 7.8vw, 5.3rem);
+	}
+
+	.resources-link {
+		grid-template-columns: 3rem minmax(10rem, 2.5fr) minmax(13rem, 4fr) 1.5rem;
+		gap: 1.15rem;
+	}
+
+	.open-source-relationship__list li {
+		min-height: 18rem;
+	}
+}
+
+@media (max-width: 48rem) {
+	.resources-hero__inner,
+	.resources-directory,
+	.open-source-hero__inner,
+	.open-source-relationship,
+	.open-source-compatibility__inner,
+	.open-source-sources {
+		width: min(calc(100% - 2rem), 90rem);
+	}
+
+	.resources-hero__inner,
+	.open-source-hero__inner,
+	.resources-directory__heading,
+	.open-source-section-heading,
+	.open-source-compatibility__inner,
+	.open-source-sources__heading {
+		display: block;
+	}
+
+	.resources-hero__inner,
+	.open-source-hero__inner {
+		min-height: auto;
+		padding-block: 4.75rem 4.25rem;
+	}
+
+	.resources-hero h1,
+	.open-source-hero h1 {
+		max-width: 9ch;
+		margin-top: 1.5rem;
+		font-size: clamp(3.15rem, 13vw, 4.7rem);
+		line-height: 0.94;
+	}
+
+	.resources-hero__introduction,
+	.open-source-hero__introduction {
+		margin-top: 2rem;
+		font-size: 1rem;
+	}
+
+	.resources-hero__scope,
+	.open-source-hero__scope {
+		margin-top: 4rem;
+	}
+
+	.resources-hero__index,
+	.open-source-hero__index {
+		margin-bottom: 2.5rem;
+		font-size: 2.5rem;
+	}
+
+	.resources-directory,
+	.open-source-relationship,
+	.open-source-sources {
+		padding-block: 4.5rem;
+	}
+
+	.resources-directory__heading,
+	.open-source-section-heading,
+	.open-source-sources__heading {
+		margin-bottom: 3rem;
+	}
+
+	.resources-directory__heading h2,
+	.open-source-section-heading h2,
+	.open-source-compatibility__heading h2,
+	.open-source-sources__heading h2 {
+		margin-top: 1.5rem;
+		font-size: clamp(2.4rem, 10vw, 3.7rem);
+	}
+
+	.resources-link {
+		grid-template-columns: 2.5rem minmax(0, 1fr) 1.5rem;
+		grid-template-rows: auto auto;
+		gap: 0.6rem 0.85rem;
+		min-height: 7.5rem;
+		padding: 1.25rem 0.25rem 1.25rem 0;
+	}
+
+	.resources-link:hover {
+		padding-inline-start: 0.6rem;
+	}
+
+	.resources-link__index {
+		grid-row: 1 / -1;
+		align-self: start;
+		padding-top: 0.22rem;
+	}
+
+	.resources-link__description {
+		grid-column: 2 / 3;
+		font-size: 0.84rem;
+	}
+
+	.resources-link__arrow {
+		grid-column: 3;
+		grid-row: 1 / -1;
+		align-self: start;
+	}
+
+	.open-source-relationship__list {
+		grid-template-columns: 1fr;
+	}
+
+	.open-source-relationship__list li,
+	.open-source-relationship__list li:first-child,
+	.open-source-relationship__list li:last-child {
+		min-height: auto;
+		border-right: 0;
+		border-bottom: 1px solid color-mix(in srgb, var(--yonaris-ink) 18%, transparent);
+		padding: 1.2rem 0 3rem;
+	}
+
+	.open-source-relationship__list li:last-child {
+		border-bottom: 0;
+	}
+
+	.open-source-relationship__index {
+		margin-bottom: 2.8rem;
+	}
+
+	.open-source-compatibility__inner {
+		padding-block: 4.5rem;
+	}
+
+	.open-source-identifiers {
+		margin-top: 3.5rem;
+	}
+
+	.open-source-identifiers > div {
+		grid-template-columns: 1fr;
+		gap: 0.8rem;
+		align-items: start;
+		min-height: 6rem;
+	}
+
+	.open-source-identifiers dd {
+		justify-content: flex-start;
+		padding-left: 2.7rem;
+	}
+
+	.open-source-sources ul {
+		display: block;
+	}
+
+	.open-source-sources a {
+		grid-template-columns: 1.75rem minmax(0, 1fr) 1rem;
+		min-height: 6.5rem;
+		padding: 1rem;
+	}
+
+	.open-source-sources small {
+		grid-column: 2;
+		grid-row: 2;
+	}
+
+	.open-source-sources a > span:last-child {
+		grid-column: 3;
+		grid-row: 1 / span 2;
+	}
+}
+
+@media (max-width: 20rem) {
+	.resources-hero__inner,
+	.resources-directory,
+	.open-source-hero__inner,
+	.open-source-relationship,
+	.open-source-compatibility__inner,
+	.open-source-sources {
+		width: min(calc(100% - 1.5rem), 90rem);
+	}
+
+	.resources-hero h1,
+	.open-source-hero h1 {
+		font-size: clamp(2.65rem, 15.5vw, 3.15rem);
+		letter-spacing: -0.058em;
+	}
+
+	.resources-directory__heading h2,
+	.open-source-section-heading h2,
+	.open-source-compatibility__heading h2,
+	.open-source-sources__heading h2 {
+		font-size: clamp(2.15rem, 12.5vw, 2.8rem);
+	}
+
+	.resources-link {
+		grid-template-columns: 2rem minmax(0, 1fr) 1rem;
+		column-gap: 0.65rem;
+	}
+
+	.resources-link__title {
+		font-size: 1.35rem;
+	}
+
+	.open-source-identifiers dd {
+		padding-left: 0;
+	}
+
+	.open-source-sources a {
+		grid-template-columns: 1.4rem minmax(0, 1fr) 0.8rem;
+		gap: 0.7rem;
+		padding-inline: 0.75rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.resources-page *,
+	.resources-page *::before,
+	.resources-page *::after,
+	.open-source-page *,
+	.open-source-page *::before,
+	.open-source-page *::after {
+		scroll-behavior: auto;
+		transition-duration: 0.01ms;
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+	}
+}

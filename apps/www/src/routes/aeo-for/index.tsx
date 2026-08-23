@@ -1,73 +1,58 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Footer } from "@/components/footer";
-import { Navbar } from "@/components/navbar";
+import { PublicationShell } from "@/components/site/publication-shell";
 import { aeoVerticals } from "@/data/aeo-verticals";
-import { breadcrumbJsonLd, canonicalUrl, itemListJsonLd, ogMeta } from "@/lib/seo";
+import { siteRouteHead } from "@/lib/site-seo";
 
 const title = "Answer Engine Optimization by Industry · Yonaris";
 const description =
-	"How answer engine optimization applies to your world: AEO for agencies, SaaS, e-commerce, B2B, startups, enterprise, healthcare, and financial services.";
+	"Archived answer-engine optimization research for agencies, SaaS, commerce, startups, enterprise, health, and finance.";
 
 export const Route = createFileRoute("/aeo-for/")({
-	head: () => ({
-		meta: [
-			{ title },
-			{ name: "description", content: description },
-			...ogMeta({ title, description, path: "/aeo-for" }),
-		],
-		links: [{ rel: "canonical", href: canonicalUrl("/aeo-for") }],
-		scripts: [
-			breadcrumbJsonLd([
-				{ name: "Home", path: "/" },
-				{ name: "AEO by industry", path: "/aeo-for" },
-			]),
-			itemListJsonLd(
-				aeoVerticals.map((v) => ({
-					name: `AEO for ${v.audience}`,
-					path: `/aeo-for/${v.slug}`,
-				})),
-			),
-		],
-	}),
+	head: () => siteRouteHead("aeoFor", { canonicalPath: "/aeo-for", title, description }),
 	component: AeoForIndex,
 });
 
 function AeoForIndex() {
 	return (
-		<div className="min-h-screen">
-			<Navbar />
-			<main>
-				<section className="border-b border-zinc-200 bg-white py-12 lg:py-20">
-					<div className="mx-auto max-w-6xl px-4 md:px-6">
-						<p className="font-mono text-[11px] uppercase tracking-[0.18em] text-zinc-500">/ AEO by industry</p>
-						<h1 className="font-heading mt-2 text-4xl text-balance text-zinc-950 md:text-5xl">
-							Answer engine optimization, by industry
-						</h1>
-						<p className="mt-4 max-w-3xl text-lg text-balance text-zinc-600">
-							The fundamentals of AEO are the same everywhere, but the prompts that matter and the stakes are not. Pick
-							your world.
+		<PublicationShell section="aeo-for" archiveContext="legacy-research">
+			<div className="publication-page">
+				<header className="publication-masthead">
+					<div className="publication-masthead__grid">
+						<div>
+							<p className="publication-kicker">Research register / sector notes</p>
+							<h1 className="publication-title">Answer engine optimization, by industry</h1>
+							<p className="publication-deck">
+								The fundamentals repeated. The buying questions and risk changed by sector. This archive preserves those
+								earlier field notes.
+							</p>
+						</div>
+						<p className="publication-masthead__note">
+							Eight historical audience studies / retained for research continuity / not current solution packaging.
 						</p>
 					</div>
-				</section>
-
-				<section className="bg-white py-10">
-					<div className="mx-auto max-w-6xl px-4 md:px-6">
-						<div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-							{aeoVerticals.map((v) => (
-								<a
-									key={v.slug}
-									href={`/aeo-for/${v.slug}`}
-									className="flex flex-col rounded-md border border-zinc-200 bg-white p-5 transition-colors hover:border-zinc-300"
-								>
-									<h2 className="font-semibold text-zinc-950">AEO for {v.audience}</h2>
-									<p className="mt-2 text-sm leading-relaxed text-zinc-600">{v.short}</p>
-								</a>
+				</header>
+				<section className="publication-ledger" aria-label="Archived AEO sector guides">
+					<div className="publication-ledger__group">
+						<h2 className="publication-ledger__group-label">Sector studies</h2>
+						<ul className="publication-ledger__items">
+							{aeoVerticals.map((vertical, index) => (
+								<li className="publication-ledger__entry" key={vertical.slug}>
+									<span className="publication-ledger__date">
+										{String(index + 1).padStart(2, "0")} / {String(aeoVerticals.length).padStart(2, "0")}
+									</span>
+									<a className="publication-ledger__link" href={`/aeo-for/${vertical.slug}`}>
+										<h2>AEO for {vertical.audience}</h2>
+										<p>{vertical.short}</p>
+									</a>
+									<span className="publication-ledger__arrow" aria-hidden="true">
+										↗
+									</span>
+								</li>
 							))}
-						</div>
+						</ul>
 					</div>
 				</section>
-			</main>
-			<Footer />
-		</div>
+			</div>
+		</PublicationShell>
 	);
 }

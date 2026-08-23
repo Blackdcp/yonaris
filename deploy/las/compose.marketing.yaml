@@ -3,6 +3,11 @@ name: yonaris-marketing
 services:
   www:
     image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-www:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    environment:
+      MARKETING_DIAGNOSTIC_DELIVERY_MODE: ${MARKETING_DIAGNOSTIC_DELIVERY_MODE:-resend}
+      MARKETING_LEAD_RECIPIENT: ${MARKETING_LEAD_RECIPIENT:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_FROM_EMAIL: ${RESEND_FROM_EMAIL:-}
     ports:
       - "127.0.0.1:1516:3000"
     healthcheck:

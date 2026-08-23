@@ -37,20 +37,20 @@ export const blog = defineDocs({
 			// when these diverge (e.g. a tighter, click-worthy ≤60-char title)
 			// set this. Falls back to `${title} · Yonaris` when omitted.
 			metaTitle: z.string().optional(),
-			// FAQ pairs rendered at the foot of the post AND emitted as FAQPage
-			// JSON-LD — one source of truth for the markup an answer engine lifts.
+			// FAQ pairs retained as visible editorial content. Blog rich-result
+			// JSON-LD stays unpublished until the claims receive editorial review.
 			faq: z.array(z.object({ question: z.string(), answer: z.string() })).optional(),
-			// Emits ItemList JSON-LD for roundup/listicle posts. `url` may be an
-			// absolute vendor URL or a site-relative path.
+			// Roundup/listicle metadata retained for future editorial review. `url`
+			// may be an absolute vendor URL or a site-relative path.
 			itemList: z
 				.array(z.object({ name: z.string(), url: z.string().optional(), description: z.string().optional() }))
 				.optional(),
-			// Emits DefinedTermSet JSON-LD for the glossary. `href` is an optional
-			// "see also" link for the term.
+			// Glossary metadata retained for future editorial review. `href` is an
+			// optional "see also" link for the term.
 			definedTerms: z
 				.array(z.object({ term: z.string(), definition: z.string(), href: z.string().optional() }))
 				.optional(),
-			// Emits HowTo JSON-LD for step-by-step guides.
+			// Guide metadata retained for future editorial review.
 			howTo: z
 				.object({
 					name: z.string().optional(),

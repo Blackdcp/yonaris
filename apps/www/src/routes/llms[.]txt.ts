@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { renderLlmsIndex } from "@/lib/marketing-content";
+import { renderLlmsIndex } from "@/lib/machine-documents";
+import { machineDocumentResponse } from "@/lib/machine-response";
 
 export const Route = createFileRoute("/llms.txt")({
 	server: {
 		handlers: {
 			GET() {
-				return new Response(renderLlmsIndex(), {
-					headers: { "Content-Type": "text/plain; charset=utf-8" },
-				});
+				return machineDocumentResponse(renderLlmsIndex(), { contentType: "text/plain; charset=utf-8" });
 			},
 		},
 	},

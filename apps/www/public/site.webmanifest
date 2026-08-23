@@ -1,5 +1,5 @@
 {
-	"name": "Yonaris — AI Visibility & GEO",
+	"name": "Yonaris — AI-native MarTech",
 	"short_name": "Yonaris",
 	"icons": [
 		{
@@ -38,6 +38,6 @@
 	],
 	"start_url": "/",
 	"display": "standalone",
-	"theme_color": "#0A1A2A",
-	"background_color": "#F8F6F3"
+	"theme_color": "#0B1220",
+	"background_color": "#F6F4F1"
 }

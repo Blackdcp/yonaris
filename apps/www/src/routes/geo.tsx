@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MarketingDetailPage } from "@/components/marketing/detail-page";
-import { marketingPageHead } from "@/lib/marketing-seo";
+import { GeoPage } from "@/components/site/pages/geo-page";
+import { corePageHead } from "@/lib/site-seo";
 
-export const Route = createFileRoute("/geo")({ head: () => marketingPageHead("en", "geo"), component: () => <MarketingDetailPage locale="en" page="geo" /> });
+export const Route = createFileRoute("/geo")({
+	head: () => corePageHead("geo", "en"),
+	component: () => <GeoPage locale="en" />,
+});
