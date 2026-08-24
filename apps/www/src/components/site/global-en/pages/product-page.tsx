@@ -1,5 +1,7 @@
 import { GlobalEnglishShell } from "../global-english-shell";
-import { EvidenceLedger, ResponsibilityLanes, ScopeRings } from "../visuals/visuals";
+import { GLOBAL_PRODUCT_MODULES } from "@/content/site/global-en/experience";
+import { ProductWorkbench } from "../interactions/product-workbench";
+import { ResponsibilityLanes, ScopeRings } from "../visuals/visuals";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";
 
 export function ProductPage() {
@@ -16,34 +18,36 @@ export function ProductPage() {
 			<PageSection
 				id="evidence-workbench"
 				number="01"
-				title="A workbench built around evidence states, not dashboard theatre."
-				body="Observation-dependent fields stay visibly unpopulated until an approved record is loaded."
+				title="One workbench keeps every evidence state connected."
+				body="Move between Scope, Answers, Evidence, and Experiments without losing the market question, owner, or boundary that gives the record meaning."
 				dark
 			>
-				<EvidenceLedger />
+				<ProductWorkbench />
+			</PageSection>
+			<PageSection
+				id="operating-loop"
+				number="02"
+				eyebrow="CONNECTED BY DESIGN"
+				title="Each module advances one reviewable decision."
+				body="The product is not a set of disconnected dashboard pages. Each module hands an explicit artifact and boundary to the next."
+			>
+				<ol className="global-en__module-flow" data-graphic="product-operating-loop">
+					{GLOBAL_PRODUCT_MODULES.map((module, index) => (
+						<li key={module.id}>
+							<em>{String(index + 1).padStart(2, "0")}</em>
+							<strong>{module.label}</strong>
+							<span>{module.output}</span>
+						</li>
+					))}
+				</ol>
 			</PageSection>
 			<PageSection
 				id="responsibility-lanes"
-				number="02"
+				number="03"
 				title="Every handoff has an owner."
-				body="System output, Yonaris review, and customer decision remain separate so recommendations never masquerade as autonomous action."
+				body="System output, Yonaris review, and customer decision remain separate so a recommendation never masquerades as autonomous action."
 			>
 				<ResponsibilityLanes />
-			</PageSection>
-			<PageSection
-				id="scope-matrix"
-				number="03"
-				title="Coverage starts with a configured scope."
-				body="The product records the exact dimensions that make an answer comparable."
-			>
-				<div className="global-en__matrix" data-graphic="scope-matrix">
-					<span>Market</span>
-					<span>Language</span>
-					<span>Question set</span>
-					<span>Supported surface</span>
-					<span>Cohort</span>
-					<span>Observation period</span>
-				</div>
 			</PageSection>
 			<CloseSection id="request-close" title="Define the question before you collect the answer." />
 		</GlobalEnglishShell>

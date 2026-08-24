@@ -11,7 +11,7 @@ export const GLOBAL_ENGLISH_SECTION_IDS = {
 		"evidence-boundary",
 		"request-close",
 	],
-	product: ["scope-rings-hero", "evidence-workbench", "responsibility-lanes", "scope-matrix", "request-close"],
+	product: ["scope-rings-hero", "evidence-workbench", "operating-loop", "responsibility-lanes", "request-close"],
 	approach: ["premise-hero", "four-step-path", "step-artifacts", "repeat-observation-boundary", "request-close"],
 	research: ["ledger-hero", "metric-anatomy", "cohort-comparison", "answer-annotation", "limits-and-request-close"],
 	geo: [

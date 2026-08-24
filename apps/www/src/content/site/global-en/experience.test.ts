@@ -26,3 +26,20 @@ describe("global Answer Studio content", () => {
 		expect(subject.getGlobalAnswerQuestion("recommended").label).toBe("Are we being recommended?");
 	});
 });
+
+describe("global product architecture", () => {
+	it("defines four complete, inspectable modules", () => {
+		expect(subject, "the global experience model must exist").toBeDefined();
+		if (!subject) return;
+
+		expect(subject.GLOBAL_PRODUCT_MODULES.map(({ id }) => id)).toEqual(["scope", "answers", "evidence", "experiments"]);
+		for (const module of subject.GLOBAL_PRODUCT_MODULES) {
+			expect(module.label).toBeTruthy();
+			expect(module.question).toBeTruthy();
+			expect(module.output).toBeTruthy();
+			expect(module.owner).toBeTruthy();
+			expect(module.boundary).toBeTruthy();
+			expect(subject.getGlobalProductModule(module.id)).toBe(module);
+		}
+	});
+});

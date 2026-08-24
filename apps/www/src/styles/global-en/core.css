@@ -350,6 +350,80 @@
 .global-en__studio-fields section:last-child {
 	border-right: 0;
 }
+.global-en__workbench-tabs {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	border-bottom: 1px solid var(--yonaris-blue-gray);
+}
+.global-en__workbench-tabs button {
+	min-height: 5rem;
+	padding: 1rem;
+	border: 0;
+	border-right: 1px solid var(--yonaris-blue-gray);
+	background: transparent;
+	color: var(--ge-paper);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	text-align: left;
+	cursor: pointer;
+}
+.global-en__workbench-tabs button:last-child {
+	border-right: 0;
+}
+.global-en__workbench-tabs button[aria-selected="true"] {
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__workbench-tabs button:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ge-signal);
+	outline-offset: -3px;
+}
+.global-en__workbench-tabs em,
+.global-en__workbench-panel small,
+.global-en__module-flow em {
+	font: 500 0.63rem / 1.2 "Geist Mono", monospace;
+	color: var(--ge-signal);
+}
+.global-en__workbench-tabs button[aria-selected="true"] em {
+	color: var(--ge-ink);
+}
+.global-en__workbench-panel {
+	min-height: 26rem;
+	display: grid;
+	grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+}
+.global-en__workbench-question {
+	padding: clamp(1.5rem, 4vw, 3rem);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	border-right: 1px solid var(--yonaris-blue-gray);
+}
+.global-en__workbench-question h3 {
+	margin: 2rem 0 0;
+	max-width: 18ch;
+	font-size: clamp(1.75rem, 3vw, 3rem);
+	line-height: 1.05;
+	font-weight: 520;
+}
+.global-en__workbench-record {
+	display: grid;
+	grid-template-rows: repeat(3, 1fr);
+}
+.global-en__workbench-record section {
+	padding: 1.4rem;
+	border-bottom: 1px solid var(--yonaris-blue-gray);
+}
+.global-en__workbench-record section:last-child {
+	border-bottom: 0;
+}
+.global-en__workbench-record p {
+	margin-bottom: 0;
+	color: var(--yonaris-mist);
+}
 .global-en__window-bar,
 .global-en__window-tabs {
 	display: flex;
@@ -582,7 +656,8 @@
 	border: 1px solid var(--ge-rule);
 }
 .global-en__question-spectrum,
-.global-en__operating-loop {
+.global-en__operating-loop,
+.global-en__module-flow {
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -593,7 +668,8 @@
 	grid-template-columns: repeat(5, 1fr);
 }
 .global-en__question-spectrum li,
-.global-en__operating-loop li {
+.global-en__operating-loop li,
+.global-en__module-flow li {
 	min-height: 13rem;
 	padding: 1.3rem;
 	display: flex;
@@ -602,7 +678,8 @@
 	border-right: 1px solid var(--ge-rule);
 }
 .global-en__question-spectrum li:last-child,
-.global-en__operating-loop li:last-child {
+.global-en__operating-loop li:last-child,
+.global-en__module-flow li:last-child {
 	border-right: 0;
 }
 .global-en__question-spectrum em,
@@ -612,12 +689,23 @@
 }
 .global-en__question-spectrum span,
 .global-en__operating-loop span,
+.global-en__module-flow span,
 .global-en__product-preview p {
 	color: var(--ge-slate);
 }
 .global-en__operating-loop {
 	grid-template-columns: repeat(4, 1fr);
 	border-color: var(--yonaris-blue-gray);
+}
+.global-en__module-flow {
+	grid-template-columns: repeat(4, 1fr);
+}
+.global-en__module-flow li {
+	min-height: 17rem;
+}
+.global-en__module-flow strong {
+	margin-top: auto;
+	font-size: 1.5rem;
 }
 .global-en__operating-loop li {
 	min-height: 15rem;
@@ -941,6 +1029,18 @@
 		border-right: 0;
 		border-bottom: 1px solid var(--ge-rule);
 	}
+	.global-en__workbench-tabs {
+		grid-template-columns: repeat(4, minmax(8rem, 1fr));
+		overflow-x: auto;
+	}
+	.global-en__workbench-panel {
+		grid-template-columns: 1fr;
+	}
+	.global-en__workbench-question {
+		min-height: 15rem;
+		border-right: 0;
+		border-bottom: 1px solid var(--yonaris-blue-gray);
+	}
 	.global-en__graphic[data-graphic="scope-rings"] {
 		min-height: 28rem;
 		padding: 1.5rem;
@@ -979,6 +1079,7 @@
 	.global-en__principles,
 	.global-en__question-spectrum,
 	.global-en__operating-loop,
+	.global-en__module-flow,
 	.global-en__product-preview {
 		grid-template-columns: 1fr;
 	}
@@ -992,6 +1093,7 @@
 	}
 	.global-en__question-spectrum li,
 	.global-en__operating-loop li,
+	.global-en__module-flow li,
 	.global-en__product-preview article {
 		min-height: auto;
 		border-right: 0;

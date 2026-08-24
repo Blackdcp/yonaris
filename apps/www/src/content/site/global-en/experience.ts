@@ -63,3 +63,55 @@ export function getGlobalAnswerQuestion(id: GlobalAnswerQuestionId): GlobalAnswe
 	if (!question) throw new Error(`Unknown global answer question: ${id}`);
 	return question;
 }
+
+export type GlobalProductModuleId = "scope" | "answers" | "evidence" | "experiments";
+
+export interface GlobalProductModule {
+	id: GlobalProductModuleId;
+	label: string;
+	question: string;
+	output: string;
+	owner: string;
+	boundary: string;
+}
+
+export const GLOBAL_PRODUCT_MODULES: readonly GlobalProductModule[] = [
+	{
+		id: "scope",
+		label: "Scope",
+		question: "What must stay fixed for an observation to be comparable?",
+		output: "A versioned brief for market, language, surface, question set, cohort, and observation period.",
+		owner: "Customer and Yonaris approve the observation rules together.",
+		boundary: "A configured scope is not universal market coverage.",
+	},
+	{
+		id: "answers",
+		label: "Answers",
+		question: "What did the configured AI system return in this buying context?",
+		output: "A reviewable answer record with prompt, response, comparison context, and observation time.",
+		owner: "The system preserves the record; Yonaris reviews collection quality.",
+		boundary: "One captured answer does not represent every user or future answer.",
+	},
+	{
+		id: "evidence",
+		label: "Evidence",
+		question: "Which available sources and product facts can explain the answer?",
+		output: "An annotated evidence note separating support, gaps, ambiguity, and unknown states.",
+		owner: "Yonaris reviews the evidence; the customer verifies approved brand facts.",
+		boundary: "Unavailable evidence remains unknown and is never inferred.",
+	},
+	{
+		id: "experiments",
+		label: "Experiments",
+		question: "Which single information change deserves the next observation?",
+		output: "A bounded test brief linking owner, change, baseline, and repeat-observation conditions.",
+		owner: "The customer approves the change and decision; Yonaris preserves the measurement frame.",
+		boundary: "Repeat observation supports comparison, not automatic causal proof.",
+	},
+];
+
+export function getGlobalProductModule(id: GlobalProductModuleId): GlobalProductModule {
+	const module = GLOBAL_PRODUCT_MODULES.find((candidate) => candidate.id === id);
+	if (!module) throw new Error(`Unknown global product module: ${id}`);
+	return module;
+}

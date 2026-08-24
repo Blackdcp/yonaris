@@ -65,6 +65,25 @@ describe("global English pages", () => {
 		expect(markup).not.toContain('data-graphic="output-stack"');
 	});
 
+	it("turns the product page into one inspectable operating system", () => {
+		const markup = renderToStaticMarkup(<ProductPage />);
+		const sectionIds = [
+			"scope-rings-hero",
+			"evidence-workbench",
+			"operating-loop",
+			"responsibility-lanes",
+			"request-close",
+		] as const;
+		const positions = sectionIds.map((id) => markup.indexOf(`id="${id}"`));
+		expect(positions.every((position) => position >= 0)).toBe(true);
+		expect(positions).toEqual([...positions].sort((a, b) => a - b));
+		expect(markup).toContain('data-graphic="product-workbench"');
+		expect(markup).toContain("Scope");
+		expect(markup).toContain("Answers");
+		expect(markup).toContain("Evidence");
+		expect(markup).toContain("Experiments");
+	});
+
 	it("never renders a broken in-page call to action", () => {
 		for (const Page of Object.values(pages)) {
 			const markup = renderToStaticMarkup(<Page />);
