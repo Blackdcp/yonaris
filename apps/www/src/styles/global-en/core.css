@@ -1094,6 +1094,77 @@
 	min-height: 3rem;
 	border: 1px solid var(--ge-stone);
 }
+.global-en .diagnostic-form--compact {
+	max-width: 58rem;
+	padding: clamp(1.5rem, 4vw, 3rem);
+	border: 1px solid var(--ge-rule);
+	background: var(--ge-paper);
+	box-shadow: 0 1.4rem 4rem color-mix(in srgb, var(--yonaris-ink) 9%, transparent);
+}
+.global-en .diagnostic-form__heading h2 {
+	margin: 0.5rem 0 0.8rem;
+	font-size: clamp(1.8rem, 3vw, 3rem);
+	line-height: 1.05;
+}
+.global-en .diagnostic-fields {
+	margin: 2rem 0 0;
+	padding: 0;
+	border: 0;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+}
+.global-en .diagnostic-field {
+	display: grid;
+	gap: 0.55rem;
+	font-size: 0.78rem;
+	font-weight: 650;
+}
+.global-en .diagnostic-field input {
+	width: 100%;
+	min-height: 3.4rem;
+	padding: 0.8rem;
+	border: 1px solid var(--ge-stone);
+	background: var(--ge-paper);
+	color: var(--ge-ink);
+	font: inherit;
+}
+.global-en .diagnostic-action {
+	min-height: 3.2rem;
+	margin-top: 1.25rem;
+	padding: 0.8rem 1.2rem;
+	border: 1px solid var(--ge-signal);
+	background: var(--ge-signal);
+	font-weight: 650;
+	cursor: pointer;
+}
+.global-en .diagnostic-disclosure,
+.global-en .diagnostic-validation,
+.global-en .diagnostic-failure {
+	max-width: 50rem;
+	font-size: 0.78rem;
+	color: var(--ge-slate);
+}
+.diagnostic-honeypot {
+	position: absolute !important;
+	width: 1px !important;
+	height: 1px !important;
+	overflow: hidden !important;
+	clip: rect(0 0 0 0) !important;
+}
+.global-en__delivery-path {
+	margin-bottom: 1.5rem;
+	min-height: 8rem;
+	padding: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	border: 1px solid var(--ge-rule);
+}
+.global-en__delivery-path i {
+	color: var(--ge-signal-text);
+}
 .global-en__footer {
 	min-height: 22rem;
 	padding: 4rem max(3rem, calc((100vw - 90rem) / 2));
@@ -1345,6 +1416,13 @@
 	}
 	.global-en__disabled-form fieldset {
 		grid-template-columns: 1fr;
+	}
+	.global-en .diagnostic-fields {
+		grid-template-columns: 1fr;
+	}
+	.global-en__delivery-path {
+		align-items: stretch;
+		flex-direction: column;
 	}
 	.global-en__footer {
 		padding: 3rem 1.25rem;

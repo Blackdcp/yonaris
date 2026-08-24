@@ -36,12 +36,15 @@ describe("global English pages", () => {
 		});
 	}
 
-	it("labels demonstrations and keeps diagnostic submission fail closed", () => {
+	it("labels demonstrations and exposes only the approved live global lead fields", () => {
 		const home = renderToStaticMarkup(<HomePage />);
 		const diagnostic = renderToStaticMarkup(<DiagnosticPage />);
 		expect(home).toContain("Interface demonstration — no customer or live observation data.");
-		expect(diagnostic).toContain('data-submission-state="disabled"');
-		expect(diagnostic).toContain("Submission is unavailable until the privacy review is verified.");
+		expect(diagnostic).toContain('name="name"');
+		expect(diagnostic).toContain('name="email"');
+		expect(diagnostic).toContain('name="company"');
+		expect(diagnostic).not.toContain('name="phone"');
+		expect(diagnostic).not.toContain('name="website"');
 		expect(diagnostic).not.toContain("mailto:");
 	});
 

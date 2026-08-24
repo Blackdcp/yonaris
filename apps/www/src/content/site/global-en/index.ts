@@ -36,7 +36,7 @@ export const GLOBAL_ENGLISH_CONTENT = {
 	diagnostic: {
 		headline: "Request a focused AI market diagnostic.",
 		description: "Start a scope review for a focused, evidence-led AI market diagnostic.",
-		enabled: false,
+		enabled: true,
 	},
 	privacy: {
 		headline: "Privacy",

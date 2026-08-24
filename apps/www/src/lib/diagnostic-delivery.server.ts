@@ -86,17 +86,19 @@ function oneLine(value: string): string {
 }
 
 function emailText(lead: DiagnosticLead): string {
-	return [
-		`Locale: ${oneLine(lead.locale)}`,
-		`Website: ${oneLine(lead.website)}`,
-		`Brand: ${oneLine(lead.brand)}`,
-		`Market or category: ${oneLine(lead.market)}`,
-		`Market question: ${oneLine(lead.question)}`,
-		`Competitors to include: ${oneLine(lead.competitors) || "—"}`,
-		`Name: ${oneLine(lead.name)}`,
-		`Email: ${oneLine(lead.email)}`,
-		"Consent: yes",
-	].join("\n");
+	return lead.locale === "en"
+		? [
+				"Region: Global",
+				`Name: ${oneLine(lead.name)}`,
+				`Work email: ${oneLine(lead.email)}`,
+				`Company: ${oneLine(lead.company)}`,
+			].join("\n")
+		: [
+				"区域：中国",
+				`姓名：${oneLine(lead.name)}`,
+				`电话：${oneLine(lead.phone)}`,
+				`公司：${oneLine(lead.company)}`,
+			].join("\n");
 }
 
 export async function readJsonBodyLimited(request: Request, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
@@ -226,13 +228,16 @@ export async function sendLeadWithResend(
 			reject(new DiagnosticDeliveryError("delivery_unconfirmed"));
 		}, RESEND_TIMEOUT_MS);
 	});
-	const payload = {
+	const payload: Record<string, unknown> = {
 		from: input.env.RESEND_FROM_EMAIL,
 		to: [input.env.MARKETING_LEAD_RECIPIENT],
-		reply_to: input.lead.email,
-		subject: `Yonaris diagnostic request / ${oneLine(input.lead.brand)}`,
+		subject:
+			input.lead.locale === "en"
+				? `Yonaris global website lead / ${oneLine(input.lead.company)}`
+				: `Yonaris 中国官网留资 / ${oneLine(input.lead.company)}`,
 		text: emailText(input.lead),
 	};
+	if (input.lead.locale === "en") payload.reply_to = input.lead.email;
 
 	try {
 		const response = await Promise.race([

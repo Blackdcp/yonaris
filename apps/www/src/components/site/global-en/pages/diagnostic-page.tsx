@@ -1,5 +1,6 @@
 import { GlobalEnglishShell } from "../global-english-shell";
-import { DiagnosticPreview, PrivacyFlow } from "../visuals/visuals";
+import { DiagnosticForm } from "../../pages/diagnostic-form";
+import { DiagnosticPreview } from "../visuals/visuals";
 import { PageHero, PageSection } from "./page-primitives";
 
 export function DiagnosticPage() {
@@ -29,52 +30,23 @@ export function DiagnosticPage() {
 				</div>
 			</PageSection>
 			<PageSection
-				id="two-stage-form"
+				id="lead-form"
 				number="02"
-				title="The request form is privacy-gated."
-				body="The form remains disabled until the notice, operational handling, region gate, and analytics boundary have been verified."
+				title="Three details are enough to start."
+				body="Share your name, work email, and company. Submission sends the request to Yonaris for a human scope review."
 			>
-				<form
-					className="global-en__disabled-form"
-					data-submission-state="disabled"
-					aria-label="Diagnostic request unavailable"
-				>
-					<fieldset disabled>
-						<legend>Scope</legend>
-						<label>
-							Website
-							<input name="website" />
-						</label>
-						<label>
-							Brand
-							<input name="brand" />
-						</label>
-						<label>
-							Target market or region
-							<input name="market" />
-						</label>
-						<label>
-							Target language
-							<input name="targetLanguage" />
-						</label>
-						<label>
-							Decision question
-							<textarea name="question" />
-						</label>
-						<button type="button">Submit diagnostic request</button>
-					</fieldset>
-				</form>
+				<DiagnosticForm locale="en" />
 			</PageSection>
 			<PageSection
-				id="privacy-failure-and-alternate"
+				id="delivery-privacy"
 				number="03"
-				title="Submission is unavailable until the privacy review is verified."
-				body="No lead data is collected by this disabled surface. Return later when the verified privacy boundary is active."
+				title="A confirmed submission means the email provider accepted the request."
+				body="The browser does not claim success until the server confirms delivery. Form values are not placed in analytics events, local storage, or cookies."
 			>
-				<PrivacyFlow />
-				<a className="global-en__text-link" href="/privacy">
-					Read the privacy gate →
-				</a>
+				<div className="global-en__delivery-path" data-graphic="lead-delivery-path">
+					<span>Three-field request</span><i>→</i><span>Server validation</span><i>→</i><span>Email accepted</span><i>→</i><strong>Human review</strong>
+				</div>
+				<a className="global-en__text-link" href="/privacy">Read the privacy note →</a>
 			</PageSection>
 		</GlobalEnglishShell>
 	);

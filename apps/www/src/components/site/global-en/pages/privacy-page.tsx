@@ -8,23 +8,23 @@ export function PrivacyPage() {
 			<PageHero
 				id="hero"
 				eyebrow="PRIVACY"
-				title="Privacy facts must be verified before collection starts."
-				lead="The global diagnostic remains disabled until its public notice and operational data handling are reviewed together."
+				title="Know what the request form sends—and why."
+				lead="The website sends only the regional contact fields you submit, a locale marker, and a hidden abuse-control field that must remain empty."
 				visual={<PrivacyFlow />}
 			/>
 			<PageSection
 				id="english-disclosure"
 				number="01"
-				title="We collect nothing until the privacy boundary is ready."
-				body="Diagnostic requests and analytics remain off until a reviewed privacy configuration explicitly enables them."
+				title="The request route is live and deliberately narrow."
+				body="Global requests include name, work email, and company. China requests include name, phone, and company. We use them to review the request and contact you."
 			>
 				<div className="global-en__privacy-state" data-graphic="privacy-state">
 					<span>NOTICE</span>
-					<b>Pending verified configuration</b>
+					<b>Published on this page</b>
 					<span>SUBMISSION</span>
-					<b>Disabled</b>
+					<b>Server-validated email delivery</b>
 					<span>ANALYTICS</span>
-					<b>Disabled</b>
+					<b>Form values excluded</b>
 				</div>
 			</PageSection>
 			<PageSection

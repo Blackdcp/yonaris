@@ -49,15 +49,29 @@ const scopeShape = {
 export const diagnosticScopeSchema = z.strictObject(scopeShape);
 export type DiagnosticScope = z.output<typeof diagnosticScopeSchema>;
 
-export const diagnosticLeadSchema = z.strictObject({
-	locale: z.enum(["en", "zh"] satisfies readonly Locale[]),
-	...scopeShape,
-	competitors: z.string().trim().max(600).default(""),
+const contactShape = {
 	name: z.string().trim().min(1).max(120),
-	email: z.string().trim().min(1).max(254).pipe(z.email()),
-	consent: z.literal(true),
+	company: z.string().trim().min(1).max(160),
 	companyUrl: z.string().trim().max(0).default(""),
-});
+} as const;
+
+export const diagnosticLeadSchema = z.discriminatedUnion("locale", [
+	z.strictObject({
+		locale: z.literal("en" satisfies Locale),
+		...contactShape,
+		email: z.string().trim().min(1).max(254).pipe(z.email()),
+	}),
+	z.strictObject({
+		locale: z.literal("zh" satisfies Locale),
+		...contactShape,
+		phone: z
+			.string()
+			.trim()
+			.min(6)
+			.max(32)
+			.regex(/^(?=.*\d)[+\d\s()-]+$/),
+	}),
+]);
 export type DiagnosticLead = z.output<typeof diagnosticLeadSchema>;
 
 export function parseDiagnosticScope(input: unknown): z.ZodSafeParseResult<DiagnosticScope> {
@@ -72,54 +86,4 @@ export function parseDiagnosticSearch(search: Record<string, unknown>): { websit
 	if (typeof search.website !== "string") return { website: "" };
 	const result = websiteSchema.safeParse(search.website);
 	return result.success ? { website: result.data } : { website: "" };
-}
-
-export const DIAGNOSTIC_FALLBACK_RECIPIENT = "black.dcp@outlook.com";
-
-function oneLine(value: string): string {
-	return value
-		.replace(/[\r\n]+/g, " ")
-		.replace(/\s+/g, " ")
-		.trim();
-}
-
-function diagnosticMailBody(lead: DiagnosticLead): string {
-	const labels =
-		lead.locale === "zh"
-			? ["语言", "官网", "品牌", "市场或品类", "市场问题", "需要纳入的竞品", "姓名", "邮箱", "同意"]
-			: [
-					"Locale",
-					"Website",
-					"Brand",
-					"Market or category",
-					"Market question",
-					"Competitors to include",
-					"Name",
-					"Email",
-					"Consent",
-				];
-	const values = [
-		lead.locale,
-		lead.website,
-		lead.brand,
-		lead.market,
-		lead.question,
-		lead.competitors || "—",
-		lead.name,
-		lead.email,
-		lead.locale === "zh" ? "已同意" : "yes",
-	];
-	return labels.map((label, index) => `${label}: ${oneLine(values[index] ?? "")}`).join("\n");
-}
-
-export function buildDiagnosticMailto(input: unknown): string | null {
-	const result = parseDiagnosticLead(input);
-	if (!result.success) return null;
-
-	const lead = result.data;
-	const subject =
-		lead.locale === "zh"
-			? `Yonaris 免费诊断申请 / ${oneLine(lead.brand)}`
-			: `Yonaris free diagnostic / ${oneLine(lead.brand)}`;
-	return `mailto:${encodeURIComponent(DIAGNOSTIC_FALLBACK_RECIPIENT)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(diagnosticMailBody(lead))}`;
 }

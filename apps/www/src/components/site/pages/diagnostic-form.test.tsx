@@ -3,25 +3,25 @@ import { describe, expect, it } from "vitest";
 import { DiagnosticForm } from "./diagnostic-form";
 
 describe("DiagnosticForm", () => {
-	it.each([
-		{
-			locale: "en" as const,
-			scope: "1 / Scope",
-			contact: "2 / Contact",
-			privacy: "How we handle diagnostic request data",
-		},
-		{ locale: "zh" as const, scope: "1 / 范围", contact: "2 / 联系", privacy: "我们如何处理诊断申请信息" },
-	])("renders the authored $locale stages and request contract", ({ locale, scope, contact, privacy }) => {
-		const markup = renderToStaticMarkup(<DiagnosticForm locale={locale} initialWebsite="https://acme.example" />);
+	it("renders exactly the three approved global lead fields", () => {
+		const markup = renderToStaticMarkup(<DiagnosticForm locale="en" />);
+		expect(markup).toContain('name="name"');
+		expect(markup).toContain('name="email"');
+		expect(markup).toContain('name="company"');
+		expect(markup).not.toContain('name="phone"');
+		expect(markup).not.toContain('name="website"');
+		expect(markup).not.toContain('name="consent"');
+		expect(markup).not.toContain("mailto:");
+	});
 
-		expect(markup).toContain(scope);
-		expect(markup).toContain(contact);
-		expect(markup).toContain('aria-current="step"');
-		expect(markup).toContain('name="companyUrl"');
-		expect(markup).toContain('href="/privacy"');
-		expect(markup).toContain(privacy);
-		expect(markup).toContain('value="https://acme.example"');
-		expect(markup).not.toContain("Opening a draft sends nothing");
-		expect(markup).not.toContain("打开草稿不会发送任何信息");
+	it("renders exactly the three approved China lead fields", () => {
+		const markup = renderToStaticMarkup(<DiagnosticForm locale="zh" />);
+		expect(markup).toContain('name="name"');
+		expect(markup).toContain('name="phone"');
+		expect(markup).toContain('name="company"');
+		expect(markup).not.toContain('name="email"');
+		expect(markup).not.toContain('name="website"');
+		expect(markup).not.toContain('name="consent"');
+		expect(markup).toContain("提交后，我们会通过你留下的联系方式沟通需求");
 	});
 });

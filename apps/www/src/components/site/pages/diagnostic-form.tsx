@@ -1,434 +1,160 @@
 import { useEffect, useRef, useState } from "react";
-import { getDiagnosticContent, type Locale } from "@/content/site";
+import type { Locale } from "@/content/site";
 import {
 	type DiagnosticRequestIdentity,
 	diagnosticLeadFingerprint,
 	resolveDiagnosticRequestIdentity,
 	submitDiagnosticRequest,
 } from "@/lib/diagnostic-client";
-import {
-	buildDiagnosticMailto,
-	DIAGNOSTIC_LEAD_FIELDS,
-	type DiagnosticLeadField,
-	type DiagnosticStageId,
-	parseDiagnosticLead,
-	parseDiagnosticScope,
-} from "@/lib/diagnostic-schema";
+import { parseDiagnosticLead, type DiagnosticLead } from "@/lib/diagnostic-schema";
 
-type TextField = Exclude<DiagnosticLeadField, "consent">;
-type SubmissionState = "idle" | "submitting" | "unconfirmed";
+type SubmissionState = "idle" | "submitting" | "unconfirmed" | "success";
 
-interface DiagnosticValues {
-	website: string;
-	brand: string;
-	market: string;
-	question: string;
-	competitors: string;
+interface LeadValues {
 	name: string;
-	email: string;
-	consent: boolean;
+	contact: string;
+	company: string;
 	companyUrl: string;
 }
 
-const TEXT_FIELD_LIMITS: Record<TextField, number> = {
-	website: 300,
-	brand: 120,
-	market: 160,
-	question: 2000,
-	competitors: 600,
-	name: 120,
-	email: 254,
-};
+const copy = {
+	en: {
+		label: "Diagnostic request",
+		title: "Tell us where to reach you.",
+		summary: "Three details are enough to begin. We will review the request before any observation starts.",
+		name: "Name",
+		contact: "Work email",
+		company: "Company",
+		namePlaceholder: "Your name",
+		contactPlaceholder: "you@company.com",
+		companyPlaceholder: "Company name",
+		submit: "Submit request",
+		submitting: "Submitting…",
+		retry: "Try again",
+		error: "Check the three fields and try again.",
+		failure: "We could not confirm delivery. Your entries remain here; please try again.",
+		successTitle: "Request received.",
+		successBody: "Yonaris will review the request and contact you at the work email provided.",
+		disclosure: "By submitting, you allow Yonaris to use these details to review your request and contact you.",
+		privacy: "How we handle request data",
+	},
+	zh: {
+		label: "需求沟通",
+		title: "留下联系方式，我们来和你一起判断下一步。",
+		summary: "只需要三项信息。收到后，我们会先了解你的问题，不会自动生成扫描或报告。",
+		name: "姓名",
+		contact: "电话",
+		company: "公司",
+		namePlaceholder: "你的姓名",
+		contactPlaceholder: "手机号或联系电话",
+		companyPlaceholder: "公司名称",
+		submit: "提交需求",
+		submitting: "正在提交…",
+		retry: "重试",
+		error: "请检查姓名、电话和公司后重试。",
+		failure: "暂时无法确认是否送达。你填写的信息仍保留在本页，请重试。",
+		successTitle: "需求已收到",
+		successBody: "我们会先了解你的实际问题，再通过所留电话与你沟通。",
+		disclosure: "提交后，我们会通过你留下的联系方式沟通需求，并仅将这些信息用于本次联系。",
+		privacy: "查看信息处理说明",
+	},
+} as const;
 
-function initialValues(initialWebsite: string): DiagnosticValues {
-	return {
-		website: initialWebsite,
-		brand: "",
-		market: "",
-		question: "",
-		competitors: "",
-		name: "",
-		email: "",
-		consent: false,
-		companyUrl: "",
-	};
+function toLead(values: LeadValues, locale: Locale): unknown {
+	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl };
+	return locale === "en" ? { ...base, email: values.contact } : { ...base, phone: values.contact };
 }
 
-function scopeInput(values: DiagnosticValues) {
-	return {
-		website: values.website,
-		brand: values.brand,
-		market: values.market,
-		question: values.question,
-	};
-}
-
-function leadInput(values: DiagnosticValues, locale: Locale) {
-	return { locale, ...values };
-}
-
-function issueFields(issues: readonly { path: PropertyKey[] }[]): DiagnosticLeadField[] {
-	const paths = new Set(issues.map((issue) => issue.path[0]));
-	return DIAGNOSTIC_LEAD_FIELDS.filter((field) => paths.has(field));
-}
-
-function focusDiagnosticField(field: DiagnosticLeadField | undefined): void {
-	if (!field) return;
-	requestAnimationFrame(() => document.getElementById(`diagnostic-${field}`)?.focus());
-}
-
-function FieldError({ id, visible, copy }: { id: string; visible: boolean; copy: string }) {
-	return (
-		<p id={id} className="diagnostic-field__error" hidden={!visible}>
-			{copy}
-		</p>
-	);
-}
-
-export function DiagnosticForm({ locale, initialWebsite = "" }: { locale: Locale; initialWebsite?: string }) {
-	const content = getDiagnosticContent(locale);
-	const copy = content.form;
-	const [stage, setStage] = useState<DiagnosticStageId | "success">("scope");
+export function DiagnosticForm({ locale }: { locale: Locale; initialWebsite?: string }) {
+	const labels = copy[locale];
+	const [values, setValues] = useState<LeadValues>({ name: "", contact: "", company: "", companyUrl: "" });
 	const [submission, setSubmission] = useState<SubmissionState>("idle");
-	const [values, setValues] = useState<DiagnosticValues>(() => initialValues(initialWebsite));
-	const [invalidFields, setInvalidFields] = useState<DiagnosticLeadField[]>([]);
 	const [validationFailed, setValidationFailed] = useState(false);
-	const [fallbackMailto, setFallbackMailto] = useState<string | null>(null);
 	const valuesRef = useRef(values);
 	const identityRef = useRef<DiagnosticRequestIdentity | null>(null);
-	const activeRequestRef = useRef<{ controller: AbortController; fingerprint: string; token: number } | null>(null);
-	const requestTokenRef = useRef(0);
-	const submittingLockRef = useRef(false);
-	const failureRef = useRef<HTMLDivElement>(null);
-	const previousStageRef = useRef(stage);
-	const previousSubmissionRef = useRef(submission);
+	const controllerRef = useRef<AbortController | null>(null);
 
-	useEffect(() => {
-		if (previousStageRef.current === stage) return;
-		previousStageRef.current = stage;
-		const titleId = stage === "success" ? "diagnostic-success-title" : "diagnostic-stage-title";
-		document.getElementById(titleId)?.focus();
-	}, [stage]);
+	useEffect(() => () => controllerRef.current?.abort(), []);
 
-	useEffect(() => {
-		if (previousSubmissionRef.current === submission) return;
-		previousSubmissionRef.current = submission;
-		if (submission === "unconfirmed") failureRef.current?.focus();
-	}, [submission]);
-
-	useEffect(
-		() => () => {
-			requestTokenRef.current += 1;
-			activeRequestRef.current?.controller.abort();
-			activeRequestRef.current = null;
-			submittingLockRef.current = false;
-		},
-		[],
-	);
-
-	function replaceValues(next: DiagnosticValues, changedField?: DiagnosticLeadField): void {
+	function update(field: keyof LeadValues, value: string): void {
+		const next = { ...valuesRef.current, [field]: value };
 		valuesRef.current = next;
 		setValues(next);
-		if (changedField) setInvalidFields((current) => current.filter((field) => field !== changedField));
 		setValidationFailed(false);
-		if (submission === "unconfirmed") {
-			setSubmission("idle");
-			setFallbackMailto(null);
-		}
-
-		const active = activeRequestRef.current;
-		if (!active) return;
-		const currentFingerprint = diagnosticLeadFingerprint(leadInput(next, locale));
-		if (currentFingerprint === active.fingerprint) return;
-		requestTokenRef.current += 1;
-		active.controller.abort();
-		activeRequestRef.current = null;
-		submittingLockRef.current = false;
-		setSubmission("idle");
+		if (submission === "unconfirmed") setSubmission("idle");
 	}
 
-	function updateText(field: TextField, value: string): void {
-		replaceValues({ ...valuesRef.current, [field]: value }, field);
-	}
-
-	function updateConsent(consent: boolean): void {
-		replaceValues({ ...valuesRef.current, consent }, "consent");
-	}
-
-	function continueToContact(): void {
-		const result = parseDiagnosticScope(scopeInput(valuesRef.current));
-		if (!result.success) {
-			const fields = issueFields(result.error.issues);
-			setInvalidFields(fields);
-			setValidationFailed(true);
-			focusDiagnosticField(fields[0]);
-			return;
-		}
-		setInvalidFields([]);
-		setValidationFailed(false);
-		setSubmission("idle");
-		setFallbackMailto(null);
-		setStage("contact");
-	}
-
-	function backToScope(): void {
+	async function submit(event: React.FormEvent<HTMLFormElement>): Promise<void> {
+		event.preventDefault();
 		if (submission === "submitting") return;
-		setInvalidFields([]);
-		setValidationFailed(false);
-		setSubmission("idle");
-		setFallbackMailto(null);
-		setStage("scope");
-	}
-
-	async function submitLead(): Promise<void> {
-		if (submittingLockRef.current) return;
-		const result = parseDiagnosticLead(leadInput(valuesRef.current, locale));
-		if (!result.success) {
-			const fields = issueFields(result.error.issues);
-			setInvalidFields(fields);
+		const parsed = parseDiagnosticLead(toLead(valuesRef.current, locale));
+		if (!parsed.success) {
 			setValidationFailed(true);
-			if (fields.some((field) => content.stages[0].fields.includes(field))) setStage("scope");
-			focusDiagnosticField(fields[0]);
 			return;
 		}
 
-		const identity = resolveDiagnosticRequestIdentity(identityRef.current, result.data);
+		const identity = resolveDiagnosticRequestIdentity(identityRef.current, parsed.data);
 		if (!identity) return;
 		identityRef.current = identity;
 		const controller = new AbortController();
-		const token = requestTokenRef.current + 1;
-		requestTokenRef.current = token;
-		activeRequestRef.current = { controller, fingerprint: identity.normalizedLeadFingerprint, token };
-		submittingLockRef.current = true;
-		setInvalidFields([]);
-		setValidationFailed(false);
-		setFallbackMailto(null);
+		controllerRef.current?.abort();
+		controllerRef.current = controller;
 		setSubmission("submitting");
-
-		const requestResult = await submitDiagnosticRequest(result.data, identity.idempotencyKey, {
+		const result = await submitDiagnosticRequest(parsed.data as DiagnosticLead, identity.idempotencyKey, {
 			signal: controller.signal,
 		});
-		const active = activeRequestRef.current;
-		const currentFingerprint = diagnosticLeadFingerprint(leadInput(valuesRef.current, locale));
-		if (
-			!active ||
-			active.token !== token ||
-			requestTokenRef.current !== token ||
-			currentFingerprint !== active.fingerprint
-		) {
-			return;
-		}
-
-		activeRequestRef.current = null;
-		submittingLockRef.current = false;
-		if (requestResult.status === "confirmed") {
+		if (controllerRef.current !== controller) return;
+		controllerRef.current = null;
+		if (result.status === "confirmed") {
 			identityRef.current = null;
-			setSubmission("idle");
-			setStage("success");
-			return;
+			setSubmission("success");
+		} else {
+			setSubmission("unconfirmed");
 		}
-
-		setFallbackMailto(buildDiagnosticMailto(result.data));
-		setSubmission("unconfirmed");
 	}
 
-	function submit(event: React.FormEvent<HTMLFormElement>): void {
-		event.preventDefault();
-		if (stage === "scope") {
-			continueToContact();
-			return;
-		}
-		if (stage === "contact") void submitLead();
+	if (submission === "success") {
+		return (
+			<section className="diagnostic-confirmation" role="status" aria-live="polite" data-diagnostic-state="success">
+				<p>{labels.label}</p>
+				<h2>{labels.successTitle}</h2>
+				<p>{labels.successBody}</p>
+			</section>
+		);
 	}
-
-	const currentStage = stage === "success" ? null : content.stages.find((item) => item.id === stage);
-	const pending = submission === "submitting";
-	const reviewItems = ["website", "brand", "market", "question"] as const;
 
 	return (
-		<div className="diagnostic-sheet" data-diagnostic-state={stage === "success" ? "success" : submission}>
-			<header className="diagnostic-sheet__masthead">
-				<p>{copy.requestLabel}</p>
-				<ol aria-label={locale === "zh" ? "申请进度" : "Request progress"}>
-					{content.stages.map((item) => (
-						<li key={item.id} aria-current={stage === item.id ? "step" : undefined}>
-							{item.progressLabel}
-						</li>
-					))}
-				</ol>
+		<form className="diagnostic-form diagnostic-form--compact" onSubmit={submit} noValidate data-diagnostic-state={submission}>
+			<header className="diagnostic-form__heading">
+				<p>{labels.label}</p>
+				<h2>{labels.title}</h2>
+				<p>{labels.summary}</p>
 			</header>
-
-			{stage === "success" ? (
-				<section className="diagnostic-confirmation" role="status" aria-live="polite">
-					<p className="diagnostic-confirmation__index">02 / 02</p>
-					<h2 id="diagnostic-success-title" tabIndex={-1}>
-						{copy.success.title}
-					</h2>
-					<p>{copy.success.body}</p>
-					<dl>
-						{reviewItems.map((field) => (
-							<div key={field}>
-								<dt>{copy.fields[field].label}</dt>
-								<dd>{values[field]}</dd>
-							</div>
-						))}
-					</dl>
-				</section>
-			) : (
-				<form className="diagnostic-form" onSubmit={submit} noValidate aria-describedby="diagnostic-disclosure">
-					<div className="diagnostic-form__heading">
-						<p>{currentStage?.progressLabel}</p>
-						<h2 id="diagnostic-stage-title" tabIndex={-1}>
-							{currentStage?.title}
-						</h2>
-						<p>{currentStage?.summary}</p>
-					</div>
-
-					{stage === "contact" ? (
-						<dl className="diagnostic-review" aria-label={copy.reviewLabel}>
-							{reviewItems.map((field) => (
-								<div key={field}>
-									<dt>{copy.fields[field].label}</dt>
-									<dd>{values[field]}</dd>
-								</div>
-							))}
-						</dl>
-					) : null}
-
-					<fieldset className="diagnostic-fields">
-						<legend className="sr-only">{currentStage?.title}</legend>
-						{currentStage?.fields.map((field) => {
-							if (field === "consent") {
-								const invalid = invalidFields.includes(field);
-								return (
-									<div className="diagnostic-consent" key={field}>
-										<label htmlFor="diagnostic-consent">
-											<input
-												id="diagnostic-consent"
-												name="consent"
-												type="checkbox"
-												value="true"
-												checked={values.consent}
-												disabled={pending}
-												aria-invalid={invalid}
-												aria-describedby="diagnostic-consent-error"
-												onChange={(event) => updateConsent(event.currentTarget.checked)}
-											/>
-											<span>{copy.consent.label}</span>
-										</label>
-										<FieldError id="diagnostic-consent-error" visible={invalid} copy={copy.consent.error} />
-									</div>
-								);
-							}
-
-							const invalid = invalidFields.includes(field);
-							const fieldCopy = copy.fields[field];
-							const errorId = `diagnostic-${field}-error`;
-							const required = field !== "competitors";
-							return (
-								<div className={`diagnostic-field diagnostic-field--${field}`} key={field}>
-									<label
-										className="diagnostic-field__label"
-										data-required={required || undefined}
-										htmlFor={`diagnostic-${field}`}
-									>
-										{fieldCopy.label}
-									</label>
-									{field === "question" ? (
-										<textarea
-											id={`diagnostic-${field}`}
-											name={field}
-											value={values[field]}
-											placeholder={fieldCopy.placeholder}
-											maxLength={TEXT_FIELD_LIMITS[field]}
-											required
-											aria-invalid={invalid}
-											aria-describedby={errorId}
-											onChange={(event) => updateText(field, event.currentTarget.value)}
-										/>
-									) : (
-										<input
-											id={`diagnostic-${field}`}
-											name={field}
-											type={field === "website" ? "url" : field === "email" ? "email" : "text"}
-											value={values[field]}
-											placeholder={fieldCopy.placeholder}
-											maxLength={TEXT_FIELD_LIMITS[field]}
-											required={required}
-											aria-invalid={invalid}
-											aria-describedby={errorId}
-											onChange={(event) => updateText(field, event.currentTarget.value)}
-										/>
-									)}
-									<FieldError id={errorId} visible={invalid} copy={fieldCopy.error} />
-								</div>
-							);
-						})}
-					</fieldset>
-
-					<p className="diagnostic-privacy">
-						<span>{copy.consent.privacyLeadIn}</span> <a href="/privacy">{copy.consent.privacyLinkLabel}</a>
-					</p>
-
-					<div className="diagnostic-honeypot" aria-hidden="true">
-						<label htmlFor="diagnostic-company-url">{copy.honeypotLabel}</label>
-						<input
-							id="diagnostic-company-url"
-							name="companyUrl"
-							type="text"
-							value={values.companyUrl}
-							autoComplete="off"
-							tabIndex={-1}
-							onChange={(event) => replaceValues({ ...valuesRef.current, companyUrl: event.currentTarget.value })}
-						/>
-					</div>
-
-					{validationFailed ? (
-						<p className="diagnostic-validation" role="alert">
-							{copy.validationSummary}
-						</p>
-					) : null}
-					{submission === "submitting" ? (
-						<p className="diagnostic-submission-status" role="status" aria-live="polite">
-							{copy.actions.submitting}
-						</p>
-					) : null}
-					{submission === "unconfirmed" ? (
-						<div className="diagnostic-failure" role="alert" tabIndex={-1} ref={failureRef}>
-							<h3>{copy.failure.title}</h3>
-							<p>{copy.failure.body}</p>
-							{fallbackMailto ? <a href={fallbackMailto}>{copy.failure.fallbackLabel}</a> : null}
-							<p>{copy.failure.fallbackDisclosure}</p>
-						</div>
-					) : null}
-
-					<div className="diagnostic-form__actions">
-						{stage === "contact" ? (
-							<button
-								type="button"
-								className="diagnostic-action diagnostic-action--back"
-								onClick={backToScope}
-								disabled={pending}
-							>
-								{copy.actions.back}
-							</button>
-						) : null}
-						<button type="submit" className="diagnostic-action diagnostic-action--primary" disabled={pending}>
-							{stage === "scope"
-								? copy.actions.continue
-								: pending
-									? copy.actions.submitting
-									: submission === "unconfirmed"
-										? copy.actions.retry
-										: copy.actions.submit}
-						</button>
-					</div>
-
-					<p id="diagnostic-disclosure" className="diagnostic-disclosure">
-						{copy.disclosure}
-					</p>
-				</form>
-			)}
-		</div>
+			<fieldset className="diagnostic-fields">
+				<legend className="sr-only">{labels.label}</legend>
+				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-name`}>
+					<span>{labels.name}</span>
+					<input id={`diagnostic-${locale}-name`} name="name" value={values.name} maxLength={120} required placeholder={labels.namePlaceholder} autoComplete="name" onChange={(event) => update("name", event.currentTarget.value)} />
+				</label>
+				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-contact`}>
+					<span>{labels.contact}</span>
+					<input id={`diagnostic-${locale}-contact`} name={locale === "en" ? "email" : "phone"} type={locale === "en" ? "email" : "tel"} value={values.contact} maxLength={locale === "en" ? 254 : 32} required placeholder={labels.contactPlaceholder} autoComplete={locale === "en" ? "email" : "tel"} onChange={(event) => update("contact", event.currentTarget.value)} />
+				</label>
+				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-company`}>
+					<span>{labels.company}</span>
+					<input id={`diagnostic-${locale}-company`} name="company" value={values.company} maxLength={160} required placeholder={labels.companyPlaceholder} autoComplete="organization" onChange={(event) => update("company", event.currentTarget.value)} />
+				</label>
+			</fieldset>
+			<div className="diagnostic-honeypot" aria-hidden="true">
+				<label htmlFor={`diagnostic-${locale}-company-url`}>Company URL</label>
+				<input id={`diagnostic-${locale}-company-url`} name="companyUrl" value={values.companyUrl} tabIndex={-1} autoComplete="off" onChange={(event) => update("companyUrl", event.currentTarget.value)} />
+			</div>
+			{validationFailed ? <p className="diagnostic-validation" role="alert">{labels.error}</p> : null}
+			{submission === "unconfirmed" ? <p className="diagnostic-failure" role="alert">{labels.failure}</p> : null}
+			<button className="diagnostic-action diagnostic-action--primary" type="submit" disabled={submission === "submitting"}>
+				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
+			</button>
+			<p className="diagnostic-disclosure">{labels.disclosure} <a href="/privacy">{labels.privacy}</a></p>
+		</form>
 	);
 }

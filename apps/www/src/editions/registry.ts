@@ -29,7 +29,7 @@ export const GLOBAL_ENGLISH_SECTION_IDS = {
 		"principles",
 		"diagnostic-close",
 	],
-	diagnostic: ["deliverable-hero", "request-timeline", "two-stage-form", "privacy-failure-and-alternate"],
+	diagnostic: ["deliverable-hero", "request-timeline", "lead-form", "delivery-privacy"],
 	privacy: ["hero", "english-disclosure", "regional-boundaries"],
 } as const;
 

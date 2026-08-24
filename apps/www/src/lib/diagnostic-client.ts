@@ -24,18 +24,11 @@ export function diagnosticLeadFingerprint(input: unknown): string | null {
 	const result = parseDiagnosticLead(input);
 	if (!result.success) return null;
 	const lead = result.data;
-	return JSON.stringify({
-		locale: lead.locale,
-		website: lead.website,
-		brand: lead.brand,
-		market: lead.market,
-		question: lead.question,
-		competitors: lead.competitors,
-		name: lead.name,
-		email: lead.email,
-		consent: lead.consent,
-		companyUrl: lead.companyUrl,
-	});
+	return JSON.stringify(
+		lead.locale === "en"
+			? { locale: lead.locale, name: lead.name, email: lead.email, company: lead.company, companyUrl: lead.companyUrl }
+			: { locale: lead.locale, name: lead.name, phone: lead.phone, company: lead.company, companyUrl: lead.companyUrl },
+	);
 }
 
 export function resolveDiagnosticRequestIdentity(
