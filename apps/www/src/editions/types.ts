@@ -1,0 +1,35 @@
+import type { ReactNode } from "react";
+
+export type SiteEdition = "global-en" | "zh-cn-legacy";
+export type EditionPageRef = `${SiteEdition}:${string}`;
+
+export interface EditionPage {
+	ref: EditionPageRef;
+	editionId: SiteEdition;
+	locale: "en" | "zh-CN";
+	pathname: `/${string}`;
+	intentId: string;
+	publication: "published" | "draft";
+	navigation: readonly ("primary" | "footer" | "utility" | "contextual")[];
+	seo: { indexable: boolean; xDefault?: boolean };
+}
+
+export interface EditionDefinition {
+	id: SiteEdition;
+	home: EditionPageRef;
+	pages: readonly EditionPage[];
+	primaryNavigation: readonly EditionPageRef[];
+	footerNavigation: readonly EditionPageRef[];
+	localeFallbackHome: EditionPageRef;
+	analyticsPolicy: "disabled" | "global-reviewed";
+	diagnosticPolicy: "disabled" | "global-v2" | "legacy-v1";
+}
+
+export interface GlobalEnglishPageContract {
+	key: "home" | "product" | "approach" | "research" | "geo" | "company" | "diagnostic" | "privacy";
+	canonicalPath: `/${string}`;
+	title: string;
+	description: string;
+	sectionIds: readonly string[];
+	page: () => ReactNode;
+}
