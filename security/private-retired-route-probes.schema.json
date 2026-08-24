@@ -1,0 +1,1 @@
+{"type":"array","items":{"type":"object","required":["routeDigest"],"properties":{"routeDigest":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}}

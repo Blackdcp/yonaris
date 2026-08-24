@@ -1,0 +1,1 @@
+{"type":"object","required":["ownerRole","publicFiles"],"properties":{"ownerRole":{"const":"release-owner"},"publicFiles":{"type":"object"}}}

@@ -1,0 +1,1 @@
+{"type":"array","items":{"type":"object","required":["fingerprintId","legalBasisReference","approvedByRole","approvedAt","expiresAt"],"properties":{"approvedByRole":{"const":"release-owner"}}}}

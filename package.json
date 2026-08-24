@@ -25,7 +25,9 @@
     "test:e2e": "pnpm --filter e2e test:e2e",
     "test:e2e-local": "bash e2e/run-local.sh",
     "test:api": "pnpm --filter e2e test:api",
-    "license-check": "node scripts/check-licenses.mjs"
+    "license-check": "node scripts/check-licenses.mjs",
+    "audit:public-output": "node scripts/public-output-audit.mjs",
+    "test:public-output-policy": "node --test scripts/public-output-policy.test.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",

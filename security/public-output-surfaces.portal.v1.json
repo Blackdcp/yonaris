@@ -1,0 +1,1 @@
+{"surfaceClass":"portal","phases":{"source":{"surface":"portal-source"},"artifact":{"surface":"portal-artifact"},"image-root":{"surface":"portal-image"}},"runtimeRouteClasses":["public","auth"]}
