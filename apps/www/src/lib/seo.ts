@@ -5,7 +5,7 @@ const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
 export const SITE_URL = configuredSiteUrl ? configuredSiteUrl.replace(/\/$/, "") : "";
 export const SITE_NAME = "Yonaris";
 export const SITE_DESCRIPTION =
-	"Yonaris is an AI-native MarTech company helping brands understand and improve how they are discovered, interpreted, compared, and chosen in AI-mediated markets.";
+	"Yonaris is an AI market evidence company helping brands understand and improve how they are discovered, interpreted, compared, and chosen in AI-mediated markets.";
 export const SITE_LOGO_URL = SITE_URL ? `${SITE_URL}/brand/logos/yonaris-wordmark-navy.png` : undefined;
 
 export function canonicalUrl(path: string): string | undefined {

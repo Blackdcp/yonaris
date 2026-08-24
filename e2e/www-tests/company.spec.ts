@@ -16,7 +16,7 @@ const locales = [
 		canonicalPath: "/company",
 		diagnosticLabel: "Get a Free Diagnostic",
 		groupLabel: "Choose the market reader",
-		headline: "MarTech, rebuilt. For humans and agents.",
+		headline: "Market evidence, built for teams and systems.",
 		humanAnnotation: "A person can question the evidence, inspect its scope, and decide what to test next.",
 		humanLabel: "Human decision-maker",
 		marketTitle: "The market now has two readers.",

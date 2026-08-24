@@ -178,7 +178,7 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 				{ title: brandName ? `${brandName} · ${appName}` : appName },
 				{
 					name: "description",
-					content: brandName ? `AI visibility tracking for ${brandName}.` : "AI visibility tracking and optimization.",
+					content: brandName ? `AI answer presence tracking for ${brandName}.` : "AI answer presence tracking and optimization.",
 				},
 			],
 		};

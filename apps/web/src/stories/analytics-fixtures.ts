@@ -22,7 +22,7 @@ function buildDates(n: number, end = "2026-06-04"): string[] {
 const DATES = buildDates(30);
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
-// AI visibility: a mild upward wave settling around 72%.
+// AI answer presence: a mild upward wave settling around 72%.
 const visibilityTimeSeries = DATES.map((date, i) => ({
 	date,
 	overall: clamp(58 + i * 0.5 + 7 * Math.sin(i / 3.5)),

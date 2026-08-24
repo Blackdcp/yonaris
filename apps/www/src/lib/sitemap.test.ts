@@ -69,7 +69,7 @@ describe("manifest-driven sitemap", () => {
 			"/roadmap",
 			"/ai-search",
 			"/aeo-for",
-			"/ai-visibility-tools",
+			"/answer-presence-tools",
 			"/agent",
 			"/agent/company",
 			"/agent/product",

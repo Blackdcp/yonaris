@@ -18,7 +18,7 @@
 - Preserve every unrelated user change in other worktrees.
 - Use the approved Yonaris VI tokens only; do not revive the earlier Structured Paths hero.
 - Completely delete the hero eyebrow/orange square and bottom three-column rail without replacements.
-- Keep `MarTech, rebuilt. For humans and agents.` visible below the hero and in agent-readable content so the approved thesis and release smoke remain true.
+- Keep `Market evidence, built for teams and systems.` visible below the hero and in agent-readable content so the approved thesis and release smoke remain true.
 - Keep every diagnostic example visibly labeled illustrative/simulated and free of customer claims.
 - Keep the final diagnostic submission as the existing transparent `mailto:` flow.
 - Do not hand-edit `apps/www/src/routeTree.gen.ts`.

@@ -67,7 +67,7 @@ const HIDDEN_PATHS = [
 	"/blog/ai-brand-sentiment",
 	"/blog/rss.xml",
 	"/glossary",
-	"/glossary/ai-visibility",
+	"/glossary/answer-presence",
 	"/docs",
 	"/docs/getting-started",
 	"/changelog",
@@ -76,8 +76,8 @@ const HIDDEN_PATHS = [
 	"/ai-search/chatgpt",
 	"/aeo-for",
 	"/aeo-for/agencies",
-	"/ai-visibility-tools",
-	"/ai-visibility-tools/retired-record",
+	"/answer-presence-tools",
+	"/answer-presence-tools/retired-record",
 	"/api/openapi.json",
 	"/api/search",
 	"/repo-activity.svg",
@@ -97,14 +97,14 @@ const ALL_COPY = [
 	"Request a focused AI market diagnostic.",
 	"See how AI is shaping your market.",
 	"MarTech, rebuilt.",
-	"For humans and agents.",
+	"for teams and systems.",
 	"看清 AI 如何塑造你的市场",
 	"重构 MarTech",
 	"同时面向人，也面向智能体",
 	"Make AI market answers observable.",
 	"A repeatable evidence loop, not a generic score.",
 	"Every finding should show its scope.",
-	"AI-native MarTech",
+	"AI market evidence",
 	"See what AI sees before you decide what to change.",
 	"Market understanding, made observable.",
 	"# Yonaris agent index",
@@ -233,7 +233,7 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 
 		const robots =
 			url.pathname === "/roadmap" ||
-			["/blog", "/glossary", "/ai-search", "/aeo-for", "/ai-visibility-tools"].some(
+			["/blog", "/glossary", "/ai-search", "/aeo-for", "/answer-presence-tools"].some(
 				(prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`),
 			)
 				? '<meta name="robots" content="noindex,follow">'

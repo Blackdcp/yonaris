@@ -93,7 +93,7 @@ curl_origin() {
 
 check_apex_and_portal() {
 	local state_dir="$1"
-	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET "AI-native MarTech" &&
+	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET "AI market evidence" &&
 		curl_origin portal.yonaris.com / 200 "$state_dir/portal.html"
 }
 
@@ -101,7 +101,7 @@ full_health() {
 	local state_dir="$1"
 	local response="$state_dir/health-response"
 
-	curl_origin yonaris.com / 200 "$response" GET "AI-native MarTech" || return 1
+	curl_origin yonaris.com / 200 "$response" GET "AI market evidence" || return 1
 	grep -Fq "MarTech, rebuilt" "$response" || return 1
 	grep -Fq "See how AI is shaping your market" "$response" || return 1
 

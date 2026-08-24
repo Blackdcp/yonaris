@@ -4,7 +4,7 @@
 
 # Yonaris
 
-Yonaris is a private AI-native MarTech product for making market evidence observable, reviewable, and useful to human teams and software agents.
+Yonaris is a private AI market evidence product for making market evidence observable, reviewable, and useful to human teams and software agents.
 
 This repository and its deployment materials are proprietary and confidential. They are not offered as a public self-hosting package or reusable third-party project.
 

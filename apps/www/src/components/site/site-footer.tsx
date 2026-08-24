@@ -47,7 +47,7 @@ export function SiteFooter({ locale }: { locale: Locale }): React.ReactNode {
 			<div className="site-footer__legal border-t border-white/10">
 				<div className="mx-auto flex min-h-16 max-w-[90rem] flex-wrap items-center justify-between gap-4 px-5 py-4 text-xs uppercase tracking-[0.12em] text-[var(--yonaris-paper)]/48 sm:px-8 lg:px-12">
 					<span>© {new Date().getFullYear()} Yonaris</span>
-					<span>MarTech, rebuilt. For humans and agents.</span>
+					<span>Market evidence, built for teams and systems.</span>
 				</div>
 			</div>
 		</footer>

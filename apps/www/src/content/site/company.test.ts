@@ -7,7 +7,7 @@ const claimContract = [
 	{ id: "company-human-agent-direction", status: "direction" },
 	{ id: "company-service-led-stage", status: "managed-delivery" },
 	{ id: "company-evidence-platform", status: "current-software" },
-	{ id: "company-recursive-forest-method", status: "managed-delivery" },
+	{ id: "company-evidence-framework-method", status: "managed-delivery" },
 ] as const;
 
 function referencedClaimIds(content: ReturnType<typeof getCompanyContent>): string[] {
@@ -25,8 +25,8 @@ describe("Company content truth model", () => {
 		const english = getCompanyContent("en");
 		const chinese = getCompanyContent("zh");
 
-		expect(english.category).toBe("AI-native MarTech");
-		expect(english.vision.headline).toBe("MarTech, rebuilt. For humans and agents.");
+		expect(english.category).toBe("AI market evidence");
+		expect(english.vision.headline).toBe("Market evidence, built for teams and systems.");
 		expect(english.marketShift.title).toBe("The market now has two readers.");
 		expect(english.stage.title).toBe("A real platform. A service-led beginning.");
 		expect(english.forest.title).toBe("Don’t enumerate every question. Build what generates the answers.");
@@ -96,7 +96,7 @@ describe("Company content truth model", () => {
 		expect(chinese.currentScope).toMatch(/人工审核/);
 	});
 
-	test("describes Recursive Forest as a bounded working method", () => {
+	test("describes Evidence Framework as a bounded working method", () => {
 		for (const locale of ["en", "zh"] as const) {
 			const content = getCompanyContent(locale);
 			expect(content.forest.summary).toMatch(locale === "en" ? /working method/i : /工作方法/);
@@ -123,7 +123,7 @@ describe("Company content truth model", () => {
 
 		expect(serialized).not.toMatch(/\bB2B[- ]only\b|仅限 B2B|只做 B2B/i);
 		expect(serialized).not.toMatch(/GEO company|GEO 公司|只做 GEO/i);
-		expect(serialized).not.toMatch(/Product Truth Graph|Commercial Feedback|产品事实图谱|商业反馈/);
+		expect(serialized).not.toMatch(/Product Evidence Graph|Market Learning|产品事实图谱|商业反馈/);
 		expect(serialized).not.toMatch(/0\s*(?:%|％)?\s*(?:→|->)\s*93\.3\s*(?:%|％)?/);
 		expect(serialized).not.toMatch(/upstream|上游/i);
 		expect(publicClaims).not.toMatch(

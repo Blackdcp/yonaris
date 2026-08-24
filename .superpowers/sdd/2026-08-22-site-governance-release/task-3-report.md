@@ -1,4 +1,4 @@
-# G3 Legacy AI/AEO/AI Visibility Governance Report
+# G3 Legacy AI/AEO/AI answer presence Governance Report
 
 Date: 2026-08-23
 Worktree: `E:\\Yonaris\\.worktrees\\homepage-product-stage`
@@ -8,10 +8,10 @@ Push/deploy: not performed
 
 ## Delivered scope
 
-- Governed exactly the 15 approved legacy templates: AI Search index/dynamic, AEO index/dynamic, and the 11 AI Visibility index/dynamic/directory/comparison/feature templates.
+- Governed exactly the 15 approved legacy templates: AI Search index/dynamic, AEO index/dynamic, and the 11 AI answer presence index/dynamic/directory/comparison/feature templates.
 - Preserved the existing loaders, source datasets, valid dynamic bodies, related records, filtering, static retired-distribution route priority, and every invalid-slug 404.
 - Reused the reviewed Publication shell for AI Search and AEO with a visible `Legacy research archive` boundary before H1.
-- Added one shared Legacy Archive shell/context for AI Visibility with visible predecessor context before H1 and the `2026-08-23` boundary date.
+- Added one shared Legacy Archive shell/context for AI answer presence with visible predecessor context before H1 and the `2026-08-23` boundary date.
 - Reframed deep-scroll AI Search guidance, AEO product wording, supplier profiles, comparison records, and FAQ answers as dated source material rather than current Yonaris claims.
 - Applied concrete canonicals and exact `noindex,follow` to every legacy route. The routes remain crawlable, are excluded from the sitemap, and emit no route-owned rich JSON-LD.
 - Removed the misattributed `PREDECESSOR_LISTING` plus zero-consumer SoftwareApplication/comparison helpers without changing the root Yonaris Organization/WebSite identity.
@@ -29,7 +29,7 @@ Focused RED coverage was written before production migration and exposed the exp
 
 Additional review-driven RED cases covered:
 
-- every AI Visibility dynamic loader/body and real comparison row;
+- every AI answer presence dynamic loader/body and real comparison row;
 - root Organization/WebSite identity plus removal of the predecessor helper and all consumers;
 - single, pair, multi, root-directory, and retired-distribution scroll regions at `1440`, `390`, and `280` CSS px;
 - actual filter state/result changes, 44px geometry, Signal focus, and reduced motion at all three interaction widths;
@@ -71,18 +71,18 @@ Files:
 4. `aeo-for-agencies--en--desktop--legacy-governed--bd0341c76fec.png`
 5. `aeo-for-agencies--en--mobile--legacy-governed--ad08add59548.png`
 6. `aeo-for-agencies--en--micro--legacy-governed--74797fff38ef.png`
-7. `ai-visibility-tools--en--desktop--legacy-governed--05bf38a9bd27.png`
-8. `ai-visibility-tools--en--mobile--legacy-governed--e8fcf8f93d4b.png`
-9. `ai-visibility-tools--en--micro--legacy-governed--02ccb43b564c.png`
-10. `ai-visibility-tools-predecessor-vs-profound--en--desktop--legacy-governed--6c56250483ad.png`
-11. `ai-visibility-tools-predecessor-vs-profound--en--mobile--legacy-governed--b0ba6a8ae4c1.png`
-12. `ai-visibility-tools-predecessor-vs-profound--en--micro--legacy-governed--acf2d447d896.png`
-13. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--desktop--legacy-governed--985cd0069849.png`
-14. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--mobile--legacy-governed--b7a4942a2f54.png`
-15. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--micro--legacy-governed--8a062dde2a0e.png`
-16. `ai-visibility-tools-category-retired-distribution--en--desktop--legacy-governed--82489adc8ecb.png`
-17. `ai-visibility-tools-category-retired-distribution--en--mobile--legacy-governed--5d86aecf0516.png`
-18. `ai-visibility-tools-category-retired-distribution--en--micro--legacy-governed--008f57f0c15c.png`
+7. `answer-presence-tools--en--desktop--legacy-governed--05bf38a9bd27.png`
+8. `answer-presence-tools--en--mobile--legacy-governed--e8fcf8f93d4b.png`
+9. `answer-presence-tools--en--micro--legacy-governed--02ccb43b564c.png`
+10. `answer-presence-tools-predecessor-vs-profound--en--desktop--legacy-governed--6c56250483ad.png`
+11. `answer-presence-tools-predecessor-vs-profound--en--mobile--legacy-governed--b0ba6a8ae4c1.png`
+12. `answer-presence-tools-predecessor-vs-profound--en--micro--legacy-governed--acf2d447d896.png`
+13. `answer-presence-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--desktop--legacy-governed--985cd0069849.png`
+14. `answer-presence-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--mobile--legacy-governed--b7a4942a2f54.png`
+15. `answer-presence-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--micro--legacy-governed--8a062dde2a0e.png`
+16. `answer-presence-tools-category-retired-distribution--en--desktop--legacy-governed--82489adc8ecb.png`
+17. `answer-presence-tools-category-retired-distribution--en--mobile--legacy-governed--5d86aecf0516.png`
+18. `answer-presence-tools-category-retired-distribution--en--micro--legacy-governed--008f57f0c15c.png`
 
 ## Review status
 

@@ -65,7 +65,7 @@ if (mode.startsWith("trusted")) {
 		["GET", "/api/repo-activity/refresh"],
 		["GET", "/blog/probe"],
 		["GET", "/docs/probe"],
-		["GET", "/ai-visibility-tools/probe"],
+		["GET", "/answer-presence-tools/probe"],
 		["GET", "/authors/probe.png"],
 		["GET", "/llms.mdx/docs/intro"],
 		["GET", "/llms.mdx/site/company"],

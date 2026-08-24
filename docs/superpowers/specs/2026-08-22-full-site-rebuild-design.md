@@ -9,7 +9,7 @@
 
 ## 1. Objective
 
-Rebuild `yonaris.com` as one coherent bilingual acquisition and product-exposure system for a global AI-native MarTech company.
+Rebuild `yonaris.com` as one coherent bilingual acquisition and product-exposure system for a global AI market evidence company.
 
 The finished site must:
 
@@ -41,17 +41,17 @@ The portal is not a mock shell. Current production code supports:
 - drill-down to individual responses and, on supported surfaces, archived evidence;
 - operator-generated, human-reviewed opportunity recommendations.
 
-It does not currently support a customer-facing Product Truth Graph, CRM or revenue feedback loop, autonomous remediation, causal attribution, universal real-time coverage, or complete public self-service onboarding. Reports and execution remain primarily operator-managed.
+It does not currently support a customer-facing Product Evidence Graph, CRM or revenue feedback loop, autonomous remediation, causal attribution, universal real-time coverage, or complete public self-service onboarding. Reports and execution remain primarily operator-managed.
 
 ## 3. Positioning and Truth Model
 
 ### Category
 
-**AI-native MarTech**
+**AI market evidence**
 
 ### Vision
 
-**MarTech, rebuilt. For humans and agents.**
+**Market evidence, built for teams and systems.**
 
 ### Current product promise
 
@@ -78,7 +78,7 @@ The status is represented in the content model and tests, even when the UI expre
 
 The public site must not claim:
 
-- an implemented Product Truth Graph or Commercial Feedback product module;
+- an implemented Product Evidence Graph or Market Learning product module;
 - automatic content fixes, publishing, continuous agentic optimization, or causal lift attribution;
 - real-time, universal, or all-model coverage;
 - self-service workspace creation, report generation, or automated runs;
@@ -94,7 +94,7 @@ The public site must not claim:
 | --- | --- | --- | --- |
 | Home | `/` | `/zh` | Category, value, product proof, method preview, research preview, conversion |
 | Product | `/product` | `/zh/product` | Current software, managed delivery, inputs, outputs, boundaries |
-| Approach | `/approach` | `/zh/approach` | Repeatable evidence loop and Recursive Forest working method |
+| Approach | `/approach` | `/zh/approach` | Repeatable evidence loop and Evidence Framework working method |
 | Research | `/research` | `/zh/research` | Measurement definitions, evidence records, public findings, limitations |
 | Company | `/company` | `/zh/company` | Category thesis, company stage, principles, Yonaris/removed-distribution-route relationship |
 | GEO | `/geo` | `/zh/geo` | High-intent applied workflow without redefining the company |
@@ -115,7 +115,7 @@ Primary navigation contains Product, Approach, Research, and Company. GEO appear
 | `/blog/**` | Keep accessible in a new publication shell; temporarily `noindex` until each article passes identity and fact review |
 | `/glossary/**` | Keep accessible in the publication shell; temporarily `noindex` until reviewed |
 | `/ai-search/**` and `/aeo-for/**` | Keep accessible as a clearly labelled legacy research archive; temporarily `noindex` |
-| `/ai-visibility-tools/**` | Keep accessible only as a predecessor comparison archive; add archive context and `noindex` |
+| `/answer-presence-tools/**` | Keep accessible only as a predecessor comparison archive; add archive context and `noindex` |
 
 ### Redirects
 
@@ -223,7 +223,7 @@ Steps:
 5. Inspect underlying answers before drawing conclusions.
 6. Make a bounded intervention and repeat the same defined test.
 
-The page states that repeated observation shows change over time but does not independently prove causation. Recursive Forest is described as a working method, not an already implemented graph architecture.
+The page states that repeated observation shows change over time but does not independently prove causation. Evidence Framework is described as a working method, not an already implemented graph architecture.
 
 ### Research
 
@@ -245,11 +245,11 @@ No unverified customer result, logo, quote, or anonymized statistic is published
 
 The page contains:
 
-- AI-native MarTech category and `MarTech, rebuilt. For humans and agents.` vision;
+- AI market evidence category and `Market evidence, built for teams and systems.` vision;
 - the shift from human-only journeys to AI-mediated discovery, comparison, and selection;
 - the current company stage: an early, service-led product with a real evidence platform;
-- the Yonaris / Recursive Forest brand thesis in a concise form;
-- operating principles: evidence over theatre, declared scope, human review, and durable product truth;
+- the Yonaris / Evidence Framework brand thesis in a concise form;
+- operating principles: evidence over theatre, declared scope, human review, and durable Product Evidence;
 - an explicit explanation that retired implementation details are not the Yonaris company identity;
 - contact and diagnostic actions.
 
@@ -412,7 +412,7 @@ The QA set includes full-page captures and interaction-state captures for Produc
 ## 12. Out of Scope
 
 - Changing `apps/web`, worker sampling, database schema, or portal authorization.
-- Inventing a Product Truth Graph, CRM integration, billing flow, customer self-service, or autonomous execution.
+- Inventing a Product Evidence Graph, CRM integration, billing flow, customer self-service, or autonomous execution.
 - Rewriting every legacy Blog, Docs, Glossary, or comparison article in this release. They are governed through the new shell and index policy until reviewed.
 - Publishing customer names, logos, quotes, security claims, or the anonymous outcome statistic without a release-approved evidence pack.
 - Adding pricing before stable public commercial terms exist.

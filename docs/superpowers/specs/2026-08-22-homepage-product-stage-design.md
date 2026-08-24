@@ -8,7 +8,7 @@ This is a bounded implementation, not another visual exploration.
 
 ## Explicit removals
 
-- Remove the orange square and `AI-NATIVE MARTECH` eyebrow above the hero headline.
+- Remove the orange square and `AI market evidence` eyebrow above the hero headline.
 - Remove the three-column `Observe the answer / Trace the evidence / Find the opening` rail below the hero.
 - Do not replace either removal with a badge, icon, label, metric, feature list, or decorative object.
 - Preserve the negative space created by those removals.
@@ -22,7 +22,7 @@ Without scrolling, a visitor must be able to identify:
 3. the next action: `Get a Free Diagnostic` / `获取免费诊断`;
 4. one clearly labeled illustrative diagnostic showing the observation-to-finding chain.
 
-The longer approved thesis, `MarTech, rebuilt. For humans and agents.`, remains visible below the first screen and in machine-readable company content. It is not restored as a hero eyebrow.
+The longer approved thesis, `Market evidence, built for teams and systems.`, remains visible below the first screen and in machine-readable company content. It is not restored as a hero eyebrow.
 
 ## Visual system
 

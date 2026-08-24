@@ -2,7 +2,7 @@
  * AI-generated Opportunities.
  *
  * We assemble a compact, deterministic digest of the brand's tracked
- * AI-visibility data (overall + per-platform visibility, per-prompt standing vs
+ * answer-presence data (overall + per-platform visibility, per-prompt standing vs
  * the leading competitor over 7d + 30d with tags + citation difficulty, and the
  * citation landscape), then make a SINGLE structured LLM completion — no web
  * search, no agent loop — to turn it into categorized opportunities (Creation /
@@ -133,7 +133,7 @@ export function canReadOpportunityReportInScope(input: {
 // treat as a verbatim copy of any source. No brand names here — data comes below.
 // ============================================================================
 
-const GUIDANCE = `You are an AI-visibility (AEO) strategist advising a content/marketing team that does NOT know how this tool computes its numbers. From the brand's tracked answer data, produce a prioritized, practical set of opportunities to get the brand cited more often in AI assistant answers (ChatGPT, Perplexity, Google AI, Claude, Copilot).
+const GUIDANCE = `You are an answer-presence (AEO) strategist advising a content/marketing team that does NOT know how this tool computes its numbers. From the brand's tracked answer data, produce a prioritized, practical set of opportunities to get the brand cited more often in AI assistant answers (ChatGPT, Perplexity, Google AI, Claude, Copilot).
 
 HOW TO READ THE DATA BELOW (define these for the reader whenever you reference them):
 - "Visibility" / "named in X%" — the share of an assistant's answers (or of all answers) to the tracked prompts that mention the brand. Higher is better. This is NOT share-of-voice.

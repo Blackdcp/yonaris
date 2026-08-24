@@ -134,8 +134,8 @@ describe("machine documents", () => {
 		for (const forbidden of [
 			"93.3%",
 			"four intelligence",
-			"Product Truth Graph",
-			"Commercial Feedback",
+			"Product Evidence Graph",
+			"Market Learning",
 			"automatic optimization",
 		]) {
 			expect(output).not.toContain(forbidden);

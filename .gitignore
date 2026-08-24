@@ -79,7 +79,7 @@ e2e/artifacts
 
 # retroactive cleanup
 # Anchored to the repo root: an unanchored `features/` also matches source
-# directories like apps/www/src/routes/ai-visibility-tools/features/.
+# directories like apps/www/src/routes/answer-presence-tools/features/.
 /features/
 .agents/
 .cursor/

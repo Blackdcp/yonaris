@@ -27,7 +27,7 @@ export default function FullPageCard({
 	customBackButton,
 	className = "w-md",
 }: FullPageCardProps) {
-	const capabilities = ["Product Truth", "Market Intent", "Model Intelligence", "Commercial Feedback"];
+	const capabilities = ["Product Evidence", "Decision Context", "Answer Signals", "Market Learning"];
 
 	return (
 		<div

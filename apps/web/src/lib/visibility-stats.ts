@@ -1,5 +1,5 @@
 /**
- * Pure, dependency-free statistics for AI-visibility analysis.
+ * Pure, dependency-free statistics for answer-presence analysis.
  *
  * These power the Share of Voice page and the Opportunities digest's stability
  * scores. They take plain aggregated rows (produced by the

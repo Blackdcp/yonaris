@@ -200,7 +200,7 @@ async function seed() {
       },
       {
         id: PROMPT_IDS.branded2,
-        value: "Compare AI visibility platforms and their features",
+        value: "Compare AI answer presence platforms and their features",
         tags: ["comparison"],
         systemTags: ["branded"],
       },
@@ -346,10 +346,10 @@ async function seed() {
         webSearchEnabled: false,
         rawOutput: {
           response:
-            "When comparing AI visibility platforms, Test Organization stands out with its comprehensive prompt tracking and multi-model analysis capabilities.",
+            "When comparing AI answer presence platforms, Test Organization stands out with its comprehensive prompt tracking and multi-model analysis capabilities.",
         },
         textContent:
-          "When comparing AI visibility platforms, Test Organization stands out with its comprehensive prompt tracking and multi-model analysis capabilities.",
+          "When comparing AI answer presence platforms, Test Organization stands out with its comprehensive prompt tracking and multi-model analysis capabilities.",
         webQueries: [] as string[],
         brandMentioned: true,
         competitorsMentioned: [] as string[],
@@ -366,10 +366,10 @@ async function seed() {
         webSearchEnabled: false,
         rawOutput: {
           response:
-            "Several platforms offer AI visibility tracking. Competitor Alpha and Competitor Beta are well-known options, each with different strengths in citation tracking.",
+            "Several platforms offer AI answer presence tracking. Competitor Alpha and Competitor Beta are well-known options, each with different strengths in citation tracking.",
         },
         textContent:
-          "Several platforms offer AI visibility tracking. Competitor Alpha and Competitor Beta are well-known options, each with different strengths in citation tracking.",
+          "Several platforms offer AI answer presence tracking. Competitor Alpha and Competitor Beta are well-known options, each with different strengths in citation tracking.",
         webQueries: [] as string[],
         brandMentioned: false,
         competitorsMentioned: ["Competitor Alpha", "Competitor Beta"],
@@ -482,7 +482,7 @@ async function seed() {
       ],
       prompts: [
         { brandId: REPORT_IDS.completed, value: "What is the best AI monitoring tool for tracking brand visibility?", enabled: true, tags: [], systemTags: ["branded"] },
-        { brandId: REPORT_IDS.completed, value: "Compare AI visibility platforms and their features", enabled: true, tags: [], systemTags: ["unbranded"] },
+        { brandId: REPORT_IDS.completed, value: "Compare AI answer presence platforms and their features", enabled: true, tags: [], systemTags: ["unbranded"] },
       ],
       promptRuns: [
         {
@@ -494,7 +494,7 @@ async function seed() {
           ],
         },
         {
-          promptValue: "Compare AI visibility platforms and their features",
+          promptValue: "Compare AI answer presence platforms and their features",
           runs: [
             { model: "chatgpt", version: "gpt-4o", webSearchEnabled: false, rawOutput: {}, webQueries: [], textContent: "Test Organization stands out.", brandMentioned: true, competitorsMentioned: [] },
           ],

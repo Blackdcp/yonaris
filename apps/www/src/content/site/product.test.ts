@@ -101,7 +101,7 @@ describe("Product content truth model", () => {
 			.join(" ");
 
 		expect(serialized).toContain("unknown");
-		expect(serialized).not.toContain("Product Truth Graph");
+		expect(serialized).not.toContain("Product Evidence Graph");
 		expect(serialized).not.toContain("产品事实图谱");
 		expect(englishClaims).not.toMatch(/\breal[- ]time\b/i);
 		expect(englishClaims).not.toMatch(/autonomous|causal|self-service|universal/i);

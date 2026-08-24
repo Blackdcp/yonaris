@@ -2,16 +2,16 @@
 
 ## Objective
 
-Rebuild yonaris.com into a bilingual lead-generation and category-building site for an early-stage AI-native MarTech company. The site must explain the current commercial product truthfully, establish a category larger than GEO, make Yonaris legible to both people and agents, and convert qualified visitors into free diagnostic requests.
+Rebuild yonaris.com into a bilingual lead-generation and category-building site for an early-stage AI market evidence company. The site must explain the current commercial product fully, establish a category larger than GEO, make Yonaris legible to both people and agents, and convert qualified visitors into free diagnostic requests.
 
 ## Positioning
 
-- Company category: **AI-native MarTech**.
-- Brand thesis: **MarTech, rebuilt. For humans and agents.**
+- Company category: **AI market evidence**.
+- Brand thesis: **Market evidence, built for teams and systems.**
 - Current commercial entry point: GEO and AI-market perception diagnosis.
-- Long-term direction: a marketing system that learns from product truth, market intent, model intelligence, and commercial feedback.
+- Long-term direction: a marketing system that learns from Product Evidence, Decision Context, Answer Signals, and Market Learning.
 - The four intelligence labels are data foundations, not four products.
-- Recursive Forest is Yonaris's methodology and technical architecture, not a second product brand.
+- Evidence Framework is Yonaris's methodology and technical architecture, not a second product brand.
 - The site must not describe roadmap capabilities as available products.
 - The site must not limit Yonaris to B2B. The current proof can come from complex buying decisions without defining the total addressable category.
 
@@ -40,7 +40,7 @@ English is the default at `/`; Chinese lives under `/zh`. Every core English pag
 | --- | --- | --- |
 | `/` | `/zh` | Category, product story, proof, and conversion |
 | `/platform` | `/zh/platform` | What Yonaris can do today |
-| `/methodology` | `/zh/methodology` | Recursive Forest and the evidence loop |
+| `/methodology` | `/zh/methodology` | Evidence Framework and the evidence loop |
 | `/results` | `/zh/results` | A real, anonymized engagement and measured outcomes |
 | `/geo` | `/zh/geo` | GEO as the current entry point, not the company boundary |
 | `/diagnostic` | `/zh/diagnostic` | Free diagnostic request flow |
@@ -51,7 +51,7 @@ Existing documentation, status, blog, glossary, and legacy discovery pages remai
 
 - `/agent` is a sparse human-visible index explaining that Yonaris publishes the same facts in an agent-oriented form.
 - `/agent/company`, `/agent/platform`, `/agent/methodology`, and `/agent/results` return concise Markdown with canonical human URLs, bilingual aliases, evidence scope, and last-updated metadata.
-- `/llms.txt` becomes the concise agent index for the new company and product truth.
+- `/llms.txt` becomes the concise agent index for the new company and Product Evidence.
 - `/llms-full.txt` is generated from the same structured marketing content instead of inherited documentation copy.
 - `robots.txt`, `sitemap.xml`, JSON-LD, canonical URLs, and language alternates make the relationship explicit.
 
@@ -64,7 +64,7 @@ All new human and agent pages consume a typed, bilingual source in `apps/www/src
 - the hero thesis;
 - four current capabilities: Observe, Explain, Improve, Verify;
 - the intelligence loop and its four data foundations;
-- Recursive Forest methodology steps;
+- Evidence Framework methodology steps;
 - the current GEO entry-point explanation;
 - anonymized engagement facts and results;
 - diagnostic labels and disclosure copy;
@@ -80,11 +80,11 @@ The header contains the Yonaris wordmark, Platform, Methodology, Results, GEO, A
 
 ### Homepage
 
-1. **Hero — category and thesis.** Ink background. Eyebrow: “AI-NATIVE MARTECH”. Headline: “MarTech, rebuilt. / For humans and agents.” Supporting copy: “Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in an AI-mediated market.” Primary CTA: free diagnostic. Secondary text link: Agent View.
+1. **Hero — category and thesis.** Ink background. Eyebrow: “AI market evidence”. Headline: “MarTech, rebuilt. / for teams and systems.” Supporting copy: “Yonaris helps brands understand and improve how they are discovered, interpreted, compared, and chosen in an AI-mediated market.” Primary CTA: free diagnostic. Secondary text link: Agent View.
 2. **The new market surface.** Paper background. Explain that discovery, comparison, and shortlisting increasingly happen inside AI-mediated journeys before a traditional click.
 3. **What Yonaris does now.** Four editorial columns: Observe, Explain, Improve, Verify. These are operating capabilities, not product SKUs.
-4. **The intelligence foundation.** Show Product Truth, Market Intent, Model Intelligence, and Commercial Feedback as a connected learning loop, explicitly labeled as foundations rather than products.
-5. **Method.** Explain the Recursive Forest sequence: establish product truth, generate real market questions, observe multi-model responses and sources, improve gaps, and repeat the same tests.
+4. **The intelligence foundation.** Show Product Evidence, Decision Context, Answer Signals, and Market Learning as a connected learning loop, explicitly labeled as foundations rather than products.
+5. **Method.** Explain the Evidence Framework sequence: establish Product Evidence, generate real market questions, observe multi-model responses and sources, improve gaps, and repeat the same tests.
 6. **Evidence.** Present the anonymized engagement from the product introduction: 6 entities, 30 fact cards, 24 buying questions, 8 platforms, and 768 answer samples. Only verified outcome numbers from the supplied materials may appear.
 7. **GEO entry point.** Heading: “Starting with GEO. Built for what comes next.” Explain that GEO is the first commercial application of the broader system.
 8. **Diagnostic close.** Ink background with expected diagnostic output and a direct route to the request form.
@@ -115,10 +115,10 @@ Typography uses the available Geist Sans and Geist Mono assets, with `PingFang S
 
 - Default English pages and `/zh` counterparts declare canonical and reciprocal language-alternate links.
 - Each core page has localized title, description, Open Graph locale, and structured data.
-- Organization schema describes Yonaris as an AI-native MarTech company. It does not claim product maturity, pricing, awards, or customers that are not public.
+- Organization schema describes Yonaris as an AI market evidence company. It does not claim product maturity, pricing, awards, or customers that are not public.
 - `sitemap.xml` includes every new human and agent route.
 - Agent Markdown includes a canonical human URL and a visible statement of current scope.
-- The current `llms.txt` wording that defines Yonaris as a self-hosted AI visibility platform is removed.
+- The current `llms.txt` wording that defines Yonaris as a self-hosted AI answer presence platform is removed.
 
 ## Accessibility and Performance
 

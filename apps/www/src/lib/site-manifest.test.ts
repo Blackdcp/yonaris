@@ -115,7 +115,7 @@ describe("site manifest", () => {
 		const subject = requireManifest();
 		if (!subject) return;
 
-		expect(subject.findSiteRoute("/ai-visibility-tools/example")).toBeUndefined();
+		expect(subject.findSiteRoute("/answer-presence-tools/example")).toBeUndefined();
 		expect(subject.findSiteRoute("/docs/getting-started")).toBeUndefined();
 		expect(subject.findSiteRoute("/api/search")?.key).toBe("api");
 		expect(subject.findSiteRoute("/llms.mdx/site/en/product")?.key).toBe("markdownInternal");

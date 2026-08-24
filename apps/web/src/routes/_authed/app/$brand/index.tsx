@@ -80,7 +80,7 @@ export const Route = createFileRoute("/_authed/app/$brand/")({
 		return {
 			meta: [
 				{ title: buildTitle("Overview", { appName, brandName }) },
-				{ name: "description", content: "Dashboard overview of AI visibility and citations." },
+				{ name: "description", content: "Dashboard overview of AI answer presence and citations." },
 			],
 		};
 	},
@@ -197,12 +197,12 @@ function DashboardPage() {
 		return (
 			<div className="flex flex-1 flex-col">
 				<div className="m-auto flex w-full max-w-[1600px] flex-col gap-3 p-4">
-					{/* AI Visibility section skeleton */}
+					{/* AI answer presence section skeleton */}
 					<section className="space-y-2">
 						<div className="flex items-center justify-between">
 							<h2 className="text-lg font-semibold flex items-center gap-2">
 								<IconEye className="h-5 w-5 text-muted-foreground" />
-								AI Visibility
+								AI answer presence
 							</h2>
 							<Button asChild variant="ghost" size="sm" className="h-8">
 								<Link to="/app/$brand/visibility" params={{ brand: brandId }}>
@@ -330,12 +330,12 @@ function DashboardPage() {
 	if (hasNoEvaluations) {
 		const getMessage = () => {
 			if (hasEnabledPrompts) {
-				return "You are ready to track your AI visibility. We're currently running the first evaluation against AI models. This usually takes a few minutes.";
+				return "You are ready to track your AI answer presence. We're currently running the first evaluation against AI models. This usually takes a few minutes.";
 			}
 			if (hasPrompts) {
-				return "You have prompts configured but none are currently enabled. Add or enable some prompts to start tracking your AI visibility.";
+				return "You have prompts configured but none are currently enabled. Add or enable some prompts to start tracking your AI answer presence.";
 			}
-			return "Set up prompts to start tracking your AI visibility. Once configured, we'll evaluate them against AI models automatically.";
+			return "Set up prompts to start tracking your AI answer presence. Once configured, we'll evaluate them against AI models automatically.";
 		};
 
 		return (
@@ -368,7 +368,7 @@ function DashboardPage() {
 				</div>
 				{hasEnabledPrompts && (
 					<p className="text-xs text-muted-foreground mt-6">
-						Refresh this page in a few minutes to see your AI visibility data.
+						Refresh this page in a few minutes to see your AI answer presence data.
 					</p>
 				)}
 			</div>
@@ -378,12 +378,12 @@ function DashboardPage() {
 	return (
 		<div className="flex flex-1 flex-col">
 			<div className="mx-auto flex w-full max-w-[1600px] flex-col gap-3 p-4">
-				{/* Section 1: AI Visibility */}
+				{/* Section 1: AI answer presence */}
 				<section className="space-y-2">
 					<div className="flex items-center justify-between">
 						<h2 className="text-lg font-semibold flex items-center gap-2">
 							<IconEye className="h-5 w-5 text-muted-foreground" />
-							AI Visibility
+							AI answer presence
 						</h2>
 						<Button asChild variant="ghost" size="sm" className="h-8">
 							<Link to="/app/$brand/visibility" params={{ brand: brandId }}>
@@ -416,7 +416,7 @@ function DashboardPage() {
 								) : (
 									<TrendChart
 										data={visibilityTimeSeries.map((p) => ({ date: p.date, value: p.overall }))}
-										label="AI Visibility (7d avg)"
+										label="AI answer presence (7d avg)"
 										color={primaryChartColor}
 									/>
 								)}
@@ -498,7 +498,7 @@ function DashboardPage() {
 									icon={IconList}
 									label="prompts tracked"
 									value={totalPrompts.toLocaleString()}
-									tooltip="Total number of unique prompts being monitored for AI visibility across ChatGPT, Claude, and Gemini."
+									tooltip="Total number of unique prompts being monitored for AI answer presence across ChatGPT, Claude, and Gemini."
 								/>
 								<StatWithTooltip
 									icon={IconActivity}

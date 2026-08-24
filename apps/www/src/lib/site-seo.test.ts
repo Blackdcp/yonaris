@@ -70,11 +70,11 @@ describe("manifest-driven site SEO", () => {
 
 		expect(subject.corePageHead("company", "en").meta).toEqual(
 			expect.arrayContaining([
-				{ title: "MarTech, rebuilt. For humans and agents. | Yonaris" },
+				{ title: "Market evidence, built for teams and systems. | Yonaris" },
 				{
 					name: "description",
 					content:
-						"Yonaris is an early, service-led AI-native MarTech company building a real evidence platform for AI-mediated markets.",
+						"Yonaris is an early, service-led AI market evidence company building a real evidence platform for AI-mediated markets.",
 				},
 			]),
 		);

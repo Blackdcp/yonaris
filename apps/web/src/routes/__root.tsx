@@ -62,10 +62,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 		const themeColor = hasCustomIcon ? "#000000" : DEFAULT_THEME_COLOR;
 		const appUrl = branding?.url ? branding.url.replace(/\/$/, "") : undefined;
 
-		const title = `${appName} - AI Search Optimization`;
+		const title = `${appName} - AI answer evidence`;
 		const description = "Track and optimize your brand's visibility across AI models.";
 		// Don't pass `title` to /api/og — the renderer already shows the brand
-		// (default logo or whitelabel icon + name), so a "Brand - AI Search Optimization"
+		// (default logo or whitelabel icon + name), so a "Brand - AI answer evidence"
 		// title would render redundantly. Pages that override og:image can supply
 		// a page-specific title via the query param.
 		const ogImageParams = new URLSearchParams({ description });

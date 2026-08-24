@@ -184,16 +184,16 @@ export const aeoVerticals: AeoVertical[] = [
 					"B2B buyers research with AI engines before they talk to sales. If the model does not name you, or describes you inaccurately, you can lose a deal before it starts. AEO is how you measure and fix that.",
 			},
 			{
-				question: "How is AI visibility different from SEO for B2B?",
+				question: "How is AI answer presence different from SEO for B2B?",
 				answer:
-					"SEO targets a ranking on a results page. AI visibility targets being named and cited inside a written answer. The fundamentals overlap, but the unit of success is the citation, not the position.",
+					"SEO targets a ranking on a results page. AI answer presence targets being named and cited inside a written answer. The fundamentals overlap, but the unit of success is the citation, not the position.",
 			},
 		],
 	},
 	{
 		slug: "startups",
 		audience: "startups",
-		short: "Build AI visibility from zero with a focused prompt set and a repeatable GEO baseline.",
+		short: "Build AI answer presence from zero with a focused prompt set and a repeatable GEO baseline.",
 		intro: [
 			"A new brand starts out invisible to AI engines, because there is little for the models to have learned. The job is to build a credible footprint quickly: clear content, early reviews, and mentions on sources the models trust.",
 			"Early teams can keep the measurement scope focused: choose the buyer questions that matter, configure the relevant AI models, and repeat the same baseline as the brand earns new coverage.",
@@ -221,7 +221,7 @@ export const aeoVerticals: AeoVertical[] = [
 			"Yonaris gives an early-stage team a repeatable GEO baseline using a focused prompt set and configurable AI models, with data controlled by the deployment operator.",
 		faqs: [
 			{
-				question: "How can a startup establish an AI visibility baseline?",
+				question: "How can a startup establish an AI answer presence baseline?",
 				answer:
 					"Start with a small set of high-intent prompts, choose the AI models relevant to your buyers, and repeat the same test on a consistent cadence. Yonaris keeps that baseline structured as the scope grows.",
 			},
@@ -235,9 +235,9 @@ export const aeoVerticals: AeoVertical[] = [
 	{
 		slug: "enterprise",
 		audience: "enterprises",
-		short: "Track AI visibility at scale with configurable model coverage and deployment-controlled data.",
+		short: "Track AI answer presence at scale with configurable model coverage and deployment-controlled data.",
 		intro: [
-			"Large brands have the most to lose when an AI engine describes them wrongly, and the most scrutiny over where their data goes. Many AI visibility tools are closed and hosted, which means handing your prompt strategy and history to a third party.",
+			"Large brands have the most to lose when an AI engine describes them wrongly, and the most scrutiny over where their data goes. Many AI answer presence tools are closed and hosted, which means handing your prompt strategy and history to a third party.",
 			"A deployment-controlled workflow keeps decisions about prompt history, access, and retention with the operator. A documented baseline also makes the methodology behind board-level reporting easier to review.",
 		],
 		examplePrompts: ["is [brand] trustworthy", "[brand] vs [competitor]", "best [category] for enterprise"],
@@ -263,7 +263,7 @@ export const aeoVerticals: AeoVertical[] = [
 			"Yonaris standardizes prompt sets and configurable model coverage while the deployment operator controls data handling and access.",
 		faqs: [
 			{
-				question: "Can we control AI visibility data handling?",
+				question: "Can we control AI answer presence data handling?",
 				answer:
 					"Yonaris is designed so the deployment operator controls how prompts, results, access, and retention are handled. Teams can also document the prompt set and model configuration behind each baseline.",
 			},
@@ -352,7 +352,7 @@ export const aeoVerticals: AeoVertical[] = [
 					"Consumers ask AI engines to compare financial products and judge whether a brand is trustworthy. An inaccurate or absent answer affects both acquisition and compliance, so tracking it is essential.",
 			},
 			{
-				question: "Can I keep AI visibility data on our own infrastructure?",
+				question: "Can I keep AI answer presence data on our own infrastructure?",
 				answer:
 					"Yes. With Yonaris, the party operating the deployment controls how prompts and visibility history are stored, accessed, and retained for the regulated environment.",
 			},

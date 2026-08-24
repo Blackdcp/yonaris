@@ -388,8 +388,8 @@ describe("core site content", () => {
 
 	it("models the approved present scope and evidence boundaries", () => {
 		expect(getGlobalContent("en")).toMatchObject({
-			category: "AI-native MarTech",
-			vision: "MarTech, rebuilt. For humans and agents.",
+			category: "AI market evidence",
+			vision: "Market evidence, built for teams and systems.",
 		});
 		expect(getProductContent("en").claims.map(({ id, status }) => ({ id, status }))).toEqual([
 			{ id: "product-configured-scope", status: "current-software" },
@@ -415,8 +415,8 @@ describe("core site content", () => {
 			CORE_PAGE_KEYS.flatMap((key) => [getCorePageContent(key, "en"), getCorePageContent(key, "zh")]),
 		);
 		for (const banned of [
-			"Product Truth Graph",
-			"Commercial Feedback",
+			"Product Evidence Graph",
+			"Market Learning",
 			"0% → 93.3%",
 			"automatic optimization",
 			"产品事实图谱",

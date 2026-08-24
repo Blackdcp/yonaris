@@ -1,5 +1,5 @@
 /**
- * Server functions for AI-visibility analysis: Share of Voice. Read-only —
+ * Server functions for answer-presence analysis: Share of Voice. Read-only —
  * derived entirely from existing prompt_runs data via the postgres read layer
  * plus the pure stats in `@/lib/visibility-stats`. No schema changes.
  *

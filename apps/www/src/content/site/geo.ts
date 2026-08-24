@@ -119,7 +119,7 @@ const enDiagnosticScopeConfirmation = {
 const enBroaderMartechDirection = {
 	id: "geo-broader-martech-direction",
 	status: "direction",
-	text: "Yonaris intends to build broader AI-native MarTech for markets shaped by people and software agents.",
+	text: "Yonaris intends to build broader AI market evidence for markets shaped by people and software agents.",
 	limitation: "That broader company direction is not presented as a completed set of software modules.",
 } as const satisfies GeoClaim;
 
@@ -140,7 +140,7 @@ export const pageEn = {
 		description:
 			"Observe how configured AI systems discover, describe, compare, cite, and recommend a brand—then choose a bounded, human-reviewed next test.",
 	},
-	category: "AI-native MarTech",
+	category: "AI market evidence",
 	eyebrow: "GEO · Applied workflow",
 	headline: "GEO, grounded in evidence.",
 	dek: "Follow how a brand enters an AI answer, how the answer frames it, and which evidence can support the next test.",
@@ -222,7 +222,7 @@ export const pageEn = {
 		eyebrow: "Beyond GEO",
 		title: "The workflow starts here. The category does not end here.",
 		summary:
-			"GEO applies the Yonaris evidence system to how AI systems discover, describe, compare, and recommend a brand. The broader direction is AI-native MarTech for markets read by humans and agents.",
+			"GEO applies the Yonaris evidence system to how AI systems discover, describe, compare, and recommend a brand. The broader direction is AI market evidence for markets read by humans and agents.",
 		productLabel: "See the evidence product",
 		companyLabel: "Read the category thesis",
 		claimIds: [enFirstAppliedWorkflow.id, enBroaderMartechDirection.id],

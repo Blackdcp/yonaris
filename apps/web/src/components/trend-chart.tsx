@@ -1,5 +1,5 @@
 /**
- * Shared trend area-chart used by the overview's AI Visibility and Share of
+ * Shared trend area-chart used by the overview's AI answer presence and Share of
  * Voice sections and the Share of Voice page. It takes only a label, a color,
  * and a {date, value} series — everything else (axis formatting, the
  * auto-ranged y-axis, the tooltip, the softened fill) is fixed here so the

@@ -107,8 +107,8 @@ export const pageEn = {
 		description:
 			"Review how configured AI systems describe and compare your brand, with the evidence behind each sampled answer.",
 	},
-	category: "AI-native MarTech",
-	vision: "MarTech, rebuilt. For humans and agents.",
+	category: "AI market evidence",
+	vision: "Market evidence, built for teams and systems.",
 	productPromise: "Make AI market answers observable.",
 	diagnosticOffer: "Give us one brand, one market, and one question that matters.",
 	currentScope:
@@ -136,17 +136,17 @@ export const pageEn = {
 				label: "Illustrative answer",
 				status: "Portal language",
 				before: "One public surface categorizes Yonaris as an ",
-				emphasis: "AI search optimization platform",
+				emphasis: "AI answer evidence platform",
 				after: ".",
-				sources: ["portal.yonaris.com", "AI Search Optimization"],
+				sources: ["portal.yonaris.com", "AI answer evidence"],
 			},
 			{
 				engine: "Y",
 				label: "Company narrative",
 				status: "Homepage language",
 				before: "The company positions itself more broadly as ",
-				emphasis: "AI-native MarTech",
-				after: "—rebuilt for humans and agents.",
+				emphasis: "AI market evidence",
+				after: "—rebuilt for teams and systems.",
 				sources: ["yonaris.com", "Public homepage"],
 			},
 			{
@@ -259,7 +259,7 @@ export const pageZh = {
 				before: "一个公开界面将 Yonaris 归类为",
 				emphasis: "AI 搜索优化平台",
 				after: "。",
-				sources: ["portal.yonaris.com", "AI Search Optimization"],
+				sources: ["portal.yonaris.com", "AI answer evidence"],
 			},
 			{
 				engine: "Y",

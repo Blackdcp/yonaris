@@ -28,8 +28,8 @@ describe("home content", () => {
 
 	it("opens with the approved category and vision as ordinary identity copy", () => {
 		expect(getGlobalContent("en")).toMatchObject({
-			category: "AI-native MarTech",
-			vision: "MarTech, rebuilt. For humans and agents.",
+			category: "AI market evidence",
+			vision: "Market evidence, built for teams and systems.",
 		});
 		expect(getGlobalContent("zh")).toMatchObject({
 			category: "AI 原生营销科技",
@@ -97,8 +97,8 @@ describe("home content", () => {
 		for (const prohibited of [
 			"Four forms of intelligence",
 			"四类情报",
-			"Product Truth Graph",
-			"Commercial Feedback",
+			"Product Evidence Graph",
+			"Market Learning",
 			"0% → 93.3%",
 		]) {
 			expect(serialized).not.toContain(prohibited);

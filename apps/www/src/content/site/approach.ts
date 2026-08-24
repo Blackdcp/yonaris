@@ -129,9 +129,9 @@ const enRepeat = {
 } as const satisfies ApproachClaim;
 
 const enRecursiveForest = {
-	id: "approach-recursive-forest",
+	id: "approach-evidence-framework",
 	status: "managed-delivery",
-	text: "Recursive Forest is Yonaris's working method for extending finite product facts into questions shaped by context and conditions.",
+	text: "Evidence Framework is Yonaris's working method for extending finite product facts into questions shaped by context and conditions.",
 	limitation:
 		"It is a working method, not an implemented graph product architecture or a claim of exhaustive coverage.",
 } as const satisfies ApproachClaim;
@@ -233,7 +233,7 @@ export const pageEn = {
 	},
 	method: {
 		eyebrow: "Working method",
-		name: "Recursive Forest",
+		name: "Evidence Framework",
 		title: "Do not enumerate every question. Govern what generates them.",
 		summary: enRecursiveForest.text,
 		boundary: enRecursiveForest.limitation,
@@ -307,7 +307,7 @@ const zhRepeat = {
 } as const satisfies ApproachClaim;
 
 const zhRecursiveForest = {
-	id: "approach-recursive-forest",
+	id: "approach-evidence-framework",
 	status: "managed-delivery",
 	text: "递归森林是 Yonaris 的工作方法：从有限的产品事实出发，让问题随语境与条件继续展开",
 	limitation: "它是一套工作方法，不是已经实现的图谱产品架构，也不意味着可以穷尽市场",

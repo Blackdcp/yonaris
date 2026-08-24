@@ -94,7 +94,7 @@ export function VisibilityBar({
 						<IconInfoCircle className={`h-3.5 w-3.5 shrink-0 ${colors.muted} cursor-help`} />
 					</TooltipTrigger>
 					<TooltipContent side="bottom" className="max-w-xs text-sm">
-						AI visibility for the {totalPrompts.toLocaleString()} prompt{totalPrompts !== 1 ? "s" : ""} shown below,
+						AI answer presence for the {totalPrompts.toLocaleString()} prompt{totalPrompts !== 1 ? "s" : ""} shown below,
 						calculated as the percentage of AI responses that mention your brand over the time period for the selected
 						filters.
 					</TooltipContent>

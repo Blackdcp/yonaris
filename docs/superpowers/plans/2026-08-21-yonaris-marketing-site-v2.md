@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Deliver a bilingual, brand-consistent Yonaris marketing site that explains the current product honestly, captures free diagnostic leads, and publishes the same product truth for humans and agents.
+**Goal:** Deliver a bilingual, brand-consistent Yonaris marketing site that explains the current product honestly, captures free diagnostic leads, and publishes the same Product Evidence for teams and systems.
 
 **Architecture:** A typed bilingual content module is the single source for React marketing pages, Markdown agent endpoints, SEO metadata, and sitemap routes. Shared shell and visual primitives render an Ink/Paper editorial system; English is the default route set and Chinese uses `/zh`. The free diagnostic remains infrastructure-light and transparently prepares an email instead of claiming server-side submission.
 
@@ -13,8 +13,8 @@
 ## Global Constraints
 
 - Use only verified claims from the supplied Yonaris product introduction and seed BP.
-- Describe `AI-native MarTech` as the company category and GEO as the current commercial entry point.
-- Do not describe Product Truth, Market Intent, Model Intelligence, and Commercial Feedback as four products.
+- Describe `AI market evidence` as the company category and GEO as the current commercial entry point.
+- Do not describe Product Evidence, Decision Context, Answer Signals, and Market Learning as four products.
 - Do not describe roadmap capabilities as currently available.
 - English is default at `/`; Chinese core pages live under `/zh`.
 - Use Ink `#0B1220`, Paper `#F6F4F1`, Slate `#1E2A39`, Stone `#8A95A3`, Mist `#DDE2E8`, Signal Orange `#FF6A00`, and optional Blue Gray `#2F3E50`.
@@ -46,10 +46,10 @@ Add `"test": "vitest run"` and `"vitest": "^4.1.10"` to `apps/www/package.json`,
 Create tests that require:
 
 ```ts
-expect(getMarketingContent("en").hero.title).toEqual(["MarTech, rebuilt.", "For humans and agents."]);
+expect(getMarketingContent("en").hero.title).toEqual(["MarTech, rebuilt.", "for teams and systems."]);
 expect(getMarketingContent("zh").cta.primary).toBe("获取免费诊断");
 expect(MARKETING_ROUTES.every((route) => route.en && route.zh)).toBe(true);
-expect(renderAgentDocument("company")).toContain("AI-native MarTech");
+expect(renderAgentDocument("company")).toContain("AI market evidence");
 expect(buildDiagnosticMailto(input, "en")).toContain("black.dcp%40outlook.com");
 ```
 
@@ -327,7 +327,7 @@ Extract the expected marketing paths into exported pure data. Assert all English
 
 - [ ] **Step 2: Update SEO helpers**
 
-Set the site description to the approved AI-native MarTech definition. Add a helper returning canonical, `en`, `zh-CN`, and `x-default` link records for a route pair. Update Organization schema without unsupported maturity or customer claims.
+Set the site description to the approved AI market evidence definition. Add a helper returning canonical, `en`, `zh-CN`, and `x-default` link records for a route pair. Update Organization schema without unsupported maturity or customer claims.
 
 - [ ] **Step 3: Update sitemap and robots**
 
@@ -335,7 +335,7 @@ Include core human and agent paths. Preserve existing crawler access and sitemap
 
 - [ ] **Step 4: Harden release smoke**
 
-Require `MarTech, rebuilt.`, `For humans and agents.`, `/zh`, `/diagnostic`, `/agent`, `/agent/company`, and `/llms.txt`. Continue crawling every same-origin HTML and CSS asset. Assert route content types and required localized text.
+Require `MarTech, rebuilt.`, `for teams and systems.`, `/zh`, `/diagnostic`, `/agent`, `/agent/company`, and `/llms.txt`. Continue crawling every same-origin HTML and CSS asset. Assert route content types and required localized text.
 
 - [ ] **Step 5: Run script tests, type check, and production build**
 

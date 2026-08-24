@@ -2,7 +2,7 @@
 
 ## What this is
 
-Yonaris is a private AI visibility and GEO platform. It tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, DeepSeek, and Google AI surfaces mention, cite, and describe brands. The codebase is a **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**.
+Yonaris is a private AI answer presence and GEO platform. It tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, DeepSeek, and Google AI surfaces mention, cite, and describe brands. The codebase is a **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**.
 
 - `apps/web` — product dashboard (TanStack Start + Vite, port 3000)
 - `apps/worker` — pg-boss background jobs (AI evaluations, citation tracking, reports)

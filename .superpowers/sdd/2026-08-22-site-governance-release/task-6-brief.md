@@ -45,7 +45,7 @@ GET/HEAD allowlist:
 - `/privacy`; retired supporting and publication routes are excluded.
 - `/blog`, `/blog/*`, `/glossary`, `/glossary/*`, `/docs`, `/docs/*`.
 - `/status`, `/brand`, `/changelog`, `/roadmap`.
-- `/ai-search`, `/ai-search/*`, `/aeo-for`, `/aeo-for/*`, `/ai-visibility-tools`, `/ai-visibility-tools/*`.
+- `/ai-search`, `/ai-search/*`, `/aeo-for`, `/aeo-for/*`, `/answer-presence-tools`, `/answer-presence-tools/*`.
 - `/agent`, `/agent/*`, `/llms.txt`, `/llms-full.txt`.
 - `/robots.txt`, `/sitemap.xml`, `/blog/rss.xml`, `/og.png`, `/og/*`, `/repo-activity.svg`.
 - All 13 manifest redirect sources.

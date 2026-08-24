@@ -217,7 +217,7 @@ The complete initial fingerprint inventory is fixed for this release:
 - Delete: `apps/www/source.generated.ts`
 - Delete: `apps/www/src/components/mdx.tsx`
 - Delete: `apps/www/src/lib/blog.ts`
-- Delete: `apps/www/src/components/ai-visibility-software-hub.tsx`
+- Delete: `apps/www/src/components/answer-presence-software-hub.tsx`
 - Modify: `package.json`
 - Modify: `pnpm-workspace.yaml`
 - Modify: `pnpm-lock.yaml`

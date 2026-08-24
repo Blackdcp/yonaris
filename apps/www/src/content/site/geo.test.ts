@@ -40,7 +40,7 @@ describe("GEO content truth model", () => {
 		expect(chinese.workflow.stages.map(({ id }) => id)).toEqual(stageIds);
 
 		for (const content of [english, chinese]) {
-			expect(content.category).toMatch(content === english ? /AI-native MarTech/ : /AI 原生营销科技/);
+			expect(content.category).toMatch(content === english ? /AI market evidence/ : /AI 原生营销科技/);
 			expect(content.workflow.stages).toHaveLength(5);
 			expect(
 				content.workflow.stages.every(
@@ -139,7 +139,7 @@ describe("GEO content truth model", () => {
 				/\bself[- ]service (?:run|runs)\b/i,
 				/\bautomat(?:e|ed|ic) (?:fixes|publishing|optimization)\b/i,
 				/\bcausal lift\b/i,
-				/Product Truth Graph/i,
+				/Product Evidence Graph/i,
 				/0\s*(?:→|->)\s*93\.3\s*%?/,
 				/\blive sample(?:s)?\b/i,
 				/\bbefore\s*\/\s*after result(?:s)?\b/i,

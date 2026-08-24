@@ -14,11 +14,11 @@
 
 ## Global Constraints
 
-- Category is `AI-native MarTech`; vision is `MarTech, rebuilt. For humans and agents.`
+- Category is `AI market evidence`; vision is `Market evidence, built for teams and systems.`
 - Binding palette only: Ink `#0B1220`, Paper `#F6F4F1`, Slate `#1E2A39`, Stone `#8A95A3`, Mist `#DDE2E8`, Signal Orange `#FF6A00`, optional Blue Gray `#2F3E50`.
 - Core canonicals are `/`, `/product`, `/approach`, `/research`, `/company`, `/geo`, `/diagnostic` and their approved Chinese counterparts.
 - GEO is the first applied workflow, never the category ceiling.
-- Do not publish Product Truth Graph, Commercial Feedback module, automatic remediation, causal attribution, universal real-time coverage, self-service execution, or the unaudited `0% → 93.3%` result.
+- Do not publish Product Evidence Graph, Market Learning module, automatic remediation, causal attribution, universal real-time coverage, self-service execution, or the unaudited `0% → 93.3%` result.
 - Every public route is classified; unreviewed legacy content remains crawlable but `noindex,follow` and outside the sitemap.
 - Every core human canonical supports `Accept: text/markdown` from the same fact source as HTML and Agent documents.
 - Keep `apps/web`, worker, database, portal authorization, status data acquisition, OpenAPI, RSS, and OG generation behavior unchanged.
@@ -50,7 +50,7 @@ export type IndexPolicy = "index,follow" | "noindex,follow";
 export const SITE_ROUTE_KEYS = [
   "home", "product", "approach", "research", "company", "geo", "diagnostic",
   "resources", "removed-distribution-route", "privacy", "blog", "glossary", "docs", "status",
-  "brand", "changelog", "roadmap", "aiSearch", "aeoFor", "aiVisibility",
+  "brand", "changelog", "roadmap", "aiSearch", "aeoFor", "answerPresence",
   "agent", "llms", "sitemap", "robots", "rss", "api", "og", "repoActivity", "markdownInternal",
 ] as const;
 export type SiteRouteKey = (typeof SITE_ROUTE_KEYS)[number];
@@ -81,14 +81,14 @@ Change Vitest include to `src/**/*.test.{ts,tsx}`. Test canonical uniqueness, al
 ```ts
 expect(getCorePath("product", "zh")).toBe("/zh/product");
 expect(SITE_REDIRECTS).toContainEqual({ from: "/platform", to: "/product", statusCode: 308 });
-expect(findSiteRoute("/ai-visibility-tools/yonaris-vs-example")?.indexPolicy).toBe("noindex,follow");
+expect(findSiteRoute("/answer-presence-tools/yonaris-vs-example")?.indexPolicy).toBe("noindex,follow");
 ```
 
 Run `pnpm.cmd --filter @workspace/www test -- src/lib/site-manifest.test.ts`; expected FAIL because the manifest does not exist.
 
 - [ ] **Step 2: Implement every route family**
 
-Use `SITE_ROUTE_KEYS` as the compile-time authority and define `SITE_MANIFEST` with `as const satisfies readonly SiteRouteDefinition[]`; test that the two sets are identical so misspelled or missing keys fail. Classify 14 core canonicals; `/resources`, `/removed-distribution-route`, `/privacy`; Blog/Glossary publication families; Docs/Status/Brand/Changelog utility families; Roadmap as noindex utility; AI Search/AEO/AI Visibility Tools legacy families; Agent/llms/sitemap/robots/RSS/API/OG/repo-activity/internal Markdown machine or utility families. Add approved company redirects plus old Agent redirects. Every core entry has the release-approved real verification date `2026-08-22`; `getCoreLastVerified()` derives from that manifest field. Tests validate ISO calendar dates on all seven core entries. Utilities and historical families omit `lastVerified` unless a later evidence-backed review supplies one.
+Use `SITE_ROUTE_KEYS` as the compile-time authority and define `SITE_MANIFEST` with `as const satisfies readonly SiteRouteDefinition[]`; test that the two sets are identical so misspelled or missing keys fail. Classify 14 core canonicals; `/resources`, `/removed-distribution-route`, `/privacy`; Blog/Glossary publication families; Docs/Status/Brand/Changelog utility families; Roadmap as noindex utility; AI Search/AEO/AI answer presence Tools legacy families; Agent/llms/sitemap/robots/RSS/API/OG/repo-activity/internal Markdown machine or utility families. Add approved company redirects plus old Agent redirects. Every core entry has the release-approved real verification date `2026-08-22`; `getCoreLastVerified()` derives from that manifest field. Tests validate ISO calendar dates on all seven core entries. Utilities and historical families omit `lastVerified` unless a later evidence-backed review supplies one.
 
 - [ ] **Step 3: Add the audit script and verify GREEN**
 
@@ -147,7 +147,7 @@ for (const key of ["home", "product", "approach", "research", "company", "geo", 
   expect(structureOf(getCorePageContent(key, "zh"))).toEqual(structureOf(getCorePageContent(key, "en")));
 }
 const serialized = JSON.stringify([getCorePageContent("product", "en"), getCorePageContent("research", "en")]);
-for (const banned of ["Product Truth Graph", "Commercial Feedback", "0% → 93.3%", "automatic optimization"]) expect(serialized).not.toContain(banned);
+for (const banned of ["Product Evidence Graph", "Market Learning", "0% → 93.3%", "automatic optimization"]) expect(serialized).not.toContain(banned);
 ```
 
 Run `pnpm.cmd --filter @workspace/www test -- src/content/site/content-parity.test.ts`; expected FAIL.
@@ -254,7 +254,7 @@ export function UtilityShell(props: { section: "docs" | "status" | "brand" | "ch
 export function LegacyArchiveContext(props: { kind: "legacy-research" | "upstream-comparison" }): React.ReactNode;
 ```
 
-`SiteShell` owns the only `<main>` landmark. `PublicationShell` composes `LegacyArchiveContext`; the `/ai-visibility-tools/**` migration later uses the same primitive with `kind="upstream-comparison"`. `site-navigation.ts` derives canonical links from `SITE_MANIFEST`/`getCorePath()` and exposes the tested Portal constant `https://portal.yonaris.com`; it must not read legacy alias navigation from `marketing-content.ts`.
+`SiteShell` owns the only `<main>` landmark. `PublicationShell` composes `LegacyArchiveContext`; the `/answer-presence-tools/**` migration later uses the same primitive with `kind="upstream-comparison"`. `site-navigation.ts` derives canonical links from `SITE_MANIFEST`/`getCorePath()` and exposes the tested Portal constant `https://portal.yonaris.com`; it must not read legacy alias navigation from `marketing-content.ts`.
 
 - [ ] **Step 1: Write failing rendered-shell and style-token tests**
 

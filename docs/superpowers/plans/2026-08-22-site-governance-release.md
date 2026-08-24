@@ -15,8 +15,8 @@
 ## Global Constraints
 
 - Do not rewrite 31 Blog posts, 21 Docs pages, 28 Glossary pages, or 108 comparison bodies in this release.
-- Unreviewed Blog/Glossary and all legacy AI Search/AEO/AI Visibility content are `noindex,follow` and absent from sitemap.
-- AI Search/AEO display a visible legacy research context; AI Visibility Tools display a visible upstream Yonaris comparison archive context.
+- Unreviewed Blog/Glossary and all legacy AI Search/AEO/AI answer presence content are `noindex,follow` and absent from sitemap.
+- AI Search/AEO display a visible legacy research context; AI answer presence Tools display a visible upstream Yonaris comparison archive context.
 - Docs, Status, Brand, Changelog, RSS, OpenAPI, OG, and repo-activity functionality must remain operational.
 - No public route may use old blue Docs-first navigation or present Yonaris as the Yonaris company.
 - Redirects are real 308 responses and are tested with redirects disabled.
@@ -77,17 +77,17 @@ git commit -m "publish supporting company resources"
 - Modify: `apps/www/src/routes/ai-search/$slug.tsx`
 - Modify: `apps/www/src/routes/aeo-for/index.tsx`
 - Modify: `apps/www/src/routes/aeo-for/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/index.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/alternatives/index.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/alternatives/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/category/index.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/category/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/category/removed-distribution-route.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/compare/index.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/compare/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/features/index.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/features/$slug.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/index.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/$slug.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/alternatives/index.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/alternatives/$slug.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/category/index.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/category/$slug.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/category/removed-distribution-route.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/compare/index.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/compare/$slug.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/features/index.tsx`
+- Modify: `apps/www/src/routes/answer-presence-tools/features/$slug.tsx`
 - Modify: `apps/www/src/routes/status.tsx`
 - Modify: `apps/www/src/routes/brand.tsx`
 - Modify: `apps/www/src/routes/changelog.tsx`
@@ -102,11 +102,11 @@ const policies = [
   { path: "/glossary", robots: "noindex,follow", context: null },
   { path: "/ai-search", robots: "noindex,follow", context: "Legacy research archive" },
   { path: "/aeo-for", robots: "noindex,follow", context: "Legacy research archive" },
-  { path: "/ai-visibility-tools", robots: "noindex,follow", context: "Upstream Yonaris comparison archive" },
+  { path: "/answer-presence-tools", robots: "noindex,follow", context: "Upstream Yonaris comparison archive" },
 ];
 ```
 
-Assert shared header/footer and exact robots meta on the family indexes plus one real dynamic Blog article, one Glossary slug, one AI Search slug, one AEO slug, and every AI Visibility nested template path. Assert visible archive context where required, Docs removed-distribution-route Documentation context, and live Status functionality. Expected RED against current mixed shells/policy.
+Assert shared header/footer and exact robots meta on the family indexes plus one real dynamic Blog article, one Glossary slug, one AI Search slug, one AEO slug, and every AI answer presence nested template path. Assert visible archive context where required, Docs removed-distribution-route Documentation context, and live Status functionality. Expected RED against current mixed shells/policy.
 
 ```powershell
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/site-governance.spec.ts --project=chromium
@@ -114,7 +114,7 @@ pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www
 
 - [ ] **Step 2: Migrate publication and legacy families**
 
-Blog/Glossary use PublicationShell and `noindex,follow`. AI Search/AEO use PublicationShell plus `LegacyArchiveContext kind="legacy-research"`. Every AI Visibility Tools template uses upstream comparison context and noindex. Every migrated route head calls `siteRouteHead()` with its manifest family key, concrete dynamic canonical path, and existing content title/description. Do not rewrite historical copy; the visible context prevents entity confusion.
+Blog/Glossary use PublicationShell and `noindex,follow`. AI Search/AEO use PublicationShell plus `LegacyArchiveContext kind="legacy-research"`. Every AI answer presence Tools template uses upstream comparison context and noindex. Every migrated route head calls `siteRouteHead()` with its manifest family key, concrete dynamic canonical path, and existing content title/description. Do not rewrite historical copy; the visible context prevents entity confusion.
 
 - [ ] **Step 3: Migrate utility routes**
 
@@ -125,7 +125,7 @@ Docs, Status, Brand, Changelog use UtilityShell and `siteRouteHead()` with their
 ```powershell
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts site-governance.spec.ts
 pnpm.cmd --filter @workspace/www check-types
-git add apps/www/src/components/blog-post-layout.tsx apps/www/src/components/docs-page-layout.tsx apps/www/src/routes/blog apps/www/src/routes/glossary apps/www/src/routes/ai-search apps/www/src/routes/aeo-for apps/www/src/routes/ai-visibility-tools apps/www/src/routes/status.tsx apps/www/src/routes/brand.tsx apps/www/src/routes/changelog.tsx apps/www/src/routes/roadmap.tsx e2e/www-tests/site-governance.spec.ts
+git add apps/www/src/components/blog-post-layout.tsx apps/www/src/components/docs-page-layout.tsx apps/www/src/routes/blog apps/www/src/routes/glossary apps/www/src/routes/ai-search apps/www/src/routes/aeo-for apps/www/src/routes/answer-presence-tools apps/www/src/routes/status.tsx apps/www/src/routes/brand.tsx apps/www/src/routes/changelog.tsx apps/www/src/routes/roadmap.tsx e2e/www-tests/site-governance.spec.ts
 git commit -m "govern the legacy public site"
 ```
 

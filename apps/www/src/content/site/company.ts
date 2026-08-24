@@ -80,9 +80,9 @@ const enEvidencePlatform = {
 } as const satisfies CompanyClaim;
 
 const enRecursiveForestMethod = {
-	id: "company-recursive-forest-method",
+	id: "company-evidence-framework-method",
 	status: "managed-delivery",
-	text: "Recursive Forest is the working method Yonaris uses to organize finite product facts, conditions, relationships, and evidence for expanding market questions.",
+	text: "Evidence Framework is the working method Yonaris uses to organize finite product facts, conditions, relationships, and evidence for expanding market questions.",
 	limitation: "It is not an implemented graph architecture or a claim that every possible question can be covered.",
 } as const satisfies CompanyClaim;
 
@@ -90,15 +90,15 @@ const enClaims = [enHumanAgentDirection, enServiceLedStage, enEvidencePlatform, 
 
 export const pageEn = {
 	meta: {
-		title: "MarTech, rebuilt. For humans and agents.",
+		title: "Market evidence, built for teams and systems.",
 		description:
-			"Yonaris is an early, service-led AI-native MarTech company building a real evidence platform for AI-mediated markets.",
+			"Yonaris is an early, service-led AI market evidence company building a real evidence platform for AI-mediated markets.",
 	},
-	category: "AI-native MarTech",
+	category: "AI market evidence",
 	vision: {
 		eyebrow: "Company · Category thesis",
 		title: "A market shaped by people and machines needs a different factual layer.",
-		headline: "MarTech, rebuilt. For humans and agents.",
+		headline: "Market evidence, built for teams and systems.",
 		summary:
 			"AI is becoming part of how markets discover, compare, and select products. Yonaris is building the evidence layer for that shift.",
 		claimIds: [enHumanAgentDirection.id],
@@ -137,10 +137,10 @@ export const pageEn = {
 	},
 	forest: {
 		eyebrow: "Brand thesis",
-		name: "Yonaris / Recursive Forest",
+		name: "Yonaris / Evidence Framework",
 		title: "Don’t enumerate every question. Build what generates the answers.",
 		summary:
-			"Recursive Forest is a working method: govern finite product facts, conditions, relationships, and evidence so understanding can expand with the market context.",
+			"Evidence Framework is a working method: govern finite product facts, conditions, relationships, and evidence so understanding can expand with the market context.",
 		boundary:
 			"It is a working method, not an implemented graph architecture or a claim that every possible question can be covered.",
 		claimIds: [enRecursiveForestMethod.id],
@@ -166,7 +166,7 @@ export const pageEn = {
 			},
 			{
 				id: "truth",
-				title: "Build durable product truth",
+				title: "Build durable Product Evidence",
 				description: "Keep claims bounded, reviewable, and useful to people and agents.",
 			},
 		],
@@ -209,7 +209,7 @@ const zhEvidencePlatform = {
 } as const satisfies CompanyClaim;
 
 const zhRecursiveForestMethod = {
-	id: "company-recursive-forest-method",
+	id: "company-evidence-framework-method",
 	status: "managed-delivery",
 	text: "递归森林是 Yonaris 用来组织有限产品事实、条件、关系与证据的工作方法，让问题可以随市场语境继续展开",
 	limitation: "它不是已经实现的图谱架构，也不表示系统能够覆盖所有可能的问题",

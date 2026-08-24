@@ -43,7 +43,7 @@ describe("generated Yonaris brand assets", () => {
 		expect(paper.opaqueRgb).toEqual(new Set(["246,244,241"]));
 	});
 
-	test("publishes the exact VI palette and AI-native MarTech application identity", async () => {
+	test("publishes the exact VI palette and AI market evidence application identity", async () => {
 		const modulePath = "./brand-assets";
 		const subject = (await import(modulePath).catch(() => undefined)) as
 			| { YONARIS_VI: Record<string, string> }
@@ -61,7 +61,7 @@ describe("generated Yonaris brand assets", () => {
 			blueGray: "#2F3E50",
 		});
 		const manifest = JSON.parse(readFileSync(resolve(appRoot, "public/site.webmanifest"), "utf8"));
-		expect(manifest.name).toBe("Yonaris — AI-native MarTech");
+		expect(manifest.name).toBe("Yonaris — AI market evidence");
 		expect(manifest.theme_color).toBe(subject.YONARIS_VI.ink);
 		expect(manifest.background_color).toBe(subject.YONARIS_VI.paper);
 	});

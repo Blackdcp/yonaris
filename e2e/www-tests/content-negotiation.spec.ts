@@ -101,8 +101,8 @@ test.describe("human and machine content negotiation", () => {
 		for (const retired of [
 			"93.3%",
 			"four intelligence",
-			"Product Truth Graph",
-			"Commercial Feedback",
+			"Product Evidence Graph",
+			"Market Learning",
 			"automatic optimization",
 		]) {
 			expect(fullBody).not.toContain(retired);

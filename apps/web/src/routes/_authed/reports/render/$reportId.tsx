@@ -746,7 +746,7 @@ function ReportRenderPage() {
 			{/* ===== CTA ===== */}
 			<div className="print:break-before-page print:h-[9.5in] print:flex print:flex-col print:justify-center p-10 print:p-0">
 				<div className="bg-gradient-to-r from-[#f6f4f1] to-[#fff4ec] border border-[#dde2e8] rounded-xl p-10 text-center">
-					<h2 className="text-2xl font-bold text-slate-800 mb-2">Ready to Optimize Your AI Visibility?</h2>
+					<h2 className="text-2xl font-bold text-slate-800 mb-2">Ready to Optimize Your AI answer presence?</h2>
 					<p className="text-slate-600 text-base mb-8">
 						Take your brand's AI presence to the next level with {appName}
 					</p>
@@ -785,7 +785,7 @@ function ReportRenderPage() {
 						<p className="text-slate-800 font-medium mb-2">Get started with {appName} today</p>
 						{appUrl && (
 							<p className="text-slate-600 text-sm text-balance">
-								Visit <strong>{appUrl}</strong> to learn more about our AI visibility platform and services.
+								Visit <strong>{appUrl}</strong> to learn more about our AI answer presence platform and services.
 							</p>
 						)}
 					</div>

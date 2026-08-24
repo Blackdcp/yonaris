@@ -94,12 +94,12 @@ if [[ -n "${CADDY_TEST_FAIL_HEALTH_PATH:-}" && "$url" == *"$CADDY_TEST_FAIL_HEAL
 	exit 0
 fi
 status=200
-body='Yonaris AI-native MarTech MarTech, rebuilt. See how AI is shaping your market.'
+body='Yonaris AI market evidence MarTech, rebuilt. See how AI is shaping your market.'
 case "$url" in
 	*/platform\?*) status=308; body='' ;;
 	*/llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
 	*/api/diagnostic) status=400; body='{"ok":false,"code":"invalid_request"}' ;;
-	*/agent/*) body='AI-native MarTech' ;;
+	*/agent/*) body='AI market evidence' ;;
 esac
 if [[ -n "$output" && "$output" != /dev/null ]]; then printf '%s' "$body" >"$output"; fi
 printf '%s' "$status"

@@ -78,7 +78,7 @@ function buildManifest(): object {
 
 	return {
 		short_name: branding.name,
-		name: `${branding.name} - AI Search Optimization`,
+		name: `${branding.name} - AI answer evidence`,
 		icons,
 		start_url: ".",
 		display: "standalone",

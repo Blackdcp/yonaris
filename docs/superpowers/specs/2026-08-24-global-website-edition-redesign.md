@@ -19,7 +19,7 @@ This specification supersedes the English-site portions of:
 - `2026-08-22-full-site-rebuild-design.md`;
 - `2026-08-22-homepage-product-stage-design.md`.
 
-It does not reopen the retired resource hub, source-distribution page, Blog, Docs, Glossary, Changelog, Roadmap, AI Visibility comparison, or other retired publication surfaces.
+It does not reopen the retired resource hub, source-distribution page, Blog, Docs, Glossary, Changelog, Roadmap, AI answer presence comparison, or other retired publication surfaces.
 
 ## 2. User Outcome
 
@@ -313,7 +313,7 @@ The public Portal entry surface is part of the global brand experience and must 
 - document title: `Yonaris Portal`;
 - description: `Review configured AI answer samples, brand and competitor mentions, available source evidence, and reviewed next tests.`;
 - manifest name: `Yonaris Portal`;
-- no `AI Search Optimization`, `AI Visibility`, AEO, old module naming, or retired category terms.
+- no `AI answer evidence`, `AI answer presence`, AEO, old module naming, or retired category terms.
 
 ### Sign-in surface
 
@@ -328,7 +328,7 @@ Four restrained capability labels:
 - Available source evidence;
 - Reviewed next tests.
 
-The existing `Product Truth`, `Market Intent`, `Model Intelligence`, and `Commercial Feedback` labels are removed from the public sign-in surface.
+The existing `Product Evidence`, `Decision Context`, `Answer Signals`, and `Market Learning` labels are removed from the public sign-in surface.
 
 The authenticated product is not redesigned in this edition except where a public-facing label or metadata leaks the retired positioning.
 

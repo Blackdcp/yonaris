@@ -36,7 +36,7 @@ export const glossaryTerms: GlossaryTerm[] = [
 			"Answer engine optimization is what SEO becomes when the result is a written answer instead of a list of links. The goal shifts from ranking a page to being the source an engine quotes when someone asks about your category.",
 			"In practice that means publishing clear, well-structured content, earning mentions on sources the models already trust, and tracking the prompts that matter to your brand. You want to see where you show up, and where a competitor shows up instead.",
 		],
-		related: ["generative-engine-optimization", "llmo", "ai-visibility", "ai-citation"],
+		related: ["generative-engine-optimization", "llmo", "answer-presence", "ai-citation"],
 		seeAlso: [{ label: "Full AEO guide", href: "/blog/answer-engine-optimization" }],
 	},
 	{
@@ -65,16 +65,16 @@ export const glossaryTerms: GlossaryTerm[] = [
 		related: ["answer-engine-optimization", "generative-engine-optimization", "large-language-model"],
 	},
 	{
-		slug: "ai-visibility",
-		term: "AI visibility",
+		slug: "answer-presence",
+		term: "AI answer presence",
 		group: "Core disciplines",
 		short: "How present your brand is across AI answers: how often it is mentioned, cited, and described accurately.",
 		body: [
-			"AI visibility is the outcome AEO works toward. It is the share of relevant AI answers where your brand appears, the sources those answers cite, and whether the description of you is correct.",
+			"AI answer presence is the outcome AEO works toward. It is the share of relevant AI answers where your brand appears, the sources those answers cite, and whether the description of you is correct.",
 			"Because answers vary between runs and shift over time, visibility is something you sample rather than check once. Tracking a consistent set of prompts on a schedule gives a far more reliable read than a single manual look.",
 		],
 		related: ["share-of-voice", "visibility-score", "brand-mention", "prompt-tracking"],
-		seeAlso: [{ label: "AI visibility software", href: "/ai-visibility-tools" }],
+		seeAlso: [{ label: "AI answer presence software", href: "/answer-presence-tools" }],
 	},
 
 	// --- Where AI answers appear ---------------------------------------------
@@ -175,7 +175,7 @@ export const glossaryTerms: GlossaryTerm[] = [
 			"There is no single formula. The two common methods are mention-count share, your mentions divided by the total across you and your competitors, and presence share, the portion of tracked prompts where your brand appears at all.",
 			"If an engine names a competitor in eight of ten category questions and you in three, the problem is concrete and you can prioritize it. This is usually the most actionable number in AI search.",
 		],
-		related: ["brand-mention", "ai-visibility", "visibility-score"],
+		related: ["brand-mention", "answer-presence", "visibility-score"],
 		seeAlso: [{ label: "AI share of voice", href: "/blog/ai-share-of-voice" }],
 	},
 	{
@@ -187,7 +187,7 @@ export const glossaryTerms: GlossaryTerm[] = [
 			"Prompt volume is roughly the AI-era equivalent of search volume, though it is harder to pin down. Broader coverage gives a more reliable read of your visibility.",
 			"Relevance beats raw volume, though. Fifty prompts that match real buyer questions are worth more than a thousand generic ones, and they cost less to run.",
 		],
-		related: ["prompt-tracking", "ai-visibility"],
+		related: ["prompt-tracking", "answer-presence"],
 	},
 	{
 		slug: "prompt-tracking",
@@ -200,19 +200,19 @@ export const glossaryTerms: GlossaryTerm[] = [
 			"A prompt set is the defined list of questions you track, ideally the ones your buyers actually ask. Running it repeatedly turns noisy, one-off answers into a trend you can act on.",
 			"Good sets mix buyer-intent questions, competitor comparisons, and broad category prompts. The point is to measure the same things consistently so a real change stands out from normal variation.",
 		],
-		related: ["prompt-volume", "ai-visibility", "share-of-voice"],
+		related: ["prompt-volume", "answer-presence", "share-of-voice"],
 		seeAlso: [{ label: "AI prompt tracking", href: "/blog/ai-prompt-tracking" }],
 	},
 	{
 		slug: "visibility-score",
-		term: "AI visibility score",
+		term: "AI answer presence score",
 		group: "What to measure",
 		short: "An aggregate metric rolling mentions, citations, and competitor presence into a single number.",
 		body: [
 			"A visibility score compresses several signals into one figure so you can track direction at a glance. The exact formula varies by tool, which is precisely why how it is calculated matters.",
 			"A score you cannot inspect is hard to trust or reproduce. Open methodology lets you see what went into the number, rather than taking a vendor's word for it.",
 		],
-		related: ["ai-visibility", "share-of-voice"],
+		related: ["answer-presence", "share-of-voice"],
 	},
 	{
 		slug: "ai-brand-sentiment",

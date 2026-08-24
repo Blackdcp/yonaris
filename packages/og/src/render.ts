@@ -12,7 +12,7 @@ export const ACCENT_COLORS = [
 	YONARIS_COLORS.signal,
 	YONARIS_COLORS.paper,
 ];
-export const DEFAULT_TAGLINE = "AI Search Optimization";
+export const DEFAULT_TAGLINE = "AI answer evidence";
 export const DEFAULT_DESCRIPTION = "Track and optimize your brand's visibility across AI models.";
 
 export interface OgImageOptions {

@@ -159,7 +159,7 @@ test("repository topology excludes retired distribution surfaces and preserves l
     "SECURITY.md",
     "apps/www/source.config.ts",
     "apps/www/source.generated.ts",
-    "apps/www/src/components/ai-visibility-software-hub.tsx",
+    "apps/www/src/components/answer-presence-software-hub.tsx",
     "apps/www/src/components/api-page.tsx",
     "apps/www/src/components/mdx.tsx",
     "apps/www/src/components/youtube-embed.tsx",

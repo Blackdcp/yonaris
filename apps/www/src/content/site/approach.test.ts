@@ -64,11 +64,11 @@ describe("Approach content truth model", () => {
 		expect(chinese.loop.steps.map(({ title }) => title)).not.toEqual(english.loop.steps.map(({ title }) => title));
 	});
 
-	test("describes Recursive Forest only as a working method", () => {
+	test("describes Evidence Framework only as a working method", () => {
 		for (const locale of ["en", "zh"] as const) {
 			const content = getApproachContent(locale);
 			const serialized = JSON.stringify(content);
-			const methodName = locale === "en" ? "Recursive Forest" : "递归森林";
+			const methodName = locale === "en" ? "Evidence Framework" : "递归森林";
 			const occurrences = serialized.split(methodName).length - 1;
 
 			expect(content.method.name).toBe(methodName);
@@ -76,7 +76,7 @@ describe("Approach content truth model", () => {
 			expect(content.method.boundary).toMatch(locale === "en" ? /not .*product architecture/i : /不是.*产品架构/);
 			expect(occurrences).toBeGreaterThanOrEqual(2);
 			expect(serialized).not.toMatch(
-				locale === "en" ? /Recursive Forest (product|module|system)/i : /递归森林(产品|模块|系统)/,
+				locale === "en" ? /Evidence Framework (product|module|system)/i : /递归森林(产品|模块|系统)/,
 			);
 		}
 	});
@@ -99,7 +99,7 @@ describe("Approach content truth model", () => {
 		const serialized = JSON.stringify(content);
 		const claimText = content.flatMap(({ claims }) => claims.map(({ text }) => text)).join(" ");
 
-		expect(serialized).not.toMatch(/Product Truth Graph|产品事实图谱/);
+		expect(serialized).not.toMatch(/Product Evidence Graph|产品事实图谱/);
 		expect(serialized).not.toMatch(/0\s*(?:%|％)?\s*(?:→|->)\s*93\.3\s*(?:%|％)?/);
 		expect(claimText).not.toMatch(/autonomous|real[- ]time|universal|causal lift|自主运行|实时|全量覆盖|因果提升/i);
 	});
