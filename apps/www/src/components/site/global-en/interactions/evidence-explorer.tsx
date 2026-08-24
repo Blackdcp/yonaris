@@ -38,17 +38,33 @@ export function EvidenceExplorer({ initialMetric = "mention-rate" }: { initialMe
 		<GraphicFrame label="Interactive evidence definition explorer" type="evidence-explorer">
 			<div className="global-en__explorer-tabs" role="tablist" aria-label="Choose an evidence definition">
 				{metrics.map((metric) => (
-					<button key={metric.id} type="button" role="tab" aria-selected={metric.id === activeId} onClick={() => setActiveId(metric.id)}>
+					<button
+						key={metric.id}
+						type="button"
+						role="tab"
+						aria-selected={metric.id === activeId}
+						onClick={() => setActiveId(metric.id)}
+					>
 						{metric.label}
 					</button>
 				))}
 			</div>
 			<article className="global-en__explorer-panel" role="tabpanel" data-metric={active.id}>
-				<header><small>DEFINITION</small><p>{active.definition}</p></header>
+				<header>
+					<small>DEFINITION</small>
+					<p>{active.definition}</p>
+				</header>
 				<div className="global-en__explorer-equation">
-					<span>{active.numerator}</span><i>÷</i><span>{active.denominator}</span><b>= {active.label}</b>
+					<span>{active.numerator}</span>
+					<i>÷</i>
+					<span>{active.denominator}</span>
+					<b>= {active.label}</b>
 				</div>
-				<footer><small>BOUNDARY</small><p>{active.boundary}</p><strong>No observation loaded</strong></footer>
+				<footer>
+					<small>BOUNDARY</small>
+					<p>{active.boundary}</p>
+					<strong>No observation loaded</strong>
+				</footer>
 			</article>
 		</GraphicFrame>
 	);

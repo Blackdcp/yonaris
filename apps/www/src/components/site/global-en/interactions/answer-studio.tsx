@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import {
 	GLOBAL_ANSWER_QUESTIONS,
-	getGlobalAnswerQuestion,
 	type GlobalAnswerQuestionId,
+	getGlobalAnswerQuestion,
 } from "@/content/site/global-en/experience";
 import { GraphicFrame } from "../graphic-frame";
 
@@ -14,7 +14,10 @@ function adjacentQuestion(current: GlobalAnswerQuestionId, key: string): GlobalA
 	if (key === "End") return GLOBAL_ANSWER_QUESTIONS.at(-1)?.id ?? current;
 	const delta = key === "ArrowRight" ? 1 : key === "ArrowLeft" ? -1 : 0;
 	if (!delta) return current;
-	return GLOBAL_ANSWER_QUESTIONS[(index + delta + GLOBAL_ANSWER_QUESTIONS.length) % GLOBAL_ANSWER_QUESTIONS.length]?.id ?? current;
+	return (
+		GLOBAL_ANSWER_QUESTIONS[(index + delta + GLOBAL_ANSWER_QUESTIONS.length) % GLOBAL_ANSWER_QUESTIONS.length]?.id ??
+		current
+	);
 }
 
 export function AnswerStudio({ initialQuestion = "recommended" }: { initialQuestion?: GlobalAnswerQuestionId }) {

@@ -147,12 +147,12 @@ Stable canonical routes remain in place to reduce deployment and search risk.
 | `/product` | Product | 产品能力 | Demonstrate what the product does | Evidence Workbench with module switching |
 | `/approach` | How it works | 服务方式 | Explain the operating and delivery process | Scroll-linked evidence path |
 | `/research` | Evidence | 研究依据 | Establish measurement credibility | Evidence ledger and annotated record |
-| `/geo` | AI Visibility | AI 可见度 | Explain the applied market workflow | Brand-answer-source relationship map |
+| `/geo` | Answer Presence | AI 答案呈现 | Explain the applied market workflow | Brand-answer-source relationship map |
 | `/company` | Company | 关于我们 | Establish purpose, trust, and global service model | Regional service and responsibility map |
 | `/diagnostic` | Diagnostic | 品牌诊断 | Convert a qualified visitor | Three-field regional lead form with confirmed email delivery |
 | `/privacy` | Privacy | 隐私说明 | Explain handling in plain language | Restrained supporting-page composition |
 
-Primary global navigation is `Product · How it works · Evidence · Company`. Primary Chinese navigation is `产品能力 · 服务方式 · 研究依据 · 关于我们`. Contextual AI visibility pages remain available through relevant sections and the footer rather than crowding primary navigation.
+Primary global navigation is `Product · How it works · Evidence · Company`. Primary Chinese navigation is `产品能力 · 服务方式 · 研究依据 · 关于我们`. Contextual answer-presence pages remain available through relevant sections and the footer rather than crowding primary navigation.
 
 No still-public route may retain an obviously older shell after a regional release. A release is a complete regional slice, not a homepage-only restyle.
 
@@ -201,7 +201,7 @@ The page shows how a claim earns trust: scope, question, surface, time, denomina
 
 Research and methodology can be filtered by buyer question, but filtering must not obscure the foundational measurement definitions.
 
-### 7.5 AI Visibility — Relationship Map
+### 7.5 Answer Presence — Relationship Map
 
 The page connects brand facts, AI answers, competitors, available sources, and repeated observation. It defines the applied workflow in plain language and connects it upward to the broader Yonaris product rather than presenting it as an isolated service category.
 
@@ -251,7 +251,7 @@ The two strongest existing Yonaris compositions become design DNA rather than is
 1. the split hero with a diagnostic evidence window;
 2. the dark Product stage with defined scope rings.
 
-The rest of the global site extends that standard with distinct visual protagonists: an evidence path on Approach, a ledger on Evidence, a relationship map on AI Visibility, a responsibility map on Company, and the live three-field lead form on Diagnostic.
+The rest of the global site extends that standard with distinct visual protagonists: an evidence path on Approach, a ledger on Evidence, a relationship map on Answer Presence, a responsibility map on Company, and the live three-field lead form on Diagnostic.
 
 #### Global interaction direction
 
@@ -483,4 +483,4 @@ The redesign is complete when:
 - 智推时代: <https://www.zhituishidai.com/> — Chinese-market framing, delivery clarity, and global-service narrative only.
 - DeepLumen: <https://www.deeplumen.com/> and <https://www.deeplumen.com/agent/> — explicit Human/Agent relationship and machine-first companion structure only.
 
-Yonaris retains its own identity, product truth, visual language, and evidence standards throughout.
+Yonaris retains its own identity, approved product facts, visual language, and evidence standards throughout.

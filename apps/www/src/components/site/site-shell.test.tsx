@@ -72,7 +72,12 @@ describe("shared public shells", () => {
 	it("renders footer destinations from canonical site paths", () => {
 		for (const locale of ["en", "zh"] satisfies Locale[]) {
 			const markup = renderToStaticMarkup(<SiteFooter locale={locale} />);
-			const expected = [locale === "zh" ? "/zh/geo" : "/geo", "/privacy", "/agent", "/llms.txt"];
+			const expected = [
+				locale === "zh" ? "/zh/geo" : "/geo",
+				locale === "zh" ? "/zh/privacy" : "/privacy",
+				locale === "zh" ? "/zh/agent" : "/agent",
+				"/llms.txt",
+			];
 
 			for (const path of expected) expect(hrefs(markup)).toContain(path);
 			expect(hrefs(markup)).not.toContain("/status");

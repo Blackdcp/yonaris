@@ -36,16 +36,18 @@ const CORE_PATHS = [
 	"/zh/diagnostic",
 ];
 
-const HTML_PATHS = [...CORE_PATHS, "/privacy"];
+const AGENT_HTML_PATHS = [
+	"/agent",
+	...["product", "approach", "research", "company", "geo", "diagnostic"].map((topic) => `/agent/${topic}`),
+	"/zh/agent",
+	...["product", "approach", "research", "company", "geo", "diagnostic", "privacy"].map(
+		(topic) => `/zh/agent/${topic}`,
+	),
+];
+
+const HTML_PATHS = [...CORE_PATHS, "/privacy", "/zh/privacy", ...AGENT_HTML_PATHS];
 
 const MACHINE_PATHS = [
-	"/agent",
-	"/agent/product",
-	"/agent/approach",
-	"/agent/research",
-	"/agent/company",
-	"/agent/geo",
-	"/agent/diagnostic",
 	"/llms.txt",
 	"/llms-full.txt",
 	"/robots.txt",
@@ -90,30 +92,31 @@ const HIDDEN_PATHS = [
 ];
 
 const ALL_COPY = [
-	"Know how AI represents your brand—and what to do next.",
+	"AI is already answering questions about your brand.",
 	"Move from uncertainty to a reviewable next test.",
 	"Evidence needs a scope, denominator, and boundary.",
 	"Evidence before conclusion.",
 	"Request a focused AI market diagnostic.",
-	"See how AI is shaping your market.",
-	"MarTech, rebuilt.",
-	"for teams and systems.",
-	"看清 AI 如何塑造你的市场",
-	"重构 MarTech",
-	"同时面向人，也面向智能体",
+	"See where your brand enters an AI answer.",
+	"Know what the request form sends—and why.",
+	"客户正在先问 AI，再认识你的品牌。",
+	"把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。",
+	"先把问题说清楚，再开始观察；先把依据看明白，再决定行动。",
+	"一个结论是否可信，先看它的范围、分母和证据边界。",
+	"理解中国市场，也按目标市场服务中国企业的全球业务。",
+	"品牌能否进入 AI 的答案，只是第一步。",
+	"先告诉我们怎么联系你，具体问题由人来一起判断。",
+	"表单只提交三项联系信息，并由服务端完成邮件传递。",
 	"Make AI market answers observable.",
-	"A repeatable evidence loop, not a generic score.",
-	"Every finding should show its scope.",
-	"AI market evidence",
-	"See what AI sees before you decide what to change.",
-	"Market understanding, made observable.",
-	"# Yonaris agent index",
+	"PUBLIC FACT INTERFACE",
+	"中国区域 · 公开事实界面",
+	"Yonaris",
 	"Current scope",
 	"User-agent:",
+	"https://yonaris.com",
 ].join(" ");
 
 function responseType(pathname) {
-	if (pathname === "/agent" || pathname.startsWith("/agent/")) return "text/markdown";
 	if (pathname === "/llms.txt" || pathname === "/llms-full.txt" || pathname === "/robots.txt") return "text/plain";
 	if (pathname.endsWith(".xml")) return "application/xml";
 	if (pathname.endsWith(".svg")) return "image/svg+xml";
@@ -142,14 +145,9 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 				const lead = JSON.parse(body);
 				validEnvelope =
 					lead.locale === "en" &&
-					lead.website === "https://example.com" &&
-					lead.brand === "Example" &&
-					typeof lead.market === "string" &&
-					lead.question.length >= 10 &&
-					typeof lead.competitors === "string" &&
 					lead.name === "Release Smoke" &&
 					lead.email === "release-smoke@example.com" &&
-					lead.consent === true &&
+					lead.company === "Example Company" &&
 					lead.companyUrl === "https://honeypot.invalid";
 			} catch {
 				validEnvelope = false;
@@ -188,10 +186,13 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 			return;
 		}
 
-		if (request.headers.accept?.includes("text/markdown") && CORE_PATHS.includes(url.pathname)) {
+		if (
+			request.headers.accept?.includes("text/markdown") &&
+			[...CORE_PATHS, ...AGENT_HTML_PATHS].includes(url.pathname)
+		) {
 			response
 				.writeHead(200, { "Content-Type": "text/markdown; charset=utf-8" })
-				.end(`Canonical: ${url.pathname}\nCurrent scope\n${ALL_COPY}`);
+				.end(`Human canonical: https://yonaris.com${url.pathname.replace(/\/agent(?=\/|$)/u, "")}\n${ALL_COPY}`);
 			return;
 		}
 
@@ -233,6 +234,10 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 
 		const robots =
 			url.pathname === "/roadmap" ||
+			url.pathname === "/agent" ||
+			url.pathname.startsWith("/agent/") ||
+			url.pathname === "/zh/agent" ||
+			url.pathname.startsWith("/zh/agent/") ||
 			["/blog", "/glossary", "/ai-search", "/aeo-for", "/answer-presence-tools"].some(
 				(prefix) => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`),
 			)
@@ -262,6 +267,14 @@ test("direct-image smoke covers every governed route without asserting Caddy-onl
 		const observed = new Set(fixture.requests.map(({ method, pathname }) => `${method} ${pathname}`));
 		for (const path of [...HTML_PATHS, ...MACHINE_PATHS]) assert.ok(observed.has(`GET ${path}`), `missing GET ${path}`);
 		for (const path of CORE_PATHS) assert.ok(observed.has(`GET ${path}`), `missing negotiated Markdown GET ${path}`);
+		for (const path of AGENT_HTML_PATHS) {
+			assert.ok(
+				fixture.requests.some(
+					(request) => request.pathname === path && request.headers.accept?.includes("text/markdown"),
+				),
+				`missing negotiated Agent Markdown GET ${path}`,
+			);
+		}
 		for (const path of REDIRECTS.keys()) assert.ok(observed.has(`GET ${path}`), `missing manual redirect GET ${path}`);
 		for (const path of HIDDEN_PATHS)
 			assert.ok(!observed.has(`GET ${path}`), `direct smoke asserted Caddy-only ${path}`);

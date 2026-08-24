@@ -3,23 +3,41 @@
 import { pathToFileURL } from "node:url";
 
 export const CORE_ROUTES = [
-	{ path: "/", copy: ["Know how AI represents your brand—and what to do next."] },
-	{ path: "/zh", copy: ["看清 AI 如何塑造你的市场", "重构 MarTech", "同时面向人，也面向智能体"] },
+	{ path: "/", copy: ["AI is already answering questions about your brand."] },
+	{ path: "/zh", copy: ["客户正在先问 AI，再认识你的品牌。"] },
 	{ path: "/product", copy: ["Make AI market answers observable."] },
-	{ path: "/zh/product", copy: [] },
+	{ path: "/zh/product", copy: ["把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。"] },
 	{ path: "/approach", copy: ["Move from uncertainty to a reviewable next test."] },
-	{ path: "/zh/approach", copy: [] },
+	{ path: "/zh/approach", copy: ["先把问题说清楚，再开始观察；先把依据看明白，再决定行动。"] },
 	{ path: "/research", copy: ["Evidence needs a scope, denominator, and boundary."] },
-	{ path: "/zh/research", copy: [] },
+	{ path: "/zh/research", copy: ["一个结论是否可信，先看它的范围、分母和证据边界。"] },
 	{ path: "/company", copy: ["Evidence before conclusion."] },
-	{ path: "/zh/company", copy: [] },
-	{ path: "/geo", copy: [] },
-	{ path: "/zh/geo", copy: [] },
+	{ path: "/zh/company", copy: ["理解中国市场，也按目标市场服务中国企业的全球业务。"] },
+	{ path: "/geo", copy: ["See where your brand enters an AI answer."] },
+	{ path: "/zh/geo", copy: ["品牌能否进入 AI 的答案，只是第一步。"] },
 	{ path: "/diagnostic", copy: ["Request a focused AI market diagnostic."] },
-	{ path: "/zh/diagnostic", copy: [] },
+	{ path: "/zh/diagnostic", copy: ["先告诉我们怎么联系你，具体问题由人来一起判断。"] },
 ];
 
-export const GOVERNED_HTML_ROUTES = [{ path: "/privacy", copy: [] }];
+export const GOVERNED_HTML_ROUTES = [
+	{ path: "/privacy", copy: ["Know what the request form sends—and why."] },
+	{ path: "/zh/privacy", copy: ["表单只提交三项联系信息，并由服务端完成邮件传递。"] },
+];
+
+export const AGENT_HTML_ROUTES = [
+	{ path: "/agent", copy: ["PUBLIC FACT INTERFACE"], noindex: true },
+	...["product", "approach", "research", "company", "geo", "diagnostic"].map((topic) => ({
+		path: `/agent/${topic}`,
+		copy: ["PUBLIC FACT INTERFACE"],
+		noindex: true,
+	})),
+	{ path: "/zh/agent", copy: ["中国区域 · 公开事实界面"], noindex: true },
+	...["product", "approach", "research", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
+		path: `/zh/agent/${topic}`,
+		copy: ["中国区域 · 公开事实界面"],
+		noindex: true,
+	})),
+];
 
 export const MANUAL_REDIRECTS = [
 	{ from: "/platform", to: "/product" },
@@ -73,14 +91,7 @@ export const HIDDEN_ROUTES = [
 ];
 
 const MACHINE_ROUTES = [
-	{ path: "/agent", contentType: "text/markdown", copy: ["# Yonaris agent index", "Current scope"] },
-	{ path: "/agent/product", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/agent/approach", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/agent/research", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/agent/company", contentType: "text/markdown", copy: ["Evidence before conclusion.", "Current scope"] },
-	{ path: "/agent/geo", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/agent/diagnostic", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/llms.txt", contentType: "text/plain", copy: ["Know how AI represents your brand"] },
+	{ path: "/llms.txt", contentType: "text/plain", copy: ["Yonaris"] },
 	{ path: "/llms-full.txt", contentType: "text/plain", copy: ["Current scope"] },
 	{ path: "/robots.txt", contentType: "text/plain", copy: ["User-agent:"] },
 	{ path: "/sitemap.xml", contentType: "xml", copy: ["http://www.sitemaps.org/schemas/sitemap/0.9"] },
@@ -89,14 +100,9 @@ const MACHINE_ROUTES = [
 
 export const HONEYPOT_LEAD = {
 	locale: "en",
-	website: "https://example.com",
-	brand: "Example",
-	market: "Enterprise software",
-	question: "How does the market compare Example with its alternatives?",
-	competitors: "Alternative One",
 	name: "Release Smoke",
 	email: "release-smoke@example.com",
-	consent: true,
+	company: "Example Company",
 	companyUrl: "https://honeypot.invalid",
 };
 
@@ -223,7 +229,7 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 	const failures = [];
 	const assetUrls = new Map();
 
-	for (const route of [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES])
+	for (const route of [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES, ...AGENT_HTML_ROUTES])
 		await checkReadableRoute(route, baseUrl, failures, assetUrls);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);
 
@@ -244,11 +250,24 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 			const response = await fetchWithTimeout(new URL(route.path, baseUrl), { headers: { Accept: "text/markdown" } });
 			const contentType = response.headers.get("content-type") ?? "";
 			const body = await response.text();
-			if (response.status !== 200 || !contentType.startsWith("text/markdown") || !body.includes("Current scope")) {
-				failures.push(`MARKDOWN ${route.path}: expected 200 text/markdown with Current scope`);
+			if (response.status !== 200 || !contentType.startsWith("text/markdown") || !body.includes("yonaris.com")) {
+				failures.push(`MARKDOWN ${route.path}: expected 200 text/markdown with a Human canonical`);
 			}
 		} catch (error) {
 			failures.push(`ERR MARKDOWN ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+
+	for (const route of AGENT_HTML_ROUTES) {
+		try {
+			const response = await fetchWithTimeout(new URL(route.path, baseUrl), { headers: { Accept: "text/markdown" } });
+			const contentType = response.headers.get("content-type") ?? "";
+			const body = await response.text();
+			if (response.status !== 200 || !contentType.startsWith("text/markdown") || !body.includes("yonaris.com")) {
+				failures.push(`AGENT MARKDOWN ${route.path}: expected paired Markdown facts`);
+			}
+		} catch (error) {
+			failures.push(`ERR AGENT MARKDOWN ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
 
@@ -318,7 +337,8 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 	await checkAssets(baseUrl, failures, assetUrls);
 
 	if (failures.length > 0) throw new Error(`Marketing smoke failed:\n${failures.join("\n")}`);
-	const routeCount = CORE_ROUTES.length + GOVERNED_HTML_ROUTES.length + MACHINE_ROUTES.length;
+	const routeCount =
+		CORE_ROUTES.length + GOVERNED_HTML_ROUTES.length + AGENT_HTML_ROUTES.length + MACHINE_ROUTES.length;
 	console.log(
 		`${routeCount} routes, ${MANUAL_REDIRECTS.length} redirects, and ${assetUrls.size} same-origin assets passed.`,
 	);

@@ -8,7 +8,13 @@ describe("中国区域网站内容模型", () => {
 		expect(subject, "中国区域内容模型必须存在").toBeDefined();
 		if (!subject) return;
 		expect(subject.ZH_ANSWER_QUESTIONS).toHaveLength(5);
-		expect(subject.ZH_ANSWER_QUESTIONS.map(({ id }) => id)).toEqual(["recommended", "accurate", "competitor", "sources", "next-test"]);
+		expect(subject.ZH_ANSWER_QUESTIONS.map(({ id }) => id)).toEqual([
+			"recommended",
+			"accurate",
+			"competitor",
+			"sources",
+			"next-test",
+		]);
 		expect(JSON.stringify(subject.ZH_ANSWER_QUESTIONS)).not.toMatch(/市场总监|销售负责人|创始人|CMO/);
 	});
 

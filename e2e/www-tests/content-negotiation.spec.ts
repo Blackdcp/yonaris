@@ -50,15 +50,24 @@ test.describe("human and machine content negotiation", () => {
 		}
 	});
 
-	test("serves all six Agent documents and permanently redirects old Agent names with their query", async ({ request }) => {
-		for (const path of ["company", "product", "approach", "research", "geo", "diagnostic"]) {
-			const response = await request.get(`/agent/${path}`);
-			expect(response.status()).toBe(200);
-			expect(response.headers()["content-type"]).toContain("text/markdown");
-			expect(response.headers()["content-language"]).toBe("en");
-			expect(response.headers()["cache-control"]).toBe("public, max-age=300");
-			expect(response.headers()["x-robots-tag"]).toBe("noindex, follow");
-			expect(await response.text()).toContain(`Human canonical: https://yonaris.com/${path}`);
+	test("serves branded regional Agent HTML and paired Markdown facts", async ({ request }) => {
+		for (const regional of [
+			{ agentPrefix: "/agent", humanPrefix: "", language: "en", topics: ["company", "product", "approach", "research", "geo", "diagnostic"] },
+			{ agentPrefix: "/zh/agent", humanPrefix: "/zh", language: "zh-CN", topics: ["company", "product", "approach", "research", "geo", "diagnostic", "privacy"] },
+		] as const) {
+			for (const path of regional.topics) {
+				const html = await request.get(`${regional.agentPrefix}/${path}`, { headers: { Accept: "text/html" } });
+				expect(html.status()).toBe(200);
+				expect(html.headers()["content-type"]).toContain("text/html");
+
+				const markdown = await request.get(`${regional.agentPrefix}/${path}`, { headers: { Accept: "text/markdown" } });
+				expect(markdown.status()).toBe(200);
+				expect(markdown.headers()["content-type"]).toContain("text/markdown");
+				expect(markdown.headers()["content-language"]).toBe(regional.language);
+				expect(markdown.headers()["cache-control"]).toBe("public, max-age=300");
+				expect(markdown.headers()["x-robots-tag"]).toBe("noindex, follow");
+				expect(await markdown.text()).toContain(`https://yonaris.com${regional.humanPrefix}/${path}`);
+			}
 		}
 
 		for (const [from, to] of [
@@ -74,8 +83,19 @@ test.describe("human and machine content negotiation", () => {
 	});
 
 	test("publishes complete Agent and llms indexes with machine response policy", async ({ request }) => {
+		for (const [path, language] of [["/agent", "en"], ["/zh/agent", "zh-CN"]] as const) {
+			const html = await request.get(path, { headers: { Accept: "text/html" } });
+			expect(html.status()).toBe(200);
+			expect(html.headers()["content-type"]).toContain("text/html");
+
+			const markdown = await request.get(path, { headers: { Accept: "text/markdown" } });
+			expect(markdown.status()).toBe(200);
+			expect(markdown.headers()["content-type"]).toContain("text/markdown");
+			expect(markdown.headers()["content-language"]).toBe(language);
+			expect(markdown.headers()["x-robots-tag"]).toBe("noindex, follow");
+		}
+
 		for (const [path, contentType, language] of [
-			["/agent", "text/markdown", "en"],
 			["/llms.txt", "text/plain", "en"],
 			["/llms-full.txt", "text/plain", "en, zh-CN"],
 		] as const) {

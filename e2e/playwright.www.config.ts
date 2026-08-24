@@ -22,8 +22,8 @@ const supersededBilingualPageSpecs = [
 
 export default defineConfig({
 	testDir: "./www-tests",
-	// These specs describe the retired shared English/Chinese presentation. Chinese is
-	// guarded by the pinned freeze suite; the independent global edition has its own suite.
+	// These specs describe the retired shared English/Chinese presentation. The two
+	// independent regional editions are guarded by dual-region-release.spec.ts.
 	testIgnore: ["diagnostic-analytics.spec.ts", ...supersededBilingualPageSpecs],
 	outputDir: "test-results-www",
 	fullyParallel: true,

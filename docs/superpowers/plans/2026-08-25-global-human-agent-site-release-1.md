@@ -40,7 +40,7 @@
 - `apps/www/src/components/site/global-en/interactions/product-workbench.tsx` — module selector and shared product evidence workbench.
 - `apps/www/src/components/site/global-en/interactions/evidence-journey.tsx` — Approach step selector and scroll-linked progressive enhancement.
 - `apps/www/src/components/site/global-en/interactions/evidence-explorer.tsx` — Evidence annotations and reviewable ledger states.
-- `apps/www/src/components/site/global-en/interactions/answer-relationship-map.tsx` — AI Visibility brand/answer/source relationship model.
+- `apps/www/src/components/site/global-en/interactions/answer-relationship-map.tsx` — brand/answer/source relationship model.
 - `apps/www/src/components/site/global-en/interactions/interactions.test.tsx` — server-rendered accessibility and initial-state contracts for every interactive figure.
 - `apps/www/src/components/site/global-en/agent/global-agent-shell.tsx` — branded Agent navigation and Human companion link.
 - `apps/www/src/components/site/global-en/agent/global-agent-pages.tsx` — Agent index and fact-page renderer driven by global machine facts.
@@ -570,7 +570,7 @@ git add apps/www/src/content/site/global-en/experience.ts apps/www/src/component
 git commit -m "build the global evidence journey"
 ```
 
-### Task 5: Build distinct Evidence and AI Visibility inspection experiences
+### Task 5: Build distinct Evidence and AI answer-presence inspection experiences
 
 **Files:**
 - Create: `apps/www/src/components/site/global-en/interactions/evidence-explorer.tsx`
@@ -619,7 +619,7 @@ Evidence uses:
 research: ["ledger-hero", "evidence-explorer", "metric-anatomy", "comparison-boundary", "limits-and-request-close"],
 ```
 
-AI Visibility uses:
+The answer-presence page uses:
 
 ```ts
 geo: ["entry-map-hero", "relationship-map", "applied-workflow", "configured-scope", "product-evidence-bridge", "request-close"],
@@ -1156,7 +1156,7 @@ Expected: clean worktree after the push and the remote branch updated to the fin
 Release 1 may be presented as ready only when all of the following are true:
 
 1. The approved Yonaris wordmark assets appear in every global Human and Agent shell.
-2. The global homepage, Product, Approach, Evidence, AI Visibility, Company, Diagnostic, and Privacy pages all use the new regional design system.
+2. The global homepage, Product, Approach, Evidence, AI answer-presence, Company, Diagnostic, and Privacy pages all use the new regional design system.
 3. Answer Studio, Product Workbench, Evidence Journey, Evidence Explorer, Relationship Map, regional lead forms, and Human/Agent switching pass keyboard, touch, reduced-motion, and mobile checks.
 4. `/agent` and six companion routes return branded HTML to browser requests and the paired Markdown facts when `text/markdown` is preferred.
 5. Human and Agent factual fields remain sourced from the same content modules.

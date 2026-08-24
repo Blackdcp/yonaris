@@ -3,7 +3,14 @@ import type { AgentPageKey, CorePageKey } from "@/content/site/types";
 
 export type GlobalAgentViewKey = "index" | AgentPageKey;
 
-const agentPages = ["product", "approach", "research", "geo", "company", "diagnostic"] as const satisfies readonly AgentPageKey[];
+const agentPages = [
+	"product",
+	"approach",
+	"research",
+	"geo",
+	"company",
+	"diagnostic",
+] as const satisfies readonly AgentPageKey[];
 
 function humanHref(key: GlobalAgentViewKey): string {
 	return key === "index" ? "/" : `/${key}`;
@@ -21,7 +28,9 @@ function ViewSwitch({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 	return (
 		<nav className="global-agent__view-switch" aria-label="Reading mode">
 			<a href={humanHref(pageKey)}>Human</a>
-			<a href={agentHref(pageKey)} aria-current="page">Agent</a>
+			<a href={agentHref(pageKey)} aria-current="page">
+				Agent
+			</a>
 		</nav>
 	);
 }
@@ -31,7 +40,9 @@ export function GlobalAgentPage({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 	return (
 		<div className="global-agent" data-view="agent" lang="en">
 			<header className="global-agent__header">
-				<a href="/" aria-label="Yonaris home"><img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" /></a>
+				<a href="/" aria-label="Yonaris home">
+					<img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" />
+				</a>
 				<span>PUBLIC FACT INTERFACE</span>
 				<ViewSwitch pageKey={pageKey} />
 			</header>
@@ -41,8 +52,10 @@ export function GlobalAgentPage({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 					<h1>{facts.title}</h1>
 					<p>{facts.description}</p>
 					<div className="global-agent__endpoints">
-						<span>Human canonical</span><a href={humanHref(pageKey)}>{humanHref(pageKey)}</a>
-						<span>Markdown</span><code>Accept: text/markdown</code>
+						<span>Human canonical</span>
+						<a href={humanHref(pageKey)}>{humanHref(pageKey)}</a>
+						<span>Markdown</span>
+						<code>Accept: text/markdown</code>
 					</div>
 				</section>
 				<section className="global-agent__scope">
@@ -50,7 +63,10 @@ export function GlobalAgentPage({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 					<p>{facts.currentScope}</p>
 				</section>
 				<section className="global-agent__facts">
-					<header><span>02 · DECLARED FACTS</span><small>{facts.claims.length} records</small></header>
+					<header>
+						<span>02 · DECLARED FACTS</span>
+						<small>{facts.claims.length} records</small>
+					</header>
 					{facts.claims.map((claim) => (
 						<article key={claim.id}>
 							<code>{claim.id}</code>
@@ -62,11 +78,18 @@ export function GlobalAgentPage({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 				</section>
 				<section className="global-agent__limits">
 					<span>03 · LIMITATIONS</span>
-					<ul>{facts.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+					<ul>
+						{facts.limitations.map((item) => (
+							<li key={item}>{item}</li>
+						))}
+					</ul>
 				</section>
 				{pageKey === "index" ? (
 					<section className="global-agent__directory">
-						<header><span>04 · TOPIC DIRECTORY</span><small>Human ↔ Agent</small></header>
+						<header>
+							<span>04 · TOPIC DIRECTORY</span>
+							<small>Human ↔ Agent</small>
+						</header>
 						{agentPages.map((key) => (
 							<div key={key}>
 								<strong>{GLOBAL_ENGLISH_MACHINE_FACTS[key].title}</strong>
@@ -77,7 +100,10 @@ export function GlobalAgentPage({ pageKey }: { pageKey: GlobalAgentViewKey }) {
 					</section>
 				) : null}
 			</main>
-			<footer className="global-agent__footer"><span>Yonaris · Evidence before conclusion.</span><a href="/llms.txt">llms.txt</a></footer>
+			<footer className="global-agent__footer">
+				<span>Yonaris · Evidence before conclusion.</span>
+				<a href="/llms.txt">llms.txt</a>
+			</footer>
 		</div>
 	);
 }

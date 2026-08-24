@@ -2,11 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import type { Locale } from "@/content/site";
 import {
 	type DiagnosticRequestIdentity,
-	diagnosticLeadFingerprint,
 	resolveDiagnosticRequestIdentity,
 	submitDiagnosticRequest,
 } from "@/lib/diagnostic-client";
-import { parseDiagnosticLead, type DiagnosticLead } from "@/lib/diagnostic-schema";
+import { type DiagnosticLead, parseDiagnosticLead } from "@/lib/diagnostic-schema";
 
 type SubmissionState = "idle" | "submitting" | "unconfirmed" | "success";
 
@@ -124,7 +123,12 @@ export function DiagnosticForm({ locale }: { locale: Locale; initialWebsite?: st
 	}
 
 	return (
-		<form className="diagnostic-form diagnostic-form--compact" onSubmit={submit} noValidate data-diagnostic-state={submission}>
+		<form
+			className="diagnostic-form diagnostic-form--compact"
+			onSubmit={submit}
+			noValidate
+			data-diagnostic-state={submission}
+		>
 			<header className="diagnostic-form__heading">
 				<p>{labels.label}</p>
 				<h2>{labels.title}</h2>
@@ -134,27 +138,76 @@ export function DiagnosticForm({ locale }: { locale: Locale; initialWebsite?: st
 				<legend className="sr-only">{labels.label}</legend>
 				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-name`}>
 					<span>{labels.name}</span>
-					<input id={`diagnostic-${locale}-name`} name="name" value={values.name} maxLength={120} required placeholder={labels.namePlaceholder} autoComplete="name" onChange={(event) => update("name", event.currentTarget.value)} />
+					<input
+						id={`diagnostic-${locale}-name`}
+						name="name"
+						value={values.name}
+						maxLength={120}
+						required
+						placeholder={labels.namePlaceholder}
+						autoComplete="name"
+						onChange={(event) => update("name", event.currentTarget.value)}
+					/>
 				</label>
 				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-contact`}>
 					<span>{labels.contact}</span>
-					<input id={`diagnostic-${locale}-contact`} name={locale === "en" ? "email" : "phone"} type={locale === "en" ? "email" : "tel"} value={values.contact} maxLength={locale === "en" ? 254 : 32} required placeholder={labels.contactPlaceholder} autoComplete={locale === "en" ? "email" : "tel"} onChange={(event) => update("contact", event.currentTarget.value)} />
+					<input
+						id={`diagnostic-${locale}-contact`}
+						name={locale === "en" ? "email" : "phone"}
+						type={locale === "en" ? "email" : "tel"}
+						value={values.contact}
+						maxLength={locale === "en" ? 254 : 32}
+						required
+						placeholder={labels.contactPlaceholder}
+						autoComplete={locale === "en" ? "email" : "tel"}
+						onChange={(event) => update("contact", event.currentTarget.value)}
+					/>
 				</label>
 				<label className="diagnostic-field" htmlFor={`diagnostic-${locale}-company`}>
 					<span>{labels.company}</span>
-					<input id={`diagnostic-${locale}-company`} name="company" value={values.company} maxLength={160} required placeholder={labels.companyPlaceholder} autoComplete="organization" onChange={(event) => update("company", event.currentTarget.value)} />
+					<input
+						id={`diagnostic-${locale}-company`}
+						name="company"
+						value={values.company}
+						maxLength={160}
+						required
+						placeholder={labels.companyPlaceholder}
+						autoComplete="organization"
+						onChange={(event) => update("company", event.currentTarget.value)}
+					/>
 				</label>
 			</fieldset>
 			<div className="diagnostic-honeypot" aria-hidden="true">
 				<label htmlFor={`diagnostic-${locale}-company-url`}>Company URL</label>
-				<input id={`diagnostic-${locale}-company-url`} name="companyUrl" value={values.companyUrl} tabIndex={-1} autoComplete="off" onChange={(event) => update("companyUrl", event.currentTarget.value)} />
+				<input
+					id={`diagnostic-${locale}-company-url`}
+					name="companyUrl"
+					value={values.companyUrl}
+					tabIndex={-1}
+					autoComplete="off"
+					onChange={(event) => update("companyUrl", event.currentTarget.value)}
+				/>
 			</div>
-			{validationFailed ? <p className="diagnostic-validation" role="alert">{labels.error}</p> : null}
-			{submission === "unconfirmed" ? <p className="diagnostic-failure" role="alert">{labels.failure}</p> : null}
-			<button className="diagnostic-action diagnostic-action--primary" type="submit" disabled={submission === "submitting"}>
+			{validationFailed ? (
+				<p className="diagnostic-validation" role="alert">
+					{labels.error}
+				</p>
+			) : null}
+			{submission === "unconfirmed" ? (
+				<p className="diagnostic-failure" role="alert">
+					{labels.failure}
+				</p>
+			) : null}
+			<button
+				className="diagnostic-action diagnostic-action--primary"
+				type="submit"
+				disabled={submission === "submitting"}
+			>
 				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
 			</button>
-			<p className="diagnostic-disclosure">{labels.disclosure} <a href="/privacy">{labels.privacy}</a></p>
+			<p className="diagnostic-disclosure">
+				{labels.disclosure} <a href={locale === "zh" ? "/zh/privacy" : "/privacy"}>{labels.privacy}</a>
+			</p>
 		</form>
 	);
 }

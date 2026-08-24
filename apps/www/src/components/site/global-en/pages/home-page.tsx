@@ -1,6 +1,6 @@
-import { GlobalEnglishShell } from "../global-english-shell";
-import { GLOBAL_ANSWER_QUESTIONS } from "@/content/site/global-en/experience";
 import { GLOBAL_ENGLISH_CONTENT } from "@/content/site/global-en";
+import { GLOBAL_ANSWER_QUESTIONS } from "@/content/site/global-en/experience";
+import { GlobalEnglishShell } from "../global-english-shell";
 import { AnswerStudio } from "../interactions/answer-studio";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";
 
@@ -95,7 +95,9 @@ export function HomePage() {
 							<p>{copy}</p>
 						</article>
 					))}
-					<a href="/product">Open the product architecture <span aria-hidden="true">↗</span></a>
+					<a href="/product">
+						Open the product architecture <span aria-hidden="true">↗</span>
+					</a>
 				</div>
 			</PageSection>
 			<PageSection
@@ -106,11 +108,20 @@ export function HomePage() {
 				body="Human pages explain the decision. Agent pages expose the same public facts in a compact, stable structure. Neither audience receives a separate truth."
 			>
 				<div className="global-en__parity-map" data-graphic="human-agent-parity">
-					<div><small>HUMAN VIEW</small><strong>Context · explanation · action</strong></div>
+					<div>
+						<small>HUMAN VIEW</small>
+						<strong>Context · explanation · action</strong>
+					</div>
 					<i aria-hidden="true">↔</i>
-					<div><small>SHARED FACTS</small><strong>Scope · claims · boundaries</strong></div>
+					<div>
+						<small>SHARED FACTS</small>
+						<strong>Scope · claims · boundaries</strong>
+					</div>
 					<i aria-hidden="true">↔</i>
-					<div><small>AGENT VIEW</small><strong>Stable paths · structured facts</strong></div>
+					<div>
+						<small>AGENT VIEW</small>
+						<strong>Stable paths · structured facts</strong>
+					</div>
 				</div>
 				<a className="global-en__text-link" href="/agent">
 					Open the Agent view →
@@ -130,7 +141,9 @@ export function HomePage() {
 					<i>KNOWN UNKNOWNS</i>
 					<b>REVIEW STATUS</b>
 				</div>
-				<a className="global-en__text-link" href="/research">Inspect the evidence framework →</a>
+				<a className="global-en__text-link" href="/research">
+					Inspect the evidence framework →
+				</a>
 			</PageSection>
 			<CloseSection id="request-close" title="Replace AI market anxiety with one reviewable starting point." />
 		</GlobalEnglishShell>

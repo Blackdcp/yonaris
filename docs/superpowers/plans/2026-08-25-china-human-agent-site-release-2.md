@@ -18,7 +18,7 @@
 - Product: Chinese product workbench.
 - Approach: operable delivery path showing customer input, Yonaris work, output, and human review.
 - Evidence: expandable evidence record and definitions without invented metrics.
-- AI visibility: Chinese answer relationship map and configured regional scope.
+- AI answer presence: Chinese answer relationship map and configured regional scope.
 - Company: local-market understanding, global service behavior, responsibility, and verified-trust boundaries.
 - Diagnostic: use the live `姓名、电话、公司` form and confirmed server email delivery.
 

@@ -5,7 +5,16 @@ type SubjectModule = typeof import("./index");
 const subject = (await import("./index").catch(() => undefined)) as SubjectModule | undefined;
 
 const expectedSections = {
-	home: ["hero", "market-change", "core-questions", "product-capability", "service-process", "global-capability", "human-agent", "diagnostic-close"],
+	home: [
+		"hero",
+		"market-change",
+		"core-questions",
+		"product-capability",
+		"service-process",
+		"global-capability",
+		"human-agent",
+		"diagnostic-close",
+	],
 	product: ["hero", "product-workbench", "module-flow", "responsibility", "diagnostic-close"],
 	approach: ["hero", "delivery-path", "delivery-artifacts", "review-boundary", "diagnostic-close"],
 	research: ["hero", "evidence-record", "measurement-definitions", "unknown-boundary", "diagnostic-close"],
@@ -23,8 +32,8 @@ describe("中国区域完整页面", () => {
 			const Page = subject.ZH_PAGES[key as keyof typeof subject.ZH_PAGES];
 			const markup = renderToStaticMarkup(<Page />);
 			expect(markup).toContain('data-edition="zh-cn"');
-			expect(markup).toContain('/brand/logos/yonaris-wordmark-navy.png');
-			expect(markup).toContain('data-graphic');
+			expect(markup).toContain("/brand/logos/yonaris-wordmark-navy.png");
+			expect(markup).toContain("data-graphic");
 			expect(markup).toContain('href="/zh/agent');
 			const positions = sectionIds.map((id) => markup.indexOf(`id="${id}"`));
 			expect(positions.every((position) => position >= 0)).toBe(true);

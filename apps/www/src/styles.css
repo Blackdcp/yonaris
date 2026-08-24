@@ -13,6 +13,7 @@
 @import "./styles/pages/legacy-archive.css";
 @import "./styles/pages/not-found.css";
 @import "./styles/global-en/core.css";
+@import "./styles/global-agent/core.css";
 @import "./styles/zh-cn/core.css";
 
 @source "../src";

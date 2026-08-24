@@ -8,10 +8,18 @@ type EvidenceExplorerModule = typeof import("./evidence-explorer");
 type AnswerRelationshipMapModule = typeof import("./answer-relationship-map");
 
 const answerStudioModule = (await import("./answer-studio").catch(() => undefined)) as AnswerStudioModule | undefined;
-const productWorkbenchModule = (await import("./product-workbench").catch(() => undefined)) as ProductWorkbenchModule | undefined;
-const evidenceJourneyModule = (await import("./evidence-journey").catch(() => undefined)) as EvidenceJourneyModule | undefined;
-const evidenceExplorerModule = (await import("./evidence-explorer").catch(() => undefined)) as EvidenceExplorerModule | undefined;
-const answerRelationshipMapModule = (await import("./answer-relationship-map").catch(() => undefined)) as AnswerRelationshipMapModule | undefined;
+const productWorkbenchModule = (await import("./product-workbench").catch(() => undefined)) as
+	| ProductWorkbenchModule
+	| undefined;
+const evidenceJourneyModule = (await import("./evidence-journey").catch(() => undefined)) as
+	| EvidenceJourneyModule
+	| undefined;
+const evidenceExplorerModule = (await import("./evidence-explorer").catch(() => undefined)) as
+	| EvidenceExplorerModule
+	| undefined;
+const answerRelationshipMapModule = (await import("./answer-relationship-map").catch(() => undefined)) as
+	| AnswerRelationshipMapModule
+	| undefined;
 
 describe("global English interactive figures", () => {
 	it("renders a complete accessible Answer Studio initial state", () => {

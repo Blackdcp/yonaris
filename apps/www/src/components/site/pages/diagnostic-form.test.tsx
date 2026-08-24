@@ -12,6 +12,7 @@ describe("DiagnosticForm", () => {
 		expect(markup).not.toContain('name="website"');
 		expect(markup).not.toContain('name="consent"');
 		expect(markup).not.toContain("mailto:");
+		expect(markup).toContain('href="/privacy"');
 	});
 
 	it("renders exactly the three approved China lead fields", () => {
@@ -23,5 +24,6 @@ describe("DiagnosticForm", () => {
 		expect(markup).not.toContain('name="website"');
 		expect(markup).not.toContain('name="consent"');
 		expect(markup).toContain("提交后，我们会通过你留下的联系方式沟通需求");
+		expect(markup).toContain('href="/zh/privacy"');
 	});
 });

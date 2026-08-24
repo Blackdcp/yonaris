@@ -9,7 +9,7 @@ describe("中国区域 Agent 页面", () => {
 		expect(subject, "中国区域 Agent 页面必须存在").toBeDefined();
 		if (!subject) return;
 		const markup = renderToStaticMarkup(<subject.ZhAgentPage pageKey="index" />);
-		expect(markup).toContain('/brand/logos/yonaris-wordmark-white.png');
+		expect(markup).toContain("/brand/logos/yonaris-wordmark-white.png");
 		expect(markup).toContain('data-edition="zh-cn-agent"');
 		expect(markup).toContain('aria-current="page">Agent 阅读');
 		expect(markup).toContain('href="/zh/product"');

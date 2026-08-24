@@ -20,7 +20,6 @@ describe("GlobalEnglishShell", () => {
 		expect(markup).not.toContain("YONARIS<span");
 		expect(markup).toContain('aria-label="Reading mode"');
 		expect(markup).toContain('href="/agent/product"');
-		for (const retiredPath of ["/status", "/brand", "/llms.txt"])
-			expect(markup).not.toContain(`href="${retiredPath}"`);
+		for (const retiredPath of ["/status", "/brand", "/llms.txt"]) expect(markup).not.toContain(`href="${retiredPath}"`);
 	});
 });

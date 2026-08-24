@@ -121,6 +121,8 @@ export const GLOBAL_ENGLISH_MACHINE_FACTS: Readonly<Record<CorePageKey, GlobalEn
 				text: "Global requests contain name, work email, and company; China requests contain name, phone, and company.",
 			},
 		],
-		limitations: ["Submitting starts a human scope review; it does not create an instant scan, score, or evidence result."],
+		limitations: [
+			"Submitting starts a human scope review; it does not create an instant scan, score, or evidence result.",
+		],
 	},
 };

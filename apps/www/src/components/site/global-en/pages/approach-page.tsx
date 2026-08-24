@@ -1,5 +1,5 @@
-import { GlobalEnglishShell } from "../global-english-shell";
 import { GLOBAL_EVIDENCE_JOURNEY } from "@/content/site/global-en/experience";
+import { GlobalEnglishShell } from "../global-english-shell";
 import { EvidenceJourney } from "../interactions/evidence-journey";
 import { EvidencePath } from "../visuals/visuals";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";

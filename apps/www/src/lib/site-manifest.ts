@@ -78,7 +78,7 @@ export const SITE_MANIFEST = [
 	{
 		key: "agent",
 		routeClass: "machine",
-		canonicals: { en: "/agent" },
+		canonicals: { en: "/agent", zh: "/zh/agent" },
 		patterns: ["/agent/*", "/zh/agent/*"],
 		navigation: [],
 		indexPolicy: "noindex,follow",

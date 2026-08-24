@@ -1,5 +1,5 @@
-import { GlobalEnglishShell } from "../global-english-shell";
 import { GLOBAL_PRODUCT_MODULES } from "@/content/site/global-en/experience";
+import { GlobalEnglishShell } from "../global-english-shell";
 import { ProductWorkbench } from "../interactions/product-workbench";
 import { ResponsibilityLanes, ScopeRings } from "../visuals/visuals";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";

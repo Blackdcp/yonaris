@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import {
 	GLOBAL_PRODUCT_MODULES,
-	getGlobalProductModule,
 	type GlobalProductModuleId,
+	getGlobalProductModule,
 } from "@/content/site/global-en/experience";
 import { GraphicFrame } from "../graphic-frame";
 
@@ -14,7 +14,10 @@ function adjacentModule(current: GlobalProductModuleId, key: string): GlobalProd
 	if (key === "End") return GLOBAL_PRODUCT_MODULES.at(-1)?.id ?? current;
 	const delta = key === "ArrowRight" ? 1 : key === "ArrowLeft" ? -1 : 0;
 	if (!delta) return current;
-	return GLOBAL_PRODUCT_MODULES[(index + delta + GLOBAL_PRODUCT_MODULES.length) % GLOBAL_PRODUCT_MODULES.length]?.id ?? current;
+	return (
+		GLOBAL_PRODUCT_MODULES[(index + delta + GLOBAL_PRODUCT_MODULES.length) % GLOBAL_PRODUCT_MODULES.length]?.id ??
+		current
+	);
 }
 
 export function ProductWorkbench({ initialModule = "scope" }: { initialModule?: GlobalProductModuleId }) {
@@ -68,9 +71,18 @@ export function ProductWorkbench({ initialModule = "scope" }: { initialModule?: 
 					<h3>{active.question}</h3>
 				</div>
 				<div className="global-en__workbench-record">
-					<section><small>REVIEWABLE OUTPUT</small><p>{active.output}</p></section>
-					<section><small>RESPONSIBILITY</small><p>{active.owner}</p></section>
-					<section><small>EVIDENCE BOUNDARY</small><p>{active.boundary}</p></section>
+					<section>
+						<small>REVIEWABLE OUTPUT</small>
+						<p>{active.output}</p>
+					</section>
+					<section>
+						<small>RESPONSIBILITY</small>
+						<p>{active.owner}</p>
+					</section>
+					<section>
+						<small>EVIDENCE BOUNDARY</small>
+						<p>{active.boundary}</p>
+					</section>
 				</div>
 			</article>
 			<figcaption>{disclosure}</figcaption>

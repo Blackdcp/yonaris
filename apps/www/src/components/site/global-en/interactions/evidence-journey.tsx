@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import {
 	GLOBAL_EVIDENCE_JOURNEY,
-	getGlobalEvidenceStep,
 	type GlobalEvidenceStepId,
+	getGlobalEvidenceStep,
 } from "@/content/site/global-en/experience";
 import { GraphicFrame } from "../graphic-frame";
 
@@ -12,7 +12,10 @@ function adjacentStep(current: GlobalEvidenceStepId, key: string): GlobalEvidenc
 	if (key === "End") return GLOBAL_EVIDENCE_JOURNEY.at(-1)?.id ?? current;
 	const delta = ["ArrowRight", "ArrowDown"].includes(key) ? 1 : ["ArrowLeft", "ArrowUp"].includes(key) ? -1 : 0;
 	if (!delta) return current;
-	return GLOBAL_EVIDENCE_JOURNEY[(index + delta + GLOBAL_EVIDENCE_JOURNEY.length) % GLOBAL_EVIDENCE_JOURNEY.length]?.id ?? current;
+	return (
+		GLOBAL_EVIDENCE_JOURNEY[(index + delta + GLOBAL_EVIDENCE_JOURNEY.length) % GLOBAL_EVIDENCE_JOURNEY.length]?.id ??
+		current
+	);
 }
 
 export function EvidenceJourney({ initialStep = "define" }: { initialStep?: GlobalEvidenceStepId }) {
@@ -62,9 +65,18 @@ export function EvidenceJourney({ initialStep = "define" }: { initialStep?: Glob
 					aria-labelledby={`evidence-step-${active.id}`}
 					data-step={active.id}
 				>
-					<header><small>{active.artifact}</small><h3>{active.promise}</h3></header>
-					<section><small>REVIEW QUESTION</small><p>{active.reviewQuestion}</p></section>
-					<section><small>BOUNDARY</small><p>{active.boundary}</p></section>
+					<header>
+						<small>{active.artifact}</small>
+						<h3>{active.promise}</h3>
+					</header>
+					<section>
+						<small>REVIEW QUESTION</small>
+						<p>{active.reviewQuestion}</p>
+					</section>
+					<section>
+						<small>BOUNDARY</small>
+						<p>{active.boundary}</p>
+					</section>
 				</article>
 			</div>
 		</GraphicFrame>

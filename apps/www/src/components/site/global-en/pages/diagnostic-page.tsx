@@ -1,5 +1,5 @@
-import { GlobalEnglishShell } from "../global-english-shell";
 import { DiagnosticForm } from "../../pages/diagnostic-form";
+import { GlobalEnglishShell } from "../global-english-shell";
 import { DiagnosticPreview } from "../visuals/visuals";
 import { PageHero, PageSection } from "./page-primitives";
 
@@ -44,9 +44,17 @@ export function DiagnosticPage() {
 				body="The browser does not claim success until the server confirms delivery. Form values are not placed in analytics events, local storage, or cookies."
 			>
 				<div className="global-en__delivery-path" data-graphic="lead-delivery-path">
-					<span>Three-field request</span><i>→</i><span>Server validation</span><i>→</i><span>Email accepted</span><i>→</i><strong>Human review</strong>
+					<span>Three-field request</span>
+					<i>→</i>
+					<span>Server validation</span>
+					<i>→</i>
+					<span>Email accepted</span>
+					<i>→</i>
+					<strong>Human review</strong>
 				</div>
-				<a className="global-en__text-link" href="/privacy">Read the privacy note →</a>
+				<a className="global-en__text-link" href="/privacy">
+					Read the privacy note →
+				</a>
 			</PageSection>
 		</GlobalEnglishShell>
 	);

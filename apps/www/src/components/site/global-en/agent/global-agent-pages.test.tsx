@@ -9,7 +9,7 @@ describe("global Agent HTML pages", () => {
 		expect(subject, "the branded Agent page must exist").toBeDefined();
 		if (!subject) return;
 		const markup = renderToStaticMarkup(<subject.GlobalAgentPage pageKey="index" />);
-		expect(markup).toContain('/brand/logos/yonaris-wordmark-white.png');
+		expect(markup).toContain("/brand/logos/yonaris-wordmark-white.png");
 		expect(markup).toContain('data-view="agent"');
 		expect(markup).toContain('aria-current="page">Agent');
 		expect(markup).toContain('href="/product"');

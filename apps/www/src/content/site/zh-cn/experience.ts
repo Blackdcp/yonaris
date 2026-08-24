@@ -67,20 +67,83 @@ export function getZhQuestion(id: ZhQuestionId): ZhAnswerQuestion {
 export type ZhProductModuleId = "observe" | "explain" | "evidence" | "experiment";
 
 export const ZH_PRODUCT_MODULES = [
-	{ id: "observe" as const, label: "答案观察", conclusion: "先看见 AI 实际怎么回答。", input: "市场、语言、购买问题与观察条件", artifact: "可回看的答案记录", boundary: "单次回答不代表所有用户或未来回答。" },
-	{ id: "explain" as const, label: "品牌判断", conclusion: "再判断品牌在哪里被说对、说偏或被忽略。", input: "批准的品牌事实与比较范围", artifact: "描述、比较与缺口标注", boundary: "判断只在当前问题和候选范围内成立。" },
-	{ id: "evidence" as const, label: "依据核验", conclusion: "把已知依据和未知状态分开。", input: "界面可见来源与可核验事实", artifact: "证据记录与未知项", boundary: "不可获得的依据保持未知，不做推断。" },
-	{ id: "experiment" as const, label: "行动复测", conclusion: "一次只推动一个可验证的改变。", input: "已审核的缺口、负责人和改变", artifact: "下一步测试与复测条件", boundary: "复测支持比较，不自动证明因果。" },
+	{
+		id: "observe" as const,
+		label: "答案观察",
+		conclusion: "先看见 AI 实际怎么回答。",
+		input: "市场、语言、购买问题与观察条件",
+		artifact: "可回看的答案记录",
+		boundary: "单次回答不代表所有用户或未来回答。",
+	},
+	{
+		id: "explain" as const,
+		label: "品牌判断",
+		conclusion: "再判断品牌在哪里被说对、说偏或被忽略。",
+		input: "批准的品牌事实与比较范围",
+		artifact: "描述、比较与缺口标注",
+		boundary: "判断只在当前问题和候选范围内成立。",
+	},
+	{
+		id: "evidence" as const,
+		label: "依据核验",
+		conclusion: "把已知依据和未知状态分开。",
+		input: "界面可见来源与可核验事实",
+		artifact: "证据记录与未知项",
+		boundary: "不可获得的依据保持未知，不做推断。",
+	},
+	{
+		id: "experiment" as const,
+		label: "行动复测",
+		conclusion: "一次只推动一个可验证的改变。",
+		input: "已审核的缺口、负责人和改变",
+		artifact: "下一步测试与复测条件",
+		boundary: "复测支持比较，不自动证明因果。",
+	},
 ] as const;
 
 export type ZhDeliveryStageId = "diagnose" | "observe" | "judge" | "act" | "remeasure";
 
 export const ZH_DELIVERY_STAGES = [
-	{ id: "diagnose" as const, label: "诊断", customerInput: "业务问题、目标市场与关键品牌事实", yonarisWork: "把模糊焦虑整理成一个可观察的问题", output: "范围说明", review: "双方确认观察条件后再开始" },
-	{ id: "observe" as const, label: "观察", customerInput: "确认的问题与比较范围", yonarisWork: "按已确认条件采集可比较的回答记录", output: "答案样本", review: "无效或不完整样本不进入有效分母" },
-	{ id: "judge" as const, label: "判断", customerInput: "批准的事实与需要关注的差距", yonarisWork: "核验描述、比较、可用来源和未知状态", output: "证据判断", review: "由人审核判断，不让系统替代决策" },
-	{ id: "act" as const, label: "行动", customerInput: "优先级、负责人和可执行限制", yonarisWork: "将一个差距转成边界明确的下一步测试", output: "行动说明", review: "客户批准改变与责任人" },
-	{ id: "remeasure" as const, label: "复测", customerInput: "已经实施的改变与原观察条件", yonarisWork: "在相同规则下再次观察并比较变化", output: "复测记录", review: "比较变化，不把相关性包装成因果" },
+	{
+		id: "diagnose" as const,
+		label: "诊断",
+		customerInput: "业务问题、目标市场与关键品牌事实",
+		yonarisWork: "把模糊焦虑整理成一个可观察的问题",
+		output: "范围说明",
+		review: "双方确认观察条件后再开始",
+	},
+	{
+		id: "observe" as const,
+		label: "观察",
+		customerInput: "确认的问题与比较范围",
+		yonarisWork: "按已确认条件采集可比较的回答记录",
+		output: "答案样本",
+		review: "无效或不完整样本不进入有效分母",
+	},
+	{
+		id: "judge" as const,
+		label: "判断",
+		customerInput: "批准的事实与需要关注的差距",
+		yonarisWork: "核验描述、比较、可用来源和未知状态",
+		output: "证据判断",
+		review: "由人审核判断，不让系统替代决策",
+	},
+	{
+		id: "act" as const,
+		label: "行动",
+		customerInput: "优先级、负责人和可执行限制",
+		yonarisWork: "将一个差距转成边界明确的下一步测试",
+		output: "行动说明",
+		review: "客户批准改变与责任人",
+	},
+	{
+		id: "remeasure" as const,
+		label: "复测",
+		customerInput: "已经实施的改变与原观察条件",
+		yonarisWork: "在相同规则下再次观察并比较变化",
+		output: "复测记录",
+		review: "比较变化，不把相关性包装成因果",
+	},
 ] as const;
 
 export const ZH_MARKET_CONTEXTS = [
@@ -106,11 +169,39 @@ export const ZH_PAGE_CONTENT = {
 		title: "客户正在先问 AI，再认识你的品牌。",
 		lead: "当 AI 开始替客户筛选、比较和推荐产品，品牌是否出现、如何被描述、为什么输给竞争对手，已经成为新的市场问题。Yonaris 帮助企业看清答案、找到依据，并决定下一步应该改变什么。",
 	},
-	product: { eyebrow: "产品能力", title: "把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。", lead: "不是再增加一块仪表盘，而是把问题、回答、依据、判断和下一次测试连接在同一个工作流里。" },
-	approach: { eyebrow: "服务方式", title: "先把问题说清楚，再开始观察；先把依据看明白，再决定行动。", lead: "每一步都说明客户提供什么、Yonaris 做什么、交付什么，以及哪里必须由人审核。" },
-	research: { eyebrow: "研究依据", title: "一个结论是否可信，先看它的范围、分母和证据边界。", lead: "Yonaris 把观察条件、有效样本、回答、可用来源、未知状态和审核结果放在同一条记录里。" },
-	geo: { eyebrow: "AI 可见度", title: "品牌能否进入 AI 的答案，只是第一步。", lead: "还需要看它怎样被描述、与谁比较、依据从哪里来，以及改变后是否在相同条件下发生变化。" },
-	company: { eyebrow: "关于 Yonaris", title: "理解中国市场，也按目标市场服务中国企业的全球业务。", lead: "Yonaris 用可检查的软件记录、配置化观察和人工审核，帮助企业在不同市场中保持清晰、准确且可验证的品牌表达。" },
-	diagnostic: { eyebrow: "需求沟通", title: "先告诉我们怎么联系你，具体问题由人来一起判断。", lead: "留下姓名、电话和公司。我们会先了解你的市场问题和目标，再确认是否适合进入观察。" },
-	privacy: { eyebrow: "隐私说明", title: "表单只提交三项联系信息，并由服务端完成邮件传递。", lead: "中国区域表单提交姓名、电话和公司；这些信息只用于审核需求和与你联系。" },
+	product: {
+		eyebrow: "产品能力",
+		title: "把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。",
+		lead: "不是再增加一块仪表盘，而是把问题、回答、依据、判断和下一次测试连接在同一个工作流里。",
+	},
+	approach: {
+		eyebrow: "服务方式",
+		title: "先把问题说清楚，再开始观察；先把依据看明白，再决定行动。",
+		lead: "每一步都说明客户提供什么、Yonaris 做什么、交付什么，以及哪里必须由人审核。",
+	},
+	research: {
+		eyebrow: "研究依据",
+		title: "一个结论是否可信，先看它的范围、分母和证据边界。",
+		lead: "Yonaris 把观察条件、有效样本、回答、可用来源、未知状态和审核结果放在同一条记录里。",
+	},
+	geo: {
+		eyebrow: "AI 可见度",
+		title: "品牌能否进入 AI 的答案，只是第一步。",
+		lead: "还需要看它怎样被描述、与谁比较、依据从哪里来，以及改变后是否在相同条件下发生变化。",
+	},
+	company: {
+		eyebrow: "关于 Yonaris",
+		title: "理解中国市场，也按目标市场服务中国企业的全球业务。",
+		lead: "Yonaris 用可检查的软件记录、配置化观察和人工审核，帮助企业在不同市场中保持清晰、准确且可验证的品牌表达。",
+	},
+	diagnostic: {
+		eyebrow: "需求沟通",
+		title: "先告诉我们怎么联系你，具体问题由人来一起判断。",
+		lead: "留下姓名、电话和公司。我们会先了解你的市场问题和目标，再确认是否适合进入观察。",
+	},
+	privacy: {
+		eyebrow: "隐私说明",
+		title: "表单只提交三项联系信息，并由服务端完成邮件传递。",
+		lead: "中国区域表单提交姓名、电话和公司；这些信息只用于审核需求和与你联系。",
+	},
 } as const;
