@@ -1,5 +1,7 @@
 # Yonaris Site Foundation Implementation Plan
 
+> Historical record: supporting, publication, documentation, and distribution routes described here were retired on 2026-08-24. Neutral placeholder identifiers below do not represent current routes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Create one typed foundation for every public Yonaris route, bilingual fact, shell, SEO surface, and human/Agent representation.
@@ -47,7 +49,7 @@ export type SiteRouteClass = "core" | "resource" | "utility" | "legacy" | "machi
 export type IndexPolicy = "index,follow" | "noindex,follow";
 export const SITE_ROUTE_KEYS = [
   "home", "product", "approach", "research", "company", "geo", "diagnostic",
-  "resources", "openSource", "privacy", "blog", "glossary", "docs", "status",
+  "resources", "removed-distribution-route", "privacy", "blog", "glossary", "docs", "status",
   "brand", "changelog", "roadmap", "aiSearch", "aeoFor", "aiVisibility",
   "agent", "llms", "sitemap", "robots", "rss", "api", "og", "repoActivity", "markdownInternal",
 ] as const;
@@ -86,7 +88,7 @@ Run `pnpm.cmd --filter @workspace/www test -- src/lib/site-manifest.test.ts`; ex
 
 - [ ] **Step 2: Implement every route family**
 
-Use `SITE_ROUTE_KEYS` as the compile-time authority and define `SITE_MANIFEST` with `as const satisfies readonly SiteRouteDefinition[]`; test that the two sets are identical so misspelled or missing keys fail. Classify 14 core canonicals; `/resources`, `/open-source`, `/privacy`; Blog/Glossary publication families; Docs/Status/Brand/Changelog utility families; Roadmap as noindex utility; AI Search/AEO/AI Visibility Tools legacy families; Agent/llms/sitemap/robots/RSS/API/OG/repo-activity/internal Markdown machine or utility families. Add approved company redirects plus old Agent redirects. Every core entry has the release-approved real verification date `2026-08-22`; `getCoreLastVerified()` derives from that manifest field. Tests validate ISO calendar dates on all seven core entries. Utilities and historical families omit `lastVerified` unless a later evidence-backed review supplies one.
+Use `SITE_ROUTE_KEYS` as the compile-time authority and define `SITE_MANIFEST` with `as const satisfies readonly SiteRouteDefinition[]`; test that the two sets are identical so misspelled or missing keys fail. Classify 14 core canonicals; `/resources`, `/removed-distribution-route`, `/privacy`; Blog/Glossary publication families; Docs/Status/Brand/Changelog utility families; Roadmap as noindex utility; AI Search/AEO/AI Visibility Tools legacy families; Agent/llms/sitemap/robots/RSS/API/OG/repo-activity/internal Markdown machine or utility families. Add approved company redirects plus old Agent redirects. Every core entry has the release-approved real verification date `2026-08-22`; `getCoreLastVerified()` derives from that manifest field. Tests validate ISO calendar dates on all seven core entries. Utilities and historical families omit `lastVerified` unless a later evidence-backed review supplies one.
 
 - [ ] **Step 3: Add the audit script and verify GREEN**
 
@@ -185,7 +187,7 @@ git commit -m "model truthful bilingual site content"
 
 ```ts
 export function corePageHead(pageKey: CorePageKey, locale: Locale): { meta: object[]; links: object[]; scripts?: object[] };
-export function supportingPageHead(routeKey: Extract<SiteRouteKey, "resources" | "openSource" | "privacy">): { meta: object[]; links: object[] };
+export function supportingPageHead(routeKey: Extract<SiteRouteKey, "resources" | "removed-distribution-route" | "privacy">): { meta: object[]; links: object[] };
 export function siteRouteHead(routeKey: SiteRouteKey, options: { canonicalPath: `/${string}`; title: string; description: string; locale?: Locale }): { meta: object[]; links: object[] };
 export function routeRobotsMeta(routeKey: SiteRouteKey): { name: "robots"; content: IndexPolicy } | undefined;
 export interface SitemapEntry { path: string; priority: number; lastVerified?: string; alternates?: readonly { hreflang: "en" | "zh-CN" | "x-default"; path: string }[] }
@@ -248,7 +250,7 @@ export function SiteHeader(props: { locale: Locale; activeKey?: CorePageKey }): 
 export function SiteFooter(props: { locale: Locale }): React.ReactNode;
 export function SiteShell(props: { locale: Locale; activeKey?: CorePageKey; children: React.ReactNode; mainClassName?: string }): React.ReactNode;
 export function PublicationShell(props: { section: "blog" | "glossary" | "ai-search" | "aeo-for"; children: React.ReactNode; archiveContext?: "legacy-research" }): React.ReactNode;
-export function UtilityShell(props: { section: "docs" | "status" | "brand" | "changelog" | "roadmap" | "open-source"; children: React.ReactNode }): React.ReactNode;
+export function UtilityShell(props: { section: "docs" | "status" | "brand" | "changelog" | "roadmap" | "removed-distribution-route"; children: React.ReactNode }): React.ReactNode;
 export function LegacyArchiveContext(props: { kind: "legacy-research" | "upstream-comparison" }): React.ReactNode;
 ```
 
@@ -256,7 +258,7 @@ export function LegacyArchiveContext(props: { kind: "legacy-research" | "upstrea
 
 - [ ] **Step 1: Write failing rendered-shell and style-token tests**
 
-Render `SiteHeader`/`SiteFooter` primitives without TanStack Link context and assert ordered primary canonical paths, secondary Portal, one visible diagnostic action per presentation, localized navigation, active page state, Resources/Open Source/Status/Privacy/Agent/llms footer links, and absence of Provider Status/Docs-first identity. Static-render zero-prop `Navbar`/`Footer` wrappers to prove router independence. Add Playwright RED behavior at 390px for Enter/Space opening, Escape close with focus restoration, link-selection close without relying on navigation, a 44px minimum trigger, and zero horizontal overflow. Replace stale homepage assertions for `/platform`, `/methodology`, `/results` with `/product`, `/approach`, `/research`; remove the obsolete dark-supporting-header contract and do not navigate to not-yet-created routes. Assert `styles.css` imports every focused stylesheet, Product Stage selectors live only in `pages/home.css`, and all first-party site CSS/marketing consumers contain no radial gradient or unapproved `surface/signal-strong` tokens.
+Render `SiteHeader`/`SiteFooter` primitives without TanStack Link context and assert ordered primary canonical paths, secondary Portal, one visible diagnostic action per presentation, localized navigation, active page state, Resources/removed-distribution-route/Status/Privacy/Agent/llms footer links, and absence of Provider Status/Docs-first identity. Static-render zero-prop `Navbar`/`Footer` wrappers to prove router independence. Add Playwright RED behavior at 390px for Enter/Space opening, Escape close with focus restoration, link-selection close without relying on navigation, a 44px minimum trigger, and zero horizontal overflow. Replace stale homepage assertions for `/platform`, `/methodology`, `/results` with `/product`, `/approach`, `/research`; remove the obsolete dark-supporting-header contract and do not navigate to not-yet-created routes. Assert `styles.css` imports every focused stylesheet, Product Stage selectors live only in `pages/home.css`, and all first-party site CSS/marketing consumers contain no radial gradient or unapproved `surface/signal-strong` tokens.
 
 - [ ] **Step 2: Implement shell primitives and compatibility wrappers**
 

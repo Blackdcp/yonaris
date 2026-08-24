@@ -16,7 +16,7 @@ Use WebFetch to read the competitor's website at `$ARGUMENTS`. Gather:
 - Product name
 - Domain
 - What the tool does (tagline + longer description)
-- Which category it fits: `tracking`, `content`, `api-developer`, `ecommerce`, `seo-traditional`, `open-source`, or `other`
+- Which category it fits: `tracking`, `content`, `api-developer`, `ecommerce`, `seo-traditional`, `private-platform`, or `other`
 - Pricing info (free tier? starting price? enterprise?)
 - Status: `active`, `shutting-down`, `acquired`, or `beta`
 - 3 highlights (short bullet points about what makes it notable)
@@ -45,7 +45,7 @@ Read the feature definitions in `apps/www/src/lib/competitors/types.ts` (the `FE
 - `dataExportApi` — CSV export or API access
 - `biConnectors` — Looker Studio, NinjaCat, etc.
 - `whiteLabelAgency` — white-label or agency features
-- `openSource` — source code available
+- `private-platform` — privately operated platform with a non-public codebase
 - `contentGeneration` — AI content creation
 
 Be conservative — only mark features as `true` if you can confirm them from the website.

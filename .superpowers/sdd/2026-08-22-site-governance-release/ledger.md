@@ -15,8 +15,8 @@ The original ignored G1 report/preflight artifacts were not persisted into this 
 
 - Commits: `683a934`, `ab48137`, follow-up `c517489`
 - Reported verification: supporting `11/11`; full unit `27 files / 214`; full public `152/152`; full visual `75/75`; WWW/E2E typecheck; site-manifest audit; authored Biome `11`; production build; diff check.
-- Visual evidence: Resources and Open Source at `1440`, `390`, and `280` CSS px inspected.
-- Review: one Important finding (Open Source 2×2 source-card grid), corrected in `c517489` to a single editorial ledger. Fresh supporting `11/11` and all three Open Source images re-inspected. Final review: `0 Critical / 0 Important / 0 Minor`.
+- Visual evidence: Resources and retired distribution at `1440`, `390`, and `280` CSS px inspected.
+- Review: one Important finding (retired distribution 2×2 source-card grid), corrected in `c517489` to a single editorial ledger. Fresh supporting `11/11` and all three retired distribution images re-inspected. Final review: `0 Critical / 0 Important / 0 Minor`.
 
 ## G2 — Publication and Utility shell migration
 

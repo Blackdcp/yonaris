@@ -1,10 +1,12 @@
 # Yonaris Site Governance and Release Implementation Plan
 
+> Historical record: supporting, publication, documentation, and distribution routes proposed here were retired on 2026-08-24. Neutral placeholder identifiers below do not represent current routes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Converge every remaining public route into the Yonaris identity, install canonical redirects and index policy, then prove the complete bilingual human/Agent site is release-safe.
 
-**Architecture:** Supporting pages use Resources, Publication, Utility, or Legacy Archive shells without rewriting all historical bodies. Canonical core routes and the single bilingual Privacy destination are already created by the page plans; this plan installs real 308 aliases, Resources/Open Source destinations, noindex/archive context, old-facade cleanup, production smoke, and final visual/behavior review.
+**Architecture:** Supporting pages use Resources, Publication, Utility, or Legacy Archive shells without rewriting all historical bodies. Canonical core routes and the single bilingual Privacy destination are already created by the page plans; this plan installs real 308 aliases, Resources/removed-distribution-route destinations, noindex/archive context, old-facade cleanup, production smoke, and final visual/behavior review.
 
 **Tech Stack:** TanStack Start/Router, React 19, TypeScript 7, Vitest, Playwright, Node test runner, existing Docker marketing deployment.
 
@@ -24,23 +26,23 @@
 
 ---
 
-### Task 1: Publish Resources and Open Source destinations
+### Task 1: Publish Resources and removed-distribution-route destinations
 
 **Files:**
 - Create: `apps/www/src/components/site/pages/resources-page.tsx`
-- Create: `apps/www/src/components/site/pages/open-source-page.tsx`
+- Create: `apps/www/src/components/site/pages/removed-distribution-route-page.tsx`
 - Create: `apps/www/src/routes/resources.tsx`
-- Create: `apps/www/src/routes/open-source.tsx`
+- Create: `apps/www/src/routes/removed-distribution-route.tsx`
 - Create: `apps/www/src/content/site/resources.test.ts`
 - Create: `e2e/www-tests/supporting-pages.spec.ts`
 
 **Interfaces:**
 - Consumes: `resources.ts`, SiteShell, UtilityShell, manifest, `supportingPageHead()`.
-- Produces: `/resources` and `/open-source`. Consumes and links the existing `/privacy` route created by Diagnostic Acquisition Task 4.
+- Produces: `/resources` and `/removed-distribution-route`. Consumes and links the existing `/privacy` route created by Diagnostic Acquisition Task 4.
 
 - [ ] **Step 1: Write failing content and route tests**
 
-Resources must link Research Notes, Docs, Glossary, Status, Brand, and Open Source. Open Source must explain the upstream Yonaris-compatible infrastructure, link repository/license/docs, and distinguish it from Yonaris company identity.
+Resources must link Research Notes, Docs, Glossary, Status, Brand, and removed-distribution-route. removed-distribution-route must explain the upstream Yonaris-compatible infrastructure, link repository/license/docs, and distinguish it from Yonaris company identity.
 
 Run focused Vitest and Playwright; expected FAIL because the routes do not exist.
 
@@ -51,14 +53,14 @@ pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www
 
 - [ ] **Step 2: Implement the two destination pages**
 
-Resources uses the publication index visual system and `supportingPageHead("resources")`. Open Source uses `UtilityShell section="open-source"`, visible identity context, and `supportingPageHead("openSource")`. No fake project metrics, stars, roadmap promises, or legal claims.
+Resources uses the publication index visual system and `supportingPageHead("resources")`. removed-distribution-route uses `UtilityShell section="removed-distribution-route"`, visible identity context, and `supportingPageHead("removed-distribution-route")`. No fake project metrics, stars, roadmap promises, or legal claims.
 
 - [ ] **Step 3: Verify and commit**
 
 ```powershell
 pnpm.cmd --filter @workspace/www test -- src/content/site/resources.test.ts
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts supporting-pages.spec.ts
-git add apps/www/src/components/site/pages/resources-page.tsx apps/www/src/components/site/pages/open-source-page.tsx apps/www/src/routes/resources.tsx apps/www/src/routes/open-source.tsx apps/www/src/content/site/resources.test.ts e2e/www-tests/supporting-pages.spec.ts
+git add apps/www/src/components/site/pages/resources-page.tsx apps/www/src/components/site/pages/removed-distribution-route-page.tsx apps/www/src/routes/resources.tsx apps/www/src/routes/removed-distribution-route.tsx apps/www/src/content/site/resources.test.ts e2e/www-tests/supporting-pages.spec.ts
 git commit -m "publish supporting company resources"
 ```
 
@@ -81,7 +83,7 @@ git commit -m "publish supporting company resources"
 - Modify: `apps/www/src/routes/ai-visibility-tools/alternatives/$slug.tsx`
 - Modify: `apps/www/src/routes/ai-visibility-tools/category/index.tsx`
 - Modify: `apps/www/src/routes/ai-visibility-tools/category/$slug.tsx`
-- Modify: `apps/www/src/routes/ai-visibility-tools/category/open-source.tsx`
+- Modify: `apps/www/src/routes/ai-visibility-tools/category/removed-distribution-route.tsx`
 - Modify: `apps/www/src/routes/ai-visibility-tools/compare/index.tsx`
 - Modify: `apps/www/src/routes/ai-visibility-tools/compare/$slug.tsx`
 - Modify: `apps/www/src/routes/ai-visibility-tools/features/index.tsx`
@@ -104,7 +106,7 @@ const policies = [
 ];
 ```
 
-Assert shared header/footer and exact robots meta on the family indexes plus one real dynamic Blog article, one Glossary slug, one AI Search slug, one AEO slug, and every AI Visibility nested template path. Assert visible archive context where required, Docs Open-source Documentation context, and live Status functionality. Expected RED against current mixed shells/policy.
+Assert shared header/footer and exact robots meta on the family indexes plus one real dynamic Blog article, one Glossary slug, one AI Search slug, one AEO slug, and every AI Visibility nested template path. Assert visible archive context where required, Docs removed-distribution-route Documentation context, and live Status functionality. Expected RED against current mixed shells/policy.
 
 ```powershell
 pnpm.cmd --filter e2e exec playwright test --config playwright.www.config.ts www-tests/site-governance.spec.ts --project=chromium
@@ -116,7 +118,7 @@ Blog/Glossary use PublicationShell and `noindex,follow`. AI Search/AEO use Publi
 
 - [ ] **Step 3: Migrate utility routes**
 
-Docs, Status, Brand, Changelog use UtilityShell and `siteRouteHead()` with their existing metadata. Roadmap is preserved as open-source utility, `noindex,follow`, outside sitemap, and uses the same head helper. Preserve loaders, status data, search, markdown, and asset behavior.
+Docs, Status, Brand, Changelog use UtilityShell and `siteRouteHead()` with their existing metadata. Roadmap is preserved as removed-distribution-route utility, `noindex,follow`, outside sitemap, and uses the same head helper. Preserve loaders, status data, search, markdown, and asset behavior.
 
 - [ ] **Step 4: Verify and commit**
 

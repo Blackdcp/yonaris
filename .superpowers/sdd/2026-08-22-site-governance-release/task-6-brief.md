@@ -42,7 +42,7 @@
 GET/HEAD allowlist:
 
 - All 14 bilingual core canonicals: `/`, `/zh`, Product, Approach, Research, Company, GEO, Diagnostic in EN/ZH.
-- `/resources`, `/open-source`, `/privacy`.
+- `/privacy`; retired supporting and publication routes are excluded.
 - `/blog`, `/blog/*`, `/glossary`, `/glossary/*`, `/docs`, `/docs/*`.
 - `/status`, `/brand`, `/changelog`, `/roadmap`.
 - `/ai-search`, `/ai-search/*`, `/aeo-for`, `/aeo-for/*`, `/ai-visibility-tools`, `/ai-visibility-tools/*`.

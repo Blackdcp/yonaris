@@ -1,5 +1,7 @@
 # Yonaris Full-Site Rebuild Design
 
+> Historical record: supporting, publication, documentation, and distribution routes proposed here were retired on 2026-08-24. Neutral placeholder identifiers below do not represent current routes or the current private operating model.
+
 **Status:** Approved direction, implementation specification
 **Date:** 2026-08-22
 **Base:** `codex/homepage-product-stage` at `3ca34a8`
@@ -94,7 +96,7 @@ The public site must not claim:
 | Product | `/product` | `/zh/product` | Current software, managed delivery, inputs, outputs, boundaries |
 | Approach | `/approach` | `/zh/approach` | Repeatable evidence loop and Recursive Forest working method |
 | Research | `/research` | `/zh/research` | Measurement definitions, evidence records, public findings, limitations |
-| Company | `/company` | `/zh/company` | Category thesis, company stage, principles, Yonaris/open-source relationship |
+| Company | `/company` | `/zh/company` | Category thesis, company stage, principles, Yonaris/removed-distribution-route relationship |
 | GEO | `/geo` | `/zh/geo` | High-intent applied workflow without redefining the company |
 | Diagnostic | `/diagnostic` | `/zh/diagnostic` | Offer scope, request flow, delivery expectations, submission |
 
@@ -104,12 +106,12 @@ Primary navigation contains Product, Approach, Research, and Company. GEO appear
 
 | Route | Policy |
 | --- | --- |
-| `/resources` | New index for Research Notes, Docs, Glossary, Status, Brand, and Open Source |
-| `/open-source` | New page explaining the open-source infrastructure, upstream identity, license, and its relationship to Yonaris |
-| `/docs/**` | Retain functionality; wrap with a branded utility header and explicit Open-source Documentation context |
+| `/resources` | New index for Research Notes, Docs, Glossary, Status, Brand, and removed-distribution-route |
+| `/removed-distribution-route` | New page explaining the removed-distribution-route infrastructure, upstream identity, license, and its relationship to Yonaris |
+| `/docs/**` | Retain functionality; wrap with a branded utility header and explicit removed-distribution-route Documentation context |
 | `/status` | Retain operational functionality; migrate to branded utility shell |
 | `/brand` | Retain assets; migrate to the shared visual system |
-| `/changelog` | Retain only as an open-source product resource; migrate shell |
+| `/changelog` | Retain only as an removed-distribution-route product resource; migrate shell |
 | `/blog/**` | Keep accessible in a new publication shell; temporarily `noindex` until each article passes identity and fact review |
 | `/glossary/**` | Keep accessible in the publication shell; temporarily `noindex` until reviewed |
 | `/ai-search/**` and `/aeo-for/**` | Keep accessible as a clearly labelled legacy research archive; temporarily `noindex` |
@@ -162,7 +164,7 @@ The pages share tokens and interface discipline, not one repeated template:
 - **Product — Evidence Workbench:** a large code-native product surface with Scope, Answer, Sources, and Next Test views. The data is illustrative and labelled. Copy beside each state maps to current software or managed delivery.
 - **Approach — Evidence Loop:** a pinned, keyboard-operable sequence that follows one market question through scope, question set, sampling, evidence inspection, bounded intervention, and repeat observation.
 - **Research — Research Ledger:** an editorial measurement surface with scope, date, sample count, metric denominator, redacted answer evidence, findings, and unknowns. It must look like an auditable record, not a dashboard scorecard.
-- **Company — Category Thesis:** restrained typography and deliberate negative space. It explains the market shift, company thesis, present stage, operating principles, and open-source relationship without product cards or invented social proof.
+- **Company — Category Thesis:** restrained typography and deliberate negative space. It explains the market shift, company thesis, present stage, operating principles, and removed-distribution-route relationship without product cards or invented social proof.
 - **GEO — Applied Workflow:** a direct high-intent page mapping discovery, description, comparison, citation, and verification to the broader market-evidence system.
 - **Diagnostic — Working Session:** a progressive request flow with clear deliverables and operational trust, not a generic contact form.
 - **Resources — Publication System:** consistent masthead, taxonomy, metadata, reading progress, and related content; no generic SaaS cards.

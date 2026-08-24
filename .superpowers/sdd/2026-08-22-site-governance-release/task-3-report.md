@@ -9,7 +9,7 @@ Push/deploy: not performed
 ## Delivered scope
 
 - Governed exactly the 15 approved legacy templates: AI Search index/dynamic, AEO index/dynamic, and the 11 AI Visibility index/dynamic/directory/comparison/feature templates.
-- Preserved the existing loaders, source datasets, valid dynamic bodies, related records, filtering, static open-source route priority, and every invalid-slug 404.
+- Preserved the existing loaders, source datasets, valid dynamic bodies, related records, filtering, static retired-distribution route priority, and every invalid-slug 404.
 - Reused the reviewed Publication shell for AI Search and AEO with a visible `Legacy research archive` boundary before H1.
 - Added one shared Legacy Archive shell/context for AI Visibility with visible predecessor context before H1 and the `2026-08-23` boundary date.
 - Reframed deep-scroll AI Search guidance, AEO product wording, supplier profiles, comparison records, and FAQ answers as dated source material rather than current Yonaris claims.
@@ -31,7 +31,7 @@ Additional review-driven RED cases covered:
 
 - every AI Visibility dynamic loader/body and real comparison row;
 - root Organization/WebSite identity plus removal of the predecessor helper and all consumers;
-- single, pair, multi, root-directory, and open-source scroll regions at `1440`, `390`, and `280` CSS px;
+- single, pair, multi, root-directory, and retired-distribution scroll regions at `1440`, `390`, and `280` CSS px;
 - actual filter state/result changes, 44px geometry, Signal focus, and reduced motion at all three interaction widths;
 - exact local boundaries for recorded AI Search guidance, AEO wording, and archived FAQ answers;
 - current-scope link gap/wrap/44px geometry;
@@ -80,9 +80,9 @@ Files:
 13. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--desktop--legacy-governed--985cd0069849.png`
 14. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--mobile--legacy-governed--b7a4942a2f54.png`
 15. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--micro--legacy-governed--8a062dde2a0e.png`
-16. `ai-visibility-tools-category-open-source--en--desktop--legacy-governed--82489adc8ecb.png`
-17. `ai-visibility-tools-category-open-source--en--mobile--legacy-governed--5d86aecf0516.png`
-18. `ai-visibility-tools-category-open-source--en--micro--legacy-governed--008f57f0c15c.png`
+16. `ai-visibility-tools-category-retired-distribution--en--desktop--legacy-governed--82489adc8ecb.png`
+17. `ai-visibility-tools-category-retired-distribution--en--mobile--legacy-governed--5d86aecf0516.png`
+18. `ai-visibility-tools-category-retired-distribution--en--micro--legacy-governed--008f57f0c15c.png`
 
 ## Review status
 

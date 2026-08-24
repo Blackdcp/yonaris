@@ -1,6 +1,6 @@
 # Deployment smoke tests (issue #341)
 #
-# Protects the yonaris-cloud build-out (issue #8): open-source (local), demo, and
+# Protects the Yonaris deployment modes: private local, demo, and
 # whitelabel deployments must keep booting unchanged while cloud lands.
 #
 # One job, one `pnpm install`, two concerns:
