@@ -19,7 +19,6 @@
     },
     "apps/www": {
       "entry": ["src/server.ts", "scripts/**"],
-      "ignore": [".source/**", "source.generated.ts"],
       "ignoreDependencies": ["shiki"]
     },
     "apps/worker": {

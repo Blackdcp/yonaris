@@ -75,7 +75,6 @@ docker/init-scripts
 e2e
 .elmo
 **/.elmo
-apps/cli
 
 # pnpm config (use-node-version breaks Alpine/MUSL Docker builds)
 .npmrc

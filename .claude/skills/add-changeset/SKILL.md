@@ -17,8 +17,7 @@ Pick something short and descriptive, the way you would choose a branch name (e.
 
 ```
 ---
-"@elmohq/cli": patch
-"@workspace/docs": patch
+"@workspace/www": patch
 ---
 
 Description of the change.

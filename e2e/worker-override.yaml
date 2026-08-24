@@ -1,19 +1,42 @@
-# Compose override layered on top of the generated .elmo/elmo.yaml so the E2E
-# worker processes jobs without any paid API calls: SCRAPE_TARGETS points at the
+# Internal Compose override for the checked-in deployment topology. It adds
+# local image builds and keeps the worker on the no-network fixture provider.
+# SCRAPE_TARGETS points at the
 # no-network `stub` provider, so a submitted job records a prompt_run without
 # reaching out to any LLM API. Worker-only — the web service keeps the real
 # SCRAPE_TARGETS from .env.
 services:
+  db-migrate:
+    image: yonaris-db-migrate:e2e
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: migrate
+    profiles: []
   web:
+    image: yonaris-web:e2e
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: web
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-migrate:
+        condition: service_completed_successfully
     environment:
       RESPONSE_SNAPSHOT_ENABLED: "true"
       RESPONSE_SNAPSHOT_ROOT: /var/lib/yonaris/response-snapshots/v1
     volumes:
-      - ../.snapshot-fixtures:/var/lib/yonaris/response-snapshots/v1
+      - ${E2E_SNAPSHOT_ROOT}:/var/lib/yonaris/response-snapshots/v1
   worker:
+    image: yonaris-worker:e2e
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: worker
     environment:
       SCRAPE_TARGETS: stub:stub
       RESPONSE_SNAPSHOT_ENABLED: "true"
       RESPONSE_SNAPSHOT_ROOT: /var/lib/yonaris/response-snapshots/v1
     volumes:
-      - ../.snapshot-fixtures:/var/lib/yonaris/response-snapshots/v1
+      - ${E2E_SNAPSHOT_ROOT}:/var/lib/yonaris/response-snapshots/v1

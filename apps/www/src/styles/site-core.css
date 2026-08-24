@@ -138,42 +138,6 @@
 	}
 }
 
-.prose code::before,
-.prose code::after {
-	/* biome-ignore lint/complexity/noImportantStyles: Fumadocs injects competing prose pseudo-content. */
-	content: none !important;
-}
-
-.prose h1 a,
-.prose h2 a,
-.prose h3 a,
-.prose h4 a,
-.prose h5 a,
-.prose h6 a {
-	/* biome-ignore lint/complexity/noImportantStyles: Fumadocs heading-link decoration must be overridden. */
-	text-decoration: none !important;
-}
-
-.prose h1 a:hover,
-.prose h2 a:hover,
-.prose h3 a:hover,
-.prose h4 a:hover,
-.prose h5 a:hover,
-.prose h6 a:hover {
-	/* biome-ignore lint/complexity/noImportantStyles: Preserve the existing Fumadocs hover override. */
-	text-decoration: underline !important;
-}
-
-.prose thead th {
-	font-weight: 700;
-}
-
-.prose thead th:first-child,
-.prose tbody td:first-child,
-.prose tfoot td:first-child {
-	padding-inline-start: 0.571429em;
-}
-
 .site-shell {
 	min-width: 0;
 	overflow-x: clip;
@@ -212,7 +176,6 @@
 }
 
 .site-archive-context,
-.site-publication-context,
 .site-utility-context {
 	width: min(100% - 2.5rem, 90rem);
 	margin-inline: auto;

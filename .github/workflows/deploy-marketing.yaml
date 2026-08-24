@@ -10,7 +10,6 @@ on:
       - apps/www/**
       - packages/api-spec/**
       - packages/config/**
-      - packages/docs/**
       - packages/og/**
       - packages/ui/**
       - docker/Dockerfile.www

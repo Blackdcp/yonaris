@@ -15,7 +15,6 @@ COPY packages/api-spec/package.json ./packages/api-spec/
 COPY packages/cloud/package.json ./packages/cloud/
 COPY packages/config/package.json ./packages/config/
 COPY packages/deployment/package.json ./packages/deployment/
-COPY packages/docs/package.json ./packages/docs/
 COPY packages/lib/package.json ./packages/lib/
 COPY packages/local/package.json ./packages/local/
 COPY packages/og/package.json ./packages/og/

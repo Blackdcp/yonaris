@@ -116,104 +116,6 @@
 	box-shadow: 0 0 0 1px var(--yonaris-ink);
 }
 
-.utility-docs-context {
-	width: min(100% - 2.5rem, 90rem);
-	margin: clamp(2.5rem, 5vw, 4.5rem) auto 0;
-	border: 1px solid var(--yonaris-ink);
-	border-left: 0.35rem solid var(--yonaris-signal);
-	padding: 1.1rem 1.25rem;
-	color: var(--yonaris-slate);
-	font-size: 0.9rem;
-	line-height: 1.55;
-}
-
-.utility-docs-layout {
-	display: grid;
-	grid-template-columns: minmax(12rem, 2.4fr) minmax(0, 9.6fr);
-	gap: clamp(1.5rem, 3vw, 3rem);
-	width: min(100% - 2.5rem, 90rem);
-	margin: 2.5rem auto clamp(5rem, 9vw, 8rem);
-}
-
-.utility-docs-embedded {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(10rem, 12rem);
-	gap: clamp(1.5rem, 3vw, 3rem);
-}
-
-.utility-docs-sidebar,
-.utility-docs-toc {
-	min-width: 0;
-}
-
-.utility-docs-sidebar > div,
-.utility-docs-toc > div {
-	position: sticky;
-	top: 6.5rem;
-}
-
-.utility-docs-content {
-	min-width: 0;
-	max-width: 76ch;
-}
-
-.utility-docs-content .prose {
-	max-width: 76ch;
-	color: var(--yonaris-slate);
-}
-
-.utility-docs-content .prose :is(h1, h2, h3, h4, strong) {
-	color: var(--yonaris-ink);
-}
-
-.utility-docs-content .prose a {
-	color: var(--yonaris-ink);
-	text-decoration-color: var(--yonaris-signal);
-}
-
-.utility-docs-content :is(.lead, .text-muted-foreground, .text-fd-muted-foreground) {
-	color: var(--yonaris-slate);
-}
-
-.utility-docs-mobile-nav {
-	display: none;
-	width: min(100% - 2.5rem, 90rem);
-	margin: 1.5rem auto 0;
-	border-block: 1px solid var(--yonaris-ink);
-}
-
-.utility-docs-mobile-nav summary {
-	display: flex;
-	align-items: center;
-	min-height: 2.75rem;
-	font-family: var(--font-geist-mono);
-	font-size: 0.7rem;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-}
-
-.utility-docs-mobile-nav > div {
-	padding-block: 1rem 1.5rem;
-}
-
-.utility-docs-actions {
-	margin-top: 2.5rem;
-	border-top: 1px solid var(--yonaris-mist);
-	padding-top: 1rem;
-}
-
-.site-utility-shell :is(.utility-docs-sidebar, .utility-docs-mobile-nav, .utility-docs-toc) :is(a, button) {
-	min-height: 2.75rem;
-	border-color: var(--yonaris-mist);
-	background-color: var(--yonaris-paper);
-	color: var(--yonaris-slate);
-}
-
-.utility-docs-content :is(button, [role="button"]) {
-	min-width: 2.75rem;
-	min-height: 2.75rem;
-}
-
 .utility-status-ledger {
 	width: min(100% - 2.5rem, 90rem);
 	margin: 0 auto clamp(5rem, 9vw, 8rem);
@@ -532,56 +434,6 @@
 	align-items: center;
 }
 
-.utility-release-markdown {
-	color: var(--yonaris-slate);
-	font-size: 0.9rem;
-	line-height: 1.6;
-}
-
-.utility-release-markdown a {
-	color: var(--yonaris-ink);
-	text-decoration-color: var(--yonaris-signal);
-}
-
-.utility-release-markdown :is(h3, h4, strong) {
-	color: var(--yonaris-ink);
-}
-
-.utility-release-markdown :is(ul, ol) {
-	padding-left: 1.25rem;
-}
-
-.utility-release-markdown :is(code, pre) {
-	border: 1px solid var(--yonaris-mist);
-	background: var(--yonaris-paper);
-}
-
-.utility-release-markdown pre {
-	max-width: 100%;
-	overflow-x: auto;
-	padding: 0.75rem;
-}
-
-.utility-release-markdown blockquote {
-	margin-left: 0;
-	border-left: 0.2rem solid var(--yonaris-signal);
-	padding-left: 1rem;
-}
-
-@media (max-width: 64rem) {
-	.utility-docs-layout {
-		grid-template-columns: minmax(11rem, 2.5fr) minmax(0, 7.5fr);
-	}
-
-	.utility-docs-embedded .utility-docs-toc {
-		display: none;
-	}
-
-	.utility-docs-embedded {
-		grid-template-columns: minmax(0, 1fr);
-	}
-}
-
 @media (max-width: 48rem) {
 	.utility-masthead__grid,
 	.utility-brand-section,
@@ -600,19 +452,6 @@
 		gap: 1rem;
 	}
 
-	.utility-docs-mobile-nav {
-		display: block;
-	}
-
-	.utility-docs-layout {
-		grid-template-columns: 1fr;
-		margin-top: 1.5rem;
-	}
-
-	.utility-docs-sidebar {
-		display: none;
-	}
-
 	.utility-brand-palette,
 	.utility-brand-assets {
 		grid-template-columns: 1fr;
@@ -623,9 +462,6 @@
 	.site-utility-context,
 	.utility-masthead,
 	.utility-content,
-	.utility-docs-context,
-	.utility-docs-layout,
-	.utility-docs-mobile-nav,
 	.utility-status-ledger,
 	.utility-activity-ledger {
 		width: calc(100% - 2rem);

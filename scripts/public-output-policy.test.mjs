@@ -129,6 +129,119 @@ async function runAudit(args, options = {}) {
   }
 }
 
+test("repository topology excludes retired distribution surfaces and preserves legal notices", async () => {
+  const { stdout } = await exec("git", ["ls-files", "-z"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+  const trackedFiles = stdout.split("\0").filter(Boolean).sort();
+  const tracked = new Set(trackedFiles);
+  const blockers = [];
+
+  const forbiddenPrefixes = [
+    ".github/blog-agent/",
+    "apps/cli/",
+    "apps/www/.source/",
+    "packages/docs/",
+  ];
+  const forbiddenFiles = [
+    ".github/FUNDING.yml",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/contributors.txt",
+    ".github/workflows/claude.yml",
+    "CLA.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "CONTRIBUTORS.md",
+    "SECURITY.md",
+    "apps/www/source.config.ts",
+    "apps/www/source.generated.ts",
+    "apps/www/src/components/ai-visibility-software-hub.tsx",
+    "apps/www/src/components/api-page.tsx",
+    "apps/www/src/components/mdx.tsx",
+    "apps/www/src/components/youtube-embed.tsx",
+    "apps/www/src/lib/blog.ts",
+    "apps/www/src/lib/release-markdown.tsx",
+    "apps/www/src/styles/pages/publication.css",
+    "e2e/cli-driver.ts",
+    "scripts/generate-release-notes.mjs",
+    "scripts/sync-root-version.mjs",
+  ];
+  for (const file of forbiddenFiles) {
+    if (tracked.has(file)) blockers.push(`tracked:${file}`);
+  }
+  for (const prefix of forbiddenPrefixes) {
+    if (trackedFiles.some((file) => file.startsWith(prefix))) blockers.push(`tracked-prefix:${prefix}`);
+  }
+
+  const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
+  const forbiddenRootScripts = new Set(["cli:link", "cli:unlink", "elmo", "release"]);
+  const forbiddenRootScriptValue =
+    /(?:apps\/cli|npm\s+(?:un)?link|changeset\s+publish|generate-release-notes|sync-root-version)/u;
+  for (const [name, command] of Object.entries(rootPackage.scripts ?? {})) {
+    if (forbiddenRootScripts.has(name) || forbiddenRootScriptValue.test(command)) {
+      blockers.push(`root-script:${name}`);
+    }
+  }
+
+  const wwwPackage = JSON.parse(
+    await readFile(path.join(repositoryRoot, "apps", "www", "package.json"), "utf8"),
+  );
+  const retiredDependency = /^(?:@mdx-js\/|@types\/mdx$|@workspace\/docs$|fumadocs)/u;
+  for (const section of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
+    for (const name of Object.keys(wwwPackage[section] ?? {})) {
+      if (retiredDependency.test(name)) blockers.push(`www-${section}:${name}`);
+    }
+  }
+
+  const workspacePackageNames = new Set();
+  for (const file of trackedFiles.filter(
+    (file) => file === "package.json" || file.endsWith("/package.json"),
+  )) {
+    const packageJson = JSON.parse(await readFile(path.join(repositoryRoot, file), "utf8"));
+    if (typeof packageJson.name === "string") workspacePackageNames.add(packageJson.name);
+  }
+  for (const file of trackedFiles.filter(
+    (file) => file.startsWith(".changeset/") || file === ".claude/skills/add-changeset/SKILL.md",
+  )) {
+    const content = await readFile(path.join(repositoryRoot, file), "utf8");
+    const referencedPackages = [...content.matchAll(/^"([^"]+)":\s*(?:patch|minor|major)$/gmu)].map(
+      (match) => match[1],
+    );
+    if (referencedPackages.some((name) => !workspacePackageNames.has(name))) {
+      blockers.push(`unknown-package-reference:${file}`);
+    }
+  }
+
+  const operationalFiles = trackedFiles.filter(
+    (file) =>
+      file === ".dockerignore" ||
+      file === "knip.json" ||
+      file === "package.json" ||
+      file === "pnpm-workspace.yaml" ||
+      file.startsWith(".changeset/") ||
+      file.startsWith(".github/workflows/") ||
+      file.startsWith("apps/www/src/") ||
+      file.startsWith("docker/") ||
+      file.startsWith("e2e/"),
+  );
+  const retiredOperationalReference =
+    /(?:packages[\\/]docs|apps[\\/]cli|@workspace\/docs|source\.generated|fumadocs|@mdx-js\/rollup)/u;
+  for (const file of operationalFiles) {
+    const content = await readFile(path.join(repositoryRoot, file), "utf8");
+    if (retiredOperationalReference.test(content)) blockers.push(`operational-reference:${file}`);
+  }
+
+  if (!tracked.has("LICENSE.md")) blockers.push("missing:LICENSE.md");
+  if (!tracked.has("scripts/check-licenses.mjs")) blockers.push("missing:scripts/check-licenses.mjs");
+  if (!trackedFiles.some((file) => /third[-_ ]party.*(?:license|notice)/iu.test(file))) {
+    blockers.push("missing:third-party-notice");
+  }
+
+  assert.deepEqual(blockers.sort(), []);
+});
+
 test("normalizes named entities and slash, underscore, and hyphen separators", () => {
   for (const value of [
     "fixture&Tab;signal&NewLine;zx9",

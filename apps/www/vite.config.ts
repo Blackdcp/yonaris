@@ -3,11 +3,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { embedBinaries, externalizeResvg } from "@workspace/og/vite-plugin";
-import mdx from "fumadocs-mdx/vite";
 import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import pkg from "./package.json" with { type: "json" };
-import * as MdxConfig from "./source.config";
 
 const tslibEsm = fileURLToPath(import.meta.resolve("tslib/tslib.es6.mjs"));
 const coreNegotiationPlugin = fileURLToPath(new URL("./src/server/core-negotiation-plugin.ts", import.meta.url));
@@ -31,7 +29,6 @@ export default defineConfig({
 	plugins: [
 		embedBinaries(),
 		externalizeResvg(),
-		mdx(MdxConfig),
 		tailwindcss(),
 		tanstackStart(),
 		nitro({

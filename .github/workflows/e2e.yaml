@@ -1,8 +1,7 @@
 # End-to-End Integration Tests
 #
-# Verifies the open source local deployment works end-to-end.
-# Walks through the `elmo init --dev` CLI flow in CI mode, then runs in two
-# phases against the Dockerized stack: with the worker down, seed data and run
+# Verifies the internal Docker deployment works end-to-end in two phases:
+# with the worker down, seed data and run
 # the fixture-dependent Playwright + Bruno suites; then start the worker
 # (pointed at the no-network `stub` provider) and run the `worker` Playwright
 # project, which submits a job and asserts the worker processes it. Starting
@@ -39,7 +38,13 @@ jobs:
       # One file set for every `docker compose` invocation below, so no step
       # can silently run against a different effective config. The override
       # scopes the worker to the no-network stub provider.
-      COMPOSE_FILE: e2e/.elmo/elmo.yaml:e2e/worker-override.yaml
+      COMPOSE_FILE: deploy/las/compose.yaml:e2e/worker-override.yaml
+      APP_ENV_FILE: ${{ github.workspace }}/e2e/.runtime.env
+      E2E_SNAPSHOT_ROOT: ${{ github.workspace }}/e2e/.snapshot-fixtures
+      IMAGE_TAG: e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yonaris
 
     steps:
       - name: Checkout
@@ -179,33 +184,20 @@ jobs:
       - name: Storybook tests
         run: pnpm -C apps/web test:storybook
 
-      - name: Build elmo CLI
-        run: pnpm -C apps/cli build
-
-      - name: "Run: elmo init --dev (via cli-driver)"
+      - name: Prepare internal E2E runtime configuration
         run: |
-          mkdir -p e2e/.elmo
-          cd e2e
-          pnpm exec tsx cli-driver.ts "$PWD/.elmo" "$GITHUB_WORKSPACE"
-
-      - name: Patch .env with test overrides
-        run: |
-          cat >> e2e/.elmo/.env <<'PATCH'
-
-          # E2E test overrides
-          ADMIN_API_KEYS=test-api-key-e2e
-          ONBOARDING_LLM_TARGET=stub:stub
-          BROWSER_RUNNER_ENABLED=true
-          SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
-          PATCH
-
-      - name: Show generated config
-        run: |
-          echo "=== .env ==="
-          cat e2e/.elmo/.env
-          echo ""
-          echo "=== elmo.yaml (services) ==="
-          grep -E '^\s{2}\w' e2e/.elmo/elmo.yaml || true
+          mkdir -p e2e/.snapshot-fixtures
+          printf '%s\n' \
+            'DATABASE_URL=postgresql://postgres:postgres@postgres:5432/yonaris' \
+            'BETTER_AUTH_SECRET=e2e-session-secret-with-at-least-thirty-two-characters' \
+            'SCRAPE_TARGETS=stub:stub' \
+            'DEPLOYMENT_MODE=demo' \
+            'APP_URL=http://localhost:1515' \
+            'ADMIN_API_KEYS=test-api-key-e2e' \
+            'ONBOARDING_LLM_TARGET=stub:stub' \
+            'BROWSER_RUNNER_ENABLED=true' \
+            'SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0' \
+            > e2e/.runtime.env
 
       # Build all images so a broken worker (or db-migrate) Dockerfile fails CI
       # here. web/worker/migrate share the base/deps/builder stages, so BuildKit
@@ -218,7 +210,6 @@ jobs:
       # down for now — it comes up in phase 2, after the fixture suites run.
       - name: Start web
         run: |
-          mkdir -p e2e/.snapshot-fixtures
           chmod 0777 e2e/.snapshot-fixtures
           docker compose up -d --no-build web
 
@@ -270,7 +261,7 @@ jobs:
           E2E_SKIP_AUTH_SETUP: "true"
 
       - name: Dump service logs
-        if: ${{ failure() && hashFiles('e2e/.elmo/elmo.yaml') != '' }}
+        if: ${{ failure() && hashFiles('deploy/las/compose.yaml') != '' }}
         run: docker compose logs web worker
 
       - name: Upload Playwright report

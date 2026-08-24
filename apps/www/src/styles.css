@@ -1,8 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "fumadocs-ui/css/neutral.css";
-@import "fumadocs-ui/css/preset.css";
-@import "fumadocs-openapi/css/preset.css";
 @import "./styles/site-core.css";
 @import "./styles/pages/home.css";
 @import "./styles/pages/product.css";
@@ -12,7 +9,6 @@
 @import "./styles/pages/geo.css";
 @import "./styles/pages/diagnostic.css";
 @import "./styles/pages/privacy.css";
-@import "./styles/pages/publication.css";
 @import "./styles/pages/utility.css";
 @import "./styles/pages/legacy-archive.css";
 @import "./styles/pages/not-found.css";

@@ -17,14 +17,11 @@ function filesUnder(relativePath: string, extensions: readonly string[]): string
 }
 
 describe("site stylesheet boundaries", () => {
-	it("keeps styles.css as the ordered Tailwind, Fumadocs, and focused stylesheet manifest", () => {
+	it("keeps styles.css as the ordered Tailwind and focused stylesheet manifest", () => {
 		const stylesheet = read("styles.css");
 		const expectedImports = [
 			'@import "tailwindcss";',
 			'@import "tw-animate-css";',
-			'@import "fumadocs-ui/css/neutral.css";',
-			'@import "fumadocs-ui/css/preset.css";',
-			'@import "fumadocs-openapi/css/preset.css";',
 			'@import "./styles/site-core.css";',
 			'@import "./styles/pages/home.css";',
 			'@import "./styles/pages/product.css";',
@@ -33,7 +30,6 @@ describe("site stylesheet boundaries", () => {
 			'@import "./styles/pages/company.css";',
 			'@import "./styles/pages/geo.css";',
 			'@import "./styles/pages/diagnostic.css";',
-			'@import "./styles/pages/publication.css";',
 			'@import "./styles/pages/utility.css";',
 		];
 
@@ -47,10 +43,10 @@ describe("site stylesheet boundaries", () => {
 		expect(stylesheet).not.toContain(".prose ");
 		expect(read("styles/site-core.css")).toMatch(/:root\s*{/);
 		expect(read("styles/site-core.css")).toContain("@layer base");
-		expect(read("styles/site-core.css")).toContain(".prose code::before");
+		expect(read("styles/site-core.css")).not.toContain(".prose");
 	});
 
-	it("keeps Publication and Utility presentation inside their focused files without gradients", () => {
+	it("keeps Utility presentation inside its focused file without gradients", () => {
 		const safeRead = (path: string): string | undefined => {
 			try {
 				return read(path);
@@ -58,30 +54,25 @@ describe("site stylesheet boundaries", () => {
 				return undefined;
 			}
 		};
-		const publication = safeRead("styles/pages/publication.css");
 		const utility = safeRead("styles/pages/utility.css");
-		expect(publication, "publication.css must exist").toBeDefined();
+		expect(safeRead("styles/pages/publication.css"), "publication.css must be absent").toBeUndefined();
 		expect(utility, "utility.css must exist").toBeDefined();
-		if (!publication || !utility) return;
+		if (!utility) return;
 		const otherStyles = [
 			"styles.css",
 			"styles/site-core.css",
-			...filesUnder("styles/pages", [".css"]).filter(
-				(path) => !path.endsWith("publication.css") && !path.endsWith("utility.css"),
-			),
+			...filesUnder("styles/pages", [".css"]).filter((path) => !path.endsWith("utility.css")),
 		]
 			.map((path) => (isAbsolute(path) ? readFileSync(path, "utf8") : read(path)))
 			.join("\n");
 
-		for (const selector of [".publication-page", ".publication-ledger", ".publication-article"]) {
-			expect(publication).toContain(selector);
-			expect(otherStyles).not.toContain(selector);
-		}
-		for (const selector of [".utility-page", ".utility-docs-layout", ".utility-status-ledger", ".utility-brand-page"]) {
+		for (const selector of [".utility-page", ".utility-status-ledger", ".utility-brand-page"]) {
 			expect(utility).toContain(selector);
 			expect(otherStyles).not.toContain(selector);
 		}
-		expect(`${publication}\n${utility}`).not.toMatch(/(?:linear|radial|conic)-gradient/i);
+		expect(utility).not.toContain(".utility-docs-");
+		expect(utility).not.toContain(".utility-release-markdown");
+		expect(utility).not.toMatch(/(?:linear|radial|conic)-gradient/i);
 	});
 
 	it("isolates every homepage composition selector in pages/home.css", () => {
