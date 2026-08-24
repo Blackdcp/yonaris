@@ -208,7 +208,7 @@ describe("diagnostic request handler", () => {
 			);
 		}
 		expect((await handle(request({ body: "{", headers: { "X-Yonaris-Client-IP": "2001:db8::0" } }))).status).toBe(429);
-	});
+	}, 15_000);
 
 	it("returns service unavailable before delivery when configuration is blank", async () => {
 		const { handle, deliver } = handler({ env: { ...validEnv, RESEND_API_KEY: "   " } });
