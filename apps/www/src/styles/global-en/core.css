@@ -164,6 +164,13 @@
 	font-size: clamp(1.08rem, 1.5vw, 1.25rem);
 	color: var(--ge-slate);
 }
+.global-en__hero-bridge {
+	margin: -0.6rem 0 1.2rem;
+	max-width: 24ch;
+	font-size: clamp(1.3rem, 2vw, 1.8rem);
+	line-height: 1.18;
+	font-weight: 620;
+}
 .global-en__eyebrow {
 	margin: 0;
 	font:
@@ -260,6 +267,88 @@
 	font:
 		500 0.62rem / 1.4 "Geist Mono",
 		monospace;
+}
+.global-en__studio-bar {
+	display: flex;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.85rem 1rem;
+	border-bottom: 1px solid var(--ge-rule);
+	font: 500 0.65rem / 1 "Geist Mono", monospace;
+}
+.global-en__studio-layout {
+	min-height: 27rem;
+	display: grid;
+	grid-template-columns: minmax(12rem, 0.72fr) minmax(0, 1.7fr);
+}
+.global-en__studio-questions {
+	display: grid;
+	align-content: start;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__studio-questions button {
+	min-height: 4.4rem;
+	padding: 0.9rem 1rem;
+	border: 0;
+	border-bottom: 1px solid var(--ge-rule);
+	background: transparent;
+	color: var(--ge-ink);
+	display: grid;
+	grid-template-columns: 2rem 1fr;
+	gap: 0.5rem;
+	align-items: center;
+	text-align: left;
+	cursor: pointer;
+}
+.global-en__studio-questions button[aria-selected="true"] {
+	box-shadow: inset 3px 0 var(--ge-signal);
+	background: var(--ge-paper-2);
+}
+.global-en__studio-questions button:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ge-signal);
+	outline-offset: -2px;
+}
+.global-en__studio-questions em,
+.global-en__studio-panel small,
+.global-en__product-preview small,
+.global-en__parity-map small {
+	font: 500 0.63rem / 1.25 "Geist Mono", monospace;
+	color: var(--ge-signal-text);
+}
+.global-en__studio-panel {
+	padding: clamp(1.25rem, 3vw, 2rem);
+	display: grid;
+	align-content: start;
+	gap: 1rem;
+}
+.global-en__studio-panel h3 {
+	margin: 0.45rem 0 1.25rem;
+	max-width: 21ch;
+	font-size: clamp(1.35rem, 2vw, 2rem);
+	line-height: 1.08;
+}
+.global-en__studio-answer {
+	padding: 1rem;
+	border: 1px solid var(--ge-rule);
+	box-shadow: inset 3px 0 var(--ge-signal);
+}
+.global-en__studio-answer p,
+.global-en__studio-fields p {
+	margin-bottom: 0;
+}
+.global-en__studio-fields {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	border: 1px solid var(--ge-rule);
+}
+.global-en__studio-fields section {
+	padding: 1rem;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__studio-fields section:last-child {
+	border-right: 0;
 }
 .global-en__window-bar,
 .global-en__window-tabs {
@@ -491,6 +580,96 @@
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	border: 1px solid var(--ge-rule);
+}
+.global-en__question-spectrum,
+.global-en__operating-loop {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	display: grid;
+	border: 1px solid var(--ge-rule);
+}
+.global-en__question-spectrum {
+	grid-template-columns: repeat(5, 1fr);
+}
+.global-en__question-spectrum li,
+.global-en__operating-loop li {
+	min-height: 13rem;
+	padding: 1.3rem;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__question-spectrum li:last-child,
+.global-en__operating-loop li:last-child {
+	border-right: 0;
+}
+.global-en__question-spectrum em,
+.global-en__operating-loop em {
+	font: 500 0.65rem / 1 "Geist Mono", monospace;
+	color: var(--ge-signal-text);
+}
+.global-en__question-spectrum span,
+.global-en__operating-loop span,
+.global-en__product-preview p {
+	color: var(--ge-slate);
+}
+.global-en__operating-loop {
+	grid-template-columns: repeat(4, 1fr);
+	border-color: var(--yonaris-blue-gray);
+}
+.global-en__operating-loop li {
+	min-height: 15rem;
+	border-color: var(--yonaris-blue-gray);
+}
+.global-en__operating-loop strong {
+	font-size: 1.5rem;
+}
+.global-en__product-preview {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	border: 1px solid var(--ge-rule);
+}
+.global-en__product-preview article {
+	min-height: 15rem;
+	padding: 1.5rem;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__product-preview h3 {
+	margin: 3rem 0 0.8rem;
+	font-size: 1.5rem;
+}
+.global-en__product-preview > a {
+	grid-column: 1 / -1;
+	padding: 1.25rem 1.5rem;
+	border-top: 1px solid var(--ge-rule);
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+	display: flex;
+	justify-content: space-between;
+	font-weight: 650;
+}
+.global-en__parity-map {
+	margin-bottom: 1.5rem;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr auto 1fr;
+	align-items: stretch;
+	border: 1px solid var(--ge-rule);
+}
+.global-en__parity-map div {
+	min-height: 11rem;
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+.global-en__parity-map i {
+	min-width: 3.5rem;
+	display: grid;
+	place-items: center;
+	border-inline: 1px solid var(--ge-rule);
+	color: var(--ge-signal-text);
 }
 .global-en__output-stack article,
 .global-en__artifact-grid article {
@@ -743,6 +922,25 @@
 		grid-template-columns: 1fr;
 		min-height: 0;
 	}
+	.global-en__studio-layout {
+		grid-template-columns: 1fr;
+	}
+	.global-en__studio-questions {
+		grid-template-columns: repeat(5, minmax(8.5rem, 1fr));
+		overflow-x: auto;
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
+	}
+	.global-en__studio-questions button {
+		border-right: 1px solid var(--ge-rule);
+	}
+	.global-en__studio-fields {
+		grid-template-columns: 1fr;
+	}
+	.global-en__studio-fields section {
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
+	}
 	.global-en__graphic[data-graphic="scope-rings"] {
 		min-height: 28rem;
 		padding: 1.5rem;
@@ -778,7 +976,10 @@
 	.global-en__output-stack,
 	.global-en__artifact-grid,
 	.global-en__matrix,
-	.global-en__principles {
+	.global-en__principles,
+	.global-en__question-spectrum,
+	.global-en__operating-loop,
+	.global-en__product-preview {
 		grid-template-columns: 1fr;
 	}
 	.global-en__lanes > div,
@@ -788,6 +989,21 @@
 		min-height: auto;
 		border-right: 0;
 		border-bottom: 1px solid var(--ge-rule);
+	}
+	.global-en__question-spectrum li,
+	.global-en__operating-loop li,
+	.global-en__product-preview article {
+		min-height: auto;
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
+	}
+	.global-en__parity-map {
+		grid-template-columns: 1fr;
+	}
+	.global-en__parity-map i {
+		min-height: 3rem;
+		border-inline: 0;
+		border-block: 1px solid var(--ge-rule);
 	}
 	.global-en__signal-line,
 	.global-en__timeline,

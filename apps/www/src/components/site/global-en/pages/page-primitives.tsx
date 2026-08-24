@@ -5,8 +5,10 @@ export function PageHero({
 	eyebrow,
 	title,
 	lead,
+	bridge,
 	visual,
 	dark = false,
+	primaryLabel = "Request a diagnostic",
 	secondaryHref = "/research",
 	secondaryLabel = "See the evidence",
 }: {
@@ -14,8 +16,10 @@ export function PageHero({
 	eyebrow: string;
 	title: string;
 	lead: string;
+	bridge?: string;
 	visual: ReactNode;
 	dark?: boolean;
+	primaryLabel?: string;
 	secondaryHref?: string;
 	secondaryLabel?: string;
 }) {
@@ -24,10 +28,11 @@ export function PageHero({
 			<div className="global-en__hero-copy">
 				<p className="global-en__eyebrow">{eyebrow}</p>
 				<h1>{title}</h1>
+				{bridge && <p className="global-en__hero-bridge">{bridge}</p>}
 				<p className="global-en__lead">{lead}</p>
 				<div className="global-en__actions">
 					<a className="global-en__button" href="/diagnostic">
-						Request a diagnostic
+						{primaryLabel}
 					</a>
 					<a className="global-en__text-link" href={secondaryHref}>
 						{secondaryLabel} <span aria-hidden="true">↘</span>

@@ -1,93 +1,136 @@
 import { GlobalEnglishShell } from "../global-english-shell";
-import { EvidencePath, EvidenceWindow, ResponsibilityLanes } from "../visuals/visuals";
+import { GLOBAL_ANSWER_QUESTIONS } from "@/content/site/global-en/experience";
+import { GLOBAL_ENGLISH_CONTENT } from "@/content/site/global-en";
+import { AnswerStudio } from "../interactions/answer-studio";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";
 
 export function HomePage() {
+	const content = GLOBAL_ENGLISH_CONTENT.home;
+
 	return (
 		<GlobalEnglishShell activeKey="home">
 			<PageHero
 				id="hero"
 				eyebrow="AI MARKET EVIDENCE FOR BRANDS"
-				title="Know how AI represents your brand—and what to do next."
-				lead="Yonaris shows how configured AI systems describe and compare your brand, which available sources appear behind the answers, and which next test deserves attention."
-				visual={<EvidenceWindow />}
-				secondaryHref="#sample"
-				secondaryLabel="See a sample"
+				title={content.headline}
+				bridge={content.bridge}
+				lead={content.description}
+				visual={<AnswerStudio />}
+				primaryLabel={content.primaryAction}
+				secondaryHref="/product"
+				secondaryLabel={content.secondaryAction}
 			/>
 			<PageSection
-				id="what-changed"
+				id="market-shift"
 				number="01"
-				eyebrow="THE UNCERTAINTY"
-				title="AI is changing how markets discover and compare."
-				body="Your market may already be learning from AI answers. The problem is not a lack of advice; it is not being able to see the answer, its context, or the evidence boundary."
+				eyebrow="THE MARKET SHIFT"
+				title="Buying journeys now pass through answers you do not control."
+				body={content.problem}
 			>
 				<div className="global-en__signal-line" data-graphic="market-shift">
-					<span>Search</span>
+					<span>Intent forms</span>
 					<i>→</i>
-					<strong>AI-mediated discovery</strong>
+					<strong>AI interprets the market</strong>
 					<i>→</i>
-					<span>Choice</span>
+					<span>A shortlist takes shape</span>
 				</div>
 			</PageSection>
 			<PageSection
-				id="visible-outputs"
+				id="buyer-questions"
 				number="02"
-				title="Four outputs turn uncertainty into a reviewable question."
-				body="See the answer sample, the comparison context, the available sources, and the next-test candidate without pretending that one score explains the market."
+				eyebrow="THE QUESTIONS THAT MATTER"
+				title="Start with buyer anxiety, not a dashboard metric."
+				body="Yonaris organizes observation around the decisions a brand team actually needs to make. Each question stays tied to its answer, available evidence, reviewed finding, and next test."
 			>
-				<div className="global-en__output-stack" data-graphic="output-stack">
-					{["Answer sample", "Comparison context", "Available sources", "Reviewed next test"].map((item, i) => (
-						<article key={item}>
-							<em>0{i + 1}</em>
-							<h3>{item}</h3>
-							<p>
-								{i === 0
-									? "What the configured system said."
-									: i === 1
-										? "How the defined cohort changes meaning."
-										: i === 2
-											? "What evidence the surface exposes."
-											: "What deserves a bounded follow-up."}
-							</p>
+				<ol className="global-en__question-spectrum" data-graphic="buyer-question-spectrum">
+					{GLOBAL_ANSWER_QUESTIONS.map((question, index) => (
+						<li key={question.id}>
+							<em>{String(index + 1).padStart(2, "0")}</em>
+							<strong>{question.label}</strong>
+							<span>{question.prompt}</span>
+						</li>
+					))}
+				</ol>
+			</PageSection>
+			<PageSection
+				id="operating-loop"
+				number="03"
+				eyebrow="THE OPERATING LOOP"
+				title="Move from a changing answer to a measured next move."
+				body="Observation becomes useful when it can be explained, reviewed, acted on, and observed again within the same defined scope."
+				dark
+			>
+				<ol className="global-en__operating-loop" data-graphic="operating-loop">
+					{[
+						["Observe", "Capture the answer and its context."],
+						["Explain", "Inspect the available evidence and boundary."],
+						["Act", "Choose one reviewed, bounded next test."],
+						["Measure", "Repeat the observation without changing the rules."],
+					].map(([label, copy], index) => (
+						<li key={label}>
+							<em>{String(index + 1).padStart(2, "0")}</em>
+							<strong>{label}</strong>
+							<span>{copy}</span>
+						</li>
+					))}
+				</ol>
+			</PageSection>
+			<PageSection
+				id="product-preview"
+				number="04"
+				eyebrow="ONE CONNECTED WORKSPACE"
+				title="See the system behind the observation."
+				body="Four connected modules keep the buying question, answer record, evidence review, and next experiment inside one inspectable workflow."
+			>
+				<div className="global-en__product-preview" data-graphic="product-architecture-preview">
+					{[
+						["Scope", "Define the market, question, and observation rules."],
+						["Answers", "Review what configured AI systems return."],
+						["Evidence", "Trace what is known, missing, and comparable."],
+						["Experiments", "Prioritize and follow the next bounded test."],
+					].map(([name, copy], index) => (
+						<article key={name}>
+							<small>MODULE {String(index + 1).padStart(2, "0")}</small>
+							<h3>{name}</h3>
+							<p>{copy}</p>
 						</article>
 					))}
+					<a href="/product">Open the product architecture <span aria-hidden="true">↗</span></a>
 				</div>
 			</PageSection>
 			<PageSection
-				id="evidence-path"
-				number="03"
-				eyebrow="ONE EVIDENCE PATH"
-				title="Follow the claim back to what can be inspected."
-				body="A defined question moves through answer, evidence, finding, and a reviewed next test."
-			>
-				<div id="sample">
-					<EvidencePath />
-				</div>
-			</PageSection>
-			<PageSection
-				id="delivery-model"
-				number="04"
-				title="Software you can inspect. Collection and review we operate with you."
-				body="The workspace keeps answer records visible. Yonaris operates configured collection and human review where the workflow is not self-service."
-			>
-				<ResponsibilityLanes />
-			</PageSection>
-			<PageSection
-				id="evidence-preview"
+				id="human-agent-parity"
 				number="05"
-				title="Evidence is useful only when its boundary is visible."
-				body="Every record reserves space for scope, time, valid denominator, known evidence, unknown evidence, and review status."
+				eyebrow="ONE FACTUAL SOURCE · TWO READERS"
+				title="Readable by people. Addressable by agents."
+				body="Human pages explain the decision. Agent pages expose the same public facts in a compact, stable structure. Neither audience receives a separate truth."
 			>
-				<div className="global-en__annotation" data-graphic="evidence-preview">
-					<span>DEFINED SCOPE</span>
-					<strong>Answer record</strong>
-					<i>Known evidence</i>
-					<i>Unknown state</i>
-					<b>Human review</b>
+				<div className="global-en__parity-map" data-graphic="human-agent-parity">
+					<div><small>HUMAN VIEW</small><strong>Context · explanation · action</strong></div>
+					<i aria-hidden="true">↔</i>
+					<div><small>SHARED FACTS</small><strong>Scope · claims · boundaries</strong></div>
+					<i aria-hidden="true">↔</i>
+					<div><small>AGENT VIEW</small><strong>Stable paths · structured facts</strong></div>
 				</div>
-				<a className="global-en__text-link" href="/research">
-					Inspect the evidence framework →
+				<a className="global-en__text-link" href="/agent">
+					Open the Agent view →
 				</a>
+			</PageSection>
+			<PageSection
+				id="evidence-boundary"
+				number="06"
+				eyebrow="EVIDENCE BEFORE CONCLUSION"
+				title="Every finding keeps its boundary in view."
+				body="Scope, observation time, valid denominator, available evidence, unknowns, and review status stay attached to the record."
+			>
+				<div className="global-en__annotation" data-graphic="evidence-boundary">
+					<span>DEFINED SCOPE</span>
+					<strong>ANSWER RECORD</strong>
+					<i>AVAILABLE EVIDENCE</i>
+					<i>KNOWN UNKNOWNS</i>
+					<b>REVIEW STATUS</b>
+				</div>
+				<a className="global-en__text-link" href="/research">Inspect the evidence framework →</a>
 			</PageSection>
 			<CloseSection id="request-close" title="Replace AI market anxiety with one reviewable starting point." />
 		</GlobalEnglishShell>

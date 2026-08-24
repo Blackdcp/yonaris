@@ -45,6 +45,26 @@ describe("global English pages", () => {
 		expect(diagnostic).not.toContain("mailto:");
 	});
 
+	it("composes the homepage around the interactive product story", () => {
+		const markup = renderToStaticMarkup(<HomePage />);
+		const sectionIds = [
+			"hero",
+			"market-shift",
+			"buyer-questions",
+			"operating-loop",
+			"product-preview",
+			"human-agent-parity",
+			"evidence-boundary",
+			"request-close",
+		] as const;
+		const positions = sectionIds.map((id) => markup.indexOf(`id="${id}"`));
+		expect(positions.every((position) => position >= 0)).toBe(true);
+		expect(positions).toEqual([...positions].sort((a, b) => a - b));
+		expect(markup).toContain('data-graphic="answer-studio"');
+		expect(markup).toContain("Know what it says—and what to change.");
+		expect(markup).not.toContain('data-graphic="output-stack"');
+	});
+
 	it("never renders a broken in-page call to action", () => {
 		for (const Page of Object.values(pages)) {
 			const markup = renderToStaticMarkup(<Page />);
