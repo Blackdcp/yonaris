@@ -8,7 +8,7 @@ export function GlobalEnglishShell({ activeKey, children }: { activeKey?: Global
 		<div className="global-en" data-edition="global-en" lang="en">
 			<GlobalEnglishHeader activeKey={activeKey} />
 			<main id="main-content">{children}</main>
-			<GlobalEnglishFooter />
+			<GlobalEnglishFooter activeKey={activeKey} />
 		</div>
 	);
 }

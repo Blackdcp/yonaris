@@ -54,14 +54,14 @@
 	align-items: center;
 	gap: 2rem;
 }
-.global-en__wordmark {
-	font:
-		600 1.05rem / 1 "Geist Mono",
-		monospace;
-	letter-spacing: 0.14em;
+.global-en__logo {
+	display: inline-flex;
+	align-items: center;
 }
-.global-en__wordmark span {
-	color: var(--ge-signal);
+.global-en__wordmark {
+	display: block;
+	width: clamp(8rem, 10vw, 10.5rem);
+	height: auto;
 }
 .global-en__nav,
 .global-en__utilities {
@@ -81,6 +81,34 @@
 }
 .global-en__utilities {
 	justify-content: flex-end;
+}
+.global-en__view-switch {
+	display: inline-grid;
+	grid-template-columns: repeat(2, auto);
+	border: 1px solid color-mix(in srgb, var(--ge-ink) 18%, transparent);
+	font-size: 0.72rem;
+	letter-spacing: 0.04em;
+}
+.global-en__view-switch a {
+	min-height: 2.75rem;
+	padding: 0.7rem 0.85rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+.global-en__view-switch a[aria-current="page"] {
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+}
+.global-en__view-switch--compact a {
+	min-height: 2.55rem;
+	padding: 0.6rem 0.7rem;
+}
+.global-en__view-switch a:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ge-signal);
+	outline-offset: 2px;
 }
 .global-en__menu {
 	display: none;
@@ -638,6 +666,14 @@
 	max-width: 25rem;
 	color: var(--yonaris-stone);
 }
+.global-en__footer .global-en__view-switch {
+	margin-top: 1.5rem;
+	border-color: color-mix(in srgb, var(--ge-paper) 32%, transparent);
+}
+.global-en__footer .global-en__view-switch a[aria-current="page"] {
+	background: var(--ge-paper);
+	color: var(--ge-ink);
+}
 .global-en__footer nav {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
@@ -670,10 +706,17 @@
 		cursor: pointer;
 		font-weight: 600;
 	}
-	.global-en__menu nav {
+	.global-en__menu > .global-en__view-switch {
 		position: absolute;
 		right: 1rem;
 		top: 4rem;
+		z-index: 2;
+		transform: translateY(1rem);
+	}
+	.global-en__menu nav {
+		position: absolute;
+		right: 1rem;
+		top: 7.85rem;
 		min-width: 15rem;
 		padding: 1rem;
 		background: var(--ge-paper);

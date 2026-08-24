@@ -1,11 +1,16 @@
-export function GlobalEnglishFooter() {
+import { Logo } from "@/components/logo";
+import type { GlobalEnglishPageKey } from "@/editions/global-en/edition";
+import { GlobalEnglishViewSwitch } from "./global-english-view-switch";
+
+export function GlobalEnglishFooter({ activeKey }: { activeKey?: GlobalEnglishPageKey }) {
 	return (
 		<footer className="global-en__footer">
 			<div>
-				<a className="global-en__wordmark global-en__wordmark--light" href="/">
-					YONARIS<span aria-hidden="true">·</span>
+				<a className="global-en__logo" href="/" aria-label="Yonaris home">
+					<Logo variant="white" className="global-en__wordmark" />
 				</a>
 				<p>Reviewable AI market evidence for decisions that matter.</p>
+				<GlobalEnglishViewSwitch activeKey={activeKey} />
 			</div>
 			<nav aria-label="Footer navigation">
 				<a href="/product">Product</a>

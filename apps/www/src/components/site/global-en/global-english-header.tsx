@@ -1,4 +1,6 @@
+import { Logo } from "@/components/logo";
 import type { GlobalEnglishPageKey } from "@/editions/global-en/edition";
+import { GlobalEnglishViewSwitch } from "./global-english-view-switch";
 
 const navigation = [
 	{ key: "product", label: "Product", href: "/product" },
@@ -14,8 +16,8 @@ export function GlobalEnglishHeader({ activeKey }: { activeKey?: GlobalEnglishPa
 				Skip to content
 			</a>
 			<div className="global-en__header-inner">
-				<a className="global-en__wordmark" href="/" aria-label="Yonaris home">
-					YONARIS<span aria-hidden="true">·</span>
+				<a className="global-en__logo" href="/" aria-label="Yonaris home">
+					<Logo variant="navy" className="global-en__wordmark" />
 				</a>
 				<nav className="global-en__nav" aria-label="Primary navigation">
 					{navigation.map((item) => (
@@ -25,6 +27,7 @@ export function GlobalEnglishHeader({ activeKey }: { activeKey?: GlobalEnglishPa
 					))}
 				</nav>
 				<div className="global-en__utilities">
+					<GlobalEnglishViewSwitch activeKey={activeKey} compact />
 					<a href="https://portal.yonaris.com">Customer sign in</a>
 					<a href="/zh" lang="zh-CN">
 						中文
@@ -35,6 +38,7 @@ export function GlobalEnglishHeader({ activeKey }: { activeKey?: GlobalEnglishPa
 				</div>
 				<details className="global-en__menu">
 					<summary>Menu</summary>
+					<GlobalEnglishViewSwitch activeKey={activeKey} />
 					<nav aria-label="Mobile navigation">
 						{navigation.map((item) => (
 							<a key={item.key} href={item.href}>

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { GlobalEnglishShell } from "./global-english-shell";
 
 describe("GlobalEnglishShell", () => {
-	it("owns one main and only approved commercial destinations", () => {
+	it("uses approved wordmarks and preserves the product topic across reading modes", () => {
 		const markup = renderToStaticMarkup(
 			<GlobalEnglishShell activeKey="product">
 				<h1>Test</h1>
@@ -15,7 +15,12 @@ describe("GlobalEnglishShell", () => {
 		expect(markup).toContain('href="https://portal.yonaris.com"');
 		expect(markup).toContain('href="/zh" lang="zh-CN"');
 		expect(markup).toContain('href="/diagnostic"');
-		for (const retiredPath of ["/status", "/brand", "/agent", "/llms.txt"])
+		expect(markup).toContain('src="/brand/logos/yonaris-wordmark-navy.png"');
+		expect(markup).toContain('src="/brand/logos/yonaris-wordmark-white.png"');
+		expect(markup).not.toContain("YONARIS<span");
+		expect(markup).toContain('aria-label="Reading mode"');
+		expect(markup).toContain('href="/agent/product"');
+		for (const retiredPath of ["/status", "/brand", "/llms.txt"])
 			expect(markup).not.toContain(`href="${retiredPath}"`);
 	});
 });

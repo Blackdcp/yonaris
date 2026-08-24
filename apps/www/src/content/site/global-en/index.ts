@@ -1,9 +1,13 @@
 export const GLOBAL_ENGLISH_CONTENT = {
 	home: {
-		headline: "Know how AI represents your brand—and what to do next.",
-		description: "Review configured AI answer evidence and decide which next test deserves attention.",
+		headline: "AI is already answering questions about your brand.",
+		bridge: "Know what it says—and what to change.",
+		description:
+			"Yonaris shows how AI describes, compares, and recommends your brand, which available sources shape the answer, and which next test deserves attention.",
+		primaryAction: "Request a diagnostic",
+		secondaryAction: "Explore the product",
 		problem:
-			"Market uncertainty grows when AI answers influence discovery and comparison but the evidence remains invisible.",
+			"Market uncertainty grows when AI-mediated discovery changes whether a brand appears, how it is represented, and what evidence deserves action.",
 	},
 	product: {
 		headline: "Make AI market answers observable.",
