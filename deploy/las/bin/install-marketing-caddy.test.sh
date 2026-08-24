@@ -10,6 +10,7 @@ V1="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-v1.caddy"
 V2="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-v2.caddy"
 FINAL="$REPO_ROOT/deploy/las/caddy/yonaris-marketing.caddy"
 PRE_R0_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-pre-r0.caddy"
+GLOBAL_R0_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-global-r0.caddy"
 
 TEST_ROOT="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
@@ -96,7 +97,7 @@ if [[ -n "${CADDY_TEST_FAIL_HEALTH_PATH:-}" && "$url" == *"$CADDY_TEST_FAIL_HEAL
 	exit 0
 fi
 status=200
-body='Yonaris AI market evidence Know how AI represents your brand data-edition="global-en"'
+body='Yonaris AI market evidence AI is already answering questions about your brand. data-edition="global-en"'
 case "$url" in
 	*/platform\?*) status=308; body='' ;;
 	*/resources | */status | */brand | */og/status.png | */recordranks-logo.svg | */llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
@@ -200,12 +201,13 @@ file_snapshot() {
 }
 
 # RED: every reviewed state and final-current are accepted, with full health.
-for state in redirect v1 v2 pre_r0_release final; do
+for state in redirect v1 v2 pre_r0_release global_r0_release final; do
 	case "$state" in
 		redirect) fragment="$REDIRECT" ;;
 		v1) fragment="$V1" ;;
 		v2) fragment="$V2" ;;
 		pre_r0_release) fragment="$PRE_R0_RELEASE" ;;
+		global_r0_release) fragment="$GLOBAL_R0_RELEASE" ;;
 		final) fragment="$FINAL" ;;
 	esac
 	new_case "accepted_$state"

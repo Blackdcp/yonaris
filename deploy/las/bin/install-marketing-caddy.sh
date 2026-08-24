@@ -8,6 +8,7 @@ V1_SHA="1b4580fed8750a61b8468b00d2852f1dc8cb8cf1b1d5587effe5519c5c230d67"
 V2_SHA="6f1f6dd9f3ce91318d037f0e0328eac4c41bdd90fb942835204408ca669f09c4"
 LAST_RELEASE_SHA="8278b92f4caf06d7c7187d1c1b3b402c745fcdbc35217a91399069bf0ceaff91"
 PRE_R0_RELEASE_SHA="8ae68c363ff0daf5952a24f208fe76ad961f312127069cb9d25423b45c6c1316"
+GLOBAL_R0_RELEASE_SHA="bd746cb3b4a6eced28e0ea3594ca1d6b8922cb309ab423b4bbfc538ea215b06a"
 APEX_HEADER="yonaris.com, www.yonaris.com {"
 
 sha_file() {
@@ -40,7 +41,7 @@ apex_sha() {
 
 is_reviewed_predecessor_sha() {
 	case "$1" in
-		"$REDIRECT_SHA" | "$V1_SHA" | "$V2_SHA" | "$LAST_RELEASE_SHA" | "$PRE_R0_RELEASE_SHA") return 0 ;;
+		"$REDIRECT_SHA" | "$V1_SHA" | "$V2_SHA" | "$LAST_RELEASE_SHA" | "$PRE_R0_RELEASE_SHA" | "$GLOBAL_R0_RELEASE_SHA") return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -102,7 +103,7 @@ full_health() {
 	local state_dir="$1"
 	local response="$state_dir/health-response"
 
-	curl_origin yonaris.com / 200 "$response" GET "Know how AI represents your brand" || return 1
+	curl_origin yonaris.com / 200 "$response" GET "AI is already answering questions about your brand." || return 1
 	grep -Fq 'data-edition="global-en"' "$response" || return 1
 
 	local path
@@ -122,7 +123,7 @@ full_health() {
 	curl_origin portal.yonaris.com / 200 "$response" || return 1
 
 	local diagnostic_body
-	diagnostic_body='{"locale":"en","website":"https://example.com","brand":"Honeypot fixture","market":"Enterprise software","question":"How does the market understand this product today?","competitors":"","name":"Release Fixture","email":"fixture@example.com","consent":true,"companyUrl":"filled-by-bot"}'
+	diagnostic_body='{"locale":"en","name":"Release Fixture","email":"fixture@example.com","company":"Yonaris release smoke","companyUrl":"filled-by-bot"}'
 	local diagnostic_status
 	if ! diagnostic_status="$(curl --insecure --silent --show-error --max-time 15 \
 		--request POST --output "$response" --write-out '%{http_code}' \

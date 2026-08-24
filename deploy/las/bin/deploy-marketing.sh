@@ -24,7 +24,8 @@ if [[ ! "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
 	exit 2
 fi
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
+SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_SOURCE")" && pwd)"
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/yonaris}"
 MARKETING_COMPOSE_FILE="${MARKETING_COMPOSE_FILE:-$(cd -- "$SCRIPT_DIR/.." && pwd)/compose.marketing.yaml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_ROOT/.env}"
