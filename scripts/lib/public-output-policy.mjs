@@ -34,7 +34,6 @@ const MAX_FINGERPRINTS = 256;
 const MAX_CHARACTERS = 256;
 const MAX_TOKENS = 16;
 const MAX_COMPACT_VARIANTS = 1024;
-const MAX_EXTRA_TOKEN_SEGMENTS = 2;
 
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const fail = (code) => {
@@ -167,11 +166,9 @@ export function scanPublicText({ policy, surface, source, text }) {
     const compactCharacters = item.characters - (item.tokens - 1);
     let match = -1;
     for (let start = 0; start < tokens.length && match < 0; start += 1) {
-      const windowLimit = start + item.tokens + MAX_EXTRA_TOKEN_SEGMENTS;
-      for (let end = start + 1; end <= tokens.length && end <= windowLimit; end += 1) {
+      for (let end = start + 1; end <= tokens.length; end += 1) {
         const window = tokens.slice(start, end);
         const compact = window.join("");
-        if (compact.length > compactCharacters) break;
         const spaced = window.join(" ");
         if (
           compact.length === compactCharacters &&
@@ -181,6 +178,7 @@ export function scanPublicText({ policy, surface, source, text }) {
           match = normalized.indexOf(tokens[start]);
           break;
         }
+        if (compact.length >= compactCharacters) break;
       }
     }
     if (match >= 0) {

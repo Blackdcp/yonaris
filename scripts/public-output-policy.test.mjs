@@ -171,6 +171,26 @@ test("matches a neutral fixture token split by an inserted separator", () => {
   );
 });
 
+test("matches a neutral fixture token split by many inserted separators", () => {
+  assert.deepEqual(
+    scanPublicText({
+      policy: fixturePolicy(),
+      surface: "fixture",
+      source: "multi-split-token.txt",
+      text: "fi/x/t/u/r/e signal zx9",
+    }),
+    [
+      {
+        id: "fixture_01",
+        severity: "block",
+        surface: "fixture",
+        source: "multi-split-token.txt",
+        offset: 0,
+      },
+    ],
+  );
+});
+
 test("does not match compact tokens with safe prefixes or suffixes", () => {
   for (const text of ["safefixturesignalzx9", "fixturesignalzx9safe", "fixturesignalsafe zx9"]) {
     assert.deepEqual(
