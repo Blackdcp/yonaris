@@ -27,15 +27,15 @@ describe("Overseas Run now planning", () => {
 		]);
 		expect(Object.fromEntries(OVERSEAS_RUN_NOW_CHANNELS.map(({ key, config }) => [key, config.provider]))).toEqual({
 			chatgpt: "brightdata",
-			perplexity: "dataforseo",
-			gemini: "dataforseo",
+			perplexity: "brightdata",
+			gemini: "brightdata",
 			copilot: "brightdata",
 			"google-ai-mode": "brightdata",
 			"google-ai-overview": "brightdata",
 		});
 	});
 
-	it("checks every selected provider before creating paid calls", () => {
+	it("checks Bright Data once before creating paid calls", () => {
 		const plan = planOverseasRunNow({
 			prompts: ppioPrompts.slice(0, 1),
 			channelKeys: ["chatgpt", "gemini", "perplexity"],
@@ -48,30 +48,25 @@ describe("Overseas Run now planning", () => {
 				checked.push(provider);
 				return provider === "brightdata";
 			}),
-		).toThrow(/DataForSEO is not configured/);
-		expect(checked).toEqual(["brightdata", "dataforseo"]);
+		).not.toThrow();
+		expect(checked).toEqual(["brightdata"]);
 	});
 
-	it("rejects prompts outside a selected provider's limit before creating paid calls", () => {
-		const dataForSeoPlan = planOverseasRunNow({
+	it("plans Gemini and Perplexity against Bright Data consumer-web routes", () => {
+		const plan = planOverseasRunNow({
 			prompts: [{ id: "prompt-1", value: "x".repeat(501) }],
-			channelKeys: ["gemini"],
+			channelKeys: ["gemini", "perplexity"],
 			scope: { market: "US", locale: "en-US", timezone: "UTC" },
 		});
-		expect(() =>
-			assertOverseasRunNowPromptCompatibility(dataForSeoPlan.calls, (provider, prompt) =>
-				provider === "dataforseo" && Array.from(prompt).length > 500
-					? "DataForSEO prompts must be 500 characters or fewer"
-					: null,
-			),
-		).toThrow(/500 characters or fewer/);
 
-		const brightDataPlan = planOverseasRunNow({
-			prompts: [{ id: "prompt-1", value: "x".repeat(501) }],
-			channelKeys: ["chatgpt"],
-			scope: { market: "US", locale: "en-US", timezone: "UTC" },
-		});
-		expect(() => assertOverseasRunNowPromptCompatibility(brightDataPlan.calls, () => null)).not.toThrow();
+		expect(() => assertOverseasRunNowPromptCompatibility(plan.calls, () => null)).not.toThrow();
+		expect(new Set(plan.calls.map(({ config }) => config.provider))).toEqual(new Set(["brightdata"]));
+		expect(new Set(plan.calls.map(({ surfaceTargetKey }) => surfaceTargetKey))).toEqual(
+			new Set(["gemini.consumer_web", "perplexity.consumer_web"]),
+		);
+		expect(new Set(plan.calls.map(({ captureRouteKey }) => captureRouteKey))).toEqual(
+			new Set(["brightdata.gemini_dataset", "brightdata.perplexity_dataset"]),
+		);
 	});
 
 	it("only makes Google AI Overview selectable when an explicit SERP zone is configured", () => {

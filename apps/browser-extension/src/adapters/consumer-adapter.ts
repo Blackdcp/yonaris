@@ -26,6 +26,7 @@ const CONFIRM_TIMEOUT_MS = 30_000;
 const RESPONSE_TIMEOUT_MS = 180_000;
 const ZHIPU_RESPONSE_TIMEOUT_MS = 12 * 60_000;
 const STABLE_ANSWER_MS = 8_000;
+const YUANBAO_RECOVERY_STABLE_ANSWER_MS = 15_000;
 const EVIDENCE_STABLE_MS = 2_000;
 const EVIDENCE_POLL_INTERVAL_MS = 500;
 const POLL_INTERVAL_MS = 250;
@@ -53,6 +54,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	#preparedPrompt: string | null = null;
 	#submitted = false;
 	#confirmedConversationUrl: string | null = null;
+	#manualPostSubmitRecovery = false;
 
 	constructor(port: ConsumerDomPort, contract: SelectorContract, evidenceAdapter?: SearchEvidenceAdapter) {
 		this.#port = port;
@@ -95,6 +97,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		this.#answerCountBeforeSubmit = visibleElements(await this.#port.query("answer", this.#contract.answer)).length;
 		this.#preparedPrompt = prompt;
+		this.#manualPostSubmitRecovery = false;
 	}
 
 	async submitOnce(promptText: string): Promise<void> {
@@ -177,6 +180,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 		}
 		this.#preparedPrompt = prompt;
 		this.#answerCountBeforeSubmit = 0;
+		this.#manualPostSubmitRecovery = true;
 	}
 
 	async collectCurrentAnswer(): Promise<CollectedAnswer> {
@@ -234,7 +238,10 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				if (latest !== stableText) {
 					stableText = latest;
 					stableSince = this.#port.now();
-				} else if (completionConfirmed && generating === 0 && this.#port.now() - stableSince >= STABLE_ANSWER_MS) {
+				} else if (
+					completionConfirmed &&
+					this.#answerIsSettledForCollection(generating, this.#port.now() - stableSince)
+				) {
 					return this.#readAcceptedAnswer(answers.at(-1)?.index ?? -1, stableText);
 				}
 			}
@@ -244,6 +251,16 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			throw this.#error("page_drift", "Submission still has more than one answer container after timeout");
 		}
 		throw this.#error("response_timeout", "Timed out waiting for one complete answer");
+	}
+
+	#answerIsSettledForCollection(generatingCount: number, stableForMs: number): boolean {
+		if (generatingCount === 0) return stableForMs >= STABLE_ANSWER_MS;
+		return (
+			this.#manualPostSubmitRecovery &&
+			this.surface === "yuanbao.consumer_web" &&
+			generatingCount === 1 &&
+			stableForMs >= YUANBAO_RECOVERY_STABLE_ANSWER_MS
+		);
 	}
 
 	async #readAcceptedAnswer(answerIndex: number, expectedText: string): Promise<CollectedAnswer> {

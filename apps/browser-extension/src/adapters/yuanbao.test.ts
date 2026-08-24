@@ -14,7 +14,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260822-localpc-v11");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260824-localpc-v12");
 		expect(yuanbaoSearchEvidenceAdapter).toMatchObject({
 			version: "yuanbao-search-evidence-20260822-v4",
 			settleTimeoutMs: 60_000,
@@ -58,7 +58,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260822-localpc-v11",
+			adapterVersion: "yuanbao-web-20260824-localpc-v12",
 		});
 	});
 
@@ -290,6 +290,45 @@ describe("Yuanbao browser-extension adapter", () => {
 			answerText: "Current answer",
 			pageUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa/0CurrentThread",
 		});
+	});
+
+	test("recovers a stable Yuanbao answer when the completed page retains its generating marker", async () => {
+		const conversationUrl = "https://yuanbao.tencent.com/chat/naQivTmsDa/0RecoveredThread";
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: conversationUrl,
+				conversationUrl,
+				initiallySubmitted: true,
+				submittedPrompt: "Prompt A",
+				generatingDurationMs: 181_000,
+				answer: { text: "Recovered answer", html: "<article>Recovered answer</article>" },
+			}),
+		);
+		const adapter = createYuanbaoAdapter(port);
+
+		await adapter.resumeSubmitted("Prompt A");
+
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({
+			answerText: "Recovered answer",
+			pageUrl: conversationUrl,
+		});
+		expect(port.elapsedMs).toBeLessThan(180_000);
+	});
+
+	test("keeps the generating marker mandatory for a fresh automated Yuanbao submission", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa",
+				conversationUrl: "https://yuanbao.tencent.com/chat/naQivTmsDa/0FreshThread",
+				generatingDurationMs: 30_000,
+			}),
+		);
+		const adapter = createYuanbaoAdapter(port);
+
+		await port.completeOneTask(adapter, "Prompt A");
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+
+		expect(port.elapsedMs).toBeGreaterThanOrEqual(30_000);
 	});
 });
 
