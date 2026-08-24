@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 
 type AnswerStudioModule = typeof import("./answer-studio");
 type ProductWorkbenchModule = typeof import("./product-workbench");
+type EvidenceJourneyModule = typeof import("./evidence-journey");
 
 const answerStudioModule = (await import("./answer-studio").catch(() => undefined)) as AnswerStudioModule | undefined;
 const productWorkbenchModule = (await import("./product-workbench").catch(() => undefined)) as ProductWorkbenchModule | undefined;
+const evidenceJourneyModule = (await import("./evidence-journey").catch(() => undefined)) as EvidenceJourneyModule | undefined;
 
 describe("global English interactive figures", () => {
 	it("renders a complete accessible Answer Studio initial state", () => {
@@ -20,6 +22,19 @@ describe("global English interactive figures", () => {
 		expect(markup).toContain('role="tabpanel"');
 		expect(markup).toContain('data-question="recommended"');
 		expect(markup).toContain("Interface demonstration — no customer or live observation data.");
+	});
+
+	it("renders a four-step evidence journey without scroll hijacking", () => {
+		expect(evidenceJourneyModule, "the Evidence Journey component must exist").toBeDefined();
+		if (!evidenceJourneyModule) return;
+
+		const markup = renderToStaticMarkup(<evidenceJourneyModule.EvidenceJourney initialStep="define" />);
+		expect(markup).toContain('data-graphic="evidence-journey"');
+		expect(markup.match(/role="tab"/g) ?? []).toHaveLength(4);
+		expect(markup).toContain('data-step="define"');
+		expect(markup).toContain("What decision must this observation support?");
+		expect(markup).not.toContain("wheel");
+		expect(markup).not.toContain("scrollIntoView");
 	});
 
 	it("renders four keyboard-addressable product modules in one shared workbench", () => {

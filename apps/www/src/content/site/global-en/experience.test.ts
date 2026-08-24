@@ -43,3 +43,19 @@ describe("global product architecture", () => {
 		}
 	});
 });
+
+describe("global evidence journey", () => {
+	it("defines four decisions with an artifact and boundary at every step", () => {
+		expect(subject, "the global experience model must exist").toBeDefined();
+		if (!subject) return;
+
+		expect(subject.GLOBAL_EVIDENCE_JOURNEY.map(({ id }) => id)).toEqual(["define", "observe", "inspect", "decide"]);
+		for (const step of subject.GLOBAL_EVIDENCE_JOURNEY) {
+			expect(step.promise).toBeTruthy();
+			expect(step.artifact).toBeTruthy();
+			expect(step.reviewQuestion).toBeTruthy();
+			expect(step.boundary).toBeTruthy();
+			expect(subject.getGlobalEvidenceStep(step.id)).toBe(step);
+		}
+	});
+});

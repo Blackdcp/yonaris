@@ -424,6 +424,70 @@
 	margin-bottom: 0;
 	color: var(--yonaris-mist);
 }
+.global-en__journey {
+	min-height: 30rem;
+	display: grid;
+	grid-template-columns: minmax(11rem, 0.65fr) minmax(0, 1.7fr);
+}
+.global-en__journey-tabs {
+	display: grid;
+	align-content: stretch;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__journey-tabs button {
+	padding: 1rem 1.2rem;
+	border: 0;
+	border-bottom: 1px solid var(--ge-rule);
+	background: transparent;
+	color: var(--ge-ink);
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	text-align: left;
+	cursor: pointer;
+}
+.global-en__journey-tabs button[aria-selected="true"] {
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+	box-shadow: inset 3px 0 var(--ge-signal);
+}
+.global-en__journey-tabs button:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ge-signal);
+	outline-offset: -3px;
+}
+.global-en__journey-tabs em,
+.global-en__journey-panel small {
+	font: 500 0.63rem / 1.2 "Geist Mono", monospace;
+	color: var(--ge-signal-text);
+}
+.global-en__journey-panel {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+}
+.global-en__journey-panel header {
+	grid-column: 1 / -1;
+	padding: clamp(1.5rem, 4vw, 3rem);
+	border-bottom: 1px solid var(--ge-rule);
+}
+.global-en__journey-panel h3 {
+	margin: 3rem 0 0;
+	max-width: 20ch;
+	font-size: clamp(1.8rem, 3vw, 3.25rem);
+	line-height: 1.03;
+	font-weight: 520;
+}
+.global-en__journey-panel section {
+	padding: 1.5rem;
+	border-right: 1px solid var(--ge-rule);
+}
+.global-en__journey-panel section:last-child {
+	border-right: 0;
+}
+.global-en__journey-panel section p {
+	color: var(--ge-slate);
+}
 .global-en__window-bar,
 .global-en__window-tabs {
 	display: flex;
@@ -1040,6 +1104,27 @@
 		min-height: 15rem;
 		border-right: 0;
 		border-bottom: 1px solid var(--yonaris-blue-gray);
+	}
+	.global-en__journey {
+		grid-template-columns: 1fr;
+	}
+	.global-en__journey-tabs {
+		grid-template-columns: repeat(4, minmax(7rem, 1fr));
+		overflow-x: auto;
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
+	}
+	.global-en__journey-tabs button {
+		border-right: 1px solid var(--ge-rule);
+	}
+	.global-en__journey-panel {
+		grid-template-columns: 1fr;
+	}
+	.global-en__journey-panel header,
+	.global-en__journey-panel section {
+		grid-column: 1;
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
 	}
 	.global-en__graphic[data-graphic="scope-rings"] {
 		min-height: 28rem;

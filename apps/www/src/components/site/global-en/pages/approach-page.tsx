@@ -1,4 +1,6 @@
 import { GlobalEnglishShell } from "../global-english-shell";
+import { GLOBAL_EVIDENCE_JOURNEY } from "@/content/site/global-en/experience";
+import { EvidenceJourney } from "../interactions/evidence-journey";
 import { EvidencePath } from "../visuals/visuals";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";
 
@@ -13,30 +15,26 @@ export function ApproachPage() {
 				visual={<EvidencePath />}
 			/>
 			<PageSection
-				id="four-step-path"
+				id="evidence-journey"
 				number="01"
-				title="One path. Four explicit decisions."
-				body="Define conditions, collect comparable answer samples, inspect available evidence, then choose a bounded next test."
+				eyebrow="A REVIEWABLE METHOD"
+				title="One journey. Four explicit decisions."
+				body="Define the conditions, observe comparable answers, inspect available evidence, then decide which bounded test deserves ownership."
 			>
-				<EvidencePath />
+				<EvidenceJourney />
 			</PageSection>
 			<PageSection
-				id="step-artifacts"
+				id="review-artifacts"
 				number="02"
 				title="Each step leaves an artifact someone can review."
 				body="Inputs, outputs, ownership, and the review question travel together."
 			>
-				<div className="global-en__artifact-grid" data-graphic="step-artifacts">
-					{[
-						["Scope brief", "Is the question specific enough?"],
-						["Answer set", "Are the samples comparable?"],
-						["Evidence note", "What is known and unknown?"],
-						["Test brief", "Who approves the next observation?"],
-					].map(([a, q], i) => (
-						<article key={a}>
+				<div className="global-en__artifact-grid" data-graphic="review-artifacts">
+					{GLOBAL_EVIDENCE_JOURNEY.map((step, i) => (
+						<article key={step.id}>
 							<em>0{i + 1}</em>
-							<h3>{a}</h3>
-							<p>{q}</p>
+							<h3>{step.artifact}</h3>
+							<p>{step.reviewQuestion}</p>
 						</article>
 					))}
 				</div>

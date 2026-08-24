@@ -115,3 +115,55 @@ export function getGlobalProductModule(id: GlobalProductModuleId): GlobalProduct
 	if (!module) throw new Error(`Unknown global product module: ${id}`);
 	return module;
 }
+
+export type GlobalEvidenceStepId = "define" | "observe" | "inspect" | "decide";
+
+export interface GlobalEvidenceStep {
+	id: GlobalEvidenceStepId;
+	label: string;
+	promise: string;
+	artifact: string;
+	reviewQuestion: string;
+	boundary: string;
+}
+
+export const GLOBAL_EVIDENCE_JOURNEY: readonly GlobalEvidenceStep[] = [
+	{
+		id: "define",
+		label: "Define",
+		promise: "Turn a broad concern into a decision-shaped market question.",
+		artifact: "Scope brief",
+		reviewQuestion: "What decision must this observation support?",
+		boundary: "Market, language, surface, cohort, question set, and time are declared before collection.",
+	},
+	{
+		id: "observe",
+		label: "Observe",
+		promise: "Collect comparable answers without hiding collection conditions.",
+		artifact: "Answer set",
+		reviewQuestion: "Are these samples eligible for the same comparison?",
+		boundary: "Invalid or incomplete samples remain visible and outside the valid denominator.",
+	},
+	{
+		id: "inspect",
+		label: "Inspect",
+		promise: "Separate supported facts, exposed sources, gaps, and unknown states.",
+		artifact: "Evidence note",
+		reviewQuestion: "What can this record support—and what can it not support?",
+		boundary: "A finding never exceeds the available evidence or configured scope.",
+	},
+	{
+		id: "decide",
+		label: "Decide",
+		promise: "Connect one observed gap to one owned, bounded next test.",
+		artifact: "Test brief",
+		reviewQuestion: "Who approves the change and the repeat-observation conditions?",
+		boundary: "Same-scope comparison can show change; causal proof requires a suitable study design.",
+	},
+];
+
+export function getGlobalEvidenceStep(id: GlobalEvidenceStepId): GlobalEvidenceStep {
+	const step = GLOBAL_EVIDENCE_JOURNEY.find((candidate) => candidate.id === id);
+	if (!step) throw new Error(`Unknown global evidence step: ${id}`);
+	return step;
+}

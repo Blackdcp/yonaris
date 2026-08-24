@@ -84,6 +84,21 @@ describe("global English pages", () => {
 		expect(markup).toContain("Experiments");
 	});
 
+	it("explains the approach as a reviewable evidence journey", () => {
+		const markup = renderToStaticMarkup(<ApproachPage />);
+		const sectionIds = [
+			"premise-hero",
+			"evidence-journey",
+			"review-artifacts",
+			"repeat-observation-boundary",
+			"request-close",
+		] as const;
+		const positions = sectionIds.map((id) => markup.indexOf(`id="${id}"`));
+		expect(positions.every((position) => position >= 0)).toBe(true);
+		expect(positions).toEqual([...positions].sort((a, b) => a - b));
+		expect(markup).toContain('data-graphic="evidence-journey"');
+	});
+
 	it("never renders a broken in-page call to action", () => {
 		for (const Page of Object.values(pages)) {
 			const markup = renderToStaticMarkup(<Page />);
