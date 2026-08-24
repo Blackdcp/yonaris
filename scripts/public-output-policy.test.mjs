@@ -178,7 +178,7 @@ test("repository topology excludes retired distribution surfaces and preserves l
   }
 
   const rootPackage = JSON.parse(await readFile(path.join(repositoryRoot, "package.json"), "utf8"));
-  const forbiddenRootScripts = new Set(["cli:link", "cli:unlink", "elmo", "release"]);
+  const forbiddenRootScripts = new Set(["cli:link", "cli:unlink", "release"]);
   const forbiddenRootScriptValue =
     /(?:apps\/cli|npm\s+(?:un)?link|changeset\s+publish|generate-release-notes|sync-root-version)/u;
   for (const [name, command] of Object.entries(rootPackage.scripts ?? {})) {

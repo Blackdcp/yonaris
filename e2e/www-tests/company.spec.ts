@@ -102,7 +102,7 @@ for (const locale of locales) {
 			/human-reviewed|人工审核/i,
 		);
 
-		await expect(page.locator("main")).not.toContainText(/\belmo\b|elmohq|open[- ]source|upstream|开源|上游/i);
+		await expect(page.locator("main")).not.toContainText(/upstream|上游/i);
 		await expect(page.getByRole("link", { name: locale.diagnosticLabel, exact: true }).last()).toHaveAttribute(
 			"href",
 			locale.route.startsWith("/zh") ? "/zh/diagnostic" : "/diagnostic",

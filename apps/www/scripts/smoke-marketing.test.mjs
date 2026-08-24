@@ -36,7 +36,7 @@ const CORE_PATHS = [
 	"/zh/diagnostic",
 ];
 
-const HTML_PATHS = [...CORE_PATHS, "/privacy", "/status", "/brand"];
+const HTML_PATHS = [...CORE_PATHS, "/privacy"];
 
 const MACHINE_PATHS = [
 	"/agent",
@@ -51,14 +51,18 @@ const MACHINE_PATHS = [
 	"/robots.txt",
 	"/sitemap.xml",
 	"/api/plausible/js/script",
-	"/recordranks-logo.svg",
 	"/og.png",
-	"/og/status.png",
 ];
 
 const HIDDEN_PATHS = [
 	"/resources",
-	"/open-source",
+	"/brand",
+	"/status",
+	"/og/status.png",
+	"/recordranks-logo.svg",
+	"/brand/architecture.svg",
+	"/brand/banners/linkedin-banner.png",
+	"/brand/banners/twitter-banner.png",
 	"/blog",
 	"/blog/ai-brand-sentiment",
 	"/blog/rss.xml",
@@ -86,6 +90,11 @@ const HIDDEN_PATHS = [
 ];
 
 const ALL_COPY = [
+	"Know how AI represents your brand—and what to do next.",
+	"Move from uncertainty to a reviewable next test.",
+	"Evidence needs a scope, denominator, and boundary.",
+	"Evidence before conclusion.",
+	"Request a focused AI market diagnostic.",
 	"See how AI is shaping your market.",
 	"MarTech, rebuilt.",
 	"For humans and agents.",

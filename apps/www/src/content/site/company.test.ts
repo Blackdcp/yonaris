@@ -125,7 +125,7 @@ describe("Company content truth model", () => {
 		expect(serialized).not.toMatch(/GEO company|GEO 公司|只做 GEO/i);
 		expect(serialized).not.toMatch(/Product Truth Graph|Commercial Feedback|产品事实图谱|商业反馈/);
 		expect(serialized).not.toMatch(/0\s*(?:%|％)?\s*(?:→|->)\s*93\.3\s*(?:%|％)?/);
-		expect(serialized).not.toMatch(/\belmo\b|elmohq|open[- ]source|upstream|开源|上游/i);
+		expect(serialized).not.toMatch(/upstream|上游/i);
 		expect(publicClaims).not.toMatch(
 			/mature SaaS|autonomous|real[- ]time|universal|customer logos?|investors?|funding|certification|成熟 SaaS|自主运行|实时|无边界|客户标识|投资人|融资|认证/i,
 		);

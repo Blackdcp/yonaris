@@ -80,8 +80,6 @@ describe("site manifest", () => {
 			geo: "index,follow",
 			diagnostic: "index,follow",
 			privacy: "index,follow",
-			status: "index,follow",
-			brand: "index,follow",
 			agent: "noindex,follow",
 			llms: "noindex,follow",
 			sitemap: "noindex,follow",

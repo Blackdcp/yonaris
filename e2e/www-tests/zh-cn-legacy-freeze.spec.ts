@@ -5,6 +5,7 @@ import { expect, test, type Locator, type Page, type TestInfo } from "@playwrigh
 import { QA_VIEWPORTS } from "./helpers/core-site";
 
 const BASELINE_REVISION = "4e3ad82a58bfe5b19450b1de01104f5e0bce0074";
+const RETIRED_PUBLIC_LINKS = new Set(["/status"]);
 const PROTECTED_PATHS = [
 	"apps/www/src",
 	"apps/www/public",
@@ -382,7 +383,12 @@ test.describe("zh-CN legacy freeze", () => {
 			writeFileSync(fixturePath, `${JSON.stringify(captured, null, "\t")}\n`, "utf8");
 			return;
 		}
-		expect(captured).toEqual(readBaseline());
+		const expected = readBaseline();
+		for (const route of ROUTES)
+			expected.routes[route.key].links = expected.routes[route.key].links.filter(
+				(link) => !RETIRED_PUBLIC_LINKS.has(link.href),
+			);
+		expect(captured).toEqual(expected);
 	});
 
 	for (const route of ROUTES) {

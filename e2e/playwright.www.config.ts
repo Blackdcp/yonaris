@@ -10,10 +10,21 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
 	throw new Error(`WWW_E2E_PORT must be an integer from 1 to 65535; received ${JSON.stringify(rawPort)}`);
 }
 const baseURL = `http://127.0.0.1:${port}`;
+const supersededBilingualPageSpecs = [
+	"homepage.spec.ts",
+	"product.spec.ts",
+	"approach.spec.ts",
+	"research.spec.ts",
+	"company.spec.ts",
+	"geo.spec.ts",
+	"diagnostic.spec.ts",
+] as const;
 
 export default defineConfig({
 	testDir: "./www-tests",
-	testIgnore: "diagnostic-analytics.spec.ts",
+	// These specs describe the retired shared English/Chinese presentation. Chinese is
+	// guarded by the pinned freeze suite; the independent global edition has its own suite.
+	testIgnore: ["diagnostic-analytics.spec.ts", ...supersededBilingualPageSpecs],
 	outputDir: "test-results-www",
 	fullyParallel: true,
 	forbidOnly: Boolean(process.env.CI),

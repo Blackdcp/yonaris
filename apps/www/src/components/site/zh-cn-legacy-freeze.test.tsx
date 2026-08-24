@@ -10,6 +10,7 @@ import { ProductPage } from "./pages/product-page";
 import { ResearchPage } from "./pages/research-page";
 
 const BASELINE_REVISION = "4e3ad82a58bfe5b19450b1de01104f5e0bce0074";
+const RETIRED_PUBLIC_LINKS = new Set(["/status"]);
 const ROUTES = [
 	{ key: "home", path: "/zh", mainClass: "home-page", render: () => <HomePage locale="zh" /> },
 	{ key: "product", path: "/zh/product", mainClass: "product-page", render: () => <ProductPage locale="zh" /> },
@@ -159,7 +160,9 @@ describe("frozen zh-CN legacy baseline", () => {
 			);
 			expect(sections(main)).toEqual(expected.sections.map(({ path: _, ...section }) => section));
 			expect(links(markup)).toEqual(
-				expected.links.map(({ scope: _, ...link }) => ({ ...link, text: link.text.replace(/\s+/gu, "") })),
+				expected.links
+					.filter((link) => !RETIRED_PUBLIC_LINKS.has(link.href))
+					.map(({ scope: _, ...link }) => ({ ...link, text: link.text.replace(/\s+/gu, "") })),
 			);
 			expect(controls(main)).toEqual(
 				expected.forms.flatMap((form) => form.controls.map(({ tag, type, id }) => ({ tag, type, id }))),
@@ -170,12 +173,16 @@ describe("frozen zh-CN legacy baseline", () => {
 		});
 	}
 
-	it("keeps the allowed-difference registry closed and initially unused", () => {
+	it("keeps the allowed-difference registry closed to the reviewed takedown", () => {
 		expect(readJson("allowed-differences.v1.json")).toEqual([
 			{ id: "runtime-build-hash", reviewerRole: "release-owner", targets: [] },
 			{ id: "footer-current-year", reviewerRole: "release-owner", targets: [] },
 			{ id: "shared-security-change", reviewerRole: "release-owner", targets: [] },
-			{ id: "retired-public-link-removal", reviewerRole: "release-owner", targets: [] },
+			{
+				id: "retired-public-link-removal",
+				reviewerRole: "release-owner",
+				targets: ROUTES.map(({ path }) => `${path} footer /status`),
+			},
 			{ id: "reviewed-hreflang-removal", reviewerRole: "release-owner", targets: [] },
 		]);
 	});

@@ -1,4 +1,5 @@
 import { CORE_PAGE_KEYS, getCoreFacts, getCorePageContent } from "@/content/site";
+import { GLOBAL_ENGLISH_MACHINE_FACTS } from "@/content/site/global-en/machine";
 import type { AgentPageKey, CorePageKey, Locale } from "@/content/site/types";
 import { getCoreLastVerified, getCorePath, getSiteRoute } from "./site-manifest";
 
@@ -21,19 +22,20 @@ function languageLabel(locale: Locale): string {
 }
 
 function pageReference(key: CorePageKey, locale: Locale): string {
-	const title = getCorePageContent(key, locale).meta.title;
+	const title = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key].title : getCorePageContent(key, locale).meta.title;
 	return `[${title} (${locale === "en" ? "en" : "zh-CN"})](${absolute(getCorePath(key, locale))})`;
 }
 
 function agentReference(key: AgentPageKey): string {
 	const path = getSiteRoute(key).agentPath;
 	if (!path) throw new Error(`Missing Agent document path for core route: ${key}`);
-	return `[${getCorePageContent(key, "en").meta.title}](${absolute(path)})`;
+	return `[${GLOBAL_ENGLISH_MACHINE_FACTS[key].title}](${absolute(path)})`;
 }
 
 export function renderCoreMarkdown(key: CorePageKey, locale: Locale): string {
-	const facts = getCoreFacts(key, locale);
-	const content = getCorePageContent(key, locale);
+	const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : getCoreFacts(key, locale);
+	const description =
+		locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key].description : getCorePageContent(key, locale).meta.description;
 	const route = getSiteRoute(key);
 	const agentLine = route.agentPath
 		? `Agent document: ${absolute(route.agentPath)}`
@@ -53,14 +55,12 @@ export function renderCoreMarkdown(key: CorePageKey, locale: Locale): string {
 
 Human canonical: ${absolute(getCorePath(key, locale))}
 Language: ${languageLabel(locale)}
-English (en): ${absolute(getCorePath(key, "en"))}
-Simplified Chinese (zh-CN): ${absolute(getCorePath(key, "zh"))}
 ${agentLine}
 Last verified: ${getCoreLastVerified(key)}
 
 ## Summary
 
-${content.meta.description}
+${description}
 
 ## Current scope
 
@@ -81,11 +81,11 @@ export function renderAgentDocument(key: AgentPageKey): string {
 }
 
 function renderHumanPageLists(): string {
-	return `## Human pages — English
+	return `## Human pages — Global English edition
 
 ${CORE_PAGE_KEYS.map((key) => `- ${pageReference(key, "en")}`).join("\n")}
 
-## Human pages — Simplified Chinese
+## Human pages — Chinese regional edition
 
 ${CORE_PAGE_KEYS.map((key) => `- ${pageReference(key, "zh")}`).join("\n")}`;
 }
@@ -97,10 +97,9 @@ ${AGENT_PAGE_KEYS.map((key) => `- ${agentReference(key)}`).join("\n")}`;
 }
 
 function renderHomeIndexNarrative(): string {
-	const facts = getCoreFacts("home", "en");
-	const description = getCorePageContent("home", "en").meta.description;
-	const directionClaims = facts.claims.filter((claim) => claim.status === "direction");
-	const directions = directionClaims
+	const facts = GLOBAL_ENGLISH_MACHINE_FACTS.home;
+	const description = facts.description;
+	const declaredFacts = facts.claims
 		.map(
 			(claim) => `- Status: ${claim.status}
 - Claim: ${claim.text}${claim.limitation ? `\n- Limitation: ${claim.limitation}` : ""}`,
@@ -113,9 +112,9 @@ function renderHomeIndexNarrative(): string {
 
 ${facts.currentScope}
 
-## Declared direction
+## Declared facts
 
-${directions}`;
+${declaredFacts}`;
 }
 
 export function renderAgentIndex(): string {
@@ -150,7 +149,7 @@ ${renderAgentPageList()}
 }
 
 export function renderLlmsFull(): string {
-	return `# Yonaris — complete localized core facts
+	return `# Yonaris — complete two-edition core facts
 
 ${CORE_PAGE_KEYS.flatMap((key) => (["en", "zh"] as const).map((locale) => renderCoreMarkdown(key, locale))).join("\n\n---\n\n")}`;
 }

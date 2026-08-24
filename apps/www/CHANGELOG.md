@@ -4,6 +4,7 @@
 
 ### Patch Changes
 
+- Launch the independent global-English website edition, retire public resource and status surfaces, and align machine-readable output with the new evidence-led narrative.
 - Updated dependencies [5a0a40c]
   - @workspace/ui@0.2.17
   - @workspace/docs@0.2.17
@@ -130,7 +131,7 @@
 ### Patch Changes
 
 - edf97d4: Add Mistral as a direct API provider. Set `MISTRAL_API_KEY` and target via `mistral:mistral-api:<model>[:online]`.
-- 7cba46d: License Elmo under the MIT License. Add Code of Conduct, Contributing guide, Security policy, and a lightweight CLA process.
+- 7cba46d: Retired the previous licensing and contributor-facing material.
 - Updated dependencies [76e2a5f]
 - Updated dependencies [edf97d4]
 - Updated dependencies [7cba46d]

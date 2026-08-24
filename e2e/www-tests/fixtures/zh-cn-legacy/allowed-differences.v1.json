@@ -17,7 +17,15 @@
 	{
 		"id": "retired-public-link-removal",
 		"reviewerRole": "release-owner",
-		"targets": []
+		"targets": [
+			"/zh footer /status",
+			"/zh/product footer /status",
+			"/zh/approach footer /status",
+			"/zh/research footer /status",
+			"/zh/company footer /status",
+			"/zh/geo footer /status",
+			"/zh/diagnostic footer /status"
+		]
 	},
 	{
 		"id": "reviewed-hreflang-removal",

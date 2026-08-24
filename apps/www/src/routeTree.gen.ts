@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApproachRouteImport } from './routes/approach'
-import { Route as BrandRouteImport } from './routes/brand'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as DiagnosticRouteImport } from './routes/diagnostic'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -29,7 +28,6 @@ import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as StatusRouteImport } from './routes/status'
 import { Route as VisionRouteImport } from './routes/vision'
 import { Route as AgentIndexRouteImport } from './routes/agent/index'
 import { Route as AgentApproachRouteImport } from './routes/agent/approach'
@@ -42,7 +40,6 @@ import { Route as AgentProductRouteImport } from './routes/agent/product'
 import { Route as AgentResearchRouteImport } from './routes/agent/research'
 import { Route as AgentResultsRouteImport } from './routes/agent/results'
 import { Route as ApiDiagnosticRouteImport } from './routes/api/diagnostic'
-import { Route as OgStatusDotpngRouteImport } from './routes/og/status[.]png'
 import { Route as ZhIndexRouteImport } from './routes/zh/index'
 import { Route as ZhApproachRouteImport } from './routes/zh/approach'
 import { Route as ZhCompanyRouteImport } from './routes/zh/company'
@@ -65,11 +62,6 @@ const IndexRoute = IndexRouteImport.update({
 const ApproachRoute = ApproachRouteImport.update({
   id: '/approach',
   path: '/approach',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BrandRoute = BrandRouteImport.update({
-  id: '/brand',
-  path: '/brand',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompanyRoute = CompanyRouteImport.update({
@@ -157,11 +149,6 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StatusRoute = StatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const VisionRoute = VisionRouteImport.update({
   id: '/vision',
   path: '/vision',
@@ -220,11 +207,6 @@ const AgentResultsRoute = AgentResultsRouteImport.update({
 const ApiDiagnosticRoute = ApiDiagnosticRouteImport.update({
   id: '/api/diagnostic',
   path: '/api/diagnostic',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OgStatusDotpngRoute = OgStatusDotpngRouteImport.update({
-  id: '/og/status.png',
-  path: '/og/status.png',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ZhIndexRoute = ZhIndexRouteImport.update({
@@ -297,7 +279,6 @@ const ApiPlausibleJsScriptIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/approach': typeof ApproachRoute
-  '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
@@ -315,7 +296,6 @@ export interface FileRoutesByFullPath {
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
@@ -327,7 +307,6 @@ export interface FileRoutesByFullPath {
   '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
-  '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
   '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
@@ -346,7 +325,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/approach': typeof ApproachRoute
-  '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
@@ -364,7 +342,6 @@ export interface FileRoutesByTo {
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
@@ -376,7 +353,6 @@ export interface FileRoutesByTo {
   '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
-  '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
   '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
@@ -396,7 +372,6 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/approach': typeof ApproachRoute
-  '/brand': typeof BrandRoute
   '/company': typeof CompanyRoute
   '/diagnostic': typeof DiagnosticRoute
   '/features': typeof FeaturesRoute
@@ -414,7 +389,6 @@ export interface FileRoutesById {
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
-  '/status': typeof StatusRoute
   '/vision': typeof VisionRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
@@ -426,7 +400,6 @@ export interface FileRoutesById {
   '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
-  '/og/status.png': typeof OgStatusDotpngRoute
   '/zh/approach': typeof ZhApproachRoute
   '/zh/company': typeof ZhCompanyRoute
   '/zh/diagnostic': typeof ZhDiagnosticRoute
@@ -447,7 +420,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/approach'
-    | '/brand'
     | '/company'
     | '/diagnostic'
     | '/features'
@@ -465,7 +437,6 @@ export interface FileRouteTypes {
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/status'
     | '/vision'
     | '/agent/approach'
     | '/agent/company'
@@ -477,7 +448,6 @@ export interface FileRouteTypes {
     | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
-    | '/og/status.png'
     | '/zh/approach'
     | '/zh/company'
     | '/zh/diagnostic'
@@ -496,7 +466,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/approach'
-    | '/brand'
     | '/company'
     | '/diagnostic'
     | '/features'
@@ -514,7 +483,6 @@ export interface FileRouteTypes {
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/status'
     | '/vision'
     | '/agent/approach'
     | '/agent/company'
@@ -526,7 +494,6 @@ export interface FileRouteTypes {
     | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
-    | '/og/status.png'
     | '/zh/approach'
     | '/zh/company'
     | '/zh/diagnostic'
@@ -545,7 +512,6 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/approach'
-    | '/brand'
     | '/company'
     | '/diagnostic'
     | '/features'
@@ -563,7 +529,6 @@ export interface FileRouteTypes {
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
-    | '/status'
     | '/vision'
     | '/agent/approach'
     | '/agent/company'
@@ -575,7 +540,6 @@ export interface FileRouteTypes {
     | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
-    | '/og/status.png'
     | '/zh/approach'
     | '/zh/company'
     | '/zh/diagnostic'
@@ -595,7 +559,6 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApproachRoute: typeof ApproachRoute
-  BrandRoute: typeof BrandRoute
   CompanyRoute: typeof CompanyRoute
   DiagnosticRoute: typeof DiagnosticRoute
   FeaturesRoute: typeof FeaturesRoute
@@ -613,7 +576,6 @@ export interface RootRouteChildren {
   ResultsRoute: typeof ResultsRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  StatusRoute: typeof StatusRoute
   VisionRoute: typeof VisionRoute
   AgentApproachRoute: typeof AgentApproachRoute
   AgentCompanyRoute: typeof AgentCompanyRoute
@@ -625,7 +587,6 @@ export interface RootRouteChildren {
   AgentResearchRoute: typeof AgentResearchRoute
   AgentResultsRoute: typeof AgentResultsRoute
   ApiDiagnosticRoute: typeof ApiDiagnosticRoute
-  OgStatusDotpngRoute: typeof OgStatusDotpngRoute
   ZhApproachRoute: typeof ZhApproachRoute
   ZhCompanyRoute: typeof ZhCompanyRoute
   ZhDiagnosticRoute: typeof ZhDiagnosticRoute
@@ -656,13 +617,6 @@ declare module '@tanstack/react-router' {
       path: '/approach'
       fullPath: '/approach'
       preLoaderRoute: typeof ApproachRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/brand': {
-      id: '/brand'
-      path: '/brand'
-      fullPath: '/brand'
-      preLoaderRoute: typeof BrandRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/company': {
@@ -784,13 +738,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/status': {
-      id: '/status'
-      path: '/status'
-      fullPath: '/status'
-      preLoaderRoute: typeof StatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/vision': {
       id: '/vision'
       path: '/vision'
@@ -873,13 +820,6 @@ declare module '@tanstack/react-router' {
       path: '/api/diagnostic'
       fullPath: '/api/diagnostic'
       preLoaderRoute: typeof ApiDiagnosticRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/og/status.png': {
-      id: '/og/status.png'
-      path: '/og/status.png'
-      fullPath: '/og/status.png'
-      preLoaderRoute: typeof OgStatusDotpngRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/zh/': {
@@ -979,7 +919,6 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApproachRoute: ApproachRoute,
-  BrandRoute: BrandRoute,
   CompanyRoute: CompanyRoute,
   DiagnosticRoute: DiagnosticRoute,
   FeaturesRoute: FeaturesRoute,
@@ -997,7 +936,6 @@ const rootRouteChildren: RootRouteChildren = {
   ResultsRoute: ResultsRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  StatusRoute: StatusRoute,
   VisionRoute: VisionRoute,
   AgentApproachRoute: AgentApproachRoute,
   AgentCompanyRoute: AgentCompanyRoute,
@@ -1009,7 +947,6 @@ const rootRouteChildren: RootRouteChildren = {
   AgentResearchRoute: AgentResearchRoute,
   AgentResultsRoute: AgentResultsRoute,
   ApiDiagnosticRoute: ApiDiagnosticRoute,
-  OgStatusDotpngRoute: OgStatusDotpngRoute,
   ZhApproachRoute: ZhApproachRoute,
   ZhCompanyRoute: ZhCompanyRoute,
   ZhDiagnosticRoute: ZhDiagnosticRoute,

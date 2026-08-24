@@ -166,15 +166,6 @@ describe("manifest-driven site SEO", () => {
 		expect(head.links).not.toEqual(expect.arrayContaining([expect.objectContaining({ rel: "alternate" })]));
 	});
 
-	test("applies the approved retained utility index policies", () => {
-		const subject = requireSiteSeo();
-		if (!subject) return;
-
-		for (const key of ["status", "brand"] as const) {
-			expect(subject.routeRobotsMeta(key)).toBeUndefined();
-		}
-	});
-
 	test("keeps Organization and WebSite structured data Yonaris-only", () => {
 		const subject = requireSiteSeo();
 		if (!subject) return;
@@ -184,6 +175,6 @@ describe("manifest-driven site SEO", () => {
 		expect(structuredData.map((entry) => entry["@type"])).toEqual(["Organization", "WebSite"]);
 		expect(structuredData.every((entry) => entry.name === "Yonaris")).toBe(true);
 		const serialized = JSON.stringify(structuredData);
-		expect(serialized).not.toMatch(/Elmo|elmohq/i);
+		expect(serialized).not.toMatch(/upstream|上游/i);
 	});
 });

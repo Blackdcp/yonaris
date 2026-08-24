@@ -5,7 +5,6 @@ import { PORTAL_URL } from "@/lib/site-navigation";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 import { SiteShell } from "./site-shell";
-import { UtilityShell } from "./utility-shell";
 
 function navMarkup(markup: string, label: string): string {
 	const match = markup.match(new RegExp(`<nav[^>]*aria-label="${label}"[^>]*>(.*?)</nav>`, "s"));
@@ -73,9 +72,10 @@ describe("shared public shells", () => {
 	it("renders footer destinations from canonical site paths", () => {
 		for (const locale of ["en", "zh"] satisfies Locale[]) {
 			const markup = renderToStaticMarkup(<SiteFooter locale={locale} />);
-			const expected = [locale === "zh" ? "/zh/geo" : "/geo", "/status", "/privacy", "/agent", "/llms.txt"];
+			const expected = [locale === "zh" ? "/zh/geo" : "/geo", "/privacy", "/agent", "/llms.txt"];
 
 			for (const path of expected) expect(hrefs(markup)).toContain(path);
+			expect(hrefs(markup)).not.toContain("/status");
 			expect(markup).not.toContain("Provider Status");
 			expect(markup).not.toContain("Get Started");
 		}
@@ -90,27 +90,5 @@ describe("shared public shells", () => {
 
 		expect(occurrences(markup, "<main")).toBe(1);
 		expect(markup).toContain('<main class="page-main"><h1>Product</h1></main>');
-	});
-
-	it("composes utility context through the shared shell", () => {
-		const utility = renderToStaticMarkup(
-			<UtilityShell section="status">
-				<article>Status</article>
-			</UtilityShell>,
-		);
-		expect(occurrences(utility, "<main")).toBe(1);
-		expect(utility).toContain('<section class="site-utility-context"');
-		expect(utility).toContain('aria-label="Operational checks"');
-	});
-
-	it("keeps publication and utility children inside SiteShell's sole main landmark", () => {
-		const utility = renderToStaticMarkup(
-			<UtilityShell section="status">
-				<section aria-label="Utility body">Utility</section>
-			</UtilityShell>,
-		);
-
-		expect(occurrences(utility, "<main")).toBe(1);
-		expect(utility).toMatch(/<main[^>]*site-utility-shell[^>]*>.*Utility body/s);
 	});
 });

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ApproachPage } from "@/components/site/pages/approach-page";
-import { corePageHead } from "@/lib/site-seo";
+import { ApproachPage } from "@/components/site/global-en/pages/approach-page";
+import { globalEnglishPageHead } from "@/editions/global-en/edition";
 
 export const Route = createFileRoute("/approach")({
-	head: () => corePageHead("approach", "en"),
-	component: () => <ApproachPage locale="en" />,
+	head: () => globalEnglishPageHead("approach"),
+	component: ApproachPage,
 });

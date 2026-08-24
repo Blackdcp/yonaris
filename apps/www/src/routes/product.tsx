@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ProductPage } from "@/components/site/pages/product-page";
-import { corePageHead } from "@/lib/site-seo";
+import { ProductPage } from "@/components/site/global-en/pages/product-page";
+import { globalEnglishPageHead } from "@/editions/global-en/edition";
 
 export const Route = createFileRoute("/product")({
-	head: () => corePageHead("product", "en"),
-	component: () => <ProductPage locale="en" />,
+	head: () => globalEnglishPageHead("product"),
+	component: ProductPage,
 });

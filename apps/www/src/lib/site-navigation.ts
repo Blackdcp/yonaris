@@ -36,7 +36,6 @@ const labels = {
 		geo: "GEO",
 		diagnostic: "Get a Free Diagnostic",
 		privacy: "Privacy",
-		status: "Status",
 		agent: "Agent",
 		llms: "llms.txt",
 		explore: "Explore",
@@ -51,7 +50,6 @@ const labels = {
 		geo: "GEO",
 		diagnostic: "获取免费诊断",
 		privacy: "隐私",
-		status: "状态",
 		agent: "Agent",
 		llms: "llms.txt",
 		explore: "浏览",
@@ -99,7 +97,7 @@ export function getFooterNavigation(locale: Locale): readonly SiteFooterGroup[] 
 		},
 		{
 			label: labels[locale].machineGroup,
-			items: (["status", "privacy", "agent", "llms"] as const).map((key) => itemFor(key, locale)),
+			items: (["privacy", "agent", "llms"] as const).map((key) => itemFor(key, locale)),
 		},
 	];
 }

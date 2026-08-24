@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { CORE_PAGE_KEYS, getCoreFacts, getCorePageContent } from "@/content/site";
+import { CORE_PAGE_KEYS, getCoreFacts } from "@/content/site";
+import { GLOBAL_ENGLISH_MACHINE_FACTS } from "@/content/site/global-en/machine";
 import type { AgentPageKey } from "@/content/site/types";
 import { getCoreLastVerified, getCorePath, getSiteRoute } from "./site-manifest";
 
@@ -27,22 +28,20 @@ function absolute(path: string): string {
 }
 
 describe("machine documents", () => {
-	test("renders every core locale from the shared facts, manifest, and verification date", () => {
+	test("renders independent global-English and Chinese regional facts", () => {
 		const renderer = requireSubject();
 		if (!renderer) return;
 
 		for (const key of CORE_PAGE_KEYS) {
 			for (const locale of locales) {
 				const document = renderer.renderCoreMarkdown(key, locale);
-				const facts = getCoreFacts(key, locale);
-				const englishPath = getCorePath(key, "en");
-				const chinesePath = getCorePath(key, "zh");
+				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : getCoreFacts(key, locale);
 
 				expect(document).toContain(`# ${facts.title}`);
 				expect(document).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
 				expect(document).toContain(`Language: ${locale === "en" ? "English (en)" : "Simplified Chinese (zh-CN)"}`);
-				expect(document).toContain(`English (en): ${absolute(englishPath)}`);
-				expect(document).toContain(`Simplified Chinese (zh-CN): ${absolute(chinesePath)}`);
+				expect(document).not.toContain("English (en):");
+				expect(document).not.toContain("Simplified Chinese (zh-CN):");
 				expect(document).toContain(`Last verified: ${getCoreLastVerified(key)}`);
 				expect(document).toContain(facts.currentScope);
 
@@ -70,13 +69,15 @@ describe("machine documents", () => {
 		expect(renderer.renderCoreMarkdown("home", "en")).toContain("Agent index: https://yonaris.com/agent");
 	});
 
-	test("indexes all fourteen human canonicals with language metadata and all six current Agent documents", () => {
+	test("indexes both independent editions and all six current Agent documents", () => {
 		const renderer = requireSubject();
 		if (!renderer) return;
 
 		for (const output of [renderer.renderAgentIndex(), renderer.renderLlmsIndex()]) {
 			for (const key of CORE_PAGE_KEYS) {
-				expect(output).toContain(`[${getCoreFacts(key, "en").title} (en)](${absolute(getCorePath(key, "en"))})`);
+				expect(output).toContain(
+					`[${GLOBAL_ENGLISH_MACHINE_FACTS[key].title} (en)](${absolute(getCorePath(key, "en"))})`,
+				);
 				expect(output).toContain(`[${getCoreFacts(key, "zh").title} (zh-CN)](${absolute(getCorePath(key, "zh"))})`);
 			}
 			for (const key of agentPageKeys) {
@@ -87,36 +88,36 @@ describe("machine documents", () => {
 		}
 	});
 
-	test("derives index narrative from the shared Home facts instead of owning parallel product copy", () => {
+	test("derives the machine index narrative from the global-English edition", () => {
 		const renderer = requireSubject();
 		if (!renderer) return;
 
-		const homeFacts = getCoreFacts("home", "en");
-		const homeDescription = getCorePageContent("home", "en").meta.description;
-		const direction = homeFacts.claims.find((claim) => claim.status === "direction");
-		expect(direction, "Home must declare the human-and-agent direction and its limitation").toBeDefined();
+		const homeFacts = GLOBAL_ENGLISH_MACHINE_FACTS.home;
+		const homeDescription = homeFacts.description;
+		const firstClaim = homeFacts.claims[0];
+		expect(firstClaim, "Global Home must declare at least one current fact").toBeDefined();
 
 		for (const output of [renderer.renderAgentIndex(), renderer.renderLlmsIndex()]) {
 			expect(output).toContain(homeDescription);
 			expect(output).toContain(homeFacts.currentScope);
-			expect(output).toContain(direction?.text);
-			expect(output).toContain(direction?.limitation);
+			expect(output).toContain(firstClaim?.text);
 		}
 	});
 
-	test("makes llms-full the complete fourteen-document factual set", () => {
+	test("makes llms-full the complete two-edition factual set", () => {
 		const renderer = requireSubject();
 		if (!renderer) return;
 
 		const full = renderer.renderLlmsFull();
 		for (const key of CORE_PAGE_KEYS) {
 			for (const locale of locales) {
-				const facts = getCoreFacts(key, locale);
+				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : getCoreFacts(key, locale);
 				expect(full).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
 				expect(full).toContain(facts.currentScope);
 			}
 		}
 		expect(full.match(/^Human canonical:/gm)).toHaveLength(14);
+		expect(full).not.toContain("complete localized core facts");
 	});
 
 	test("does not serialize retired evidence or imagined product modules", () => {

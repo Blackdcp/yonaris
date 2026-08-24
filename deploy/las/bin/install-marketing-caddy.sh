@@ -108,8 +108,11 @@ full_health() {
 	local path
 	for path in \
 		/product /zh/product /approach /research /company /privacy \
-		/status /brand /agent/company /llms.txt /recordranks-logo.svg; do
+		/agent/company /llms.txt; do
 		curl_origin yonaris.com "$path" 200 "$response" || return 1
+	done
+	for path in /status /brand /og/status.png /recordranks-logo.svg; do
+		curl_origin yonaris.com "$path" 404 "$response" || return 1
 	done
 
 	curl_origin yonaris.com '/platform?fixture=1' 308 "$response" || return 1

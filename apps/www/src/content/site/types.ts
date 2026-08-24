@@ -52,8 +52,6 @@ export const SITE_ROUTE_KEYS = [
 	"geo",
 	"diagnostic",
 	"privacy",
-	"status",
-	"brand",
 	"agent",
 	"llms",
 	"sitemap",

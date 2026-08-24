@@ -1,24 +1,8 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { DiagnosticPage } from "@/components/site/pages/diagnostic-page";
-import { clearDiagnosticPrefillWebsite, consumeDiagnosticPrefillWebsite } from "@/lib/diagnostic-analytics-privacy";
-import { parseDiagnosticSearch } from "@/lib/diagnostic-schema";
-import { corePageHead } from "@/lib/site-seo";
+import { createFileRoute } from "@tanstack/react-router";
+import { DiagnosticPage } from "@/components/site/global-en/pages/diagnostic-page";
+import { globalEnglishPageHead } from "@/editions/global-en/edition";
 
 export const Route = createFileRoute("/diagnostic")({
-	head: () => corePageHead("diagnostic", "en"),
-	validateSearch: parseDiagnosticSearch,
-	search: { middlewares: [stripSearchParams({ website: "" })] },
-	component: EnglishDiagnosticRoute,
+	head: () => globalEnglishPageHead("diagnostic"),
+	component: DiagnosticPage,
 });
-
-function EnglishDiagnosticRoute() {
-	const search = Route.useSearch();
-	const [initialWebsite] = useState(() => consumeDiagnosticPrefillWebsite(search.website));
-
-	useEffect(() => {
-		clearDiagnosticPrefillWebsite();
-	}, []);
-
-	return <DiagnosticPage locale="en" initialWebsite={initialWebsite} />;
-}

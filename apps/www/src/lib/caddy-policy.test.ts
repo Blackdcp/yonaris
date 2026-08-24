@@ -123,12 +123,12 @@ describe("the production apex Caddy policy", () => {
 		for (const redirect of SITE_REDIRECTS) expectedPaths.add(redirect.from);
 		for (const path of [
 			"/assets/*",
-			"/brand/*",
+			"/brand/logos/yonaris-wordmark-navy.png",
+			"/brand/logos/yonaris-wordmark-white.png",
 			"/icons/*",
 			"/apple-touch-icon.png",
 			"/favicon.ico",
 			"/site.webmanifest",
-			"/recordranks-logo.svg",
 		]) {
 			expectedPaths.add(path);
 		}

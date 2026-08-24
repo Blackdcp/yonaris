@@ -3,27 +3,23 @@
 import { pathToFileURL } from "node:url";
 
 export const CORE_ROUTES = [
-	{ path: "/", copy: ["See how AI is shaping your market.", "MarTech, rebuilt.", "For humans and agents."] },
+	{ path: "/", copy: ["Know how AI represents your brand—and what to do next."] },
 	{ path: "/zh", copy: ["看清 AI 如何塑造你的市场", "重构 MarTech", "同时面向人，也面向智能体"] },
 	{ path: "/product", copy: ["Make AI market answers observable."] },
 	{ path: "/zh/product", copy: [] },
-	{ path: "/approach", copy: ["A repeatable evidence loop, not a generic score."] },
+	{ path: "/approach", copy: ["Move from uncertainty to a reviewable next test."] },
 	{ path: "/zh/approach", copy: [] },
-	{ path: "/research", copy: ["Every finding should show its scope."] },
+	{ path: "/research", copy: ["Evidence needs a scope, denominator, and boundary."] },
 	{ path: "/zh/research", copy: [] },
-	{ path: "/company", copy: ["AI-native MarTech"] },
+	{ path: "/company", copy: ["Evidence before conclusion."] },
 	{ path: "/zh/company", copy: [] },
 	{ path: "/geo", copy: [] },
 	{ path: "/zh/geo", copy: [] },
-	{ path: "/diagnostic", copy: ["See what AI sees before you decide what to change."] },
+	{ path: "/diagnostic", copy: ["Request a focused AI market diagnostic."] },
 	{ path: "/zh/diagnostic", copy: [] },
 ];
 
-export const GOVERNED_HTML_ROUTES = [
-	{ path: "/privacy", copy: [] },
-	{ path: "/status", copy: [] },
-	{ path: "/brand", copy: [] },
-];
+export const GOVERNED_HTML_ROUTES = [{ path: "/privacy", copy: [] }];
 
 export const MANUAL_REDIRECTS = [
 	{ from: "/platform", to: "/product" },
@@ -43,7 +39,13 @@ export const MANUAL_REDIRECTS = [
 
 export const HIDDEN_ROUTES = [
 	"/resources",
-	"/open-source",
+	"/brand",
+	"/status",
+	"/og/status.png",
+	"/recordranks-logo.svg",
+	"/brand/architecture.svg",
+	"/brand/banners/linkedin-banner.png",
+	"/brand/banners/twitter-banner.png",
 	"/blog",
 	"/blog/ai-brand-sentiment",
 	"/blog/rss.xml",
@@ -75,16 +77,14 @@ const MACHINE_ROUTES = [
 	{ path: "/agent/product", contentType: "text/markdown", copy: ["Current scope"] },
 	{ path: "/agent/approach", contentType: "text/markdown", copy: ["Current scope"] },
 	{ path: "/agent/research", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/agent/company", contentType: "text/markdown", copy: ["AI-native MarTech", "Current scope"] },
+	{ path: "/agent/company", contentType: "text/markdown", copy: ["Evidence before conclusion.", "Current scope"] },
 	{ path: "/agent/geo", contentType: "text/markdown", copy: ["Current scope"] },
 	{ path: "/agent/diagnostic", contentType: "text/markdown", copy: ["Current scope"] },
-	{ path: "/llms.txt", contentType: "text/plain", copy: ["For humans and agents"] },
+	{ path: "/llms.txt", contentType: "text/plain", copy: ["Know how AI represents your brand"] },
 	{ path: "/llms-full.txt", contentType: "text/plain", copy: ["Current scope"] },
 	{ path: "/robots.txt", contentType: "text/plain", copy: ["User-agent:"] },
-	{ path: "/sitemap.xml", contentType: "xml", copy: ["http://www.sitemaps.org/schemas/sitemap/0.9", "hreflang"] },
-	{ path: "/recordranks-logo.svg", contentType: "image/svg+xml", copy: [] },
+	{ path: "/sitemap.xml", contentType: "xml", copy: ["http://www.sitemaps.org/schemas/sitemap/0.9"] },
 	{ path: "/og.png", contentType: "image/png", copy: [] },
-	{ path: "/og/status.png", contentType: "image/png", copy: [] },
 ];
 
 export const HONEYPOT_LEAD = {

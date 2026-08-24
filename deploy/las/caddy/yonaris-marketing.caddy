@@ -41,7 +41,7 @@ yonaris.com, www.yonaris.com {
 
 		@publicGetHead {
 			method GET HEAD
-			path / /zh /product /zh/product /approach /zh/approach /research /zh/research /company /zh/company /geo /zh/geo /diagnostic /zh/diagnostic /privacy /status /brand /agent /agent/* /llms.txt /llms-full.txt /robots.txt /sitemap.xml /og.png /og/status.png /platform /features /zh/platform /methodology /zh/methodology /results /zh/results /vision /pricing /off-site-aeo /agent/platform /agent/methodology /agent/results /assets/* /brand/* /icons/* /apple-touch-icon.png /favicon.ico /site.webmanifest /recordranks-logo.svg
+			path / /zh /product /zh/product /approach /zh/approach /research /zh/research /company /zh/company /geo /zh/geo /diagnostic /zh/diagnostic /privacy /agent /agent/* /llms.txt /llms-full.txt /robots.txt /sitemap.xml /og.png /platform /features /zh/platform /methodology /zh/methodology /results /zh/results /vision /pricing /off-site-aeo /agent/platform /agent/methodology /agent/results /assets/* /brand/logos/yonaris-wordmark-navy.png /brand/logos/yonaris-wordmark-white.png /icons/* /apple-touch-icon.png /favicon.ico /site.webmanifest
 		}
 		reverse_proxy @publicGetHead 127.0.0.1:1516 {
 			header_up -X-Yonaris-Client-IP

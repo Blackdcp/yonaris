@@ -43,8 +43,6 @@ const approvedPaths = [
 	"/diagnostic",
 	"/zh/diagnostic",
 	"/privacy",
-	"/status",
-	"/brand",
 ] as const;
 
 describe("manifest-driven sitemap", () => {
@@ -97,53 +95,43 @@ describe("manifest-driven sitemap", () => {
 		for (const path of corePairs.flat()) {
 			expect(entries.find((entry) => entry.path === path)?.lastVerified).toBe("2026-08-22");
 		}
-		for (const path of ["/privacy", "/status", "/brand"]) {
+		for (const path of ["/privacy"]) {
 			expect(entries.find((entry) => entry.path === path)?.lastVerified).toBeUndefined();
 		}
 	});
 
-	test("adds reciprocal English, Chinese, and x-default alternates to every core entry", () => {
+	test("keeps the global English and Chinese editions independent", () => {
 		const subject = requireSitemap();
 		if (!subject) return;
 
 		const entries = subject.buildSitemapEntries();
 		for (const [english, chinese] of corePairs) {
-			const expected = [
-				{ hreflang: "en", path: english },
-				{ hreflang: "zh-CN", path: chinese },
-				{ hreflang: "x-default", path: english },
-			];
-			expect(entries.find((entry) => entry.path === english)?.alternates).toEqual(expected);
-			expect(entries.find((entry) => entry.path === chinese)?.alternates).toEqual(expected);
+			const englishEntry = entries.find((entry) => entry.path === english);
+			const chineseEntry = entries.find((entry) => entry.path === chinese);
+			expect(englishEntry && "alternates" in englishEntry).toBe(false);
+			expect(chineseEntry && "alternates" in chineseEntry).toBe(false);
 		}
 	});
 
-	test("renders the XHTML namespace and reciprocal alternate links", () => {
+	test("renders each edition without reciprocal alternate links", () => {
 		const subject = requireSitemap();
 		if (!subject) return;
 
 		const xml = subject.renderSitemap("https://yonaris.example/");
-		expect(xml).toContain('xmlns:xhtml="http://www.w3.org/1999/xhtml"');
+		expect(xml).not.toContain("xmlns:xhtml");
 		expect(xml).toContain("<loc>https://yonaris.example/product</loc>");
-		expect(xml).toContain('<xhtml:link rel="alternate" hreflang="en" href="https://yonaris.example/product" />');
-		expect(xml).toContain('<xhtml:link rel="alternate" hreflang="zh-CN" href="https://yonaris.example/zh/product" />');
-		expect(xml).toContain('<xhtml:link rel="alternate" hreflang="x-default" href="https://yonaris.example/product" />');
+		expect(xml).toContain("<loc>https://yonaris.example/zh/product</loc>");
+		expect(xml).not.toContain("<xhtml:link");
 		expect(xml.match(/<lastmod>2026-08-22<\/lastmod>/g)).toHaveLength(14);
 	});
 
-	test("renders core sitemap elements before XHTML alternate extensions", () => {
+	test("renders exactly one URL record per approved canonical path", () => {
 		const subject = requireSitemap();
 		if (!subject) return;
 
 		const xml = subject.renderSitemap("https://yonaris.example/");
-		const entriesWithAlternates = [...xml.matchAll(/<url>[\s\S]*?<\/url>/g)]
-			.map(([entry]) => entry)
-			.filter((entry) => entry.includes("<xhtml:link"));
-
-		expect(entriesWithAlternates).toHaveLength(14);
-		for (const entry of entriesWithAlternates) {
-			expect(entry.indexOf("<priority>")).toBeLessThan(entry.indexOf("<xhtml:link"));
-		}
+		expect(xml.match(/<url>/g)).toHaveLength(approvedPaths.length);
+		expect(xml.match(/<loc>/g)).toHaveLength(approvedPaths.length);
 	});
 
 	test("renders a crawlable robots policy pointing at the sitemap", () => {
