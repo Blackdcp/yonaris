@@ -97,7 +97,11 @@ export class ExtensionCoordinator {
 			claim = await api.resume(entry.taskId, entry.brandId, requestedStage, entry.surfaceTargetKey);
 			recoveryStage = claim.postSubmitAssist ? "post_submit" : "pre_submit";
 			await assertManualResumeClaim(entry, claim, recoveryStage);
-			await this.#dependencies.tabs.activate(entry.tabId);
+			const recoveryTabId = this.#dependencies.tabs.resolveManualRecoveryTab
+				? await this.#dependencies.tabs.resolveManualRecoveryTab(entry.tabId, entry.surfaceTargetKey)
+				: entry.tabId;
+			if (recoveryTabId !== entry.tabId) await journal.rebindNeedsHumanTab(taskId, recoveryTabId);
+			await this.#dependencies.tabs.activate(recoveryTabId);
 			if (recoveryStage === "pre_submit") {
 				if (requestedStage === "pre_submit") await journal.resumePreSubmit(taskId);
 				else await journal.resumeServerAuthorizedPreSubmit(taskId);

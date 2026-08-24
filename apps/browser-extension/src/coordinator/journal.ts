@@ -155,6 +155,21 @@ export class DurableTaskJournal {
 		});
 	}
 
+	async rebindNeedsHumanTab(taskId: string, tabId: number): Promise<TaskJournalEntry> {
+		return this.#mutate(taskId, async () => {
+			if (!Number.isSafeInteger(tabId) || tabId < 0) throw new Error("Browser Runner tab id is invalid");
+			const current = (await this.entries())[taskId];
+			if (current?.phase !== "needs_human") {
+				throw new Error("Only a needs-human task can rebind its browser tab");
+			}
+			if (current.tabId === tabId) return current;
+			const next = { ...current, tabId, updatedAt: this.#now().toISOString() };
+			await this.#storage.saveJournal(next);
+			this.#onWrite?.(next.phase);
+			return next;
+		});
+	}
+
 	async remove(taskId: string): Promise<void> {
 		await this.#mutate(taskId, () => this.#storage.removeJournal(taskId));
 	}
