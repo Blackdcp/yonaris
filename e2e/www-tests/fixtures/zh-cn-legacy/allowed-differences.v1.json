@@ -1,0 +1,27 @@
+[
+	{
+		"id": "runtime-build-hash",
+		"reviewerRole": "release-owner",
+		"targets": []
+	},
+	{
+		"id": "footer-current-year",
+		"reviewerRole": "release-owner",
+		"targets": []
+	},
+	{
+		"id": "shared-security-change",
+		"reviewerRole": "release-owner",
+		"targets": []
+	},
+	{
+		"id": "retired-public-link-removal",
+		"reviewerRole": "release-owner",
+		"targets": []
+	},
+	{
+		"id": "reviewed-hreflang-removal",
+		"reviewerRole": "release-owner",
+		"targets": []
+	}
+]

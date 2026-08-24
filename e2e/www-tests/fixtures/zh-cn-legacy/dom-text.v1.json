@@ -1,0 +1,3566 @@
+{
+	"schemaVersion": 1,
+	"revision": "4e3ad82a58bfe5b19450b1de01104f5e0bce0074",
+	"normalization": "unicode-nfkc-whitespace-v1",
+	"routes": {
+		"home": {
+			"path": "/zh",
+			"lang": "zh-CN",
+			"mainClass": "home-page",
+			"mainText": "AI 原生营销科技 / 重构 MarTech,同时面向人,也面向智能体。 看清 AI 如何塑造你的市场 Yonaris 揭示 AI 如何描述与比较你的品牌、哪些信息源正在影响答案,以及市场叙事还能向哪里生长 官网 获取免费诊断 ↗ 示例诊断 市场认知 / 购买问题 诊断读数 答案全景 比较方式 信息来源 叙事机会 Yonaris 自我诊断 · 公开叙事 Yonaris 是什么——它属于哪个品类? A 示例答案 产品门户语言 一个公开界面将 Yonaris 归类为AI 搜索优化平台。 portal.yonaris.com AI Search Optimization Y 公司叙事 官网语言 公司把自身定位为更广义的AI 原生营销科技——同时面向人,也面向智能体。 yonaris.com 公开官网 ! 观察到的不一致 品类漂移 两个公开界面正在传递两个不同品类。更窄的产品标签更容易被 AI 重复。 示例综合判断 公开元数据 Yonaris 诊断读数 观察 两个公开界面传递两个品类。 诊断发现 更广义的 MarTech 定位没有被充分继承。 下一步 统一公司、产品与门户元数据。 该窗口是说明性组合,不是实时遥测、客户证据,也不是已经完成的诊断结果。 产品证据 从回答样本回到可复核证据 查看产品 ↗ 第一项落地工作流 了解 GEO 场景 ↗ 现在可以观察什么 示例证据视图 用户可以检查回答样本、提及指标、指定竞品集合内的声量份额,以及可用的引用和查询改写。 证据边界 引用或查询字段为空,只表示证据不可用,不能据此认定服务商没有搜索。 证据方法 让一个问题进入可复核的证据循环 先声明测试,再检查底层证据,最后用同一定义复测 查看方法 ↗ 证据循环中的三个时刻 01 声明范围 02 检查证据 03 重复测试 研究记录 一项可以被审计的发现 阅读研究 ↗ 声明范围 在指定 AI 界面与声明采集时间中观察一个明确的问题集合 明确分母 每一项指标都明确说明分母中包含哪些样本 解释边界 重复观察可以呈现时间上的差异,但不能独立证明因果关系 免费诊断 从决定下一步市场行动的问题开始 告诉 Yonaris 一个品牌、一个市场和一个重要问题,团队会在采集证据前确认测量范围。 获取免费诊断 ↗ 提交后不会即时生成扫描、分数或证据结果。",
+			"headings": [
+				{
+					"level": 1,
+					"id": "home-hero-title",
+					"text": "看清 AI 如何塑造你的市场",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "home-preview-question-zh",
+					"text": "Yonaris 是什么——它属于哪个品类?",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "",
+					"text": "Yonaris 诊断读数",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "home-product-title",
+					"text": "从回答样本回到可复核证据",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "home-approach-title",
+					"text": "让一个问题进入可复核的证据循环",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "home-research-title",
+					"text": "一项可以被审计的发现",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "home-diagnostic-title",
+					"text": "从决定下一步市场行动的问题开始",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "home-product-stage",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-hero-title"
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>figure:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"id": "",
+					"className": "home-diagnostic-preview__canvas",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-preview-question-zh"
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(1)",
+					"id": "",
+					"className": "home-stage home-stage--product",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-product-title"
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(2)",
+					"id": "",
+					"className": "home-stage home-stage--approach",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-approach-title"
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(3)",
+					"id": "",
+					"className": "home-stage home-stage--research",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-research-title"
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(4)",
+					"id": "",
+					"className": "home-stage home-stage--diagnostic",
+					"ariaLabel": "",
+					"ariaLabelledby": "home-diagnostic-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "重构 MarTech,同时面向人,也面向智能体。",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看产品 ↗",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "了解 GEO 场景 ↗",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看方法 ↗",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "阅读研究 ↗",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断 ↗",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)",
+					"action": "/zh/diagnostic",
+					"method": "get",
+					"controls": [
+						{
+							"tag": "input",
+							"type": "url",
+							"name": "website",
+							"id": "home-website-zh",
+							"valueAttribute": "",
+							"required": true,
+							"disabled": false,
+							"tabIndex": 0
+						},
+						{
+							"tag": "button",
+							"type": "submit",
+							"name": "",
+							"id": "",
+							"valueAttribute": "",
+							"required": false,
+							"disabled": false,
+							"tabIndex": 0
+						}
+					]
+				}
+			],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>p:nth-of-type(1)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "company"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>figure:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-preview-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-stage",
+							"value": "product"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "product"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "geo"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-home-stage",
+							"value": "approach"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(1)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "approach"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-home-stage",
+							"value": "research"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(1)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "research"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-home-stage",
+							"value": "diagnostic"
+						}
+					]
+				},
+				{
+					"path": "main>div:nth-of-type(1)>section:nth-of-type(4)>div:nth-of-type(1)>div:nth-of-type(2)>a:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-home-context-link",
+							"value": "diagnostic"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/"
+					}
+				]
+			}
+		},
+		"product": {
+			"path": "/zh/product",
+			"lang": "zh-CN",
+			"mainClass": "product-page",
+			"mainText": "产品 · 证据工作台 让 AI 形成的市场答案变得可观察 客户可以在工作区中查看已配置的 Program 与回答证据;部分采集及机会建议的审核目前仍由 Yonaris 团队完成。 01 界定范围 02 观察回答 03 检查证据 04 选择下一项测试 一条证据工作流 四项活动,串成一条范围明确的证据链。 01 界定范围 当前软件能力 工作区支持配置品牌、域名、别名、竞品、Program 和跟踪问题。 每个 Program 都有明确范围,不代表系统自动覆盖整个市场。 02 观察回答 团队交付 Yonaris 会采集已配置服务商的样本,也可操作受支持的消费端界面采集流程。 部分执行依赖运营人员,并非持续运行或适用于所有界面。 03 检查证据 当前软件能力 用户可以检查回答样本、提及指标、指定竞品集合内的声量份额,以及可用的引用和查询改写。 引用或查询字段为空,只表示证据不可用,不能据此认定服务商没有搜索。 04 选择下一项测试 团队交付 机会建议由运营人员生成,并在交付前经过人工审核。 Yonaris 不会自主修改内容或代替客户发布。 虚构 Program · Northstar Materials 沿着一条样本,走完从范围到下一项测试。 示例 这份示例记录展示证据如何保持可复核,同时明确它不是真实客户数据,也不是实时产品结果。 01 范围 02 回答 03 来源 04 下一项测试 示例 / 01 范围明确的 Program 样本从审核者真正希望观察的市场与问题开始。 品牌 已知 Northstar Materials · 虚构公司 市场 已知 美国库存规划软件 语言 已知 英语 时区 已知 America/New_York 跟踪问题 已知 哪些库存规划平台最适合区域制造企业? 示例 工作台中的范围属于虚构的 Northstar Materials 示例。 其中的公司、Program、市场与跟踪问题均为示例,并非客户数据。 当前软件能力 工作区支持配置品牌、域名、别名、竞品、Program 和跟踪问题。 每个 Program 都有明确范围,不代表系统自动覆盖整个市场。 产品边界 现阶段的工作边界 客户工作区 当前软件能力 工作区支持配置品牌、域名、别名、竞品、Program 和跟踪问题。 每个 Program 都有明确范围,不代表系统自动覆盖整个市场。 当前软件能力 用户可以检查回答样本、提及指标、指定竞品集合内的声量份额,以及可用的引用和查询改写。 引用或查询字段为空,只表示证据不可用,不能据此认定服务商没有搜索。 Yonaris 执行 团队交付 Yonaris 会采集已配置服务商的样本,也可操作受支持的消费端界面采集流程。 部分执行依赖运营人员,并非持续运行或适用于所有界面。 团队交付 机会建议由运营人员生成,并在交付前经过人工审核。 Yonaris 不会自主修改内容或代替客户发布。 覆盖范围需要声明,不能想当然 当前软件能力 覆盖范围取决于 Program 中配置的服务商与消费端界面。 部分界面不会公开引用或搜索查询;字段不可用不能证明没有发生搜索。 产品与应用场景 把证据模型用于真实问题 查看 GEO 工作流程 获取免费诊断",
+			"headings": [
+				{
+					"level": 1,
+					"id": "",
+					"text": "让 AI 形成的市场答案变得可观察",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "product-activities-title",
+					"text": "四项活动,串成一条范围明确的证据链。",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "界定范围",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "观察回答",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "检查证据",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "选择下一项测试",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "",
+					"text": "沿着一条样本,走完从范围到下一项测试。",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "范围明确的 Program",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "一条完整的虚构回答",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "既呈现证据,也保留未知",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "边界清晰、经过人工审核的下一项测试",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "product-boundary-title",
+					"text": "现阶段的工作边界",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "客户工作区",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "Yonaris 执行",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "覆盖范围需要声明,不能想当然",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "product-next-title",
+					"text": "把证据模型用于真实问题",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "product-hero",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(2)",
+					"id": "",
+					"className": "product-activities",
+					"ariaLabel": "",
+					"ariaLabelledby": "product-activities-title"
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"id": "",
+					"className": "product-workbench-stage",
+					"ariaLabel": "沿着一条样本，走完从范围到下一项测试。",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)",
+					"id": "",
+					"className": "product-boundary",
+					"ariaLabel": "",
+					"ariaLabelledby": "product-boundary-title"
+				},
+				{
+					"path": "main>section:nth-of-type(5)",
+					"id": "",
+					"className": "product-next",
+					"ariaLabel": "",
+					"ariaLabelledby": "product-next-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/product",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/product",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看 GEO 工作流程",
+					"href": "/zh/geo",
+					"ariaLabel": "查看 GEO 工作流程",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "获取免费诊断",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>p:nth-of-type(2)>span:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>p:nth-of-type(2)>span:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(1)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(2)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(3)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(4)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(5)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>aside:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-scope>aside:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>aside:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-answer>aside:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-sources>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-sources>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-sources>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "unknown"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-sources>aside:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-sources>aside:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "known"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>div:nth-of-type(1)>dl:nth-of-type(1)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-state",
+							"value": "unknown"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>aside:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(1)>div:nth-of-type(3)>div#product-workbench-panel-next-test>aside:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>div:nth-of-type(2)>article:nth-of-type(1)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>div:nth-of-type(2)>article:nth-of-type(1)>ul:nth-of-type(1)>li:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>div:nth-of-type(2)>article:nth-of-type(2)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>div:nth-of-type(2)>article:nth-of-type(2)>ul:nth-of-type(1)>li:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>div:nth-of-type(3)>ul:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/product"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/product"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/product"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/product"
+					}
+				]
+			}
+		},
+		"approach": {
+			"path": "/zh/approach",
+			"lang": "zh-CN",
+			"mainClass": "approach-page",
+			"mainText": "方法 · 证据协议 建立可重复的证据循环,而不是制造一个泛化分数 当前范围 团队交付 Yonaris 把软件中可复核的证据与人工判断放在同一条流程里,用明确的市场测试串起界定、观察、检查与复测 边界 当前流程由团队服务驱动,执行前会共同确认采集条件和复核范围 01 06 一个问题 · 六个受控动作 让问题、证据与下一步始终处在同一条链路里 每次观察都保留它成立的条件,让下一次比较仍然有意义 01 确定决策问题 采集开始前,Yonaris 会先明确一个市场和一个真正影响决策的问题 02 建立问题集合 品牌相关与非品牌相关的问题会先组成一组边界明确的问题集,再进入采样 03 声明范围并采样 在已声明的市场、语言、时间与样本条件下,Yonaris 采集指定 AI 服务商和支持的消费端界面 04 比较证据 工作区可以比较品牌提及、同一竞品集合内的声量、引用,以及服务商公开的查询改写 05 检查原始回答 形成结论或选择下一项测试前,复核者可以回到每一条回答样本检查原文 06 改变一个有限变量 完成一个边界清楚的干预后,可以用同一定义再次观察相同样本集合 当前证据记录 当前步骤 01 / 06 声明范围 确定决策问题 证据产物 一个市场 · 一个决策问题 实际交付状态 团队交付 采集开始前,Yonaris 会先明确一个市场和一个真正影响决策的问题 边界 范围以双方确认的诊断或 Program 为准,并不代表整个市场 ↳ 重复观察能够呈现变化,但仅凭这些观察无法证明变化由什么造成 工作方法 递归森林 不穷举每一个问题,而是治理问题如何生长 递归森林是 Yonaris 的工作方法:从有限的产品事实出发,让问题随语境与条件继续展开 边界 它是一套工作方法,不是已经实现的图谱产品架构,也不意味着可以穷尽市场 把方法用于真实问题 从一个真正影响市场决策的问题开始 查看产品 获取免费诊断",
+			"headings": [
+				{
+					"level": 1,
+					"id": "",
+					"text": "建立可重复的证据循环,而不是制造一个泛化分数",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "approach-loop-title",
+					"text": "让问题、证据与下一步始终处在同一条链路里",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "确定决策问题",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "approach-method-title",
+					"text": "不穷举每一个问题,而是治理问题如何生长",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "approach-next-title",
+					"text": "从一个真正影响市场决策的问题开始",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "approach-hero",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(2)",
+					"id": "",
+					"className": "approach-loop-stage",
+					"ariaLabel": "",
+					"ariaLabelledby": "approach-loop-title"
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>section#approach-evidence-record",
+					"id": "approach-evidence-record",
+					"className": "evidence-loop__record",
+					"ariaLabel": "",
+					"ariaLabelledby": "approach-step-frame"
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"id": "",
+					"className": "approach-method",
+					"ariaLabel": "",
+					"ariaLabelledby": "approach-method-title"
+				},
+				{
+					"path": "main>section:nth-of-type(4)",
+					"id": "",
+					"className": "approach-next",
+					"ariaLabel": "",
+					"ariaLabelledby": "approach-next-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/approach",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/approach",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>aside:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(5)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>ol:nth-of-type(1)>li:nth-of-type(6)",
+					"attributes": [
+						{
+							"name": "data-active",
+							"value": "false"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(2)>section#approach-evidence-record>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/approach"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/approach"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/approach"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/approach"
+					}
+				]
+			}
+		},
+		"research": {
+			"path": "/zh/research",
+			"lang": "zh-CN",
+			"mainClass": "research-page",
+			"mainText": "研究 · 测量账本 每一项结论,都应说明它成立的范围 只有当问题、AI 界面、时间、样本、分母与未知项始终跟随记录,一条回答才会成为可用证据 R / 01 声明范围 Yonaris 会把每次观察与已配置的 Program、问题集合、AI 界面、市场、语言和采集时间放在一起保存 测量设计 先声明观察框架,再阅读结论 一条可复核的观察从采集条件开始。它们共同决定这条记录能支持什么,也决定它不能证明什么 完整的范围声明包括 01 已配置的 Program 02 问题集合 03 指定 AI 界面 04 市场与语言 05 采集时间窗口 06 有效样本规则 指标定义 分母本身就是结论的一部分 01 可见度 定义 当前声明筛选下,提及目标品牌的有效回答占全部有效回答的比例 分子 提及目标品牌的有效采样回答 分母 当前声明筛选下的全部有效采样回答 边界 这个指标只适用于分母中实际纳入的样本与筛选条件 02 指定竞品集合内的声量份额 定义 同一声明样本集合中,目标品牌提及次数占目标品牌与已配置竞品全部提及次数的比例 分子 声明样本集合中的目标品牌提及次数 分母 同一声明样本集合中,目标品牌提及次数加已配置竞品提及次数 边界 一旦更换竞品集合或样本集合,分母随之改变,不能直接沿用原来的比较 证据记录 · 01 Aster Vale Systems(虚构)· 采购软件 · 美国 · 英语 · 一个决策问题 示例 illustrative-record-01 记录元数据 让一条回答始终带着它成立的条件 声明范围 Aster Vale Systems(虚构)· 采购软件 · 美国 · 英语 · 一个决策问题 观察时间 2026 年 8 月 12 日 回答样本数 1 AI 界面 示例 AI 回答界面 · 已配置样本 决策问题 哪些采购平台能帮助成长中的团队用可审计流程复核供应商风险? 回答摘录 这条虚构回答介绍了三类方案,并把 Aster Vale Systems 列为适合需要可审计复核记录的团队的一种选择,同时提醒购买者在决策前核实集成范围与实施要求 引用 已知 documentation.astervale.example/product-overview buyers-guide.example/procurement-evidence 公开查询 未知 这个示例界面没有公开本条样本的查询数据。数据不可用,不能证明没有发生搜索 这条记录可以支持什么 这条虚构回答直接回应已声明问题,并提及目标品牌 回答同时要求购买者继续核实集成与实施条件 仍然未知的部分 界面为何选择这些措辞 回答附带字段之外是否发生了检索 另一个采集时间窗口会产生什么差异 前后比较 比较样本集合,而不是孤立截图 尽可能让 Program、问题集合、AI 界面、市场、语言、有效样本规则与采集条件保持一致,分别报告两次分母,并在描述差异之前检查底层回答 ↳ 重复观察可以呈现时间上的差异,但不能独立证明因果关系 使用这套记录 把一个真正重要的市场问题放进明确的证据框架 查看方法 获取免费诊断",
+			"headings": [
+				{
+					"level": 1,
+					"id": "",
+					"text": "每一项结论,都应说明它成立的范围",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "research-measurement-title",
+					"text": "先声明观察框架,再阅读结论",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "research-metrics-title",
+					"text": "分母本身就是结论的一部分",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "可见度",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "指定竞品集合内的声量份额",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "research-ledger-title",
+					"text": "让一条回答始终带着它成立的条件",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "哪些采购平台能帮助成长中的团队用可审计流程复核供应商风险?",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "引用",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "公开查询",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "research-comparison-title",
+					"text": "比较样本集合,而不是孤立截图",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "research-next-title",
+					"text": "把一个真正重要的市场问题放进明确的证据框架",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "research-hero",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(2)",
+					"id": "",
+					"className": "research-measurement",
+					"ariaLabel": "",
+					"ariaLabelledby": "research-measurement-title"
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"id": "",
+					"className": "research-metrics",
+					"ariaLabel": "",
+					"ariaLabelledby": "research-metrics-title"
+				},
+				{
+					"path": "main>section:nth-of-type(4)",
+					"id": "",
+					"className": "research-record-stage",
+					"ariaLabel": "让一条回答始终带着它成立的条件",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"id": "",
+					"className": "research-ledger__question",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"id": "",
+					"className": "research-ledger__answer",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>section:nth-of-type(1)",
+					"id": "",
+					"className": "",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>section:nth-of-type(2)",
+					"id": "",
+					"className": "",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"id": "",
+					"className": "",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"id": "",
+					"className": "",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(5)",
+					"id": "",
+					"className": "research-comparison",
+					"ariaLabel": "",
+					"ariaLabelledby": "research-comparison-title"
+				},
+				{
+					"path": "main>section:nth-of-type(6)",
+					"id": "",
+					"className": "research-next",
+					"ariaLabel": "",
+					"ariaLabelledby": "research-next-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/research",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/research",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(2)>article:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-metric-id",
+							"value": "visibility"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)>div:nth-of-type(2)>article:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-metric-id",
+							"value": "share-of-voice"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-record-status",
+							"value": "illustrative"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-record-section",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-record-section",
+							"value": "answer"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>section:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-availability-state",
+							"value": "known"
+						},
+						{
+							"name": "data-record-section",
+							"value": "citations"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(1)>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-availability-state",
+							"value": "unknown"
+						},
+						{
+							"name": "data-record-section",
+							"value": "exposed-queries"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-record-section",
+							"value": "findings"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(4)>article:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(2)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-record-section",
+							"value": "unknowns"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/research"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/research"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/research"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/research"
+					}
+				]
+			}
+		},
+		"company": {
+			"path": "/zh/company",
+			"lang": "zh-CN",
+			"mainClass": "company-page",
+			"mainText": "公司 · 品类主张 AI 原生营销科技 重构 MarTech,同时面向人,也面向智能体 AI 正在进入产品发现、比较与选择。Yonaris 为这一变化建设可检查的市场证据层 Y / 01 市场变化 市场现在有两类读者 购买旅程不再只面对一种读者。人和软件智能体形成判断的方式不同,但都需要能够回到事实、条件与证据的产品主张 01 人类决策者 02 软件智能体 01 人类决策者 人通过问题、比较、约束与证明理解产品。他们需要足够的语境,在采取行动之前判断一项主张是否成立 02 软件智能体 智能体从分散的事实中组织市场理解。它需要明确的关系与成立条件,避免把局部主张误读成普遍答案 由此发生的变化 人可以追问证据、检查范围,并判断下一步值得测试什么 当前阶段 真实的平台,服务驱动的起点 Yonaris 是一家早期公司,正以服务驱动的方式交付一套真实可用的市场证据产品 今天如何交付 已配置的证据对客户可见;部分采集与建议仍由 Yonaris 团队执行,并经过人工审核 品牌理念 Yonaris / 递归森林 不穷举每一个问题,构建答案生长的根系 递归森林是一套工作方法:治理有限的产品事实、条件、关系与证据,让理解可以随市场语境继续生长 它是一套工作方法,不是已经实现的图谱架构,也不表示系统能够覆盖所有可能的问题 工作原则 四项承诺决定我们如何工作 01 证据优先于表演 在包装成功叙事之前,先展示回答原文与可用的来源记录 02 声明范围 每次观察都写明市场、问题、界面、样本集合与时间 03 保留人工审核 证据不完整时保留判断,并在建议变成行动之前由人复核 04 沉淀持久的产品事实 让主张边界清楚、可以复核,并同时服务于人和智能体 从证据开始 从一个真正重要的问题开始 告诉我们一个品牌、一个市场和一个决策问题。采集证据之前,我们会先确认测量范围 获取免费诊断 → 联系创始团队 black.dcp@outlook.com",
+			"headings": [
+				{
+					"level": 1,
+					"id": "company-hero-title",
+					"text": "重构 MarTech,同时面向人,也面向智能体",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "company-reader-title",
+					"text": "市场现在有两类读者",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "人类决策者",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "软件智能体",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "company-stage-title",
+					"text": "真实的平台,服务驱动的起点",
+					"ariaLabel": "真实的平台，服务驱动的起点"
+				},
+				{
+					"level": 2,
+					"id": "company-forest-title",
+					"text": "不穷举每一个问题,构建答案生长的根系",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "company-principles-title",
+					"text": "四项承诺决定我们如何工作",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "证据优先于表演",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "声明范围",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "保留人工审核",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "沉淀持久的产品事实",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "company-contact-title",
+					"text": "从一个真正重要的问题开始",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "company-hero",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-hero-title"
+				},
+				{
+					"path": "main>section:nth-of-type(2)",
+					"id": "",
+					"className": "company-reader-field",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-reader-title"
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"id": "",
+					"className": "company-reader-field__description",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"id": "",
+					"className": "company-reader-field__description",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"id": "",
+					"className": "company-stage",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-stage-title"
+				},
+				{
+					"path": "main>section:nth-of-type(4)",
+					"id": "",
+					"className": "company-forest",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-forest-title"
+				},
+				{
+					"path": "main>section:nth-of-type(5)",
+					"id": "",
+					"className": "company-principles",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-principles-title"
+				},
+				{
+					"path": "main>section:nth-of-type(6)",
+					"id": "",
+					"className": "company-close",
+					"ariaLabel": "从一个真正重要的问题开始",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(6)>div:nth-of-type(1)>section:nth-of-type(1)",
+					"id": "",
+					"className": "company-contact",
+					"ariaLabel": "",
+					"ariaLabelledby": "company-contact-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/company",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/company",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断 →",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "black.dcp@outlook.com",
+					"href": "mailto:black.dcp@outlook.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-locale",
+							"value": "zh"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(1)>span:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-company-hinge",
+							"value": "true"
+						},
+						{
+							"name": "data-reader",
+							"value": "human"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-reader-description",
+							"value": "human"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(2)>section:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-reader-description",
+							"value": "agent"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>div:nth-of-type(3)>p:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-company-reader-annotation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-company-stage",
+							"value": "service-led"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/company"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/company"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/company"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/company"
+					}
+				]
+			}
+		},
+		"geo": {
+			"path": "/zh/geo",
+			"lang": "zh-CN",
+			"mainClass": "geo-page",
+			"mainText": "GEO · 落地工作流 让 GEO 建立在证据之上 沿着回答去看:品牌怎样进入 AI 的市场理解,答案如何描述它,又有哪些证据足以支撑下一步测试 AI 原生营销科技 第一项工作流 更广的公司方向 GEO 是 Yonaris 第一项落地工作流,而不是公司的品类上限 已配置的问题、市场、语言、界面、竞品集合与观察周期,共同定义每一次 GEO 工作范围 落地证据场 沿着回答观察 不止于一个分数 五个相连的问题,从第一次观察走向一次边界明确的复测。每一段都把证据和它的限制放在一起 GEO 落地证据工作流 观察到的证据 边界明确的下一步 能力说明 01 发现 品牌在什么情况下进入回答 观察到的证据 在已配置的问题与声明过的观察周期内,检查回答样本是否包含品牌 边界明确的下一步 选择一个重要但缺席、或进入方式较弱的问题,再检查对应回答原文 能力说明 服务交付 Yonaris 围绕已配置的问题,在声明过的市场、语言、界面与观察周期内执行回答采样 边界 观察只描述这一次已配置的范围与周期 当前软件能力 客户可以在工作区中检查已采集的回答样本与品牌提及 边界 回答样本是声明范围内的证据,不代表整个市场 02 描述 答案如何描述品牌 观察到的证据 阅读回答样本中的属性、限定条件与遗漏 边界明确的下一步 先核实一项重要事实或语境缺口,再设计一项需要人工审核的测试 能力说明 当前软件能力 客户可以在工作区中检查已采集的回答样本与品牌提及 边界 回答样本是声明范围内的证据,不代表整个市场 服务交付 Yonaris 把经过检查的证据缺口转化为边界明确、需要人工审核的下一步测试,并可重复同一项观察 边界 重复采样之间的变化不能独立证明因果关系 03 比较 答案如何比较品牌 观察到的证据 检查每条回答中的替代方案与比较标准,再观察已配置竞品集合内的提及 边界明确的下一步 选择一项需要更清晰、且能被产品证据支持的比较标准 能力说明 当前软件能力 在相同筛选条件下,已配置集合比较会把目标品牌与已配置的竞品集合放在一起观察 边界 已配置的竞品集合不等于整个市场 当前软件能力 客户可以在工作区中检查已采集的回答样本与品牌提及 边界 回答样本是声明范围内的证据,不代表整个市场 04 引用 哪些可用来源参与了回答 观察到的证据 只在受支持界面提供相关字段时,检查引用与公开的查询改写 边界明确的下一步 先把来源证据与未知字段分开,再判断什么值得进入下一次测试 能力说明 当前软件能力 当受支持界面公开引用或查询改写时,系统会展示这些记录 边界 证据缺失仍是未知,不能据此认定没有发生检索 05 验证 在同一项测试下,哪些证据发生了变化 观察到的证据 完成一项边界明确、经过审核的干预后,重复同一项已配置观察 边界明确的下一步 在相同范围内比较证据,不为变化添加证据之外的因果解释 能力说明 服务交付 Yonaris 把经过检查的证据缺口转化为边界明确、需要人工审核的下一步测试,并可重复同一项观察 边界 重复采样之间的变化不能独立证明因果关系 服务交付 Yonaris 围绕已配置的问题,在声明过的市场、语言、界面与观察周期内执行回答采样 边界 观察只描述这一次已配置的范围与周期 ↳ 证据有它的边界 只有受支持界面提供的引用与查询改写,才能成为可检查的来源证据。证据缺失仍是未知。重复观察可以显示变化,但不能独立证明因果关系。每一项下一步动作都需要人工审核 GEO 之外 工作流从这里开始 品类不止于此 GEO 把 Yonaris 的证据系统应用在 AI 如何发现、描述、比较与推荐品牌上。更广的方向,是服务于人类与软件智能体共同参与市场的 AI 原生营销科技 查看证据产品 ↗ 阅读品类主张 ↗ 免费诊断 从一个真正重要的市场问题开始 给我们一个品牌、一个市场和一个真正重要的问题。Yonaris 会先确认测量范围,再开始收集证据 获取免费诊断 → 提交请求会先进入范围审核,再开始采集,不会立即产生证据结果",
+			"headings": [
+				{
+					"level": 1,
+					"id": "",
+					"text": "让 GEO 建立在证据之上",
+					"ariaLabel": "让 GEO 建立在证据之上"
+				},
+				{
+					"level": 2,
+					"id": "",
+					"text": "第一项工作流 更广的公司方向",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "geo-workflow-title",
+					"text": "沿着回答观察 不止于一个分数",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "发现",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "描述",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "比较",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "引用",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "验证",
+					"ariaLabel": ""
+				},
+				{
+					"level": 3,
+					"id": "",
+					"text": "证据有它的边界",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "geo-beyond-title",
+					"text": "工作流从这里开始 品类不止于此",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "geo-diagnostic-title",
+					"text": "从一个真正重要的市场问题开始",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "geo-hero",
+					"ariaLabel": "",
+					"ariaLabelledby": ""
+				},
+				{
+					"path": "main>section:nth-of-type(2)",
+					"id": "",
+					"className": "geo-applied-field",
+					"ariaLabel": "",
+					"ariaLabelledby": "geo-workflow-title"
+				},
+				{
+					"path": "main>section:nth-of-type(3)",
+					"id": "",
+					"className": "geo-beyond",
+					"ariaLabel": "",
+					"ariaLabelledby": "geo-beyond-title"
+				},
+				{
+					"path": "main>section:nth-of-type(4)",
+					"id": "",
+					"className": "geo-diagnostic",
+					"ariaLabel": "",
+					"ariaLabelledby": "geo-diagnostic-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/geo",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/geo",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "查看证据产品 ↗",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "阅读品类主张 ↗",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "获取免费诊断 →",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-stage",
+							"value": "discovery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "observed"
+						},
+						{
+							"name": "data-geo-observed-signal",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-bounded-action",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "action"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-capability-context",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "context"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(4)>div:nth-of-type(1)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(4)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(1)>div:nth-of-type(4)>div:nth-of-type(2)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-stage",
+							"value": "description"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "observed"
+						},
+						{
+							"name": "data-geo-observed-signal",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-bounded-action",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "action"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-capability-context",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "context"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(4)>div:nth-of-type(1)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(4)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(2)>div:nth-of-type(4)>div:nth-of-type(2)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-stage",
+							"value": "comparison"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "observed"
+						},
+						{
+							"name": "data-geo-observed-signal",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-bounded-action",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "action"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-capability-context",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "context"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(4)>div:nth-of-type(1)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(4)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(3)>div:nth-of-type(4)>div:nth-of-type(2)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-stage",
+							"value": "citation"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "observed"
+						},
+						{
+							"name": "data-geo-observed-signal",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-bounded-action",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "action"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-capability-context",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "context"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "current-software"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(4)>div:nth-of-type(4)>div:nth-of-type(1)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)",
+					"attributes": [
+						{
+							"name": "data-geo-stage",
+							"value": "verification"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "question"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-geo-column",
+							"value": "observed"
+						},
+						{
+							"name": "data-geo-observed-signal",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-bounded-action",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "action"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(4)",
+					"attributes": [
+						{
+							"name": "data-geo-capability-context",
+							"value": "true"
+						},
+						{
+							"name": "data-geo-column",
+							"value": "context"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(1)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-claim-status",
+							"value": "managed-delivery"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(2)>div:nth-of-type(1)>ol:nth-of-type(1)>li:nth-of-type(5)>div:nth-of-type(4)>div:nth-of-type(2)>p:nth-of-type(3)",
+					"attributes": [
+						{
+							"name": "data-geo-limitation",
+							"value": "true"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/geo"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/geo"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/geo"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/geo"
+					}
+				]
+			}
+		},
+		"diagnostic": {
+			"path": "/zh/diagnostic",
+			"lang": "zh-CN",
+			"mainClass": "diagnostic-page",
+			"mainText": "免费市场诊断 先看见 AI 看见了什么 再决定改变什么 一个品牌,一个市场,一个决策问题 采集证据前,我们会先和你确认范围 提交申请只会进入审核队列,不会触发扫描,也不会立即开始证据采集。 可能的交付 诊断可以帮你看清什么 如果范围可执行,诊断预计会包括: 01 围绕已确认问题形成的基线 02 选取的 AI 回答与可用来源证据 03 最清晰的已观察缺口 04 三项边界明确的下一步测试 诊断申请 1 / 范围 2 / 联系 1 / 范围 界定问题 告诉我们下一步决策前最需要看清什么 界定问题 官网 品牌 市场或品类 市场问题 隐私说明: 我们如何处理诊断申请信息 公司网址(请留空) 继续 提交后将由 Yonaris 团队审核范围,不会即时生成扫描、分数或证据结果。",
+			"headings": [
+				{
+					"level": 1,
+					"id": "",
+					"text": "先看见 AI 看见了什么 再决定改变什么",
+					"ariaLabel": "先看见 AI 看见了什么 再决定改变什么"
+				},
+				{
+					"level": 2,
+					"id": "diagnostic-output-title",
+					"text": "诊断可以帮你看清什么",
+					"ariaLabel": ""
+				},
+				{
+					"level": 2,
+					"id": "diagnostic-stage-title",
+					"text": "界定问题",
+					"ariaLabel": ""
+				}
+			],
+			"sections": [
+				{
+					"path": "main>section:nth-of-type(1)",
+					"id": "",
+					"className": "diagnostic-environment",
+					"ariaLabel": "",
+					"ariaLabelledby": "diagnostic-title"
+				}
+			],
+			"links": [
+				{
+					"scope": "header",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/diagnostic",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "Portal",
+					"href": "https://portal.yonaris.com",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "header",
+					"text": "EN",
+					"href": "/diagnostic",
+					"ariaLabel": "",
+					"lang": "en"
+				},
+				{
+					"scope": "header",
+					"text": "获取免费诊断",
+					"href": "/zh/diagnostic",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "main",
+					"text": "我们如何处理诊断申请信息",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "",
+					"href": "/zh",
+					"ariaLabel": "Yonaris 中文首页",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "产品",
+					"href": "/zh/product",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "方法",
+					"href": "/zh/approach",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "研究",
+					"href": "/zh/research",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "公司",
+					"href": "/zh/company",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "GEO",
+					"href": "/zh/geo",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "状态",
+					"href": "/status",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "隐私",
+					"href": "/privacy",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "Agent",
+					"href": "/agent",
+					"ariaLabel": "",
+					"lang": ""
+				},
+				{
+					"scope": "footer",
+					"text": "llms.txt",
+					"href": "/llms.txt",
+					"ariaLabel": "",
+					"lang": ""
+				}
+			],
+			"forms": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)",
+					"action": "",
+					"method": "get",
+					"controls": [
+						{
+							"tag": "input",
+							"type": "url",
+							"name": "website",
+							"id": "diagnostic-website",
+							"valueAttribute": "",
+							"required": true,
+							"disabled": false,
+							"tabIndex": 0
+						},
+						{
+							"tag": "input",
+							"type": "text",
+							"name": "brand",
+							"id": "diagnostic-brand",
+							"valueAttribute": "",
+							"required": true,
+							"disabled": false,
+							"tabIndex": 0
+						},
+						{
+							"tag": "input",
+							"type": "text",
+							"name": "market",
+							"id": "diagnostic-market",
+							"valueAttribute": "",
+							"required": true,
+							"disabled": false,
+							"tabIndex": 0
+						},
+						{
+							"tag": "textarea",
+							"type": "",
+							"name": "question",
+							"id": "diagnostic-question",
+							"valueAttribute": "",
+							"required": true,
+							"disabled": false,
+							"tabIndex": 0
+						},
+						{
+							"tag": "input",
+							"type": "text",
+							"name": "companyUrl",
+							"id": "diagnostic-company-url",
+							"valueAttribute": "",
+							"required": false,
+							"disabled": false,
+							"tabIndex": -1
+						},
+						{
+							"tag": "button",
+							"type": "submit",
+							"name": "",
+							"id": "",
+							"valueAttribute": "",
+							"required": false,
+							"disabled": false,
+							"tabIndex": 0
+						}
+					]
+				}
+			],
+			"dataAttributes": [
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>header:nth-of-type(1)>div#diagnostic-title>h1:nth-of-type(1)>span:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-diagnostic-headline-line",
+							"value": "先看见 AI 看见了什么"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>header:nth-of-type(1)>div#diagnostic-title>h1:nth-of-type(1)>span:nth-of-type(2)",
+					"attributes": [
+						{
+							"name": "data-diagnostic-headline-line",
+							"value": "再决定改变什么"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-diagnostic-state",
+							"value": "idle"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)>fieldset:nth-of-type(1)>div:nth-of-type(1)>label:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-required",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)>fieldset:nth-of-type(1)>div:nth-of-type(2)>label:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-required",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)>fieldset:nth-of-type(1)>div:nth-of-type(3)>label:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-required",
+							"value": "true"
+						}
+					]
+				},
+				{
+					"path": "main>section:nth-of-type(1)>div:nth-of-type(1)>div:nth-of-type(1)>form:nth-of-type(1)>fieldset:nth-of-type(1)>div:nth-of-type(4)>label:nth-of-type(1)",
+					"attributes": [
+						{
+							"name": "data-required",
+							"value": "true"
+						}
+					]
+				}
+			],
+			"seo": {
+				"canonicals": [
+					"/zh/diagnostic"
+				],
+				"alternates": [
+					{
+						"hrefLang": "en",
+						"href": "/diagnostic"
+					},
+					{
+						"hrefLang": "zh-CN",
+						"href": "/zh/diagnostic"
+					},
+					{
+						"hrefLang": "x-default",
+						"href": "/diagnostic"
+					}
+				]
+			}
+		}
+	},
+	"diagnosticV1": {
+		"scopeFields": [
+			"website",
+			"brand",
+			"market",
+			"question"
+		],
+		"contactFields": [
+			"competitors",
+			"name",
+			"email",
+			"consent"
+		],
+		"honeypotField": "companyUrl",
+		"privacyHref": "/privacy",
+		"request": {
+			"method": "POST",
+			"path": "/api/diagnostic",
+			"contentType": "application/json",
+			"keys": [
+				"locale",
+				"website",
+				"brand",
+				"market",
+				"question",
+				"competitors",
+				"name",
+				"email",
+				"consent",
+				"companyUrl"
+			],
+			"locale": "zh",
+			"valueTypes": {
+				"locale": "string",
+				"website": "string",
+				"brand": "string",
+				"market": "string",
+				"question": "string",
+				"competitors": "string",
+				"name": "string",
+				"email": "string",
+				"consent": "boolean",
+				"companyUrl": "string"
+			},
+			"idempotencyKeyFormat": "uuid-v4"
+		}
+	}
+}
