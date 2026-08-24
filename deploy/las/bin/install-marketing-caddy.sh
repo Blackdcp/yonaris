@@ -101,9 +101,8 @@ full_health() {
 	local state_dir="$1"
 	local response="$state_dir/health-response"
 
-	curl_origin yonaris.com / 200 "$response" GET "AI market evidence" || return 1
-	grep -Fq "MarTech, rebuilt" "$response" || return 1
-	grep -Fq "See how AI is shaping your market" "$response" || return 1
+	curl_origin yonaris.com / 200 "$response" GET "Know how AI represents your brand" || return 1
+	grep -Fq 'data-edition="global-en"' "$response" || return 1
 
 	local path
 	for path in \
@@ -111,7 +110,7 @@ full_health() {
 		/agent/company /llms.txt; do
 		curl_origin yonaris.com "$path" 200 "$response" || return 1
 	done
-	for path in /status /brand /og/status.png /recordranks-logo.svg; do
+	for path in /resources /status /brand /og/status.png /recordranks-logo.svg; do
 		curl_origin yonaris.com "$path" 404 "$response" || return 1
 	done
 

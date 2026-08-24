@@ -94,10 +94,10 @@ if [[ -n "${CADDY_TEST_FAIL_HEALTH_PATH:-}" && "$url" == *"$CADDY_TEST_FAIL_HEAL
 	exit 0
 fi
 status=200
-body='Yonaris AI market evidence MarTech, rebuilt. See how AI is shaping your market.'
+body='Yonaris AI market evidence Know how AI represents your brand data-edition="global-en"'
 case "$url" in
 	*/platform\?*) status=308; body='' ;;
-	*/llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
+	*/resources | */status | */brand | */og/status.png | */recordranks-logo.svg | */llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
 	*/api/diagnostic) status=400; body='{"ok":false,"code":"invalid_request"}' ;;
 	*/agent/*) body='AI market evidence' ;;
 esac
@@ -213,7 +213,7 @@ for state in redirect v1 v2 final; do
 	[[ -f "$META_OUT/previous-caddy-sha256" ]] && previous_binding="$(tr -d '[:space:]' <"$META_OUT/previous-caddy-sha256")"
 	[[ -f "$META_OUT/candidate-caddy-sha256" ]] && candidate_binding="$(tr -d '[:space:]' <"$META_OUT/candidate-caddy-sha256")"
 	if [[ -n "$expected_backup_sha" && "$previous_binding" == "$expected_backup_sha" && "$candidate_binding" == "$(sha256sum "$TARGET" | cut -d' ' -f1)" ]]; then pass "$state writes full-file predecessor and candidate Caddy bindings"; else fail "$state writes full-file predecessor and candidate Caddy bindings"; fi
-	for required in '/product' '/approach' '/research' '/company' '/status' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
+	for required in '/product' '/approach' '/research' '/company' '/resources' '/status' '/brand' '/og/status.png' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
 		if ! grep -Fq "$required" "$CURL_LOG"; then fail "$state full health includes $required"; fi
 	done
 done
