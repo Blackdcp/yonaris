@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type SiteEdition = "global-en" | "zh-cn-legacy";
+export type SiteEdition = "global-en" | "zh-cn";
 export type EditionPageRef = `${SiteEdition}:${string}`;
 
 export interface EditionPage {
@@ -22,7 +22,7 @@ export interface EditionDefinition {
 	footerNavigation: readonly EditionPageRef[];
 	localeFallbackHome: EditionPageRef;
 	analyticsPolicy: "disabled" | "global-reviewed";
-	diagnosticPolicy: "disabled" | "global-v2" | "legacy-v1";
+	diagnosticPolicy: "disabled" | "global-v2" | "regional-v2";
 }
 
 export interface GlobalEnglishPageContract {

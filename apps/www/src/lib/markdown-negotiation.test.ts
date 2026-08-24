@@ -45,6 +45,18 @@ const agentCases = [
 	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
 ] as const;
 
+const zhAgentCases = [
+	["/zh/agent", "/llms.mdx/zh-agent/index"],
+	["/zh/agent/", "/llms.mdx/zh-agent/index"],
+	["/zh/agent/product", "/llms.mdx/zh-agent/product"],
+	["/zh/agent/approach", "/llms.mdx/zh-agent/approach"],
+	["/zh/agent/research", "/llms.mdx/zh-agent/research"],
+	["/zh/agent/geo", "/llms.mdx/zh-agent/geo"],
+	["/zh/agent/company", "/llms.mdx/zh-agent/company"],
+	["/zh/agent/diagnostic", "/llms.mdx/zh-agent/diagnostic"],
+	["/zh/agent/privacy", "/llms.mdx/zh-agent/privacy"],
+] as const;
+
 function request(path: string, accept: string, method = "GET"): Request {
 	return new Request(`https://yonaris.test${path}`, { method, headers: { Accept: accept } });
 }
@@ -84,7 +96,7 @@ describe("core Markdown negotiation", () => {
 	test("serves branded Agent HTML by default and Markdown when an agent prefers it", () => {
 		const negotiation = requireSubject();
 		if (!negotiation) return;
-		for (const [path, targetPath] of agentCases) {
+		for (const [path, targetPath] of [...agentCases, ...zhAgentCases]) {
 			expect(negotiation.resolveMarkdownRequest(request(path, "text/html"))).toEqual({ variesOnAccept: true });
 			expect(negotiation.resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({ targetPath, variesOnAccept: true });
 		}

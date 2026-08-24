@@ -70,7 +70,7 @@ export const SITE_MANIFEST = [
 	{
 		key: "privacy",
 		routeClass: "resource",
-		canonicals: { en: "/privacy" },
+		canonicals: { en: "/privacy", zh: "/zh/privacy" },
 		navigation: ["footer"],
 		indexPolicy: "index,follow",
 		sitemap: { priority: 0.3 },
@@ -79,7 +79,7 @@ export const SITE_MANIFEST = [
 		key: "agent",
 		routeClass: "machine",
 		canonicals: { en: "/agent" },
-		patterns: ["/agent/*"],
+		patterns: ["/agent/*", "/zh/agent/*"],
 		navigation: [],
 		indexPolicy: "noindex,follow",
 		sitemap: false,

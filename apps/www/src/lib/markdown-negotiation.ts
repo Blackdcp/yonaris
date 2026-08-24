@@ -22,6 +22,15 @@ const agentMarkdownTargets = new Map<string, string>([
 	["/agent/geo", "/llms.mdx/agent/geo"],
 	["/agent/company", "/llms.mdx/agent/company"],
 	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
+	["/zh/agent", "/llms.mdx/zh-agent/index"],
+	["/zh/agent/", "/llms.mdx/zh-agent/index"],
+	["/zh/agent/product", "/llms.mdx/zh-agent/product"],
+	["/zh/agent/approach", "/llms.mdx/zh-agent/approach"],
+	["/zh/agent/research", "/llms.mdx/zh-agent/research"],
+	["/zh/agent/geo", "/llms.mdx/zh-agent/geo"],
+	["/zh/agent/company", "/llms.mdx/zh-agent/company"],
+	["/zh/agent/diagnostic", "/llms.mdx/zh-agent/diagnostic"],
+	["/zh/agent/privacy", "/llms.mdx/zh-agent/privacy"],
 ]);
 
 interface MediaPreference {

@@ -47,11 +47,21 @@ import { Route as ZhDiagnosticRouteImport } from './routes/zh/diagnostic'
 import { Route as ZhGeoRouteImport } from './routes/zh/geo'
 import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
 import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
+import { Route as ZhPrivacyRouteImport } from './routes/zh/privacy'
 import { Route as ZhProductRouteImport } from './routes/zh/product'
 import { Route as ZhResearchRouteImport } from './routes/zh/research'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as LlmsDotmdxAgentSplatRouteImport } from './routes/llms[.]mdx.agent.$'
 import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
+import { Route as LlmsDotmdxZhAgentSplatRouteImport } from './routes/llms[.]mdx.zh-agent.$'
+import { Route as ZhAgentIndexRouteImport } from './routes/zh/agent/index'
+import { Route as ZhAgentApproachRouteImport } from './routes/zh/agent/approach'
+import { Route as ZhAgentCompanyRouteImport } from './routes/zh/agent/company'
+import { Route as ZhAgentDiagnosticRouteImport } from './routes/zh/agent/diagnostic'
+import { Route as ZhAgentGeoRouteImport } from './routes/zh/agent/geo'
+import { Route as ZhAgentPrivacyRouteImport } from './routes/zh/agent/privacy'
+import { Route as ZhAgentProductRouteImport } from './routes/zh/agent/product'
+import { Route as ZhAgentResearchRouteImport } from './routes/zh/agent/research'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 
@@ -245,6 +255,11 @@ const ZhPlatformRoute = ZhPlatformRouteImport.update({
   path: '/zh/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhPrivacyRoute = ZhPrivacyRouteImport.update({
+  id: '/zh/privacy',
+  path: '/zh/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhProductRoute = ZhProductRouteImport.update({
   id: '/zh/product',
   path: '/zh/product',
@@ -268,6 +283,51 @@ const LlmsDotmdxAgentSplatRoute = LlmsDotmdxAgentSplatRouteImport.update({
 const LlmsDotmdxSiteSplatRoute = LlmsDotmdxSiteSplatRouteImport.update({
   id: '/llms.mdx/site/$',
   path: '/llms.mdx/site/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDotmdxZhAgentSplatRoute = LlmsDotmdxZhAgentSplatRouteImport.update({
+  id: '/llms.mdx/zh-agent/$',
+  path: '/llms.mdx/zh-agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentIndexRoute = ZhAgentIndexRouteImport.update({
+  id: '/zh/agent/',
+  path: '/zh/agent/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentApproachRoute = ZhAgentApproachRouteImport.update({
+  id: '/zh/agent/approach',
+  path: '/zh/agent/approach',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentCompanyRoute = ZhAgentCompanyRouteImport.update({
+  id: '/zh/agent/company',
+  path: '/zh/agent/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentDiagnosticRoute = ZhAgentDiagnosticRouteImport.update({
+  id: '/zh/agent/diagnostic',
+  path: '/zh/agent/diagnostic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentGeoRoute = ZhAgentGeoRouteImport.update({
+  id: '/zh/agent/geo',
+  path: '/zh/agent/geo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentPrivacyRoute = ZhAgentPrivacyRouteImport.update({
+  id: '/zh/agent/privacy',
+  path: '/zh/agent/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentProductRoute = ZhAgentProductRouteImport.update({
+  id: '/zh/agent/product',
+  path: '/zh/agent/product',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZhAgentResearchRoute = ZhAgentResearchRouteImport.update({
+  id: '/zh/agent/research',
+  path: '/zh/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPlausibleEventIndexRoute = ApiPlausibleEventIndexRouteImport.update({
@@ -319,6 +379,7 @@ export interface FileRoutesByFullPath {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
   '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
@@ -326,6 +387,15 @@ export interface FileRoutesByFullPath {
   '/zh/': typeof ZhIndexRoute
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
+  '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/approach': typeof ZhAgentApproachRoute
+  '/zh/agent/company': typeof ZhAgentCompanyRoute
+  '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
+  '/zh/agent/geo': typeof ZhAgentGeoRoute
+  '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
+  '/zh/agent/product': typeof ZhAgentProductRoute
+  '/zh/agent/research': typeof ZhAgentResearchRoute
+  '/zh/agent/': typeof ZhAgentIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
 }
@@ -366,6 +436,7 @@ export interface FileRoutesByTo {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
   '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
@@ -373,6 +444,15 @@ export interface FileRoutesByTo {
   '/zh': typeof ZhIndexRoute
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
+  '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/approach': typeof ZhAgentApproachRoute
+  '/zh/agent/company': typeof ZhAgentCompanyRoute
+  '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
+  '/zh/agent/geo': typeof ZhAgentGeoRoute
+  '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
+  '/zh/agent/product': typeof ZhAgentProductRoute
+  '/zh/agent/research': typeof ZhAgentResearchRoute
+  '/zh/agent': typeof ZhAgentIndexRoute
   '/api/plausible/event': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
 }
@@ -414,6 +494,7 @@ export interface FileRoutesById {
   '/zh/geo': typeof ZhGeoRoute
   '/zh/methodology': typeof ZhMethodologyRoute
   '/zh/platform': typeof ZhPlatformRoute
+  '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
   '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
@@ -421,6 +502,15 @@ export interface FileRoutesById {
   '/zh/': typeof ZhIndexRoute
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
+  '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/approach': typeof ZhAgentApproachRoute
+  '/zh/agent/company': typeof ZhAgentCompanyRoute
+  '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
+  '/zh/agent/geo': typeof ZhAgentGeoRoute
+  '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
+  '/zh/agent/product': typeof ZhAgentProductRoute
+  '/zh/agent/research': typeof ZhAgentResearchRoute
+  '/zh/agent/': typeof ZhAgentIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
 }
@@ -463,6 +553,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/privacy'
     | '/zh/product'
     | '/zh/research'
     | '/zh/results'
@@ -470,6 +561,15 @@ export interface FileRouteTypes {
     | '/zh/'
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
+    | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/approach'
+    | '/zh/agent/company'
+    | '/zh/agent/diagnostic'
+    | '/zh/agent/geo'
+    | '/zh/agent/privacy'
+    | '/zh/agent/product'
+    | '/zh/agent/research'
+    | '/zh/agent/'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
   fileRoutesByTo: FileRoutesByTo
@@ -510,6 +610,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/privacy'
     | '/zh/product'
     | '/zh/research'
     | '/zh/results'
@@ -517,6 +618,15 @@ export interface FileRouteTypes {
     | '/zh'
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
+    | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/approach'
+    | '/zh/agent/company'
+    | '/zh/agent/diagnostic'
+    | '/zh/agent/geo'
+    | '/zh/agent/privacy'
+    | '/zh/agent/product'
+    | '/zh/agent/research'
+    | '/zh/agent'
     | '/api/plausible/event'
     | '/api/plausible/js/script'
   id:
@@ -557,6 +667,7 @@ export interface FileRouteTypes {
     | '/zh/geo'
     | '/zh/methodology'
     | '/zh/platform'
+    | '/zh/privacy'
     | '/zh/product'
     | '/zh/research'
     | '/zh/results'
@@ -564,6 +675,15 @@ export interface FileRouteTypes {
     | '/zh/'
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
+    | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/approach'
+    | '/zh/agent/company'
+    | '/zh/agent/diagnostic'
+    | '/zh/agent/geo'
+    | '/zh/agent/privacy'
+    | '/zh/agent/product'
+    | '/zh/agent/research'
+    | '/zh/agent/'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
   fileRoutesById: FileRoutesById
@@ -605,6 +725,7 @@ export interface RootRouteChildren {
   ZhGeoRoute: typeof ZhGeoRoute
   ZhMethodologyRoute: typeof ZhMethodologyRoute
   ZhPlatformRoute: typeof ZhPlatformRoute
+  ZhPrivacyRoute: typeof ZhPrivacyRoute
   ZhProductRoute: typeof ZhProductRoute
   ZhResearchRoute: typeof ZhResearchRoute
   ZhResultsRoute: typeof ZhResultsRoute
@@ -612,6 +733,15 @@ export interface RootRouteChildren {
   ZhIndexRoute: typeof ZhIndexRoute
   LlmsDotmdxAgentSplatRoute: typeof LlmsDotmdxAgentSplatRoute
   LlmsDotmdxSiteSplatRoute: typeof LlmsDotmdxSiteSplatRoute
+  LlmsDotmdxZhAgentSplatRoute: typeof LlmsDotmdxZhAgentSplatRoute
+  ZhAgentApproachRoute: typeof ZhAgentApproachRoute
+  ZhAgentCompanyRoute: typeof ZhAgentCompanyRoute
+  ZhAgentDiagnosticRoute: typeof ZhAgentDiagnosticRoute
+  ZhAgentGeoRoute: typeof ZhAgentGeoRoute
+  ZhAgentPrivacyRoute: typeof ZhAgentPrivacyRoute
+  ZhAgentProductRoute: typeof ZhAgentProductRoute
+  ZhAgentResearchRoute: typeof ZhAgentResearchRoute
+  ZhAgentIndexRoute: typeof ZhAgentIndexRoute
   ApiPlausibleEventIndexRoute: typeof ApiPlausibleEventIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
 }
@@ -884,6 +1014,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhPlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/privacy': {
+      id: '/zh/privacy'
+      path: '/zh/privacy'
+      fullPath: '/zh/privacy'
+      preLoaderRoute: typeof ZhPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/product': {
       id: '/zh/product'
       path: '/zh/product'
@@ -917,6 +1054,69 @@ declare module '@tanstack/react-router' {
       path: '/llms.mdx/site/$'
       fullPath: '/llms.mdx/site/$'
       preLoaderRoute: typeof LlmsDotmdxSiteSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.mdx/zh-agent/$': {
+      id: '/llms.mdx/zh-agent/$'
+      path: '/llms.mdx/zh-agent/$'
+      fullPath: '/llms.mdx/zh-agent/$'
+      preLoaderRoute: typeof LlmsDotmdxZhAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/': {
+      id: '/zh/agent/'
+      path: '/zh/agent'
+      fullPath: '/zh/agent/'
+      preLoaderRoute: typeof ZhAgentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/approach': {
+      id: '/zh/agent/approach'
+      path: '/zh/agent/approach'
+      fullPath: '/zh/agent/approach'
+      preLoaderRoute: typeof ZhAgentApproachRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/company': {
+      id: '/zh/agent/company'
+      path: '/zh/agent/company'
+      fullPath: '/zh/agent/company'
+      preLoaderRoute: typeof ZhAgentCompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/diagnostic': {
+      id: '/zh/agent/diagnostic'
+      path: '/zh/agent/diagnostic'
+      fullPath: '/zh/agent/diagnostic'
+      preLoaderRoute: typeof ZhAgentDiagnosticRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/geo': {
+      id: '/zh/agent/geo'
+      path: '/zh/agent/geo'
+      fullPath: '/zh/agent/geo'
+      preLoaderRoute: typeof ZhAgentGeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/privacy': {
+      id: '/zh/agent/privacy'
+      path: '/zh/agent/privacy'
+      fullPath: '/zh/agent/privacy'
+      preLoaderRoute: typeof ZhAgentPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/product': {
+      id: '/zh/agent/product'
+      path: '/zh/agent/product'
+      fullPath: '/zh/agent/product'
+      preLoaderRoute: typeof ZhAgentProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zh/agent/research': {
+      id: '/zh/agent/research'
+      path: '/zh/agent/research'
+      fullPath: '/zh/agent/research'
+      preLoaderRoute: typeof ZhAgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/plausible/event/': {
@@ -973,6 +1173,7 @@ const rootRouteChildren: RootRouteChildren = {
   ZhGeoRoute: ZhGeoRoute,
   ZhMethodologyRoute: ZhMethodologyRoute,
   ZhPlatformRoute: ZhPlatformRoute,
+  ZhPrivacyRoute: ZhPrivacyRoute,
   ZhProductRoute: ZhProductRoute,
   ZhResearchRoute: ZhResearchRoute,
   ZhResultsRoute: ZhResultsRoute,
@@ -980,6 +1181,15 @@ const rootRouteChildren: RootRouteChildren = {
   ZhIndexRoute: ZhIndexRoute,
   LlmsDotmdxAgentSplatRoute: LlmsDotmdxAgentSplatRoute,
   LlmsDotmdxSiteSplatRoute: LlmsDotmdxSiteSplatRoute,
+  LlmsDotmdxZhAgentSplatRoute: LlmsDotmdxZhAgentSplatRoute,
+  ZhAgentApproachRoute: ZhAgentApproachRoute,
+  ZhAgentCompanyRoute: ZhAgentCompanyRoute,
+  ZhAgentDiagnosticRoute: ZhAgentDiagnosticRoute,
+  ZhAgentGeoRoute: ZhAgentGeoRoute,
+  ZhAgentPrivacyRoute: ZhAgentPrivacyRoute,
+  ZhAgentProductRoute: ZhAgentProductRoute,
+  ZhAgentResearchRoute: ZhAgentResearchRoute,
+  ZhAgentIndexRoute: ZhAgentIndexRoute,
   ApiPlausibleEventIndexRoute: ApiPlausibleEventIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,
 }

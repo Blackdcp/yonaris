@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CompanyPage } from "@/components/site/pages/company-page";
+import { ZhCompanyPage } from "@/components/site/zh-cn/pages";
 import { corePageHead } from "@/lib/site-seo";
 
 export const Route = createFileRoute("/zh/company")({
 	head: () => corePageHead("company", "zh"),
-	component: () => <CompanyPage locale="zh" />,
+	component: ZhCompanyPage,
 });

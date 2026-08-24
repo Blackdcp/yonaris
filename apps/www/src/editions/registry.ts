@@ -57,16 +57,16 @@ const englishPages = englishKeys.map(
 	}),
 );
 
-const zhKeys = ["home", "product", "approach", "research", "geo", "company", "diagnostic"] as const;
+const zhKeys = ["home", "product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const;
 const zhPages = zhKeys.map(
 	(key): EditionPage => ({
-		ref: `zh-cn-legacy:${key}`,
-		editionId: "zh-cn-legacy",
+		ref: `zh-cn:${key}`,
+		editionId: "zh-cn",
 		locale: "zh-CN",
 		pathname: key === "home" ? "/zh" : `/zh/${key}`,
-		intentId: `zh-legacy-${key}`,
+		intentId: `zh-${key}`,
 		publication: "published",
-		navigation: ["footer"],
+		navigation: key === "diagnostic" ? ["utility", "footer"] : key === "privacy" ? ["footer"] : ["primary", "footer"],
 		seo: { indexable: true },
 	}),
 );
@@ -82,15 +82,15 @@ const editions: Record<SiteEdition, EditionDefinition> = {
 		analyticsPolicy: "disabled",
 		diagnosticPolicy: "disabled",
 	},
-	"zh-cn-legacy": {
-		id: "zh-cn-legacy",
-		home: "zh-cn-legacy:home",
+	"zh-cn": {
+		id: "zh-cn",
+		home: "zh-cn:home",
 		pages: zhPages,
-		primaryNavigation: [],
+		primaryNavigation: ["zh-cn:product", "zh-cn:approach", "zh-cn:research", "zh-cn:company"],
 		footerNavigation: zhPages.map((page) => page.ref),
-		localeFallbackHome: "zh-cn-legacy:home",
+		localeFallbackHome: "zh-cn:home",
 		analyticsPolicy: "disabled",
-		diagnosticPolicy: "legacy-v1",
+		diagnosticPolicy: "regional-v2",
 	},
 };
 

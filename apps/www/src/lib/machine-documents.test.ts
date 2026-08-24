@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { CORE_PAGE_KEYS, getCoreFacts } from "@/content/site";
+import { CORE_PAGE_KEYS } from "@/content/site";
 import { GLOBAL_ENGLISH_MACHINE_FACTS } from "@/content/site/global-en/machine";
+import { ZH_MACHINE_FACTS } from "@/content/site/zh-cn/machine";
 import type { AgentPageKey } from "@/content/site/types";
 import { getCoreLastVerified, getCorePath, getSiteRoute } from "./site-manifest";
 
@@ -35,7 +36,7 @@ describe("machine documents", () => {
 		for (const key of CORE_PAGE_KEYS) {
 			for (const locale of locales) {
 				const document = renderer.renderCoreMarkdown(key, locale);
-				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : getCoreFacts(key, locale);
+				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : ZH_MACHINE_FACTS[key];
 
 				expect(document).toContain(`# ${facts.title}`);
 				expect(document).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
@@ -78,7 +79,7 @@ describe("machine documents", () => {
 				expect(output).toContain(
 					`[${GLOBAL_ENGLISH_MACHINE_FACTS[key].title} (en)](${absolute(getCorePath(key, "en"))})`,
 				);
-				expect(output).toContain(`[${getCoreFacts(key, "zh").title} (zh-CN)](${absolute(getCorePath(key, "zh"))})`);
+				expect(output).toContain(`[${ZH_MACHINE_FACTS[key].title} (zh-CN)](${absolute(getCorePath(key, "zh"))})`);
 			}
 			for (const key of agentPageKeys) {
 				expect(output).toContain(absolute(getSiteRoute(key).agentPath ?? ""));
@@ -111,13 +112,26 @@ describe("machine documents", () => {
 		const full = renderer.renderLlmsFull();
 		for (const key of CORE_PAGE_KEYS) {
 			for (const locale of locales) {
-				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : getCoreFacts(key, locale);
+				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : ZH_MACHINE_FACTS[key];
 				expect(full).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
 				expect(full).toContain(facts.currentScope);
 			}
 		}
 		expect(full.match(/^Human canonical:/gm)).toHaveLength(14);
 		expect(full).not.toContain("complete localized core facts");
+	});
+
+	test("publishes Chinese Agent documents from the released regional facts", () => {
+		const renderer = requireSubject();
+		if (!renderer) return;
+		const index = renderer.renderZhAgentIndex();
+		for (const key of ["product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const) {
+			const document = renderer.renderZhAgentDocument(key);
+			expect(document).toContain(`# ${ZH_MACHINE_FACTS[key].title}`);
+			expect(document).toContain(`人类页面：https://yonaris.com/zh/${key}`);
+			expect(document).toContain(ZH_MACHINE_FACTS[key].currentScope);
+			expect(index).toContain(`https://yonaris.com/zh/agent/${key}`);
+		}
 	});
 
 	test("does not serialize retired evidence or imagined product modules", () => {
