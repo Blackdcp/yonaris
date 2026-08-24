@@ -215,35 +215,130 @@ The visitor enters a brand website, market, language, and decision question. The
 
 Failure states are honest, preserve entered data locally where safe, and offer retry or a verified business-contact route without placing submitted private data in a URL.
 
-## 8. Visual and Interaction System
+## 8. Regional Competitive Design and Interaction Translation
 
-The site uses the approved Yonaris identity to create richer compositions without becoming decorative theatre.
+The regional editions do not share one competitor-inspired design language. Each Human edition follows the habits of its intended market. DeepLumen informs only the Human/Agent relationship.
 
-### Visual grammar
+### 8.1 Global Human edition — Bluefish reference
 
-- Evidence windows for answers, comparisons, sources, findings, and next tests;
-- scope fields for market, language, question set, surface, and time;
-- evidence paths connecting question to action;
-- relationship maps connecting brand, answer, competitor, and source;
-- ledgers for reviewable records and boundaries;
-- service maps for regional and Human/Agent responsibility.
+Reference: <https://www.bluefishai.com/>
 
-Every core page has one unique visual protagonist. No two consecutive core sections are text-only. No page repeats the same `headline + paragraph + outlined cards` composition as its dominant rhythm.
+Bluefish is useful because its site behaves like an enterprise product launch rather than a long marketing document. It creates confidence through a strong opening proposition, cinematic visual staging, an early platform architecture, product-module transitions, and repeated movement from outcome to product proof.
 
-### Meaningful interaction
+| Bluefish strength | Why it works for global buyers | Yonaris translation |
+| --- | --- | --- |
+| Large, decisive category statement | Establishes enterprise relevance before explaining method | Lead with the market consequence of AI answering brand questions, then immediately show the Answer Studio |
+| High-contrast cinematic hero | Makes the category feel important and differentiated | Use Yonaris Ink, Paper, and Signal Orange with a product-evidence composition, not competitor imagery or color |
+| Platform architecture near the top | Converts an abstract market problem into a system a buyer can understand | Introduce `Observe → Explain → Act → Measure` as one visual operating loop |
+| Product suite revealed through modules | Lets buyers understand breadth without reading a feature catalogue | Use one Evidence Workbench whose state changes across Monitoring, Narrative, Sources, and Experiments |
+| Product imagery connected to outcomes | Makes product capability feel tangible | Show answer, comparison, source, finding, and next-test artifacts in semantic interface compositions |
+| Research and news as authority | Extends trust beyond sales claims | Connect the homepage and Product page to approved evidence methods and research records |
+| Strong demo conversion | Gives every section a clear commercial direction | Use one primary diagnostic action in the hero and one qualified close, not a CTA after every block |
 
-- Homepage question selection updates the Answer Studio;
-- Product tabs update one consistent workbench;
-- Approach scroll progression advances one evidence path;
-- evidence annotations expand through click, tap, keyboard, or focus;
-- Human/Agent switching preserves locale and page topic;
-- diagnostic steps preserve state and expose validation clearly.
+#### Global visual direction
 
-Entrance motion never hides essential content at time zero. There is no continuous ambient animation. Reduced-motion mode preserves every state change without spatial animation.
+The global Human edition is spacious, product-led, and cinematic. It uses strong contrast between Paper reading stages and Ink product stages. One oversized idea and one meaningful product composition dominate each viewport. Supporting copy remains short enough for the visual evidence to carry part of the explanation.
 
-### Responsive behavior
+The two strongest existing Yonaris compositions become design DNA rather than isolated exceptions:
 
-Mobile is recomposed, not scaled down. Complex desktop figures become progressive vertical narratives, module controls become swipe-safe and keyboard-safe selectors, and all primary actions remain at least 44 CSS pixels high. No primary label requires pinch zoom at 390 CSS pixels.
+1. the split hero with a diagnostic evidence window;
+2. the dark Product stage with defined scope rings.
+
+The rest of the global site extends that standard with distinct visual protagonists: an evidence path on Approach, a ledger on Evidence, a relationship map on AI Visibility, a responsibility map on Company, and a live scope preview on Diagnostic.
+
+#### Global interaction direction
+
+- The homepage behaves like a lightweight product demonstration: selecting a buyer question updates the answer, evidence, interpretation, and next test in one coordinated transition.
+- Product modules change a single shared workbench so the buyer understands that the capabilities belong to one system.
+- Scroll progression on Approach reveals one stage of the evidence path at a time without locking or hijacking scroll.
+- Evidence annotations expand on click, tap, keyboard activation, or focus; hover is never the only route.
+- Research previews expose enough detail to establish authority before navigating away.
+- Motion is restrained and product-like: state change, selection, connection, and evidence emphasis. There is no decorative cursor effect, continuous ambient animation, or generic parallax.
+
+#### Bluefish patterns not adopted
+
+- Role-based primary segmentation, because Yonaris begins with shared AI anxiety rather than job title;
+- competitor wording, identity, imagery, teal/yellow palette, or signature compositions;
+- unverified enterprise scale, customer, performance, or exclusivity claims;
+- product breadth that Yonaris cannot currently demonstrate or deliver.
+
+### 8.2 Chinese Human edition — 智推时代 reference
+
+Reference: <https://www.zhituishidai.com/>
+
+智推时代 is useful because its site follows a Chinese enterprise decision sequence: explain why the market has changed, make the risk concrete, define the category, show the service system, prove coverage, explain delivery, and provide an immediate contact route. Its strength is not minimalism; it is decision clarity and the feeling that a complete service path exists.
+
+| 智推时代 strength | Why it works for Chinese buyers | Yonaris translation |
+| --- | --- | --- |
+| Market-change framing before product detail | Gives the buyer a reason to continue reading | Begin with “客户正在先问 AI，再认识你的品牌” and show the business consequence immediately |
+| Conclusion-first section headlines | Supports fast executive scanning | Every section starts with a complete judgment, followed by evidence and method |
+| Dense but explicit information hierarchy | Reduces ambiguity about what is sold and delivered | Use labelled diagrams, delivery steps, output previews, and responsibility boundaries rather than abstract editorial paragraphs |
+| Human-to-AI and Agent-to-Agent future narrative | Makes a new market behavior easy to visualize | Explain the move from people asking AI to agents selecting and acting, using Yonaris's Human/Agent fact system |
+| Complete service sequence | Creates delivery confidence | Show `诊断 → 观察 → 判断 → 行动 → 复测` with customer input, Yonaris work, and output at every step |
+| Domestic and overseas platform framing | Signals ability to serve Chinese companies globally | Separate China and global observation contexts and show only verified supported scope |
+| Prominent cases, coverage, and contact | Answers “why trust you” and “what do I do next” | Use approved evidence, demonstration reports, verified service facts, and a direct diagnostic path |
+
+#### Chinese visual direction
+
+The Chinese Human edition uses the same Yonaris identity but a different information rhythm. It is denser, more explicit, and more directional than the global edition. Each major section combines a conclusion, a visual model, and a concrete output. More information may appear within one viewport, but hierarchy must remain clear through numbered stages, labelled bands, and strong Ink/Paper contrast.
+
+The page does not imitate the competitor's color, logo walls, terminology, decorative technology motifs, or sales packaging. Yonaris Signal Orange marks the exact point of risk, evidence, or next action. It never becomes a general festive accent.
+
+#### Chinese interaction direction
+
+- A sticky section navigator helps visitors move through `市场变化、核心问题、产品能力、服务流程、全球能力、诊断` on a longer page.
+- The opening answer scene lets visitors switch among the five AI-anxiety questions; the copy and evidence change in Chinese rather than translating the English state labels.
+- The market-context visual switches between `中国市场` and `全球市场`, showing differences in language, question scope, and available observation surfaces without claiming universal coverage.
+- The delivery path is directly operable: choosing a stage reveals what the customer provides, what Yonaris performs, and what is delivered.
+- Report and evidence previews use expandable annotations so Chinese buyers can inspect substance without first opening another page.
+- The diagnostic flow updates a visible scope summary as the visitor enters brand, market, language, and decision question.
+
+#### 智推时代 patterns not adopted
+
+- unsupported market statistics, platform counts, customer counts, logo walls, outcomes, rankings, or delivery guarantees;
+- inflated transformation language, excessive slogans, or fear-based claims;
+- pricing tiers, technical architecture, service promises, or capabilities that Yonaris has not approved;
+- excessive section length or interaction added only to make the page feel busy.
+
+### 8.3 Human/Agent separation — DeepLumen reference only
+
+References: <https://www.deeplumen.com/> and <https://www.deeplumen.com/agent/>
+
+DeepLumen contributes one structural idea: make the Human and Agent views visibly related, publicly accessible, and factually aligned while giving each a different reading density. It is not a shared aesthetic reference for the global and Chinese Human sites.
+
+| DeepLumen mechanism | Yonaris translation |
+| --- | --- |
+| Visible Human/Agent entry points | Add a branded, accessible `Human / Agent` control to both regional shells |
+| Agent-first site map | Use `/agent` and `/zh/agent` as regional fact maps with concise page summaries |
+| Agent pages paired to Human canonicals | Preserve locale and topic when switching between views |
+| Machine-first information hierarchy | Lead Agent pages with entity, capability, evidence, boundary, canonical, and verification facts |
+| Same content represented differently | Generate both views from one factual source while allowing independently written regional narrative |
+
+The global Agent experience uses the global factual vocabulary and English buyer context. The Chinese Agent experience uses Chinese terminology, local market context, and Chinese page relationships. DeepLumen's commerce imagery, visual identity, content categories, and page rhythm are not copied.
+
+### 8.4 Shared Yonaris interaction rules
+
+Regional interaction patterns differ, but their behavior follows one quality baseline:
+
+- Every interactive figure has a meaningful initial state before JavaScript runs.
+- Every state change updates text and semantic relationships, not only color or position.
+- Keyboard, touch, and pointer access expose the same information.
+- Active state uses Signal Orange with an additional text, icon, or structural cue.
+- Entrance motion never hides essential content at time zero.
+- There is no continuous ambient animation.
+- Reduced-motion mode preserves every state change without spatial animation.
+- Human/Agent switching performs a real route change, preserves locale and topic, and never creates two independent factual stores.
+
+### 8.5 Responsive translation
+
+The regional difference remains visible on mobile:
+
+- Global mobile pages preserve generous breathing room and turn horizontal product compositions into concise vertical states.
+- Chinese mobile pages preserve stronger section labels, numbered delivery steps, and denser decision information without shrinking desktop diagrams.
+- Question selectors become touch-safe horizontal controls or accordions.
+- Product tabs become a labelled selector followed by the active panel.
+- Evidence maps become ordered narratives with each connection explained in text.
+- All primary actions are at least 44 CSS pixels high, and no primary label requires pinch zoom at 390 CSS pixels.
 
 ## 9. Content Standards
 
