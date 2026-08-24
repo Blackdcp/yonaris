@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import Ajv from "ajv";
 
 const exec = promisify(execFile);
 const SHA256 = /^[a-f0-9]{64}$/i;
@@ -12,6 +13,14 @@ const entity = /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z]+));?/gi;
 const escape = /\\(?:u\{([0-9a-f]+)\}|u([0-9a-f]{4})|x([0-9a-f]{2}))/gi;
 const separator = /[\/_\-\s\p{P}]+/gu;
 const digest = (value) => createHash("sha256").update(value).digest("hex");
+function spacedVariants(compact, parts) {
+  const results = [];
+  const visit = (start, remaining, segments) => {
+    if (remaining === 1) { results.push([...segments, compact.slice(start)].join(" ")); return; }
+    for (let end = start + 1; end <= compact.length - remaining + 1; end += 1) visit(end, remaining - 1, [...segments, compact.slice(start, end)]);
+  };
+  visit(0, parts, []); return results;
+}
 
 function decodeOnce(value) {
   return value.replace(entity, (raw, hex, decimal, named) => {
@@ -42,6 +51,7 @@ export function scanPublicText({ policy, surface, source, text }) {
   for (const item of policy.fingerprints) {
     let match = -1;
     for (let index = 0; index + item.tokens <= tokens.length; index += 1) { const candidate = tokens.slice(index, index + item.tokens).join(" "); if (candidate.length === item.characters && digest(candidate) === item.sha256) { match = normalized.indexOf(candidate); break; } }
+    if (match < 0) for (const token of tokens) if (token.length === item.characters - (item.tokens - 1) && spacedVariants(token, item.tokens).some((candidate) => digest(candidate) === item.sha256)) { match = normalized.indexOf(token); break; }
     if (match >= 0) findings.push({ id: item.id, severity: "block", surface, source, offset: match });
   }
   return findings.sort((a, b) => a.id.localeCompare(b.id) || a.source.localeCompare(b.source) || a.offset - b.offset);
@@ -55,7 +65,7 @@ const ignored = (relative, config) => relative.split(path.sep).some((part) => ["
 const binary = (buffer) => buffer.includes(0);
 async function walk(root, files = []) { for (const entry of await readdir(root, { withFileTypes: true })) { const target = path.join(root, entry.name); if (entry.isSymbolicLink()) continue; if (entry.isDirectory()) await walk(target, files); else if (entry.isFile()) files.push(target); } return files; }
 export async function scanPaths({ policyPath, inventoryPath, phase, root }) {
-  const policy = validatePolicy(JSON.parse(await readFile(policyPath, "utf8"))); const inventory = JSON.parse(await readFile(inventoryPath, "utf8")); const config = validateInventory(inventory, phase); const resolvedRoot = await realpath(root);
+  const policy = JSON.parse(await readFile(policyPath, "utf8")); const schemaPath = path.join(path.dirname(policyPath), "public-output-policy.schema.json"); const schema = JSON.parse(await readFile(schemaPath, "utf8")); const check = new Ajv({ allErrors: true, strict: true }).compile(schema); if (!check(policy)) throw new Error("Invalid public output policy schema"); validatePolicy(policy); const inventory = JSON.parse(await readFile(inventoryPath, "utf8")); const config = validateInventory(inventory, phase); const resolvedRoot = await realpath(root);
   let paths;
   if (phase === "source") { const { stdout } = await exec("git", ["-C", resolvedRoot, "ls-files", "--cached", "--others", "--exclude-standard", "-z"]); paths = stdout.split("\0").filter(Boolean).map((entry) => path.join(resolvedRoot, entry)); }
   else paths = await walk(resolvedRoot);

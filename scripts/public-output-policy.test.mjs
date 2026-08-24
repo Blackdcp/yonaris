@@ -43,6 +43,12 @@ test("recursively decodes neutral encodings without matching a containing token"
   assert.deepEqual(scanPublicText({ policy, surface: "fixture", source: "safe.txt", text: "fixture-signal-zx9safe" }), []);
 });
 
+test("matches only the complete compact neutral fixture token", () => {
+  const policy = fixturePolicy();
+  assert.equal(scanPublicText({ policy, surface: "fixture", source: "compact.txt", text: "fixturesignalzx9" }).length, 1);
+  for (const safe of ["fixturesignalzx9safe", "safefixturesignalzx9", "fixturesignalzx"]) assert.deepEqual(scanPublicText({ policy, surface: "fixture", source: "safe.txt", text: safe }), []);
+});
+
 test("reports deterministic redacted findings for an encoded neutral fixture", () => {
   const policy = fixturePolicy();
   const input = {
