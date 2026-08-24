@@ -58,6 +58,7 @@ STUB
 
 cat >"$fixture/bin/chown" <<'STUB'
 #!/usr/bin/env bash
+if [[ -n "${CADDY_TEST_CHOWN_LOG:-}" ]]; then printf 'chown %s\n' "$*" >>"$CADDY_TEST_CHOWN_LOG"; fi
 exit 0
 STUB
 
@@ -127,6 +128,8 @@ done
 script_count=0
 for argument in "$@"; do [[ "$argument" == "$CADDY_TEST_EXPECTED_SCRIPT" ]] && script_count=$((script_count + 1)); done
 [[ "$script_count" == 1 ]]
+[[ "${@: -2:1}" == "$CADDY_TEST_EXPECTED_UID" ]]
+[[ "${@: -1}" == "$CADDY_TEST_EXPECTED_GID" ]]
 STUB
 
 chmod +x "$fixture/bin/"*
@@ -139,10 +142,12 @@ new_case() {
 	META_OUT="$CASE_ROOT/durable"
 	COMMAND_LOG="$CASE_ROOT/caddy.log"
 	CURL_LOG="$CASE_ROOT/curl.log"
+	CHOWN_LOG="$CASE_ROOT/chown.log"
 	RELOAD_COUNT="$CASE_ROOT/reload-count"
 	mkdir -p "$CASE_ROOT" "$META_OUT"
 	: >"$COMMAND_LOG"
 	: >"$CURL_LOG"
+	: >"$CHOWN_LOG"
 }
 
 write_full_config() {
@@ -159,6 +164,7 @@ run_install() {
 		PATH="$fixture/bin:$PATH" \
 		CADDY_TEST_COMMAND_LOG="$COMMAND_LOG" \
 		CADDY_TEST_CURL_LOG="$CURL_LOG" \
+		CADDY_TEST_CHOWN_LOG="$CHOWN_LOG" \
 		CADDY_TEST_RELOAD_COUNT="$RELOAD_COUNT" \
 		CADDY_TEST_FAIL_CANDIDATE_VALIDATE="${CADDY_TEST_FAIL_CANDIDATE_VALIDATE:-0}" \
 		CADDY_TEST_FAIL_RESTORE_VALIDATE="${CADDY_TEST_FAIL_RESTORE_VALIDATE:-0}" \
@@ -166,7 +172,7 @@ run_install() {
 		CADDY_TEST_FAIL_RELOAD_ALWAYS="${CADDY_TEST_FAIL_RELOAD_ALWAYS:-0}" \
 		CADDY_TEST_FAIL_HEALTH_PATH="${CADDY_TEST_FAIL_HEALTH_PATH:-}" \
 		MARKETING_HEALTH_RELOAD_ATTEMPTS=1 \
-		bash "$INSTALLER" --inside-host install "$REDIRECT" "$V1" "$V2" "$FINAL" "$TARGET" "$BACKUP_OUT" "$META_OUT"
+		bash "$INSTALLER" --inside-host install "$REDIRECT" "$V1" "$V2" "$FINAL" "$TARGET" "$BACKUP_OUT" "$META_OUT" - "$(id -u)" "$(id -g)"
 }
 
 run_restore() {
@@ -215,6 +221,7 @@ for state in redirect v1 v2 pre_r0_release final; do
 	[[ -f "$META_OUT/previous-caddy-sha256" ]] && previous_binding="$(tr -d '[:space:]' <"$META_OUT/previous-caddy-sha256")"
 	[[ -f "$META_OUT/candidate-caddy-sha256" ]] && candidate_binding="$(tr -d '[:space:]' <"$META_OUT/candidate-caddy-sha256")"
 	if [[ -n "$expected_backup_sha" && "$previous_binding" == "$expected_backup_sha" && "$candidate_binding" == "$(sha256sum "$TARGET" | cut -d' ' -f1)" ]]; then pass "$state writes full-file predecessor and candidate Caddy bindings"; else fail "$state writes full-file predecessor and candidate Caddy bindings"; fi
+	if grep -Fq "chown -- $(id -u):$(id -g) $BACKUP_OUT $META_OUT/previous-caddy-sha256 $META_OUT/candidate-caddy-sha256" "$CHOWN_LOG"; then pass "$state returns durable recovery files to the deployment account"; else fail "$state returns durable recovery files to the deployment account"; fi
 	for required in '/product' '/approach' '/research' '/company' '/resources' '/status' '/brand' '/og/status.png' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
 		if ! grep -Fq "$required" "$CURL_LOG"; then fail "$state full health includes $required"; fi
 	done
@@ -236,6 +243,8 @@ assert_status 0 "outer helper dispatch passes one exact inside-host argv vector"
 	CADDY_HELPER_IMAGE=fixture-helper:immutable \
 	CADDY_TEST_DOCKER_ARGV="$docker_argv" \
 	CADDY_TEST_EXPECTED_SCRIPT="$CASE_ROOT/deploy/source/deploy/las/bin/install-marketing-caddy.sh" \
+	CADDY_TEST_EXPECTED_UID="$(id -u)" \
+	CADDY_TEST_EXPECTED_GID="$(id -g)" \
 	bash "$INSTALLER"
 
 # RED: unknown state is refused before tempfile, validation, reload, or health.

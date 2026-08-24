@@ -151,7 +151,11 @@ reload_with_retries() {
 }
 
 inside_install() {
-	local redirect="$1" v1="$2" v2="$3" final="$4" target="$5" backup_output="$6" metadata_dir="$7" expected_candidate_sha_file="${8:--}"
+	local redirect="$1" v1="$2" v2="$3" final="$4" target="$5" backup_output="$6" metadata_dir="$7" expected_candidate_sha_file="${8:--}" output_uid="${9:-}" output_gid="${10:-}"
+	[[ "$output_uid" =~ ^[0-9]+$ && "$output_gid" =~ ^[0-9]+$ ]] || {
+		echo "Durable Caddy output owner is invalid." >&2
+		return 1
+	}
 	local required
 	for required in "$redirect" "$v1" "$v2" "$final" "$target"; do
 		[[ -f "$required" ]] || { echo "Missing required Caddy file: $required" >&2; return 1; }
@@ -227,6 +231,10 @@ inside_install() {
 	[[ "$backup_sha" == "$(sha_file "$backup")" ]] || return 1
 	atomic_text "$backup_sha" "$metadata_dir/previous-caddy-sha256" || return 1
 	atomic_text "$candidate_sha" "$metadata_dir/candidate-caddy-sha256" || return 1
+	chown -- "$output_uid:$output_gid" \
+		"$backup_output" \
+		"$metadata_dir/previous-caddy-sha256" \
+		"$metadata_dir/candidate-caddy-sha256" || return 1
 
 	restore_previous() {
 		keep_state=true
@@ -347,6 +355,8 @@ final="${CADDY_MARKETING_FRAGMENT:-$DEPLOY_ROOT/source/deploy/las/caddy/yonaris-
 target="${CADDY_TARGET_CONFIG:-/etc/caddy/Caddyfile}"
 helper_image="${CADDY_HELPER_IMAGE:?Set CADDY_HELPER_IMAGE to the deployed marketing image}"
 script_path="$DEPLOY_ROOT/source/deploy/las/bin/install-marketing-caddy.sh"
+output_uid="$(id -u)"
+output_gid="$(id -g)"
 
 run_helper() {
 	docker run --rm --user 0 --network host --entrypoint /bin/sh --volume /:/host "$helper_image" \
@@ -369,6 +379,6 @@ case "${1:-}" in
 		backup_output="${CADDY_BACKUP_OUTPUT:?Set CADDY_BACKUP_OUTPUT to the durable rollback bundle}"
 		metadata_dir="${CADDY_METADATA_DIR:?Set CADDY_METADATA_DIR to the durable rollback bundle}"
 		expected_candidate="${CADDY_EXPECTED_CANDIDATE_SHA_FILE:--}"
-		run_helper --inside-host install "$redirect" "$v1" "$v2" "$final" "$target" "$backup_output" "$metadata_dir" "$expected_candidate"
+		run_helper --inside-host install "$redirect" "$v1" "$v2" "$final" "$target" "$backup_output" "$metadata_dir" "$expected_candidate" "$output_uid" "$output_gid"
 		;;
 esac
