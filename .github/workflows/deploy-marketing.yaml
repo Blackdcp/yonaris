@@ -204,6 +204,7 @@ jobs:
           test "$deployed_image" = "ghcr.io/blackdcp/yonaris-www:sha-$RELEASE_SHA"
           curl --fail --silent --show-error --max-time 15 https://yonaris.com/ >/dev/null
           curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
-          curl --fail --silent --show-error --max-time 15 https://yonaris.com/status >/dev/null
           curl --fail --silent --show-error --max-time 15 https://yonaris.com/company >/dev/null
+          test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 https://yonaris.com/resources)" = 404
+          test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 https://yonaris.com/status)" = 404
           REMOTE

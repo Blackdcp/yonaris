@@ -9,6 +9,7 @@ REDIRECT="$REPO_ROOT/deploy/las/caddy/yonaris-redirect.caddy"
 V1="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-v1.caddy"
 V2="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-v2.caddy"
 FINAL="$REPO_ROOT/deploy/las/caddy/yonaris-marketing.caddy"
+PRE_R0_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-pre-r0.caddy"
 
 TEST_ROOT="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
@@ -193,11 +194,12 @@ file_snapshot() {
 }
 
 # RED: every reviewed state and final-current are accepted, with full health.
-for state in redirect v1 v2 final; do
+for state in redirect v1 v2 pre_r0_release final; do
 	case "$state" in
 		redirect) fragment="$REDIRECT" ;;
 		v1) fragment="$V1" ;;
 		v2) fragment="$V2" ;;
+		pre_r0_release) fragment="$PRE_R0_RELEASE" ;;
 		final) fragment="$FINAL" ;;
 	esac
 	new_case "accepted_$state"
