@@ -11,7 +11,9 @@ services:
       context: ../..
       dockerfile: docker/Dockerfile
       target: migrate
-    profiles: []
+    # Compose merges unique sequence fields, so a plain empty list would leave
+    # the base `operations` profile in place and make this dependency invisible.
+    profiles: !reset []
   web:
     image: yonaris-web:e2e
     build:
