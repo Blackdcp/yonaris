@@ -56,7 +56,7 @@ The earlier G2 preflight artifact was not persisted. The root-agent message deli
 
 Exact base: `937ec7b4f4dc5bb5ca8794cc8403e29c53f6c258`.
 
-Exactly 15 legacy templates now use governed Publication/Legacy Archive shells while preserving their source data, loaders, valid bodies, filtering, static route priority, and invalid-slug 404 behavior. Every route has a concrete canonical, exact `noindex,follow`, sitemap exclusion, crawlable robots behavior, visible provenance/current-scope boundaries, and no route-owned rich JSON-LD. The misattributed Elmo listing/helper surface was removed without changing the root Yonaris identity.
+Exactly 15 legacy templates now use governed Publication/Legacy Archive shells while preserving their source data, loaders, valid bodies, filtering, static route priority, and invalid-slug 404 behavior. Every route has a concrete canonical, exact `noindex,follow`, sitemap exclusion, crawlable robots behavior, visible provenance/current-scope boundaries, and no route-owned rich JSON-LD. The misattributed predecessor listing/helper surface was removed without changing the root Yonaris identity.
 
 The AI Visibility archive uses one shared shell/context and locally frames deep-scroll comparison/FAQ content as recorded upstream material. All directory, table, filter, current-scope, focus, motion, and `280–1440` accessibility/overflow contracts are covered by the new legacy governance browser suite. The complete loader-derived feature-by-supplier matrix, single/pair/multi pricing/domain/source facts, category heading order, and distinct navigation landmarks are preserved. The nondeterministic remote supplier screenshot surface was removed while retaining a visible recorded-source link. Directory filters remain natively disabled through SSR and the first client render, then become enabled only after hydration attaches their handlers.
 
@@ -72,7 +72,7 @@ Final gates: expanded focused legacy `16/16`; full unit `30 files / 227`; full p
 - [x] Write focused content/SEO/route/layout/accessibility/visual contracts and observe expected RED.
 - [x] Migrate AI Search/AEO to reviewed Publication governance.
 - [x] Migrate all AI Visibility templates to one Legacy Archive governance system.
-- [x] Preserve dynamic/static route behavior and source data while removing route rich schema and Elmo identity helpers.
+- [x] Preserve dynamic/static route behavior and source data while removing route rich schema and predecessor identity helpers.
 - [x] Inspect all 18 required visual artifacts at `1440`, `390`, and `280` CSS px.
 - [x] Run focused, full unit/type/build/manifest/public/visual/Biome/diff gates.
 - [x] Complete independent final review and record the disposition.

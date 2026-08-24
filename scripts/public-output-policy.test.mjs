@@ -226,9 +226,13 @@ test("repository topology excludes retired distribution surfaces and preserves l
       file.startsWith(".changeset/") ||
       file.startsWith(".github/workflows/") ||
       file.startsWith("apps/www/src/") ||
+      /^apps\/www\/(?:package\.json|[^/]*config\.(?:js|json|ts)|tsconfig[^/]*\.json)$/u.test(file) ||
       file.startsWith("docker/") ||
       file.startsWith("e2e/"),
   );
+  for (const file of ["apps/www/package.json", "apps/www/tsconfig.json", "apps/www/vite.config.ts"]) {
+    if (!operationalFiles.includes(file)) blockers.push(`unscanned-operational-config:${file}`);
+  }
   const retiredOperationalReference =
     /(?:packages[\\/]docs|apps[\\/]cli|@workspace\/docs|source\.generated|fumadocs|@mdx-js\/rollup)/u;
   for (const file of operationalFiles) {

@@ -191,9 +191,10 @@ jobs:
             'DATABASE_URL=postgresql://postgres:postgres@postgres:5432/yonaris' \
             'BETTER_AUTH_SECRET=e2e-session-secret-with-at-least-thirty-two-characters' \
             'SCRAPE_TARGETS=stub:stub' \
-            'DEPLOYMENT_MODE=demo' \
+            'DEPLOYMENT_MODE=local' \
             'APP_URL=http://localhost:1515' \
             'ADMIN_API_KEYS=test-api-key-e2e' \
+            'CREDENTIAL_ENCRYPTION_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=' \
             'ONBOARDING_LLM_TARGET=stub:stub' \
             'BROWSER_RUNNER_ENABLED=true' \
             'SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0' \

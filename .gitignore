@@ -51,8 +51,8 @@ test-results/
 test-results-worker/
 blob-report/
 
-# e2e generated config (created by `elmo init --dev --defaults`)
-e2e/.elmo/
+# e2e generated config (created by `yonaris init --dev --defaults`)
+e2e/.yonaris/
 e2e/.auth/
 e2e/.snapshot-fixtures/
 
@@ -64,7 +64,6 @@ e2e/.snapshot-fixtures/
 next-env.d.ts
 
 # brand kit (generated assets)
-elmo-brand-kit.zip
 yonaris-brand-kit.zip
 .runtime/
 og-default.png
@@ -75,7 +74,7 @@ prompt_runs_rows.csv
 prompt_runs.meta.json
 
 # docker
-elmo.yaml
+yonaris.yaml
 e2e/artifacts
 
 # retroactive cleanup
