@@ -12,10 +12,13 @@ const ENTITIES = {
   amp: "&",
   apos: "'",
   gt: ">",
+  hyphen: "-",
   lt: "<",
+  lowbar: "_",
   newline: "\n",
   nbsp: " ",
   quot: '"',
+  sol: "/",
   tab: "\t",
 };
 const ENTITY = /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z]+));?/gi;
@@ -29,7 +32,8 @@ const HARD_EXCLUDED_DIRECTORIES = new Set([
   "node_modules",
   "vendor",
 ]);
-const MAX_DECODE_ROUNDS = 4;
+const MAX_DECODE_ROUNDS = 16;
+const MAX_NORMALIZATION_INPUT_LENGTH = 1_048_576;
 const MAX_FINGERPRINTS = 256;
 const MAX_CHARACTERS = 256;
 const MAX_TOKENS = 16;
@@ -74,21 +78,46 @@ function decodeOnce(value) {
 
 export function normalizePublicText(value) {
   let decoded = String(value);
+  if (decoded.length > MAX_NORMALIZATION_INPUT_LENGTH) {
+    fail("PUBLIC_OUTPUT_NORMALIZATION_LIMIT");
+  }
+  let settled = false;
   for (let index = 0; index < MAX_DECODE_ROUNDS; index += 1) {
     const next = decodeOnce(decoded);
-    if (next === decoded) break;
+    if (next.length > MAX_NORMALIZATION_INPUT_LENGTH) {
+      fail("PUBLIC_OUTPUT_NORMALIZATION_LIMIT");
+    }
+    if (next === decoded) {
+      settled = true;
+      break;
+    }
     decoded = next;
   }
-  return decoded
+  if (!settled && decodeOnce(decoded) !== decoded) {
+    fail("PUBLIC_OUTPUT_NORMALIZATION_LIMIT");
+  }
+  const normalized = decoded
     .normalize("NFKC")
     .toLowerCase()
     .replace(ZERO_WIDTH, "")
     .replace(SEPARATOR, " ")
     .trim();
+  if (normalized.length > MAX_NORMALIZATION_INPUT_LENGTH) {
+    fail("PUBLIC_OUTPUT_NORMALIZATION_LIMIT");
+  }
+  return normalized;
+}
+
+function tokenizeNormalizedPublicText(normalized) {
+  const tokens = [];
+  for (const match of normalized.matchAll(/[\p{L}\p{N}]+/gu)) {
+    tokens.push({ offset: match.index, value: match[0] });
+  }
+  return tokens;
 }
 
 export function tokenizePublicText(value) {
-  return normalizePublicText(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  return tokenizeNormalizedPublicText(normalizePublicText(value)).map((token) => token.value);
 }
 
 export function validatePolicy(policy) {
@@ -238,7 +267,8 @@ function matchesFingerprint(compact, item) {
 export function scanPublicText({ policy, surface, source, text }) {
   validatePolicy(policy);
   const normalized = normalizePublicText(text);
-  const tokens = tokenizePublicText(normalized);
+  const positionedTokens = tokenizeNormalizedPublicText(normalized);
+  const tokens = positionedTokens.map((token) => token.value);
   const findings = [];
   for (const item of policy.fingerprints) {
     const compactCharacters = item.characters - (item.tokens - 1);
@@ -253,7 +283,7 @@ export function scanPublicText({ policy, surface, source, text }) {
           ((window.length === item.tokens && digest(spaced) === item.sha256) ||
             matchesFingerprint(compact, item))
         ) {
-          match = normalized.indexOf(tokens[start]);
+          match = positionedTokens[start].offset;
           break;
         }
         if (compact.length >= compactCharacters) break;

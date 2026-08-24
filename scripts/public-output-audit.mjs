@@ -12,7 +12,7 @@ function usageError() {
 
 function parseArguments(args) {
   let phase = "source";
-  let target = process.cwd();
+  let target = repositoryRoot;
   let portal = false;
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];

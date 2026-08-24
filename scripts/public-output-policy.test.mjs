@@ -82,16 +82,42 @@ async function fixtureWorkspace(t) {
   };
 }
 
+async function fixtureAuditRepository(t) {
+  const root = await mkdtemp(path.join(repositoryRoot, ".public-output-cli-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  await mkdir(path.join(root, "scripts", "lib"), { recursive: true });
+  await mkdir(path.join(root, "security"), { recursive: true });
+  for (const relative of [
+    "scripts/public-output-audit.mjs",
+    "scripts/lib/public-output-policy.mjs",
+    "security/public-output-policy.v1.json",
+    "security/public-output-policy.schema.json",
+    "security/public-output-surfaces.schema.json",
+    "security/public-output-surfaces.marketing.v1.json",
+    "security/public-output-surfaces.portal.v1.json",
+  ]) {
+    await cp(path.join(repositoryRoot, relative), path.join(root, relative));
+  }
+  await writeFile(path.join(root, "neutral.txt"), "completely neutral\n");
+  await initGit(root);
+  return {
+    auditScript: path.join(root, "scripts", "public-output-audit.mjs"),
+    nestedCwd: path.join(root, "scripts", "lib"),
+    root,
+  };
+}
+
 async function initGit(root) {
   await mkdir(root, { recursive: true });
   await exec("git", ["init", "--quiet", root]);
 }
 
 async function runAudit(args, options = {}) {
+  const { auditScriptPath = auditScript, ...execOptions } = options;
   try {
-    const result = await exec(process.execPath, [auditScript, ...args], {
+    const result = await exec(process.execPath, [auditScriptPath, ...args], {
       cwd: repositoryRoot,
-      ...options,
+      ...execOptions,
     });
     return { ...result, status: 0 };
   } catch (error) {
@@ -115,6 +141,20 @@ test("normalizes named entities and slash, underscore, and hyphen separators", (
   }
 });
 
+test("matches named slash, lowbar, and hyphen entity separators", () => {
+  for (const text of [
+    "fixture&sol;signal&sol;zx9",
+    "fixture&lowbar;signal&lowbar;zx9",
+    "fixture&hyphen;signal&hyphen;zx9",
+  ]) {
+    assert.equal(
+      scanPublicText({ policy: fixturePolicy(), surface: "fixture", source: "entity.txt", text }).length,
+      1,
+      text,
+    );
+  }
+});
+
 test("recursively normalizes double percent, HTML, and JavaScript encodings", () => {
   for (const value of [
     "fixture%2520signal%2520zx9",
@@ -123,6 +163,24 @@ test("recursively normalizes double percent, HTML, and JavaScript encodings", ()
   ]) {
     assert.equal(normalizePublicText(value), "fixture signal zx9", value);
   }
+});
+
+test("normalizes five-plus recursive percent encodings", () => {
+  assert.equal(
+    normalizePublicText("fixture%252525252520signal%252525252520zx9"),
+    fixturePhrase,
+  );
+});
+
+test("rejects exhausted decode rounds and oversized normalization input with a redacted code", () => {
+  let tooDeep = "%20";
+  for (let index = 0; index < 17; index += 1) tooDeep = encodeURIComponent(tooDeep);
+  assert.throws(() => normalizePublicText(`fixture${tooDeep}signal`), {
+    message: "PUBLIC_OUTPUT_NORMALIZATION_LIMIT",
+  });
+  assert.throws(() => normalizePublicText("x".repeat(1_048_577)), {
+    message: "PUBLIC_OUTPUT_NORMALIZATION_LIMIT",
+  });
 });
 
 test("tokenizes the neutral separated fixture", () => {
@@ -218,6 +276,26 @@ test("reports deterministic redacted findings", () => {
     },
   ]);
   assert.equal(JSON.stringify(findings).includes(fixturePhrase), false);
+});
+
+test("reports the offset of the matched repeated-token window", () => {
+  assert.deepEqual(
+    scanPublicText({
+      policy: fixturePolicy(),
+      surface: "fixture",
+      source: "repeated.txt",
+      text: "fixture safe fixture signal zx9",
+    }),
+    [
+      {
+        id: "fixture_01",
+        severity: "block",
+        surface: "fixture",
+        source: "repeated.txt",
+        offset: 13,
+      },
+    ],
+  );
 });
 
 test("rejects unsafe policy sizes before scanning", () => {
@@ -426,7 +504,7 @@ test("reject binary strategy fails with a deterministic redacted code", async (t
   );
 });
 
-test("CLI accepts no flags and valid phase, root, and portal combinations", async (t) => {
+test("CLI accepts valid phase, root, and portal combinations", async (t) => {
   const fixture = await fixtureWorkspace(t);
   const sourceRoot = path.join(fixture.base, "repo");
   const artifactRoot = path.join(fixture.base, "artifact");
@@ -434,7 +512,6 @@ test("CLI accepts no flags and valid phase, root, and portal combinations", asyn
   await mkdir(artifactRoot);
   await writeFile(path.join(artifactRoot, "neutral.txt"), "completely neutral\n");
   for (const [args, options] of [
-    [[], { cwd: sourceRoot }],
     [["--phase", "source", "--root", sourceRoot], {}],
     [["--phase", "artifact", "--root", artifactRoot], {}],
     [["--portal", "--phase", "image-root", "--root", artifactRoot], {}],
@@ -443,6 +520,25 @@ test("CLI accepts no flags and valid phase, root, and portal combinations", asyn
     assert.match(result.stdout, /^\[[\s\S]*\]\r?\n$/);
     assert.equal(result.stderr, "");
   }
+});
+
+test("CLI no-flags uses the repository root from a nested cwd while explicit root is unchanged", async (t) => {
+  const auditFixture = await fixtureAuditRepository(t);
+  const noFlags = await runAudit([], {
+    auditScriptPath: auditFixture.auditScript,
+    cwd: auditFixture.nestedCwd,
+  });
+  assert.equal(noFlags.status, 0);
+  assert.match(noFlags.stdout, /^\[[\s\S]*\]\r?\n$/);
+  assert.equal(noFlags.stderr, "");
+
+  const fixture = await fixtureWorkspace(t);
+  const explicitRoot = path.join(fixture.base, "repo");
+  await initGit(explicitRoot);
+  const explicit = await runAudit(["--root", explicitRoot], { cwd: auditFixture.nestedCwd });
+  assert.equal(explicit.status, 0);
+  assert.equal(explicit.stdout, "[]\n");
+  assert.equal(explicit.stderr, "");
 });
 
 test("CLI rejects missing values, unknown flags, and unsupported phases without content leaks", async () => {
