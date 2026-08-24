@@ -52,7 +52,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260824-localpc-v12",
+				adapterVersion: "yuanbao-web-20260824-localpc-v13",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
@@ -105,7 +105,7 @@ describe("buildHeartbeat", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260824-localpc-v12",
+				adapterVersion: "yuanbao-web-20260824-localpc-v13",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {

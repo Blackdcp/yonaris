@@ -1,5 +1,5 @@
 {
-	"version": "yuanbao-web-20260824-localpc-v12",
+	"version": "yuanbao-web-20260824-localpc-v13",
 	"surface": "yuanbao.consumer_web",
 	"launchUrl": "https://yuanbao.tencent.com/",
 	"conversationPathPattern": "^/chat/[A-Za-z0-9_-]{4,200}/[A-Za-z0-9_-]{4,200}/?$",
@@ -8,7 +8,7 @@
 	"newConversation": "[data-desc=\"new-chat\"]",
 	"newConversationLabel": null,
 	"userMessage": ".agent-chat__bubble--human .hyc-content-text",
-	"answer": ".agent-chat__bubble--ai .agent-chat__speech-card__text",
+	"answer": ".agent-chat__bubble--ai .hyc-content-md",
 	"generating": ".hyc-content-md:not(.hyc-content-md-done)",
 	"completion": null,
 	"completionCompanion": null,

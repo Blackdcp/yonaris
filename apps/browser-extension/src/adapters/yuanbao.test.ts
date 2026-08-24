@@ -14,7 +14,7 @@ describe("Yuanbao browser-extension adapter", () => {
 				}),
 			),
 		);
-		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260824-localpc-v12");
+		expect(yuanbaoSelectorContract.version).toBe("yuanbao-web-20260824-localpc-v13");
 		expect(yuanbaoSearchEvidenceAdapter).toMatchObject({
 			version: "yuanbao-search-evidence-20260822-v4",
 			settleTimeoutMs: 60_000,
@@ -58,7 +58,7 @@ describe("Yuanbao browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/yuanbao", title: "元宝来源" }],
-			adapterVersion: "yuanbao-web-20260824-localpc-v12",
+			adapterVersion: "yuanbao-web-20260824-localpc-v13",
 		});
 	});
 

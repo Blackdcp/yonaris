@@ -22,6 +22,7 @@ type BrowserTab = { id?: number; windowId?: number; active?: boolean; url?: stri
 export interface ChromeTabsGateway {
 	create(url: string, options: { active: boolean }): Promise<BrowserTab>;
 	get(tabId: number): Promise<BrowserTab>;
+	query(options: { active: true; lastFocusedWindow: true }): Promise<BrowserTab[]>;
 	remove(tabId: number): Promise<void>;
 	activate(tabId: number): Promise<void>;
 	captureVisibleTab(windowId: number, options: { format: "jpeg"; quality: 82 }): Promise<string>;
@@ -64,6 +65,23 @@ export class ChromeTabDriver implements RunnerTabDriver {
 	async activate(tabId: number): Promise<void> {
 		if (!Number.isSafeInteger(tabId) || tabId < 0) throw new Error("Browser Runner tab id is invalid");
 		await this.#gateway.activate(tabId);
+	}
+
+	async resolveManualRecoveryTab(tabId: number, surface: BrowserExtensionSurface): Promise<number> {
+		if (!Number.isSafeInteger(tabId) || tabId < 0) throw new Error("Browser Runner tab id is invalid");
+		const activeApprovedTabs = (await this.#gateway.query({ active: true, lastFocusedWindow: true })).filter(
+			(tab) => Number.isSafeInteger(tab.id) && (tab.id ?? -1) >= 0 && isApprovedUrl(tab.url, surface),
+		);
+		if (activeApprovedTabs.length > 1) throw new Error("Active Browser Runner tab is ambiguous");
+		if (activeApprovedTabs[0]?.id !== undefined) return activeApprovedTabs[0].id;
+
+		const preserved = await this.#gateway.get(tabId);
+		if (preserved.id !== undefined && preserved.id !== tabId) {
+			throw new Error("Chrome returned a different Browser Runner tab");
+		}
+		if (!preserved.url) throw new Error("Browser Runner tab URL is unavailable");
+		assertApprovedUrl(preserved.url, surface);
+		return tabId;
 	}
 
 	async #waitForReady(tabId: number, surface: BrowserExtensionSurface): Promise<void> {
@@ -161,6 +179,7 @@ export function chromeTabsGateway(): ChromeTabsGateway {
 	return {
 		create: (url, options) => chrome.tabs.create({ url, active: options.active }),
 		get: (tabId) => chrome.tabs.get(tabId),
+		query: (options) => chrome.tabs.query(options),
 		remove: (tabId) => chrome.tabs.remove(tabId),
 		activate: async (tabId) => {
 			await chrome.tabs.update(tabId, { active: true });
@@ -197,6 +216,15 @@ function assertApprovedUrl(value: string, surface: BrowserExtensionSurface): voi
 	const url = new URL(value);
 	if (!extensionSurfaceDefinition(surface).approvedUrl(url)) {
 		throw new AdapterError("page_drift", "pre_submit", "Browser Runner tab left the approved channel");
+	}
+}
+
+function isApprovedUrl(value: string | undefined, surface: BrowserExtensionSurface): boolean {
+	if (!value) return false;
+	try {
+		return extensionSurfaceDefinition(surface).approvedUrl(new URL(value));
+	} catch {
+		return false;
 	}
 }
 

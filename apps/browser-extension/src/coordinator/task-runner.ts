@@ -58,6 +58,10 @@ export interface RunnerTabDriver {
 	open(claim: BrowserExtensionClaim): Promise<RunnerTab>;
 	attach(tabId: number, surface: BrowserExtensionClaim["surfaceTargetKey"]): Promise<RunnerTab>;
 	activate(tabId: number): Promise<void>;
+	resolveManualRecoveryTab?(
+		preferredTabId: number,
+		surface: BrowserExtensionClaim["surfaceTargetKey"],
+	): Promise<number>;
 }
 
 export type TaskRunResult =

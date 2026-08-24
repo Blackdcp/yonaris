@@ -64,7 +64,7 @@ describe("browser extension contract", () => {
 			"yuanbao.consumer_web",
 			"browser_extension.yuanbao",
 			"https://yuanbao.tencent.com/",
-			"yuanbao-web-20260824-localpc-v12",
+			"yuanbao-web-20260824-localpc-v13",
 		],
 		["zhipu.consumer_web", "browser_extension.zhipu", "https://chatglm.cn/", "zhipu-web-20260822-localpc-v5"],
 	] as const)("defines %s", (surface, captureRoute, launchUrl, adapterVersion) => {

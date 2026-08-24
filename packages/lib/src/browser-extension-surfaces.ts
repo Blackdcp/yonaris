@@ -39,7 +39,7 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Yuanbao",
 		captureRoute: "browser_extension.yuanbao",
 		launchUrl: "https://yuanbao.tencent.com/",
-		adapterVersion: "yuanbao-web-20260824-localpc-v12",
+		adapterVersion: "yuanbao-web-20260824-localpc-v13",
 	},
 	{
 		key: "zhipu.consumer_web",

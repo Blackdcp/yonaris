@@ -461,6 +461,54 @@ describe("ExtensionCoordinator", () => {
 		expect(await journal.entries()).toEqual({});
 	});
 
+	test("rebinds manual recovery to the administrator's active approved tab", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		const journal = new DurableTaskJournal(storage);
+		await journal.start(claimedTask(), {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+		});
+		await journal.advance("task-1", "submit_intent");
+		await journal.advance("task-1", "needs_human");
+		const originalTabs = fakeTabDriver(events, fakeAdapter(events));
+		const tabs = {
+			...originalTabs,
+			resolveManualRecoveryTab: async () => {
+				events.push("tab:resolve:42:84");
+				return 84;
+			},
+			attach: async (tabId: number, surface: "deepseek.consumer_web") => {
+				events.push(`tab:attach:${tabId}`);
+				return originalTabs.attach(tabId, surface);
+			},
+		};
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => null,
+				resume: async () =>
+					claimedTask({ postSubmitAssist: true, submitConfirmed: true, runnerSessionId: "session-1" }),
+			}),
+			tabs,
+			browserVersion: "Chrome/140",
+		});
+
+		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toMatchObject({ status: "succeeded" });
+		expect(events).toContain("tab:resolve:42:84");
+		expect(events).toContain("tab:activate:84");
+		expect(events).toContain("tab:attach:84");
+		expect(events).not.toContain("adapter:submit");
+	});
+
 	test("uses the server-authoritative pre-submit stage when durable intent never reached the Portal", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());

@@ -91,6 +91,32 @@ describe("ChromeTabDriver", () => {
 		expect(events).toContain("activate:42");
 	});
 
+	test("rebinds manual recovery to the active approved consumer tab", async () => {
+		const events: string[] = [];
+		const driver = new ChromeTabDriver(
+			fakeGateway(events, {
+				activeTab: { id: 84, url: "https://yuanbao.tencent.com/chat/workspace/thread", status: "complete" },
+			}),
+			{ wait: async () => undefined },
+		);
+
+		await expect(driver.resolveManualRecoveryTab(42, "yuanbao.consumer_web")).resolves.toBe(84);
+		expect(events).toContain("query:active-approved-tab");
+	});
+
+	test("falls back to the preserved tab when the active tab belongs to another channel", async () => {
+		const events: string[] = [];
+		const driver = new ChromeTabDriver(
+			fakeGateway(events, {
+				activeTab: { id: 84, url: "https://example.com/", status: "complete" },
+			}),
+			{ wait: async () => undefined },
+		);
+
+		await expect(driver.resolveManualRecoveryTab(42, "deepseek.consumer_web")).resolves.toBe(42);
+		expect(events).toContain("get:42");
+	});
+
 	test("maps structured content adapter errors without leaking page content", async () => {
 		const gateway = fakeGateway([], {
 			response: { ok: false, error: { code: "captcha", stage: "pre_submit", message: "Verification required" } },
@@ -116,7 +142,10 @@ describe("ChromeTabDriver", () => {
 	});
 });
 
-function fakeGateway(events: string[], options: { url?: string; response?: unknown } = {}): ChromeTabsGateway {
+function fakeGateway(
+	events: string[],
+	options: { url?: string; response?: unknown; activeTab?: { id: number; url: string; status: string } } = {},
+): ChromeTabsGateway {
 	return {
 		create: async (url, createOptions?: { active: boolean }) => {
 			events.push(`create:${url}:active=${String(createOptions?.active)}`);
@@ -137,6 +166,10 @@ function fakeGateway(events: string[], options: { url?: string; response?: unkno
 		},
 		activate: async (tabId) => {
 			events.push(`activate:${tabId}`);
+		},
+		query: async () => {
+			events.push("query:active-approved-tab");
+			return options.activeTab ? [options.activeTab] : [];
 		},
 		captureVisibleTab: async (windowId, captureOptions) => {
 			events.push(`capture:${windowId}:${captureOptions.format}:${captureOptions.quality}`);

@@ -10,7 +10,20 @@ describe("Yuanbao semantic DOM contract", () => {
 			<a id="yuanbao-send-btn" class="style__send-btn--disabled___mhfdQ" aria-label="发送"></a>
 			<a id="yuanbao-send-btn" aria-label="发送"></a>
 			<div class="agent-chat__bubble agent-chat__bubble--human"><div class="hyc-content-text">Prompt A</div><div>复制</div></div>
-			<div class="agent-chat__bubble agent-chat__bubble--ai"><div class="agent-chat__speech-card__text"><div class="hyc-content-md hyc-content-md-done">Current answer</div></div><div>复制</div></div>
+			<div class="agent-chat__bubble agent-chat__bubble--ai agent-chat__conv--ai--multiple">
+				<div class="agent-chat__bubble__content">
+					<div class="agent-chat__conv--ai__speech_show">
+						<div class="agent-chat__speech-text--box agent-chat__speech-text--box-left">
+							<div class="agent-chat__speech-text">
+								<div class="hyc-component-text">
+									<div class="hyc-content-md hyc-content-md-done">Current answer</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div>复制</div>
+			</div>
 		</body></html>`);
 
 		expect(document.querySelectorAll(yuanbaoSelectorContract.composer)).toHaveLength(1);
