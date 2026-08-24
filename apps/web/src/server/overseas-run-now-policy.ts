@@ -10,9 +10,9 @@ export const OVERSEAS_RUN_NOW_CHANNELS = [
 	{
 		key: "perplexity",
 		label: "Perplexity",
-		config: { model: "perplexity", provider: "dataforseo", webSearch: true },
+		config: { model: "perplexity", provider: "brightdata", webSearch: true },
 	},
-	{ key: "gemini", label: "Gemini", config: { model: "gemini", provider: "dataforseo", webSearch: true } },
+	{ key: "gemini", label: "Gemini", config: { model: "gemini", provider: "brightdata", webSearch: true } },
 	{ key: "copilot", label: "Copilot", config: { model: "copilot", provider: "brightdata", webSearch: true } },
 	{
 		key: "google-ai-mode",
@@ -59,7 +59,7 @@ export function assertOverseasRunNowProvidersConfigured(
 		if (checked.has(provider)) continue;
 		checked.add(provider);
 		if (!isConfigured(provider)) {
-			const label = provider === "dataforseo" ? "DataForSEO" : provider === "brightdata" ? "Bright Data" : provider;
+			const label = provider === "brightdata" ? "Bright Data" : provider;
 			throw new Error(`${label} is not configured`);
 		}
 	}
