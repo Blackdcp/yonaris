@@ -9,7 +9,7 @@ import { HomePage } from "./pages/home-page";
 import { ProductPage } from "./pages/product-page";
 import { ResearchPage } from "./pages/research-page";
 
-const BASELINE_REVISION = "4e3ad82a58bfe5b19450b1de01104f5e0bce0074";
+const BASELINE_REVISION = "36ecb7ce14af2cdd589a2fd23b8cf91fc882e9bd";
 const RETIRED_PUBLIC_LINKS = new Set(["/status"]);
 const ROUTES = [
 	{ key: "home", path: "/zh", mainClass: "home-page", render: () => <HomePage locale="zh" /> },
@@ -184,6 +184,11 @@ describe("frozen zh-CN legacy baseline", () => {
 				targets: ROUTES.map(({ path }) => `${path} footer /status`),
 			},
 			{ id: "reviewed-hreflang-removal", reviewerRole: "release-owner", targets: [] },
+			{
+				id: "retired-positioning-language-removal",
+				reviewerRole: "release-owner",
+				targets: ["/zh main illustrative category label"],
+			},
 		]);
 	});
 });
