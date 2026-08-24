@@ -13,6 +13,17 @@ const coreCanonicalTargets = new Map<string, { key: CorePageKey; locale: Locale 
 	),
 );
 
+const agentMarkdownTargets = new Map<string, string>([
+	["/agent", "/llms.mdx/agent/index"],
+	["/agent/", "/llms.mdx/agent/index"],
+	["/agent/product", "/llms.mdx/agent/product"],
+	["/agent/approach", "/llms.mdx/agent/approach"],
+	["/agent/research", "/llms.mdx/agent/research"],
+	["/agent/geo", "/llms.mdx/agent/geo"],
+	["/agent/company", "/llms.mdx/agent/company"],
+	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
+]);
+
 interface MediaPreference {
 	quality: number;
 	position: number;
@@ -57,12 +68,15 @@ function isCoreMarkdownPreferred(request: Request): boolean {
 export function resolveMarkdownRequest(request: Request): MarkdownResolution {
 	if (request.method !== "GET" && request.method !== "HEAD") return { variesOnAccept: false };
 
-	const canonical = coreCanonicalTargets.get(new URL(request.url).pathname);
-	if (!canonical) return { variesOnAccept: false };
+	const pathname = new URL(request.url).pathname;
+	const canonical = coreCanonicalTargets.get(pathname);
+	const agentTarget = agentMarkdownTargets.get(pathname);
+	if (!canonical && !agentTarget) return { variesOnAccept: false };
 	if (!isCoreMarkdownPreferred(request)) return { variesOnAccept: true };
+	if (agentTarget) return { targetPath: agentTarget, variesOnAccept: true };
 
 	return {
-		targetPath: `/llms.mdx/site/${canonical.locale}/${canonical.key}`,
+		targetPath: `/llms.mdx/site/${canonical?.locale}/${canonical?.key}`,
 		variesOnAccept: true,
 	};
 }

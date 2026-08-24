@@ -130,7 +130,7 @@ export const SITE_MANIFEST = [
 		key: "markdownInternal",
 		routeClass: "machine",
 		canonicals: { en: "/llms.mdx/site" },
-		patterns: ["/llms.mdx/site/*"],
+		patterns: ["/llms.mdx/*"],
 		navigation: [],
 		indexPolicy: "noindex,follow",
 		sitemap: false,

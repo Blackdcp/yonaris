@@ -113,14 +113,14 @@ export const GLOBAL_ENGLISH_MACHINE_FACTS: Readonly<Record<CorePageKey, GlobalEn
 		title: GLOBAL_ENGLISH_CONTENT.diagnostic.headline,
 		description: GLOBAL_ENGLISH_CONTENT.diagnostic.description,
 		currentScope:
-			"A diagnostic starts with one brand, one market, and one decision question, followed by a scope review before collection.",
+			"The regional website forms collect only the approved contact fields and send them through a server-validated email delivery route for human review.",
 		claims: [
 			{
-				id: "submission-disabled",
+				id: "regional-contact-contract",
 				status: "verified-evidence",
-				text: "The global diagnostic form is disabled until its privacy boundary is verified.",
+				text: "Global requests contain name, work email, and company; China requests contain name, phone, and company.",
 			},
 		],
-		limitations: ["The public surface does not collect lead data while submission remains disabled."],
+		limitations: ["Submitting starts a human scope review; it does not create an instant scan, score, or evidence result."],
 	},
 };

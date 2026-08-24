@@ -50,6 +50,7 @@ import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
 import { Route as ZhProductRouteImport } from './routes/zh/product'
 import { Route as ZhResearchRouteImport } from './routes/zh/research'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
+import { Route as LlmsDotmdxAgentSplatRouteImport } from './routes/llms[.]mdx.agent.$'
 import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
@@ -259,6 +260,11 @@ const ZhResultsRoute = ZhResultsRouteImport.update({
   path: '/zh/results',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LlmsDotmdxAgentSplatRoute = LlmsDotmdxAgentSplatRouteImport.update({
+  id: '/llms.mdx/agent/$',
+  path: '/llms.mdx/agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LlmsDotmdxSiteSplatRoute = LlmsDotmdxSiteSplatRouteImport.update({
   id: '/llms.mdx/site/$',
   path: '/llms.mdx/site/$',
@@ -318,6 +324,7 @@ export interface FileRoutesByFullPath {
   '/zh/results': typeof ZhResultsRoute
   '/agent/': typeof AgentIndexRoute
   '/zh/': typeof ZhIndexRoute
+  '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
@@ -364,6 +371,7 @@ export interface FileRoutesByTo {
   '/zh/results': typeof ZhResultsRoute
   '/agent': typeof AgentIndexRoute
   '/zh': typeof ZhIndexRoute
+  '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/api/plausible/event': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
@@ -411,6 +419,7 @@ export interface FileRoutesById {
   '/zh/results': typeof ZhResultsRoute
   '/agent/': typeof AgentIndexRoute
   '/zh/': typeof ZhIndexRoute
+  '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
@@ -459,6 +468,7 @@ export interface FileRouteTypes {
     | '/zh/results'
     | '/agent/'
     | '/zh/'
+    | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
@@ -505,6 +515,7 @@ export interface FileRouteTypes {
     | '/zh/results'
     | '/agent'
     | '/zh'
+    | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/api/plausible/event'
     | '/api/plausible/js/script'
@@ -551,6 +562,7 @@ export interface FileRouteTypes {
     | '/zh/results'
     | '/agent/'
     | '/zh/'
+    | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
@@ -598,6 +610,7 @@ export interface RootRouteChildren {
   ZhResultsRoute: typeof ZhResultsRoute
   AgentIndexRoute: typeof AgentIndexRoute
   ZhIndexRoute: typeof ZhIndexRoute
+  LlmsDotmdxAgentSplatRoute: typeof LlmsDotmdxAgentSplatRoute
   LlmsDotmdxSiteSplatRoute: typeof LlmsDotmdxSiteSplatRoute
   ApiPlausibleEventIndexRoute: typeof ApiPlausibleEventIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
@@ -892,6 +905,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/llms.mdx/agent/$': {
+      id: '/llms.mdx/agent/$'
+      path: '/llms.mdx/agent/$'
+      fullPath: '/llms.mdx/agent/$'
+      preLoaderRoute: typeof LlmsDotmdxAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/llms.mdx/site/$': {
       id: '/llms.mdx/site/$'
       path: '/llms.mdx/site/$'
@@ -958,6 +978,7 @@ const rootRouteChildren: RootRouteChildren = {
   ZhResultsRoute: ZhResultsRoute,
   AgentIndexRoute: AgentIndexRoute,
   ZhIndexRoute: ZhIndexRoute,
+  LlmsDotmdxAgentSplatRoute: LlmsDotmdxAgentSplatRoute,
   LlmsDotmdxSiteSplatRoute: LlmsDotmdxSiteSplatRoute,
   ApiPlausibleEventIndexRoute: ApiPlausibleEventIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,

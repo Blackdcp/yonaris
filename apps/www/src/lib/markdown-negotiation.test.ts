@@ -34,6 +34,17 @@ const canonicalCases = [
 	["/zh/diagnostic", "/llms.mdx/site/zh/diagnostic"],
 ] as const;
 
+const agentCases = [
+	["/agent", "/llms.mdx/agent/index"],
+	["/agent/", "/llms.mdx/agent/index"],
+	["/agent/product", "/llms.mdx/agent/product"],
+	["/agent/approach", "/llms.mdx/agent/approach"],
+	["/agent/research", "/llms.mdx/agent/research"],
+	["/agent/geo", "/llms.mdx/agent/geo"],
+	["/agent/company", "/llms.mdx/agent/company"],
+	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
+] as const;
+
 function request(path: string, accept: string, method = "GET"): Request {
 	return new Request(`https://yonaris.test${path}`, { method, headers: { Accept: accept } });
 }
@@ -68,6 +79,15 @@ describe("core Markdown negotiation", () => {
 			targetPath: "/llms.mdx/site/en/product",
 			variesOnAccept: true,
 		});
+	});
+
+	test("serves branded Agent HTML by default and Markdown when an agent prefers it", () => {
+		const negotiation = requireSubject();
+		if (!negotiation) return;
+		for (const [path, targetPath] of agentCases) {
+			expect(negotiation.resolveMarkdownRequest(request(path, "text/html"))).toEqual({ variesOnAccept: true });
+			expect(negotiation.resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({ targetPath, variesOnAccept: true });
+		}
 	});
 
 	test("uses the most specific media range before its quality weight", () => {
