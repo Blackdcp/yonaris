@@ -197,6 +197,14 @@ test("repository topology excludes retired distribution surfaces and preserves l
       if (retiredDependency.test(name)) blockers.push(`www-${section}:${name}`);
     }
   }
+  const wwwTsconfig = JSON.parse(
+    await readFile(path.join(repositoryRoot, "apps", "www", "tsconfig.json"), "utf8"),
+  );
+  for (const include of wwwTsconfig.include ?? []) {
+    if (typeof include === "string" && include.startsWith("content/")) {
+      blockers.push(`www-tsconfig-orphan:${include}`);
+    }
+  }
 
   const workspacePackageNames = new Set();
   for (const file of trackedFiles.filter(

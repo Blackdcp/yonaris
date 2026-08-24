@@ -17,6 +17,6 @@
 			"@workspace/ui/*": ["../../packages/ui/src/*"]
 		}
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "content/**/*.ts"],
+	"include": ["src/**/*.ts", "src/**/*.tsx"],
 	"exclude": ["node_modules", "dist", ".output"]
 }
