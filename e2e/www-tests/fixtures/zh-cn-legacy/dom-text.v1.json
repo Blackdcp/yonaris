@@ -1,6 +1,6 @@
 {
 	"schemaVersion": 1,
-	"revision": "4e3ad82a58bfe5b19450b1de01104f5e0bce0074",
+	"revision": "36ecb7ce14af2cdd589a2fd23b8cf91fc882e9bd",
 	"normalization": "unicode-nfkc-whitespace-v1",
 	"routes": {
 		"home": {
@@ -283,13 +283,6 @@
 					"scope": "footer",
 					"text": "GEO",
 					"href": "/zh/geo",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
 					"ariaLabel": "",
 					"lang": ""
 				},
@@ -764,13 +757,6 @@
 					"scope": "footer",
 					"text": "GEO",
 					"href": "/zh/geo",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
 					"ariaLabel": "",
 					"lang": ""
 				},
@@ -1372,13 +1358,6 @@
 				},
 				{
 					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
 					"text": "隐私",
 					"href": "/privacy",
 					"ariaLabel": "",
@@ -1812,13 +1791,6 @@
 					"scope": "footer",
 					"text": "GEO",
 					"href": "/zh/geo",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
 					"ariaLabel": "",
 					"lang": ""
 				},
@@ -2264,13 +2236,6 @@
 				},
 				{
 					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
 					"text": "隐私",
 					"href": "/privacy",
 					"ariaLabel": "",
@@ -2641,13 +2606,6 @@
 					"scope": "footer",
 					"text": "GEO",
 					"href": "/zh/geo",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
 					"ariaLabel": "",
 					"lang": ""
 				},
@@ -3329,13 +3287,6 @@
 					"scope": "footer",
 					"text": "GEO",
 					"href": "/zh/geo",
-					"ariaLabel": "",
-					"lang": ""
-				},
-				{
-					"scope": "footer",
-					"text": "状态",
-					"href": "/status",
 					"ariaLabel": "",
 					"lang": ""
 				},

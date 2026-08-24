@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { QA_VIEWPORTS } from "./helpers/core-site";
 
-const BASELINE_REVISION = "4e3ad82a58bfe5b19450b1de01104f5e0bce0074";
+const BASELINE_REVISION = "36ecb7ce14af2cdd589a2fd23b8cf91fc882e9bd";
 const RETIRED_PUBLIC_LINKS = new Set(["/status"]);
 const PROTECTED_PATHS = [
 	"apps/www/src",

@@ -31,5 +31,12 @@
 		"id": "reviewed-hreflang-removal",
 		"reviewerRole": "release-owner",
 		"targets": []
+	},
+	{
+		"id": "retired-positioning-language-removal",
+		"reviewerRole": "release-owner",
+		"targets": [
+			"/zh main illustrative category label"
+		]
 	}
 ]
