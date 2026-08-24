@@ -22,7 +22,7 @@
 - Unsupported customers, logos, platform counts, results, coverage claims, certifications, locations, response times, and delivery guarantees are forbidden.
 - Demonstrations remain visibly labelled and cannot imply live observation or customer proof.
 - Previously retired public routes remain retired, and the repository's restricted-marketing scan must pass.
-- Diagnostic submission remains disabled until the already-defined privacy gate is verified; local scope-preview interaction must not transmit data.
+- The shared lead pipeline is enabled in Release 1: English exposes only Name, Work email, and Company; Chinese exposes only 姓名、电话、公司; successful submission sends one server-side email to the configured marketing recipient.
 - Every interaction has a semantic server-rendered initial state, keyboard and touch access, and a reduced-motion state.
 - Use existing dependencies only. Use pnpm exclusively and do not weaken workspace supply-chain controls.
 - Do not hand-edit `apps/www/src/routeTree.gen.ts`; allow the TanStack route generator to update it through the normal build/dev command and commit the generated result if it changes.
@@ -41,7 +41,6 @@
 - `apps/www/src/components/site/global-en/interactions/evidence-journey.tsx` — Approach step selector and scroll-linked progressive enhancement.
 - `apps/www/src/components/site/global-en/interactions/evidence-explorer.tsx` — Evidence annotations and reviewable ledger states.
 - `apps/www/src/components/site/global-en/interactions/answer-relationship-map.tsx` — AI Visibility brand/answer/source relationship model.
-- `apps/www/src/components/site/global-en/interactions/diagnostic-scope-preview.tsx` — local-only diagnostic scope composer with disabled submission.
 - `apps/www/src/components/site/global-en/interactions/interactions.test.tsx` — server-rendered accessibility and initial-state contracts for every interactive figure.
 - `apps/www/src/components/site/global-en/agent/global-agent-shell.tsx` — branded Agent navigation and Human companion link.
 - `apps/www/src/components/site/global-en/agent/global-agent-pages.tsx` — Agent index and fact-page renderer driven by global machine facts.
@@ -637,62 +636,215 @@ git add apps/www/src/components/site/global-en/interactions/evidence-explorer.ts
 git commit -m "add global evidence inspection experiences"
 ```
 
-### Task 6: Finish Company, Diagnostic, and Privacy as product-quality pages
+### Task 6: Finish Company and ship the simple regional email lead forms
 
 **Files:**
-- Create: `apps/www/src/components/site/global-en/interactions/diagnostic-scope-preview.tsx`
 - Modify: `apps/www/src/components/site/global-en/interactions/interactions.test.tsx`
 - Modify: `apps/www/src/components/site/global-en/pages/company-page.tsx`
 - Modify: `apps/www/src/components/site/global-en/pages/diagnostic-page.tsx`
 - Modify: `apps/www/src/components/site/global-en/pages/privacy-page.tsx`
 - Modify: `apps/www/src/components/site/global-en/visuals/visuals.tsx`
+- Modify: `apps/www/src/components/site/pages/diagnostic-form.tsx`
+- Modify: `apps/www/src/components/site/pages/diagnostic-form.test.tsx`
+- Modify: `apps/www/src/content/site/diagnostic.ts`
+- Modify: `apps/www/src/content/site/diagnostic.test.ts`
+- Modify: `apps/www/src/content/site/content-parity.test.ts`
+- Modify: `apps/www/src/lib/diagnostic-schema.ts`
+- Modify: `apps/www/src/lib/diagnostic-schema.test.ts`
+- Modify: `apps/www/src/lib/diagnostic-client.test.ts`
+- Modify: `apps/www/src/lib/diagnostic-delivery.server.ts`
+- Modify: `apps/www/src/lib/diagnostic-delivery.server.test.ts`
 - Modify: `apps/www/src/editions/registry.ts`
 - Modify: `apps/www/src/styles/global-en/core.css`
 
 **Interfaces:**
-- Produces: `<DiagnosticScopePreview />`, a local-only controlled scope builder with no network request.
-- Consumes: the existing privacy gate and `data-submission-state="disabled"` contract.
+- Produces: `DIAGNOSTIC_VISIBLE_FIELDS`, a locale-discriminated `DiagnosticLead`, and a one-stage `<DiagnosticForm locale="en" | "zh" />`.
+- Preserves: same-origin POST, strict payload parsing, honeypot, request-size limit, idempotency, rate limiting, confirmed delivery, truthful error, and retry behavior.
+- Consumes: `MARKETING_LEAD_RECIPIENT`, `RESEND_API_KEY`, and `RESEND_FROM_EMAIL` only on the server.
 
-- [ ] **Step 1: Write a failing diagnostic preview contract**
+- [ ] **Step 1: Replace the old lead-schema assertions with failing regional three-field contracts**
 
-Require server markup with labelled `Website`, `Brand`, `Target market or region`, `Target language`, and `Decision question` controls, a `Scope preview` region, and a disabled `Submit diagnostic request` button. Require the form to have `data-submission-state="disabled"` and no `action`, `mailto:`, or success claim.
-
-- [ ] **Step 2: Implement local scope state without collection**
-
-`DiagnosticScopePreview` uses local React state only. Its `<form onSubmit={(event) => event.preventDefault()}>` has no `action` and no fetch. The scope region displays safe fallbacks:
+In `diagnostic-schema.test.ts`, define hand-written valid payloads and require the exact visible fields:
 
 ```ts
-const scope = {
-	brand: brand.trim() || "Brand not provided",
-	market: market.trim() || "Market not defined",
-	language: targetLanguage.trim() || "Language not defined",
-	question: question.trim() || "Decision question not defined",
+const englishLead = {
+	locale: "en",
+	name: "Ava Chen",
+	email: "ava@acme.example",
+	company: "Acme",
+	companyUrl: "",
+} as const;
+
+const chineseLead = {
+	locale: "zh",
+	name: "陈安",
+	phone: "+86 138 0013 8000",
+	company: "示例公司",
+	companyUrl: "",
+} as const;
+
+expect(DIAGNOSTIC_VISIBLE_FIELDS).toEqual({
+	en: ["name", "email", "company"],
+	zh: ["name", "phone", "company"],
+});
+expect(parseDiagnosticLead(englishLead)).toMatchObject({ success: true });
+expect(parseDiagnosticLead(chineseLead)).toMatchObject({ success: true });
+expect(parseDiagnosticLead({ ...englishLead, phone: "13800138000" }).success).toBe(false);
+expect(parseDiagnosticLead({ ...chineseLead, email: "chen@example.cn" }).success).toBe(false);
+```
+
+Also require trimmed non-empty names and companies, valid English email, a Chinese phone containing 6–20 digits with only `+`, spaces, parentheses, or hyphens as separators, an empty honeypot, and rejection of unknown fields.
+
+- [ ] **Step 2: Run the schema test and verify the intentional RED state**
+
+```powershell
+pnpm.cmd --filter @workspace/www exec vitest run --config vitest.config.ts src/lib/diagnostic-schema.test.ts
+```
+
+Expected: FAIL because the old schema still requires website, brand, market, question, competitors, email, and consent for both locales.
+
+- [ ] **Step 3: Implement the locale-discriminated lead schema**
+
+Replace the old scope/contact field model with:
+
+```ts
+export const DIAGNOSTIC_VISIBLE_FIELDS = {
+	en: ["name", "email", "company"],
+	zh: ["name", "phone", "company"],
+} as const;
+
+const sharedShape = {
+	name: z.string().trim().min(1).max(120),
+	company: z.string().trim().min(1).max(160),
+	companyUrl: z.string().trim().max(0).default(""),
+} as const;
+
+const englishLeadSchema = z.strictObject({
+	locale: z.literal("en"),
+	...sharedShape,
+	email: z.string().trim().min(1).max(254).pipe(z.email()),
+});
+
+const chineseLeadSchema = z.strictObject({
+	locale: z.literal("zh"),
+	...sharedShape,
+	phone: z.string().trim().min(6).max(32).superRefine((value, context) => {
+		if (!/^[+()\-\s\d]+$/.test(value) || (value.match(/\d/g) ?? []).length < 6 || (value.match(/\d/g) ?? []).length > 20)
+			context.addIssue({ code: "custom", message: "invalid_phone" });
+	}),
+});
+
+export const diagnosticLeadSchema = z.discriminatedUnion("locale", [englishLeadSchema, chineseLeadSchema]);
+export type DiagnosticLead = z.output<typeof diagnosticLeadSchema>;
+```
+
+Remove the public mailto builder and hard-coded fallback recipient. Keep recipient selection entirely in `readDeliveryEnv`.
+
+- [ ] **Step 4: Write failing delivery tests for both regional emails**
+
+In `diagnostic-delivery.server.test.ts`, keep the real handler and inject only the external mail delivery boundary. Require one delivery call for each valid request and exact provider payload behavior:
+
+```ts
+expect(englishPayload.to).toEqual(["owner@example.com"]);
+expect(englishPayload.reply_to).toBe("ava@acme.example");
+expect(englishPayload.subject).toBe("Yonaris website lead / Acme");
+expect(englishPayload.text).toContain("Name: Ava Chen");
+expect(englishPayload.text).toContain("Work email: ava@acme.example");
+expect(englishPayload.text).toContain("Company: Acme");
+
+expect(chinesePayload.to).toEqual(["owner@example.com"]);
+expect(chinesePayload).not.toHaveProperty("reply_to");
+expect(chinesePayload.subject).toBe("Yonaris 官网留资 / 示例公司");
+expect(chinesePayload.text).toContain("姓名: 陈安");
+expect(chinesePayload.text).toContain("电话: +86 138 0013 8000");
+expect(chinesePayload.text).toContain("公司: 示例公司");
+```
+
+Run the delivery test. Expected: FAIL because delivery still serializes the old scope payload and always reads `lead.email`.
+
+- [ ] **Step 5: Implement provider-confirmed email delivery**
+
+Update the provider payload to:
+
+```ts
+const payload = {
+	from: input.env.RESEND_FROM_EMAIL,
+	to: [input.env.MARKETING_LEAD_RECIPIENT],
+	...(input.lead.locale === "en" ? { reply_to: input.lead.email } : {}),
+	subject:
+		input.lead.locale === "zh"
+			? `Yonaris 官网留资 / ${oneLine(input.lead.company)}`
+			: `Yonaris website lead / ${oneLine(input.lead.company)}`,
+	text: diagnosticLeadEmailText(input.lead),
 };
 ```
 
-The website value is displayed only inside the current browser state. The submission button remains disabled and the nearby copy states that no request is sent from this release.
+`diagnosticLeadEmailText` renders only Locale, Name, Work email or Phone, and Company. Keep header-injection normalization, timeout, idempotency header, and non-2xx failure handling unchanged.
 
-- [ ] **Step 3: Recompose Company around a responsibility and service map**
+- [ ] **Step 6: Write failing form and localized-content tests**
+
+`diagnostic-form.test.tsx` must assert real rendered outcomes:
+
+```tsx
+const english = renderToStaticMarkup(<DiagnosticForm locale="en" />);
+expect(english).toContain('name="name"');
+expect(english).toContain('name="email"');
+expect(english).toContain('name="company"');
+expect(english).not.toContain('name="phone"');
+
+const chinese = renderToStaticMarkup(<DiagnosticForm locale="zh" />);
+expect(chinese).toContain('name="name"');
+expect(chinese).toContain('name="phone"');
+expect(chinese).toContain('name="company"');
+expect(chinese).not.toContain('name="email"');
+```
+
+Both forms retain the hidden `companyUrl` honeypot, one privacy link, one submit button, one honest failure region, and one provider-confirmed success state. Content tests require concise locale-specific labels and disclosures and no two-stage progress copy.
+
+- [ ] **Step 7: Implement the one-stage shared form and content**
+
+Simplify `DiagnosticForm` to the locale's three visible fields plus the honeypot. Preserve the existing request identity, duplicate-click lock, abort-on-value-change behavior, `submitDiagnosticRequest`, confirmed success branch, and retry branch. Remove scope/contact stage transitions, consent checkbox, review list, and mailto fallback.
+
+Use this locale-specific payload builder:
+
+```ts
+function leadInput(values: DiagnosticValues, locale: Locale): unknown {
+	const shared = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl };
+	return locale === "en" ? { ...shared, email: values.email } : { ...shared, phone: values.phone };
+}
+```
+
+The disclosure states that submission sends the provided details to Yonaris so the team can respond and links to `/privacy` for English or `/zh/privacy` when the Chinese privacy route is available; until that route ships, use the current localized privacy destination defined by the route manifest rather than a broken link.
+
+Update `DiagnosticPage` to render the shared `<DiagnosticForm locale="en" />` inside a branded section with `data-graphic="lead-form"`. The current Chinese diagnostic page already consumes `<DiagnosticForm locale="zh" />`, so it receives the required three-field contract without adopting the global visual shell.
+
+- [ ] **Step 8: Recompose Company around a responsibility and service map**
 
 Replace the current empty trust slot with a visual map connecting `Customer question → Yonaris evidence workflow → Reviewable decision` and three responsibility lanes. Keep unverified entity/team/location blocks omitted. Present global service as configurable market and language scope, not universal coverage.
 
-- [ ] **Step 4: Recompose Diagnostic and Privacy**
+- [ ] **Step 9: Recompose Diagnostic and Privacy**
 
 Diagnostic uses:
 
 ```ts
-diagnostic: ["deliverable-hero", "scope-preview", "request-timeline", "privacy-gate"],
+diagnostic: ["deliverable-hero", "lead-form", "request-timeline", "privacy-and-delivery"],
 ```
 
-Privacy remains a restrained supporting page and explicitly explains that the local preview does not transmit data. Do not turn Privacy into another marketing page.
+Privacy remains a restrained supporting page and explains the three submitted fields, response purpose, configured email delivery, and retry behavior in plain language. Do not turn Privacy into another marketing page or invent retention, transfer, controller, or legal-basis facts that have not been approved.
 
-- [ ] **Step 5: Run the focused tests and commit**
+- [ ] **Step 10: Run the focused tests and commit**
 
-Run global interaction, global page, diagnostic privacy, and section-order tests. Expected: PASS.
+Run:
 
 ```powershell
-git add apps/www/src/components/site/global-en/interactions/diagnostic-scope-preview.tsx apps/www/src/components/site/global-en/interactions/interactions.test.tsx apps/www/src/components/site/global-en/pages/company-page.tsx apps/www/src/components/site/global-en/pages/diagnostic-page.tsx apps/www/src/components/site/global-en/pages/privacy-page.tsx apps/www/src/components/site/global-en/visuals/visuals.tsx apps/www/src/editions/registry.ts apps/www/src/styles/global-en/core.css
-git commit -m "finish the global trust and diagnostic pages"
+pnpm.cmd --filter @workspace/www exec vitest run --config vitest.config.ts src/lib/diagnostic-schema.test.ts src/lib/diagnostic-client.test.ts src/lib/diagnostic-delivery.server.test.ts src/components/site/pages/diagnostic-form.test.tsx src/content/site/diagnostic.test.ts src/content/site/content-parity.test.ts src/components/site/global-en/pages/global-english-pages.test.tsx
+```
+
+Expected: PASS with one English delivery, one Chinese delivery, exact regional fields, and honest success/failure behavior.
+
+```powershell
+git add apps/www/src/lib/diagnostic-schema.ts apps/www/src/lib/diagnostic-schema.test.ts apps/www/src/lib/diagnostic-client.test.ts apps/www/src/lib/diagnostic-delivery.server.ts apps/www/src/lib/diagnostic-delivery.server.test.ts apps/www/src/components/site/pages/diagnostic-form.tsx apps/www/src/components/site/pages/diagnostic-form.test.tsx apps/www/src/content/site/diagnostic.ts apps/www/src/content/site/diagnostic.test.ts apps/www/src/content/site/content-parity.test.ts apps/www/src/components/site/global-en/pages/company-page.tsx apps/www/src/components/site/global-en/pages/diagnostic-page.tsx apps/www/src/components/site/global-en/pages/privacy-page.tsx apps/www/src/components/site/global-en/visuals/visuals.tsx apps/www/src/editions/registry.ts apps/www/src/styles/global-en/core.css
+git commit -m "simplify and enable regional website leads"
 ```
 
 ### Task 7: Convert global Agent routes into branded HTML with Markdown negotiation
@@ -858,7 +1010,7 @@ const humanPages = [
 	{ path: "/research", headline: "Evidence needs a scope, denominator, and boundary.", graphic: "evidence-explorer" },
 	{ path: "/geo", headline: "See where your brand enters an AI answer.", graphic: "answer-relationship-map" },
 	{ path: "/company", headline: "Evidence before conclusion.", graphic: "operating-model" },
-	{ path: "/diagnostic", headline: "Request a focused AI market diagnostic.", graphic: "diagnostic-scope-preview" },
+	{ path: "/diagnostic", headline: "Request a focused AI market diagnostic.", graphic: "lead-form" },
 	{ path: "/privacy", headline: "Privacy facts must be verified before collection starts.", graphic: "privacy-flow" },
 ] as const;
 ```
@@ -872,7 +1024,7 @@ Use role-based locators. Select `Why is a competitor being preferred?`, assert `
 - [ ] **Step 3: Add failing Approach, Diagnostic, and Human/Agent tests**
 
 - Approach: activate the `Inspect` stage and assert the corresponding article is current without checking scroll position.
-- Diagnostic: fill Brand, Market, Language, and Decision question; assert the local scope preview changes, the submit button remains disabled, and no request is sent to `/api/diagnostic`.
+- Diagnostic: intercept the external email-provider boundary in the server test, submit Name, Work email, and Company through the browser, assert exactly one `/api/diagnostic` request with the three visible fields plus honeypot, and show success only after a `202` response. Add the Chinese payload assertion for Name, Phone, and Company in the shared form suite.
 - Human/Agent: from `/product`, follow Agent to `/agent/product`, verify the Agent mode is active and `Current scope` is visible, then follow Human back to `/product`.
 
 - [ ] **Step 4: Update content-negotiation and smoke expectations**
@@ -893,7 +1045,7 @@ In `smoke-marketing.mjs`, move `/agent` and six companions from `MACHINE_ROUTES`
 
 At minimum, run all Human routes at 1440×900 and 390×844 through `expectNoHorizontalOverflow` and `runWcagAa`. Run representative `/`, `/product`, `/approach`, `/agent`, and `/agent/product` at 320×740. With reduced motion, call `expectNoRunningAnimations` for all Human and Agent routes.
 
-Add `@visual` captures with `captureQa` for every Human route at desktop and mobile plus Agent index and Agent Product at both viewports. Capture Answer Studio's `competitor`, Product's `sources`, and Diagnostic's filled local-preview state as named interaction states.
+Add `@visual` captures with `captureQa` for every Human route at desktop and mobile plus Agent index and Agent Product at both viewports. Capture Answer Studio's `competitor`, Product's `sources`, and Diagnostic's validation, submitting, and confirmed-success states as named interaction states.
 
 - [ ] **Step 6: Run the targeted Playwright gate and fix only Release 1 failures**
 
@@ -1005,7 +1157,7 @@ Release 1 may be presented as ready only when all of the following are true:
 
 1. The approved Yonaris wordmark assets appear in every global Human and Agent shell.
 2. The global homepage, Product, Approach, Evidence, AI Visibility, Company, Diagnostic, and Privacy pages all use the new regional design system.
-3. Answer Studio, Product Workbench, Evidence Journey, Evidence Explorer, Relationship Map, scope preview, and Human/Agent switching pass keyboard, touch, reduced-motion, and mobile checks.
+3. Answer Studio, Product Workbench, Evidence Journey, Evidence Explorer, Relationship Map, regional lead forms, and Human/Agent switching pass keyboard, touch, reduced-motion, and mobile checks.
 4. `/agent` and six companion routes return branded HTML to browser requests and the paired Markdown facts when `text/markdown` is preferred.
 5. Human and Agent factual fields remain sourced from the same content modules.
 6. No unsupported proof or restricted marketing content enters HTML, metadata, Markdown, tests, or built assets.

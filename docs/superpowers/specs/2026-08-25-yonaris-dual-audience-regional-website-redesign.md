@@ -149,7 +149,7 @@ Stable canonical routes remain in place to reduce deployment and search risk.
 | `/research` | Evidence | 研究依据 | Establish measurement credibility | Evidence ledger and annotated record |
 | `/geo` | AI Visibility | AI 可见度 | Explain the applied market workflow | Brand-answer-source relationship map |
 | `/company` | Company | 关于我们 | Establish purpose, trust, and global service model | Regional service and responsibility map |
-| `/diagnostic` | Diagnostic | 品牌诊断 | Convert a qualified visitor | Progressive request and scope preview |
+| `/diagnostic` | Diagnostic | 品牌诊断 | Convert a qualified visitor | Three-field regional lead form with confirmed email delivery |
 | `/privacy` | Privacy | 隐私说明 | Explain handling in plain language | Restrained supporting-page composition |
 
 Primary global navigation is `Product · How it works · Evidence · Company`. Primary Chinese navigation is `产品能力 · 服务方式 · 研究依据 · 关于我们`. Contextual AI visibility pages remain available through relevant sections and the footer rather than crowding primary navigation.
@@ -209,11 +209,18 @@ The page connects brand facts, AI answers, competitors, available sources, and r
 
 The global edition emphasizes purpose, operating model, evidence principles, and verified company facts. The Chinese edition explains local-market understanding and global service capability through one concrete service map. Entity, team, office, customer, and certification claims appear only when approved evidence exists.
 
-### 7.7 Diagnostic — Progressive Scope Preview
+### 7.7 Diagnostic — Simple Regional Lead Form
 
-The visitor enters a brand website, market, language, and decision question. The interface previews the proposed diagnostic scope before submission. It does not claim that an automatic report or universal score has already been generated.
+The form is intentionally short and uses different contact habits in each region:
 
-Failure states are honest, preserve entered data locally where safe, and offer retry or a verified business-contact route without placing submitted private data in a URL.
+- Global English: `Name`, `Work email`, and `Company`;
+- Chinese: `姓名`, `电话`, and `公司`.
+
+All three visible fields are required. A hidden honeypot may be retained for abuse prevention, but no additional visible discovery, scope, competitor, consent, or qualification fields are added. A concise privacy disclosure beside the submit action explains that submission allows Yonaris to use the provided details to respond and links to the regional privacy page.
+
+Submitting posts to the same-origin diagnostic endpoint. The server validates the locale-specific payload, applies the existing origin, request-size, idempotency, and rate-limit protections, then sends one email to the deployment-configured marketing recipient. The recipient address and mail-provider credentials remain server-only configuration. English submissions use the work email as `reply-to`; Chinese submissions include the phone number in the message body and do not manufacture a reply email.
+
+Success is displayed only after the mail provider confirms acceptance. Failure states are honest, preserve entered data locally where safe, and offer retry without placing submitted private data in a URL or opening a mail client.
 
 ## 8. Regional Competitive Design and Interaction Translation
 
@@ -244,7 +251,7 @@ The two strongest existing Yonaris compositions become design DNA rather than is
 1. the split hero with a diagnostic evidence window;
 2. the dark Product stage with defined scope rings.
 
-The rest of the global site extends that standard with distinct visual protagonists: an evidence path on Approach, a ledger on Evidence, a relationship map on AI Visibility, a responsibility map on Company, and a live scope preview on Diagnostic.
+The rest of the global site extends that standard with distinct visual protagonists: an evidence path on Approach, a ledger on Evidence, a relationship map on AI Visibility, a responsibility map on Company, and the live three-field lead form on Diagnostic.
 
 #### Global interaction direction
 
@@ -291,7 +298,7 @@ The page does not imitate the competitor's color, logo walls, terminology, decor
 - The market-context visual switches between `中国市场` and `全球市场`, showing differences in language, question scope, and available observation surfaces without claiming universal coverage.
 - The delivery path is directly operable: choosing a stage reveals what the customer provides, what Yonaris performs, and what is delivered.
 - Report and evidence previews use expandable annotations so Chinese buyers can inspect substance without first opening another page.
-- The diagnostic flow updates a visible scope summary as the visitor enters brand, market, language, and decision question.
+- The Chinese diagnostic uses one compact row or vertical stack for `姓名、电话、公司`, with inline validation and confirmed email-delivery feedback.
 
 #### 智推时代 patterns not adopted
 
@@ -373,6 +380,7 @@ The regional difference remains visible on mobile:
 3. Independent regional narrative modules compose those facts into English and Chinese Human pages.
 4. Agent renderers expose the same facts through concise semantic pages and machine documents.
 5. Automated parity checks compare required factual fields across each paired Human and Agent route.
+6. The regional diagnostic form sends a strict locale-specific payload to the same-origin endpoint; the server validates it and delivers one email through the configured provider.
 
 If a fact is unavailable, the public surface omits the unsupported block or states the boundary. It never substitutes a placeholder that appears factual. If interaction code fails, every component retains a meaningful default state. If a paired locale or Agent route is missing, the build fails rather than silently linking to the wrong language or topic.
 
@@ -385,6 +393,7 @@ If a fact is unavailable, the public surface omits the unsupported block or stat
 - rebuild every active global core page in Section 6;
 - ship `/agent` and all required global Agent companions;
 - include the Answer Studio, Product module switcher, Evidence Path, and Human/Agent switching;
+- enable the shared lead pipeline with the three-field English form and the three-field Chinese form, each delivering to the configured recipient;
 - complete desktop, mobile, route, content, and production smoke checks;
 - deploy without waiting for the Chinese edition.
 
@@ -422,7 +431,9 @@ If a fact is unavailable, the public surface omits the unsupported block or stat
 
 - Answer Studio, Product Workbench, Evidence Path, Human/Agent switching, mobile navigation, and Diagnostic work by mouse, touch, and keyboard.
 - Complete meaning is visible with JavaScript unavailable and with reduced motion enabled.
-- Form validation, success, delivery failure, and retry states are truthful.
+- The English form exposes only Name, Work email, and Company; the Chinese form exposes only 姓名、电话、公司.
+- A valid submission reaches the same-origin endpoint and triggers one provider-confirmed email to the configured recipient.
+- Form validation, success, delivery failure, duplicate submission, and retry states are truthful.
 
 ### Visual QA
 
