@@ -99,6 +99,15 @@ describe("global English pages", () => {
 		expect(markup).toContain('data-graphic="evidence-journey"');
 	});
 
+	it("makes evidence definitions and answer relationships explorable", () => {
+		const research = renderToStaticMarkup(<ResearchPage />);
+		const geo = renderToStaticMarkup(<GeoPage />);
+		expect(research).toContain('data-graphic="evidence-explorer"');
+		expect(geo).toContain('data-graphic="answer-relationship-map"');
+		expect(research).not.toMatch(/\b\d+(?:\.\d+)?%\b/);
+		expect(geo).toContain("Global service capability is configured, not universal.");
+	});
+
 	it("never renders a broken in-page call to action", () => {
 		for (const Page of Object.values(pages)) {
 			const markup = renderToStaticMarkup(<Page />);

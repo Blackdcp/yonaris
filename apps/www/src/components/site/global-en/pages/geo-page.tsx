@@ -1,5 +1,6 @@
 import { GlobalEnglishShell } from "../global-english-shell";
-import { EntryMap, EvidencePath } from "../visuals/visuals";
+import { AnswerRelationshipMap } from "../interactions/answer-relationship-map";
+import { EvidencePath } from "../visuals/visuals";
 import { CloseSection, PageHero, PageSection } from "./page-primitives";
 
 export function GeoPage() {
@@ -10,7 +11,7 @@ export function GeoPage() {
 				eyebrow="GEO · APPLIED WORKFLOW"
 				title="See where your brand enters an AI answer."
 				lead="Generative engine optimization becomes useful when discovery, description, comparison, available sources, and repeat observation can each be inspected within a configured market scope."
-				visual={<EntryMap />}
+				visual={<AnswerRelationshipMap />}
 			/>
 			<PageSection
 				id="buyer-questions-and-artifacts"
@@ -18,7 +19,7 @@ export function GeoPage() {
 				title="Every entry point answers a buyer question."
 				body="The map pairs a question with an evidence artifact instead of presenting a decorative coverage map."
 			>
-				<EntryMap />
+				<AnswerRelationshipMap />
 			</PageSection>
 			<PageSection
 				id="applied-workflow"

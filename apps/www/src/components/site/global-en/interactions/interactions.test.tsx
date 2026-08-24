@@ -4,10 +4,14 @@ import { describe, expect, it } from "vitest";
 type AnswerStudioModule = typeof import("./answer-studio");
 type ProductWorkbenchModule = typeof import("./product-workbench");
 type EvidenceJourneyModule = typeof import("./evidence-journey");
+type EvidenceExplorerModule = typeof import("./evidence-explorer");
+type AnswerRelationshipMapModule = typeof import("./answer-relationship-map");
 
 const answerStudioModule = (await import("./answer-studio").catch(() => undefined)) as AnswerStudioModule | undefined;
 const productWorkbenchModule = (await import("./product-workbench").catch(() => undefined)) as ProductWorkbenchModule | undefined;
 const evidenceJourneyModule = (await import("./evidence-journey").catch(() => undefined)) as EvidenceJourneyModule | undefined;
+const evidenceExplorerModule = (await import("./evidence-explorer").catch(() => undefined)) as EvidenceExplorerModule | undefined;
+const answerRelationshipMapModule = (await import("./answer-relationship-map").catch(() => undefined)) as AnswerRelationshipMapModule | undefined;
 
 describe("global English interactive figures", () => {
 	it("renders a complete accessible Answer Studio initial state", () => {
@@ -22,6 +26,29 @@ describe("global English interactive figures", () => {
 		expect(markup).toContain('role="tabpanel"');
 		expect(markup).toContain('data-question="recommended"');
 		expect(markup).toContain("Interface demonstration — no customer or live observation data.");
+	});
+
+	it("renders a definition-led evidence explorer without invented observations", () => {
+		expect(evidenceExplorerModule, "the Evidence Explorer component must exist").toBeDefined();
+		if (!evidenceExplorerModule) return;
+
+		const markup = renderToStaticMarkup(<evidenceExplorerModule.EvidenceExplorer initialMetric="mention-rate" />);
+		expect(markup).toContain('data-graphic="evidence-explorer"');
+		expect(markup.match(/role="tab"/g) ?? []).toHaveLength(3);
+		expect(markup).toContain('data-metric="mention-rate"');
+		expect(markup).toContain("No observation loaded");
+		expect(markup).toContain("valid answers mentioning target");
+	});
+
+	it("renders five addressable answer relationships", () => {
+		expect(answerRelationshipMapModule, "the Answer Relationship Map component must exist").toBeDefined();
+		if (!answerRelationshipMapModule) return;
+
+		const markup = renderToStaticMarkup(<answerRelationshipMapModule.AnswerRelationshipMap initialNode="discovery" />);
+		expect(markup).toContain('data-graphic="answer-relationship-map"');
+		expect(markup.match(/role="tab"/g) ?? []).toHaveLength(5);
+		expect(markup).toContain('data-node="discovery"');
+		expect(markup).toContain("Where does the brand enter the answer?");
 	});
 
 	it("renders a four-step evidence journey without scroll hijacking", () => {

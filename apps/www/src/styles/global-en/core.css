@@ -488,6 +488,116 @@
 .global-en__journey-panel section p {
 	color: var(--ge-slate);
 }
+.global-en__explorer-tabs,
+.global-en__relationship-map {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	border-bottom: 1px solid var(--ge-rule);
+}
+.global-en__explorer-tabs button,
+.global-en__relationship-map button {
+	min-height: 4.5rem;
+	padding: 1rem;
+	border: 0;
+	border-right: 1px solid var(--ge-rule);
+	background: transparent;
+	color: var(--ge-ink);
+	text-align: left;
+	cursor: pointer;
+}
+.global-en__explorer-tabs button:last-child,
+.global-en__relationship-map button:last-child {
+	border-right: 0;
+}
+.global-en__explorer-tabs button[aria-selected="true"],
+.global-en__relationship-map button[aria-selected="true"] {
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__explorer-tabs button:focus-visible,
+.global-en__relationship-map button:focus-visible {
+	position: relative;
+	z-index: 1;
+	outline: 2px solid var(--ge-ink);
+	outline-offset: -3px;
+}
+.global-en__explorer-panel header,
+.global-en__explorer-panel footer {
+	padding: 1.25rem;
+}
+.global-en__explorer-panel header {
+	display: grid;
+	grid-template-columns: 7rem 1fr;
+	border-bottom: 1px solid var(--ge-rule);
+}
+.global-en__explorer-panel header p,
+.global-en__explorer-panel footer p {
+	margin: 0;
+}
+.global-en__explorer-panel small,
+.global-en__relationship-panel small,
+.global-en__relationship-map em {
+	font: 500 0.63rem / 1.2 "Geist Mono", monospace;
+	color: var(--ge-signal-text);
+}
+.global-en__explorer-equation {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr 0.75fr;
+	align-items: stretch;
+}
+.global-en__explorer-equation > * {
+	min-height: 8rem;
+	padding: 1rem;
+	display: grid;
+	place-items: center;
+	border-right: 1px solid var(--ge-rule);
+	text-align: center;
+}
+.global-en__explorer-equation b {
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+}
+.global-en__explorer-panel footer {
+	display: grid;
+	grid-template-columns: 7rem 1fr auto;
+	gap: 1rem;
+	align-items: center;
+	border-top: 1px solid var(--ge-rule);
+}
+.global-en__explorer-panel footer strong {
+	padding: 0.55rem 0.7rem;
+	border: 1px solid var(--ge-rule);
+	font-size: 0.72rem;
+}
+.global-en__relationship-map {
+	grid-template-columns: repeat(5, 1fr);
+}
+.global-en__relationship-map button {
+	display: grid;
+	grid-template-columns: 1.6rem 1fr;
+	gap: 0.5rem;
+	align-items: center;
+}
+.global-en__relationship-panel {
+	min-height: 20rem;
+	padding: clamp(1.5rem, 4vw, 3rem);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+.global-en__relationship-panel h3 {
+	margin: 2rem 0;
+	max-width: 20ch;
+	font-size: clamp(2rem, 3.5vw, 3.75rem);
+	line-height: 1.02;
+	font-weight: 520;
+}
+.global-en__relationship-panel > span {
+	align-self: flex-start;
+	padding: 0.7rem 0.9rem;
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+}
 .global-en__window-bar,
 .global-en__window-tabs {
 	display: flex;
@@ -1123,6 +1233,24 @@
 	.global-en__journey-panel header,
 	.global-en__journey-panel section {
 		grid-column: 1;
+		border-right: 0;
+		border-bottom: 1px solid var(--ge-rule);
+	}
+	.global-en__explorer-tabs,
+	.global-en__relationship-map {
+		grid-template-columns: repeat(5, minmax(8rem, 1fr));
+		overflow-x: auto;
+	}
+	.global-en__explorer-tabs {
+		grid-template-columns: repeat(3, minmax(10rem, 1fr));
+	}
+	.global-en__explorer-equation,
+	.global-en__explorer-panel header,
+	.global-en__explorer-panel footer {
+		grid-template-columns: 1fr;
+	}
+	.global-en__explorer-equation > * {
+		min-height: 5rem;
 		border-right: 0;
 		border-bottom: 1px solid var(--ge-rule);
 	}

@@ -1,4 +1,5 @@
 import { GlobalEnglishShell } from "../global-english-shell";
+import { EvidenceExplorer } from "../interactions/evidence-explorer";
 import { EvidenceLedger } from "../visuals/visuals";
 import { PageHero, PageSection } from "./page-primitives";
 
@@ -21,12 +22,7 @@ export function ResearchPage() {
 				title="The denominator is part of the claim."
 				body="Mention rate means valid answer samples mentioning the target brand divided by all valid samples in the defined scope."
 			>
-				<div className="global-en__equation" data-graphic="metric-anatomy">
-					<span>valid answers mentioning target</span>
-					<i>÷</i>
-					<span>all valid answers in scope</span>
-					<b>= mention rate</b>
-				</div>
+				<EvidenceExplorer />
 			</PageSection>
 			<PageSection
 				id="cohort-comparison"
