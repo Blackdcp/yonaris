@@ -46,7 +46,7 @@ describe("Browser Runner retry policy", () => {
 			["qwen.consumer_web", "qwen-web-20260822-localpc-v10"],
 			["kimi.consumer_web", "kimi-web-20260823-localpc-v15"],
 			["wenxin.consumer_web", "wenxin-web-20260822-localpc-v12"],
-			["yuanbao.consumer_web", "yuanbao-web-20260822-localpc-v11"],
+			["yuanbao.consumer_web", "yuanbao-web-20260824-localpc-v12"],
 			["zhipu.consumer_web", "zhipu-web-20260822-localpc-v5"],
 		] as const) {
 			expect(
