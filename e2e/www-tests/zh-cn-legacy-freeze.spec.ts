@@ -13,6 +13,9 @@ const PROTECTED_PATHS = [
 	"e2e/playwright.www.config.ts",
 	"e2e/www-tests/helpers/core-site.ts",
 ] as const;
+const PROTECTED_PATH_EXCLUDES = [
+	":(exclude)apps/www/src/components/site/zh-cn-legacy-freeze.test.tsx",
+] as const;
 const ROUTES = [
 	{ key: "home", path: "/zh", mainClass: "home-page" },
 	{ key: "product", path: "/zh/product", mainClass: "product-page" },
@@ -37,7 +40,9 @@ const REQUEST_KEYS = [
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 const fixturePath = fileURLToPath(new URL("./fixtures/zh-cn-legacy/dom-text.v1.json", import.meta.url));
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
-const updateSnapshotsRequested = process.argv.some((argument) => argument.startsWith("--update-snapshots"));
+const updateSnapshotsRequested = process.argv.some((argument) =>
+	/^(?:-u|--update-snapshots)(?:=|$)/u.test(argument),
+);
 const generationIntent =
 	process.env.ZH_CN_BASELINE_WRITE !== undefined ||
 	process.env.ZH_CN_BASELINE_REVISION !== undefined ||
@@ -125,10 +130,14 @@ function assertGenerationEnvironment(environment: NodeJS.ProcessEnv): void {
 
 function assertRevisionGuard(): void {
 	try {
-		execFileSync("git", ["diff", "--exit-code", BASELINE_REVISION, "--", ...PROTECTED_PATHS], {
+		execFileSync(
+			"git",
+			["diff", "--exit-code", BASELINE_REVISION, "--", ...PROTECTED_PATHS, ...PROTECTED_PATH_EXCLUDES],
+			{
 			cwd: repositoryRoot,
 			stdio: "pipe",
-		});
+			},
+		);
 	} catch {
 		throw new Error(`Protected website files differ from pinned revision ${BASELINE_REVISION}; refusing baseline write`);
 	}
@@ -346,8 +355,10 @@ test.use({
 });
 
 test.describe("zh-CN legacy freeze", () => {
-	test.beforeAll(() => {
-		if (generationIntent) assertGenerationAuthorized();
+	test.beforeAll(({}, testInfo) => {
+		const resolvedSnapshotMutation =
+			testInfo.config.updateSnapshots === "all" || testInfo.config.updateSnapshots === "changed";
+		if (generationIntent || resolvedSnapshotMutation) assertGenerationAuthorized();
 	});
 	test("generation requires write=1 and the exact full revision", () => {
 		expect(() => assertGenerationEnvironment({})).toThrow("ZH_CN_BASELINE_WRITE=1");
