@@ -352,7 +352,7 @@ const FORBIDDEN_BROWSER_ENVIRONMENT = [
 	"DATABASE_URL",
 	"ADMIN_API_KEYS",
 	"BETTER_AUTH_SECRET",
-	"ELMO_ENCRYPTION_KEY",
+	"CREDENTIAL_ENCRYPTION_KEY",
 ] as const;
 
 export function assertBrokerEnvironmentSafe(environment: NodeJS.ProcessEnv | Record<string, string | undefined>): void {

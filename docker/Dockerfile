@@ -1,4 +1,4 @@
-# Yonaris (Elmo-compatible runtime)
+# Yonaris private runtime
 # Supports: web app (Nitro server) and worker
 
 # Base stage with Node.js
@@ -75,16 +75,16 @@ ENV NODE_ENV=production
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 elmo
+RUN adduser --system --uid 1001 yonaris
 
 # Copy entrypoint script
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # Copy Nitro output - this is the entire server bundle
-COPY --from=builder --chown=elmo:nodejs /app/apps/web/.output ./.output
+COPY --from=builder --chown=yonaris:nodejs /app/apps/web/.output ./.output
 
-USER elmo
+USER yonaris
 
 EXPOSE 3000
 ENV PORT=3000

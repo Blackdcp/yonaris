@@ -6,7 +6,7 @@
 
 Browser Runner 是平台侧的执行能力，不属于客户账户权限。当前发布只提供“显式启动一批”的执行链，不创建 cron、定时任务或每日自动批次；在合同生效并完成真实站 UAT 之前，生产环境必须保持 `BROWSER_RUNNER_ENABLED=false` 或不配置该变量。
 
-它不改变 Elmo 的指标公式：冻结任务数为 `N`，成功保存的有效回答数为 `S`，其中品牌被提及的回答数为 `M`，Visibility 仍为 `M / S`。登录墙、验证码、页面漂移、网络错误和采集失败都不会伪装成 `brandMentioned=false`，只会让 success coverage `S / N` 降低。只有拿到有效回答且答案确实未提及品牌时，才保存成功观察并以 `brandMentioned=false` 进入指标。
+它不改变 Yonaris 的指标公式：冻结任务数为 `N`，成功保存的有效回答数为 `S`，其中品牌被提及的回答数为 `M`，Visibility 仍为 `M / S`。登录墙、验证码、页面漂移、网络错误和采集失败都不会伪装成 `brandMentioned=false`，只会让 success coverage `S / N` 降低。只有拿到有效回答且答案确实未提及品牌时，才保存成功观察并以 `brandMentioned=false` 进入指标。
 
 自动批次遵循以下固定流程：
 

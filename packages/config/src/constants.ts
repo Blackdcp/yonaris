@@ -30,13 +30,6 @@ export const DEFAULT_THEME_COLOR = YONARIS_COLORS.ink;
 export const DEFAULT_BACKGROUND_COLOR = YONARIS_COLORS.paper;
 export const YONARIS_BRAND_FONT = "Geist Sans";
 
-// Compatibility aliases for packages that have not yet migrated their internal
-// constant names. These are not user-visible product identifiers.
-export const ELMO_BRAND_COLOR = DEFAULT_BRAND_COLOR;
-export const ELMO_BRAND_FONT = YONARIS_BRAND_FONT;
-export const ELMO_THEME_COLOR = DEFAULT_THEME_COLOR;
-export const ELMO_BACKGROUND_COLOR = DEFAULT_BACKGROUND_COLOR;
-
 /**
  * Tonal data palette derived only from the approved Yonaris hues. Signal
  * Orange identifies the tracked brand; neutral series use Ink, Slate,

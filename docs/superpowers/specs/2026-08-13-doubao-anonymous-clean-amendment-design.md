@@ -38,7 +38,7 @@ The frozen protocol is:
 
 ## Metric invariants
 
-Elmo formulas remain unchanged. `N` is the 18 frozen slots, `S` is successful persisted observations, and `M` is successful observations with a StepFun mention. Visibility remains `M / S`; technical failures reduce coverage `S / N` but never become negative mentions. A valid answer without StepFun remains a successful `brandMentioned=false` observation.
+Yonaris formulas remain unchanged. `N` is the 18 frozen slots, `S` is successful persisted observations, and `M` is successful observations with a StepFun mention. Visibility remains `M / S`; technical failures reduce coverage `S / N` but never become negative mentions. A valid answer without StepFun remains a successful `brandMentioned=false` observation.
 
 ## Isolation and cleanup
 

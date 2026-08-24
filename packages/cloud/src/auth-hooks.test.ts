@@ -17,7 +17,7 @@ describe("getCloudAuthOptions", () => {
 		vi.stubEnv("APP_URL", "https://app.example.com");
 		vi.stubEnv("GOOGLE_CLIENT_ID", "test-google-client-id");
 		vi.stubEnv("GOOGLE_CLIENT_SECRET", "test-google-client-secret");
-		vi.stubEnv("RESEND_FROM_EMAIL", "Elmo <notifications@example.com>");
+		vi.stubEnv("RESEND_FROM_EMAIL", "Yonaris <notifications@example.com>");
 		vi.stubEnv("RESEND_API_KEY", "re_test_x");
 	});
 

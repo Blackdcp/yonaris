@@ -17,7 +17,7 @@ if (parsedE2ePostgresPort < 1 || parsedE2ePostgresPort > 65_535) {
   throw new Error(`E2E_POSTGRES_PORT is out of range: ${e2ePostgresPort}`);
 }
 export const DATABASE_URL =
-  `postgres://postgres:postgres@localhost:${parsedE2ePostgresPort}/elmo`;
+  `postgres://postgres:postgres@localhost:${parsedE2ePostgresPort}/yonaris`;
 
 // Must match ADMIN_API_KEYS in the CI-patched .env (.github/workflows/e2e.yaml)
 // and bruno/environments/local.bru.

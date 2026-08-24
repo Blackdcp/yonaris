@@ -41,7 +41,7 @@ describe("createCloudDeployment", () => {
 	});
 
 	it("reads the public app URL from APP_URL", () => {
-		expect(createCloudDeployment({ APP_URL: "https://app.elmo.com/" }).branding.url).toBe("https://app.elmo.com/");
+		expect(createCloudDeployment({ APP_URL: "https://app.yonaris.com/" }).branding.url).toBe("https://app.yonaris.com/");
 	});
 
 	it("falls back to the default app URL when APP_URL is absent (env validation reports it)", () => {

@@ -51,7 +51,7 @@ After enablement, verify a fixture or already-saved run from an ordinary custome
 - the inline HTML loads inside the sandboxed same-origin iframe and makes no external request;
 - downloaded HTML, JSON and manifest values match the SHA-256 values shown in the panel;
 - a second tenant and an anonymous request cannot read the object;
-- pending, failed and expired archive states do not change the response text or any Elmo metric input.
+- pending, failed and expired archive states do not change the response text or any Yonaris metric input.
 
 ## Operations
 

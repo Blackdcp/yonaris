@@ -21,7 +21,7 @@ done
 [[ "$(stat -c %U:%G:%a -- "$network_env")" == "root:root:644" ]] ||
 	die "network configuration must be root-owned mode 0644"
 
-if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|ELMO_ENCRYPTION_KEY' "$browser_env"; then
+if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|CREDENTIAL_ENCRYPTION_KEY' "$browser_env"; then
 	die "browser environment contains a control-plane secret name"
 fi
 

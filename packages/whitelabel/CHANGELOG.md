@@ -103,7 +103,7 @@
 
 ### Patch Changes
 
-- 7cba46d: License Elmo under the MIT License. Add Code of Conduct, Contributing guide, Security policy, and a lightweight CLA process.
+- 7cba46d: Record the retired predecessor distribution-governance release.
 - Updated dependencies [7990382]
 - Updated dependencies [edf97d4]
 - Updated dependencies [7cba46d]

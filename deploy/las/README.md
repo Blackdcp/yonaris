@@ -21,7 +21,7 @@ default `127.0.0.1:4173` route, the running One API container, or the stopped
 ## 1. GitHub repository
 
 Create an empty private repository at `https://github.com/Blackdcp/yonaris`.
-Use it as `origin`; keep `https://github.com/elmohq/elmo.git` as `upstream`.
+Use it as `origin`; no external source remote is required.
 
 The deployment workflow is intentionally gated by the repository variable
 `LAS_DEPLOY_ENABLED`. The first push builds images but does not contact the
@@ -110,7 +110,7 @@ uuidgen
 
 The database password must be copied into both `POSTGRES_PASSWORD` and the
 password component of `DATABASE_URL`. For the initial data migration, do not
-generate a new `ELMO_ENCRYPTION_KEY`: copy the exact key from the current local
+generate a new `CREDENTIAL_ENCRYPTION_KEY`: copy the exact key from the current local
 environment so encrypted provider credentials remain readable.
 
 The example keeps the current memory-tensor target,
@@ -179,8 +179,8 @@ Export the current local PostgreSQL 16 database without writing a binary dump
 through PowerShell's output redirection:
 
 ```powershell
-docker exec elmo-dev-postgres pg_dump -U postgres -d elmo -Fc -f /tmp/yonaris.dump
-docker cp elmo-dev-postgres:/tmp/yonaris.dump .\yonaris.dump
+docker exec yonaris-dev-postgres pg_dump -U postgres -d yonaris -Fc -f /tmp/yonaris.dump
+docker cp yonaris-dev-postgres:/tmp/yonaris.dump .\yonaris.dump
 $hash = (Get-FileHash -Algorithm SHA256 .\yonaris.dump).Hash.ToLowerInvariant()
 "$hash  yonaris.dump" | Set-Content -Encoding ascii .\yonaris.dump.sha256
 ```

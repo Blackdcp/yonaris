@@ -804,7 +804,7 @@ export function SamplingTaskWorkbench({
 									<DialogTitle>{isHumanTakeover ? "Confirm terminal failure" : "Report task failure"}</DialogTitle>
 									<DialogDescription>
 										Record a terminal failure that remains in the frozen delivery denominator and lowers success
-										coverage. It is excluded from the Elmo visibility denominator and is never counted as a brand
+										coverage. It is excluded from the Yonaris visibility denominator and is never counted as a brand
 										non-mention.{" "}
 										{requiresSameSessionRecovery
 											? "Only use this when the retained Runner session cannot recover the original answer."

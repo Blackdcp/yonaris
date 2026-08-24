@@ -137,7 +137,7 @@ test.describe("customer response snapshot archive", () => {
     ).toBe(true);
   });
 
-  test("keeps Elmo metric inputs intact when snapshot storage is failed", async ({ request }) => {
+  test("keeps Yonaris metric inputs intact when snapshot storage is failed", async ({ request }) => {
     const client = new pg.Client({ connectionString: DATABASE_URL });
     await client.connect();
     try {

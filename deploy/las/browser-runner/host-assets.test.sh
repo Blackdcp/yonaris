@@ -55,18 +55,23 @@ control_unit="$SCRIPT_DIR/systemd/yonaris-browser-runner.service.in"
 network_unit="$SCRIPT_DIR/systemd/yonaris-browser-network.service"
 proxy_unit="$SCRIPT_DIR/systemd/yonaris-browser-egress-proxy.service.in"
 
+for unit in "$broker_unit" "$control_unit" "$network_unit" "$proxy_unit"; do
+	grep -Fqx '@@KERNEL_MODULE_PROTECTION@@' "$unit"
+done
+grep -Fq '"ProtectKernel" + "Modules=yes"' "$SCRIPT_DIR/install-host.sh"
+
 grep -Fqx 'User=yonaris-browser' "$broker_unit"
 grep -Fqx 'Group=yonaris-browser-rpc' "$broker_unit"
 grep -Fq '@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/broker-cli.ts -- serve' "$broker_unit"
 grep -Fqx 'Restart=no' "$broker_unit"
 grep -Fqx 'Requires=yonaris-browser-network.service' "$broker_unit"
-grep -Fqx 'UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY' "$broker_unit"
+grep -Fqx 'UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET CREDENTIAL_ENCRYPTION_KEY' "$broker_unit"
 
 grep -Fqx 'User=yonaris-runner' "$control_unit"
 grep -Fqx 'SupplementaryGroups=yonaris-browser-rpc' "$control_unit"
 grep -Fq '@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/cli.ts -- poll --live --surface doubao' "$control_unit"
 grep -Fqx 'Restart=no' "$control_unit"
-grep -Fqx 'UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY' "$control_unit"
+grep -Fqx 'UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET CREDENTIAL_ENCRYPTION_KEY' "$control_unit"
 
 grep -Fqx 'Type=oneshot' "$network_unit"
 grep -Fqx 'Requires=yonaris-browser-egress-proxy.service' "$network_unit"
@@ -93,7 +98,7 @@ control_env="$SCRIPT_DIR/config/control.env.example"
 network_env="$SCRIPT_DIR/config/network.env.example"
 grep -Fqx 'BROWSER_RUNNER_DOUBAO_ADAPTER_VERIFIED=false' "$browser_env"
 grep -Fqx 'BROWSER_EGRESS_PROXY_URL=http://127.0.0.1:17777' "$browser_env"
-if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|ELMO_ENCRYPTION_KEY' "$browser_env"; then
+if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|CREDENTIAL_ENCRYPTION_KEY' "$browser_env"; then
 	echo "Browser environment template contains a control-plane secret name." >&2
 	exit 1
 fi

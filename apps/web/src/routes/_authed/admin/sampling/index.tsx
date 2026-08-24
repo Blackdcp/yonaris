@@ -302,7 +302,7 @@ function SamplingQueuePage() {
 
 	const finalizeNeedsHuman = async (batch: SamplingBatchView) => {
 		const reason = window.prompt(
-			"Explain why these unresolved Browser Runner tasks cannot be recovered. They will become technical failures: delivery coverage will decrease, but Elmo Visibility will not count them as brand-not-mentioned.",
+			"Explain why these unresolved Browser Runner tasks cannot be recovered. They will become technical failures: delivery coverage will decrease, but Yonaris Visibility will not count them as brand-not-mentioned.",
 		);
 		if (!reason?.trim()) return;
 		setActionError(null);

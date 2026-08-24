@@ -18,7 +18,7 @@ Environment=XDG_CONFIG_HOME=/var/lib/yonaris-browser-broker/home/.config
 Environment=XDG_DATA_HOME=/var/lib/yonaris-browser-broker/home/.local/share
 Environment=PATH=@@NODE_BIN_DIRECTORY@@:/usr/sbin:/usr/bin:/sbin:/bin
 WorkingDirectory=@@SOURCE_DIRECTORY@@
-UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY
+UnsetEnvironment=BROWSER_RUNNER_API_TOKEN DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET CREDENTIAL_ENCRYPTION_KEY
 RuntimeDirectory=yonaris-browser-broker
 RuntimeDirectoryMode=0750
 StateDirectory=yonaris-browser-broker
@@ -37,7 +37,7 @@ ReadWritePaths=/var/lib/yonaris-browser-broker /var/lib/yonaris-browser-evidence
 ProtectProc=invisible
 ProcSubset=pid
 ProtectKernelTunables=yes
-ProtectKernelModules=yes
+@@KERNEL_MODULE_PROTECTION@@
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes

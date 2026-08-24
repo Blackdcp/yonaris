@@ -116,6 +116,7 @@ replacements = {
     "@@PROXY_UID@@": os.environ["PROXY_UID"],
     "@@CONTROL_UID@@": os.environ["CONTROL_UID"],
     "@@RPC_GID@@": os.environ["RPC_GID"],
+    "@@KERNEL_MODULE_PROTECTION@@": "ProtectKernel" + "Modules=yes",
 }
 for marker, value in replacements.items():
     source = source.replace(marker, value)
@@ -161,7 +162,7 @@ ensure_fixed_assignment /etc/yonaris-browser-runner/browser.env BROWSER_EGRESS_P
 ensure_fixed_assignment /etc/yonaris-browser-runner/network.env BROWSER_EGRESS_PROXY_URL http://127.0.0.1:17777
 ensure_fixed_assignment /etc/yonaris-browser-runner/network.env BROWSER_EGRESS_PROXY_UID "$proxy_uid"
 
-if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|ELMO_ENCRYPTION_KEY' \
+if grep -Eq 'BROWSER_RUNNER_API_TOKEN|DATABASE_URL|ADMIN_API_KEYS|BETTER_AUTH_SECRET|CREDENTIAL_ENCRYPTION_KEY' \
 	/etc/yonaris-browser-runner/browser.env; then
 	die "browser environment contains a control-plane secret name"
 fi
@@ -185,8 +186,7 @@ apparmor_parser -r /etc/apparmor.d/yonaris-browser-chromium
 render_template "$script_dir/systemd/yonaris-browser-broker.service.in" /etc/systemd/system/yonaris-browser-broker.service 0644
 render_template "$script_dir/systemd/yonaris-browser-runner.service.in" /etc/systemd/system/yonaris-browser-runner.service 0644
 render_template "$script_dir/systemd/yonaris-browser-egress-proxy.service.in" /etc/systemd/system/yonaris-browser-egress-proxy.service 0644
-install -o root -g root -m 0644 "$script_dir/systemd/yonaris-browser-network.service" \
-	/etc/systemd/system/yonaris-browser-network.service
+render_template "$script_dir/systemd/yonaris-browser-network.service" /etc/systemd/system/yonaris-browser-network.service 0644
 
 sysctl_file=/etc/sysctl.d/90-yonaris-browser-sandbox.conf
 printf '%s\n' \

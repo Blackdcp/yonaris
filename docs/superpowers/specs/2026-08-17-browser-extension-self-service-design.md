@@ -6,7 +6,7 @@ A platform administrator can sign in to Portal from any Windows or macOS device,
 
 ## Architecture
 
-The web image builds `@workspace/browser-extension` before the Portal build. A packaging script creates one deterministic ZIP and a SHA-256 metadata file in the Portal public assets. The existing **Local Browser devices** page links to the same-origin ZIP and displays the digest and concise Chrome installation steps. Pairing, device authorization, task claiming, provider login state, retry rules, response snapshots and Elmo metric calculations remain unchanged.
+The web image builds `@workspace/browser-extension` before the Portal build. A packaging script creates one deterministic ZIP and a SHA-256 metadata file in the Portal public assets. The existing **Local Browser devices** page links to the same-origin ZIP and displays the digest and concise Chrome installation steps. Pairing, device authorization, task claiming, provider login state, retry rules, response snapshots and Yonaris metric calculations remain unchanged.
 
 ## Security and Operations
 

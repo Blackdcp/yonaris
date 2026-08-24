@@ -1,6 +1,6 @@
 # Doubao Anonymous-Clean Amendment Implementation Plan
 
-**Outcome:** Anonymous Doubao was validated without scoring and rejected because submission opened a mandatory login wall. The remaining path is the exact StepFun 3 x 6 delivery through the dedicated sampling profile, without changing Elmo metrics or enabling a daily schedule.
+**Outcome:** Anonymous Doubao was validated without scoring and rejected because submission opened a mandatory login wall. The remaining path is the exact StepFun 3 x 6 delivery through the dedicated sampling profile, without changing Yonaris metrics or enabling a daily schedule.
 
 ## Constraints
 

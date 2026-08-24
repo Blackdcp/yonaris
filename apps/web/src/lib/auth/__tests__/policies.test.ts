@@ -12,6 +12,8 @@
  *   4. API key authentication
  *   5. Read-only enforcement
  */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
 	evaluateAdminRouteGuard,
@@ -41,6 +43,35 @@ function req(method: string, pathname: string, authorizationHeader?: string): Re
 const VALID_API_KEY = "test-key-abc123";
 const INVALID_API_KEY = "wrong-key";
 const API_KEYS = [VALID_API_KEY, "another-key"];
+
+function readE2eRuntimeEnvironment(): Record<string, string> {
+	const workflowPath = fileURLToPath(new URL("../../../../../../.github/workflows/e2e.yaml", import.meta.url));
+	const workflow = readFileSync(workflowPath, "utf8");
+	const runtimeStep = workflow.match(
+		/- name: Prepare internal E2E runtime configuration[\s\S]*?> e2e\/\.runtime\.env/,
+	)?.[0];
+	if (!runtimeStep) throw new Error("E2E runtime configuration step is missing");
+
+	return Object.fromEntries(
+		[...runtimeStep.matchAll(/'([A-Z0-9_]+)=([^']*)'/g)].map((match) => [match[1], match[2]]),
+	);
+}
+
+describe("E2E workflow write contract", () => {
+	it("uses a writable deployment mode and a valid neutral credential key", () => {
+		const runtimeEnv = readE2eRuntimeEnvironment();
+		expect(runtimeEnv.DEPLOYMENT_MODE).toBe("local");
+		expect(Buffer.from(runtimeEnv.CREDENTIAL_ENCRYPTION_KEY ?? "", "base64")).toHaveLength(32);
+
+		const apiKey = runtimeEnv.ADMIN_API_KEYS;
+		expect(apiKey).toBeTruthy();
+		expect(
+			evaluateDeploymentPolicy(LOCAL_FEATURES, req("POST", "/api/v1/prompts", `Bearer ${apiKey}`), {
+				adminApiKeys: [apiKey],
+			}),
+		).toMatchObject({ action: "allow" });
+	});
+});
 
 // ============================================================================
 // 1. Deployment Request Policy Matrix
@@ -620,27 +651,27 @@ describe("evaluateSignupAllowed", () => {
 	});
 
 	it("allows any address at an allowed domain", () => {
-		expect(evaluateSignupAllowed("anyone@elmohq.com", ["@elmohq.com"])).toBe("allow");
-		expect(evaluateSignupAllowed("someone.else@elmohq.com", ["@elmohq.com"])).toBe("allow");
+		expect(evaluateSignupAllowed("anyone@yonarishq.com", ["@yonarishq.com"])).toBe("allow");
+		expect(evaluateSignupAllowed("someone.else@yonarishq.com", ["@yonarishq.com"])).toBe("allow");
 	});
 
 	it("denies an address at a domain that is not listed", () => {
-		expect(evaluateSignupAllowed("anyone@gmail.com", ["@elmohq.com"])).toBe("deny");
+		expect(evaluateSignupAllowed("anyone@gmail.com", ["@yonarishq.com"])).toBe("deny");
 	});
 
 	it("is case-insensitive on both the email and the entries", () => {
-		expect(evaluateSignupAllowed("Alice@Elmohq.com", ["@ELMOHQ.COM"])).toBe("allow");
+		expect(evaluateSignupAllowed("Alice@Yonarishq.com", ["@YONARISHQ.COM"])).toBe("allow");
 		expect(evaluateSignupAllowed("BOB@Partner.com", ["bob@partner.com"])).toBe("allow");
 	});
 
 	it("does not let a domain entry match a lookalike domain", () => {
-		expect(evaluateSignupAllowed("x@evil-elmohq.com", ["@elmohq.com"])).toBe("deny");
-		expect(evaluateSignupAllowed("x@elmohq.com.evil.com", ["@elmohq.com"])).toBe("deny");
+		expect(evaluateSignupAllowed("x@evil-yonarishq.com", ["@yonarishq.com"])).toBe("deny");
+		expect(evaluateSignupAllowed("x@yonarishq.com.evil.com", ["@yonarishq.com"])).toBe("deny");
 	});
 
 	it("opens signup to everyone when '*' is present", () => {
 		expect(evaluateSignupAllowed("anyone@anywhere.com", ["*"])).toBe("allow");
-		expect(evaluateSignupAllowed("anyone@anywhere.com", ["@elmohq.com", "*"])).toBe("allow");
+		expect(evaluateSignupAllowed("anyone@anywhere.com", ["@yonarishq.com", "*"])).toBe("allow");
 	});
 
 	it("ignores blank and whitespace-only entries", () => {
@@ -649,7 +680,7 @@ describe("evaluateSignupAllowed", () => {
 	});
 
 	it("denies a malformed email with no domain unless listed exactly", () => {
-		expect(evaluateSignupAllowed("not-an-email", ["@elmohq.com"])).toBe("deny");
+		expect(evaluateSignupAllowed("not-an-email", ["@yonarishq.com"])).toBe("deny");
 		expect(evaluateSignupAllowed("not-an-email", ["not-an-email"])).toBe("allow");
 	});
 });

@@ -9,7 +9,7 @@ Turn Yonaris domestic consumer-web monitoring into a normal product workflow:
 3. a paired Chrome extension on a trusted local PC claims the work;
 4. the extension opens a new Doubao or DeepSeek conversation for every sample;
 5. the extension uploads the answer, citations, query metadata, and answer-container HTML;
-6. Yonaris persists the observation and 90-day response snapshot, then exposes the existing Elmo metrics and read-only customer views.
+6. Yonaris persists the observation and 90-day response snapshot, then exposes the existing Yonaris metrics and read-only customer views.
 
 This release is administrator-triggered only. It does not create a daily schedule, run historical batches automatically, or give customer accounts execution permissions.
 
@@ -40,7 +40,7 @@ Platform admin
   -> answer + citations + query state + answer HTML
   -> atomic observation persistence
   -> response snapshot archive (HTML + JSON, 90 days)
-  -> existing Elmo metrics and customer views
+  -> existing Yonaris metrics and customer views
 ```
 
 The Portal remains the source of truth for task identity, leases, progress, metrics, and retention. The extension never connects directly to PostgreSQL and never calculates customer metrics.
@@ -203,7 +203,7 @@ Response snapshots use the existing `response-snapshot.v1` contract and filesyst
 
 ## Metric compatibility
 
-The existing Elmo Visibility, Share of Voice, citation, query, and coverage formulas are not changed.
+The existing Yonaris Visibility, Share of Voice, citation, query, and coverage formulas are not changed.
 
 - Only successfully persisted `prompt_runs` enter Visibility's successful-observation denominator.
 - A valid answer without a brand mention enters the denominator with `brandMentioned=false`.
@@ -237,7 +237,7 @@ The extension popup provides:
 - adaptive concurrency boundaries and cooldown transitions;
 - submit-intent ordering and no resubmission after intent;
 - response payload, URL, HTML, size, and search-tristate validation;
-- metric regression proving snapshots and technical failures do not alter Elmo formulas.
+- metric regression proving snapshots and technical failures do not alter Yonaris formulas.
 
 ### Extension fixture tests
 
@@ -281,4 +281,4 @@ No live-site test runs in ordinary CI. Real-site UAT is operator-started, non-sc
 - automated login, CAPTCHA solving, account creation, proxy rotation, or fingerprint spoofing;
 - Chrome Web Store publication and automated extension updates;
 - Safari or Firefox support;
-- changing Elmo metric formulas.
+- changing Yonaris metric formulas.

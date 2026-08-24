@@ -14,9 +14,9 @@
 
 - Do not rewrite 31 Blog posts, 21 Docs pages, 28 Glossary pages, or 108 comparison bodies in this release.
 - Unreviewed Blog/Glossary and all legacy AI Search/AEO/AI Visibility content are `noindex,follow` and absent from sitemap.
-- AI Search/AEO display a visible legacy research context; AI Visibility Tools display a visible upstream Elmo comparison archive context.
+- AI Search/AEO display a visible legacy research context; AI Visibility Tools display a visible upstream Yonaris comparison archive context.
 - Docs, Status, Brand, Changelog, RSS, OpenAPI, OG, and repo-activity functionality must remain operational.
-- No public route may use old blue Docs-first navigation or present Elmo as the Yonaris company.
+- No public route may use old blue Docs-first navigation or present Yonaris as the Yonaris company.
 - Redirects are real 308 responses and are tested with redirects disabled.
 - Release smoke must check every core locale, same-origin asset, machine representation, redirect, index policy, and safe diagnostic failure without sending email.
 - No push, merge, publish, DNS, or production deployment occurs under this plan without the finishing-branch/release gate.
@@ -40,7 +40,7 @@
 
 - [ ] **Step 1: Write failing content and route tests**
 
-Resources must link Research Notes, Docs, Glossary, Status, Brand, and Open Source. Open Source must explain the upstream Elmo-compatible infrastructure, link repository/license/docs, and distinguish it from Yonaris company identity.
+Resources must link Research Notes, Docs, Glossary, Status, Brand, and Open Source. Open Source must explain the upstream Yonaris-compatible infrastructure, link repository/license/docs, and distinguish it from Yonaris company identity.
 
 Run focused Vitest and Playwright; expected FAIL because the routes do not exist.
 
@@ -100,7 +100,7 @@ const policies = [
   { path: "/glossary", robots: "noindex,follow", context: null },
   { path: "/ai-search", robots: "noindex,follow", context: "Legacy research archive" },
   { path: "/aeo-for", robots: "noindex,follow", context: "Legacy research archive" },
-  { path: "/ai-visibility-tools", robots: "noindex,follow", context: "Upstream Elmo comparison archive" },
+  { path: "/ai-visibility-tools", robots: "noindex,follow", context: "Upstream Yonaris comparison archive" },
 ];
 ```
 

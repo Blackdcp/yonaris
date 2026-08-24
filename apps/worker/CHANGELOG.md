@@ -81,7 +81,7 @@
 
 ### Patch Changes
 
-- 1e770ff: Publish multi-arch (`linux/amd64` + `linux/arm64`) Docker images for `elmohq/elmo-web` and `elmohq/elmo-worker`, so Apple Silicon and other arm64 hosts can pull them.
+- 1e770ff: Retired predecessor release published multi-architecture web and worker images.
   - @workspace/lib@0.2.7
   - @workspace/whitelabel@0.2.7
 
@@ -96,8 +96,8 @@
 
 ### Patch Changes
 
-- 76e2a5f: Add telemetry opt-out prompt during `elmo init` and new `elmo telemetry status|enable|disable` subcommand. See [Telemetry](https://elmohq.com/docs/developer-guide/telemetry) for what's collected.
-- 7cba46d: License Elmo under the MIT License. Add Code of Conduct, Contributing guide, Security policy, and a lightweight CLA process.
+- 76e2a5f: Retired predecessor release added telemetry controls.
+- 7cba46d: Record the retired predecessor distribution-governance release.
 - 839b98b: Brand onboarding is now a single screen: paste a website and review the suggested products, competitors (with their own domains and aliases), additional brand domains, aliases, and tagged starter prompts before saving. Powered by whichever direct LLM API you've configured (OpenRouter, Anthropic, OpenAI, or Mistral) with web search.
 - Updated dependencies [7990382]
 - Updated dependencies [edf97d4]

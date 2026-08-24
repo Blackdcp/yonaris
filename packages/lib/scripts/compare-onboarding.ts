@@ -18,7 +18,7 @@
  *   pnpm --filter @workspace/lib compare:onboarding nike.com --max-prompts 30 --max-competitors 12
  *   pnpm --filter @workspace/lib compare:onboarding nike.com --only anthropic-api,openrouter
  *   pnpm --filter @workspace/lib compare:onboarding nike.com --skip mistral-api
- *   pnpm --filter @workspace/lib compare:onboarding nike.com --env-file ~/code/elmo/apps/web/.env
+ *   pnpm --filter @workspace/lib compare:onboarding nike.com --env-file ~/code/yonaris/apps/web/.env
  *
  * Reads `<repo>/apps/web/.env` and `<repo>/.env` automatically; --env-file
  * PATH overrides. Real env vars always win over .env entries.
@@ -300,7 +300,7 @@ async function main() {
 		console.error("Example:");
 		console.error("  pnpm --filter @workspace/lib compare:onboarding nike.com");
 		console.error("  pnpm --filter @workspace/lib compare:onboarding nike.com --only anthropic-api,openrouter");
-		console.error("  pnpm --filter @workspace/lib compare:onboarding nike.com --env-file ~/code/elmo/apps/web/.env");
+		console.error("  pnpm --filter @workspace/lib compare:onboarding nike.com --env-file ~/code/yonaris/apps/web/.env");
 		process.exit(values.help ? 0 : 1);
 	}
 

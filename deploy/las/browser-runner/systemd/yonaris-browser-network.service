@@ -21,7 +21,7 @@ PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
 ProtectKernelTunables=yes
-ProtectKernelModules=yes
+@@KERNEL_MODULE_PROTECTION@@
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
 RestrictAddressFamilies=AF_UNIX AF_NETLINK AF_INET AF_INET6

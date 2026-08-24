@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Capture and publish one exact, comparable StepFun DeepSeek consumer-web cohort of three frozen prompts times six independent conversations, without changing Elmo metrics or enabling recurring execution.
+**Goal:** Capture and publish one exact, comparable StepFun DeepSeek consumer-web cohort of three frozen prompts times six independent conversations, without changing Yonaris metrics or enabling recurring execution.
 
 **Architecture:** Add a local-PC-only DeepSeek capture path beside, but not inside, the production Doubao Browser Runner. It creates a reviewed immutable manifest, then a request-gated production operation validates and imports all 18 observations atomically into the existing `cn-zh-scored` scope as `model=deepseek`, `surfaceTargetKey=deepseek.consumer_web`, and `captureRouteKey=assisted_browser.generic`.
 
@@ -18,7 +18,7 @@
 - Search uses the product default: `searchMode=native_auto`; `webSearchObserved` is `true` only with positive evidence, `false` only with an explicit no-search marker, otherwise `null`.
 - Before durable submit intent, only a clearly transient navigation failure may retry once. After intent, automatic resend is forbidden; recovery uses the same retained conversation/profile.
 - Technical failures never create `prompt_runs`. A valid answer without StepFun is successful and persists `brandMentioned=false`.
-- Elmo Visibility, Share of Voice, Query Fan-Out, citation, opportunity, and report formulas are unchanged.
+- Yonaris Visibility, Share of Voice, Query Fan-Out, citation, opportunity, and report formulas are unchanged.
 - The existing Doubao 18-run cohort and its repair-only importer are not modified by the DeepSeek import.
 - Execution is foreground and explicit. No cron, timer, daily batch creator, long-running poller, or production DeepSeek Browser Runner service is added.
 - Production import is request-gated, exact-manifest, idempotent, all-or-nothing, and verified before commit.
@@ -535,7 +535,7 @@ Expected: exactly one `请仅回复：测试通过。` submission, a completed a
 - [ ] **Step 5: Run the exact 18-slot cohort in the foreground**
 
 ```powershell
-pnpm --filter @workspace/browser-runner deepseek -- run-cohort --state-dir C:\Users\user\AppData\Local\Yonaris\DeepSeekSampling --output E:\Yonaris\elmo-release-20260811\apps\worker\src\consumer-cohort-imports\stepfun-local-pc-deepseek-18-20260814.json
+pnpm --filter @workspace/browser-runner deepseek -- run-cohort --state-dir C:\Users\user\AppData\Local\Yonaris\DeepSeekSampling --output E:\Yonaris\yonaris-release-20260811\apps\worker\src\consumer-cohort-imports\stepfun-local-pc-deepseek-18-20260814.json
 ```
 
 Expected: `planned=18`, `captured=18`, `needsHuman=0`; exactly 18 user submissions; a new blank conversation before every submission; no daily process left running.
@@ -642,5 +642,5 @@ Verify the next workflow plans `has_request=false`; no cron, poller, DeepSeek se
 - [ ] Technical failures, retries before submit, and human-handling records created no negative `prompt_runs`.
 - [ ] Production import is either all 18 or zero; an exact rerun is unchanged; partial/mismatched cohorts fail closed.
 - [ ] Doubao remains 18 runs with 48 queries and 271 citations after the DeepSeek import.
-- [ ] Elmo formulas have no diff and model filtering separates Doubao from DeepSeek.
+- [ ] Yonaris formulas have no diff and model filtering separates Doubao from DeepSeek.
 - [ ] The production request is retired and there is no recurring DeepSeek execution.

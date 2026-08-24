@@ -4,7 +4,7 @@
 
 **Goal:** Create one typed foundation for every public Yonaris route, bilingual fact, shell, SEO surface, and human/Agent representation.
 
-**Architecture:** A route-family manifest classifies every current public route and owns canonical, navigation, indexing, sitemap, redirect, and Agent policy. Focused `content/site` modules hold bilingual facts with explicit claim status. Shared core/publication/utility shells and manifest-driven SEO replace the split Yonaris/Elmo identity. Machine documents and Markdown content negotiation reuse the current internal rewrite pattern.
+**Architecture:** A route-family manifest classifies every current public route and owns canonical, navigation, indexing, sitemap, redirect, and Agent policy. Focused `content/site` modules hold bilingual facts with explicit claim status. Shared core/publication/utility shells and manifest-driven SEO replace the split Yonaris/Yonaris identity. Machine documents and Markdown content negotiation reuse the current internal rewrite pattern.
 
 **Tech Stack:** TypeScript 7, React 19, TanStack Start/Router, Vite 8, Vitest 4, Playwright 1.61, Tailwind CSS 4.
 
@@ -79,7 +79,7 @@ Change Vitest include to `src/**/*.test.{ts,tsx}`. Test canonical uniqueness, al
 ```ts
 expect(getCorePath("product", "zh")).toBe("/zh/product");
 expect(SITE_REDIRECTS).toContainEqual({ from: "/platform", to: "/product", statusCode: 308 });
-expect(findSiteRoute("/ai-visibility-tools/elmo-vs-example")?.indexPolicy).toBe("noindex,follow");
+expect(findSiteRoute("/ai-visibility-tools/yonaris-vs-example")?.indexPolicy).toBe("noindex,follow");
 ```
 
 Run `pnpm.cmd --filter @workspace/www test -- src/lib/site-manifest.test.ts`; expected FAIL because the manifest does not exist.

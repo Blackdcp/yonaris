@@ -1,6 +1,6 @@
 # Yonaris Browser Runner
 
-This package is an execution sidecar for frozen sampling batches. It does not calculate Visibility or Share of Voice and does not schedule batches. Successful observations eventually flow into Elmo's existing `prompt_runs` path; technical failures remain delivery failures and never become negative brand mentions.
+This package is an execution sidecar for frozen sampling batches. It does not calculate Visibility or Share of Voice and does not schedule batches. Successful observations eventually flow into Yonaris's existing `prompt_runs` path; technical failures remain delivery failures and never become negative brand mentions.
 
 The package is intentionally source-run with `tsx`. Its `build` and `check-types` scripts validate the TypeScript source without producing a deployment bundle; the CN host starts `src/cli.ts` through the package `start` script.
 

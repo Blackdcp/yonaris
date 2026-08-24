@@ -2,7 +2,7 @@
 
 ## Objective
 
-Restore the domestic collection flow after the 2026-08-18 failed PPIO run without risking another account restriction or corrupting Elmo metrics.
+Restore the domestic collection flow after the 2026-08-18 failed PPIO run without risking another account restriction or corrupting Yonaris metrics.
 
 The immediate release has two outcomes:
 
@@ -17,7 +17,7 @@ The immediate release has two outcomes:
 - The first login, CAPTCHA, account restriction, page drift, timeout, or ambiguous state stops that surface. Remaining delivery tasks stay queued or become explicit human work; no subsequent task is claimed in the same action.
 - A durable submit intent is stored before sending. After it exists, the frozen Prompt is never sent again for that task.
 - Pre-submit human recovery may continue only the exact task in its preserved tab. Post-submit recovery may collect only from the exact original tab and session and never calls submit.
-- Technical failures create no `prompt_run`. Valid successful answers enter the existing Elmo denominator, including a valid answer with `brandMentioned=false`.
+- Technical failures create no `prompt_run`. Valid successful answers enter the existing Yonaris denominator, including a valid answer with `brandMentioned=false`.
 - Standard evidence remains sanitized answer HTML plus canonical JSON under the existing 90-day snapshot policy. Original-site screenshots are not required.
 
 ## Surface qualification

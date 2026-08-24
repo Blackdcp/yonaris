@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Let a platform administrator create and start a five-sample-per-Prompt Doubao/DeepSeek batch from the Portal, execute it through a paired Chrome extension on Windows or macOS, and persist answers plus 90-day HTML/JSON snapshots into the existing Elmo metric pipeline.
+**Goal:** Let a platform administrator create and start a five-sample-per-Prompt Doubao/DeepSeek batch from the Portal, execute it through a paired Chrome extension on Windows or macOS, and persist answers plus 90-day HTML/JSON snapshots into the existing Yonaris metric pipeline.
 
 **Architecture:** Extend the existing frozen delivery batch and Browser Runner APIs with dynamically paired extension devices and two supported consumer-web surfaces. A Manifest V3 extension owns the device credential in its background worker, coordinates bounded tab pools, and delegates page interaction to origin-specific content adapters. Successful observations continue through `persistSuccessfulObservation` and the current response-snapshot archive; technical failures remain delivery failures.
 
@@ -19,7 +19,7 @@
 - The default extension concurrency is five per channel with an adaptive hard range of one through ten.
 - A server-side submit intent must be durable before page submission; after intent, the Prompt is never automatically resubmitted.
 - Technical failures do not create `prompt_runs` and do not count as brand-not-mentioned.
-- Existing Elmo metric formulas are unchanged.
+- Existing Yonaris metric formulas are unchanged.
 - Response snapshots retain sanitized HTML/JSON for 90 days through the existing snapshot archive.
 - No daily schedule, cron, hidden webpage API, automated login, CAPTCHA solving, proxy rotation, or fingerprint spoofing is introduced.
 - Real Doubao or DeepSeek sites are never contacted by ordinary CI.

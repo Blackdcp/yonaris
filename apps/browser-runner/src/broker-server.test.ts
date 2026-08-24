@@ -46,7 +46,7 @@ test("browser broker refuses to start with control-plane or database secrets", (
 		"DATABASE_URL",
 		"ADMIN_API_KEYS",
 		"BETTER_AUTH_SECRET",
-		"ELMO_ENCRYPTION_KEY",
+		"CREDENTIAL_ENCRYPTION_KEY",
 	]) {
 		assert.throws(() => assertBrokerEnvironmentSafe({ [name]: "secret" }), new RegExp(name));
 	}

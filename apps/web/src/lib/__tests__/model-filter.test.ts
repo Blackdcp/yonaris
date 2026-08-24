@@ -23,7 +23,7 @@ describe("getAvailableModels", () => {
 		]);
 	});
 
-	it("works for arbitrary deployment-configured model ids, not just the ones Elmo knows about", () => {
+	it("works for arbitrary deployment-configured model ids, not just the ones Yonaris knows about", () => {
 		expect(getAvailableModels(["my-custom-model", "another-model"])).toEqual([
 			ALL_MODELS_VALUE,
 			"my-custom-model",

@@ -16,7 +16,7 @@ Environment=HOME=/var/lib/yonaris-browser-runner
 Environment=XDG_DATA_HOME=/var/lib/yonaris-browser-runner/control
 Environment=PATH=@@NODE_BIN_DIRECTORY@@:/usr/sbin:/usr/bin:/sbin:/bin
 WorkingDirectory=@@SOURCE_DIRECTORY@@
-UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET ELMO_ENCRYPTION_KEY
+UnsetEnvironment=DATABASE_URL ADMIN_API_KEYS BETTER_AUTH_SECRET CREDENTIAL_ENCRYPTION_KEY
 StateDirectory=yonaris-browser-runner
 StateDirectoryMode=0700
 ExecStart=@@NODE_EXECUTABLE@@ @@TSX_EXECUTABLE@@ @@SOURCE_DIRECTORY@@/apps/browser-runner/src/cli.ts -- poll --live --surface doubao --brand-id ${BROWSER_RUNNER_BRAND_ID} --state-dir /var/lib/yonaris-browser-runner/control
@@ -33,7 +33,7 @@ ReadWritePaths=/var/lib/yonaris-browser-runner /var/lib/yonaris-browser-evidence
 ProtectProc=invisible
 ProcSubset=pid
 ProtectKernelTunables=yes
-ProtectKernelModules=yes
+@@KERNEL_MODULE_PROTECTION@@
 ProtectKernelLogs=yes
 ProtectControlGroups=yes
 ProtectClock=yes

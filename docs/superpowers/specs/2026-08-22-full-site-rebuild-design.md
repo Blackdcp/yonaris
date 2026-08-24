@@ -16,7 +16,7 @@ The finished site must:
 - turn qualified interest into a reliably delivered free diagnostic request;
 - give Product, Approach, Research, Company, GEO, and Diagnostic distinct jobs, content, visuals, and interactions;
 - give people and agents the same canonical facts;
-- resolve the current conflict between the new Yonaris marketing site and the public Elmo-era website;
+- resolve the current conflict between the new Yonaris marketing site and the predecessor-era website;
 - preserve useful documentation and content without allowing legacy material to redefine the company.
 
 The approved homepage Product Stage is a starting component, not the project boundary.
@@ -26,9 +26,9 @@ The approved homepage Product Stage is a starting component, not the project bou
 The repository currently exposes two sites on one domain:
 
 1. Six bilingual Yonaris marketing route pairs using `MarketingShell`.
-2. More than sixty route patterns using an older Navbar/Footer and Elmo-oriented content.
+2. More than sixty route patterns using an older Navbar/Footer and predecessor-oriented content.
 
-The audit found 164 public `Elmo` or `elmohq` references, a sitemap that lists only the new marketing routes while robots permits the entire legacy tree, and two unrelated navigation systems.
+The audit found 164 public predecessor-brand references, a sitemap that lists only the new marketing routes while robots permits the entire legacy tree, and two unrelated navigation systems.
 
 The portal is not a mock shell. Current production code supports:
 
@@ -113,7 +113,7 @@ Primary navigation contains Product, Approach, Research, and Company. GEO appear
 | `/blog/**` | Keep accessible in a new publication shell; temporarily `noindex` until each article passes identity and fact review |
 | `/glossary/**` | Keep accessible in the publication shell; temporarily `noindex` until reviewed |
 | `/ai-search/**` and `/aeo-for/**` | Keep accessible as a clearly labelled legacy research archive; temporarily `noindex` |
-| `/ai-visibility-tools/**` | Keep accessible only as an upstream Elmo comparison archive; add archive context and `noindex` |
+| `/ai-visibility-tools/**` | Keep accessible only as a predecessor comparison archive; add archive context and `noindex` |
 
 ### Redirects
 
@@ -248,7 +248,7 @@ The page contains:
 - the current company stage: an early, service-led product with a real evidence platform;
 - the Yonaris / Recursive Forest brand thesis in a concise form;
 - operating principles: evidence over theatre, declared scope, human review, and durable product truth;
-- an explicit explanation that open-source Elmo-compatible infrastructure is a technical foundation and not the Yonaris company identity;
+- an explicit explanation that retired implementation details are not the Yonaris company identity;
 - contact and diagnostic actions.
 
 It does not invent locations, team biographies, investors, customers, security certifications, or funding status.
@@ -339,7 +339,7 @@ Each module exports a typed English source and an independently written Chinese 
 - `SiteShell`: core bilingual pages.
 - `PublicationShell`: Blog, Glossary, AI Search, and AEO articles.
 - `UtilityShell`: Docs, Status, Brand, and Changelog.
-- `LegacyArchiveContext`: explicit upstream/legacy explanation for unreviewed Elmo comparison content.
+- `LegacyArchiveContext`: explicit predecessor context for unreviewed comparison content.
 
 The old Navbar and Footer become compatibility wrappers around shared header/footer primitives so every reachable public page immediately presents Yonaris consistently.
 
@@ -354,8 +354,8 @@ Core pages use page-specific components, not one `DetailPage` template with swap
 - Redirected routes emit real permanent redirects rather than canonical-only hints.
 - Sitemap includes reciprocal English/Chinese alternates for core pages and real last-verified dates.
 - Organization and WebSite structured data use Yonaris only.
-- Resource pages that legitimately discuss Elmo identify it as upstream/open-source infrastructure rather than the company.
-- No route keeps old blue navigation, Docs-first CTA, or Elmo company footer.
+- Retired archive pages identify predecessor material without presenting it as the company.
+- No route keeps old blue navigation, Docs-first CTA, or predecessor company footer.
 
 ## 10. Accessibility, Responsive Behavior, and Performance
 
@@ -424,7 +424,7 @@ The project is complete only when:
 2. every core English page has a complete Chinese counterpart;
 3. Product, Approach, Research, Company, GEO, and Diagnostic each have a distinct visual and interaction model;
 4. the diagnostic request reaches the configured recipient or reports an honest failure with fallback;
-5. no reachable page presents Elmo as the Yonaris company or uses the old Docs-first navigation;
+5. no reachable page presents the predecessor as the Yonaris company or uses the old Docs-first navigation;
 6. sitemap, hreflang, Agent documents, and llms files agree with the human site;
 7. all automated checks and the complete multi-viewport visual QA pass;
 8. the final branch receives a clean independent whole-site review.

@@ -3,8 +3,8 @@ import { compactDecrypt, CompactEncrypt, decodeProtectedHeader } from "jose";
 
 const KEY_BYTES = 32; // 256-bit
 
-export const ENCRYPTION_KEY_ENV = "ELMO_ENCRYPTION_KEY";
-export const RETIRED_KEYS_ENV = "ELMO_ENCRYPTION_KEY_OLD";
+export const ENCRYPTION_KEY_ENV = "CREDENTIAL_ENCRYPTION_KEY";
+export const RETIRED_KEYS_ENV = "CREDENTIAL_ENCRYPTION_KEY_OLD";
 
 /** Compact JWE using direct symmetric encryption (`dir`) and AES-256-GCM. */
 export type EncryptedPayload = string;
@@ -48,7 +48,7 @@ export interface Keyring {
  *  rotation can be completed without re-entering every secret. Domain-separated
  *  so it can never double as a plain hash of the key in another context. */
 export function keyId(key: Uint8Array): string {
-	return createHash("sha256").update("elmo-secret-key-id\0").update(key).digest("hex").slice(0, 16);
+	return createHash("sha256").update("yonaris-credential-key-id\0").update(key).digest("hex").slice(0, 16);
 }
 
 export async function encryptSecret(
@@ -77,7 +77,21 @@ export async function decryptSecret(payload: unknown, opts: { keyring: Keyring; 
 	// Choosing the key from a not-yet-authenticated header is safe: the header is
 	// the AEAD's additional data, so a rewritten `kid` fails the tag below rather
 	// than steering the payload at a key that would decrypt it.
-	if (!key) throw new UnknownKeyError(kid);
+	if (!key) {
+		for (const candidate of new Set(opts.keyring.byId.values())) {
+			try {
+				const { plaintext, protectedHeader } = await compactDecrypt(payload as string, candidate, {
+					keyManagementAlgorithms: ["dir"],
+					contentEncryptionAlgorithms: ["A256GCM"],
+				});
+				if (protectedHeader.ctx !== opts.aad) throw new SecretDecryptError("failed to decrypt secret");
+				return new TextDecoder("utf-8", { fatal: true }).decode(plaintext);
+			} catch (cause) {
+				if (cause instanceof SecretDecryptError) throw cause;
+			}
+		}
+		throw new UnknownKeyError(kid);
+	}
 
 	try {
 		const { plaintext, protectedHeader } = await compactDecrypt(payload as string, key, {
@@ -103,8 +117,8 @@ function decodeKey(raw: string, source: string): Buffer {
 	return key;
 }
 
-/** Resolve the keyring from the environment: ELMO_ENCRYPTION_KEY encrypts, and
- *  the comma-separated ELMO_ENCRYPTION_KEY_OLD keys stay readable so a rotation
+/** Resolve the keyring from the environment: CREDENTIAL_ENCRYPTION_KEY encrypts, and
+ *  the comma-separated CREDENTIAL_ENCRYPTION_KEY_OLD keys stay readable so a rotation
  *  doesn't strand existing rows. Returns null when no key is set at all
  *  (storage disabled, environment credentials unaffected); throws
  *  EncryptionKeyError when a key is set but unusable. */

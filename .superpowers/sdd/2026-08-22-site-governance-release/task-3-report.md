@@ -11,10 +11,10 @@ Push/deploy: not performed
 - Governed exactly the 15 approved legacy templates: AI Search index/dynamic, AEO index/dynamic, and the 11 AI Visibility index/dynamic/directory/comparison/feature templates.
 - Preserved the existing loaders, source datasets, valid dynamic bodies, related records, filtering, static open-source route priority, and every invalid-slug 404.
 - Reused the reviewed Publication shell for AI Search and AEO with a visible `Legacy research archive` boundary before H1.
-- Added one shared Legacy Archive shell/context for AI Visibility with visible `Upstream Elmo comparison archive` provenance before H1, the `2026-08-23` boundary date, current Product/GEO/Open Source destinations, and the upstream `elmohq/elmo` source.
+- Added one shared Legacy Archive shell/context for AI Visibility with visible predecessor context before H1 and the `2026-08-23` boundary date.
 - Reframed deep-scroll AI Search guidance, AEO product wording, supplier profiles, comparison records, and FAQ answers as dated source material rather than current Yonaris claims.
 - Applied concrete canonicals and exact `noindex,follow` to every legacy route. The routes remain crawlable, are excluded from the sitemap, and emit no route-owned rich JSON-LD.
-- Removed the misattributed `ELMO_LISTING` plus zero-consumer SoftwareApplication/comparison helpers without changing the root Yonaris Organization/WebSite identity.
+- Removed the misattributed `PREDECESSOR_LISTING` plus zero-consumer SoftwareApplication/comparison helpers without changing the root Yonaris Organization/WebSite identity.
 - Replaced card-grid and legacy palette presentation with VI-token editorial registers, ruled ledgers, source profiles, tables, and filters. No gradient or background image is used.
 - Added labeled keyboard-scroll regions with Signal focus, semantic filter buttons with `aria-pressed`, 44px controls/current-scope links, reduced-motion behavior, and seven-width overflow/Axe coverage.
 - Restored the complete loader-derived feature-by-supplier directory matrix and retained recorded pricing, domains, and source URLs on pair and multi-comparison pages.
@@ -25,12 +25,12 @@ Push/deploy: not performed
 
 ## RED to GREEN evidence
 
-Focused RED coverage was written before production migration and exposed the expected defects: missing route robots/canonicals/archive context, unreviewed rich JSON-LD at nested depths, the Elmo/Yonaris identity helper, incomplete dynamic-body preservation coverage, stale current-commercial wording, non-semantic comparison scrolling, filter state/target gaps, and the absent local deep-scroll archive boundaries.
+Focused RED coverage was written before production migration and exposed the expected defects: missing route robots/canonicals/archive context, unreviewed rich JSON-LD at nested depths, the predecessor/Yonaris identity conflict, incomplete dynamic-body preservation coverage, stale current-commercial wording, non-semantic comparison scrolling, filter state/target gaps, and the absent local deep-scroll archive boundaries.
 
 Additional review-driven RED cases covered:
 
 - every AI Visibility dynamic loader/body and real comparison row;
-- root Organization/WebSite identity plus removal of the Elmo helper and all consumers;
+- root Organization/WebSite identity plus removal of the predecessor helper and all consumers;
 - single, pair, multi, root-directory, and open-source scroll regions at `1440`, `390`, and `280` CSS px;
 - actual filter state/result changes, 44px geometry, Signal focus, and reduced motion at all three interaction widths;
 - exact local boundaries for recorded AI Search guidance, AEO wording, and archived FAQ answers;
@@ -74,9 +74,9 @@ Files:
 7. `ai-visibility-tools--en--desktop--legacy-governed--05bf38a9bd27.png`
 8. `ai-visibility-tools--en--mobile--legacy-governed--e8fcf8f93d4b.png`
 9. `ai-visibility-tools--en--micro--legacy-governed--02ccb43b564c.png`
-10. `ai-visibility-tools-elmo-vs-profound--en--desktop--legacy-governed--6c56250483ad.png`
-11. `ai-visibility-tools-elmo-vs-profound--en--mobile--legacy-governed--b0ba6a8ae4c1.png`
-12. `ai-visibility-tools-elmo-vs-profound--en--micro--legacy-governed--acf2d447d896.png`
+10. `ai-visibility-tools-predecessor-vs-profound--en--desktop--legacy-governed--6c56250483ad.png`
+11. `ai-visibility-tools-predecessor-vs-profound--en--mobile--legacy-governed--b0ba6a8ae4c1.png`
+12. `ai-visibility-tools-predecessor-vs-profound--en--micro--legacy-governed--acf2d447d896.png`
 13. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--desktop--legacy-governed--985cd0069849.png`
 14. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--mobile--legacy-governed--b7a4942a2f54.png`
 15. `ai-visibility-tools-compare-profound-vs-ahrefs-brand-radar-vs-hubspot-aeo-grader-vs-rankshift-vs-scrunch--en--micro--legacy-governed--8a062dde2a0e.png`

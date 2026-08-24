@@ -288,7 +288,7 @@ Return rendered documents with `Content-Type: text/markdown; charset=utf-8` and 
 
 - [ ] **Step 4: Replace llms files**
 
-`llms.txt` becomes a concise index; `llms-full.txt` concatenates company, platform, methodology, and results documents. Remove inherited self-hosted Elmo/GEO-only positioning from both.
+`llms.txt` becomes a concise index; `llms-full.txt` concatenates company, platform, methodology, and results documents. Remove inherited self-hosted Yonaris/GEO-only positioning from both.
 
 - [ ] **Step 5: Run tests and build**
 

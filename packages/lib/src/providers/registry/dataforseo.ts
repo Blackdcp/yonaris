@@ -18,7 +18,7 @@ const SERP_MODELS = new Set(["google-ai-mode"]);
 
 /**
  * Models served via the AI Optimization "LLM Responses" API
- * (chat_gpt / perplexity / gemini), mapping each Elmo model id to the
+ * (chat_gpt / perplexity / gemini), mapping each Yonaris model id to the
  * AiOptimizationApi live method plus a sensible default DataForSEO model_name.
  * The model_name can be overridden per target via the version slug, e.g.
  * `chatgpt:dataforseo:gpt-4.1:online`.
@@ -91,7 +91,7 @@ function dataForSeoSnapshotSource(rawOutput: unknown): NonNullable<ScrapeResult[
 	};
 }
 
-/** Live LLM Responses call dispatch, keyed by Elmo model id. */
+/** Live LLM Responses call dispatch, keyed by Yonaris model id. */
 const LLM_CALLS = {
 	chatgpt: (api: client.AiOptimizationApi, body: DataForSeoLlmRequest[]) =>
 		api.chatGptLlmResponsesLive(body.map((b) => new client.AiOptimizationChatGptLlmResponsesLiveRequestInfo(b))),

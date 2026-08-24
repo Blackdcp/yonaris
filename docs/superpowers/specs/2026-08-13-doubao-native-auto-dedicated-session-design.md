@@ -19,7 +19,7 @@ The failed UAT was isolated and never entered Yonaris. It is not a failed brand 
 
 ## Metric invariants
 
-The Elmo metric formula remains unchanged:
+The Yonaris metric formula remains unchanged:
 
 - `N`: frozen task slots in the delivery manifest.
 - `S`: successful observations persisted as `prompt_runs`.

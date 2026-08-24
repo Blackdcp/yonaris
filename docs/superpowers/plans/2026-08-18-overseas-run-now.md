@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a platform-admin Portal action that runs every enabled Prompt in an eligible overseas Program five times on all selected Bright Data channels, persists existing Elmo observations and HTML/JSON snapshots, and shows auditable progress without scheduling another run.
+**Goal:** Add a platform-admin Portal action that runs every enabled Prompt in an eligible overseas Program five times on all selected Bright Data channels, persists existing Yonaris observations and HTML/JSON snapshots, and shows auditable progress without scheduling another run.
 
 **Architecture:** A fixed six-channel registry plans a frozen overseas cohort. New cohort and call-slot tables are the database source of truth and dispatch outbox; deterministic pg-boss jobs execute individual slots through the existing Bright Data provider and observation/snapshot pipeline. Portal server functions authorize, plan, dispatch, and read progress, while a dedicated UI card defaults all six channels on.
 
@@ -15,7 +15,7 @@
 - Eligible Programs are enabled, scored, manual-only, and explicit non-China market/locale Programs compatible with the selected routes.
 - Only global platform administrators may create or dispatch cohorts; customers remain read-only.
 - One click is one cohort and never creates a recurring schedule.
-- Existing Elmo metric formulas must not change; technical failures create no `prompt_run`.
+- Existing Yonaris metric formulas must not change; technical failures create no `prompt_run`.
 - Every successful Bright Data observation continues to produce the existing answer/citation/query data and HTML/JSON response snapshot when snapshot capture is enabled.
 - A paid-submission intent is durable before provider invocation; generic retries never reissue an uncertain paid call.
 - Do not modify or delete unrelated untracked local browser profiles, run artifacts, or recovery scripts.
@@ -379,7 +379,7 @@ git diff --check
 
 - [ ] **Step 2: Perform security/release review**
 
-Verify platform authorization, no customer mutation path, no credential output, exact six-channel registry, paid-intent ordering, no uncertain replay, one-shot behavior, migration compatibility, snapshot retention, and unchanged Elmo metric files.
+Verify platform authorization, no customer mutation path, no credential output, exact six-channel registry, paid-intent ordering, no uncertain replay, one-shot behavior, migration compatibility, snapshot retention, and unchanged Yonaris metric files.
 
 - [ ] **Step 3: Push and monitor immutable deployment**
 

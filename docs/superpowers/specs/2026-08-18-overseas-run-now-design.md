@@ -2,7 +2,7 @@
 
 ## Outcome
 
-A global platform administrator can open **Platform administration → Sampling operations**, select an enabled scored overseas Program, choose any of the six Bright Data channels already registered in Yonaris, and start one five-sample cohort. The work runs asynchronously on the existing worker, writes the existing Elmo observations and response snapshots, and exposes progress without creating a recurring schedule.
+A global platform administrator can open **Platform administration → Sampling operations**, select an enabled scored overseas Program, choose any of the six Bright Data channels already registered in Yonaris, and start one five-sample cohort. The work runs asynchronously on the existing worker, writes the existing Yonaris observations and response snapshots, and exposes progress without creating a recurring schedule.
 
 The first production use is PPIO's `Global Market` Program: 10 enabled Prompts × 6 channels × 5 samples = 300 planned provider calls.
 
@@ -22,7 +22,7 @@ The first production use is PPIO's `Global Market` Program: 10 enabled Prompts �
 - The Portal displays the exact paid call count before execution: `Prompts × channels × 5`.
 - One click creates one cohort. It does not enable daily automation or change the Program's automatic target configuration.
 - Customer accounts remain read-only.
-- The Elmo Visibility, Share of Voice, citation, query, and coverage formulas remain unchanged.
+- The Yonaris Visibility, Share of Voice, citation, query, and coverage formulas remain unchanged.
 
 ## Recommended architecture
 
@@ -37,7 +37,7 @@ Platform administrator
   -> existing Bright Data provider adapters
   -> existing observation persistence
   -> existing response snapshot archive
-  -> existing Elmo metrics and customer views
+  -> existing Yonaris metrics and customer views
 ```
 
 The cohort is the product and audit boundary. It freezes Program identity, Prompt IDs and texts, selected channel descriptors, five sample slots, market/locale/timezone, creator, creation time, and a manifest hash. Its call slots are created in the same database transaction. The worker receives only frozen call identities; it never re-reads a mutable Prompt to decide what text to submit.
@@ -188,7 +188,7 @@ PPIO's first full cohort is exactly 300 calls. Worker concurrency is bounded sep
 4. Deploy migrations and compatible web/worker images with the feature flag disabled.
 5. Enable the feature for platform administrators after verifying all six production route readiness checks.
 6. Run one one-Prompt/one-channel/five-sample production smoke cohort.
-7. Run the PPIO 300-call cohort and verify channel totals, Elmo metrics, citations, queries, and snapshots.
+7. Run the PPIO 300-call cohort and verify channel totals, Yonaris metrics, citations, queries, and snapshots.
 
 No daily schedule is created by this rollout.
 
@@ -198,7 +198,7 @@ No daily schedule is created by this rollout.
 - daily or recurring overseas schedules;
 - channels without a registered Bright Data route;
 - automatic replay of uncertain paid requests;
-- changing Elmo metric formulas;
+- changing Yonaris metric formulas;
 - original-site pixel screenshots;
 - mixing domestic Browser Runner tasks with overseas Bright Data cohorts;
 - exposing provider credentials, dataset IDs, or raw billing details to customers.

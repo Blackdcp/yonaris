@@ -13,7 +13,7 @@
 - Do not embed secrets, tokens, pairing codes, customer data or environment values in the extension artifact.
 - Package exactly `background.js`, `content-entry.js`, `icon.svg`, `manifest.json`, `popup.css`, `popup.html`, and `popup.js`.
 - Keep domestic execution administrator-started; do not add a schedule or automated provider login.
-- Keep existing customer assignment, retry, evidence and Elmo metric semantics unchanged.
+- Keep existing customer assignment, retry, evidence and Yonaris metric semantics unchanged.
 - Preserve all user-owned untracked files in the worktree.
 
 ---

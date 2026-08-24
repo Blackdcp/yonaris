@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Safely execute one explicit StepFun Doubao batch containing 3 frozen prompts × 6 samples while retaining the original Elmo metric denominator and honestly recording Doubao's native search and dedicated-account session semantics.
+**Goal:** Safely execute one explicit StepFun Doubao batch containing 3 frozen prompts × 6 samples while retaining the original Yonaris metric denominator and honestly recording Doubao's native search and dedicated-account session semantics.
 
 **Architecture:** Add forward-only delivery/session/search protocol values and nullable search-observation metadata, then update the independent Browser Runner and admin workflow to use them. Keep the runner on the dedicated China host behind explicit feature gates, a human-provisioned sampling profile, Chromium sandboxing, and a one-shot batch command.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Do not modify Elmo Visibility, Share of Voice, Opportunities, or report formulas.
+- Do not modify Yonaris Visibility, Share of Voice, Opportunities, or report formulas.
 - Technical failures never create `prompt_runs` and never become `brandMentioned=false`.
 - Existing frozen batches are immutable and are never reinterpreted.
 - `webSearchObserved=null` means unknown and must never be coerced to false.
@@ -164,7 +164,7 @@
 ## Self-review
 
 - Every design requirement maps to a task.
-- No task changes Elmo metric formulas.
+- No task changes Yonaris metric formulas.
 - Forward-only search and session protocol values are explicit.
 - Formal data cannot be written before the non-scored UAT and host isolation pass.
 - The plan contains no unattended daily scheduling.

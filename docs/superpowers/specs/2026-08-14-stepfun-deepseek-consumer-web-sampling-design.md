@@ -2,7 +2,7 @@
 
 ## Objective
 
-Collect a directly comparable DeepSeek consumer-web cohort for StepFun using the same three frozen prompts and the same six samples per prompt as the existing Doubao cohort. Publish the results into the existing `China · Simplified Chinese · Scored` measurement scope as the public AI channel `DeepSeek`, without changing Elmo metric formulas or enabling any recurring schedule.
+Collect a directly comparable DeepSeek consumer-web cohort for StepFun using the same three frozen prompts and the same six samples per prompt as the existing Doubao cohort. Publish the results into the existing `China · Simplified Chinese · Scored` measurement scope as the public AI channel `DeepSeek`, without changing Yonaris metric formulas or enabling any recurring schedule.
 
 ## Frozen measurement contract
 
@@ -61,7 +61,7 @@ The importer must:
 6. leave the existing 18 Doubao observations untouched;
 7. verify the final DeepSeek run/query/citation/mention totals before commit.
 
-Elmo Visibility and Share-of-Voice formulas remain unchanged. Only valid DeepSeek `prompt_runs` enter their successful-observation denominator.
+Yonaris Visibility and Share-of-Voice formulas remain unchanged. Only valid DeepSeek `prompt_runs` enter their successful-observation denominator.
 
 ## Customer experience
 
@@ -72,7 +72,7 @@ Once imported, the existing model filter automatically exposes `All models`, `Do
 - Adapter fixture tests: unique composer/send controls, login/CAPTCHA/rate-limit/page-drift detection, new-conversation isolation, exactly-once submission, completion, current-answer extraction, and search/citation tri-state.
 - Capture contract tests: exact frozen prompts, exact six samples each, unique slot/source keys, DeepSeek URL allowlist, evidence digests, and no secrets.
 - Import tests: dry run, exact 18-slot validation, idempotent retry, all-or-nothing rollback, no Doubao mutation, and final model-specific totals.
-- Metric regression tests: the existing Elmo M/S result is unchanged when the same valid observations are filtered by `model=deepseek`.
+- Metric regression tests: the existing Yonaris M/S result is unchanged when the same valid observations are filtered by `model=deepseek`.
 - Live UAT: one non-scored prompt first; only after it succeeds may the 18 scored observations run.
 
 ## Out of scope

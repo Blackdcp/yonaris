@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 为国内 Browser Runner 与海外 Bright Data 的每个成功 `prompt_run` 生成统一、只读、可校验的回答快照；HTML/JSON 在生产 LAS 独立目录压缩保存 90 天，客户只能读取自己品牌，并可按日期范围导出，同时保持 Elmo 所有指标公式和失败口径不变。
+**Goal:** 为国内 Browser Runner 与海外 Bright Data 的每个成功 `prompt_run` 生成统一、只读、可校验的回答快照；HTML/JSON 在生产 LAS 独立目录压缩保存 90 天，客户只能读取自己品牌，并可按日期范围导出，同时保持 Yonaris 所有指标公式和失败口径不变。
 
 **Architecture:** 采集器只负责提供统一 `ResponseSnapshotDraft`。现有回答事务继续作为指标事实源，并在同一事务内预留一个 `pending` 快照记录；快照 bundle 在事务外构建，压缩后进入有严格大小与 24 小时 TTL 的 PostgreSQL outbox，再由同进程立即 flush 或维护任务重试到 `FilesystemResponseSnapshotStorage`。文件成功原子落盘后才把快照置为 `ready` 并删除 outbox。任何快照失败都不会回滚成功回答、重问 AI 或改变 M/S。客户 API 只按 snapshot UUID 查询并再次校验 brand 权限，永远不接受外部传入的 storage key。
 
@@ -198,7 +198,7 @@ Expected: pass and `Everything's fine`.
 
 - [ ] **Step 3: Add migration smoke coverage**
 
-Extend the existing deploy migration smoke path so both empty database and seeded 0021 database advance to 0022. The test must prove existing prompt runs and Elmo aggregate inputs remain byte-for-byte unchanged.
+Extend the existing deploy migration smoke path so both empty database and seeded 0021 database advance to 0022. The test must prove existing prompt runs and Yonaris aggregate inputs remain byte-for-byte unchanged.
 
 - [ ] **Step 4: Commit**
 
@@ -788,7 +788,7 @@ git commit -m "test: verify response snapshot archive"
 ## Definition of Done
 
 - Every new successful Bright Data or supported domestic Browser Runner run has exactly one current snapshot revision or an explicit pending/failed state.
-- Snapshot generation, storage and expiry cannot alter Elmo metric inputs or cause an AI re-query.
+- Snapshot generation, storage and expiry cannot alter Yonaris metric inputs or cause an AI re-query.
 - Customer users can view/download/export only their brand's ready, unexpired snapshots; no customer mutation exists.
 - HTML is deterministic, sanitized, sandboxed and hash-verifiable; JSON records honest source/query availability.
 - LAS storage survives image/release rollback, is separate from PostgreSQL, and is protected by 70/80% gates plus a 90-day cleanup path.

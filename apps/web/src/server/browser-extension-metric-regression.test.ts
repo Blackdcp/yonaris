@@ -2,7 +2,7 @@ import { summarizeDeliveryCoverage } from "@workspace/lib/delivery-manifest";
 import { describe, expect, it } from "vitest";
 import { calculateVisibilityPercentages } from "@/lib/chart-utils";
 
-describe("Browser extension Elmo metric regression", () => {
+describe("Browser extension Yonaris metric regression", () => {
 	it("keeps a technical failure in delivery coverage but out of the successful visibility denominator", () => {
 		const coverage = summarizeDeliveryCoverage([
 			{ status: "succeeded", evaluationRole: "scored" },
