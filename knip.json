@@ -18,8 +18,7 @@
       ]
     },
     "apps/www": {
-      "entry": ["src/server.ts", "scripts/**"],
-      "ignoreDependencies": ["shiki"]
+      "entry": ["src/server.ts", "scripts/**"]
     },
     "apps/worker": {
       "entry": ["scripts/test-provider.ts"]

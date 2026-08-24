@@ -190,7 +190,8 @@ test("repository topology excludes retired distribution surfaces and preserves l
   const wwwPackage = JSON.parse(
     await readFile(path.join(repositoryRoot, "apps", "www", "package.json"), "utf8"),
   );
-  const retiredDependency = /^(?:@mdx-js\/|@types\/mdx$|@workspace\/docs$|fumadocs)/u;
+  const retiredDependency =
+    /^(?:@mdx-js\/|@tailwindcss\/typography$|@types\/mdx$|@workspace\/(?:api-spec|docs)$|fumadocs|react-markdown$|remark-gfm$|shiki$)/u;
   for (const section of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
     for (const name of Object.keys(wwwPackage[section] ?? {})) {
       if (retiredDependency.test(name)) blockers.push(`www-${section}:${name}`);

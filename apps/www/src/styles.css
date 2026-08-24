@@ -16,6 +16,4 @@
 @source "../src";
 @source "../../../packages/ui/src";
 
-@plugin "@tailwindcss/typography";
-
 @custom-variant dark (&:is(.dark *));
