@@ -1,71 +1,65 @@
 import { createHash } from "node:crypto";
-import { readFile, readdir, stat } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 
+const exec = promisify(execFile);
+const SHA256 = /^[a-f0-9]{64}$/i;
 const ZERO_WIDTH = /[\u200B-\u200D\uFEFF]/g;
-const HTML_ENTITY = /&#(?:x([0-9a-f]+)|([0-9]+));?/gi;
-const JS_ESCAPE = /\\(?:u\{([0-9a-f]+)\}|u([0-9a-f]{4})|x([0-9a-f]{2}))/gi;
-const SEPARATORS = /[\/_\-\s]+/g;
+const ENTITIES = { amp: "&", nbsp: " ", quot: '"', apos: "'", lt: "<", gt: ">" };
+const entity = /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z]+));?/gi;
+const escape = /\\(?:u\{([0-9a-f]+)\}|u([0-9a-f]{4})|x([0-9a-f]{2}))/gi;
+const separator = /[\/_\-\s\p{P}]+/gu;
+const digest = (value) => createHash("sha256").update(value).digest("hex");
 
-function decode(value) {
-  return value
-    .replace(HTML_ENTITY, (_, hex, decimal) => String.fromCodePoint(Number.parseInt(hex || decimal, hex ? 16 : 10)))
-    .replace(/%(?:[0-9a-f]{2})+/gi, (encoded) => {
-      try { return decodeURIComponent(encoded); } catch { return encoded; }
-    })
-    .replace(JS_ESCAPE, (_, codePoint, unicode, hex) => String.fromCodePoint(Number.parseInt(codePoint || unicode || hex, codePoint || unicode ? 16 : 16)));
+function decodeOnce(value) {
+  return value.replace(entity, (raw, hex, decimal, named) => {
+    const number = hex || decimal;
+    if (number) { try { return String.fromCodePoint(Number.parseInt(number, hex ? 16 : 10)); } catch { return raw; } }
+    return ENTITIES[named.toLowerCase()] ?? raw;
+  }).replace(/%(?:[0-9a-f]{2})+/gi, (raw) => { try { return decodeURIComponent(raw); } catch { return raw; } })
+    .replace(escape, (raw, point, unicode, hex) => { try { return String.fromCodePoint(Number.parseInt(point || unicode || hex, 16)); } catch { return raw; } });
 }
 
 export function normalizePublicText(value) {
-  return decode(String(value)).normalize("NFKC").toLowerCase().replace(ZERO_WIDTH, "").replace(SEPARATORS, " ").trim();
+  let decoded = String(value);
+  for (let index = 0; index < 4; index += 1) { const next = decodeOnce(decoded); if (next === decoded) break; decoded = next; }
+  return decoded.normalize("NFKC").toLowerCase().replace(ZERO_WIDTH, "").replace(separator, " ").trim();
 }
-
-export function tokenizePublicText(value) {
-  return normalizePublicText(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+export function tokenizePublicText(value) { return normalizePublicText(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean); }
+export function validatePolicy(policy) {
+  if (!policy || policy.policyVersion !== 1 || policy.normalizationVersion !== 1 || policy.ownerRole !== "release-owner" || !Array.isArray(policy.surfaceClasses) || !Array.isArray(policy.fingerprints)) throw new Error("Invalid public output policy");
+  const ids = new Set();
+  for (const item of policy.fingerprints) {
+    if (!item || typeof item.id !== "string" || ids.has(item.id) || !SHA256.test(item.sha256) || !Number.isInteger(item.characters) || item.characters < 1 || !Number.isInteger(item.tokens) || item.tokens < 1 || item.severity !== "block" || Object.keys(item).length !== 5) throw new Error("Invalid public output fingerprint");
+    ids.add(item.id);
+  }
+  return policy;
 }
-
-const digest = (value) => createHash("sha256").update(value).digest("hex");
-
 export function scanPublicText({ policy, surface, source, text }) {
-  const normalized = normalizePublicText(text);
-  const tokens = tokenizePublicText(normalized);
-  const findings = [];
-  for (const fingerprint of policy.fingerprints) {
-    const candidates = new Set();
-    for (let index = 0; index + fingerprint.tokens <= tokens.length; index += 1) {
-      candidates.add(tokens.slice(index, index + fingerprint.tokens).join(" "));
-    }
-    for (let index = 0; index + fingerprint.characters <= normalized.length; index += 1) {
-      candidates.add(normalized.slice(index, index + fingerprint.characters));
-    }
-    if ([...candidates].some((candidate) => digest(candidate) === fingerprint.sha256)) {
-      const tokenCandidate = [...candidates].find((candidate) => digest(candidate) === fingerprint.sha256) ?? "";
-      findings.push({ id: fingerprint.id, severity: "block", surface, source, offset: Math.max(0, normalized.indexOf(tokenCandidate)) });
-    }
+  if (!policy || !Array.isArray(policy.fingerprints)) throw new Error("Invalid scan policy"); const normalized = normalizePublicText(text); const tokens = tokenizePublicText(normalized); const findings = [];
+  for (const item of policy.fingerprints) {
+    let match = -1;
+    for (let index = 0; index + item.tokens <= tokens.length; index += 1) { const candidate = tokens.slice(index, index + item.tokens).join(" "); if (candidate.length === item.characters && digest(candidate) === item.sha256) { match = normalized.indexOf(candidate); break; } }
+    if (match >= 0) findings.push({ id: item.id, severity: "block", surface, source, offset: match });
   }
-  return findings.sort((left, right) => left.id.localeCompare(right.id) || left.source.localeCompare(right.source) || left.offset - right.offset);
+  return findings.sort((a, b) => a.id.localeCompare(b.id) || a.source.localeCompare(b.source) || a.offset - b.offset);
 }
-
-async function filesAt(root) {
-  const entries = await readdir(root, { withFileTypes: true });
-  const paths = await Promise.all(entries.map(async (entry) => {
-    const target = path.join(root, entry.name);
-    return entry.isDirectory() ? filesAt(target) : [target];
-  }));
-  return paths.flat();
+function validateInventory(inventory, phase) {
+  const config = inventory?.phases?.[phase];
+  if (!inventory || !["marketing", "portal"].includes(inventory.surfaceClass) || !config || !["source", "artifact", "image-root"].includes(phase) || typeof config.surface !== "string" || !Array.isArray(config.allowedRoots) || !Array.isArray(config.exclude)) throw new Error("Invalid public surface inventory");
+  return config;
 }
-
+const ignored = (relative, config) => relative.split(path.sep).some((part) => [".git", "node_modules", ".superpowers"].includes(part)) || config.exclude.some((entry) => relative === entry || relative.startsWith(`${entry}/`));
+const binary = (buffer) => buffer.includes(0);
+async function walk(root, files = []) { for (const entry of await readdir(root, { withFileTypes: true })) { const target = path.join(root, entry.name); if (entry.isSymbolicLink()) continue; if (entry.isDirectory()) await walk(target, files); else if (entry.isFile()) files.push(target); } return files; }
 export async function scanPaths({ policyPath, inventoryPath, phase, root }) {
-  const policy = JSON.parse(await readFile(policyPath, "utf8"));
-  const inventory = JSON.parse(await readFile(inventoryPath, "utf8"));
-  const configured = inventory.phases?.[phase];
-  if (!configured) throw new Error(`Unsupported public-output phase: ${phase}`);
-  const rootStats = await stat(root);
-  const paths = rootStats.isDirectory() ? await filesAt(root) : [root];
+  const policy = validatePolicy(JSON.parse(await readFile(policyPath, "utf8"))); const inventory = JSON.parse(await readFile(inventoryPath, "utf8")); const config = validateInventory(inventory, phase); const resolvedRoot = await realpath(root);
+  let paths;
+  if (phase === "source") { const { stdout } = await exec("git", ["-C", resolvedRoot, "ls-files", "--cached", "--others", "--exclude-standard", "-z"]); paths = stdout.split("\0").filter(Boolean).map((entry) => path.join(resolvedRoot, entry)); }
+  else paths = await walk(resolvedRoot);
   const findings = [];
-  for (const target of paths) {
-    const text = await readFile(target, "utf8");
-    findings.push(...scanPublicText({ policy, surface: configured.surface, source: path.relative(root, target) || path.basename(target), text }));
-  }
+  for (const target of paths) { const relative = path.relative(resolvedRoot, target); if (ignored(relative, config)) continue; const resolved = await realpath(target); if (!resolved.startsWith(`${resolvedRoot}${path.sep}`) && resolved !== resolvedRoot) throw new Error("Out-of-root public path"); const buffer = await readFile(resolved); if (binary(buffer)) continue; findings.push(...scanPublicText({ policy, surface: config.surface, source: relative.replaceAll("\\", "/"), text: buffer.toString("utf8") })); }
   return findings;
 }

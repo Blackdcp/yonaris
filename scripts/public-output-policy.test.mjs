@@ -37,6 +37,12 @@ test("normalizes neutral public text before scanning", () => {
   assert.equal(normalizePublicText("fixture\\u0020signal&#32;zx9"), policy.phrase);
 });
 
+test("recursively decodes neutral encodings without matching a containing token", () => {
+  const policy = fixturePolicy();
+  assert.equal(normalizePublicText("fixture%2520signal&amp;#32;zx9"), policy.phrase);
+  assert.deepEqual(scanPublicText({ policy, surface: "fixture", source: "safe.txt", text: "fixture-signal-zx9safe" }), []);
+});
+
 test("reports deterministic redacted findings for an encoded neutral fixture", () => {
   const policy = fixturePolicy();
   const input = {

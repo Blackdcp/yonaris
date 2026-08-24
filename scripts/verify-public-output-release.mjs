@@ -22,4 +22,12 @@ if (process.env.YONARIS_OUTPUT_EXCEPTION_FILE) {
     if (exception.approvedByRole !== "release-owner" || !exception.legalBasisReference || new Date(exception.expiresAt) <= new Date()) throw new Error("Invalid legal exception");
   }
 }
-if (process.env.YONARIS_RELEASE_ATTESTATION_FILE) await writeFile(process.env.YONARIS_RELEASE_ATTESTATION_FILE, JSON.stringify({ policyDigest: manifest.publicFiles["security/public-output-policy.v1.json"], ownerRole: manifest.ownerRole }));
+if (process.env.YONARIS_RELEASE_ATTESTATION_FILE) await writeFile(process.env.YONARIS_RELEASE_ATTESTATION_FILE, JSON.stringify({
+  policyDigest: manifest.publicFiles["security/public-output-policy.v1.json"],
+  marketingInventoryDigest: manifest.publicFiles["security/public-output-surfaces.marketing.v1.json"],
+  portalInventoryDigest: manifest.publicFiles["security/public-output-surfaces.portal.v1.json"],
+  retiredRouteProbeDigest: process.env.YONARIS_RETIRED_ROUTE_PROBE_SHA256 ?? null,
+  legalExceptionDigest: process.env.YONARIS_OUTPUT_EXCEPTION_SHA256 ?? null,
+  ownerRole: manifest.ownerRole,
+  verifiedAt: new Date().toISOString(),
+}));
