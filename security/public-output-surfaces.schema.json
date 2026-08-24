@@ -18,6 +18,7 @@
     "runtimeRouteClasses": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 2,
       "uniqueItems": true,
       "items": { "enum": ["public", "auth"] }
     }
@@ -44,6 +45,7 @@
         },
         "include": {
           "type": "array",
+          "minItems": 1,
           "maxItems": 256,
           "uniqueItems": true,
           "items": { "$ref": "#/$defs/safePrefix" }

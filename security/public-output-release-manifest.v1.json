@@ -3,7 +3,7 @@
   "ownerRole": "release-owner",
   "publicFiles": {
     "security/public-output-policy.v1.json": "904ab029cc06b8eb1ee7863d09bef3bc4770daf5556a3a711f88c7eb06b9b559",
-    "security/public-output-surfaces.marketing.v1.json": "a0dbb4daf820dbe4e170d0ab34801a164778c212e534988fbf738f06e2129df2",
-    "security/public-output-surfaces.portal.v1.json": "97496d032f442776400bd6aa0454763a504c254c1552d52d391580e3a78c32c3"
+    "security/public-output-surfaces.marketing.v1.json": "eead1b7e9d6e488e9d34cfe1cad90de6d9976419809b7e8a799bccc26005f574",
+    "security/public-output-surfaces.portal.v1.json": "3dfdbc48b4e78c9ead4120cb196f1cff8b8711dc28f07ca62607234f7bf35971"
   }
 }

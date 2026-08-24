@@ -27,7 +27,8 @@
     "test:api": "pnpm --filter e2e test:api",
     "license-check": "node scripts/check-licenses.mjs",
     "audit:public-output": "node scripts/public-output-audit.mjs",
-    "test:public-output-policy": "node --test scripts/public-output-policy.test.mjs"
+    "test:public-output-policy": "node --test scripts/public-output-policy.test.mjs",
+    "verify:public-output-release": "node scripts/verify-public-output-release.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.4",

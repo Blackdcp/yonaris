@@ -34,6 +34,9 @@ const MAX_FINGERPRINTS = 256;
 const MAX_CHARACTERS = 256;
 const MAX_TOKENS = 16;
 const MAX_COMPACT_VARIANTS = 1024;
+const EXCEPTION_SHA256 = /^[a-f0-9]{64}$/;
+const UTC_TIMESTAMP =
+  /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/;
 
 const digest = (value) => createHash("sha256").update(value).digest("hex");
 const fail = (code) => {
@@ -124,6 +127,81 @@ export function validatePolicy(policy) {
     ids.add(item.id);
   }
   return policy;
+}
+
+function parseUtcTimestamp(value) {
+  if (typeof value !== "string") return null;
+  const match = UTC_TIMESTAMP.exec(value);
+  if (!match) return null;
+  const date = new Date(value);
+  if (
+    !Number.isFinite(date.getTime()) ||
+    date.getUTCFullYear() !== Number(match[1]) ||
+    date.getUTCMonth() + 1 !== Number(match[2]) ||
+    date.getUTCDate() !== Number(match[3]) ||
+    date.getUTCHours() !== Number(match[4]) ||
+    date.getUTCMinutes() !== Number(match[5]) ||
+    date.getUTCSeconds() !== Number(match[6]) ||
+    date.getUTCMilliseconds() !== Number((match[7] ?? "0").padEnd(3, "0"))
+  ) {
+    return null;
+  }
+  return date;
+}
+
+export function validateOutputExceptions({ policy, exceptions = [], now = new Date() }) {
+  validatePolicy(policy);
+  const verifiedAt = now instanceof Date ? now : new Date(now);
+  if (!Array.isArray(exceptions) || !Number.isFinite(verifiedAt.getTime())) {
+    fail("PUBLIC_OUTPUT_EXCEPTION_INVALID");
+  }
+  const fingerprintIds = new Set(policy.fingerprints.map((item) => item.id));
+  const seenTargets = new Set();
+  const allowedKeys = new Set([
+    "fingerprintId",
+    "exactPathSha256",
+    "artifactSha256",
+    "legalBasisReference",
+    "approvedByRole",
+    "approvedAt",
+    "expiresAt",
+  ]);
+  for (const exception of exceptions) {
+    const approvedAt = parseUtcTimestamp(exception?.approvedAt);
+    const expiresAt = parseUtcTimestamp(exception?.expiresAt);
+    if (
+      !exception ||
+      typeof exception !== "object" ||
+      Array.isArray(exception) ||
+      Object.keys(exception).some((key) => !allowedKeys.has(key)) ||
+      !fingerprintIds.has(exception.fingerprintId) ||
+      exception.approvedByRole !== "release-owner" ||
+      typeof exception.legalBasisReference !== "string" ||
+      exception.legalBasisReference.trim().length === 0 ||
+      (exception.exactPathSha256 !== undefined &&
+        !EXCEPTION_SHA256.test(exception.exactPathSha256)) ||
+      (exception.artifactSha256 !== undefined &&
+        !EXCEPTION_SHA256.test(exception.artifactSha256)) ||
+      (exception.exactPathSha256 === undefined && exception.artifactSha256 === undefined) ||
+      !approvedAt ||
+      !expiresAt ||
+      approvedAt > verifiedAt ||
+      expiresAt <= verifiedAt ||
+      approvedAt >= expiresAt
+    ) {
+      fail("PUBLIC_OUTPUT_EXCEPTION_INVALID");
+    }
+    for (const [targetType, targetDigest] of [
+      ["path", exception.exactPathSha256],
+      ["artifact", exception.artifactSha256],
+    ]) {
+      if (!targetDigest) continue;
+      const key = `${exception.fingerprintId}:${targetType}:${targetDigest}`;
+      if (seenTargets.has(key)) fail("PUBLIC_OUTPUT_EXCEPTION_INVALID");
+      seenTargets.add(key);
+    }
+  }
+  return exceptions;
 }
 
 function compactVariantCount(characters, tokens) {
@@ -358,7 +436,14 @@ function sortFindings(findings) {
   );
 }
 
-export async function scanPaths({ policyPath, inventoryPath, phase, root } = {}) {
+export async function scanPaths({
+  policyPath,
+  inventoryPath,
+  phase,
+  root,
+  exceptions = [],
+  now = new Date(),
+} = {}) {
   try {
     if (typeof root !== "string" || root.length === 0) fail("PUBLIC_OUTPUT_ROOT_REQUIRED");
     await rejectRootSymlink(root);
@@ -377,6 +462,7 @@ export async function scanPaths({ policyPath, inventoryPath, phase, root } = {})
     }
     if (!policySchemaValid) fail("PUBLIC_OUTPUT_POLICY_INVALID");
     validatePolicy(policy);
+    validateOutputExceptions({ policy, exceptions, now });
 
     const inventoryValue = await readJson(inventoryPath, "PUBLIC_OUTPUT_INVENTORY_INVALID");
     const inventorySchema = await readJson(
@@ -394,14 +480,27 @@ export async function scanPaths({ policyPath, inventoryPath, phase, root } = {})
       if (buffer.includes(0) && config.binaryStrategy === "reject") {
         fail("PUBLIC_OUTPUT_BINARY_REJECTED");
       }
-      findings.push(
-        ...scanPublicText({
-          policy,
-          surface: config.surface,
-          source: relative,
-          text: buffer.toString("utf8"),
-        }),
-      );
+      const fileFindings = scanPublicText({
+        policy,
+        surface: config.surface,
+        source: relative,
+        text: buffer.toString("utf8"),
+      });
+      if (phase !== "source" || exceptions.length === 0) {
+        findings.push(...fileFindings);
+        continue;
+      }
+      const pathDigest = digest(relative);
+      const artifactDigest = digest(buffer);
+      for (const finding of fileFindings) {
+        const suppressed = exceptions.some(
+          (exception) =>
+            exception.fingerprintId === finding.id &&
+            (exception.exactPathSha256 === pathDigest ||
+              exception.artifactSha256 === artifactDigest),
+        );
+        if (!suppressed) findings.push(finding);
+      }
     }
     return sortFindings(findings);
   } catch (error) {

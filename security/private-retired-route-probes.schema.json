@@ -1,1 +1,22 @@
-{"type":"array","items":{"type":"object","required":["routeDigest"],"properties":{"routeDigest":{"type":"string","pattern":"^[a-f0-9]{64}$"}}}}
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "minItems": 26,
+  "maxItems": 26,
+  "uniqueItems": true,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "path", "expectedStatus"],
+    "properties": {
+      "id": { "type": "string", "pattern": "^retired_route_(?:0[1-9]|1[0-9]|2[0-6])$" },
+      "path": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048,
+        "pattern": "^/(?!/)[^?#\\\\\\u0000-\\u001F\\u007F]*$"
+      },
+      "expectedStatus": { "enum": [404, 410] }
+    }
+  }
+}
