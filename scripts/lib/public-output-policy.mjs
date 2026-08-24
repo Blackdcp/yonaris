@@ -1,75 +1,411 @@
 import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { readFile, readdir, realpath } from "node:fs/promises";
+import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
+import { promisify } from "node:util";
 import Ajv from "ajv";
 
 const exec = promisify(execFile);
 const SHA256 = /^[a-f0-9]{64}$/i;
 const ZERO_WIDTH = /[\u200B-\u200D\uFEFF]/g;
-const ENTITIES = { amp: "&", nbsp: " ", quot: '"', apos: "'", lt: "<", gt: ">" };
-const entity = /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z]+));?/gi;
-const escape = /\\(?:u\{([0-9a-f]+)\}|u([0-9a-f]{4})|x([0-9a-f]{2}))/gi;
-const separator = /[\/_\-\s\p{P}]+/gu;
+const ENTITIES = {
+  amp: "&",
+  apos: "'",
+  gt: ">",
+  lt: "<",
+  newline: "\n",
+  nbsp: " ",
+  quot: '"',
+  tab: "\t",
+};
+const ENTITY = /&(?:#x([0-9a-f]+)|#([0-9]+)|([a-z]+));?/gi;
+const ESCAPE = /\\(?:u\{([0-9a-f]+)\}|u([0-9a-f]{4})|x([0-9a-f]{2}))/gi;
+const SEPARATOR = /[\/_\-\s\p{P}]+/gu;
+const HARD_EXCLUDED_DIRECTORIES = new Set([
+  ".git",
+  ".pnpm",
+  ".superpowers",
+  "bower_components",
+  "node_modules",
+  "vendor",
+]);
+const MAX_DECODE_ROUNDS = 4;
+const MAX_FINGERPRINTS = 256;
+const MAX_CHARACTERS = 256;
+const MAX_TOKENS = 16;
+const MAX_COMPACT_VARIANTS = 1024;
+
 const digest = (value) => createHash("sha256").update(value).digest("hex");
-function spacedVariants(compact, parts) {
-  const results = [];
-  const visit = (start, remaining, segments) => {
-    if (remaining === 1) { results.push([...segments, compact.slice(start)].join(" ")); return; }
-    for (let end = start + 1; end <= compact.length - remaining + 1; end += 1) visit(end, remaining - 1, [...segments, compact.slice(start, end)]);
-  };
-  visit(0, parts, []); return results;
-}
+const fail = (code) => {
+  throw new Error(code);
+};
 
 function decodeOnce(value) {
-  return value.replace(entity, (raw, hex, decimal, named) => {
-    const number = hex || decimal;
-    if (number) { try { return String.fromCodePoint(Number.parseInt(number, hex ? 16 : 10)); } catch { return raw; } }
-    return ENTITIES[named.toLowerCase()] ?? raw;
-  }).replace(/%(?:[0-9a-f]{2})+/gi, (raw) => { try { return decodeURIComponent(raw); } catch { return raw; } })
-    .replace(escape, (raw, point, unicode, hex) => { try { return String.fromCodePoint(Number.parseInt(point || unicode || hex, 16)); } catch { return raw; } });
+  return value
+    .replace(ENTITY, (raw, hex, decimal, named) => {
+      const number = hex || decimal;
+      if (number) {
+        try {
+          return String.fromCodePoint(Number.parseInt(number, hex ? 16 : 10));
+        } catch {
+          return raw;
+        }
+      }
+      return ENTITIES[named.toLowerCase()] ?? raw;
+    })
+    .replace(/%(?:[0-9a-f]{2})+/gi, (raw) => {
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
+      }
+    })
+    .replace(ESCAPE, (raw, point, unicode, hex) => {
+      try {
+        return String.fromCodePoint(Number.parseInt(point || unicode || hex, 16));
+      } catch {
+        return raw;
+      }
+    });
 }
 
 export function normalizePublicText(value) {
   let decoded = String(value);
-  for (let index = 0; index < 4; index += 1) { const next = decodeOnce(decoded); if (next === decoded) break; decoded = next; }
-  return decoded.normalize("NFKC").toLowerCase().replace(ZERO_WIDTH, "").replace(separator, " ").trim();
+  for (let index = 0; index < MAX_DECODE_ROUNDS; index += 1) {
+    const next = decodeOnce(decoded);
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(ZERO_WIDTH, "")
+    .replace(SEPARATOR, " ")
+    .trim();
 }
-export function tokenizePublicText(value) { return normalizePublicText(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean); }
+
+export function tokenizePublicText(value) {
+  return normalizePublicText(value).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+}
+
 export function validatePolicy(policy) {
-  if (!policy || policy.policyVersion !== 1 || policy.normalizationVersion !== 1 || policy.ownerRole !== "release-owner" || !Array.isArray(policy.surfaceClasses) || !Array.isArray(policy.fingerprints)) throw new Error("Invalid public output policy");
+  if (
+    !policy ||
+    policy.policyVersion !== 1 ||
+    policy.normalizationVersion !== 1 ||
+    policy.ownerRole !== "release-owner" ||
+    !Array.isArray(policy.surfaceClasses) ||
+    !Array.isArray(policy.fingerprints) ||
+    policy.fingerprints.length > MAX_FINGERPRINTS
+  ) {
+    fail("PUBLIC_OUTPUT_POLICY_INVALID");
+  }
   const ids = new Set();
   for (const item of policy.fingerprints) {
-    if (!item || typeof item.id !== "string" || ids.has(item.id) || !SHA256.test(item.sha256) || !Number.isInteger(item.characters) || item.characters < 1 || !Number.isInteger(item.tokens) || item.tokens < 1 || item.severity !== "block" || Object.keys(item).length !== 5) throw new Error("Invalid public output fingerprint");
+    if (
+      !item ||
+      typeof item.id !== "string" ||
+      ids.has(item.id) ||
+      !SHA256.test(item.sha256) ||
+      !Number.isInteger(item.characters) ||
+      item.characters < 1 ||
+      item.characters > MAX_CHARACTERS ||
+      !Number.isInteger(item.tokens) ||
+      item.tokens < 1 ||
+      item.tokens > MAX_TOKENS ||
+      item.characters - (item.tokens - 1) < item.tokens ||
+      compactVariantCount(item.characters - (item.tokens - 1), item.tokens) >
+        MAX_COMPACT_VARIANTS ||
+      item.severity !== "block" ||
+      Object.keys(item).length !== 5
+    ) {
+      fail("PUBLIC_OUTPUT_POLICY_INVALID");
+    }
     ids.add(item.id);
   }
   return policy;
 }
-export function scanPublicText({ policy, surface, source, text }) {
-  if (!policy || !Array.isArray(policy.fingerprints)) throw new Error("Invalid scan policy"); const normalized = normalizePublicText(text); const tokens = tokenizePublicText(normalized); const findings = [];
-  for (const item of policy.fingerprints) {
-    let match = -1;
-    for (let index = 0; index + item.tokens <= tokens.length; index += 1) { const candidate = tokens.slice(index, index + item.tokens).join(" "); if (candidate.length === item.characters && digest(candidate) === item.sha256) { match = normalized.indexOf(candidate); break; } }
-    if (match < 0) for (const token of tokens) if (token.length === item.characters - (item.tokens - 1) && spacedVariants(token, item.tokens).some((candidate) => digest(candidate) === item.sha256)) { match = normalized.indexOf(token); break; }
-    if (match >= 0) findings.push({ id: item.id, severity: "block", surface, source, offset: match });
+
+function compactVariantCount(characters, tokens) {
+  let count = 1;
+  const selections = Math.min(tokens - 1, characters - tokens);
+  for (let index = 1; index <= selections; index += 1) {
+    count = (count * (characters - index)) / index;
+    if (count > MAX_COMPACT_VARIANTS) return count;
   }
-  return findings.sort((a, b) => a.id.localeCompare(b.id) || a.source.localeCompare(b.source) || a.offset - b.offset);
+  return count;
 }
-function validateInventory(inventory, phase) {
-  const config = inventory?.phases?.[phase];
-  if (!inventory || !["marketing", "portal"].includes(inventory.surfaceClass) || !config || !["source", "artifact", "image-root"].includes(phase) || typeof config.surface !== "string" || !Array.isArray(config.allowedRoots) || !Array.isArray(config.exclude)) throw new Error("Invalid public surface inventory");
-  return config;
+
+function matchesFingerprint(compact, item) {
+  let variants = 0;
+  let matched = false;
+  const visit = (start, remaining, segments) => {
+    if (matched || variants >= MAX_COMPACT_VARIANTS) return;
+    if (remaining === 1) {
+      variants += 1;
+      const candidate = [...segments, compact.slice(start)].join(" ");
+      matched = digest(candidate) === item.sha256;
+      return;
+    }
+    const lastEnd = compact.length - remaining + 1;
+    for (let end = start + 1; end <= lastEnd; end += 1) {
+      visit(end, remaining - 1, [...segments, compact.slice(start, end)]);
+      if (matched || variants >= MAX_COMPACT_VARIANTS) return;
+    }
+  };
+  visit(0, item.tokens, []);
+  return matched;
 }
-const ignored = (relative, config) => relative.split(path.sep).some((part) => [".git", "node_modules", ".superpowers"].includes(part)) || config.exclude.some((entry) => relative === entry || relative.startsWith(`${entry}/`));
-const binary = (buffer) => buffer.includes(0);
-async function walk(root, files = []) { for (const entry of await readdir(root, { withFileTypes: true })) { const target = path.join(root, entry.name); if (entry.isSymbolicLink()) continue; if (entry.isDirectory()) await walk(target, files); else if (entry.isFile()) files.push(target); } return files; }
-export async function scanPaths({ policyPath, inventoryPath, phase, root }) {
-  const policy = JSON.parse(await readFile(policyPath, "utf8")); const schemaPath = path.join(path.dirname(policyPath), "public-output-policy.schema.json"); const schema = JSON.parse(await readFile(schemaPath, "utf8")); const check = new Ajv({ allErrors: true, strict: true }).compile(schema); if (!check(policy)) throw new Error("Invalid public output policy schema"); validatePolicy(policy); const inventory = JSON.parse(await readFile(inventoryPath, "utf8")); const config = validateInventory(inventory, phase); const resolvedRoot = await realpath(root);
-  let paths;
-  if (phase === "source") { const { stdout } = await exec("git", ["-C", resolvedRoot, "ls-files", "--cached", "--others", "--exclude-standard", "-z"]); paths = stdout.split("\0").filter(Boolean).map((entry) => path.join(resolvedRoot, entry)); }
-  else paths = await walk(resolvedRoot);
+
+export function scanPublicText({ policy, surface, source, text }) {
+  validatePolicy(policy);
+  const normalized = normalizePublicText(text);
+  const tokens = tokenizePublicText(normalized);
   const findings = [];
-  for (const target of paths) { const relative = path.relative(resolvedRoot, target); if (ignored(relative, config)) continue; const resolved = await realpath(target); if (!resolved.startsWith(`${resolvedRoot}${path.sep}`) && resolved !== resolvedRoot) throw new Error("Out-of-root public path"); const buffer = await readFile(resolved); if (binary(buffer)) continue; findings.push(...scanPublicText({ policy, surface: config.surface, source: relative.replaceAll("\\", "/"), text: buffer.toString("utf8") })); }
-  return findings;
+  for (const item of policy.fingerprints) {
+    const compactCharacters = item.characters - (item.tokens - 1);
+    let match = -1;
+    for (let start = 0; start < tokens.length && match < 0; start += 1) {
+      for (let end = start + 1; end <= tokens.length && end <= start + item.tokens; end += 1) {
+        const window = tokens.slice(start, end);
+        const compact = window.join("");
+        if (compact.length > compactCharacters) break;
+        const spaced = window.join(" ");
+        if (
+          compact.length === compactCharacters &&
+          ((window.length === item.tokens && digest(spaced) === item.sha256) ||
+            matchesFingerprint(compact, item))
+        ) {
+          match = normalized.indexOf(tokens[start]);
+          break;
+        }
+      }
+    }
+    if (match >= 0) {
+      findings.push({ id: item.id, severity: "block", surface, source, offset: match });
+    }
+  }
+  return findings.sort(
+    (left, right) =>
+      left.id.localeCompare(right.id) ||
+      left.source.localeCompare(right.source) ||
+      left.offset - right.offset,
+  );
+}
+
+function isPublicError(error) {
+  return error instanceof Error && /^PUBLIC_OUTPUT_[A-Z_]+$/.test(error.message);
+}
+
+function normalizeRelativePath(value) {
+  return value.replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
+function matchesPrefix(relative, prefix) {
+  return prefix === "." || relative === prefix || relative.startsWith(`${prefix}/`);
+}
+
+function isPrefixAncestor(relative, prefix) {
+  return prefix !== "." && prefix.startsWith(`${relative}/`);
+}
+
+function isHardExcluded(relative) {
+  return relative.split("/").some((part) => HARD_EXCLUDED_DIRECTORIES.has(part));
+}
+
+function isSelected(relative, config) {
+  return (
+    !isHardExcluded(relative) &&
+    config.allowedRoots.some((entry) => matchesPrefix(relative, entry)) &&
+    config.include.some((entry) => matchesPrefix(relative, entry)) &&
+    !config.exclude.some((entry) => matchesPrefix(relative, entry))
+  );
+}
+
+function canContainSelection(relative, config) {
+  return config.include.some(
+    (entry) => matchesPrefix(relative, entry) || isPrefixAncestor(relative, entry),
+  );
+}
+
+function validateInventory(inventory, schema, phase) {
+  let valid = false;
+  try {
+    valid = new Ajv({ allErrors: true, strict: true }).compile(schema)(inventory);
+  } catch {
+    fail("PUBLIC_OUTPUT_INVENTORY_INVALID");
+  }
+  if (!valid || !["source", "artifact", "image-root"].includes(phase)) {
+    fail("PUBLIC_OUTPUT_INVENTORY_INVALID");
+  }
+  return inventory.phases[phase];
+}
+
+export function assertWithinPublicBoundary(boundary, candidate) {
+  const relative = path.relative(path.resolve(boundary), path.resolve(candidate));
+  if (
+    relative === "" ||
+    (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+  ) {
+    return;
+  }
+  fail("PUBLIC_OUTPUT_OUT_OF_ROOT");
+}
+
+async function rejectRootSymlink(root) {
+  let stat;
+  try {
+    stat = await lstat(root);
+  } catch {
+    fail("PUBLIC_OUTPUT_SCAN_FAILED");
+  }
+  if (stat.isSymbolicLink()) fail("PUBLIC_OUTPUT_SYMLINK");
+}
+
+async function sourcePaths(root, config) {
+  let topLevel;
+  try {
+    const result = await exec("git", ["-C", root, "rev-parse", "--show-toplevel"]);
+    topLevel = await realpath(result.stdout.trim());
+  } catch {
+    fail("PUBLIC_OUTPUT_NOT_GIT_ROOT");
+  }
+  if (path.relative(root, topLevel) !== "") fail("PUBLIC_OUTPUT_NOT_GIT_ROOT");
+
+  let stdout;
+  try {
+    ({ stdout } = await exec("git", [
+      "-C",
+      topLevel,
+      "ls-files",
+      "--cached",
+      "--others",
+      "--exclude-standard",
+      "-z",
+    ]));
+  } catch {
+    fail("PUBLIC_OUTPUT_SCAN_FAILED");
+  }
+  const results = [];
+  for (const entry of stdout.split("\0").filter(Boolean)) {
+    const relative = normalizeRelativePath(entry);
+    if (!isSelected(relative, config)) continue;
+    const target = path.resolve(topLevel, ...relative.split("/"));
+    assertWithinPublicBoundary(topLevel, target);
+    const stat = await lstat(target);
+    if (stat.isSymbolicLink()) fail("PUBLIC_OUTPUT_SYMLINK");
+    if (!stat.isFile()) continue;
+    const resolved = await realpath(target);
+    assertWithinPublicBoundary(topLevel, resolved);
+    results.push({ relative, target: resolved });
+  }
+  return results;
+}
+
+async function walkAllowedPath(boundary, target, config, files, seen) {
+  const relative = normalizeRelativePath(path.relative(boundary, target));
+  if (relative && (isHardExcluded(relative) || config.exclude.some((entry) => matchesPrefix(relative, entry)))) {
+    return;
+  }
+  if (relative && !isSelected(relative, config) && !canContainSelection(relative, config)) return;
+
+  let stat;
+  try {
+    stat = await lstat(target);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  if (stat.isSymbolicLink()) fail("PUBLIC_OUTPUT_SYMLINK");
+  const resolved = await realpath(target);
+  assertWithinPublicBoundary(boundary, resolved);
+  if (stat.isDirectory()) {
+    for (const entry of await readdir(resolved)) {
+      await walkAllowedPath(boundary, path.join(resolved, entry), config, files, seen);
+    }
+  } else if (stat.isFile() && isSelected(relative || ".", config) && !seen.has(resolved)) {
+    seen.add(resolved);
+    files.push({ relative: relative || path.basename(resolved), target: resolved });
+  }
+}
+
+async function artifactPaths(root, config) {
+  const files = [];
+  const seen = new Set();
+  for (const allowedRoot of config.allowedRoots) {
+    const target =
+      allowedRoot === "." ? root : path.resolve(root, ...normalizeRelativePath(allowedRoot).split("/"));
+    assertWithinPublicBoundary(root, target);
+    await walkAllowedPath(root, target, config, files, seen);
+  }
+  return files;
+}
+
+async function readJson(file, errorCode) {
+  try {
+    return JSON.parse(await readFile(file, "utf8"));
+  } catch {
+    fail(errorCode);
+  }
+}
+
+function sortFindings(findings) {
+  return findings.sort(
+    (left, right) =>
+      left.id.localeCompare(right.id) ||
+      left.source.localeCompare(right.source) ||
+      left.offset - right.offset,
+  );
+}
+
+export async function scanPaths({ policyPath, inventoryPath, phase, root } = {}) {
+  try {
+    if (typeof root !== "string" || root.length === 0) fail("PUBLIC_OUTPUT_ROOT_REQUIRED");
+    await rejectRootSymlink(root);
+    const resolvedRoot = await realpath(root);
+
+    const policy = await readJson(policyPath, "PUBLIC_OUTPUT_POLICY_INVALID");
+    const policySchema = await readJson(
+      path.join(path.dirname(policyPath), "public-output-policy.schema.json"),
+      "PUBLIC_OUTPUT_POLICY_INVALID",
+    );
+    let policySchemaValid = false;
+    try {
+      policySchemaValid = new Ajv({ allErrors: true, strict: true }).compile(policySchema)(policy);
+    } catch {
+      fail("PUBLIC_OUTPUT_POLICY_INVALID");
+    }
+    if (!policySchemaValid) fail("PUBLIC_OUTPUT_POLICY_INVALID");
+    validatePolicy(policy);
+
+    const inventoryValue = await readJson(inventoryPath, "PUBLIC_OUTPUT_INVENTORY_INVALID");
+    const inventorySchema = await readJson(
+      path.join(path.dirname(inventoryPath), "public-output-surfaces.schema.json"),
+      "PUBLIC_OUTPUT_INVENTORY_INVALID",
+    );
+    const config = validateInventory(inventoryValue, inventorySchema, phase);
+    const files =
+      phase === "source"
+        ? await sourcePaths(resolvedRoot, config)
+        : await artifactPaths(resolvedRoot, config);
+    const findings = [];
+    for (const { relative, target } of files) {
+      const buffer = await readFile(target);
+      if (buffer.includes(0) && config.binaryStrategy === "reject") {
+        fail("PUBLIC_OUTPUT_BINARY_REJECTED");
+      }
+      findings.push(
+        ...scanPublicText({
+          policy,
+          surface: config.surface,
+          source: relative,
+          text: buffer.toString("utf8"),
+        }),
+      );
+    }
+    return sortFindings(findings);
+  } catch (error) {
+    if (isPublicError(error)) throw error;
+    fail("PUBLIC_OUTPUT_SCAN_FAILED");
+  }
 }
