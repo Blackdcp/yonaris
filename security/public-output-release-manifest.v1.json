@@ -2,7 +2,7 @@
   "manifestVersion": 1,
   "ownerRole": "release-owner",
   "publicFiles": {
-    "security/public-output-policy.v1.json": "904ab029cc06b8eb1ee7863d09bef3bc4770daf5556a3a711f88c7eb06b9b559",
+    "security/public-output-policy.v1.json": "9c20b1b1a13af664e691915a492a047434e62fb0bbefd2f5437ae9a63823e433",
     "security/public-output-surfaces.marketing.v1.json": "eead1b7e9d6e488e9d34cfe1cad90de6d9976419809b7e8a799bccc26005f574",
     "security/public-output-surfaces.portal.v1.json": "3dfdbc48b4e78c9ead4120cb196f1cff8b8711dc28f07ca62607234f7bf35971"
   }

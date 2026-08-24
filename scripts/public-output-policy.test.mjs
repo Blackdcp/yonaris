@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
@@ -28,6 +29,7 @@ function fixturePolicy() {
       {
         id: "fixture_01",
         sha256: createHash("sha256").update(fixturePhrase).digest("hex"),
+        compactSha256: createHash("sha256").update(fixturePhrase.replaceAll(" ", "")).digest("hex"),
         characters: fixturePhrase.length,
         tokens: 3,
         severity: "block",
@@ -372,6 +374,21 @@ test("does not match compact tokens with safe prefixes or suffixes", () => {
   }
 });
 
+test("scans a large neutral source file within the release time budget", () => {
+  const text = "alpha bravo charli ".repeat(27_778).slice(0, 500_000);
+  const startedAt = performance.now();
+  const findings = scanPublicText({
+    policy: fixturePolicy(),
+    surface: "fixture",
+    source: "large-neutral.txt",
+    text,
+  });
+  const elapsed = performance.now() - startedAt;
+
+  assert.deepEqual(findings, []);
+  assert.ok(elapsed <= 5_000, `expected <= 5000ms, received ${Math.round(elapsed)}ms`);
+});
+
 test("reports deterministic redacted findings", () => {
   const findings = scanPublicText({
     policy: fixturePolicy(),
@@ -417,6 +434,28 @@ test("rejects unsafe policy sizes before scanning", () => {
   assert.throws(() => scanPublicText({ policy, surface: "fixture", source: "safe.txt", text: "safe" }), {
     message: "PUBLIC_OUTPUT_POLICY_INVALID",
   });
+});
+
+test("requires a lowercase compact digest in every policy fingerprint", async () => {
+  const schema = JSON.parse(
+    await readFile(path.join(repositoryRoot, "security", "public-output-policy.schema.json"), "utf8"),
+  );
+  const validate = new Ajv({ allErrors: true, strict: true }).compile(schema);
+  const valid = fixturePolicy();
+  const missing = structuredClone(valid);
+  delete missing.fingerprints[0].compactSha256;
+  const malformed = structuredClone(valid);
+  malformed.fingerprints[0].compactSha256 = "A".repeat(64);
+
+  assert.equal(validate(valid), true, JSON.stringify(validate.errors));
+  assert.equal(validate(missing), false);
+  assert.equal(validate(malformed), false);
+  for (const policy of [missing, malformed]) {
+    assert.throws(
+      () => scanPublicText({ policy, surface: "fixture", source: "safe.txt", text: "safe" }),
+      { message: "PUBLIC_OUTPUT_POLICY_INVALID" },
+    );
+  }
 });
 
 test("loads and compiles the strict surface inventory schema for both inventories", async () => {

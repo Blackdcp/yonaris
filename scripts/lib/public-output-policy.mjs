@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import Ajv from "ajv";
 
 const exec = promisify(execFile);
-const SHA256 = /^[a-f0-9]{64}$/i;
+const SHA256 = /^[a-f0-9]{64}$/;
 const ZERO_WIDTH = /[\u200B-\u200D\uFEFF]/g;
 const ENTITIES = {
   amp: "&",
@@ -37,7 +37,6 @@ const MAX_NORMALIZATION_INPUT_LENGTH = 1_048_576;
 const MAX_FINGERPRINTS = 256;
 const MAX_CHARACTERS = 256;
 const MAX_TOKENS = 16;
-const MAX_COMPACT_VARIANTS = 1024;
 const EXCEPTION_SHA256 = /^[a-f0-9]{64}$/;
 const UTC_TIMESTAMP =
   /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?Z$/;
@@ -139,6 +138,7 @@ export function validatePolicy(policy) {
       typeof item.id !== "string" ||
       ids.has(item.id) ||
       !SHA256.test(item.sha256) ||
+      !SHA256.test(item.compactSha256) ||
       !Number.isInteger(item.characters) ||
       item.characters < 1 ||
       item.characters > MAX_CHARACTERS ||
@@ -146,10 +146,8 @@ export function validatePolicy(policy) {
       item.tokens < 1 ||
       item.tokens > MAX_TOKENS ||
       item.characters - (item.tokens - 1) < item.tokens ||
-      compactVariantCount(item.characters - (item.tokens - 1), item.tokens) >
-        MAX_COMPACT_VARIANTS ||
       item.severity !== "block" ||
-      Object.keys(item).length !== 5
+      Object.keys(item).length !== 6
     ) {
       fail("PUBLIC_OUTPUT_POLICY_INVALID");
     }
@@ -233,37 +231,6 @@ export function validateOutputExceptions({ policy, exceptions = [], now = new Da
   return exceptions;
 }
 
-function compactVariantCount(characters, tokens) {
-  let count = 1;
-  const selections = Math.min(tokens - 1, characters - tokens);
-  for (let index = 1; index <= selections; index += 1) {
-    count = (count * (characters - index)) / index;
-    if (count > MAX_COMPACT_VARIANTS) return count;
-  }
-  return count;
-}
-
-function matchesFingerprint(compact, item) {
-  let variants = 0;
-  let matched = false;
-  const visit = (start, remaining, segments) => {
-    if (matched || variants >= MAX_COMPACT_VARIANTS) return;
-    if (remaining === 1) {
-      variants += 1;
-      const candidate = [...segments, compact.slice(start)].join(" ");
-      matched = digest(candidate) === item.sha256;
-      return;
-    }
-    const lastEnd = compact.length - remaining + 1;
-    for (let end = start + 1; end <= lastEnd; end += 1) {
-      visit(end, remaining - 1, [...segments, compact.slice(start, end)]);
-      if (matched || variants >= MAX_COMPACT_VARIANTS) return;
-    }
-  };
-  visit(0, item.tokens, []);
-  return matched;
-}
-
 export function scanPublicText({ policy, surface, source, text }) {
   validatePolicy(policy);
   const normalized = normalizePublicText(text);
@@ -277,11 +244,9 @@ export function scanPublicText({ policy, surface, source, text }) {
       for (let end = start + 1; end <= tokens.length; end += 1) {
         const window = tokens.slice(start, end);
         const compact = window.join("");
-        const spaced = window.join(" ");
         if (
           compact.length === compactCharacters &&
-          ((window.length === item.tokens && digest(spaced) === item.sha256) ||
-            matchesFingerprint(compact, item))
+          digest(compact) === item.compactSha256
         ) {
           match = positionedTokens[start].offset;
           break;

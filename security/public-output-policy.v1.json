@@ -4,19 +4,19 @@
   "ownerRole": "release-owner",
   "surfaceClasses": ["marketing", "portal"],
   "fingerprints": [
-    {"id":"provenance_01","sha256":"c34e8bafe33b7f1cb1335ff6a07a0b7efca46412ba91bb379a322099a285c442","characters":4,"tokens":1,"severity":"block"},
-    {"id":"provenance_02","sha256":"f0b7e42351bc34d2453e0465c175c291b5be3f88fe1b1f0a4fecfaa806d3659a","characters":6,"tokens":1,"severity":"block"},
-    {"id":"distribution_01","sha256":"1ae64990e804a162b3728158b8f09fe90b2858acc74e9357ad5dedab65741c94","characters":11,"tokens":2,"severity":"block"},
-    {"id":"distribution_02","sha256":"b829e805ab160bf10124b48da39c07eecc55bea7b9229820abbcc396ebf35cf1","characters":10,"tokens":1,"severity":"block"},
-    {"id":"distribution_03","sha256":"16dc8ea1cf4807b0db5c890f39c970a66f240e2d28617c0a53a7c5e0c0c4cbf0","characters":2,"tokens":1,"severity":"block"},
-    {"id":"positioning_01","sha256":"ebb9e574da5022b61ce52feb9b58cfd56054afc14427a158037e0633485b6584","characters":22,"tokens":3,"severity":"block"},
-    {"id":"positioning_02","sha256":"8f10a6e6110709207aa45589b64b1436ee14bd490bf17da0e2ec6181df18e45a","characters":13,"tokens":2,"severity":"block"},
-    {"id":"positioning_03","sha256":"712e4584a902fc71986b04a1d99feb8ad08be60702f5b53cd2d4fb604497a100","characters":13,"tokens":2,"severity":"block"},
-    {"id":"positioning_04","sha256":"a73a5201e6244acfcd69f6d5ceb56d2e82ee9b31c28cc7b4881cad49a89e7adc","characters":13,"tokens":2,"severity":"block"},
-    {"id":"positioning_05","sha256":"e34aed7a3c93d7b6fc0ac9039b0e4612bb7aba9a78a1c14d0d02be7b4cfd45cd","characters":18,"tokens":2,"severity":"block"},
-    {"id":"positioning_06","sha256":"76ebb28a3fa59d97af5848250f953958279939c3de95022cca45698ab3129693","characters":19,"tokens":2,"severity":"block"},
-    {"id":"positioning_07","sha256":"391b1fcbfe1f411b63fb97d41d691f45b77cb66cfa4a91cecc9d9a6525a44884","characters":17,"tokens":3,"severity":"block"},
-    {"id":"positioning_08","sha256":"60772f3f951985315cd9e129db23a4384a01bff47f6871c6d16d68c336c5ba42","characters":21,"tokens":4,"severity":"block"},
-    {"id":"positioning_09","sha256":"13fef948be33bd55157a607e8b1d5ae76d32d695e6b608ada49e937b4983275f","characters":16,"tokens":2,"severity":"block"}
+    {"id":"provenance_01","sha256":"c34e8bafe33b7f1cb1335ff6a07a0b7efca46412ba91bb379a322099a285c442","compactSha256":"c34e8bafe33b7f1cb1335ff6a07a0b7efca46412ba91bb379a322099a285c442","characters":4,"tokens":1,"severity":"block"},
+    {"id":"provenance_02","sha256":"f0b7e42351bc34d2453e0465c175c291b5be3f88fe1b1f0a4fecfaa806d3659a","compactSha256":"f0b7e42351bc34d2453e0465c175c291b5be3f88fe1b1f0a4fecfaa806d3659a","characters":6,"tokens":1,"severity":"block"},
+    {"id":"distribution_01","sha256":"1ae64990e804a162b3728158b8f09fe90b2858acc74e9357ad5dedab65741c94","compactSha256":"b829e805ab160bf10124b48da39c07eecc55bea7b9229820abbcc396ebf35cf1","characters":11,"tokens":2,"severity":"block"},
+    {"id":"distribution_02","sha256":"b829e805ab160bf10124b48da39c07eecc55bea7b9229820abbcc396ebf35cf1","compactSha256":"b829e805ab160bf10124b48da39c07eecc55bea7b9229820abbcc396ebf35cf1","characters":10,"tokens":1,"severity":"block"},
+    {"id":"distribution_03","sha256":"16dc8ea1cf4807b0db5c890f39c970a66f240e2d28617c0a53a7c5e0c0c4cbf0","compactSha256":"16dc8ea1cf4807b0db5c890f39c970a66f240e2d28617c0a53a7c5e0c0c4cbf0","characters":2,"tokens":1,"severity":"block"},
+    {"id":"positioning_01","sha256":"ebb9e574da5022b61ce52feb9b58cfd56054afc14427a158037e0633485b6584","compactSha256":"84a4323b591dbdc03c0d735abcf65078dca8fdb4e642da337a52da14fd2f0055","characters":22,"tokens":3,"severity":"block"},
+    {"id":"positioning_02","sha256":"8f10a6e6110709207aa45589b64b1436ee14bd490bf17da0e2ec6181df18e45a","compactSha256":"ee19d7251c7b3e29a65bfb5e77e43342c67b297eae1ba332d1fbb076623c3a1c","characters":13,"tokens":2,"severity":"block"},
+    {"id":"positioning_03","sha256":"712e4584a902fc71986b04a1d99feb8ad08be60702f5b53cd2d4fb604497a100","compactSha256":"2bc119f869396e7b2153af51201dd9f937757f1f63b9488fadd671888caf2de5","characters":13,"tokens":2,"severity":"block"},
+    {"id":"positioning_04","sha256":"a73a5201e6244acfcd69f6d5ceb56d2e82ee9b31c28cc7b4881cad49a89e7adc","compactSha256":"335714c5e1d73fec03648fcbabf569e521215788c3408ebb2e1d4ff77620fb53","characters":13,"tokens":2,"severity":"block"},
+    {"id":"positioning_05","sha256":"e34aed7a3c93d7b6fc0ac9039b0e4612bb7aba9a78a1c14d0d02be7b4cfd45cd","compactSha256":"30ad10358f0fe0acdbedd7d2f83678c3f4bc482b4018f9d6d2323c1a19b82b0b","characters":18,"tokens":2,"severity":"block"},
+    {"id":"positioning_06","sha256":"76ebb28a3fa59d97af5848250f953958279939c3de95022cca45698ab3129693","compactSha256":"75d79d6f2e1516930b923908c622316b9ee6a30053203745bbb285664a498c72","characters":19,"tokens":2,"severity":"block"},
+    {"id":"positioning_07","sha256":"391b1fcbfe1f411b63fb97d41d691f45b77cb66cfa4a91cecc9d9a6525a44884","compactSha256":"8f1b54f186e1031189fbde83bb3362dc228a747b761f34839f2a5f2f438a2ce1","characters":17,"tokens":3,"severity":"block"},
+    {"id":"positioning_08","sha256":"60772f3f951985315cd9e129db23a4384a01bff47f6871c6d16d68c336c5ba42","compactSha256":"4f5d97d62f388d20d51a71e7fb3b4051462d82d73c5d9e8292f8a05c1e0bd2ca","characters":21,"tokens":4,"severity":"block"},
+    {"id":"positioning_09","sha256":"13fef948be33bd55157a607e8b1d5ae76d32d695e6b608ada49e937b4983275f","compactSha256":"d5f43cf9d595893d47d9bcd3fec1a97951d2be0a08c4271d9ec10c9ca9244e15","characters":16,"tokens":2,"severity":"block"}
   ]
 }

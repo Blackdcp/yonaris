@@ -28,6 +28,7 @@ function fixturePolicy() {
       {
         id: "fixture_01",
         sha256: sha256(fixturePhrase),
+        compactSha256: sha256(fixturePhrase.replaceAll(" ", "")),
         characters: fixturePhrase.length,
         tokens: 3,
         severity: "block",
