@@ -5,7 +5,7 @@ import { yuanbaoSelectorContract } from "./yuanbao";
 describe("Yuanbao semantic DOM contract", () => {
 	test("matches the current official composer, send control, and icon-only new-dialogue action", () => {
 		const { document } = parseHTML(`<!doctype html><html><body>
-			<div class="yb-common-nav__trigger" data-desc="new-chat"><span class="icon-yb-ic_newchat_20"></span></div>
+			<div class="yb-new-chat-entry"><div class="yb-common-nav__trigger"><span class="yb-icon iconfont-yb icon-yb-ic_newchat_20"></span></div><span>新对话</span></div>
 			<div class="ql-editor ql-blank" contenteditable="true"></div>
 			<a id="yuanbao-send-btn" class="style__send-btn--disabled___mhfdQ" aria-label="发送"></a>
 			<a id="yuanbao-send-btn" aria-label="发送"></a>

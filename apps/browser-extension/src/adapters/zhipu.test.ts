@@ -6,7 +6,7 @@ import { createZhipuAdapter, zhipuSearchEvidenceAdapter, zhipuSelectorContract }
 describe("Zhipu browser-extension adapter", () => {
 	test("uses the qualified ChatGLM origin and adapter identity", () => {
 		expect(zhipuSelectorContract).toMatchObject({
-			version: "zhipu-web-20260822-localpc-v5",
+			version: "zhipu-web-20260825-localpc-v6",
 			surface: "zhipu.consumer_web",
 			launchUrl: "https://chatglm.cn/",
 		});
@@ -33,7 +33,7 @@ describe("Zhipu browser-extension adapter", () => {
 			webSearchObserved: null,
 			webQueries: [],
 			citations: [{ url: "https://source.example/zhipu", title: "智谱来源" }],
-			adapterVersion: "zhipu-web-20260822-localpc-v5",
+			adapterVersion: "zhipu-web-20260825-localpc-v6",
 		});
 	});
 
@@ -162,6 +162,37 @@ describe("Zhipu browser-extension adapter", () => {
 		);
 
 		await expect(port.completeOneTask(createZhipuAdapter(port), "Prompt A")).resolves.toBeUndefined();
+	});
+
+	test("accepts the current live durable conversation URL with language and cid", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://chatglm.cn/main/alltoolsdetail?lang=zh",
+				conversationUrl: "https://chatglm.cn/main/alltoolsdetail?lang=zh&cid=6a8d465fcbe4d49da653612f",
+				newConversationLabels: ["新对话"],
+			}),
+		);
+
+		await expect(port.completeOneTask(createZhipuAdapter(port), "Prompt A")).resolves.toBeUndefined();
+	});
+
+	test("resumes the current live durable conversation without resubmitting the prompt", async () => {
+		const conversationUrl = "https://chatglm.cn/main/alltoolsdetail?lang=zh&cid=6a8d465fcbe4d49da653612f";
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				initiallySubmitted: true,
+				pageUrl: conversationUrl,
+				conversationUrl,
+				submittedPrompt: "Prompt A",
+				generatingDurationMs: 0,
+				completionReadyDelayMs: 0,
+			}),
+		);
+		const adapter = createZhipuAdapter(port);
+
+		await adapter.resumeSubmitted("Prompt A");
+		await expect(adapter.collectCurrentAnswer()).resolves.toMatchObject({ answerText: "Current answer" });
+		expect(port.submitCount).toBe(0);
 	});
 });
 

@@ -58,12 +58,12 @@ describe("DeviceStorage", () => {
 			},
 			"yuanbao.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "yuanbao-web-20260824-localpc-v13",
+				adapterVersion: "yuanbao-web-20260825-localpc-v14",
 				activeConcurrency: 0,
 			},
 			"zhipu.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "zhipu-web-20260822-localpc-v5",
+				adapterVersion: "zhipu-web-20260825-localpc-v6",
 				activeConcurrency: 0,
 			},
 		});
