@@ -6,7 +6,7 @@ import {
 	type HumanPageKey,
 } from "@/content/experience/types";
 import type { AgentPageKey } from "@/content/site/types";
-import { getCoreLastVerified } from "./site-manifest";
+import type { MachineLinkSet } from "./machine-response";
 
 const SITE_ORIGIN = "https://yonaris.com";
 const ORGANIZATION_DESCRIPTION =
@@ -23,6 +23,38 @@ export function agentMarkdownPath(locale: ExperienceLocale, key: HumanPageKey): 
 
 export function agentCatalogPath(locale: ExperienceLocale): "/agent/catalog.json" | "/zh/agent/catalog.json" {
 	return locale === "en" ? "/agent/catalog.json" : "/zh/agent/catalog.json";
+}
+
+export function agentDocumentLinks(locale: ExperienceLocale, key: HumanPageKey): MachineLinkSet {
+	const topic = getAgentTopic(locale, key);
+	const peerLocale = locale === "en" ? "zh" : "en";
+	return [
+		{ href: topic.markdownPath, rel: "canonical", type: "text/markdown" },
+		{ href: topic.humanPath, rel: "alternate", type: "text/html" },
+		{ href: agentCatalogPath(locale), rel: "alternate", type: "application/ld+json" },
+		{
+			href: agentMarkdownPath(peerLocale, key),
+			rel: "alternate",
+			type: "text/markdown",
+			hrefLang: peerLocale === "zh" ? "zh-CN" : "en",
+		},
+		{ href: "/llms.txt", rel: "describedby", type: "text/plain" },
+	];
+}
+
+export function agentCatalogLinks(locale: ExperienceLocale): MachineLinkSet {
+	const peerLocale = locale === "en" ? "zh" : "en";
+	return [
+		{ href: agentCatalogPath(locale), rel: "canonical", type: "application/ld+json" },
+		{ href: locale === "en" ? "/" : "/zh", rel: "alternate", type: "text/html" },
+		{
+			href: agentCatalogPath(peerLocale),
+			rel: "alternate",
+			type: "application/ld+json",
+			hrefLang: peerLocale === "zh" ? "zh-CN" : "en",
+		},
+		{ href: "/llms.txt", rel: "describedby", type: "text/plain" },
+	];
 }
 
 export function getAgentTopic(locale: ExperienceLocale, key: HumanPageKey): AgentTopic {
@@ -52,7 +84,6 @@ function renderMetadata(topic: AgentTopic): string {
 
 export function renderCoreMarkdown(key: HumanPageKey, locale: ExperienceLocale): string {
 	const topic = getAgentTopic(locale, key);
-	const lastReviewed = getCoreLastVerified(key);
 	const limitations = topic.limitations.map((limitation) => `- ${limitation}`).join("\n");
 	const related = [
 		`- [Human canonical](${absolute(topic.humanPath)})`,
@@ -66,7 +97,7 @@ export function renderCoreMarkdown(key: HumanPageKey, locale: ExperienceLocale):
 
 > ${topic.summary}
 
-${renderMetadata({ ...topic, lastReviewed })}
+${renderMetadata(topic)}
 
 ## Scope
 

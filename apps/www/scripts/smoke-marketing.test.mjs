@@ -41,9 +41,22 @@ const AGENT_HTML_PATHS = [
 	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/zh/agent/${topic}`),
 ];
 
+const AGENT_MARKDOWN_PATHS = [
+	"/agent/index.md",
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/agent/${topic}.md`),
+	"/zh/agent/index.md",
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map(
+		(topic) => `/zh/agent/${topic}.md`,
+	),
+];
+
+const CATALOG_PATHS = ["/agent/catalog.json", "/zh/agent/catalog.json"];
+
 const HTML_PATHS = [...CORE_PATHS, "/privacy", "/zh/privacy", ...AGENT_HTML_PATHS];
 
 const MACHINE_PATHS = [
+	...AGENT_MARKDOWN_PATHS,
+	...CATALOG_PATHS,
 	"/llms.txt",
 	"/llms-full.txt",
 	"/robots.txt",
@@ -113,9 +126,12 @@ const ALL_COPY = [
 	"public facts",
 	"User-agent:",
 	"https://yonaris.com",
+	...AGENT_MARKDOWN_PATHS.map((path) => `https://yonaris.com${path}`),
 ].join(" ");
 
 function responseType(pathname) {
+	if (pathname.endsWith(".md")) return "text/markdown";
+	if (pathname.endsWith("catalog.json")) return "application/ld+json";
 	if (pathname === "/llms.txt" || pathname === "/llms-full.txt" || pathname === "/robots.txt") return "text/plain";
 	if (pathname.endsWith(".xml")) return "application/xml";
 	if (pathname.endsWith(".svg")) return "image/svg+xml";
@@ -208,6 +224,50 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 			return;
 		}
 
+		if (AGENT_MARKDOWN_PATHS.includes(url.pathname)) {
+			const locale = url.pathname.startsWith("/zh/") ? "zh-CN" : "en";
+			const peerPath = locale === "en" ? `/zh${url.pathname}` : url.pathname.replace(/^\/zh/u, "");
+			const humanPath = url.pathname
+				.replace(/^\/zh\/agent\/index\.md$/u, "/zh")
+				.replace(/^\/agent\/index\.md$/u, "/")
+				.replace(/\/agent\/(.+)\.md$/u, "/$1");
+			response
+				.writeHead(200, {
+					"Content-Type": "text/markdown; charset=utf-8",
+					"Content-Language": locale,
+					"Content-Location": url.pathname,
+					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+					Vary: "Accept",
+					"X-Robots-Tag": "noindex, follow",
+					Link: `<${url.pathname}>; rel="canonical"; type="text/markdown", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+				})
+				.end(`# Facts\n\n- [fixture.claim] ${ALL_COPY}`);
+			return;
+		}
+
+		if (CATALOG_PATHS.includes(url.pathname)) {
+			const locale = url.pathname.startsWith("/zh/") ? "zh-CN" : "en";
+			const peerPath = locale === "en" ? "/zh/agent/catalog.json" : "/agent/catalog.json";
+			const humanPath = locale === "en" ? "/" : "/zh";
+			response
+				.writeHead(200, {
+					"Content-Type": "application/ld+json; charset=utf-8",
+					"Content-Language": locale,
+					"Content-Location": url.pathname,
+					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
+					Vary: "Accept",
+					"X-Robots-Tag": "noindex, follow",
+					Link: `<${url.pathname}>; rel="canonical"; type="application/ld+json", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="application/ld+json"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+				})
+				.end(
+					JSON.stringify({
+						"@context": "https://schema.org",
+						"@graph": [{ "@type": "ListItem", identifier: "fixture.claim" }],
+					}),
+				);
+			return;
+		}
+
 		if (![...HTML_PATHS, ...MACHINE_PATHS].includes(url.pathname)) {
 			response.writeHead(404).end("missing");
 			return;
@@ -242,10 +302,13 @@ async function startFixture({ diagnosticStatus = 400, redirectStatus = 308 } = {
 			)
 				? '<meta name="robots" content="noindex,follow">'
 				: "";
+		const agentDiscovery = AGENT_HTML_PATHS.includes(url.pathname)
+			? `<link rel="canonical" href="${url.pathname.replace(/\/agent(?=\/|$)/u, "") || "/"}"><link rel="alternate" type="text/markdown" href="${url.pathname.replace(/\/$/u, "")}${url.pathname.endsWith("/agent") ? "/index.md" : ".md"}"><link rel="alternate" type="application/ld+json" href="${url.pathname.startsWith("/zh/") ? "/zh" : ""}/agent/catalog.json"><link rel="describedby" type="text/plain" href="/llms.txt">`
+			: "";
 		response
 			.writeHead(200, { "Content-Type": contentType })
 			.end(
-				`<html><head>${robots}<link rel="stylesheet" href="/assets/site.css"></head><body>${ALL_COPY}</body></html>`,
+				`<html><head>${robots}${agentDiscovery}<link rel="stylesheet" href="/assets/site.css"></head><body>${ALL_COPY}</body></html>`,
 			);
 	});
 
@@ -273,6 +336,9 @@ test("direct-image smoke covers every governed route without asserting Caddy-onl
 				),
 				`missing negotiated Agent Markdown GET ${path}`,
 			);
+		}
+		for (const path of [...AGENT_MARKDOWN_PATHS, ...CATALOG_PATHS]) {
+			assert.ok(observed.has(`GET ${path}`), `missing stable machine GET ${path}`);
 		}
 		for (const path of REDIRECTS.keys()) assert.ok(observed.has(`GET ${path}`), `missing manual redirect GET ${path}`);
 		for (const path of HIDDEN_PATHS)

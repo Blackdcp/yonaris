@@ -37,6 +37,45 @@ export const AGENT_HTML_ROUTES = [
 	})),
 ];
 
+function agentMachinePaths(agentPath) {
+	const zh = agentPath.startsWith("/zh/");
+	const localePrefix = zh ? "/zh" : "";
+	const topic = agentPath.replace(`${localePrefix}/agent`, "").replace(/^\//u, "") || "index";
+	const humanPath = topic === "index" ? localePrefix || "/" : `${localePrefix}/${topic}`;
+	const markdownPath = `${localePrefix}/agent/${topic}.md`;
+	const peerPath = `${zh ? "" : "/zh"}/agent/${topic}.md`;
+	return {
+		locale: zh ? "zh-CN" : "en",
+		humanPath,
+		markdownPath,
+		catalogPath: `${localePrefix}/agent/catalog.json`,
+		peerPath,
+		peerLanguage: zh ? "en" : "zh-CN",
+	};
+}
+
+const AGENT_MARKDOWN_ROUTES = AGENT_HTML_ROUTES.map(({ path }) => ({
+	path: agentMachinePaths(path).markdownPath,
+	...agentMachinePaths(path),
+}));
+
+const AGENT_CATALOG_ROUTES = [
+	{
+		path: "/agent/catalog.json",
+		locale: "en",
+		humanPath: "/",
+		peerPath: "/zh/agent/catalog.json",
+		peerLanguage: "zh-CN",
+	},
+	{
+		path: "/zh/agent/catalog.json",
+		locale: "zh-CN",
+		humanPath: "/zh",
+		peerPath: "/agent/catalog.json",
+		peerLanguage: "en",
+	},
+];
+
 export const MANUAL_REDIRECTS = [
 	{ from: "/platform", to: "/product" },
 	{ from: "/features", to: "/product" },
@@ -94,7 +133,11 @@ export const HIDDEN_ROUTES = [
 ];
 
 const MACHINE_ROUTES = [
-	{ path: "/llms.txt", contentType: "text/plain", copy: ["Yonaris"] },
+	{
+		path: "/llms.txt",
+		contentType: "text/plain",
+		copy: ["Yonaris", ...AGENT_MARKDOWN_ROUTES.map(({ path }) => `https://yonaris.com${path}`)],
+	},
 	{ path: "/llms-full.txt", contentType: "text/plain", copy: ["public facts"] },
 	{ path: "/robots.txt", contentType: "text/plain", copy: ["User-agent:"] },
 	{ path: "/sitemap.xml", contentType: "xml", copy: ["http://www.sitemaps.org/schemas/sitemap/0.9"] },
@@ -149,6 +192,51 @@ function typeMatches(actual, expected) {
 	return actual.startsWith(expected);
 }
 
+function parsedHtmlLinks(html) {
+	return [...html.matchAll(/<link\b[^>]*>/giu)].map(([tag]) =>
+		Object.fromEntries([...tag.matchAll(/([\w-]+)=["']([^"']*)["']/gu)].map((match) => [match[1].toLowerCase(), match[2]])),
+	);
+}
+
+function linkPath(href) {
+	try {
+		return new URL(href, "https://yonaris.invalid").pathname;
+	} catch {
+		return "";
+	}
+}
+
+function hasHtmlLink(links, { rel, path, type }) {
+	return links.some(
+		(link) =>
+			link.rel === rel &&
+			linkPath(link.href) === path &&
+			(type === undefined || link.type === type),
+	);
+}
+
+function parsedHttpLinks(header) {
+	return [...header.matchAll(/<([^>]+)>\s*((?:;\s*[^,]+)*)/gu)].map((match) => {
+		const parameters = Object.fromEntries(
+			[...match[2].matchAll(/;\s*([\w-]+)="([^"]*)"/gu)].map((parameter) => [
+				parameter[1].toLowerCase(),
+				parameter[2],
+			]),
+		);
+		return { href: match[1], ...parameters };
+	});
+}
+
+function hasHttpLink(links, { rel, path, type, hrefLang }) {
+	return links.some(
+		(link) =>
+			link.rel === rel &&
+			linkPath(link.href) === path &&
+			(type === undefined || link.type === type) &&
+			(hrefLang === undefined || link.hreflang === hrefLang),
+	);
+}
+
 async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 	const routeUrl = new URL(route.path, baseUrl);
 	try {
@@ -164,7 +252,100 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 		for (const copy of route.copy) if (!body.includes(copy)) failures.push(`COPY ${route.path}: ${copy}`);
 		if (route.noindex && !body.includes("noindex,follow"))
 			failures.push(`ROBOTS ${route.path}: expected noindex,follow`);
+		if (route.noindex) {
+			const discovery = agentMachinePaths(route.path);
+			const links = parsedHtmlLinks(body);
+			if (!hasHtmlLink(links, { rel: "canonical", path: discovery.humanPath }))
+				failures.push(`CANONICAL ${route.path}: expected ${discovery.humanPath}`);
+			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+				failures.push(`DISCOVERY ${route.path}: missing Markdown alternate`);
+			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+				failures.push(`DISCOVERY ${route.path}: missing JSON-LD alternate`);
+			if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+				failures.push(`DISCOVERY ${route.path}: missing llms.txt relation`);
+		}
 		collectHtmlAssets(body, routeUrl, baseUrl, assetUrls);
+		console.log(`${response.status} ${route.path}`);
+	} catch (error) {
+		failures.push(`ERR ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+function checkMachineHeaders(route, response, failures, contentType) {
+	const actualType = response.headers.get("content-type") ?? "";
+	if (!typeMatches(actualType, contentType))
+		failures.push(`TYPE ${route.path}: expected ${contentType}, received ${actualType || "none"}`);
+	if (response.headers.get("content-language") !== route.locale)
+		failures.push(`LANGUAGE ${route.path}: expected ${route.locale}`);
+	if (response.headers.get("content-location") !== route.path)
+		failures.push(`LOCATION ${route.path}: expected ${route.path}`);
+	if (!(response.headers.get("cache-control") ?? "").includes("stale-while-revalidate=3600"))
+		failures.push(`CACHE ${route.path}: missing stale-while-revalidate`);
+	if (!(response.headers.get("vary") ?? "").split(/\s*,\s*/u).some((value) => value.toLowerCase() === "accept"))
+		failures.push(`VARY ${route.path}: missing Accept`);
+	if (response.headers.get("x-robots-tag") !== "noindex, follow")
+		failures.push(`ROBOTS ${route.path}: expected noindex, follow`);
+
+	const links = parsedHttpLinks(response.headers.get("link") ?? "");
+	if (!hasHttpLink(links, { rel: "canonical", path: route.path, type: contentType }))
+		failures.push(`LINK ${route.path}: missing canonical`);
+	if (route.humanPath && !hasHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }))
+		failures.push(`LINK ${route.path}: missing Human alternate`);
+	if (
+		!hasHttpLink(links, {
+			rel: "alternate",
+			path: route.peerPath,
+			type: contentType,
+			hrefLang: route.peerLanguage,
+		})
+	)
+		failures.push(`LINK ${route.path}: missing locale peer`);
+	if (!hasHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+		failures.push(`LINK ${route.path}: missing llms.txt relation`);
+}
+
+async function checkAgentMarkdownRoute(route, baseUrl, failures) {
+	try {
+		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
+		if (response.status >= 500) {
+			failures.push(`${response.status} ${route.path}`);
+			return;
+		}
+		if (!response.ok) {
+			failures.push(`${response.status} ${route.path}`);
+			return;
+		}
+		checkMachineHeaders(route, response, failures, "text/markdown");
+		const body = await response.text();
+		if (!/- \[[a-z0-9.-]+\] /u.test(body)) failures.push(`CLAIM ${route.path}: missing stable claim ID`);
+		console.log(`${response.status} ${route.path}`);
+	} catch (error) {
+		failures.push(`ERR ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+
+async function checkAgentCatalogRoute(route, baseUrl, failures) {
+	try {
+		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
+		if (response.status >= 500) {
+			failures.push(`${response.status} ${route.path}`);
+			return;
+		}
+		if (!response.ok) {
+			failures.push(`${response.status} ${route.path}`);
+			return;
+		}
+		checkMachineHeaders(route, response, failures, "application/ld+json");
+		const body = await response.text();
+		try {
+			const parsed = JSON.parse(body);
+			if (parsed?.["@context"] !== "https://schema.org" || !Array.isArray(parsed?.["@graph"]))
+				failures.push(`JSON ${route.path}: invalid JSON-LD graph`);
+			if (!/"identifier":"[a-z0-9.-]+"/u.test(JSON.stringify(parsed)))
+				failures.push(`CLAIM ${route.path}: missing stable claim ID`);
+		} catch {
+			failures.push(`JSON ${route.path}: malformed JSON`);
+		}
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
 		failures.push(`ERR ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
@@ -234,6 +415,8 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 
 	for (const route of [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES, ...AGENT_HTML_ROUTES])
 		await checkReadableRoute(route, baseUrl, failures, assetUrls);
+	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures);
+	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);
 
 	const plausibleUrl = new URL("/api/plausible/js/script", baseUrl);
@@ -341,7 +524,12 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 
 	if (failures.length > 0) throw new Error(`Marketing smoke failed:\n${failures.join("\n")}`);
 	const routeCount =
-		CORE_ROUTES.length + GOVERNED_HTML_ROUTES.length + AGENT_HTML_ROUTES.length + MACHINE_ROUTES.length;
+		CORE_ROUTES.length +
+		GOVERNED_HTML_ROUTES.length +
+		AGENT_HTML_ROUTES.length +
+		AGENT_MARKDOWN_ROUTES.length +
+		AGENT_CATALOG_ROUTES.length +
+		MACHINE_ROUTES.length;
 	console.log(
 		`${routeCount} routes, ${MANUAL_REDIRECTS.length} redirects, and ${assetUrls.size} same-origin assets passed.`,
 	);

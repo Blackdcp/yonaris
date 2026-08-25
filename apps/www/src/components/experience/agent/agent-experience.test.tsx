@@ -4,6 +4,20 @@ import { AGENT_FACTS } from "@/content/experience/agent-facts";
 import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import { agentCatalogPath, getAgentTopic } from "@/lib/machine-documents";
 import { agentPageHead, machineDiscoveryLinks, siteHref } from "@/lib/seo";
+import { Route as agentApproachRoute } from "@/routes/agent/approach";
+import { Route as agentCompanyRoute } from "@/routes/agent/company";
+import { Route as agentDiagnosticRoute } from "@/routes/agent/diagnostic";
+import { Route as agentGeoRoute } from "@/routes/agent/geo";
+import { Route as agentHomeRoute } from "@/routes/agent/index";
+import { Route as agentPrivacyRoute } from "@/routes/agent/privacy";
+import { Route as agentProductRoute } from "@/routes/agent/product";
+import { Route as zhAgentApproachRoute } from "@/routes/zh/agent/approach";
+import { Route as zhAgentCompanyRoute } from "@/routes/zh/agent/company";
+import { Route as zhAgentDiagnosticRoute } from "@/routes/zh/agent/diagnostic";
+import { Route as zhAgentGeoRoute } from "@/routes/zh/agent/geo";
+import { Route as zhAgentHomeRoute } from "@/routes/zh/agent/index";
+import { Route as zhAgentPrivacyRoute } from "@/routes/zh/agent/privacy";
+import { Route as zhAgentProductRoute } from "@/routes/zh/agent/product";
 import { AgentPage } from "./agent-pages";
 
 const humanPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
@@ -107,6 +121,29 @@ describe("zero-to-one Agent experience", () => {
 				]);
 				expect(JSON.parse(head.scripts[0].children)["@graph"]).toHaveLength(4);
 			}
+		}
+	});
+
+	it("wires the shared Agent head contract into all fourteen route exports", () => {
+		const routes = [
+			["en", "home", agentHomeRoute],
+			["en", "product", agentProductRoute],
+			["en", "approach", agentApproachRoute],
+			["en", "geo", agentGeoRoute],
+			["en", "company", agentCompanyRoute],
+			["en", "diagnostic", agentDiagnosticRoute],
+			["en", "privacy", agentPrivacyRoute],
+			["zh", "home", zhAgentHomeRoute],
+			["zh", "product", zhAgentProductRoute],
+			["zh", "approach", zhAgentApproachRoute],
+			["zh", "geo", zhAgentGeoRoute],
+			["zh", "company", zhAgentCompanyRoute],
+			["zh", "diagnostic", zhAgentDiagnosticRoute],
+			["zh", "privacy", zhAgentPrivacyRoute],
+		] as const;
+
+		for (const [locale, pageKey, route] of routes) {
+			expect(route.options.head?.({} as never), `${locale}/${pageKey}`).toEqual(agentPageHead(locale, pageKey));
 		}
 	});
 });

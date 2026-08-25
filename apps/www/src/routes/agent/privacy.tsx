@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AgentPage } from "@/components/experience/agent/agent-pages";
+import { agentPageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/agent/privacy")({
-	head: () => ({ meta: [{ title: "Privacy | Yonaris for AI agents" }, { name: "robots", content: "noindex,follow" }] }),
+	head: () => agentPageHead("en", "privacy"),
 	component: () => <AgentPage locale="en" pageKey="privacy" />,
 });

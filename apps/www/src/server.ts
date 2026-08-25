@@ -1,6 +1,5 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
-import { appendVary, preserveApplicationVary } from "@/lib/machine-response";
-import { resolveMarkdownRequest, rewriteMarkdownRequest } from "@/lib/markdown-negotiation";
+import { negotiatedResponse } from "@/lib/machine-response";
 
 function configuredPosthogOrigin(): string | undefined {
 	if (!process.env.VITE_POSTHOG_KEY?.trim()) return undefined;
@@ -45,18 +44,7 @@ function addSecurityHeaders(response: Response): Response {
 
 export default createServerEntry({
 	async fetch(request) {
-		const coreMarkdown = resolveMarkdownRequest(request);
-
-		let req = request;
-		if (coreMarkdown.targetPath) {
-			req = rewriteMarkdownRequest(request, coreMarkdown.targetPath);
-		}
-
-		const response = await handler.fetch(req);
-		if (coreMarkdown.variesOnAccept) {
-			appendVary(response.headers, "Accept");
-			preserveApplicationVary(response);
-		}
+		const response = await negotiatedResponse(request, (routedRequest) => handler.fetch(routedRequest));
 		return addSecurityHeaders(response);
 	},
 });

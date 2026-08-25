@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
 import { HUMAN_PAGE_KEYS } from "@/content/experience/types";
 import type { AgentPageKey } from "@/content/site/types";
+import type { MachineLinkSet } from "./machine-response";
+import * as machineDocumentsModule from "./machine-documents";
 import {
 	agentCatalogPath,
 	agentMarkdownPath,
@@ -17,6 +19,12 @@ import {
 } from "./machine-documents";
 
 const agentKeys = HUMAN_PAGE_KEYS.filter((key): key is AgentPageKey => key !== "home");
+
+const machineLinkHelpers = machineDocumentsModule as typeof machineDocumentsModule &
+	Partial<{
+		agentDocumentLinks(locale: "en" | "zh", key: (typeof HUMAN_PAGE_KEYS)[number]): MachineLinkSet;
+		agentCatalogLinks(locale: "en" | "zh"): MachineLinkSet;
+	}>;
 
 describe("machine documents", () => {
 	test("publishes a stable typed catalogue for every locale and Human topic", () => {
@@ -100,6 +108,45 @@ describe("machine documents", () => {
 				expect(directory).toContain(`- [${topic.title}](https://yonaris.com${topic.markdownPath}): ${topic.summary}`);
 			}
 		}
+	});
+
+	test("keeps public machine paths stable and never advertises internal rewrite routes", () => {
+		const publicDirectory = renderLlmsIndex();
+		for (const locale of ["en", "zh"] as const) {
+			for (const key of HUMAN_PAGE_KEYS) {
+				const publicPath = agentMarkdownPath(locale, key);
+				expect(publicDirectory).toContain(`https://yonaris.com${publicPath}`);
+				expect(publicDirectory).not.toContain("/llms.mdx/");
+				expect(renderCoreMarkdown(key, locale)).toContain(`Markdown document: https://yonaris.com${publicPath}`);
+			}
+		}
+	});
+
+	test("builds canonical, alternate, locale-peer, and directory links for public machine documents", () => {
+		expect(machineLinkHelpers.agentDocumentLinks, "the topic Link-set helper must be exported").toBeTypeOf("function");
+		expect(machineLinkHelpers.agentCatalogLinks, "the catalogue Link-set helper must be exported").toBeTypeOf("function");
+		if (!machineLinkHelpers.agentDocumentLinks || !machineLinkHelpers.agentCatalogLinks) return;
+
+		expect(machineLinkHelpers.agentDocumentLinks("en", "product")).toEqual([
+			{ href: "/agent/product.md", rel: "canonical", type: "text/markdown" },
+			{ href: "/product", rel: "alternate", type: "text/html" },
+			{ href: "/agent/catalog.json", rel: "alternate", type: "application/ld+json" },
+			{ href: "/zh/agent/product.md", rel: "alternate", type: "text/markdown", hrefLang: "zh-CN" },
+			{ href: "/llms.txt", rel: "describedby", type: "text/plain" },
+		]);
+		expect(machineLinkHelpers.agentDocumentLinks("zh", "home")).toEqual([
+			{ href: "/zh/agent/index.md", rel: "canonical", type: "text/markdown" },
+			{ href: "/zh", rel: "alternate", type: "text/html" },
+			{ href: "/zh/agent/catalog.json", rel: "alternate", type: "application/ld+json" },
+			{ href: "/agent/index.md", rel: "alternate", type: "text/markdown", hrefLang: "en" },
+			{ href: "/llms.txt", rel: "describedby", type: "text/plain" },
+		]);
+		expect(machineLinkHelpers.agentCatalogLinks("en")).toEqual([
+			{ href: "/agent/catalog.json", rel: "canonical", type: "application/ld+json" },
+			{ href: "/", rel: "alternate", type: "text/html" },
+			{ href: "/zh/agent/catalog.json", rel: "alternate", type: "application/ld+json", hrefLang: "zh-CN" },
+			{ href: "/llms.txt", rel: "describedby", type: "text/plain" },
+		]);
 	});
 
 	test("renders all fourteen regional Human topics from public Agent facts", () => {

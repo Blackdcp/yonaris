@@ -1,10 +1,12 @@
 import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import type { Locale } from "@/content/site/types";
 
-export interface MarkdownResolution {
-	targetPath?: string;
-	variesOnAccept: boolean;
-}
+export type RepresentationResolution =
+	| { kind: "html"; variesOnAccept: true }
+	| { kind: "markdown"; targetPath: string; variesOnAccept: true }
+	| { kind: "redirect"; location: string; variesOnAccept: true }
+	| { kind: "not-acceptable"; variesOnAccept: true }
+	| { kind: "pass"; variesOnAccept: false };
 
 function humanPath(key: HumanPageKey, locale: Locale): string {
 	if (locale === "en") return key === "home" ? "/" : `/${key}`;
@@ -16,19 +18,15 @@ function agentPath(key: HumanPageKey, locale: Locale): string {
 	return key === "home" ? "/zh/agent" : `/zh/agent/${key}`;
 }
 
-const coreCanonicalTargets = new Map<string, { key: HumanPageKey; locale: Locale }>(
+const representationTargets = new Map<string, string>(
 	HUMAN_PAGE_KEYS.flatMap((key) =>
-		(["en", "zh"] as const).map((locale) => [humanPath(key, locale), { key, locale }] as const),
-	),
-);
-
-const agentMarkdownTargets = new Map<string, string>(
-	HUMAN_PAGE_KEYS.flatMap((key) =>
-		(["en", "zh"] as const).flatMap((locale) => {
-			const path = agentPath(key, locale);
-			const target = `/llms.mdx/${locale === "en" ? "agent" : "zh-agent"}/${key === "home" ? "index" : key}`;
-			return key === "home" ? [[path, target] as const, [`${path}/`, target] as const] : [[path, target] as const];
-		}),
+		(["en", "zh"] as const).flatMap((locale) => [
+			[humanPath(key, locale), `/llms.mdx/site/${locale}/${key}`] as const,
+			[
+				agentPath(key, locale),
+				`/llms.mdx/${locale === "en" ? "agent" : "zh-agent"}/${key === "home" ? "index" : key}`,
+			] as const,
+		]),
 	),
 );
 
@@ -62,25 +60,36 @@ function mediaPreference(accept: string, target: string): MediaPreference {
 	return best;
 }
 
-function isCoreMarkdownPreferred(request: Request): boolean {
-	const accept = request.headers.get("Accept") ?? "";
+function preferredRepresentation(accept: string | null): "html" | "markdown" | "not-acceptable" {
+	if (!accept?.trim()) return "html";
+
 	const markdown = mediaPreference(accept, "text/markdown");
 	const html = mediaPreference(accept, "text/html");
-	if (markdown.quality === 0) return false;
-	if (markdown.quality !== html.quality) return markdown.quality > html.quality;
-	if (markdown.specificity !== html.specificity) return markdown.specificity > html.specificity;
-	return markdown.position < html.position;
+	if (markdown.quality === 0 && html.quality === 0) return "not-acceptable";
+	if (markdown.quality !== html.quality) return markdown.quality > html.quality ? "markdown" : "html";
+	if (markdown.specificity !== html.specificity) return markdown.specificity > html.specificity ? "markdown" : "html";
+	if (html.specificity === 1) return "markdown";
+	return "html";
 }
 
-export function resolveMarkdownRequest(request: Request): MarkdownResolution {
-	if (request.method !== "GET" && request.method !== "HEAD") return { variesOnAccept: false };
-	const pathname = new URL(request.url).pathname;
-	const canonical = coreCanonicalTargets.get(pathname);
-	const agentTarget = agentMarkdownTargets.get(pathname);
-	if (!canonical && !agentTarget) return { variesOnAccept: false };
-	if (!isCoreMarkdownPreferred(request)) return { variesOnAccept: true };
-	if (agentTarget) return { targetPath: agentTarget, variesOnAccept: true };
-	return { targetPath: `/llms.mdx/site/${canonical?.locale}/${canonical?.key}`, variesOnAccept: true };
+export function resolveRepresentation(request: Request): RepresentationResolution {
+	if (request.method !== "GET" && request.method !== "HEAD") return { kind: "pass", variesOnAccept: false };
+
+	const url = new URL(request.url);
+	const pathname = url.pathname;
+	if (pathname.length > 1 && pathname.endsWith("/")) {
+		const canonicalPath = pathname.slice(0, -1);
+		if (representationTargets.has(canonicalPath)) {
+			return { kind: "redirect", location: `${canonicalPath}${url.search}`, variesOnAccept: true };
+		}
+	}
+
+	const targetPath = representationTargets.get(pathname);
+	if (!targetPath) return { kind: "pass", variesOnAccept: false };
+
+	const kind = preferredRepresentation(request.headers.get("Accept"));
+	if (kind === "markdown") return { kind, targetPath, variesOnAccept: true };
+	return { kind, variesOnAccept: true };
 }
 
 export function rewriteMarkdownRequest(request: Request, targetPath: string): Request {

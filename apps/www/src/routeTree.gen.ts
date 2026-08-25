@@ -29,6 +29,7 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as VisionRouteImport } from './routes/vision'
 import { Route as AgentIndexRouteImport } from './routes/agent/index'
+import { Route as AgentSplatRouteImport } from './routes/agent.$'
 import { Route as AgentApproachRouteImport } from './routes/agent/approach'
 import { Route as AgentCompanyRouteImport } from './routes/agent/company'
 import { Route as AgentDiagnosticRouteImport } from './routes/agent/diagnostic'
@@ -53,6 +54,7 @@ import { Route as LlmsDotmdxAgentSplatRouteImport } from './routes/llms[.]mdx.ag
 import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
 import { Route as LlmsDotmdxZhAgentSplatRouteImport } from './routes/llms[.]mdx.zh-agent.$'
 import { Route as ZhAgentIndexRouteImport } from './routes/zh/agent/index'
+import { Route as ZhAgentSplatRouteImport } from './routes/zh/agent.$'
 import { Route as ZhAgentApproachRouteImport } from './routes/zh/agent/approach'
 import { Route as ZhAgentCompanyRouteImport } from './routes/zh/agent/company'
 import { Route as ZhAgentDiagnosticRouteImport } from './routes/zh/agent/diagnostic'
@@ -160,6 +162,11 @@ const VisionRoute = VisionRouteImport.update({
 const AgentIndexRoute = AgentIndexRouteImport.update({
   id: '/agent/',
   path: '/agent/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentSplatRoute = AgentSplatRouteImport.update({
+  id: '/agent/$',
+  path: '/agent/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentApproachRoute = AgentApproachRouteImport.update({
@@ -282,6 +289,11 @@ const ZhAgentIndexRoute = ZhAgentIndexRouteImport.update({
   path: '/zh/agent/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ZhAgentSplatRoute = ZhAgentSplatRouteImport.update({
+  id: '/zh/agent/$',
+  path: '/zh/agent/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ZhAgentApproachRoute = ZhAgentApproachRouteImport.update({
   id: '/zh/agent/approach',
   path: '/zh/agent/approach',
@@ -344,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vision': typeof VisionRoute
+  '/agent/$': typeof AgentSplatRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
   '/agent/diagnostic': typeof AgentDiagnosticRoute
@@ -368,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/$': typeof ZhAgentSplatRoute
   '/zh/agent/approach': typeof ZhAgentApproachRoute
   '/zh/agent/company': typeof ZhAgentCompanyRoute
   '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
@@ -398,6 +412,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vision': typeof VisionRoute
+  '/agent/$': typeof AgentSplatRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
   '/agent/diagnostic': typeof AgentDiagnosticRoute
@@ -422,6 +437,7 @@ export interface FileRoutesByTo {
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/$': typeof ZhAgentSplatRoute
   '/zh/agent/approach': typeof ZhAgentApproachRoute
   '/zh/agent/company': typeof ZhAgentCompanyRoute
   '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
@@ -453,6 +469,7 @@ export interface FileRoutesById {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vision': typeof VisionRoute
+  '/agent/$': typeof AgentSplatRoute
   '/agent/approach': typeof AgentApproachRoute
   '/agent/company': typeof AgentCompanyRoute
   '/agent/diagnostic': typeof AgentDiagnosticRoute
@@ -477,6 +494,7 @@ export interface FileRoutesById {
   '/llms.mdx/agent/$': typeof LlmsDotmdxAgentSplatRoute
   '/llms.mdx/site/$': typeof LlmsDotmdxSiteSplatRoute
   '/llms.mdx/zh-agent/$': typeof LlmsDotmdxZhAgentSplatRoute
+  '/zh/agent/$': typeof ZhAgentSplatRoute
   '/zh/agent/approach': typeof ZhAgentApproachRoute
   '/zh/agent/company': typeof ZhAgentCompanyRoute
   '/zh/agent/diagnostic': typeof ZhAgentDiagnosticRoute
@@ -509,6 +527,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/vision'
+    | '/agent/$'
     | '/agent/approach'
     | '/agent/company'
     | '/agent/diagnostic'
@@ -533,6 +552,7 @@ export interface FileRouteTypes {
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/$'
     | '/zh/agent/approach'
     | '/zh/agent/company'
     | '/zh/agent/diagnostic'
@@ -563,6 +583,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/vision'
+    | '/agent/$'
     | '/agent/approach'
     | '/agent/company'
     | '/agent/diagnostic'
@@ -587,6 +608,7 @@ export interface FileRouteTypes {
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/$'
     | '/zh/agent/approach'
     | '/zh/agent/company'
     | '/zh/agent/diagnostic'
@@ -617,6 +639,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/vision'
+    | '/agent/$'
     | '/agent/approach'
     | '/agent/company'
     | '/agent/diagnostic'
@@ -641,6 +664,7 @@ export interface FileRouteTypes {
     | '/llms.mdx/agent/$'
     | '/llms.mdx/site/$'
     | '/llms.mdx/zh-agent/$'
+    | '/zh/agent/$'
     | '/zh/agent/approach'
     | '/zh/agent/company'
     | '/zh/agent/diagnostic'
@@ -672,6 +696,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VisionRoute: typeof VisionRoute
+  AgentSplatRoute: typeof AgentSplatRoute
   AgentApproachRoute: typeof AgentApproachRoute
   AgentCompanyRoute: typeof AgentCompanyRoute
   AgentDiagnosticRoute: typeof AgentDiagnosticRoute
@@ -696,6 +721,7 @@ export interface RootRouteChildren {
   LlmsDotmdxAgentSplatRoute: typeof LlmsDotmdxAgentSplatRoute
   LlmsDotmdxSiteSplatRoute: typeof LlmsDotmdxSiteSplatRoute
   LlmsDotmdxZhAgentSplatRoute: typeof LlmsDotmdxZhAgentSplatRoute
+  ZhAgentSplatRoute: typeof ZhAgentSplatRoute
   ZhAgentApproachRoute: typeof ZhAgentApproachRoute
   ZhAgentCompanyRoute: typeof ZhAgentCompanyRoute
   ZhAgentDiagnosticRoute: typeof ZhAgentDiagnosticRoute
@@ -847,6 +873,13 @@ declare module '@tanstack/react-router' {
       path: '/agent'
       fullPath: '/agent/'
       preLoaderRoute: typeof AgentIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agent/$': {
+      id: '/agent/$'
+      path: '/agent/$'
+      fullPath: '/agent/$'
+      preLoaderRoute: typeof AgentSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/approach': {
@@ -1017,6 +1050,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhAgentIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/zh/agent/$': {
+      id: '/zh/agent/$'
+      path: '/zh/agent/$'
+      fullPath: '/zh/agent/$'
+      preLoaderRoute: typeof ZhAgentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/zh/agent/approach': {
       id: '/zh/agent/approach'
       path: '/zh/agent/approach'
@@ -1096,6 +1136,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   VisionRoute: VisionRoute,
+  AgentSplatRoute: AgentSplatRoute,
   AgentApproachRoute: AgentApproachRoute,
   AgentCompanyRoute: AgentCompanyRoute,
   AgentDiagnosticRoute: AgentDiagnosticRoute,
@@ -1120,6 +1161,7 @@ const rootRouteChildren: RootRouteChildren = {
   LlmsDotmdxAgentSplatRoute: LlmsDotmdxAgentSplatRoute,
   LlmsDotmdxSiteSplatRoute: LlmsDotmdxSiteSplatRoute,
   LlmsDotmdxZhAgentSplatRoute: LlmsDotmdxZhAgentSplatRoute,
+  ZhAgentSplatRoute: ZhAgentSplatRoute,
   ZhAgentApproachRoute: ZhAgentApproachRoute,
   ZhAgentCompanyRoute: ZhAgentCompanyRoute,
   ZhAgentDiagnosticRoute: ZhAgentDiagnosticRoute,
