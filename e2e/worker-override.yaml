@@ -5,6 +5,9 @@
 # reaching out to any LLM API. Worker-only — the web service keeps the real
 # SCRAPE_TARGETS from .env.
 services:
+  postgres:
+    ports:
+      - "127.0.0.1:${E2E_POSTGRES_PORT:-5432}:5432"
   db-migrate:
     image: yonaris-db-migrate:e2e
     build:

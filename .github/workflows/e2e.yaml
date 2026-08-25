@@ -82,6 +82,9 @@ jobs:
       - name: Unit tests
         run: pnpm turbo test
 
+      - name: Verify E2E Compose topology
+        run: node --test scripts/e2e-compose-topology.test.mjs
+
       - name: Build and verify Browser Runner extension
         run: |
           pnpm --filter @workspace/browser-extension check-types
