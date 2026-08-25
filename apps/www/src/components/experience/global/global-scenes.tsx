@@ -6,51 +6,66 @@ const answerQuestions = [
 		id: "shortlist",
 		label: "Shortlist",
 		prompt: "Which platforms help manufacturers coordinate product quality across multiple sites?",
-		answer: "The illustrative answer groups options by workflow, integrations, and rollout fit.",
-		presence: "The example brand appears in the opening shortlist.",
-		comparison: "The example brand and supplied alternatives are framed by rollout and integration fit.",
-		citations: "Illustrative source labels: product overview and deployment guide.",
-		nextAction: "Check whether the brand’s multi-site distinction is stated precisely.",
+		answer:
+			"Illustrative answer: for a distributed manufacturer, the example brand belongs in the shortlist when the team needs one quality workflow across sites, documented integration paths, and a staged rollout. The response keeps those criteria separate so each statement can be reviewed.",
+		presence: "The example brand appears in the opening shortlist and is described in relation to multi-site coordination.",
+		comparison:
+			"Supplied Alternative A is framed around a single-site start, while supplied Alternative B is framed around configurable reporting; neither is presented as a real company.",
+		citations:
+			"Illustrative citation 01 — example product overview; illustrative citation 02 — example deployment guide.",
+		nextAction: "Check whether the example brand’s multi-site distinction is stated precisely in the supplied public information.",
 	},
 	{
 		id: "accuracy",
 		label: "Accuracy",
 		prompt: "What makes this quality platform different for a distributed manufacturing team?",
-		answer: "The illustrative answer emphasizes deployment support but leaves the operating model unclear.",
-		presence: "The example brand is present, with one differentiator visible.",
-		comparison: "A supplied alternative receives a clearer workflow description in this answer.",
-		citations: "Illustrative source labels: category guide and product overview.",
-		nextAction: "Review the missing operating-model detail before changing public information.",
+		answer:
+			"Illustrative answer: the example brand is described as supporting phased deployment and shared quality practices for distributed teams. The response does not explain how local teams and a central team divide daily ownership, leaving one material operating detail unresolved.",
+		presence: "The example brand is present in the direct answer, with phased deployment named as its visible distinction.",
+		comparison:
+			"Supplied Alternative A receives a clearer description of local-versus-central workflow ownership, while the example brand receives the clearer rollout description.",
+		citations:
+			"Illustrative citation 03 — example category guide; illustrative citation 04 — example operating-model page.",
+		nextAction: "Review the missing ownership detail against the supplied public information before changing the recorded description.",
 	},
 	{
 		id: "comparison",
 		label: "Comparison",
 		prompt: "How should I compare quality platforms for a multi-site manufacturing group?",
-		answer: "The illustrative answer compares deployment, integrations, and operating fit side by side.",
-		presence: "The example brand appears in the comparison table and the summary.",
-		comparison: "The supplied alternatives are separated by integration depth and rollout model.",
-		citations: "Illustrative source labels: integration notes and buyer guide.",
-		nextAction: "Confirm that the comparison uses criteria buyers can verify from public sources.",
+		answer:
+			"Illustrative answer: compare the example brand and the supplied alternatives on rollout sequence, integration depth, local workflow control, and evidence available to a buyer. The response uses the same four criteria for every option and leaves unverified details visibly unresolved.",
+		presence: "The example brand appears in both the side-by-side comparison and the closing decision summary.",
+		comparison:
+			"Supplied Alternative A leads on a narrower integration example, supplied Alternative B leads on local configuration detail, and the example brand leads on the described rollout sequence.",
+		citations:
+			"Illustrative citation 05 — example integration notes; illustrative citation 06 — example buyer guide.",
+		nextAction: "Confirm that each comparison criterion can be inspected in the supplied public information and mark any unsupported cell.",
 	},
 	{
 		id: "market",
 		label: "Market",
 		prompt: "Which quality platform fits a manufacturer entering a selected new market?",
-		answer: "The illustrative answer changes its category language for the selected market context.",
-		presence: "The example brand appears, but its market-specific description is abbreviated.",
-		comparison: "The supplied alternative set shifts with the selected language and category frame.",
-		citations: "Illustrative source labels: local product page and market guide.",
-		nextAction: "Check the local description against the intended category position.",
+		answer:
+			"Illustrative answer: in the selected market, the buying question uses local category wording and gives priority to implementation support in the chosen language. The example brand remains in scope, but its local description contains less workflow detail than the main-language description.",
+		presence: "The example brand appears in the selected-market answer, although its local description is visibly abbreviated.",
+		comparison:
+			"Supplied Alternative B has the fuller local-language workflow description, while supplied Alternative A is included only for its market-specific implementation wording.",
+		citations:
+			"Illustrative citation 07 — example local product page; illustrative citation 08 — example market guide.",
+		nextAction: "Check the abbreviated local description against the intended category position and record only the specific wording gap.",
 	},
 	{
 		id: "priority",
 		label: "Priority",
 		prompt: "What should the brand team review first in this selected AI answer?",
-		answer: "The illustrative answer record highlights one description gap before broader changes.",
-		presence: "The example brand is present, so the first review item is accuracy rather than absence.",
-		comparison: "One supplied alternative owns the clearest statement of the decision criterion.",
-		citations: "Illustrative source labels: answer citations kept beside the recorded gap.",
-		nextAction: "Assign the description gap, then recheck the same scoped question.",
+		answer:
+			"Illustrative answer: begin with the missing description of local-versus-central workflow ownership because the example brand is already present and the buying criteria are otherwise visible. Keep the complete response, comparison, and citation labels beside that one priority.",
+		presence: "The example brand is present in the answer, so the first review item concerns description accuracy rather than absence.",
+		comparison:
+			"Supplied Alternative A owns the clearest workflow-ownership statement, making that precise difference more useful than a broad attempt to rewrite every comparison.",
+		citations:
+			"Illustrative citation 09 — example answer source label; illustrative citation 10 — example workflow overview.",
+		nextAction: "Assign the workflow-ownership description gap, then recheck the same brand, market, language, question, and supplied alternatives.",
 	},
 ] as const;
 
@@ -66,6 +81,15 @@ export function AnswerFieldScene() {
 		idPrefix: "answer-question",
 	});
 	const activeIndex = answerQuestionIds.indexOf(active);
+	const activeQuestion = answerQuestions[activeIndex] ?? answerQuestions[0];
+	const evidenceItems = [
+		{ id: "question", label: "Selected buyer question", detail: activeQuestion.prompt },
+		{ id: "answer", label: "Complete illustrative answer", detail: activeQuestion.answer },
+		{ id: "presence", label: "Brand presence", detail: activeQuestion.presence },
+		{ id: "comparison", label: "Alternatives and comparison", detail: activeQuestion.comparison },
+		{ id: "citations", label: "Visible illustrative citations", detail: activeQuestion.citations },
+		{ id: "action", label: "Next review action", detail: activeQuestion.nextAction },
+	] as const;
 
 	return (
 		<section
@@ -106,12 +130,14 @@ export function AnswerFieldScene() {
 					{answerQuestions.map((question) => (
 						<article key={question.id} className="sf-answer-field__answer" {...tabs.getPanelProps(question.id)}>
 							<header>
-								<span>Illustrative decision readout</span>
-								<p>{question.prompt}</p>
+								<span>Selected buyer question</span>
+								<div data-answer-field="question">
+									<p>{question.prompt}</p>
+								</div>
 							</header>
 							<dl>
 								<div data-answer-field="answer">
-									<dt>Answer excerpt</dt>
+									<dt>Complete illustrative answer</dt>
 									<dd>{question.answer}</dd>
 								</div>
 								<div data-answer-field="presence">
@@ -119,15 +145,15 @@ export function AnswerFieldScene() {
 									<dd>{question.presence}</dd>
 								</div>
 								<div data-answer-field="comparison">
-									<dt>Comparison frame</dt>
+									<dt>Alternatives and comparison</dt>
 									<dd>{question.comparison}</dd>
 								</div>
 								<div data-answer-field="citations">
-									<dt>Visible citations</dt>
+									<dt>Visible illustrative citations</dt>
 									<dd>{question.citations}</dd>
 								</div>
 								<div data-answer-field="action">
-									<dt>Next action</dt>
+									<dt>Next review action</dt>
 									<dd>{question.nextAction}</dd>
 								</div>
 							</dl>
@@ -135,6 +161,26 @@ export function AnswerFieldScene() {
 					))}
 				</div>
 			</div>
+			<section
+				className="sf-answer-evidence"
+				data-evidence-rail="selected-record"
+				data-evidence-record={active}
+				aria-labelledby="answer-evidence-title"
+			>
+				<header>
+					<span>Illustrative selected record</span>
+					<h2 id="answer-evidence-title">The active question, answer, comparison, sources, and action</h2>
+				</header>
+				<ol>
+					{evidenceItems.map((item, index) => (
+						<li key={item.id} data-evidence-item={item.id}>
+							<span>{String(index + 1).padStart(2, "0")}</span>
+							<strong>{item.label}</strong>
+							<p>{item.detail}</p>
+						</li>
+					))}
+				</ol>
+			</section>
 		</section>
 	);
 }

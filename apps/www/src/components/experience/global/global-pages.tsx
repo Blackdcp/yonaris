@@ -41,34 +41,6 @@ const homeSituations = [
 	},
 ] as const;
 
-const homeEvidenceItems = [
-	{
-		id: "question",
-		label: "Selected buyer question",
-		detail: "The brand, market, language, and buying decision held in scope.",
-	},
-	{
-		id: "answer",
-		label: "Complete answer",
-		detail: "The full illustrative response, not an isolated mention or score.",
-	},
-	{
-		id: "comparison",
-		label: "Brand and alternatives",
-		detail: "The supplied comparison set shown inside the same answer.",
-	},
-	{
-		id: "citations",
-		label: "Visible citations",
-		detail: "Source labels kept with the response whenever the selected answer displays them.",
-	},
-	{
-		id: "action",
-		label: "Next review item",
-		detail: "One observed description, comparison, or source gap for the team to inspect.",
-	},
-] as const;
-
 export function GlobalHomePage() {
 	const copy = GLOBAL_COPY.home;
 	return (
@@ -91,22 +63,6 @@ export function GlobalHomePage() {
 					</div>
 				</div>
 				<AnswerFieldScene />
-			</section>
-
-			<section className="sf-evidence-rail" data-evidence-rail="focused-review" aria-labelledby="evidence-rail-title">
-				<header>
-					<span>Illustrative focused review</span>
-					<strong id="evidence-rail-title">What the decision record keeps together</strong>
-				</header>
-				<ol>
-					{homeEvidenceItems.map((item, index) => (
-						<li key={item.id} data-evidence-item={item.id}>
-							<span>{String(index + 1).padStart(2, "0")}</span>
-							<strong>{item.label}</strong>
-							<p>{item.detail}</p>
-						</li>
-					))}
-				</ol>
 			</section>
 
 			<section className="sf-situation-chapter">

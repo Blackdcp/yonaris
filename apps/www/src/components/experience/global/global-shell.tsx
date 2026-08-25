@@ -90,7 +90,7 @@ export function GlobalShell({
 
 			<footer className="sf-footer">
 				<div className="sf-footer__brand">
-					<a href="/" aria-label="Yonaris home">
+					<a className="sf-footer__home-link" href="/" aria-label="Yonaris home">
 						<img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" width="340" height="94" />
 					</a>
 					<p>Review how your brand appears in selected AI answers.</p>

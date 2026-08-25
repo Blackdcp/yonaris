@@ -13,6 +13,24 @@ function markupFor(page: PageKey): string {
 	return renderToStaticMarkup(subject.GLOBAL_PAGES[page]());
 }
 
+function plainText(markup: string): string {
+	return markup
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&(?:amp|quot|#x27|lt|gt);/g, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function componentBlocks(markup: string, tag: string, className: string): string[] {
+	const pattern = new RegExp(`<${tag}[^>]*class="${className}"[^>]*>([\\s\\S]*?)</${tag}>`, "g");
+	return [...markup.matchAll(pattern)].map((match) => match[1] ?? "");
+}
+
+function fieldsIn(block: string, attributeName: string): Map<string, string> {
+	const pattern = new RegExp(`<div[^>]*${attributeName}="([^"]+)"[^>]*>([\\s\\S]*?)</div>`, "g");
+	return new Map([...block.matchAll(pattern)].map((match) => [match[1] ?? "", plainText(match[2] ?? "")]));
+}
+
 describe("Global zero-to-one experience", () => {
 	it("keeps keyboard navigation and the same-topic China switch available on every page", () => {
 		const chinaPaths: Record<PageKey, string> = {
@@ -42,37 +60,95 @@ describe("Global zero-to-one experience", () => {
 		}
 	});
 
-	it("turns five buyer situations into an explorable Answer Field", () => {
+	it("gives every buyer-question state a distinct, substantive six-part illustrative answer", () => {
 		const markup = markupFor("home");
+		const expectedFields = ["question", "answer", "presence", "comparison", "citations", "action"] as const;
+		const minimumLengths = {
+			question: 50,
+			answer: 150,
+			presence: 55,
+			comparison: 70,
+			citations: 55,
+			action: 55,
+		} satisfies Record<(typeof expectedFields)[number], number>;
+		const panels = componentBlocks(markup, "article", "sf-answer-field__answer");
+		const records = panels.map((panel) => fieldsIn(panel, "data-answer-field"));
+
 		expect(markup.match(/data-situation=/g) ?? []).toHaveLength(5);
 		expect(markup.match(/data-answer-question=/g) ?? []).toHaveLength(5);
-		expect(markup.match(/data-answer-field=/g) ?? []).toHaveLength(25);
+		expect(panels).toHaveLength(5);
+		for (const record of records) {
+			expect([...record.keys()]).toEqual(expectedFields);
+			for (const field of expectedFields) {
+				expect(record.get(field)?.length ?? 0, `${field} must contain concrete review content`).toBeGreaterThanOrEqual(
+					minimumLengths[field] ?? 0,
+				);
+			}
+		}
+		for (const field of expectedFields) {
+			expect(new Set(records.map((record) => record.get(field))).size, `${field} must change with the selected state`).toBe(
+				5,
+			);
+		}
+		expect(new Set(records.map((record) => expectedFields.map((field) => record.get(field)).join("|"))).size).toBe(5);
 		expect(markup).toContain('aria-selected="true"');
 		expect(markup).toContain('data-scene-output="answer-field"');
 		expect(markup).toContain("Illustrative buyer question");
+		expect(markup).toContain("Complete illustrative answer");
 	});
 
-	it("places a concrete five-part review artefact directly after the homepage hero", () => {
+	it("binds the opening evidence rail to the selected six-part illustrative record", () => {
 		const home = markupFor("home");
-		expect(home.match(/data-evidence-item=/g) ?? []).toHaveLength(5);
-		expect(home).toContain("Selected buyer question");
-		expect(home).toContain("Complete answer");
-		expect(home).toContain("Brand and alternatives");
-		expect(home).toContain("Visible citations");
-		expect(home).toContain("Next review item");
+		const rail = home.match(
+			/<section[^>]*data-evidence-rail="selected-record"[^>]*aria-labelledby="([^"]+)"[^>]*>([\s\S]*?)<\/section>/,
+		);
+		const defaultPanel = fieldsIn(componentBlocks(home, "article", "sf-answer-field__answer")[0] ?? "", "data-answer-field");
+		const evidenceItems = [
+			...(rail?.[2] ?? "").matchAll(/<li[^>]*data-evidence-item="([^"]+)"[^>]*>([\s\S]*?)<\/li>/g),
+		];
+
+		expect(rail, "the opening artefact must be a labelled region").not.toBeNull();
+		expect(rail?.[2]).toContain(`<h2 id="${rail?.[1]}">`);
+		expect(evidenceItems.map((item) => item[1])).toEqual([
+			"question",
+			"answer",
+			"presence",
+			"comparison",
+			"citations",
+			"action",
+		]);
+		for (const item of evidenceItems) {
+			const field = item[1] ?? "";
+			const content = plainText(item[2] ?? "");
+			expect(content).toContain(defaultPanel.get(field));
+			expect(content.length, `${field} evidence must be substantive`).toBeGreaterThanOrEqual(70);
+		}
+		expect(home).toContain('data-evidence-record="shortlist"');
+		expect(home).toContain("Visible illustrative citations");
+		expect(home).toContain("Next review action");
 		expect(home.indexOf("data-evidence-rail")).toBeLessThan(home.indexOf("sf-situation-chapter"));
 	});
 
 	it("shows a controllable four-part product journey", () => {
 		const product = markupFor("product");
+		const panels = componentBlocks(product, "section", "sf-product-lens__panel");
+		const records = panels.map((panel) => fieldsIn(panel, "data-decision-field"));
+
 		expect(product.match(/data-product-step=/g) ?? []).toHaveLength(4);
 		expect(product.match(/aria-controls="product-panel-/g) ?? []).toHaveLength(4);
 		expect(product).toContain('data-scene-output="product-lens"');
-		expect(product.match(/data-decision-field=/g) ?? []).toHaveLength(16);
-		expect(product).toContain('data-decision-field="input"');
-		expect(product).toContain('data-decision-field="evidence"');
-		expect(product).toContain('data-decision-field="decision"');
-		expect(product).toContain('data-decision-field="action"');
+		expect(panels).toHaveLength(4);
+		for (const record of records) {
+			expect([...record.keys()]).toEqual(["input", "evidence", "decision", "action"]);
+			expect([...record.values()].every((value) => value.length >= 35)).toBe(true);
+		}
+		expect(new Set(records.map((record) => [...record.values()].join("|"))).size).toBe(4);
+	});
+
+	it("renders the footer links inside the shared 44px target contract", () => {
+		const footer = markupFor("home").match(/<footer class="sf-footer">([\s\S]*?)<\/footer>/)?.[1] ?? "";
+		expect(footer.match(/<a /g) ?? []).toHaveLength(10);
+		expect(footer).toContain('class="sf-footer__home-link"');
 	});
 
 	it("gives approach, markets, company, and privacy their own visual protagonists", () => {
