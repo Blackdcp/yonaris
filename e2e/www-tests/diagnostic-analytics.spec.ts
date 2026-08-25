@@ -2,15 +2,30 @@ import { expect, test, type Page, type Request } from "@playwright/test";
 import { gunzipSync } from "node:zlib";
 
 const posthogToken = "phc_diagnostic_privacy_test";
-const rawWebsite = "https://acme.example/private-path";
+const rawPrefill = "https://acme.example/private-path";
+const localeCases = [
+	{
+		locale: "en" as const,
+		path: "/diagnostic",
+		name: { label: "Name", value: "Ava Chen" },
+		contact: { label: "Work email", value: "ava@acme.example" },
+		company: { label: "Company", value: "Acme Confidential" },
+		submit: "Talk to Yonaris",
+		failure: "We couldn’t send this yet",
+	},
+	{
+		locale: "zh" as const,
+		path: "/zh/diagnostic",
+		name: { label: "姓名", value: "陈晓" },
+		contact: { label: "电话", value: "+86 138 0013 8000" },
+		company: { label: "公司", value: "示例机密公司" },
+		submit: "提交并预约沟通",
+		failure: "暂时没有发送成功",
+	},
+] as const;
 const sensitiveValues = [
-	rawWebsite,
-	"Acme Confidential",
-	"Enterprise software",
-	"Which platform should our global team choose next?",
-	"Example Secret Co",
-	"Ava Chen",
-	"ava@acme.example",
+	rawPrefill,
+	...localeCases.flatMap(({ name, contact, company }) => [name.value, contact.value, company.value]),
 ];
 
 type PostHogCompression = "base64" | "gzip-js";
@@ -67,13 +82,15 @@ async function installPostHogRemoteConfig(page: Page, compression: PostHogCompre
 }
 
 for (const compression of ["base64", "gzip-js"] as const) {
-	test(`diagnostic prefill and lead data stay out of real ${compression} analytics captures and browser storage`, async ({
-		page,
-	}) => {
+	for (const fixture of localeCases) {
+		test(`${fixture.locale} lead data stays out of real ${compression} analytics captures and browser storage`, async ({
+			page,
+		}) => {
 		const plausibleEvents: Request[] = [];
 		const posthogRequests: Request[] = [];
 		const posthogCaptures: Request[] = [];
 		let diagnosticUuid = "";
+		let diagnosticBody: unknown;
 
 		await installPostHogRemoteConfig(page, compression);
 		await page.route("**/api/plausible/js/script", (route) =>
@@ -94,6 +111,7 @@ for (const compression of ["base64", "gzip-js"] as const) {
 		});
 		await page.route("**/api/diagnostic", async (route) => {
 			diagnosticUuid = route.request().headers()["idempotency-key"] ?? "";
+			diagnosticBody = JSON.parse(route.request().postData() ?? "null");
 			await route.fulfill({
 				status: 503,
 				contentType: "application/json",
@@ -101,24 +119,37 @@ for (const compression of ["base64", "gzip-js"] as const) {
 			});
 		});
 
-		await page.goto(`/diagnostic?website=${encodeURIComponent(rawWebsite)}`);
+		await page.goto(`${fixture.path}?website=${encodeURIComponent(rawPrefill)}&company=should-not-prefill`);
 		await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
-		await expect(page).toHaveURL("/diagnostic");
-		await expect(page.getByLabel("Website", { exact: true })).toHaveValue(rawWebsite);
-		await page.getByLabel("Brand", { exact: true }).fill(sensitiveValues[1]);
-		await page.getByLabel("Market or category", { exact: true }).fill(sensitiveValues[2]);
-		await page.getByLabel("Market question", { exact: true }).fill(sensitiveValues[3]);
-		await page.getByRole("button", { name: "Continue", exact: true }).click();
-		await page.getByLabel("Competitors to include", { exact: true }).fill(sensitiveValues[4]);
-		await page.getByLabel("Your name", { exact: true }).fill(sensitiveValues[5]);
-		await page.getByLabel("Work email", { exact: true }).fill(sensitiveValues[6]);
-		await page.getByLabel(/I agree that Yonaris/).check();
-		await page.getByRole("button", { name: "Request the diagnostic", exact: true }).click();
-		await expect(page.getByRole("alert")).toContainText("We couldn’t confirm delivery");
+		await expect(page).toHaveURL(fixture.path);
+		const form = page.locator("form.lead-form");
+		await expect(form.locator("fieldset input")).toHaveCount(3);
+		await page.getByLabel(fixture.name.label, { exact: true }).fill(fixture.name.value);
+		await page.getByLabel(fixture.contact.label, { exact: true }).fill(fixture.contact.value);
+		await page.getByLabel(fixture.company.label, { exact: true }).fill(fixture.company.value);
+		await page.getByRole("button", { name: fixture.submit, exact: true }).click();
+		await expect(page.getByRole("alert")).toContainText(fixture.failure);
 
 		await expect.poll(() => plausibleEvents.length).toBeGreaterThan(0);
 		await expect.poll(() => posthogCaptures.length).toBeGreaterThan(0);
 		expect(diagnosticUuid).toMatch(/^[0-9a-f-]{36}$/);
+		expect(diagnosticBody).toEqual(
+			fixture.locale === "en"
+				? {
+						locale: "en",
+						name: fixture.name.value,
+						email: fixture.contact.value,
+						company: fixture.company.value,
+						companyUrl: "",
+					}
+				: {
+						locale: "zh",
+						name: fixture.name.value,
+						phone: fixture.contact.value,
+						company: fixture.company.value,
+						companyUrl: "",
+					},
+		);
 		const posthogPayloads = posthogCaptures.map(decodeAnalyticsBody).join("\n");
 		expect(posthogPayloads).toContain('"event":"$pageview"');
 		const analyticsTransport = [...plausibleEvents, ...posthogRequests]
@@ -140,5 +171,6 @@ for (const compression of ["base64", "gzip-js"] as const) {
 			expect(serializedPersistence).not.toContain(value);
 			expect(serializedPersistence).not.toContain(encodeURIComponent(value));
 		}
-	});
+		});
+	}
 }

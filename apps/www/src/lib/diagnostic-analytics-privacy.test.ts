@@ -58,6 +58,8 @@ describe("analytics sanitization", () => {
 			competitors: "Example Co",
 			name: "Ava Chen",
 			email: "ava@acme.example",
+			phone: "+86 138 0013 8000",
+			company: "Acme Confidential",
 			consent: true,
 			companyUrl: "bot.example",
 			domain: "acme.example",

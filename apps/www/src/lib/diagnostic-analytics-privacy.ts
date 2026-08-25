@@ -6,6 +6,8 @@ const SENSITIVE_PROPERTY_KEYS = new Set([
 	"competitors",
 	"name",
 	"email",
+	"phone",
+	"company",
 	"consent",
 	"companyurl",
 	"domain",
