@@ -234,10 +234,7 @@ function typeMatches(actual, expected) {
 function parsedHtmlTags(html, tagName) {
 	return [...html.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, "giu"))].map(([tag]) =>
 		Object.fromEntries(
-			[...tag.matchAll(/([\w-]+)(?:=["']([^"']*)["'])?/gu)].map((match) => [
-				match[1].toLowerCase(),
-				match[2] ?? "",
-			]),
+			[...tag.matchAll(/([\w-]+)(?:=["']([^"']*)["'])?/gu)].map((match) => [match[1].toLowerCase(), match[2] ?? ""]),
 		),
 	);
 }
@@ -267,10 +264,7 @@ function hasHtmlLink(links, { rel, path, type, hrefLang }) {
 function parsedHttpLinks(header) {
 	return [...header.matchAll(/<([^>]+)>\s*((?:;\s*[^,]+)*)/gu)].map((match) => {
 		const parameters = Object.fromEntries(
-			[...match[2].matchAll(/;\s*([\w-]+)="([^"]*)"/gu)].map((parameter) => [
-				parameter[1].toLowerCase(),
-				parameter[2],
-			]),
+			[...match[2].matchAll(/;\s*([\w-]+)="([^"]*)"/gu)].map((parameter) => [parameter[1].toLowerCase(), parameter[2]]),
 		);
 		return { href: match[1], ...parameters };
 	});
@@ -369,9 +363,11 @@ function checkLeadForm(path, body, failures) {
 				];
 	const fields = [...body.matchAll(/<div\b[^>]*data-lead-field=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/giu)];
 	const form = body.match(/<form\b[^>]*data-lead-state=["'][^"']+["'][^>]*>[\s\S]*?<\/form>/iu)?.[0] ?? "";
-	const visibleControls = parsedHtmlTags(form, "input").filter(
-		(input) => input.type !== "hidden" && input.name !== "companyUrl",
-	);
+	const visibleControls = [
+		...parsedHtmlTags(form, "input").filter((input) => input.type !== "hidden" && input.name !== "companyUrl"),
+		...parsedHtmlTags(form, "select"),
+		...parsedHtmlTags(form, "textarea"),
+	];
 	if (fields.length !== expected.length) {
 		failures.push(`FORM ${path}: expected exactly three visible fields`);
 		return;
@@ -435,7 +431,11 @@ function checkCatalogueGraph(route, graph, failures) {
 	}
 	for (const list of lists) {
 		const claims = list?.itemListElement;
-		if (!Array.isArray(claims) || claims.length === 0 || claims.some((claim) => !/^[a-z0-9.-]+$/u.test(claim?.identifier)))
+		if (
+			!Array.isArray(claims) ||
+			claims.length === 0 ||
+			claims.some((claim) => !/^[a-z0-9.-]+$/u.test(claim?.identifier))
+		)
 			failures.push(`GRAPH ${route.path}: ItemList ${list?.["@id"] ?? "without id"} has unstable claims`);
 	}
 }
@@ -471,8 +471,7 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 		} else {
 			checkHumanDocument(route, body, failures);
 		}
-		if (route.path === "/diagnostic" || route.path === "/zh/diagnostic")
-			checkLeadForm(route.path, body, failures);
+		if (route.path === "/diagnostic" || route.path === "/zh/diagnostic") checkLeadForm(route.path, body, failures);
 		collectHtmlAssets(body, routeUrl, baseUrl, assetUrls);
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
@@ -668,12 +667,9 @@ async function checkNegotiationMatrix(baseUrl, failures) {
 					const body = await response.text();
 					const location = response.headers.get("location");
 					const resolved = location ? new URL(location, baseUrl) : undefined;
-					if (response.status >= 500)
-						failures.push(`TRAILING ${method} ${route.path}/ ${accept}: ${response.status}`);
+					if (response.status >= 500) failures.push(`TRAILING ${method} ${route.path}/ ${accept}: ${response.status}`);
 					if (response.status !== 307)
-						failures.push(
-							`TRAILING ${method} ${route.path}/ ${accept}: expected 307, received ${response.status}`,
-						);
+						failures.push(`TRAILING ${method} ${route.path}/ ${accept}: expected 307, received ${response.status}`);
 					if (`${resolved?.pathname ?? ""}${resolved?.search ?? ""}` !== `${route.path}?utm_source=release`)
 						failures.push(`TRAILING ${method} ${route.path}/ ${accept}: query-preserving location missing`);
 					if (method === "HEAD" && body.length > 0)

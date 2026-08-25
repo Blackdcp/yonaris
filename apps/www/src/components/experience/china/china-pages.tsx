@@ -5,6 +5,7 @@ import {
 	CHINA_SITUATIONS,
 } from "@/content/experience/china-copy";
 import { LeadForm } from "../shared/lead-form";
+import { DeliveryTruth, ManagedReviewTrust, PublicRecordTrust } from "../shared/public-trust";
 import {
 	AiAnswerFlow,
 	BrandGapConsole,
@@ -175,6 +176,8 @@ export function ChinaProductPage() {
 						))}
 					</div>
 				</section>
+
+				<ManagedReviewTrust locale="zh" />
 
 				<section className="china-product-close">
 					<span>下一步优先级</span>
@@ -362,6 +365,8 @@ export function ChinaCompanyPage() {
 					</div>
 				</section>
 
+				<PublicRecordTrust locale="zh" />
+
 				<section className="china-company-regions">
 					<div className="china-company-regions__china">
 						<span>中国市场基线</span>
@@ -403,7 +408,7 @@ export function ChinaDiagnosticPage() {
 					</div>
 					<ConsultationBrief />
 				</section>
-				<section className="china-diagnostic-form" aria-label="预约沟通表单">
+				<section className="china-diagnostic-form" id="china-contact-form" aria-label="预约沟通表单">
 					<div>
 						<span>姓名 / 电话 / 公司</span>
 						<h2>{copy.closingTitle}</h2>
@@ -450,6 +455,8 @@ export function ChinaPrivacyPage() {
 						<p>用于回复这次咨询、了解基本需求和安排后续沟通，不会显示在公开页面。</p>
 					</article>
 				</section>
+
+				<DeliveryTruth locale="zh" />
 
 				<section className="china-privacy-close">
 					<div>

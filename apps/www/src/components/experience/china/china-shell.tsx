@@ -34,6 +34,7 @@ export function ChinaShell({
 	scene: string;
 	children: ReactNode;
 }) {
+	const diagnosticHref = pageKey === "diagnostic" ? "#china-contact-form" : "/zh/diagnostic";
 	return (
 		<div
 			className="china-command"
@@ -53,7 +54,7 @@ export function ChinaShell({
 				<div className="china-nav__actions">
 					<HumanAgentLink locale="zh" pageKey={pageKey} />
 					<LocaleSwitchLink locale="zh" pageKey={pageKey} />
-					<a className="china-action china-action--small" href="/zh/diagnostic">
+					<a className="china-action china-action--small" href={diagnosticHref}>
 						预约沟通 <span aria-hidden="true">↗</span>
 					</a>
 				</div>
@@ -68,7 +69,7 @@ export function ChinaShell({
 							<HumanAgentLink locale="zh" pageKey={pageKey} />
 							<LocaleSwitchLink locale="zh" pageKey={pageKey} />
 						</div>
-						<a className="china-action" href="/zh/diagnostic">
+						<a className="china-action" href={diagnosticHref}>
 							预约沟通 <span aria-hidden="true">↗</span>
 						</a>
 					</div>
@@ -96,7 +97,7 @@ export function ChinaShell({
 					<div>
 						<strong>开始沟通</strong>
 						<a href="/zh/company">关于我们</a>
-						<a href="/zh/diagnostic">预约沟通</a>
+						<a href={diagnosticHref}>预约沟通</a>
 						<a href="/zh/privacy">隐私说明</a>
 					</div>
 				</nav>
@@ -106,10 +107,6 @@ export function ChinaShell({
 					<small>© Yonaris</small>
 				</div>
 			</footer>
-
-			<a className="china-mobile-action" href="/zh/diagnostic">
-				预约沟通 <span aria-hidden="true">↗</span>
-			</a>
 		</div>
 	);
 }

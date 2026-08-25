@@ -2358,10 +2358,6 @@
 	color: color-mix(in srgb, var(--y-paper) 76%, transparent);
 }
 
-.china-mobile-action {
-	display: none;
-}
-
 @media (max-width: 1080px) {
 	.china-command {
 		--china-shell: min(82rem, calc(100vw - 2rem));
@@ -2595,57 +2591,59 @@
 		min-width: var(--target-mobile);
 		min-height: var(--target-mobile);
 	}
-	.china-command :is(
-		.china-answer-flow__controls button,
-		.china-answer-flow__controls button span,
-		.china-answer-flow__window-bar strong,
-		.china-answer-flow__window-bar small,
-		.china-answer-flow__question small,
-		.china-answer-flow__answer small,
-		.china-answer-flow__gap span,
-		.china-answer-flow__move span,
-		.china-situation-band > header span,
-		.china-situation-band article > span,
-		.china-home-story__statement > span,
-		.china-home-story__route li > span,
-		.china-home-story__route small,
-		.china-gap-console__rail button span,
-		.china-gap-console__rail button strong,
-		.china-gap-console__workspace > header small,
-		.china-gap-console__body aside span,
-		.china-gap-console__body section > small,
-		.china-gap-console__readout span,
-		.china-gap-console__output span,
-		.china-service-route__map button span,
-		.china-service-route__detail > span,
-		.china-service-route__detail small,
-		.china-market-bridge__canvas > section span,
-		.china-market-bridge__readout small,
-		.china-company-network__center p,
-		.china-company-network__node span,
-		.china-company-network__node strong,
-		.china-consultation-brief > header span,
-		.china-consultation-brief > header i,
-		.china-consultation-brief li > span,
-		.china-privacy-path > div span,
-		.china-privacy-path > b,
-		.china-footer__links strong
-	) {
+	.china-command
+		:is(
+			.china-answer-flow__controls button,
+			.china-answer-flow__controls button span,
+			.china-answer-flow__window-bar strong,
+			.china-answer-flow__window-bar small,
+			.china-answer-flow__question small,
+			.china-answer-flow__answer small,
+			.china-answer-flow__gap span,
+			.china-answer-flow__move span,
+			.china-situation-band > header span,
+			.china-situation-band article > span,
+			.china-home-story__statement > span,
+			.china-home-story__route li > span,
+			.china-home-story__route small,
+			.china-gap-console__rail button span,
+			.china-gap-console__rail button strong,
+			.china-gap-console__workspace > header small,
+			.china-gap-console__body aside span,
+			.china-gap-console__body section > small,
+			.china-gap-console__readout span,
+			.china-gap-console__output span,
+			.china-service-route__map button span,
+			.china-service-route__detail > span,
+			.china-service-route__detail small,
+			.china-market-bridge__canvas > section span,
+			.china-market-bridge__readout small,
+			.china-company-network__center p,
+			.china-company-network__node span,
+			.china-company-network__node strong,
+			.china-consultation-brief > header span,
+			.china-consultation-brief > header i,
+			.china-consultation-brief li > span,
+			.china-privacy-path > div span,
+			.china-privacy-path > b,
+			.china-footer__links strong
+		) {
 		font-size: var(--text-functional-mobile);
 	}
-	.china-command :is(
-		.china-answer-flow__move p,
-		.china-answer-flow__gap p,
-		.china-situation-band article p,
-		.china-home-story__route p,
-		.china-gap-console__readout strong,
-		.china-gap-console__readout p,
-		.china-product-outputs__stack p,
-		.china-service-route__readout p,
-		.china-service-route__readout strong,
-		.china-market-bridge__readout [data-output-field],
-		.china-consultation-brief li p
-	) {
+	.china-command
+		:is(
+			.china-answer-flow__move p,
+			.china-answer-flow__gap p,
+			.china-situation-band article p,
+			.china-home-story__route p,
+			.china-gap-console__readout strong,
+			.china-gap-console__readout p,
+			.china-product-outputs__stack p,
+			.china-service-route__readout p,
+			.china-service-route__readout strong,
+			.china-market-bridge__readout [data-output-field],
+			.china-consultation-brief li p
+		) {
 		font-size: var(--text-body-mobile);
 		line-height: 1.5;
 	}
@@ -2846,32 +2844,11 @@
 	}
 	.china-footer {
 		grid-template-columns: 1fr;
-		padding-bottom: 6.5rem;
 	}
 	.china-footer__mode {
 		grid-column: auto;
 		align-items: start;
 		flex-direction: column;
-	}
-	.china-mobile-action {
-		position: fixed;
-		right: 0.75rem;
-		bottom: 0.75rem;
-		left: 0.75rem;
-		z-index: 60;
-		min-height: 3.5rem;
-		padding: 0.8rem 1.1rem;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		background: var(--y-orange);
-		border: 1px solid var(--y-ink);
-		border-radius: 999px;
-		color: var(--y-ink);
-		font-size: 0.88rem;
-		font-weight: 780;
-		text-decoration: none;
-		box-shadow: 0 1rem 2.5rem color-mix(in srgb, var(--y-ink) 24%, transparent);
 	}
 }
 
@@ -2969,6 +2946,243 @@
 	}
 	.china-footer__links {
 		grid-template-columns: 1fr 1fr;
+	}
+}
+
+.china-managed-delivery,
+.china-public-record,
+.china-delivery-note {
+	width: var(--china-shell);
+	margin: 0 auto;
+	padding: clamp(4.5rem, 8vw, 7rem) 0;
+}
+
+.china-managed-delivery {
+	display: grid;
+	grid-template-columns: minmax(17rem, 0.74fr) minmax(0, 1.26fr);
+	gap: clamp(2rem, 5vw, 5rem);
+}
+
+.china-managed-delivery > header > span,
+.china-public-record > header > span,
+.china-delivery-note > span {
+	color: var(--china-accent-on-light);
+	font-size: 0.75rem;
+	font-weight: 760;
+	letter-spacing: 0.12em;
+	line-height: 1.4;
+}
+
+.china-managed-delivery h2,
+.china-public-record h2,
+.china-delivery-note h2 {
+	margin: 1rem 0 1.3rem;
+	font-size: clamp(2.5rem, 5vw, 5rem);
+	font-weight: 820;
+	letter-spacing: -0.045em;
+	line-height: 1.02;
+}
+
+.china-managed-delivery > header > p,
+.china-public-record > header > p,
+.china-delivery-note > p {
+	color: var(--china-muted-on-light);
+	font-size: 1rem;
+	line-height: 1.75;
+}
+
+.china-managed-delivery__roles {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1px;
+	background: color-mix(in srgb, var(--y-ink) 20%, transparent);
+}
+
+.china-managed-delivery__roles article {
+	min-height: 18rem;
+	padding: 1.5rem;
+	background: white;
+}
+
+.china-managed-delivery__roles h3 {
+	font-size: 1.5rem;
+	font-weight: 800;
+}
+
+.china-managed-delivery__roles ul {
+	margin: 2rem 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.china-managed-delivery__roles li {
+	padding: 0.9rem 0;
+	border-top: 1px solid color-mix(in srgb, var(--y-ink) 16%, transparent);
+	color: var(--china-muted-on-light);
+	line-height: 1.65;
+}
+
+.china-managed-delivery__handoff {
+	grid-column: 1 / -1;
+	padding: 1.5rem;
+	display: grid;
+	grid-template-columns: 0.42fr 1fr 1fr;
+	gap: clamp(1.5rem, 4vw, 4rem);
+	background: var(--y-orange);
+}
+
+.china-managed-delivery__handoff strong {
+	font-size: 0.78rem;
+	letter-spacing: 0.08em;
+	line-height: 1.5;
+}
+
+.china-managed-delivery__handoff p {
+	font-size: 0.92rem;
+	font-weight: 560;
+	line-height: 1.65;
+}
+
+.china-public-record {
+	width: 100%;
+	padding-right: max(1rem, calc((100vw - min(82rem, calc(100vw - 3rem))) / 2));
+	padding-left: max(1rem, calc((100vw - min(82rem, calc(100vw - 3rem))) / 2));
+	display: grid;
+	grid-template-columns: minmax(17rem, 0.7fr) minmax(0, 1.3fr);
+	gap: clamp(2rem, 6vw, 6rem);
+	background: var(--y-ink);
+	color: var(--y-paper);
+}
+
+.china-public-record > header > span {
+	color: var(--y-orange);
+}
+
+.china-public-record > header > p,
+.china-public-record__proof p,
+.china-public-record__support {
+	color: color-mix(in srgb, var(--y-paper) 78%, transparent);
+}
+
+.china-public-record__proof p {
+	margin: 0;
+	padding: 1rem 0;
+	border-top: 1px solid color-mix(in srgb, var(--y-paper) 20%, transparent);
+	line-height: 1.7;
+}
+
+.china-public-record nav {
+	grid-column: 1 / -1;
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	border-top: 1px solid color-mix(in srgb, var(--y-paper) 24%, transparent);
+}
+
+.china-public-record nav a {
+	min-height: 4.75rem;
+	padding: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-right: 1px solid color-mix(in srgb, var(--y-paper) 24%, transparent);
+	color: var(--y-paper);
+	font-size: 0.9rem;
+	font-weight: 720;
+	text-decoration: none;
+}
+
+.china-public-record nav a:hover,
+.china-public-record nav a:focus-visible {
+	background: var(--y-orange);
+	color: var(--y-ink);
+}
+
+.china-public-record__support {
+	grid-column: 1 / -1;
+	margin: 0;
+	font-size: 0.92rem;
+	line-height: 1.7;
+}
+
+.china-public-record__support a {
+	min-height: var(--target-mobile);
+	display: inline-flex;
+	align-items: center;
+	color: var(--y-orange);
+	font-weight: 760;
+	text-underline-offset: 0.25rem;
+}
+
+.china-delivery-note a {
+	min-height: var(--target-mobile);
+	display: inline-flex;
+	align-items: center;
+	color: var(--china-accent-on-light);
+	font-weight: 760;
+	text-underline-offset: 0.25rem;
+}
+
+.china-delivery-note {
+	border-top: 1px solid color-mix(in srgb, var(--y-ink) 18%, transparent);
+}
+
+.china-delivery-note h2 {
+	max-width: 15ch;
+}
+
+.china-delivery-note > p + p {
+	margin-top: 1.2rem;
+}
+
+@media (max-width: 800px) {
+	.china-managed-delivery,
+	.china-public-record {
+		grid-template-columns: 1fr;
+	}
+
+	.china-managed-delivery__handoff {
+		grid-template-columns: 1fr;
+	}
+
+	.china-managed-delivery > header > p,
+	.china-managed-delivery__roles li,
+	.china-managed-delivery__handoff p,
+	.china-public-record > header > p,
+	.china-public-record__proof p,
+	.china-public-record__support,
+	.china-delivery-note > p {
+		font-size: var(--text-body-mobile);
+		line-height: 1.6;
+	}
+}
+
+@media (max-width: 520px) {
+	.china-managed-delivery__roles,
+	.china-public-record nav {
+		grid-template-columns: 1fr;
+	}
+
+	.china-managed-delivery__roles article {
+		min-height: 0;
+	}
+
+	.china-public-record nav a {
+		border-right: 0;
+		border-bottom: 1px solid color-mix(in srgb, var(--y-paper) 24%, transparent);
+	}
+}
+
+@media (max-width: 800px) {
+	.china-command .china-approach-intro__index > span,
+	.china-command .china-home-global__map span,
+	.china-command .china-approach-promise span {
+		font-size: var(--text-functional-mobile);
+		line-height: 1.4;
+	}
+
+	.china-command .china-company-network__node p {
+		font-size: var(--text-body-mobile);
+		line-height: 1.5;
 	}
 }
 

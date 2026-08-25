@@ -75,7 +75,7 @@ describe("Global zero-to-one experience", () => {
 		for (const key of ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as PageKey[]) {
 			const markup = markupFor(key);
 			expect(markup.match(/<img src="\/brand\/logos\/yonaris-wordmark-/g) ?? []).toHaveLength(2);
-			expect(markup).toContain('href="/diagnostic"');
+			expect(markup).toContain(key === "diagnostic" ? 'href="#contact-form"' : 'href="/diagnostic"');
 			expect(markup).toContain(`data-page="${key}"`);
 		}
 	});
@@ -259,6 +259,46 @@ describe("Global zero-to-one experience", () => {
 		expect(markup).toContain('name="email"');
 		expect(markup).toContain('name="company"');
 		expect(markup).not.toContain('name="phone"');
+	});
+
+	it("routes diagnostic shell calls to action to the explicit form anchor without an occluding fixed bar", () => {
+		const markup = markupFor("diagnostic");
+		const header = markup.match(/<header class="sf-header">([\s\S]*?)<\/header>/)?.[1] ?? "";
+
+		expect(markup).toContain('<section class="sf-contact-form-section" id="contact-form">');
+		expect(header.match(/href="#contact-form"/g) ?? []).toHaveLength(2);
+		expect(markup).not.toContain('class="sf-mobile-cta"');
+	});
+
+	it("publishes an inspectable managed-review trust record without inventing outcomes", () => {
+		const product = markupFor("product");
+		const company = markupFor("company");
+		const privacy = markupFor("privacy");
+
+		expect(product).toContain('data-public-trust="managed-review"');
+		expect(product).toContain("Yonaris runs a hands-on review and keeps the selected evidence in a workspace");
+		expect(product).toContain("not a self-serve ranking dashboard");
+		expect(product).toContain("complete answer snapshot");
+		expect(product).toContain("citations only when the answer exposes them");
+		expect(product).toContain("named-alternative comparison");
+		expect(product).toContain("prioritized next review");
+		expect(product).toContain("recheck record");
+		expect(product).toContain(
+			"Rechecks are scheduled around the agreed questions, rather than run as continuous monitoring",
+		);
+		expect(company).toContain('data-public-trust="first-party-records"');
+		expect(company).toContain('href="/agent/product.md"');
+		expect(company).toContain('href="/agent/company.md"');
+		expect(company).toContain('href="/agent/catalog.json"');
+		expect(company).toContain("Last reviewed: 2026-08-25");
+		expect(company).toContain(
+			"do not prove customer outcomes, rankings, coverage beyond the selected scope, or live AI observations",
+		);
+		expect(company).toContain('href="mailto:black.dcp@outlook.com"');
+		expect(company).toContain("Questions about these records or privacy?");
+		expect(company).not.toContain("If the form cannot confirm delivery");
+		expect(privacy).toContain("The page confirms form delivery only after the delivery service accepts the request");
+		expect(privacy).toContain('href="mailto:black.dcp@outlook.com"');
 	});
 
 	it("keeps internal design vocabulary out of customer-facing pages", () => {

@@ -1,6 +1,7 @@
 import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
 import { LeadForm } from "../shared/lead-form";
+import { DeliveryTruth, ManagedReviewTrust, PublicRecordTrust } from "../shared/public-trust";
 import { GlobalHomeReview } from "./global-home-review";
 import {
 	ChangePathScene,
@@ -126,6 +127,8 @@ export function GlobalProductPage() {
 					does not substitute an unexplained score for the complete answer.
 				</p>
 			</section>
+
+			<ManagedReviewTrust locale="en" />
 
 			<section className="sf-page-close sf-page-close--product">
 				<div>
@@ -289,6 +292,8 @@ export function GlobalCompanyPage() {
 				</div>
 			</section>
 
+			<PublicRecordTrust locale="en" />
+
 			<section className="sf-page-close sf-page-close--company">
 				<div>
 					<p className="sf-kicker">What comes together</p>
@@ -370,12 +375,12 @@ export function GlobalPrivacyPage() {
 				<article>
 					<span>01 / What you send</span>
 					<h2>Three visible contact fields.</h2>
-					<p>The global form sends the name, work email, and company you enter.</p>
+					<p>The global form asks for the name, work email, and company you choose to enter.</p>
 				</article>
 				<article>
 					<span>02 / Why we use it</span>
-					<h2>To receive and respond to your request.</h2>
-					<p>Yonaris uses these details to understand the enquiry and contact you.</p>
+					<h2>To understand the enquiry if delivery is confirmed.</h2>
+					<p>These details provide a name, return address, and basic company context for that enquiry.</p>
 				</article>
 				<article>
 					<span>03 / Browser analytics</span>
@@ -388,6 +393,8 @@ export function GlobalPrivacyPage() {
 					<p>Connection information may be processed briefly to reduce automated abuse.</p>
 				</article>
 			</section>
+
+			<DeliveryTruth locale="en" />
 
 			<section className="sf-privacy-contact">
 				<div>

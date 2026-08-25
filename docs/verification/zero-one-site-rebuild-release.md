@@ -1,8 +1,8 @@
 # Zero-one regional experience release evidence
 
-Status: local release candidate. Production push and deployment are intentionally pending independent release-owner review.
+Status: local release candidate, pending independent release-owner review. This document records a provisional design score; it does not claim that the strict release rubric has passed. No production push or deployment was performed.
 
-Candidate source starts from `bd6ea1c8e0d89c90192f51fc8f352ee1255561f1`. Verification was performed on the final local tree on 2026-08-25 against production-built output, never the development server.
+Verification was performed on 2026-08-25 against fresh production-built output from the local tree based on `b35b94ab57dcce1ad22f2a1ae24c2d899d642035`, never against the development server.
 
 ## Release contract
 
@@ -10,8 +10,16 @@ Candidate source starts from `bd6ea1c8e0d89c90192f51fc8f352ee1255561f1`. Verific
 - Agent surfaces: 14 noindex-follow HTML pages, 14 stable Markdown documents, and two locale catalogues with Human canonicals, stable fact groups, claim IDs, scope, limitations, and connected JSON-LD graphs.
 - Canonical URLs: all 13 non-root Human trailing-slash variants and all 16 stable machine trailing-slash variants return query-preserving `307` redirects to the no-slash URL for GET and HEAD before representation negotiation.
 - Negotiation: 904 GET/HEAD Accept and trailing-slash cases passed, including an omitted `Accept` header, valid HTML/Markdown preferences, unsupported media, and zero 5xx responses.
-- Forms: Global exposes exactly name, email, and company; China exposes exactly name, phone, and company. Extra visible controls are rejected by release smoke.
+- Forms: Global exposes exactly name, email, and company; China exposes exactly name, phone, and company. Smoke rejects any additional visible `input`, `select`, or `textarea`.
 - Public output: source and runtime checks found no prohibited ancestry/licensing language, implementation commentary, or retired publication output.
+
+## Product and trust boundary
+
+The Human and Agent surfaces now describe the same current delivery model: a Yonaris-led managed review with a customer-visible evidence workspace, not a self-serve ranking dashboard. The handoff covers the agreed question scope, complete answer snapshot, citations only when the source exposes them, named-alternative comparison, prioritized next review, and a recheck record for the same scope. Rechecks follow the agreed project questions rather than an invented continuous-monitoring or fixed-SLA promise.
+
+The Product and Company pages expose the actual English and Chinese Agent Markdown/catalogue records, review date, scope, limitations, and first-party provenance. The pages state what those records prove and do not prove. They do not invent customers, results, an independent audit, a legal entity, a retention policy, or real AI observations. The approved visible support/privacy fallback is `mailto:black.dcp@outlook.com`.
+
+Form copy is conditional on the delivery provider accepting the request. A provider-accepted response is not presented as inbox delivery. An unconfirmed response preserves the entered values, offers retry, and exposes a mail draft fallback that sends nothing until the visitor sends it.
 
 ## Built-output browser evidence
 
@@ -21,55 +29,71 @@ The final browser suite used `WWW_E2E_REUSE_SERVER=true` and `WWW_E2E_PORT=3001`
 | --- | --- |
 | Human captures | 14 routes × 390×844, 768×1024, 1024×768, and 1440×900 = 56 |
 | Representative Agent captures | `/agent`, `/agent/product`, `/zh/agent`, `/zh/agent/product` × four viewports = 16 |
-| Layout records | 72; zero overflow, clipping, collision, lexical-break, text-floor, or mobile-target findings; zero exceptions |
-| Accessibility | Axe on 18 Human/Agent routes; zero minor, moderate, serious, critical, or unknown findings |
+| Layout records | 72; zero overflow, clipping, collision, lexical-break, text-floor, or mobile-target findings; `inlineTargetExceptions=[]` |
+| Accessibility | Axe on 18 Human/Agent routes; zero violations at every severity |
 | Tabs | 9 tablists, 34 tabs, 36 Arrow/Home/End keyboard actions; zero failures |
 | Focus | 18 route-level visible-focus checks; zero failures |
-| Forms | Two locale contracts; empty-submit focus, intercepted 503 `delivery_unconfirmed`, no false success, UUID idempotency, and input preservation passed |
+| Approach paint | 768, 1024, and 1440 checks keep the full active tab label inside the visible paint area |
+| Diagnostic CTAs | Global 390 and China 768 have no bottom overlay; header/prominent CTAs reach an explicit form anchor |
+| Agent rails | Global/China at 390/768 expose a 44px scroll affordance and a genuinely horizontally scrollable topic rail |
+| Forms | Exact locale fields, empty-submit focus, intercepted `delivery_unconfirmed`, value preservation, mailto fallback, UUID idempotency, and provider-accepted/no-inbox-claim state passed |
 
-The machine-readable browser summary and captures are stored at `.superpowers/sdd/2026-08-25-experience-90-agent-readable/screenshots/`. Representative evidence:
+Evidence root: `.superpowers/sdd/2026-08-25-experience-90-agent-readable/screenshots/`.
 
-- `human-en-home-1440x900.png` and `human-en-home-390x844.png`: Global proposition, illustrative answer artefact, detached evidence rail, market decision path, and lead handoff.
-- `human-product-1440x900.png`: Observe → Compare → Review → Recheck product walkthrough.
-- `human-zh-1440x900.png` and `human-zh-390x844.png`: China-local first-screen narrative, intact “第一解释权” lexical unit, four commercial risks, four diagnostic outputs, and coherent two-row decision path.
-- `human-zh-approach-390x844.png`: China-local service sequence and readable priority treatment.
-- `agent-agent-390x844.png` and `agent-zh-agent-product-1440x900.png`: explicit Human canonical, Markdown, catalogue, locale, review date, scope, stable facts, evidence links, and limitations.
+Machine-readable summary: `browser-qa-summary.json`, generated `2026-08-25T12:20:39Z`, SHA-256 `8FBD36968D29D9546C8D56822409C2BB6A89D12711B5274C119E2B1638CA4AA8`.
 
-## Strict 90-point review
+Representative captures:
 
-The rubric is a release judgment grounded in the captures and interactions above, not an automated scientific score.
+- `human-en-home-1440x900.png` and `human-en-home-390x844.png`: Global proposition, answer artefact, evidence rail, and decision path.
+- `human-approach-768x1024.png`, `human-approach-1024x768.png`, and `human-approach-1440x900.png`: complete active `01 Choose the question` label with no paint clipping.
+- `human-product-1440x900.png`: managed review, customer-visible workspace, inspectable handoff, and recheck boundary.
+- `human-company-1440x900.png` and `human-privacy-390x844.png`: first-party public-record limits and visible support/privacy fallback.
+- `human-zh-1440x900.png` and `human-zh-390x844.png`: China-local narrative with intact lexical units and readable decision path.
+- `human-zh-diagnostic-768x1024.png`: in-flow conversion path and explicit China form anchor.
+- `agent-agent-390x844.png` and `agent-zh-agent-product-1440x900.png`: Human canonical, Markdown, catalogue, locale, review date, stable facts, evidence links, scope, and limitations.
 
-| Dimension | Score | Concrete evidence |
+## Provisional design review
+
+This is an implementer assessment grounded in the final captures and interactions, not an independent approval. The trust score is intentionally capped because the repository does not contain independently verifiable customer evidence, operator/legal identity evidence, or real-answer provenance. Consequently, the current provisional score does **not** satisfy the rubric's mandatory Trust 14/15 floor and is not represented as a ≥90 release pass.
+
+| Dimension | Provisional score | Concrete evidence and remaining limit |
 | --- | ---: | --- |
-| Positioning and first-screen value | 14/15 | Both homepages state the buying shift immediately and show a concrete review artefact within the first 1.5 screens. |
-| Trust, evidence, and buying confidence | 14/15 | Illustrative material is labelled as such; evidence rails, scope, limitations, citations, review dates, and honest unconfirmed form state avoid invented proof. |
-| Product comprehension and actionability | 14/15 | Global shows Observe/Compare/Review/Recheck; China shows question scope, answer snapshot, gap evidence, and priority list with a clear next action. |
-| Visual hierarchy and system coherence | 15/15 | The three deliberate systems—Global editorial/answer field, China command centre, and Agent fact interface—share the Yonaris wordmark, navy, paper, and Signal Orange while remaining purpose-specific. |
-| Information architecture and conversion | 9/10 | Topic-paired Human/Agent navigation, locale parity, canonical discovery, and exactly three-field handoffs are coherent on all governed routes. |
-| Responsive reading quality | 9/10 | 72 four-viewport captures have no overflow or lexical break; visible mobile functional labels are at least 0.75rem, body/readout text at least 0.875rem with 1.4 line height, and targets at least 44×44. |
-| Interaction and motion quality | 9/10 | All scene tabs pass click/focus/Arrow/Home/End behavior with bounded transitions and reduced-motion handling; form focus and error-state behavior are deterministic. |
-| Accessibility and performance resilience | 8/10 | Axe is clean across 18 routes, focus is visible, and built/Docker output is stable. The existing shared client chunk remains about 597 kB; the long-lived local Nitro QA process also emitted TanStack Router's 120-second stream-cleanup warning when its buffered logs were drained at shutdown, without a failed response or gate. |
-| **Total** | **92/100** | Release threshold ≥90; trust and comprehension both meet the required 14/15 floor. |
+| Positioning and first-screen value | 14/15 | Both homepages state the buying shift immediately and show a concrete, explicitly illustrative review artefact. |
+| Trust, evidence, and buying confidence | 12/15 | First-party records, review date, scope, limitations, support fallback, and honest delivery states are inspectable. Independent identity/customer/real-answer proof is unavailable and was not invented. |
+| Product comprehension and actionability | 14/15 | Independently authored EN/ZH copy explains the managed-review/workspace model, who does what, exact handoff fields, next review, and scoped recheck. |
+| Visual hierarchy and system coherence | 14/15 | Global editorial answer field, China decision interface, and Agent fact interface share the Yonaris wordmark, navy, paper, and Signal Orange without collapsing into one regional template. |
+| Information architecture and conversion | 9/10 | Topic-paired Human/Agent navigation, locale parity, canonical discovery, explicit diagnostic anchors, and three-field handoffs are coherent. |
+| Responsive reading quality | 9/10 | 72 captures have zero findings; meaningful mobile labels meet the 0.75rem floor, body/readout text the 0.875rem floor, and interactive targets 44×44. |
+| Interaction and motion quality | 9/10 | Tabs, keyboard operation, focus, CTA-to-form behavior, form error/success boundaries, and reduced-motion treatment pass. |
+| Accessibility and performance resilience | 7/10 | Axe and focus checks are clean and the HEAD stream leak is fixed. The shared client chunk remains about 597 kB and no independent performance lab result is claimed. |
+| **Total** | **88/100 provisional** | Independent review is required; Trust is below the mandatory 14/15 floor. |
 
-## Automated and container gates
+## Automated, runtime, and container gates
 
-- `node --test apps/www/scripts/smoke-marketing.test.mjs apps/www/scripts/smoke-marketing-caddy.test.mjs`: 24/24 passed.
-- `pnpm --filter @workspace/www test`: 27 files, 157 tests passed.
+- `node --test apps/www/scripts/smoke-marketing.test.mjs apps/www/scripts/smoke-marketing-caddy.test.mjs`: 26/26 passed.
+- `pnpm --filter @workspace/www test`: 28 files, 172 tests passed.
 - `pnpm --filter @workspace/www check-types`: passed.
-- `pnpm --filter @workspace/www build`: passed; only the existing >500 kB shared-chunk advisory remains.
+- `pnpm --filter @workspace/www build`: passed; the existing ~597 kB shared-client-chunk advisory remains.
 - `pnpm --filter @workspace/www audit:legacy-marketing`: passed.
 - `pnpm --filter @workspace/www audit:site-manifest`: passed.
-- `pnpm audit:public-output -- --phase source`: `[]`.
+- `pnpm audit:public-output --phase source`: `[]`.
 - `pnpm test:public-output-policy`: 34/34 passed.
-- `git diff --check`: passed (line-ending notices only).
-- Final immutable marketing image: `yonaris-www@sha256:e374bcd8c08dc4549458d8df6e8c051fd1a69e2e8b1d57c0256b1651689dab8f`.
+- `git diff --check`: passed.
+- Final local marketing image: `yonaris-www@sha256:3df7e6e80fb3c951212755a8dadf89f9ac175ca6dff0f121931ba48fb4281ef6`.
 - Direct image smoke: 49 routes, 13 redirects, 48 same-origin assets, and 904 negotiation/trailing-slash cases passed.
 - Caddy boundary smoke: trusted IPv4, trusted IPv6, direct-host identity, exact public-route policy, and strict 904-case matrix passed.
 
-## Honest delivery boundary
+## HEAD SSR ownership regression
 
-Automatic email delivery is not claimed. Production Resend credentials and sending-domain DNS are not configured in this release context. QA validates exact regional fields, client/server validation, an intercepted 503 response, and the honest `delivery_unconfirmed` state with preserved input; it does not represent that an email was sent.
+The earlier 120-second warning was reproduced as a real live-process HTML `HEAD` SSR stream ownership leak, not a harmless shutdown advisory. A focused regression now verifies that the application server strips a routed HTML `HEAD` result while it still owns the TanStack `SsrResponse`: the handler runs once, cleanup/disposal runs exactly once, status and headers are preserved, and the returned body is null. `GET` retains its body and ownership; Markdown, 406, and 307 behavior remains unchanged.
 
-Release-owner monitoring should watch the TanStack Router SSR stream-lifetime warning noted above. It did not reproduce as a response failure, 5xx, browser error, container-smoke failure, or accessibility failure in this candidate, so it is recorded as a runtime advisory rather than hidden or presented as resolved.
+Fresh runtime evidence:
 
-No production push, deployment, external message, or repository setting change was performed as part of this local release-candidate task.
+- Built server: isolated HTML `HEAD`, complete 904-case governed matrix, and the browser run were observed for more than 140 seconds with zero `SSR stream transform exceeded maximum lifetime` warnings.
+- Final Docker image: HTML `HEAD` at `2026-08-25T12:24:31Z` plus the complete governed matrix was observed through `2026-08-25T12:26:47Z` (136 seconds) with only the normal listening log and zero watchdog warnings.
+
+## Honest release boundary
+
+Automatic email or inbox delivery is not claimed or verified. QA proves exact fields, validation, the provider-accepted wording, and the honest unconfirmed/retry/mailto state; it does not represent that an email reached an inbox.
+
+No production push, deployment, external message, or repository-setting change was performed. Independent review remains the release blocker, especially for the explicit Trust evidence gap and the provisional rubric score.

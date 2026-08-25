@@ -1,5 +1,15 @@
-import handler, { createServerEntry } from "@tanstack/react-start/server-entry";
+import { createStartHandler, defaultStreamHandler, defineHandlerCallback } from "@tanstack/react-start/server";
+import { createServerEntry } from "@tanstack/react-start/server-entry";
+import { finalizeHeadSsrResult } from "@/lib/head-ssr-response";
 import { negotiatedResponse } from "@/lib/machine-response";
+
+const handler = createServerEntry({
+	fetch: createStartHandler(
+		defineHandlerCallback(async (context) =>
+			finalizeHeadSsrResult(context.request, await defaultStreamHandler(context)),
+		),
+	),
+});
 
 function configuredPosthogOrigin(): string | undefined {
 	if (!process.env.VITE_POSTHOG_KEY?.trim()) return undefined;

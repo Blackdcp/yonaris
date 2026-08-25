@@ -35,6 +35,7 @@ export function GlobalShell({
 	scene: string;
 	children: ReactNode;
 }) {
+	const diagnosticHref = pageKey === "diagnostic" ? "#contact-form" : "/diagnostic";
 	return (
 		<div
 			className={`sf-shell sf-shell--${pageKey}`}
@@ -61,7 +62,7 @@ export function GlobalShell({
 					<div className="sf-header__actions">
 						<HumanAgentLink locale="en" pageKey={pageKey} />
 						<LocaleSwitchLink locale="en" pageKey={pageKey} />
-						<a className="sf-button sf-button--small" href="/diagnostic">
+						<a className="sf-button sf-button--small" href={diagnosticHref}>
 							Talk to Yonaris <span aria-hidden="true">↗</span>
 						</a>
 					</div>
@@ -76,7 +77,7 @@ export function GlobalShell({
 								<HumanAgentLink locale="en" pageKey={pageKey} />
 								<LocaleSwitchLink locale="en" pageKey={pageKey} />
 							</div>
-							<a className="sf-button" href="/diagnostic">
+							<a className="sf-button" href={diagnosticHref}>
 								Talk to Yonaris <span aria-hidden="true">↗</span>
 							</a>
 						</div>
@@ -106,7 +107,7 @@ export function GlobalShell({
 					</div>
 					<div>
 						<span>Connect</span>
-						<a href="/diagnostic">Talk to Yonaris</a>
+						<a href={diagnosticHref}>Talk to Yonaris</a>
 						<a href="/privacy">Privacy</a>
 						<LocaleSwitchLink locale="en" pageKey={pageKey} />
 					</div>
@@ -116,9 +117,6 @@ export function GlobalShell({
 					<small>© {new Date().getFullYear()} Yonaris</small>
 				</div>
 			</footer>
-			<a className="sf-mobile-cta" href="/diagnostic">
-				Talk to Yonaris <span aria-hidden="true">↗</span>
-			</a>
 		</div>
 	);
 }

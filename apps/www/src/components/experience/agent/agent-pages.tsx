@@ -24,6 +24,7 @@ const interfaceCopy = {
 		evidence: "Human evidence",
 		returnHuman: "Return to the Human site",
 		facts: "Public facts",
+		railHint: "Swipe topics",
 		pageLabels: {
 			home: "Overview",
 			product: "Product",
@@ -49,6 +50,7 @@ const interfaceCopy = {
 		evidence: "官网依据",
 		returnHuman: "返回官网",
 		facts: "公开事实",
+		railHint: "横向滑动查看更多",
 		pageLabels: {
 			home: "概览",
 			product: "产品能力",
@@ -94,6 +96,9 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 			<main className="agent-experience__layout">
 				<aside className="agent-experience__rail">
 					<p>{copy.directory}</p>
+					<p className="agent-experience__rail-hint">
+						{copy.railHint} <span aria-hidden="true">→</span>
+					</p>
 					<nav aria-label={copy.directory}>
 						{HUMAN_PAGE_KEYS.map((key, index) => (
 							<a key={key} href={agentPath(locale, key)} aria-current={key === pageKey ? "page" : undefined}>

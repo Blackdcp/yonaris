@@ -70,9 +70,7 @@ const AGENT_MARKDOWN_PATHS = [
 	"/agent/index.md",
 	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/agent/${topic}.md`),
 	"/zh/agent/index.md",
-	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map(
-		(topic) => `/zh/agent/${topic}.md`,
-	),
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/zh/agent/${topic}.md`),
 ];
 
 const CATALOG_PATHS = ["/agent/catalog.json", "/zh/agent/catalog.json"];
@@ -172,7 +170,13 @@ function humanPaths(pathname) {
 	return {
 		locale: zh ? "zh-CN" : "en",
 		canonicalPath: pathname,
-		peerPath: zh ? (pathname === "/zh" ? "/" : pathname.replace(/^\/zh/u, "")) : pathname === "/" ? "/zh" : `/zh${pathname}`,
+		peerPath: zh
+			? pathname === "/zh"
+				? "/"
+				: pathname.replace(/^\/zh/u, "")
+			: pathname === "/"
+				? "/zh"
+				: `/zh${pathname}`,
 		markdownPath: `${localePrefix}/agent/${topic}.md`,
 		catalogPath: `${localePrefix}/agent/catalog.json`,
 		agentPath: `${localePrefix}/agent${suffix}`,
@@ -250,7 +254,7 @@ async function startFixture({
 	catalogGraph = true,
 	catalogFanIn = false,
 	formContract = true,
-	extraVisibleControl = false,
+	extraVisibleControl = "",
 	publicLeak = "",
 } = {}) {
 	const requests = [];
@@ -308,9 +312,7 @@ async function startFixture({
 		if ([...HUMAN_HTML_PATHS, ...AGENT_HTML_PATHS].includes(url.pathname)) {
 			const representation = fixtureNegotiation(request.headers.accept);
 			if (representation === "not-acceptable") {
-				response.writeHead(406, { Vary: "Accept", "Content-Type": "text/plain; charset=utf-8" }).end(
-					"Not acceptable",
-				);
+				response.writeHead(406, { Vary: "Accept", "Content-Type": "text/plain; charset=utf-8" }).end("Not acceptable");
 				return;
 			}
 			if (representation === "markdown") {
@@ -452,7 +454,14 @@ async function startFixture({
 						return `<div data-agent-surface="true"><article><dl><div class="agent-experience__metadata-wide"><dt>${paths.locale === "en" ? "Scope" : "范围"}</dt><dd>Selected market, language, buyer question, and comparison frame.</dd></div></dl><section data-fact-group="fixture.group"><ul><li data-claim-id="${paths.claimId}">Observable public fact</li></ul></section><section class="agent-experience__limitations"><h2>${paths.locale === "en" ? "Limitations" : "限制"}</h2><ul><li>Bounded to the selected scope and review time.</li></ul></section></article></div>`;
 					})()
 				: "";
-		const extraControl = extraVisibleControl ? '<input name="role" required>' : "";
+		const extraControl =
+			extraVisibleControl === "select"
+				? '<select name="role" required><option>Marketing</option></select>'
+				: extraVisibleControl === "textarea"
+					? '<textarea name="notes" required>Extra</textarea>'
+					: extraVisibleControl
+						? '<input name="role" required>'
+						: "";
 		const formBody =
 			url.pathname === "/diagnostic" || url.pathname === "/zh/diagnostic"
 				? formContract
@@ -479,7 +488,10 @@ async function startFixture({
 }
 
 test("the release matrix includes a request that omits the Accept header", () => {
-	assert.ok(ACCEPT_MATRIX.some((entry) => !("accept" in entry)), "missing omitted Accept case");
+	assert.ok(
+		ACCEPT_MATRIX.some((entry) => !("accept" in entry)),
+		"missing omitted Accept case",
+	);
 });
 
 test("direct-image smoke covers every governed route without asserting Caddy-only hidden paths", async () => {
@@ -507,9 +519,7 @@ test("direct-image smoke covers every governed route without asserting Caddy-onl
 					assert.ok(
 						fixture.requests.some(
 							(request) =>
-								request.method === method &&
-								request.pathname === path &&
-								request.headers.accept === (accept ?? "*/*"),
+								request.method === method && request.pathname === path && request.headers.accept === (accept ?? "*/*"),
 						),
 						`missing ${method} ${path} Accept=${accept}`,
 					);
@@ -519,9 +529,7 @@ test("direct-image smoke covers every governed route without asserting Caddy-onl
 					assert.ok(
 						fixture.requests.some(
 							(request) =>
-								request.method === method &&
-								request.pathname === trailingPath &&
-								request.headers.accept === accept,
+								request.method === method && request.pathname === trailingPath && request.headers.accept === accept,
 						),
 						`missing trailing ${method} ${trailingPath} Accept=${accept}`,
 					);
@@ -534,9 +542,7 @@ test("direct-image smoke covers every governed route without asserting Caddy-onl
 					assert.ok(
 						fixture.requests.some(
 							(request) =>
-								request.method === method &&
-								request.pathname === `${path}/` &&
-								request.headers.accept === accept,
+								request.method === method && request.pathname === `${path}/` && request.headers.accept === accept,
 						),
 						`missing stable trailing ${method} ${path}/ Accept=${accept}`,
 					);
@@ -644,6 +650,17 @@ test("release smoke rejects an extra visible control outside the three field wra
 		await fixture.close();
 	}
 });
+
+for (const control of ["select", "textarea"]) {
+	test(`release smoke counts an extra visible ${control} outside the three field wrappers`, async () => {
+		const fixture = await startFixture({ extraVisibleControl: control });
+		try {
+			await assert.rejects(() => runMarketingSmoke(fixture.url), /FORM \/diagnostic/u);
+		} finally {
+			await fixture.close();
+		}
+	});
+}
 
 test("release smoke rejects forbidden ancestry or licensing language in public output", async () => {
 	const fixture = await startFixture({

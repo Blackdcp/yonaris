@@ -29,7 +29,8 @@ export const AGENT_FACTS = {
 			markdownPath: "/agent/index.md",
 			lastReviewed: LAST_REVIEWED,
 			reviewedBy: "Yonaris",
-			scope: "This topic states the public identity of Yonaris, its review focus, and the questions a scoped review can examine.",
+			scope:
+				"This topic states the public identity of Yonaris, its review focus, and the questions a scoped review can examine.",
 			limitations: EN_LIMITATIONS,
 			groups: [
 				{
@@ -84,13 +85,14 @@ export const AGENT_FACTS = {
 			language: "en",
 			title: "Yonaris product",
 			summary:
-				"Yonaris turns AI answers into a clear view of brand presence, description, comparison, and visible sources.",
+				"Yonaris currently provides a hands-on managed review with a customer-visible evidence workspace and record; it is not a self-serve ranking dashboard.",
 			humanPath: "/product",
 			agentPath: "/agent/product",
 			markdownPath: "/agent/product.md",
 			lastReviewed: LAST_REVIEWED,
 			reviewedBy: "Yonaris",
-			scope: "This topic describes the observable inputs and outputs of the Yonaris review workspace.",
+			scope:
+				"This topic describes the customer-selected scope, Yonaris-operated review, customer-visible handoff, and optional recheck record.",
 			limitations: EN_LIMITATIONS,
 			groups: [
 				{
@@ -99,7 +101,7 @@ export const AGENT_FACTS = {
 					facts: [
 						{
 							id: "product.presence",
-							value: "Monitor whether a brand appears for selected buyer questions.",
+							value: "The evidence workspace records whether a brand appears for selected buyer questions.",
 							evidenceUrl: "/product",
 						},
 						{
@@ -109,33 +111,61 @@ export const AGENT_FACTS = {
 						},
 						{
 							id: "product.comparison",
-							value: "Compare the brand with named alternatives.",
+							value: "The handoff includes a named-alternative comparison.",
 							evidenceUrl: "/product",
 						},
 						{
 							id: "product.citations",
-							value: "See citations when an AI surface provides them.",
+							value: "The record includes citations only when the answer exposes them.",
 							evidenceUrl: "/product",
 						},
 						{
 							id: "product.repeat-checks",
-							value: "Track changes across repeated checks.",
+							value: "A selected repeat check produces a recheck record for the same agreed scope.",
 							evidenceUrl: "/product",
 						},
 					],
 				},
 				{
 					id: "product.workspace",
-					title: "Customer experience",
+					title: "How delivery works now",
 					facts: [
 						{
 							id: "product.answer-workspace",
-							value: "A workspace brings relevant AI answers and brand mentions together.",
+							value: "A customer-visible workspace brings relevant AI answers and brand mentions together.",
 							evidenceUrl: "/product",
 						},
 						{
 							id: "product.review-items",
-							value: "The workspace lists observed omissions and inconsistencies for team review.",
+							value: "The workspace lists observed omissions and inconsistencies for human review.",
+							evidenceUrl: "/product",
+						},
+						{
+							id: "product.service-led",
+							value: "Current delivery is a Yonaris-led managed review, not a self-serve ranking dashboard.",
+							evidenceUrl: "/product",
+						},
+						{
+							id: "product.customer-visible",
+							value:
+								"The customer selects the brand, market, language, buyer question, named alternatives, and recheck timing, then inspects the evidence workspace and record.",
+							evidenceUrl: "/product",
+						},
+						{
+							id: "product.yonaris-operated",
+							value:
+								"Yonaris operates answer collection, organization, human review, and the next scoped recommendation.",
+							evidenceUrl: "/product",
+						},
+						{
+							id: "product.handoff",
+							value:
+								"The customer-visible handoff keeps the question scope, complete answer snapshot, named-alternative comparison, prioritized next review, and recheck record together.",
+							evidenceUrl: "/product",
+						},
+						{
+							id: "product.recheck-cadence",
+							value: "Rechecks are scheduled around the agreed questions rather than run as continuous monitoring.",
 							evidenceUrl: "/product",
 						},
 					],
@@ -195,7 +225,7 @@ export const AGENT_FACTS = {
 			locale: "en",
 			language: "en",
 			title: "Global markets",
-			summary: "Yonaris shows how brands appear when AI systems describe, compare, and recommend options.",
+			summary: "Yonaris shows how brands appear when AI systems describe and compare options in a selected scope.",
 			humanPath: "/geo",
 			agentPath: "/agent/geo",
 			markdownPath: "/agent/geo.md",
@@ -264,7 +294,8 @@ export const AGENT_FACTS = {
 			markdownPath: "/agent/company.md",
 			lastReviewed: LAST_REVIEWED,
 			reviewedBy: "Yonaris",
-			scope: "This topic states the purpose of Yonaris and the regional context used to frame its public review work.",
+			scope:
+				"This topic identifies the Yonaris review team as operator and explains the status and limits of Yonaris first-party public records.",
 			limitations: EN_LIMITATIONS,
 			groups: [
 				{
@@ -299,6 +330,29 @@ export const AGENT_FACTS = {
 						},
 					],
 				},
+				{
+					id: "company.public-records",
+					title: "Public record boundary",
+					facts: [
+						{
+							id: "company.operator",
+							value: "The Yonaris review team operates and reviews the public records.",
+							evidenceUrl: "/company",
+						},
+						{
+							id: "company.first-party",
+							value:
+								"The public Markdown and JSON-LD records are Yonaris first-party statements, not independent validation.",
+							evidenceUrl: "/company",
+						},
+						{
+							id: "company.proof-limit",
+							value:
+								"They state current scope, delivery, handoff, and limitations; they do not prove customer outcomes, rankings, out-of-scope coverage, or live AI observations.",
+							evidenceUrl: "/company",
+						},
+					],
+				},
 			],
 		},
 		diagnostic: {
@@ -306,7 +360,8 @@ export const AGENT_FACTS = {
 			locale: "en",
 			language: "en",
 			title: "Contact Yonaris",
-			summary: "Share three contact details to start a conversation about your brand's presence in AI answers.",
+			summary:
+				"Share three contact details for a scope-setting conversation, not an instant report or a self-serve dashboard.",
 			humanPath: "/diagnostic",
 			agentPath: "/agent/diagnostic",
 			markdownPath: "/agent/diagnostic.md",
@@ -329,6 +384,23 @@ export const AGENT_FACTS = {
 							value: "Yonaris will use these details to understand the request and make contact.",
 							evidenceUrl: "/diagnostic",
 						},
+						{
+							id: "diagnostic.scope-setting",
+							value: "The first conversation sets the review scope; it does not produce an instant report.",
+							evidenceUrl: "/diagnostic",
+						},
+						{
+							id: "diagnostic.delivery-state",
+							value:
+								"The page confirms form delivery only after the delivery service accepts the request; an unconfirmed attempt preserves the entered values.",
+							evidenceUrl: "/diagnostic",
+						},
+						{
+							id: "diagnostic.support-contact",
+							value:
+								"Email fallback: black.dcp@outlook.com. The mailto link opens a draft and sends nothing until the user sends it.",
+							evidenceUrl: "/diagnostic",
+						},
 					],
 				},
 			],
@@ -338,7 +410,8 @@ export const AGENT_FACTS = {
 			locale: "en",
 			language: "en",
 			title: "Contact data and privacy",
-			summary: "The website asks only for the contact details needed to respond to an inquiry.",
+			summary:
+				"The website asks for three contact details and distinguishes provider acceptance from unconfirmed delivery.",
 			humanPath: "/privacy",
 			agentPath: "/agent/privacy",
 			markdownPath: "/agent/privacy.md",
@@ -359,6 +432,18 @@ export const AGENT_FACTS = {
 						{
 							id: "privacy.contact-purpose",
 							value: "Contact details are used to understand the inquiry and respond.",
+							evidenceUrl: "/privacy",
+						},
+						{
+							id: "privacy.unconfirmed-delivery",
+							value:
+								"A delivery receipt is shown only after the delivery service accepts the request; otherwise no receipt is claimed and entered values remain available.",
+							evidenceUrl: "/privacy",
+						},
+						{
+							id: "privacy.support-contact",
+							value:
+								"Support fallback: black.dcp@outlook.com. The email link opens a draft and sends nothing until the user sends it.",
 							evidenceUrl: "/privacy",
 						},
 						{
@@ -421,13 +506,14 @@ export const AGENT_FACTS = {
 			locale: "zh",
 			language: "zh-CN",
 			title: "Yonaris 产品能力",
-			summary: "Yonaris 汇总 AI 如何提到、描述和比较品牌，并在答案提供引用时显示相应来源。",
+			summary:
+				"Yonaris 团队负责采集与核对，客户在同一工作空间查看问题范围、完整答案和下一步优先级；不是只给一个分数，也不是自助排名看板。",
 			humanPath: "/zh/product",
 			agentPath: "/zh/agent/product",
 			markdownPath: "/zh/agent/product.md",
 			lastReviewed: LAST_REVIEWED,
 			reviewedBy: "Yonaris",
-			scope: "本主题说明 Yonaris 核对工作空间中可以查看的输入、答案信息和后续复核项。",
+			scope: "本主题说明客户确定的范围、Yonaris 执行的复核、客户可见的交接内容和可选复查记录。",
 			limitations: ZH_LIMITATIONS,
 			groups: [
 				{
@@ -436,7 +522,7 @@ export const AGENT_FACTS = {
 					facts: [
 						{
 							id: "product.presence",
-							value: "查看选定客户问题的答案中是否出现品牌。",
+							value: "证据工作空间记录选定购买问题的答案中是否出现品牌。",
 							evidenceUrl: "/zh/product",
 						},
 						{
@@ -446,33 +532,58 @@ export const AGENT_FACTS = {
 						},
 						{
 							id: "product.comparison",
-							value: "了解品牌与指定竞争对手的比较方式。",
+							value: "交接记录包含指定对标对象的比较。",
 							evidenceUrl: "/zh/product",
 						},
 						{
 							id: "product.citations",
-							value: "在 AI 界面提供引用时查看相关来源。",
+							value: "仅记录答案明确展示的引用。",
 							evidenceUrl: "/zh/product",
 						},
 						{
 							id: "product.repeat-checks",
-							value: "持续查看相同问题中的变化。",
+							value: "双方选择沿同一范围复查时，会留下复查记录。",
 							evidenceUrl: "/zh/product",
 						},
 					],
 				},
 				{
 					id: "product.workspace",
-					title: "客户获得什么",
+					title: "当前交付方式",
 					facts: [
 						{
 							id: "product.answer-workspace",
-							value: "在同一个工作空间查看相关 AI 答案和品牌提及。",
+							value: "客户可见的工作空间汇总相关 AI 答案和品牌提及。",
 							evidenceUrl: "/zh/product",
 						},
 						{
 							id: "product.review-items",
-							value: "标记需要补充或统一的对外信息。",
+							value: "工作空间列出需要人工复核的缺失和不一致。",
+							evidenceUrl: "/zh/product",
+						},
+						{
+							id: "product.service-led",
+							value: "当前交付是由 Yonaris 主导的托管式品牌复核，不是自助排名看板。",
+							evidenceUrl: "/zh/product",
+						},
+						{
+							id: "product.customer-visible",
+							value: "客户确定品牌、市场、语言、购买问题、指定对标对象和复盘节点，并查看证据工作空间和记录。",
+							evidenceUrl: "/zh/product",
+						},
+						{
+							id: "product.yonaris-operated",
+							value: "Yonaris 负责答案采集、整理、人工核对和下一步范围明确的建议。",
+							evidenceUrl: "/zh/product",
+						},
+						{
+							id: "product.handoff",
+							value: "客户可见的交接内容包括问题范围、完整答案快照、指定对标对象的比较、下一次优先复核项和复查记录。",
+							evidenceUrl: "/zh/product",
+						},
+						{
+							id: "product.recheck-cadence",
+							value: "按项目节奏围绕约定问题复盘，不包装成实时监控。",
 							evidenceUrl: "/zh/product",
 						},
 					],
@@ -584,7 +695,7 @@ export const AGENT_FACTS = {
 			markdownPath: "/zh/agent/company.md",
 			lastReviewed: LAST_REVIEWED,
 			reviewedBy: "Yonaris",
-			scope: "本主题说明 Yonaris 的公开目的，以及品牌核对所采用的中国和海外市场语境。",
+			scope: "本主题说明 Yonaris 复核团队的维护角色，以及 Yonaris 第一方公开记录的性质与限制。",
 			limitations: ZH_LIMITATIONS,
 			groups: [
 				{
@@ -619,6 +730,27 @@ export const AGENT_FACTS = {
 						},
 					],
 				},
+				{
+					id: "company.public-records",
+					title: "公开记录边界",
+					facts: [
+						{
+							id: "company.operator",
+							value: "公开记录由 Yonaris 复核团队维护和核对。",
+							evidenceUrl: "/zh/company",
+						},
+						{
+							id: "company.first-party",
+							value: "公开 Markdown 和 JSON-LD 是 Yonaris 第一方自述，不是独立第三方背书。",
+							evidenceUrl: "/zh/company",
+						},
+						{
+							id: "company.proof-limit",
+							value: "它们说明当前范围、交付方式、交接内容和限制；不证明客户结果、排名、范围外覆盖或实时 AI 观察。",
+							evidenceUrl: "/zh/company",
+						},
+					],
+				},
 			],
 		},
 		diagnostic: {
@@ -626,7 +758,7 @@ export const AGENT_FACTS = {
 			locale: "zh",
 			language: "zh-CN",
 			title: "联系 Yonaris",
-			summary: "留下三项基本信息，开始沟通你的品牌在 AI 答案中的表现。",
+			summary: "留下三项基本信息，用于确认摸底范围；这不是即时报告或自助看板。",
 			humanPath: "/zh/diagnostic",
 			agentPath: "/zh/agent/diagnostic",
 			markdownPath: "/zh/agent/diagnostic.md",
@@ -649,6 +781,21 @@ export const AGENT_FACTS = {
 							value: "Yonaris 会使用这些信息了解需求并与你联系。",
 							evidenceUrl: "/zh/diagnostic",
 						},
+						{
+							id: "diagnostic.scope-setting",
+							value: "第一次沟通用于确认复核范围，不会即时生成报告。",
+							evidenceUrl: "/zh/diagnostic",
+						},
+						{
+							id: "diagnostic.delivery-state",
+							value: "只有投递服务接受申请后，页面才显示已送出；未确认时保留已填内容。",
+							evidenceUrl: "/zh/diagnostic",
+						},
+						{
+							id: "diagnostic.support-contact",
+							value: "邮件兜底：black.dcp@outlook.com。邮件链接只打开草稿，用户主动发送前不会发出内容。",
+							evidenceUrl: "/zh/diagnostic",
+						},
 					],
 				},
 			],
@@ -658,7 +805,7 @@ export const AGENT_FACTS = {
 			locale: "zh",
 			language: "zh-CN",
 			title: "联系信息与隐私",
-			summary: "官网只要求提交回复咨询所需的联系信息。",
+			summary: "官网只要求三项联系信息，并明确区分投递服务已接受与投递尚未确认。",
 			humanPath: "/zh/privacy",
 			agentPath: "/zh/agent/privacy",
 			markdownPath: "/zh/agent/privacy.md",
@@ -679,6 +826,16 @@ export const AGENT_FACTS = {
 						{
 							id: "privacy.contact-purpose",
 							value: "这些信息用于确认称呼、了解公司背景并与你联系。",
+							evidenceUrl: "/zh/privacy",
+						},
+						{
+							id: "privacy.unconfirmed-delivery",
+							value: "只有投递服务接受申请后才显示投递确认；否则不声称已收到，并保留已填内容。",
+							evidenceUrl: "/zh/privacy",
+						},
+						{
+							id: "privacy.support-contact",
+							value: "支持邮箱：black.dcp@outlook.com。邮件链接只打开草稿，用户主动发送前不会发出内容。",
 							evidenceUrl: "/zh/privacy",
 						},
 						{

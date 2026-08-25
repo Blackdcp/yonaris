@@ -32,7 +32,7 @@ const agentPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
 
 const retiredRoutes = /href="\/(?:zh\/)?(?:research|resources)(?:[/#"])/i;
 const internalNarration =
-	/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof|draft|supply chain|implementation detail|配置化观察|证据边界|当前演示|非客户数据|内部策略|实现细节|供应链/i;
+	/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof|supply chain|implementation detail|配置化观察|证据边界|当前演示|非客户数据|内部策略|实现细节|供应链/i;
 const retiredVisuals = /global-cinematic|zh-decision|editorial-stage|decision-canvas|global-en__|zh-site__/i;
 
 describe("zero-to-one Agent experience", () => {
@@ -57,6 +57,88 @@ describe("zero-to-one Agent experience", () => {
 		expect(serialized).not.toMatch(/\/(?:zh\/)?(?:research|resources)/i);
 		expect(serialized).not.toMatch(internalNarration);
 		expect(serialized).not.toMatch(/sources that shape|help brands become|影响答案|持续改善后|获得改善/iu);
+	});
+
+	it("keeps the managed product model, handoff fields, operator, and delivery truth aligned across Agent facts", () => {
+		const en = JSON.stringify(AGENT_FACTS.global);
+		const zh = JSON.stringify(AGENT_FACTS.zh);
+
+		for (const topic of [...Object.values(AGENT_FACTS.global), ...Object.values(AGENT_FACTS.zh)]) {
+			expect(topic.reviewedBy).toBe("Yonaris");
+		}
+		for (const phrase of [
+			"managed review",
+			"customer-visible evidence workspace and record",
+			"not a self-serve ranking dashboard",
+			"complete answer snapshot",
+			"citations only when the answer exposes them",
+			"named-alternative comparison",
+			"prioritized next review",
+			"recheck record",
+			"scheduled around the agreed questions rather than run as continuous monitoring",
+			"black.dcp@outlook.com",
+		])
+			expect(en).toContain(phrase);
+		for (const phrase of [
+			"托管式品牌复核",
+			"证据工作空间和记录",
+			"不是自助排名看板",
+			"完整答案快照",
+			"仅记录答案明确展示的引用",
+			"指定对标对象的比较",
+			"下一次优先复核项",
+			"复查记录",
+			"按项目节奏围绕约定问题复盘，不包装成实时监控",
+			"black.dcp@outlook.com",
+		])
+			expect(zh).toContain(phrase);
+		expect(en).not.toMatch(/\bmonitor\b|track changes|automatic ranking|real-time ranking|guaranteed outcome/i);
+		expect(zh).not.toMatch(/提供持续监控|自动持续监控|自动排名|实时排名|保证结果/);
+	});
+
+	it("keeps established claim IDs on their original meaning and adds new delivery facts under new IDs", () => {
+		for (const [edition, locale] of [
+			["global", "en"],
+			["zh", "zh"],
+		] as const) {
+			const facts = (key: "product" | "diagnostic" | "privacy") =>
+				new Map<string, string>(
+					AGENT_FACTS[edition][key].groups.flatMap((group) =>
+						group.facts.map((fact) => [fact.id, fact.value] as const),
+					),
+				);
+			const product = facts("product");
+			const diagnostic = facts("diagnostic");
+			const privacy = facts("privacy");
+
+			expect(product.get("product.answer-workspace")).toMatch(
+				locale === "en" ? /workspace.*answers.*brand mentions/i : /工作空间.*答案.*品牌提及/,
+			);
+			expect(product.get("product.review-items")).toMatch(
+				locale === "en" ? /workspace lists.*omissions.*review/i : /工作空间.*列出.*复核/,
+			);
+			for (const id of [
+				"product.service-led",
+				"product.customer-visible",
+				"product.yonaris-operated",
+				"product.handoff",
+				"product.recheck-cadence",
+			]) {
+				expect(product.has(id), `${edition} ${id}`).toBe(true);
+			}
+			expect(diagnostic.get("diagnostic.contact-purpose")).toMatch(
+				locale === "en" ? /use these details to understand.*make contact/i : /使用这些信息了解需求.*联系/,
+			);
+			for (const id of ["diagnostic.scope-setting", "diagnostic.delivery-state", "diagnostic.support-contact"]) {
+				expect(diagnostic.has(id), `${edition} ${id}`).toBe(true);
+			}
+			expect(privacy.get("privacy.contact-purpose")).toMatch(
+				locale === "en" ? /used to understand.*respond/i : /用于确认称呼.*联系/,
+			);
+			for (const id of ["privacy.unconfirmed-delivery", "privacy.support-contact"]) {
+				expect(privacy.has(id), `${edition} ${id}`).toBe(true);
+			}
+		}
 	});
 
 	it("renders a machine-first page with an unmistakable return to its Human canonical", () => {
@@ -107,6 +189,15 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain(`href="${agentPath(locale, pageKey)}"`);
 			}
 		}
+	});
+
+	it("announces the horizontal topic rail affordance in both independently written interfaces", () => {
+		expect(renderToStaticMarkup(<AgentPage locale="en" pageKey="product" />)).toContain(
+			'<p class="agent-experience__rail-hint">Swipe topics <span aria-hidden="true">→</span></p>',
+		);
+		expect(renderToStaticMarkup(<AgentPage locale="zh" pageKey="product" />)).toContain(
+			'<p class="agent-experience__rail-hint">横向滑动查看更多 <span aria-hidden="true">→</span></p>',
+		);
 	});
 
 	it("provides noindex Agent heads with paired Human and machine discovery links", () => {

@@ -42,12 +42,22 @@ describe("regional customer copy", () => {
 		expect(china).not.toMatch(/北美市场|欧洲市场|亚太市场|交付物|竞品更靠前/);
 		expect(china).not.toMatch(/四个可核对结果|待核对信息|复查记录|确认范围|在中国扎根|陪中国企业走向全球/);
 		expect(china).not.toMatch(/保证排名|保证推荐|自动改变|全网覆盖|流量承诺/);
-		expect(china).not.toMatch(/客户问 AI 时，你的品牌被怎么说？|从最担心的品牌问题开始|让企业看清 AI 如何介绍自己的品牌/);
+		expect(china).not.toMatch(
+			/客户问 AI 时，你的品牌被怎么说？|从最担心的品牌问题开始|让企业看清 AI 如何介绍自己的品牌/,
+		);
 	});
 
 	it("aligns consultation calls to action with the approved three-field handoff", () => {
 		const global = JSON.stringify(subject?.GLOBAL_COPY ?? {});
 		expect(global).not.toMatch(/See your brand through AI|Walk through your question|Bring us your question/i);
 		expect(global).toContain("Share three details");
+	});
+
+	it("never presents an unconfirmed form attempt as delivered", () => {
+		const global = JSON.stringify(subject?.GLOBAL_COPY ?? {});
+		const china = JSON.stringify(subject?.CHINA_COPY ?? {});
+		expect(global).toContain("The page confirms form delivery only after the delivery service accepts the request");
+		expect(global).not.toContain("They are sent to Yonaris");
+		expect(china).toContain("只有投递服务接受申请后，页面才显示已送出");
 	});
 });

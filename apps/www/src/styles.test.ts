@@ -65,7 +65,10 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("applies mobile floors to the concrete Global component selectors that render small text", () => {
 		const global = read("styles/experience/global.css");
-		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		const mobile = global.slice(
+			global.lastIndexOf("@media (max-width: 48rem)"),
+			global.lastIndexOf("@media (prefers-reduced-motion"),
+		);
 		const functionalSelectors = [
 			".sf-shell .sf-answer-field__topline",
 			".sf-shell .sf-answer-field__scope span",
@@ -100,6 +103,11 @@ describe("zero-to-one stylesheet boundary", () => {
 			expect(declarations, `${selector} needs the body line-height`).toContain("line-height: 1.4");
 		}
 		expect(mobile).not.toContain(":where(p:not(.sf-lead), dd)");
+		for (const selector of [".sf-shell a[href]", ".sf-shell button", ".sf-shell summary"]) {
+			expect(ruleFor(mobile, selector), `${selector} needs the tablet functional floor`).toContain(
+				"font-size: max(var(--text-functional-mobile), 1em)",
+			);
+		}
 	});
 
 	it("keeps the light Company record explicitly dark and makes every footer anchor a 44px box", () => {
@@ -123,8 +131,8 @@ describe("zero-to-one stylesheet boundary", () => {
 		const global = read("styles/experience/global.css");
 		for (const selector of [".sf-answer-evidence h2", ".sf-answer-evidence li strong"]) {
 			expect(ruleFor(global, selector), `${selector} needs an explicit light foreground`).toContain(
-			"color: var(--sf-paper)",
-		);
+				"color: var(--sf-paper)",
+			);
 		}
 	});
 
@@ -133,19 +141,33 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(global, ".sf-market-atlas__question span")).toContain("color: #713207");
 	});
 
+	it("keeps every desktop Approach tab inside a rectangular paint-safe path", () => {
+		const global = read("styles/experience/global.css");
+		expect(global).not.toMatch(/\.sf-change-path\s*\{[^}]*overflow:\s*clip;[^}]*\}/s);
+		expect(global).toMatch(
+			/\.sf-change-path__stages \.sf-change-path__stage:nth-child\(1\)\s*\{[^}]*left:\s*50%;[^}]*transform:\s*translateX\(-50%\);[^}]*\}/s,
+		);
+	});
+
 	it("keeps Global mode and locale text at the mobile functional floor", () => {
 		const global = read("styles/experience/global.css");
-		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		const mobile = global.slice(
+			global.lastIndexOf("@media (max-width: 48rem)"),
+			global.lastIndexOf("@media (prefers-reduced-motion"),
+		);
 		for (const selector of [".sf-shell .mode-link a", ".sf-shell .locale-switch"]) {
 			expect(ruleFor(mobile, selector), `${selector} needs the functional floor`).toContain(
-			"font-size: var(--text-functional-mobile)",
-		);
+				"font-size: var(--text-functional-mobile)",
+			);
 		}
 	});
 
 	it("keeps Global market-diagram labels at the mobile functional floor", () => {
 		const global = read("styles/experience/global.css");
-		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		const mobile = global.slice(
+			global.lastIndexOf("@media (max-width: 48rem)"),
+			global.lastIndexOf("@media (prefers-reduced-motion"),
+		);
 		for (const selector of [
 			".sf-shell .sf-market-atlas__choices button span",
 			".sf-shell .sf-market-atlas__question > span",
@@ -160,12 +182,17 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("keeps every visible Global micro-label above the mobile functional floor", () => {
 		const global = read("styles/experience/global.css");
-		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		const mobile = global.slice(
+			global.lastIndexOf("@media (max-width: 48rem)"),
+			global.lastIndexOf("@media (prefers-reduced-motion"),
+		);
 		for (const selector of [
 			".sf-shell .sf-situation-rail > article > span",
 			".sf-shell .sf-home-contact__statement > span",
 			".sf-shell .lead-form > header > span",
 			".sf-shell .sf-footer__links > div > span",
+			".sf-shell .sf-home-world__node",
+			".sf-shell .sf-market-atlas__node",
 			".sf-shell .sf-geo-bridge__origin > span",
 			".sf-shell .sf-geo-bridge__markets > div > span",
 			".sf-shell .sf-constellation__detail > span",
@@ -207,7 +234,10 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("keeps Agent controls and machine-document metadata readable at mobile widths", () => {
 		const agent = read("styles/experience/agent.css");
-		const mobile = agent.slice(agent.lastIndexOf("@media (max-width: 560px)"), agent.lastIndexOf("@media (prefers-reduced-motion"));
+		const mobile = agent.slice(
+			agent.lastIndexOf("@media (max-width: 880px)"),
+			agent.lastIndexOf("@media (prefers-reduced-motion"),
+		);
 		for (const selector of [
 			".agent-experience__masthead .mode-link a",
 			".agent-experience .locale-switch",
@@ -258,6 +288,35 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(metadataLink).toContain("display: inline-flex");
 		expect(metadataLink).toContain("min-width: var(--target-mobile)");
 		expect(metadataLink).toContain("min-height: var(--target-mobile)");
+
+		const topicRailLink = ruleFor(mobile, ".agent-experience .agent-experience__rail nav a");
+		expect(topicRailLink).toContain("min-width: 9rem");
+		expect(topicRailLink).toContain("flex: 0 0 9rem");
+	});
+
+	it("keeps Agent desktop micro-labels readable and Chinese headings stable at tablet width", () => {
+		const agent = read("styles/experience/agent.css");
+		for (const selector of [
+			".agent-experience__identity",
+			".agent-experience .mode-link a",
+			".agent-experience .locale-switch",
+			".agent-experience__rail > p",
+			".agent-experience__rail nav a em",
+			".agent-experience__intro > p:first-of-type",
+			".agent-experience__metadata dt",
+			".agent-experience__facts header em",
+			".agent-experience__facts li a",
+		]) {
+			expect(ruleFor(agent, selector), `${selector} needs the desktop supplementary floor`).toContain(
+				"font-size: 0.75rem",
+			);
+		}
+		expect(agent).toMatch(
+			/@media \(max-width: 1100px\)[\s\S]*?\.agent-experience\[data-agent-locale="zh"\] \.agent-experience__intro h1[^{]*\{[^}]*word-break:\s*keep-all;[^}]*overflow-wrap:\s*break-word;/,
+		);
+		expect(agent).toMatch(
+			/@media \(max-width: 880px\)[\s\S]*?\.agent-experience__rail-hint\s*\{[^}]*display:\s*flex;[^}]*position:\s*sticky;/,
+		);
 	});
 
 	it("makes the China lead disclosure link a real mobile target", () => {
@@ -325,11 +384,24 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(answerQuestion).toContain("line-height: 1.4");
 	});
 
+	it("keeps the China Approach index numerals above the tablet functional floor", () => {
+		const china = read("styles/experience/china.css");
+		const declarations = ruleFor(china, ".china-command .china-approach-intro__index > span");
+		expect(declarations).toContain("font-size: var(--text-functional-mobile)");
+		expect(declarations).toContain("line-height: 1.4");
+	});
+
 	it("keeps the Agent Human-return control dark on Signal Orange", () => {
 		const agent = read("styles/experience/agent.css");
-		expect(ruleFor(agent, ".agent-experience .agent-experience__human-return")).toContain(
-			"color: var(--agent-ink)",
-		);
+		expect(ruleFor(agent, ".agent-experience .agent-experience__human-return")).toContain("color: var(--agent-ink)");
+	});
+
+	it("keeps trust labels and delivery fallback links legible on their actual surfaces", () => {
+		const global = read("styles/experience/global.css");
+		const china = read("styles/experience/china.css");
+		expect(ruleFor(global, ".sf-public-record > header > span")).toContain("color: var(--sf-orange-soft)");
+		expect(ruleFor(global, ".sf-delivery-note a")).toContain("color: #8a3e0b");
+		expect(ruleFor(china, ".china-delivery-note a")).toContain("color: var(--china-accent-on-light)");
 	});
 
 	it("removes legacy Global selectors once their replacement artefacts own the experience", () => {

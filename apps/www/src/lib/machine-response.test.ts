@@ -40,10 +40,7 @@ describe("machine responses", () => {
 		if (!responseHelpers) return;
 		const negotiatedResponse = (
 			responseHelpers as Partial<{
-				negotiatedResponse(
-					request: Request,
-					fetchHandler: (request: Request) => Promise<Response>,
-				): Promise<Response>;
+				negotiatedResponse(request: Request, fetchHandler: (request: Request) => Promise<Response>): Promise<Response>;
 			}>
 		).negotiatedResponse;
 		expect(negotiatedResponse, "the executable negotiation helper must be exported").toBeTypeOf("function");
@@ -146,7 +143,8 @@ describe("machine responses", () => {
 		expect(jsonResponse.headers.get("content-type")).toBe("application/ld+json; charset=utf-8");
 		expect(jsonResponse.headers.get("content-language")).toBe("zh-CN");
 
-		const notAcceptableResponse = (responseHelpers as Partial<{ notAcceptableResponse(): Response }>).notAcceptableResponse;
+		const notAcceptableResponse = (responseHelpers as Partial<{ notAcceptableResponse(): Response }>)
+			.notAcceptableResponse;
 		expect(notAcceptableResponse, "the 406 response helper must be exported").toBeTypeOf("function");
 		if (!notAcceptableResponse) return;
 		const response = notAcceptableResponse();

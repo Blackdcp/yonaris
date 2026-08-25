@@ -61,7 +61,7 @@
 	align-items: center;
 	gap: 0.8rem;
 	font-family: var(--y-mono, monospace);
-	font-size: 0.64rem;
+	font-size: 0.75rem;
 	letter-spacing: 0.1em;
 	text-transform: uppercase;
 }
@@ -82,6 +82,7 @@
 
 .agent-experience .mode-link a {
 	color: var(--agent-muted);
+	font-size: 0.75rem;
 }
 
 .agent-experience .mode-link a[aria-current="page"] {
@@ -104,7 +105,10 @@
 	gap: 0.35rem;
 	border: 1px solid var(--agent-line);
 	border-radius: 999px;
-	font: 650 0.64rem / 1 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 650;
+	line-height: 1;
 	text-decoration: none;
 	white-space: nowrap;
 }
@@ -127,10 +131,17 @@
 
 .agent-experience__rail > p {
 	margin: 0 0 1.2rem;
-	font: 600 0.62rem / 1 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1.4;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--agent-muted);
+}
+
+.agent-experience__rail .agent-experience__rail-hint {
+	display: none;
 }
 
 .agent-experience__rail nav {
@@ -156,7 +167,10 @@
 }
 
 .agent-experience__rail nav a em {
-	font: 500 0.65rem / 1 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 500;
+	line-height: 1.4;
 	font-style: normal;
 	color: var(--agent-muted);
 }
@@ -188,7 +202,10 @@
 
 .agent-experience__intro > p:first-of-type {
 	margin: 0;
-	font: 600 0.66rem / 1.2 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1.4;
 	letter-spacing: 0.13em;
 	text-transform: uppercase;
 	color: var(--agent-orange);
@@ -282,7 +299,7 @@
 }
 
 .agent-experience__metadata dt {
-	font-size: 0.62rem;
+	font-size: 0.75rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--agent-muted);
@@ -291,12 +308,12 @@
 .agent-experience__metadata dd {
 	min-width: 0;
 	margin: 0;
-	font-size: 0.8rem;
+	font-size: var(--text-body-mobile);
 	line-height: 1.45;
 }
 
 .agent-experience__metadata a {
-	font-size: 0.8rem;
+	font-size: var(--text-body-mobile);
 	overflow-wrap: anywhere;
 	text-underline-offset: 0.3rem;
 }
@@ -345,7 +362,10 @@
 }
 
 .agent-experience__facts header em {
-	font: 500 0.65rem / 1 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 500;
+	line-height: 1.4;
 	font-style: normal;
 	color: var(--agent-orange);
 }
@@ -386,7 +406,10 @@
 
 .agent-experience__facts li a {
 	width: fit-content;
-	font: 600 0.68rem / 1 var(--y-mono, monospace);
+	font-family: var(--y-mono, monospace);
+	font-size: 0.75rem;
+	font-weight: 600;
+	line-height: 1.4;
 	color: var(--agent-muted);
 	text-underline-offset: 0.25rem;
 }
@@ -419,6 +442,24 @@
 	outline-offset: 3px;
 }
 
+@media (max-width: 1100px) {
+	.agent-experience__layout {
+		grid-template-columns: minmax(12.5rem, 15rem) minmax(0, 1fr);
+	}
+
+	.agent-experience[data-agent-locale="zh"] .agent-experience__intro h1,
+	.agent-experience[data-agent-locale="zh"] .agent-experience__facts h2,
+	.agent-experience[data-agent-locale="zh"] .agent-experience__limitations h2 {
+		word-break: keep-all;
+		overflow-wrap: break-word;
+		text-wrap: wrap;
+	}
+
+	.agent-experience[data-agent-locale="zh"] .agent-experience__facts > section {
+		grid-template-columns: minmax(13.5rem, 0.52fr) minmax(0, 1fr);
+	}
+}
+
 @media (max-width: 880px) {
 	.agent-experience__masthead {
 		padding: 0 1rem;
@@ -442,6 +483,24 @@
 
 	.agent-experience__rail > p {
 		display: none;
+	}
+
+	.agent-experience__rail .agent-experience__rail-hint {
+		display: flex;
+		position: sticky;
+		z-index: 2;
+		left: 0;
+		min-height: var(--target-mobile);
+		width: 100vw;
+		margin: 0;
+		padding: 0.7rem 1rem;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1px solid var(--agent-line);
+		background: var(--agent-ink);
+		color: var(--agent-orange);
+		font-size: 0.75rem;
+		line-height: 1.4;
 	}
 
 	.agent-experience__rail nav {
@@ -469,9 +528,25 @@
 	.agent-experience__limitations {
 		grid-template-columns: 1fr;
 	}
+
+	.agent-experience[data-agent-locale="zh"] .agent-experience__facts > section {
+		grid-template-columns: 1fr;
+	}
 }
 
-@media (max-width: 560px) {
+@media (max-width: 880px) {
+	.agent-experience a[href] {
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
+		display: inline-flex;
+		align-items: center;
+	}
+
+	.agent-experience .agent-experience__rail nav a {
+		min-width: 9rem;
+		flex: 0 0 9rem;
+	}
+
 	.agent-experience__brand {
 		min-height: var(--target-mobile);
 		display: inline-flex;

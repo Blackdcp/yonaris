@@ -24,9 +24,7 @@ function attribute(markup: string, name: string): string | undefined {
 function expectDiagnosticTabSet(Scene: () => React.ReactNode, expectedCount: number) {
 	const markup = renderToStaticMarkup(<Scene />);
 	const tabs = [...markup.matchAll(/<button[^>]*role="tab"[^>]*>/g)].map(([tab]) => tab);
-	const panels = [...markup.matchAll(/<(?:article|div|section)[^>]*role="tabpanel"[^>]*>/g)].map(
-		([panel]) => panel,
-	);
+	const panels = [...markup.matchAll(/<(?:article|div|section)[^>]*role="tabpanel"[^>]*>/g)].map(([panel]) => panel);
 
 	expect(tabs).toHaveLength(expectedCount);
 	expect(panels).toHaveLength(expectedCount);
@@ -65,7 +63,7 @@ describe("中国站客户体验", () => {
 			expect(mobileMenu).toContain('aria-label="中国站移动导航"');
 			expect(mobileMenu).toContain(`href="${humanPath}"`);
 			expect(mobileMenu).toContain(`href="${agentPath}"`);
-			expect(mobileMenu).toContain('href="/zh/diagnostic"');
+			expect(mobileMenu).toContain(page === "diagnostic" ? 'href="#china-contact-form"' : 'href="/zh/diagnostic"');
 		}
 	});
 
@@ -269,5 +267,41 @@ describe("中国站客户体验", () => {
 		expect(form).toContain('name="phone"');
 		expect(form).toContain('type="tel"');
 		expect(form).not.toMatch(/name="email"|type="email"|工作邮箱/);
+	});
+
+	it("预约页导航按钮直达明确表单锚点且不再使用遮挡内容的固定按钮", () => {
+		const markup = render("diagnostic");
+		const header = markup.match(/<header class="china-nav">([\s\S]*?)<\/header>/)?.[1] ?? "";
+
+		expect(markup).toContain('<section class="china-diagnostic-form" id="china-contact-form"');
+		expect(header.match(/href="#china-contact-form"/g) ?? []).toHaveLength(2);
+		expect(markup).not.toContain('class="china-mobile-action"');
+	});
+
+	it("公开托管式复核的真实边界、记录入口与人工兜底", () => {
+		const product = render("product");
+		const company = render("company");
+		const privacy = render("privacy");
+
+		expect(product).toContain('data-public-trust="managed-review"');
+		expect(product).toContain("Yonaris 团队负责采集与核对，客户在同一工作空间查看问题范围、完整答案和下一步优先级");
+		expect(product).toContain("不是只给一个分数");
+		expect(product).toContain("完整答案快照");
+		expect(product).toContain("仅记录答案明确展示的引用");
+		expect(product).toContain("指定对标对象的比较");
+		expect(product).toContain("下一次优先复核项");
+		expect(product).toContain("复查记录");
+		expect(product).toContain("按项目节奏围绕约定问题复盘，不包装成实时监控");
+		expect(company).toContain('data-public-trust="first-party-records"');
+		expect(company).toContain('href="/zh/agent/product.md"');
+		expect(company).toContain('href="/zh/agent/company.md"');
+		expect(company).toContain('href="/zh/agent/catalog.json"');
+		expect(company).toContain("最近核对：2026-08-25");
+		expect(company).toContain("不证明客户结果、排名、范围外覆盖或实时 AI 观察");
+		expect(company).toContain('href="mailto:black.dcp@outlook.com"');
+		expect(company).toContain("对公开记录或隐私有疑问？");
+		expect(company).not.toContain("如果表单无法确认投递");
+		expect(privacy).toContain("只有投递服务接受申请后，页面才显示已送出");
+		expect(privacy).toContain('href="mailto:black.dcp@outlook.com"');
 	});
 });

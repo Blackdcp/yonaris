@@ -98,10 +98,10 @@ export const GLOBAL_COPY = {
 		navLabel: "Privacy",
 		metaTitle: "Yonaris Privacy — Contact request data",
 		metaDescription:
-			"What the Yonaris contact form sends, how the details are used, and what stays out of browser analytics.",
+			"What the Yonaris contact form asks for, when delivery is confirmed, and what stays out of browser analytics.",
 		eyebrow: "Contact request privacy",
 		title: "Your details take one short route.",
-		lead: "The contact form asks for three visible details. They are sent to Yonaris so we can respond to your request.",
+		lead: "The contact form asks for three visible details. The page confirms form delivery only after the delivery service accepts the request; otherwise your entries stay in place.",
 		primaryAction: { label: "Return to contact", href: "/diagnostic" },
 		secondaryAction: { label: "Visit the homepage", href: "/" },
 		closingTitle: "Ready to start a conversation?",

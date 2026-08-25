@@ -106,7 +106,8 @@ describe("LeadForm delivery states", () => {
 		const markup = renderView({ locale: "en", values, submission, errors: {} });
 		expect(submission).toBe("success");
 		expect(markup).toContain('data-lead-state="success"');
-		expect(markup).toContain("Thanks. We’ll be in touch.");
+		expect(markup).toContain("Request accepted for delivery.");
+		expect(markup).toContain("This does not confirm inbox delivery.");
 		expect(markup).not.toContain("<form");
 		expect(markup).not.toContain('type="submit"');
 	});
@@ -123,6 +124,15 @@ describe("LeadForm delivery states", () => {
 		expect(markup).toContain('data-lead-state="unconfirmed"');
 		expect(markup).toContain('value="ava@acme.example"');
 		expect(markup).toContain("Try again");
-		expect(markup).toContain("We couldn’t send this yet.");
+		expect(markup).toContain("Delivery is not confirmed.");
+		expect(markup).toContain('href="mailto:black.dcp@outlook.com"');
+		expect(markup).not.toContain("Request accepted for delivery.");
+	});
+
+	it("gives an honest Chinese email fallback when delivery is unconfirmed", () => {
+		const markup = renderView({ locale: "zh", values, submission: "unconfirmed", errors: {} });
+		expect(markup).toContain("投递尚未确认");
+		expect(markup).toContain('href="mailto:black.dcp@outlook.com"');
+		expect(markup).not.toContain("投递服务已接受这次申请");
 	});
 });

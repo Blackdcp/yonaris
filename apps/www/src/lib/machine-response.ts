@@ -12,10 +12,7 @@ export type MachineLinkSet = readonly MachineLink[];
 
 export interface MachineDocumentResponseOptions {
 	language?: Locale | readonly Locale[];
-	contentType?:
-		| "text/markdown; charset=utf-8"
-		| "text/plain; charset=utf-8"
-		| "application/ld+json; charset=utf-8";
+	contentType?: "text/markdown; charset=utf-8" | "text/plain; charset=utf-8" | "application/ld+json; charset=utf-8";
 	contentLocation?: string;
 	links?: MachineLinkSet;
 	status?: number;
@@ -60,9 +57,7 @@ export async function negotiatedResponse(
 		response = notAcceptableResponse();
 	} else {
 		const routedRequest =
-			representation.kind === "markdown"
-				? rewriteMarkdownRequest(request, representation.targetPath)
-				: request;
+			representation.kind === "markdown" ? rewriteMarkdownRequest(request, representation.targetPath) : request;
 		response = await fetchHandler(routedRequest);
 	}
 
