@@ -1,9 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "./styles/experience/base.css";
-@import "./styles/experience/global.css";
-@import "./styles/experience/china.css";
-@import "./styles/experience/agent.css";
 
 @source "../src";
 @source "../../../packages/ui/src";

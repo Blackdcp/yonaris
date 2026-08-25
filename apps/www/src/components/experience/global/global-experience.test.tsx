@@ -14,6 +14,25 @@ function markupFor(page: PageKey): string {
 }
 
 describe("Global zero-to-one experience", () => {
+	it("keeps keyboard navigation and the same-topic China switch available on every page", () => {
+		const chinaPaths: Record<PageKey, string> = {
+			home: "/zh",
+			product: "/zh/product",
+			approach: "/zh/approach",
+			geo: "/zh/geo",
+			company: "/zh/company",
+			diagnostic: "/zh/diagnostic",
+			privacy: "/zh/privacy",
+		};
+
+		for (const [page, path] of Object.entries(chinaPaths) as [PageKey, string][]) {
+			const markup = markupFor(page);
+			expect(markup).toContain('class="sf-skip-link" href="#main-content"');
+			expect(markup).toContain('<main id="main-content" tabindex="-1"');
+			expect(markup).toContain(`href="${path}" data-locale-switch="zh"`);
+		}
+	});
+
 	it("keeps the Yonaris identity and conversion path present on every page", () => {
 		for (const key of ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as PageKey[]) {
 			const markup = markupFor(key);

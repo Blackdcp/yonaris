@@ -20,6 +20,30 @@ export function siteHref(path: string): string {
 	return canonicalUrl(normalizedPath) ?? normalizedPath;
 }
 
+export function pageSocialMeta(options: {
+	title: string;
+	description: string;
+	canonicalPath: string;
+	locale: "en_US" | "zh_CN";
+}) {
+	const pageUrl = siteHref(options.canonicalPath);
+	const imageUrl = siteHref(getMarketingOgImage({ title: options.title, description: options.description }));
+
+	return [
+		{ property: "og:type", content: "website" },
+		{ property: "og:site_name", content: SITE_NAME },
+		{ property: "og:locale", content: options.locale },
+		{ property: "og:title", content: options.title },
+		{ property: "og:description", content: options.description },
+		{ property: "og:url", content: pageUrl },
+		{ property: "og:image", content: imageUrl },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:title", content: options.title },
+		{ name: "twitter:description", content: options.description },
+		{ name: "twitter:image", content: imageUrl },
+	] as const;
+}
+
 export function jsonLd(data: Record<string, unknown>): { type: string; children: string } {
 	return { type: "application/ld+json", children: JSON.stringify({ "@context": "https://schema.org", ...data }) };
 }

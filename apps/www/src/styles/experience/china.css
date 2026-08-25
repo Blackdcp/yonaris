@@ -29,6 +29,27 @@
 	text-wrap: pretty;
 }
 
+.china-skip-link {
+	position: fixed;
+	top: 0.75rem;
+	left: 0.75rem;
+	z-index: 1000;
+	padding: 0.75rem 1rem;
+	border: 1px solid var(--y-ink);
+	border-radius: 999px;
+	background: var(--y-orange);
+	color: var(--y-ink);
+	font-size: 0.82rem;
+	font-weight: 760;
+	text-decoration: none;
+	transform: translateY(-180%);
+	transition: transform 180ms ease;
+}
+
+.china-skip-link:focus {
+	transform: translateY(0);
+}
+
 .china-nav {
 	position: sticky;
 	top: 0;
@@ -102,6 +123,28 @@
 
 .china-nav .mode-link {
 	background: var(--y-paper);
+}
+
+.china-command .locale-switch {
+	min-height: 2.5rem;
+	padding: 0.55rem 0.8rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	border: 1px solid color-mix(in srgb, var(--y-ink) 18%, transparent);
+	border-radius: 999px;
+	font: 700 0.7rem / 1 var(--y-mono);
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.locale-switch__arrow {
+	color: var(--y-orange);
+}
+
+.china-menu {
+	display: none;
 }
 
 .china-eyebrow {
@@ -2126,6 +2169,11 @@
 	color: var(--y-ink);
 }
 
+.china-footer .locale-switch {
+	border-color: color-mix(in srgb, var(--y-paper) 28%, transparent);
+	color: var(--y-paper);
+}
+
 .china-footer__mode small {
 	color: color-mix(in srgb, var(--y-paper) 76%, transparent);
 }
@@ -2139,7 +2187,7 @@
 		--china-shell: min(82rem, calc(100vw - 2rem));
 	}
 	.china-nav {
-		grid-template-columns: auto 1fr;
+		grid-template-columns: auto minmax(0, 1fr) auto;
 		gap: 1rem;
 	}
 	.china-nav__primary {
@@ -2147,6 +2195,86 @@
 	}
 	.china-nav__actions {
 		justify-self: end;
+	}
+	.china-menu {
+		position: relative;
+		display: block;
+		justify-self: end;
+	}
+	.china-menu summary {
+		min-width: 4.4rem;
+		min-height: 2.75rem;
+		padding: 0.65rem 0.85rem;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.65rem;
+		border: 1px solid color-mix(in srgb, var(--y-ink) 20%, transparent);
+		border-radius: 999px;
+		background: var(--y-paper);
+		cursor: pointer;
+		font-size: 0.76rem;
+		font-weight: 760;
+		list-style: none;
+	}
+	.china-menu summary::-webkit-details-marker {
+		display: none;
+	}
+	.china-menu summary i {
+		width: 0.48rem;
+		height: 0.48rem;
+		border-right: 1px solid currentColor;
+		border-bottom: 1px solid currentColor;
+		transform: translateY(-0.12rem) rotate(45deg);
+		transition: transform 180ms ease;
+	}
+	.china-menu[open] summary i {
+		transform: translateY(0.12rem) rotate(225deg);
+	}
+	.china-menu__panel {
+		position: fixed;
+		top: 4.75rem;
+		right: 0;
+		left: 0;
+		max-width: 100vw;
+		max-height: calc(100dvh - 4.75rem);
+		padding: 1rem max(1rem, calc((100vw - 82rem) / 2)) 1.25rem;
+		display: grid;
+		gap: 1rem;
+		overflow-x: hidden;
+		overflow-y: auto;
+		border-bottom: 1px solid var(--y-line);
+		background: color-mix(in srgb, var(--y-paper) 96%, transparent);
+		box-shadow: 0 1.5rem 3rem color-mix(in srgb, var(--y-ink) 16%, transparent);
+		backdrop-filter: blur(18px);
+	}
+	.china-mobile-nav {
+		display: grid;
+	}
+	.china-mobile-nav a {
+		min-width: 0;
+		padding: 0.9rem 0;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border-bottom: 1px solid color-mix(in srgb, var(--y-ink) 14%, transparent);
+		font-size: 1rem;
+		font-weight: 680;
+		text-decoration: none;
+	}
+	.china-mobile-nav a[aria-current="page"]::after {
+		color: var(--y-orange);
+		content: "●";
+		font-size: 0.6rem;
+	}
+	.china-menu__utilities {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+	.china-menu__panel > .china-action {
+		width: 100%;
 	}
 	.china-home-hero {
 		grid-template-columns: 1fr;
@@ -2198,11 +2326,14 @@
 	.china-nav__brand img {
 		height: 1.7rem;
 	}
-	.china-nav__actions .mode-link {
+	.china-nav__actions {
 		display: none;
 	}
-	.china-nav__actions .china-action {
-		display: none;
+	.china-menu__panel {
+		top: 4.15rem;
+		max-height: calc(100dvh - 4.15rem);
+		padding-right: 0.8rem;
+		padding-left: 0.8rem;
 	}
 	.china-home-hero,
 	.china-product-intro,
@@ -2414,6 +2545,23 @@
 }
 
 @media (max-width: 520px) {
+	.china-menu summary {
+		min-width: 2.8rem;
+		padding-right: 0.75rem;
+		padding-left: 0.75rem;
+	}
+	.china-menu summary span {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+	.china-menu__utilities {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 	.china-home-hero__copy h1,
 	.china-product-intro h1,
 	.china-approach-intro h1,

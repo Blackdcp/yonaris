@@ -47,6 +47,7 @@ describe("zero-to-one Agent experience", () => {
 		for (const locale of ["en", "zh"] as const) {
 			for (const pageKey of HUMAN_PAGE_KEYS) {
 				const markup = renderToStaticMarkup(<AgentPage locale={locale} pageKey={pageKey} />);
+				const otherLocale = locale === "en" ? "zh" : "en";
 				expect(markup.match(/<main/g) ?? []).toHaveLength(1);
 				expect(markup.match(/<h1/g) ?? []).toHaveLength(1);
 				expect(markup).toContain('data-agent-surface="true"');
@@ -55,6 +56,7 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain('src="/brand/logos/yonaris-wordmark-white.png"');
 				expect(markup).toContain(`href="${humanPath(locale, pageKey)}" data-human-canonical="true"`);
 				expect(markup).toContain(`href="${agentPath(locale, pageKey)}" aria-current="page"`);
+				expect(markup).toContain(`href="${agentPath(otherLocale, pageKey)}" data-locale-switch="${otherLocale}"`);
 				expect(markup).toContain(locale === "en" ? "Return to the Human site" : "返回官网");
 				expect(markup).toContain("data-fact-group");
 				expect(markup).toContain("data-fact-item");

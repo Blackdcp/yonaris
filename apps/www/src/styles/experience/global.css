@@ -167,6 +167,25 @@
 	color: white;
 }
 
+.sf-shell .locale-switch {
+	min-height: 2.75rem;
+	padding: 0.65rem 0.75rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.35rem;
+	border: 1px solid color-mix(in srgb, var(--sf-ink) 16%, transparent);
+	border-radius: 999px;
+	font-family: "Geist Mono", monospace;
+	font-size: 0.66rem;
+	font-weight: 650;
+	white-space: nowrap;
+}
+
+.locale-switch__arrow {
+	color: var(--sf-orange);
+}
+
 .sf-button {
 	min-height: 3.45rem;
 	padding: 0.9rem 1.15rem 0.9rem 1.35rem;
@@ -2246,12 +2265,12 @@
 	border: 0;
 }
 
-.sf-shell .lead-form label[data-lead-field] {
+.sf-shell .lead-form [data-lead-field] {
 	display: grid;
 	gap: 0.5rem;
 }
 
-.sf-shell .lead-form label[data-lead-field] > span {
+.sf-shell .lead-form [data-lead-field] > label > span {
 	font-family: "Geist Mono", monospace;
 	font-size: 0.6rem;
 	font-weight: 650;
@@ -2468,7 +2487,14 @@
 		font-weight: 560;
 	}
 	.sf-menu__panel .mode-link {
+		margin: 0;
+	}
+	.sf-menu__utilities {
 		margin: 1.2rem 0;
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
 	}
 	.sf-menu__panel .sf-button {
 		width: 100%;

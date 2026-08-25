@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { HumanPageKey } from "@/content/experience/types";
 import { HumanAgentLink } from "../shared/human-agent-link";
+import { LocaleSwitchLink } from "../shared/locale-switch-link";
 
 const NAV_ITEMS: readonly { key: HumanPageKey; label: string; href: string }[] = [
 	{ key: "product", label: "Product", href: "/product" },
@@ -57,6 +58,7 @@ export function GlobalShell({
 					<PrimaryNavigation pageKey={pageKey} />
 					<div className="sf-header__actions">
 						<HumanAgentLink locale="en" pageKey={pageKey} />
+						<LocaleSwitchLink locale="en" pageKey={pageKey} />
 						<a className="sf-button sf-button--small" href="/diagnostic">
 							Talk to Yonaris <span aria-hidden="true">↗</span>
 						</a>
@@ -68,7 +70,10 @@ export function GlobalShell({
 						</summary>
 						<div className="sf-menu__panel">
 							<PrimaryNavigation pageKey={pageKey} mobile />
-							<HumanAgentLink locale="en" pageKey={pageKey} />
+							<div className="sf-menu__utilities">
+								<HumanAgentLink locale="en" pageKey={pageKey} />
+								<LocaleSwitchLink locale="en" pageKey={pageKey} />
+							</div>
 							<a className="sf-button" href="/diagnostic">
 								Talk to Yonaris <span aria-hidden="true">↗</span>
 							</a>
@@ -77,7 +82,7 @@ export function GlobalShell({
 				</div>
 			</header>
 
-			<main id="main-content" data-page={pageKey} data-scene={scene}>
+			<main id="main-content" tabIndex={-1} data-page={pageKey} data-scene={scene}>
 				{children}
 			</main>
 
@@ -101,7 +106,7 @@ export function GlobalShell({
 						<span>Connect</span>
 						<a href="/diagnostic">Talk to Yonaris</a>
 						<a href="/privacy">Privacy</a>
-						<a href="/zh">中文版</a>
+						<LocaleSwitchLink locale="en" pageKey={pageKey} />
 					</div>
 				</div>
 				<div className="sf-footer__bottom">

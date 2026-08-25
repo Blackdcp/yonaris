@@ -89,6 +89,30 @@
 	color: var(--agent-ink);
 }
 
+.agent-experience__actions {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	gap: 0.65rem;
+}
+
+.agent-experience .locale-switch {
+	min-height: 2.5rem;
+	padding: 0.65rem 0.8rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	border: 1px solid var(--agent-line);
+	border-radius: 999px;
+	font: 650 0.64rem / 1 var(--y-mono, monospace);
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.agent-experience .locale-switch__arrow {
+	color: var(--agent-orange);
+}
+
 .agent-experience__layout {
 	min-height: calc(100svh - 5rem);
 	display: grid;
@@ -381,9 +405,28 @@
 }
 
 @media (max-width: 560px) {
+	.agent-experience__masthead {
+		min-height: 6.5rem;
+	}
+
+	.agent-experience__brand img {
+		width: 7rem;
+	}
+
+	.agent-experience__actions {
+		align-items: flex-end;
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
 	.agent-experience__masthead .mode-link a {
 		padding-inline: 0.55rem;
 		font-size: 0.65rem;
+	}
+
+	.agent-experience .locale-switch {
+		min-height: 2rem;
+		padding: 0.45rem 0.65rem;
 	}
 
 	.agent-experience__intro {

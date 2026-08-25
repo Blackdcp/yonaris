@@ -1,6 +1,6 @@
 import { CHINA_COPY } from "@/content/experience";
 import type { HumanPageKey } from "@/content/experience/types";
-import { organizationJsonLd, siteHref, websiteJsonLd } from "@/lib/seo";
+import { organizationJsonLd, pageSocialMeta, siteHref, websiteJsonLd } from "@/lib/seo";
 
 const pathFor: Record<HumanPageKey, `/${string}`> = {
 	home: "/zh",
@@ -33,12 +33,7 @@ export function zhPageHead(key: ZhPageKey) {
 			{ title },
 			{ name: "description", content: page.metaDescription },
 			{ name: "theme-color", content: "#f6f4f1" },
-			{ property: "og:locale", content: "zh_CN" },
-			{ property: "og:title", content: title },
-			{ property: "og:description", content: page.metaDescription },
-			{ name: "twitter:card", content: "summary_large_image" },
-			{ name: "twitter:title", content: title },
-			{ name: "twitter:description", content: page.metaDescription },
+			...pageSocialMeta({ title, description: page.metaDescription, canonicalPath, locale: "zh_CN" }),
 		],
 		links: [
 			{ rel: "canonical", href: siteHref(canonicalPath) },

@@ -7,22 +7,23 @@ const sourceRoot = dirname(fileURLToPath(import.meta.url));
 const read = (relative: string) => readFileSync(join(sourceRoot, relative), "utf8");
 
 describe("zero-to-one stylesheet boundary", () => {
-	it("loads only the new regional experience styles", () => {
+	it("loads shared styles once and lets each regional route own its stylesheet", () => {
 		const stylesheet = read("styles.css");
-		const expected = [
-			'@import "tailwindcss";',
-			'@import "tw-animate-css";',
-			'@import "./styles/experience/base.css";',
-			'@import "./styles/experience/global.css";',
-			'@import "./styles/experience/china.css";',
-			'@import "./styles/experience/agent.css";',
-		];
+		const expected = ['@import "tailwindcss";', '@import "tw-animate-css";', '@import "./styles/experience/base.css";'];
 		const positions = expected.map((item) => stylesheet.indexOf(item));
 		expect(positions.every((position) => position >= 0)).toBe(true);
 		expect(positions).toEqual([...positions].sort((left, right) => left - right));
 		for (const retired of ["site-core", "styles/pages", "global-en/core", "zh-cn/core", "global-agent/core"]) {
 			expect(stylesheet).not.toContain(retired);
 		}
+		for (const regional of ["global.css", "china.css", "agent.css"]) expect(stylesheet).not.toContain(regional);
+		expect(read("components/experience/global/global-pages.tsx")).toContain(
+			'import "../../../styles/experience/global.css";',
+		);
+		expect(read("components/experience/china/china-pages.tsx")).toContain(
+			'import "../../../styles/experience/china.css";',
+		);
+		expect(read("components/experience/agent/agent-pages.tsx")).toContain('import "@/styles/experience/agent.css";');
 	});
 
 	it("keeps the brand palette and rejects retired visible selectors", () => {

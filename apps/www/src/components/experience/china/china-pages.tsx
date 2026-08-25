@@ -10,6 +10,7 @@ import {
 	ServiceRoute,
 } from "./china-scenes";
 import { ChinaShell } from "./china-shell";
+import "../../../styles/experience/china.css";
 
 export function ChinaHomePage() {
 	const copy = CHINA_COPY.home;

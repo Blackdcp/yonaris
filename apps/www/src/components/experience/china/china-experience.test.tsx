@@ -12,6 +12,38 @@ function render(page: keyof ChinaPages): string {
 }
 
 describe("中国站客户体验", () => {
+	it("在每个页面提供可跳过导航、移动主导航与人机双入口", () => {
+		for (const page of ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const) {
+			const markup = render(page);
+			const mobileMenu = markup.match(/<details class="china-menu">([\s\S]*?)<\/details>/)?.[1] ?? "";
+			const humanPath = page === "home" ? "/zh" : `/zh/${page}`;
+			const agentPath = page === "home" ? "/zh/agent" : `/zh/agent/${page}`;
+
+			expect(markup).toContain('class="china-skip-link" href="#main-content"');
+			expect(markup).toContain('<main id="main-content" tabindex="-1"');
+			expect(mobileMenu).toContain('aria-label="中国站移动导航"');
+			expect(mobileMenu).toContain(`href="${humanPath}"`);
+			expect(mobileMenu).toContain(`href="${agentPath}"`);
+			expect(mobileMenu).toContain('href="/zh/diagnostic"');
+		}
+	});
+
+	it("区域切换始终进入英文站的同主题页面", () => {
+		const englishPaths: Record<keyof ChinaPages, string> = {
+			home: "/",
+			product: "/product",
+			approach: "/approach",
+			geo: "/geo",
+			company: "/company",
+			diagnostic: "/diagnostic",
+			privacy: "/privacy",
+		};
+
+		for (const [page, path] of Object.entries(englishPaths) as [keyof ChinaPages, string][]) {
+			expect(render(page)).toContain(`href="${path}" data-locale-switch="en"`);
+		}
+	});
+
 	it("让客户从四种真实处境进入，而不是按职位选择", () => {
 		const markup = render("home");
 		expect(markup.match(/data-situation-control=/g) ?? []).toHaveLength(4);

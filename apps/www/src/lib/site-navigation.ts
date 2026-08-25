@@ -2,6 +2,8 @@ import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import type { Locale, SiteRouteDefinition, SiteRouteKey } from "@/content/site/types";
 import { getCorePath, getSiteRoute, SITE_MANIFEST } from "./site-manifest";
 
+export { getLocaleSwitchPath } from "./locale-paths";
+
 export const PORTAL_URL = "https://portal.yonaris.com";
 
 export interface SiteNavigationItem {
@@ -69,10 +71,6 @@ export function getPrimaryNavigation(locale: Locale): readonly SiteNavigationIte
 
 export function getDiagnosticNavigation(locale: Locale): SiteNavigationItem {
 	return itemFor("diagnostic", locale);
-}
-
-export function getLocaleSwitchPath(locale: Locale, activeKey: HumanPageKey = "home"): string {
-	return getCorePath(activeKey, locale === "en" ? "zh" : "en");
 }
 
 export function getFooterNavigation(locale: Locale): readonly SiteFooterGroup[] {

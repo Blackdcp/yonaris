@@ -29,6 +29,15 @@ const chinaPages = [
 ] as const;
 
 const humanPages = [...globalPages, ...chinaPages] as const;
+const regionalPairs = [
+	{ key: "home", en: "/", zh: "/zh" },
+	{ key: "product", en: "/product", zh: "/zh/product" },
+	{ key: "approach", en: "/approach", zh: "/zh/approach" },
+	{ key: "geo", en: "/geo", zh: "/zh/geo" },
+	{ key: "company", en: "/company", zh: "/zh/company" },
+	{ key: "diagnostic", en: "/diagnostic", zh: "/zh/diagnostic" },
+	{ key: "privacy", en: "/privacy", zh: "/zh/privacy" },
+] as const;
 
 async function waitForHydration(page: Page): Promise<void> {
 	await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
@@ -60,6 +69,31 @@ test("all 14 regional Human routes publish the zero-one generation and their int
 			"href",
 			fixture.path,
 		);
+	}
+});
+
+test("regional switches preserve all seven topics and China navigation remains usable at both breakpoints", async ({
+	page,
+}) => {
+	for (const pair of regionalPairs) {
+		await visitHydrated(page, pair.en);
+		await expect(page.locator(`[data-locale-switch="zh"][href="${pair.zh}"]`).first(), pair.key).toBeVisible();
+
+		await visitHydrated(page, pair.zh);
+		await expect(page.locator(`[data-locale-switch="en"][href="${pair.en}"]`).first(), pair.key).toBeVisible();
+	}
+
+	for (const width of [1080, 800]) {
+		await page.setViewportSize({ width, height: 900 });
+		await visitHydrated(page, "/zh/product");
+		const menu = page.locator(".china-menu");
+		await expect(menu.locator("summary"), `${width}px menu trigger`).toBeVisible();
+		await menu.locator("summary").click();
+		await expect(menu.getByRole("navigation", { name: "中国站移动导航" })).toBeVisible();
+		await expect(menu.locator('.mode-link a[href="/zh/product"]')).toBeVisible();
+		await expect(menu.locator('.mode-link a[href="/zh/agent/product"]')).toBeVisible();
+		await expect(menu.locator('[data-locale-switch="en"][href="/product"]')).toBeVisible();
+		await expectNoHorizontalOverflow(page);
 	}
 });
 
@@ -122,9 +156,68 @@ test("regional lead forms expose exactly the approved three fields", async ({ pa
 	for (const label of ["姓名", "电话", "公司"]) await expect(chinaForm.getByLabel(label, { exact: true })).toHaveCount(1);
 });
 
-test("all 14 Human routes pair with the new Agent fact interface", async ({ page, request }) => {
+test("lead forms focus inline errors, confirm accepted delivery once, and preserve retry identity", async ({ page }) => {
+	let acceptedRequests = 0;
+	await page.route("**/api/diagnostic", async (route) => {
+		acceptedRequests += 1;
+		await route.fulfill({ status: 202, contentType: "application/json", body: '{"ok":true}' });
+	});
+	await visitHydrated(page, "/diagnostic");
+	const globalForm = page.locator("form.lead-form");
+	const globalName = globalForm.getByLabel("Name", { exact: true });
+	const normalBorder = await globalName.evaluate((input) => getComputedStyle(input).borderTopColor);
+	await globalForm.getByRole("button", { name: "Talk to Yonaris", exact: true }).click();
+	await expect(globalName).toBeFocused();
+	await expect(globalName).toHaveAttribute("aria-invalid", "true");
+	await expect(globalName).toHaveAttribute("aria-describedby", "lead-en-name-error");
+	await expect(page.locator("#lead-en-name-error")).toHaveText("Enter your name.");
+	const invalidBorder = await globalName.evaluate((input) => getComputedStyle(input).borderTopColor);
+	expect(invalidBorder).not.toBe(normalBorder);
+
+	await globalName.fill("Ava Chen");
+	await globalForm.getByLabel("Work email", { exact: true }).fill("ava@acme.example");
+	await globalForm.getByLabel("Company", { exact: true }).fill("Acme");
+	await globalForm.getByRole("button", { name: "Talk to Yonaris", exact: true }).click();
+	await expect(page.locator('[data-lead-state="success"]')).toContainText("Thanks. We’ll be in touch.");
+	await expect(page.locator("form.lead-form")).toHaveCount(0);
+	await page.keyboard.press("Enter");
+	expect(acceptedRequests).toBe(1);
+
+	await page.unroute("**/api/diagnostic");
+	const retryKeys: string[] = [];
+	await page.route("**/api/diagnostic", async (route) => {
+		retryKeys.push(route.request().headers()["idempotency-key"] ?? "");
+		await route.fulfill({
+			status: 503,
+			contentType: "application/json",
+			body: '{"ok":false,"code":"delivery_unconfirmed"}',
+		});
+	});
+	await visitHydrated(page, "/zh/diagnostic");
+	const chinaForm = page.locator("form.lead-form");
+	await chinaForm.getByLabel("姓名", { exact: true }).fill("陈晓");
+	await chinaForm.getByLabel("电话", { exact: true }).fill("13800138000");
+	await chinaForm.getByLabel("公司", { exact: true }).fill("示例科技");
+	await chinaForm.getByRole("button", { name: "提交并预约沟通", exact: true }).click();
+	await expect(chinaForm.getByRole("alert")).toContainText("暂时没有发送成功");
+	await expect(chinaForm.getByLabel("电话", { exact: true })).toHaveValue("13800138000");
+	await chinaForm.getByRole("button", { name: "重新发送", exact: true }).click();
+	await expect.poll(() => retryKeys).toHaveLength(2);
+	expect(new Set(retryKeys).size).toBe(1);
+});
+
+test("all 14 Human routes pair with a bilingual, mobile-safe Agent fact interface", async ({ page, request }) => {
 	for (const fixture of humanPages) {
 		const locale = fixture.path.startsWith("/zh") ? "zh" : "en";
+		const otherLocale = locale === "en" ? "zh" : "en";
+		const otherAgent =
+			otherLocale === "zh"
+				? fixture.key === "home"
+					? "/zh/agent"
+					: `/zh/agent/${fixture.key}`
+				: fixture.key === "home"
+					? "/agent"
+					: `/agent/${fixture.key}`;
 		await visitHydrated(page, fixture.agent);
 		await expect(
 			page.locator(
@@ -134,12 +227,22 @@ test("all 14 Human routes pair with the new Agent fact interface", async ({ page
 		).toHaveCount(1);
 		await expect(page.locator(`a[data-human-canonical="true"][href="${fixture.path}"]`), fixture.agent).toHaveCount(1);
 		await expect(page.locator(`.mode-link a[href="${fixture.agent}"][aria-current="page"]`), fixture.agent).toHaveCount(1);
+		await expect(
+			page.locator(`[data-locale-switch="${otherLocale}"][href="${otherAgent}"]`),
+			fixture.agent,
+		).toHaveCount(1);
 		await expect(page.locator('img[src="/brand/logos/yonaris-wordmark-white.png"]'), fixture.agent).toHaveCount(1);
 
 		const markdown = await request.get(fixture.agent, { headers: { Accept: "text/markdown" } });
 		expect(markdown.status(), fixture.agent).toBe(200);
 		expect(markdown.headers()["content-type"], fixture.agent).toContain("text/markdown");
 		if (fixture.key !== "home") expect(await markdown.text(), fixture.agent).toContain(`https://yonaris.com${fixture.path}`);
+	}
+
+	await page.setViewportSize(QA_VIEWPORTS.mobile);
+	for (const fixture of humanPages) {
+		await visitHydrated(page, fixture.agent);
+		await expectNoHorizontalOverflow(page);
 	}
 });
 

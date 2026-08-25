@@ -1,6 +1,7 @@
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
 import { type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import { HumanAgentLink } from "../shared/human-agent-link";
+import { LocaleSwitchLink } from "../shared/locale-switch-link";
 import "@/styles/experience/agent.css";
 
 function agentPath(locale: ExperienceLocale, pageKey: HumanPageKey): string {
@@ -70,7 +71,10 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 					<span>{copy.interfaceLabel}</span>
 					<code>{copy.format}</code>
 				</div>
-				<HumanAgentLink locale={locale} pageKey={pageKey} mode="agent" />
+				<div className="agent-experience__actions">
+					<HumanAgentLink locale={locale} pageKey={pageKey} mode="agent" />
+					<LocaleSwitchLink locale={locale} pageKey={pageKey} surface="agent" />
+				</div>
 			</header>
 
 			<main className="agent-experience__layout">

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { HumanPageKey } from "@/content/experience/types";
 import { HumanAgentLink } from "../shared/human-agent-link";
+import { LocaleSwitchLink } from "../shared/locale-switch-link";
 
 const primaryNavigation = [
 	{ key: "product" as const, label: "产品", href: "/zh/product" },
@@ -8,6 +9,21 @@ const primaryNavigation = [
 	{ key: "geo" as const, label: "全球市场", href: "/zh/geo" },
 	{ key: "company" as const, label: "关于我们", href: "/zh/company" },
 ] as const;
+
+function PrimaryNavigation({ pageKey, mobile = false }: { pageKey: HumanPageKey; mobile?: boolean }) {
+	return (
+		<nav
+			className={mobile ? "china-mobile-nav" : "china-nav__primary"}
+			aria-label={mobile ? "中国站移动导航" : "中国站主导航"}
+		>
+			{primaryNavigation.map((item) => (
+				<a key={item.key} href={item.href} aria-current={pageKey === item.key ? "page" : undefined}>
+					{item.label}
+				</a>
+			))}
+		</nav>
+	);
+}
 
 export function ChinaShell({
 	pageKey,
@@ -26,26 +42,42 @@ export function ChinaShell({
 			data-edition="zh-cn"
 			data-scene={scene}
 		>
+			<a className="china-skip-link" href="#main-content">
+				跳至主要内容
+			</a>
 			<header className="china-nav">
 				<a className="china-nav__brand" href="/zh" aria-label="Yonaris 中国站首页">
 					<img src="/brand/logos/yonaris-wordmark-navy.png" alt="Yonaris" width="154" height="34" />
 				</a>
-				<nav className="china-nav__primary" aria-label="中国站主导航">
-					{primaryNavigation.map((item) => (
-						<a key={item.key} href={item.href} aria-current={pageKey === item.key ? "page" : undefined}>
-							{item.label}
-						</a>
-					))}
-				</nav>
+				<PrimaryNavigation pageKey={pageKey} />
 				<div className="china-nav__actions">
 					<HumanAgentLink locale="zh" pageKey={pageKey} />
+					<LocaleSwitchLink locale="zh" pageKey={pageKey} />
 					<a className="china-action china-action--small" href="/zh/diagnostic">
 						预约沟通 <span aria-hidden="true">↗</span>
 					</a>
 				</div>
+				<details className="china-menu">
+					<summary aria-label="打开主导航">
+						<span>菜单</span>
+						<i aria-hidden="true" />
+					</summary>
+					<div className="china-menu__panel">
+						<PrimaryNavigation pageKey={pageKey} mobile />
+						<div className="china-menu__utilities">
+							<HumanAgentLink locale="zh" pageKey={pageKey} />
+							<LocaleSwitchLink locale="zh" pageKey={pageKey} />
+						</div>
+						<a className="china-action" href="/zh/diagnostic">
+							预约沟通 <span aria-hidden="true">↗</span>
+						</a>
+					</div>
+				</details>
 			</header>
 
-			<main>{children}</main>
+			<main id="main-content" tabIndex={-1}>
+				{children}
+			</main>
 
 			<footer className="china-footer">
 				<div className="china-footer__brand">
@@ -70,6 +102,7 @@ export function ChinaShell({
 				</nav>
 				<div className="china-footer__mode">
 					<HumanAgentLink locale="zh" pageKey={pageKey} />
+					<LocaleSwitchLink locale="zh" pageKey={pageKey} />
 					<small>© Yonaris</small>
 				</div>
 			</footer>
