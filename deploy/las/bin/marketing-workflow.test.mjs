@@ -1,10 +1,18 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const repoRoot = new URL("../../../", import.meta.url);
 const workflow = await readFile(new URL(".github/workflows/deploy-marketing.yaml", repoRoot), "utf8");
 const dockerfile = await readFile(new URL("docker/Dockerfile.www", repoRoot), "utf8");
+const caddyInstaller = await readFile(new URL("deploy/las/bin/install-marketing-caddy.sh", repoRoot), "utf8");
+const regionalPreTrailingSlashUrl = new URL(
+	"deploy/las/caddy/yonaris-marketing-regional-pre-trailing-slash.caddy",
+	repoRoot,
+);
+const REGIONAL_PRE_TRAILING_SLASH_SHA = "804857e0867dfff19a5369eebf06cfe1d7865eff6d28e78309921d3cfd38ab52";
 
 const ACTION_PINS = [
 	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -35,6 +43,22 @@ test("release supply chain uses immutable action and image references", () => {
 		workflow,
 		/docker\/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a[\s\S]*?platforms: linux\/amd64[\s\S]*?load: true[\s\S]*?push: false/u,
 	);
+});
+
+test("release fixtures bind the deployed regional pre-trailing-slash predecessor byte-for-byte", async () => {
+	ordered(
+		"Verify release fixtures",
+		"bash deploy/las/bin/install-marketing-caddy.test.sh",
+		"Build and load the immutable release image",
+	);
+	assert.equal(existsSync(regionalPreTrailingSlashUrl), true, "missing deployed regional predecessor snapshot");
+	const predecessor = await readFile(regionalPreTrailingSlashUrl);
+	assert.equal(createHash("sha256").update(predecessor).digest("hex"), REGIONAL_PRE_TRAILING_SLASH_SHA);
+	assert.match(
+		caddyInstaller,
+		new RegExp(`REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA="${REGIONAL_PRE_TRAILING_SLASH_SHA}"`, "u"),
+	);
+	assert.match(caddyInstaller, /"\$REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA"\) return 0/u);
 });
 
 test("the exact image is tested directly and through pinned Caddy before its only push", () => {

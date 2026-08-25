@@ -11,6 +11,8 @@ V2="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-v2.caddy"
 FINAL="$REPO_ROOT/deploy/las/caddy/yonaris-marketing.caddy"
 PRE_R0_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-pre-r0.caddy"
 GLOBAL_R0_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-global-r0.caddy"
+REGIONAL_PRE_TRAILING_SLASH_RELEASE="$REPO_ROOT/deploy/las/caddy/yonaris-marketing-regional-pre-trailing-slash.caddy"
+REGIONAL_PRE_TRAILING_SLASH_SHA="804857e0867dfff19a5369eebf06cfe1d7865eff6d28e78309921d3cfd38ab52"
 
 TEST_ROOT="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
@@ -200,16 +202,35 @@ file_snapshot() {
 	sha256sum "$1"
 }
 
+# RED: the deployed regional predecessor is an immutable, explicitly allowlisted fixture.
+if [[ -f "$REGIONAL_PRE_TRAILING_SLASH_RELEASE" ]] &&
+	[[ "$(sha256sum "$REGIONAL_PRE_TRAILING_SLASH_RELEASE" | cut -d' ' -f1)" == "$REGIONAL_PRE_TRAILING_SLASH_SHA" ]]; then
+	pass "regional pre-trailing-slash predecessor snapshot is immutable"
+else
+	fail "regional pre-trailing-slash predecessor snapshot is immutable"
+fi
+if grep -Fq "REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA=\"$REGIONAL_PRE_TRAILING_SLASH_SHA\"" "$INSTALLER" &&
+	grep -Fq '"$REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA"' "$INSTALLER"; then
+	pass "installer explicitly allowlists the regional pre-trailing-slash predecessor"
+else
+	fail "installer explicitly allowlists the regional pre-trailing-slash predecessor"
+fi
+
 # RED: every reviewed state and final-current are accepted, with full health.
-for state in redirect v1 v2 pre_r0_release global_r0_release final; do
+for state in redirect v1 v2 pre_r0_release global_r0_release regional_pre_trailing_slash_release final; do
 	case "$state" in
 		redirect) fragment="$REDIRECT" ;;
 		v1) fragment="$V1" ;;
 		v2) fragment="$V2" ;;
 		pre_r0_release) fragment="$PRE_R0_RELEASE" ;;
 		global_r0_release) fragment="$GLOBAL_R0_RELEASE" ;;
+		regional_pre_trailing_slash_release) fragment="$REGIONAL_PRE_TRAILING_SLASH_RELEASE" ;;
 		final) fragment="$FINAL" ;;
 	esac
+	if [[ ! -f "$fragment" ]]; then
+		fail "$state reviewed Caddy state fixture exists"
+		continue
+	fi
 	new_case "accepted_$state"
 	write_full_config "$fragment" "$TARGET"
 	cp "$TARGET" "$CASE_ROOT/original"
