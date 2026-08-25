@@ -2605,7 +2605,8 @@
 }
 
 .sf-answer-evidence {
-	margin-top: 0.9rem;
+	width: min(100% - 3rem, var(--sf-max));
+	margin: 0 auto clamp(5rem, 8vw, 8rem);
 	border-top: 3px solid var(--sf-orange);
 	border-bottom: 1px solid color-mix(in srgb, white 16%, transparent);
 	background: color-mix(in srgb, var(--sf-navy-soft) 82%, transparent);
@@ -2653,7 +2654,7 @@
 	border-right: 0;
 }
 
-.sf-answer-evidence li:nth-last-child(-n + 3) {
+.sf-answer-evidence li:nth-last-child(-n + 2) {
 	border-bottom: 0;
 }
 
@@ -3129,9 +3130,13 @@
 		grid-template-columns: 1fr;
 	}
 
+	.sf-answer-evidence {
+		width: min(100% - 2rem, var(--sf-max));
+	}
+
 	.sf-answer-evidence li,
 	.sf-answer-evidence li:nth-child(3n),
-	.sf-answer-evidence li:nth-last-child(-n + 3) {
+	.sf-answer-evidence li:nth-last-child(-n + 2) {
 		border-right: 0;
 		border-bottom: 1px solid color-mix(in srgb, white 13%, transparent);
 	}

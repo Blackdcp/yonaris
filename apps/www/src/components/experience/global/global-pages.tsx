@@ -1,8 +1,8 @@
 import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
 import { LeadForm } from "../shared/lead-form";
+import { GlobalHomeReview } from "./global-home-review";
 import {
-	AnswerFieldScene,
 	ChangePathScene,
 	CompanyConstellationScene,
 	ContactSignalScene,
@@ -45,25 +45,7 @@ export function GlobalHomePage() {
 	const copy = GLOBAL_COPY.home;
 	return (
 		<GlobalShell pageKey="home" scene="answer-field">
-			<section className="sf-home-opening">
-				<div className="sf-home-opening__copy">
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<div className="sf-actions">
-						<a className="sf-button" href={copy.primaryAction.href}>
-							{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-					<div className="sf-home-opening__shift">
-						<span>Start focused</span>
-						<i />
-						<strong>One decision-critical question</strong>
-						<small>Expand by brand · market · language</small>
-					</div>
-				</div>
-				<AnswerFieldScene />
-			</section>
+			<GlobalHomeReview />
 
 			<section className="sf-situation-chapter">
 				<header>

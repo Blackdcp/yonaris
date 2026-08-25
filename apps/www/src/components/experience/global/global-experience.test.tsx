@@ -26,9 +26,29 @@ function componentBlocks(markup: string, tag: string, className: string): string
 	return [...markup.matchAll(pattern)].map((match) => match[1] ?? "");
 }
 
-function fieldsIn(block: string, attributeName: string): Map<string, string> {
+function fieldNodesIn(block: string, attributeName: string): { name: string; value: string }[] {
 	const pattern = new RegExp(`<div[^>]*${attributeName}="([^"]+)"[^>]*>([\\s\\S]*?)</div>`, "g");
-	return new Map([...block.matchAll(pattern)].map((match) => [match[1] ?? "", plainText(match[2] ?? "")]));
+	return [...block.matchAll(pattern)].map((match) => {
+		const body = match[2] ?? "";
+		const valueMarkup =
+			body.match(/<dd[^>]*>([\s\S]*?)<\/dd>/)?.[1] ?? body.match(/<p[^>]*>([\s\S]*?)<\/p>/)?.[1] ?? body;
+		return { name: match[1] ?? "", value: plainText(valueMarkup) };
+	});
+}
+
+function fieldsIn(block: string, attributeName: string): Map<string, string> {
+	return new Map(fieldNodesIn(block, attributeName).map((field) => [field.name, field.value]));
+}
+
+function matchingElementEnd(markup: string, tag: string, openingIndex: number): number {
+	const tags = new RegExp(`<\\/?${tag}\\b[^>]*>`, "g");
+	tags.lastIndex = openingIndex;
+	let depth = 0;
+	for (const match of markup.matchAll(tags)) {
+		depth += match[0].startsWith(`</${tag}`) ? -1 : 1;
+		if (depth === 0) return (match.index ?? -1) + match[0].length;
+	}
+	return -1;
 }
 
 describe("Global zero-to-one experience", () => {
@@ -72,12 +92,14 @@ describe("Global zero-to-one experience", () => {
 			action: 55,
 		} satisfies Record<(typeof expectedFields)[number], number>;
 		const panels = componentBlocks(markup, "article", "sf-answer-field__answer");
-		const records = panels.map((panel) => fieldsIn(panel, "data-answer-field"));
+		const rawRecords = panels.map((panel) => fieldNodesIn(panel, "data-answer-field"));
+		const records = rawRecords.map((fields) => new Map(fields.map((field) => [field.name, field.value])));
 
 		expect(markup.match(/data-situation=/g) ?? []).toHaveLength(5);
 		expect(markup.match(/data-answer-question=/g) ?? []).toHaveLength(5);
 		expect(panels).toHaveLength(5);
-		for (const record of records) {
+		for (const [index, record] of records.entries()) {
+			expect(rawRecords[index]).toHaveLength(6);
 			expect([...record.keys()]).toEqual(expectedFields);
 			for (const field of expectedFields) {
 				expect(record.get(field)?.length ?? 0, `${field} must contain concrete review content`).toBeGreaterThanOrEqual(
@@ -86,9 +108,10 @@ describe("Global zero-to-one experience", () => {
 			}
 		}
 		for (const field of expectedFields) {
-			expect(new Set(records.map((record) => record.get(field))).size, `${field} must change with the selected state`).toBe(
-				5,
-			);
+			expect(
+				new Set(records.map((record) => record.get(field))).size,
+				`${field} must change with the selected state`,
+			).toBe(5);
 		}
 		expect(new Set(records.map((record) => expectedFields.map((field) => record.get(field)).join("|"))).size).toBe(5);
 		expect(markup).toContain('aria-selected="true"');
@@ -97,48 +120,83 @@ describe("Global zero-to-one experience", () => {
 		expect(markup).toContain("Complete illustrative answer");
 	});
 
-	it("binds the opening evidence rail to the selected six-part illustrative record", () => {
+	it("binds an exact five-item evidence rail directly after the closed homepage opening", () => {
 		const home = markupFor("home");
+		const openingStart = home.indexOf('<section class="sf-home-opening">');
+		const openingEnd = matchingElementEnd(home, "section", openingStart);
+		const evidenceStart = home.indexOf('<section class="sf-answer-evidence"');
 		const rail = home.match(
-			/<section[^>]*data-evidence-rail="selected-record"[^>]*aria-labelledby="([^"]+)"[^>]*>([\s\S]*?)<\/section>/,
+			/<section class="sf-answer-evidence"[^>]*data-evidence-rail="selected-record"[^>]*aria-labelledby="([^"]+)"[^>]*>([\s\S]*?)<\/section>/,
 		);
-		const defaultPanel = fieldsIn(componentBlocks(home, "article", "sf-answer-field__answer")[0] ?? "", "data-answer-field");
+		const defaultPanel = fieldsIn(
+			componentBlocks(home, "article", "sf-answer-field__answer")[0] ?? "",
+			"data-answer-field",
+		);
 		const evidenceItems = [
 			...(rail?.[2] ?? "").matchAll(/<li[^>]*data-evidence-item="([^"]+)"[^>]*>([\s\S]*?)<\/li>/g),
 		];
+		const expectedItems = [
+			["question", "Selected buyer question"],
+			["answer", "Complete answer"],
+			["brand-alternatives", "Brand and alternatives"],
+			["citations", "Visible citations"],
+			["action", "Next review item"],
+		] as const;
 
 		expect(rail, "the opening artefact must be a labelled region").not.toBeNull();
 		expect(rail?.[2]).toContain(`<h2 id="${rail?.[1]}">`);
-		expect(evidenceItems.map((item) => item[1])).toEqual([
-			"question",
-			"answer",
-			"presence",
-			"comparison",
-			"citations",
-			"action",
-		]);
-		for (const item of evidenceItems) {
-			const field = item[1] ?? "";
-			const content = plainText(item[2] ?? "");
-			expect(content).toContain(defaultPanel.get(field));
-			expect(content.length, `${field} evidence must be substantive`).toBeGreaterThanOrEqual(70);
+		expect(openingStart).toBeGreaterThan(-1);
+		expect(openingEnd).toBe(evidenceStart);
+		expect(evidenceItems.map((item) => item[1])).toEqual(expectedItems.map(([id]) => id));
+		for (const [index, [id, label]] of expectedItems.entries()) {
+			const item = evidenceItems[index];
+			expect(item?.[2]).toContain(`<strong>${label}</strong>`);
+			expect(plainText(item?.[2] ?? "").length, `${id} evidence must be substantive`).toBeGreaterThanOrEqual(70);
 		}
+		expect(plainText(evidenceItems[0]?.[2] ?? "")).toContain(defaultPanel.get("question"));
+		expect(plainText(evidenceItems[1]?.[2] ?? "")).toContain(defaultPanel.get("answer"));
+		expect(plainText(evidenceItems[2]?.[2] ?? "")).toContain(defaultPanel.get("presence"));
+		expect(plainText(evidenceItems[2]?.[2] ?? "")).toContain(defaultPanel.get("comparison"));
+		expect(plainText(evidenceItems[3]?.[2] ?? "")).toContain(defaultPanel.get("citations"));
+		expect(plainText(evidenceItems[4]?.[2] ?? "")).toContain(defaultPanel.get("action"));
 		expect(home).toContain('data-evidence-record="shortlist"');
-		expect(home).toContain("Visible illustrative citations");
-		expect(home).toContain("Next review action");
 		expect(home.indexOf("data-evidence-rail")).toBeLessThan(home.indexOf("sf-situation-chapter"));
+	});
+
+	it("gives evidence headings unique IDs when the homepage review renders more than once", () => {
+		expect(subject?.GLOBAL_PAGES, "Global Human pages must exist").toBeDefined();
+		if (!subject?.GLOBAL_PAGES) return;
+		const Home = subject.GLOBAL_PAGES.home;
+		const markup = renderToStaticMarkup(
+			<>
+				<Home />
+				<Home />
+			</>,
+		);
+		const rails = [
+			...markup.matchAll(
+				/<section class="sf-answer-evidence"[^>]*aria-labelledby="([^"]+)"[^>]*>([\s\S]*?)<\/section>/g,
+			),
+		];
+		const ids = rails.map((rail) => rail[1] ?? "");
+
+		expect(rails).toHaveLength(2);
+		expect(new Set(ids).size).toBe(2);
+		for (const rail of rails) expect(rail[2]).toContain(`<h2 id="${rail[1]}">`);
 	});
 
 	it("shows a controllable four-part product journey", () => {
 		const product = markupFor("product");
 		const panels = componentBlocks(product, "section", "sf-product-lens__panel");
-		const records = panels.map((panel) => fieldsIn(panel, "data-decision-field"));
+		const rawRecords = panels.map((panel) => fieldNodesIn(panel, "data-decision-field"));
+		const records = rawRecords.map((fields) => new Map(fields.map((field) => [field.name, field.value])));
 
 		expect(product.match(/data-product-step=/g) ?? []).toHaveLength(4);
 		expect(product.match(/aria-controls="product-panel-/g) ?? []).toHaveLength(4);
 		expect(product).toContain('data-scene-output="product-lens"');
 		expect(panels).toHaveLength(4);
-		for (const record of records) {
+		for (const [index, record] of records.entries()) {
+			expect(rawRecords[index], `Product panel ${index + 1} must render exactly four field nodes`).toHaveLength(4);
 			expect([...record.keys()]).toEqual(["input", "evidence", "decision", "action"]);
 			expect([...record.values()].every((value) => value.length >= 35)).toBe(true);
 		}

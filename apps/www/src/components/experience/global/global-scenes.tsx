@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRovingTabs } from "../shared/use-roving-tabs";
 
 const answerQuestions = [
@@ -69,11 +69,19 @@ const answerQuestions = [
 	},
 ] as const;
 
-type AnswerQuestionId = (typeof answerQuestions)[number]["id"];
+export type AnswerQuestionId = (typeof answerQuestions)[number]["id"];
 const answerQuestionIds = answerQuestions.map((question) => question.id);
 
-export function AnswerFieldScene() {
-	const [active, setActive] = useState<AnswerQuestionId>("shortlist");
+export function AnswerFieldScene({
+	active: controlledActive,
+	onChange,
+}: {
+	active?: AnswerQuestionId;
+	onChange?: (next: AnswerQuestionId) => void;
+} = {}) {
+	const [internalActive, setInternalActive] = useState<AnswerQuestionId>("shortlist");
+	const active = controlledActive ?? internalActive;
+	const setActive = onChange ?? setInternalActive;
 	const tabs = useRovingTabs({
 		items: answerQuestionIds,
 		active,
@@ -81,15 +89,6 @@ export function AnswerFieldScene() {
 		idPrefix: "answer-question",
 	});
 	const activeIndex = answerQuestionIds.indexOf(active);
-	const activeQuestion = answerQuestions[activeIndex] ?? answerQuestions[0];
-	const evidenceItems = [
-		{ id: "question", label: "Selected buyer question", detail: activeQuestion.prompt },
-		{ id: "answer", label: "Complete illustrative answer", detail: activeQuestion.answer },
-		{ id: "presence", label: "Brand presence", detail: activeQuestion.presence },
-		{ id: "comparison", label: "Alternatives and comparison", detail: activeQuestion.comparison },
-		{ id: "citations", label: "Visible illustrative citations", detail: activeQuestion.citations },
-		{ id: "action", label: "Next review action", detail: activeQuestion.nextAction },
-	] as const;
 
 	return (
 		<section
@@ -161,26 +160,47 @@ export function AnswerFieldScene() {
 					))}
 				</div>
 			</div>
-			<section
-				className="sf-answer-evidence"
-				data-evidence-rail="selected-record"
-				data-evidence-record={active}
-				aria-labelledby="answer-evidence-title"
-			>
-				<header>
-					<span>Illustrative selected record</span>
-					<h2 id="answer-evidence-title">The active question, answer, comparison, sources, and action</h2>
-				</header>
-				<ol>
-					{evidenceItems.map((item, index) => (
-						<li key={item.id} data-evidence-item={item.id}>
-							<span>{String(index + 1).padStart(2, "0")}</span>
-							<strong>{item.label}</strong>
-							<p>{item.detail}</p>
-						</li>
-					))}
-				</ol>
-			</section>
+		</section>
+	);
+}
+
+export function AnswerEvidenceRail({ active }: { active: AnswerQuestionId }) {
+	const activeIndex = answerQuestionIds.indexOf(active);
+	const activeQuestion = answerQuestions[activeIndex] ?? answerQuestions[0];
+	const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+	const titleId = `answer-evidence-title-${instanceId}`;
+	const evidenceItems = [
+		{ id: "question", label: "Selected buyer question", detail: activeQuestion.prompt },
+		{ id: "answer", label: "Complete answer", detail: activeQuestion.answer },
+		{
+			id: "brand-alternatives",
+			label: "Brand and alternatives",
+			detail: `Brand presence ${activeQuestion.presence} Alternatives and comparison ${activeQuestion.comparison}`,
+		},
+		{ id: "citations", label: "Visible citations", detail: activeQuestion.citations },
+		{ id: "action", label: "Next review item", detail: activeQuestion.nextAction },
+	] as const;
+
+	return (
+		<section
+			className="sf-answer-evidence"
+			data-evidence-rail="selected-record"
+			data-evidence-record={active}
+			aria-labelledby={titleId}
+		>
+			<header>
+				<span>Illustrative selected record</span>
+				<h2 id={titleId}>The active question, answer, comparison, sources, and action</h2>
+			</header>
+			<ol>
+				{evidenceItems.map((item, index) => (
+					<li key={item.id} data-evidence-item={item.id}>
+						<span>{String(index + 1).padStart(2, "0")}</span>
+						<strong>{item.label}</strong>
+						<p>{item.detail}</p>
+					</li>
+				))}
+			</ol>
 		</section>
 	);
 }
