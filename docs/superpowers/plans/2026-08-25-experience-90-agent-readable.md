@@ -457,7 +457,7 @@ git commit -m "feat localize china brand diagnosis story"
 - Modify: `apps/www/scripts/smoke-marketing.mjs`
 - Modify: `apps/www/scripts/smoke-marketing-caddy.mjs`
 - Modify: `apps/www/src/styles.test.ts`
-- Modify: `docs/verification/zero-one-site-rebuild-release.md`
+- Create: `docs/verification/zero-one-site-rebuild-release.md`
 - Modify only if a verified defect requires it: files changed by Tasks 1–4
 
 **Interfaces:**
