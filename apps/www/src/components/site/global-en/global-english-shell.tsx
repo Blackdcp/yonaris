@@ -5,7 +5,7 @@ import { GlobalEnglishHeader } from "./global-english-header";
 
 export function GlobalEnglishShell({ activeKey, children }: { activeKey?: GlobalEnglishPageKey; children: ReactNode }) {
 	return (
-		<div className="global-en" data-edition="global-en" lang="en">
+		<div className="global-en" data-edition="global-en" data-visual-system="global-cinematic" lang="en">
 			<GlobalEnglishHeader activeKey={activeKey} />
 			<main id="main-content">{children}</main>
 			<GlobalEnglishFooter activeKey={activeKey} />

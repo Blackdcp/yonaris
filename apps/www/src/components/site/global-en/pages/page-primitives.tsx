@@ -24,7 +24,19 @@ export function PageHero({
 	secondaryLabel?: string;
 }) {
 	return (
-		<section id={id} className={`global-en__hero${dark ? " global-en__band--dark" : ""}`}>
+		<section
+			id={id}
+			className={`global-en__hero${dark ? " global-en__band--dark" : ""}`}
+			data-stage="global-hero"
+			data-layout="editorial-stage"
+			data-tone="ink"
+		>
+			<div className="global-en__hero-atmosphere" aria-hidden="true">
+				<i />
+				<i />
+				<i />
+				<b />
+			</div>
 			<div className="global-en__hero-copy">
 				<p className="global-en__eyebrow">{eyebrow}</p>
 				<h1>{title}</h1>
@@ -62,16 +74,22 @@ export function PageSection({
 	dark?: boolean;
 }) {
 	return (
-		<section id={id} className={`global-en__section${dark ? " global-en__band--dark" : ""}`}>
-			<div className="global-en__section-head">
-				<span className="global-en__section-number">{number}</span>
-				<div>
+		<section
+			id={id}
+			className={`global-en__section${dark ? " global-en__band--dark" : ""}`}
+			data-stage={id === "operating-loop" ? "operating-system" : "story"}
+			data-layout="editorial-stage"
+			data-tone={dark ? "ink" : "paper"}
+		>
+			<header className="global-en__story-intro">
+				<div className="global-en__story-label">
+					<span>{number}</span>
 					{eyebrow && <p className="global-en__eyebrow">{eyebrow}</p>}
-					<h2>{title}</h2>
-					<p>{body}</p>
 				</div>
-			</div>
-			{children}
+				<h2>{title}</h2>
+				<p className="global-en__story-summary">{body}</p>
+			</header>
+			{children ? <div className="global-en__story-visual">{children}</div> : null}
 		</section>
 	);
 }
@@ -86,7 +104,7 @@ export function CloseSection({
 	body?: string;
 }) {
 	return (
-		<section id={id} className="global-en__close">
+		<section id={id} className="global-en__close" data-stage="conversion" data-layout="editorial-stage">
 			<p className="global-en__eyebrow">NEXT STEP</p>
 			<h2>{title}</h2>
 			<p>{body}</p>

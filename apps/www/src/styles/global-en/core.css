@@ -39,10 +39,12 @@
 	transform: translateY(0);
 }
 .global-en__header {
-	position: relative;
+	position: sticky;
 	z-index: 10;
+	top: 0;
 	border-bottom: 1px solid var(--ge-rule);
-	background: var(--ge-paper);
+	background: color-mix(in srgb, var(--ge-paper) 92%, transparent);
+	backdrop-filter: blur(18px);
 }
 .global-en__header-inner {
 	max-width: 96rem;
@@ -124,10 +126,16 @@
 	color: var(--ge-ink);
 	font-weight: 650;
 }
+.global-en .global-en__button {
+	color: var(--ge-ink);
+}
 .global-en__button:hover {
 	background: var(--ge-ink);
 	color: var(--ge-paper);
 	border-color: var(--ge-ink);
+}
+.global-en .global-en__button:hover {
+	color: var(--ge-paper);
 }
 .global-en__button--compact {
 	min-height: 2.55rem;
@@ -140,36 +148,94 @@
 	font-weight: 600;
 }
 .global-en__hero {
-	min-height: min(52rem, calc(100svh - 5rem));
+	position: relative;
+	isolation: isolate;
+	min-height: min(56rem, 88svh);
 	display: grid;
-	grid-template-columns: minmax(0, 0.88fr) minmax(34rem, 1.12fr);
-	gap: clamp(2rem, 5vw, 7rem);
-	align-items: center;
-	padding: clamp(4rem, 8vw, 8rem) max(3rem, calc((100vw - 90rem) / 2));
-	border-bottom: 1px solid var(--ge-rule);
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+	grid-template-rows: minmax(0, 1fr);
+	column-gap: clamp(1rem, 2vw, 2rem);
+	align-items: start;
+	padding: clamp(4.5rem, 7vw, 7rem) max(3rem, calc((100vw - 94rem) / 2)) clamp(3rem, 5vw, 5rem);
+	border-bottom: 1px solid var(--yonaris-blue-gray);
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+	overflow: hidden;
 }
 .global-en__hero-copy {
-	max-width: 42rem;
+	position: relative;
+	z-index: 3;
+	grid-column: 1 / span 5;
+	grid-row: 1;
+	max-width: 58rem;
+	align-self: center;
 }
 .global-en__hero h1 {
-	margin: 1.4rem 0 1.5rem;
-	max-width: 13ch;
-	font-size: clamp(3.5rem, 6vw, 6rem);
-	line-height: 0.96;
-	letter-spacing: -0.065em;
-	font-weight: 520;
+	margin: 1.25rem 0 1.5rem;
+	max-width: 9ch;
+	font-size: clamp(4rem, 5.7vw, 6rem);
+	line-height: 0.88;
+	letter-spacing: -0.075em;
+	font-weight: 500;
+	text-wrap: balance;
 }
 .global-en__lead {
-	max-width: 38rem;
+	max-width: 42rem;
 	font-size: clamp(1.08rem, 1.5vw, 1.25rem);
-	color: var(--ge-slate);
+	color: var(--yonaris-mist);
 }
 .global-en__hero-bridge {
-	margin: -0.6rem 0 1.2rem;
-	max-width: 24ch;
+	margin: -0.35rem 0 1.2rem;
+	max-width: 32ch;
 	font-size: clamp(1.3rem, 2vw, 1.8rem);
 	line-height: 1.18;
 	font-weight: 620;
+}
+.global-en__hero > .global-en__graphic {
+	position: relative;
+	z-index: 2;
+	grid-column: 6 / -1;
+	grid-row: 1;
+	width: 100%;
+	align-self: center;
+	margin-top: 0;
+	transform: none;
+	border-color: color-mix(in srgb, var(--ge-paper) 20%, transparent);
+	box-shadow: 0 2rem 7rem color-mix(in srgb, var(--ge-ink) 55%, transparent);
+}
+.global-en__hero-atmosphere {
+	position: absolute;
+	z-index: -1;
+	inset: 0;
+	pointer-events: none;
+}
+.global-en__hero-atmosphere i {
+	position: absolute;
+	right: clamp(-16rem, -8vw, -6rem);
+	bottom: -22rem;
+	width: clamp(34rem, 68vw, 76rem);
+	aspect-ratio: 1;
+	border: 1px solid color-mix(in srgb, var(--ge-paper) 12%, transparent);
+	border-radius: 50%;
+}
+.global-en__hero-atmosphere i:nth-child(2) {
+	transform: scale(0.74);
+}
+.global-en__hero-atmosphere i:nth-child(3) {
+	transform: scale(0.48);
+}
+.global-en__hero-atmosphere b {
+	position: absolute;
+	right: 12%;
+	top: 18%;
+	width: 0.8rem;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	background: var(--ge-signal);
+	box-shadow:
+		-26rem 13rem 0 color-mix(in srgb, var(--ge-signal) 45%, transparent),
+		9rem 20rem 0 color-mix(in srgb, var(--ge-paper) 25%, transparent),
+		-12rem 31rem 0 color-mix(in srgb, var(--ge-paper) 18%, transparent);
 }
 .global-en__eyebrow {
 	margin: 0;
@@ -180,6 +246,9 @@
 	text-transform: uppercase;
 	color: var(--ge-slate);
 }
+.global-en__hero .global-en__eyebrow {
+	color: var(--ge-signal);
+}
 .global-en__actions {
 	display: flex;
 	align-items: center;
@@ -187,38 +256,59 @@
 	margin-top: 2rem;
 }
 .global-en__section {
-	padding: clamp(4rem, 8vw, 8rem) max(3rem, calc((100vw - 90rem) / 2));
+	position: relative;
+	padding: clamp(5rem, 10vw, 10rem) max(3rem, calc((100vw - 94rem) / 2));
 	border-bottom: 1px solid var(--ge-rule);
 }
-.global-en__section-head {
+.global-en__story-intro {
+	max-width: 88rem;
 	display: grid;
-	grid-template-columns: 5rem minmax(0, 46rem);
-	gap: 1.5rem;
-	margin-bottom: 3rem;
+	grid-template-columns: minmax(14rem, 0.62fr) minmax(0, 1.35fr);
+	column-gap: clamp(2rem, 7vw, 8rem);
+	row-gap: 1.5rem;
+	align-items: start;
 }
-.global-en__section-number {
+.global-en__story-label {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+.global-en__story-label > span {
+	min-width: 2.4rem;
+	min-height: 2.4rem;
+	display: inline-grid;
+	place-items: center;
+	border: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+	border-radius: 50%;
 	font:
 		500 0.72rem / 1.3 "Geist Mono",
 		monospace;
 	color: var(--ge-signal-text);
 }
-.global-en__band--dark .global-en__section-number {
+.global-en__band--dark .global-en__story-label > span {
 	color: var(--ge-signal);
 }
 .global-en__section h2,
 .global-en__close h2 {
-	margin: 0.65rem 0 1.25rem;
-	max-width: 18ch;
+	grid-column: 2;
+	margin: 0;
+	max-width: 16ch;
 	font-size: clamp(2.4rem, 4.4vw, 4.75rem);
-	line-height: 1;
+	line-height: 0.96;
 	letter-spacing: -0.055em;
 	font-weight: 520;
+	text-wrap: balance;
 }
-.global-en__section-head p:last-child,
+.global-en__story-summary,
 .global-en__close > p {
+	grid-column: 2;
+	margin: 0;
 	max-width: 42rem;
 	font-size: 1.1rem;
 	color: var(--ge-slate);
+}
+.global-en__story-visual {
+	margin-top: clamp(3rem, 6vw, 6rem);
 }
 .global-en__band--dark {
 	background: var(--ge-ink);
@@ -227,7 +317,7 @@
 }
 .global-en__band--dark .global-en__lead,
 .global-en__band--dark .global-en__eyebrow,
-.global-en__band--dark .global-en__section-head p:last-child {
+.global-en__band--dark .global-en__story-summary {
 	color: var(--yonaris-mist);
 }
 .global-en__band--dark .global-en__button {
@@ -244,6 +334,9 @@
 	justify-content: center;
 	padding: clamp(5rem, 9vw, 9rem) max(3rem, calc((100vw - 90rem) / 2));
 	background: var(--ge-paper-2);
+}
+.global-en__close h2 {
+	grid-column: auto;
 }
 .global-en__close .global-en__button {
 	margin-top: 1.5rem;
@@ -1194,6 +1287,260 @@
 .global-en__delivery-path i {
 	color: var(--ge-signal-text);
 }
+
+.global-en__graphic[data-protagonist="answer-orbit"] {
+	min-height: 36rem;
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+	color: var(--ge-paper);
+	box-shadow: none;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-bar {
+	position: absolute;
+	z-index: 4;
+	top: 0;
+	left: 2rem;
+	right: 2rem;
+	border: 0;
+	color: var(--yonaris-stone);
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-layout {
+	position: relative;
+	min-height: 42rem;
+	display: grid;
+	grid-template-columns: 1fr;
+	place-items: center;
+	padding: 2rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions {
+	position: absolute;
+	z-index: 2;
+	inset: 0;
+	display: block;
+	border: 0;
+	pointer-events: none;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button {
+	position: absolute;
+	width: 12rem;
+	min-height: 3.5rem;
+	padding: 0.75rem 1rem;
+	border: 1px solid color-mix(in srgb, var(--ge-paper) 22%, transparent);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--ge-ink) 88%, var(--yonaris-blue-gray));
+	color: var(--ge-paper);
+	box-shadow: 0 1rem 2rem color-mix(in srgb, var(--ge-ink) 28%, transparent);
+	pointer-events: auto;
+	transition:
+		transform 220ms ease,
+		background 220ms ease;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions em {
+	color: inherit;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:hover,
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button[aria-selected="true"] {
+	transform: translateY(-0.2rem);
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+	box-shadow: 0 1rem 3rem color-mix(in srgb, var(--ge-signal) 24%, transparent);
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(1) {
+	top: 1.5rem;
+	left: 1.5rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(2) {
+	top: 1.5rem;
+	right: 1.5rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(3) {
+	right: 0.75rem;
+	top: 50%;
+	transform: translateY(-50%);
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(3):hover,
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(3)[aria-selected="true"] {
+	transform: translateY(calc(-50% - 0.2rem));
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(4) {
+	right: 2.5rem;
+	bottom: 1.4rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(5) {
+	left: 2.5rem;
+	bottom: 1.4rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-panel {
+	position: relative;
+	z-index: 1;
+	width: clamp(28rem, 38vw, 34rem);
+	min-height: 28rem;
+	padding: clamp(1.4rem, 3vw, 2.5rem);
+	border: 1px solid color-mix(in srgb, var(--ge-ink) 14%, transparent);
+	border-radius: 1.75rem;
+	background: var(--ge-paper);
+	color: var(--ge-ink);
+	box-shadow:
+		0 2rem 5rem color-mix(in srgb, var(--ge-ink) 46%, transparent),
+		0 0 0 0.65rem color-mix(in srgb, var(--ge-paper) 7%, transparent);
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-panel::before {
+	content: "AI";
+	position: absolute;
+	right: 1.4rem;
+	top: 1.4rem;
+	width: 2.25rem;
+	aspect-ratio: 1;
+	display: grid;
+	place-items: center;
+	border-radius: 50%;
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+	font: 600 0.64rem / 1 "Geist Mono", monospace;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-fields {
+	border: 0;
+	gap: 0.6rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-fields section {
+	border: 1px solid var(--ge-rule);
+	border-radius: 0.65rem;
+}
+.global-en__graphic[data-protagonist="answer-orbit"] figcaption {
+	border-color: color-mix(in srgb, var(--ge-paper) 14%, transparent);
+	color: var(--yonaris-stone);
+}
+
+.global-en__graphic[data-protagonist="operating-system"] {
+	border-radius: 1.25rem;
+	box-shadow: 0 2rem 6rem color-mix(in srgb, var(--ge-ink) 34%, transparent);
+}
+.global-en__graphic[data-protagonist="evidence-path"] .global-en__path {
+	position: relative;
+	gap: clamp(0.8rem, 2vw, 1.5rem);
+	padding: clamp(1.5rem, 4vw, 3rem);
+	border: 0;
+}
+.global-en__graphic[data-protagonist="evidence-path"] .global-en__path::before {
+	content: "";
+	position: absolute;
+	left: 8%;
+	right: 8%;
+	top: 50%;
+	height: 1px;
+	background: var(--ge-signal);
+}
+.global-en__graphic[data-protagonist="evidence-path"] .global-en__path li {
+	z-index: 1;
+	min-height: 14rem;
+	border: 1px solid var(--ge-rule);
+	background: var(--ge-paper);
+	box-shadow: 0 1.2rem 2.4rem color-mix(in srgb, var(--ge-ink) 8%, transparent);
+}
+.global-en__graphic[data-protagonist="evidence-path"] .global-en__path li:nth-child(even) {
+	transform: translateY(2.5rem);
+}
+.global-en__graphic[data-protagonist="evidence-ledger"] {
+	border-radius: 1.25rem;
+	box-shadow: 0 2rem 6rem color-mix(in srgb, var(--ge-ink) 30%, transparent);
+}
+.global-en__graphic[data-protagonist="evidence-ledger"] .global-en__ledger tr:nth-child(2) td:first-child,
+.global-en__graphic[data-protagonist="evidence-ledger"] .global-en__explorer-equation b {
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] {
+	position: relative;
+	min-height: 31rem;
+	border-radius: 1.25rem;
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map {
+	position: absolute;
+	z-index: 2;
+	inset: 1.5rem;
+	display: block;
+	border: 0;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button {
+	position: absolute;
+	width: 9rem;
+	min-height: 4rem;
+	border: 1px solid var(--yonaris-blue-gray);
+	border-radius: 999px;
+	background: var(--ge-ink);
+	color: var(--ge-paper);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button[aria-selected="true"] {
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map em {
+	color: inherit;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(1) {
+	left: 0;
+	top: 0;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(2) {
+	right: 0;
+	top: 0;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(3) {
+	right: 0;
+	top: 50%;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(4) {
+	right: 14%;
+	bottom: 0;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(5) {
+	left: 14%;
+	bottom: 0;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-panel {
+	position: absolute;
+	z-index: 1;
+	inset: 20% 20%;
+	min-height: 0;
+	padding: 2rem;
+	border: 1px solid color-mix(in srgb, var(--ge-paper) 18%, transparent);
+	border-radius: 50%;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-panel h3 {
+	margin: 1rem 0;
+	font-size: clamp(1.5rem, 2.8vw, 3rem);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-panel small {
+	color: var(--ge-signal);
+}
+.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-panel > span {
+	align-self: center;
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__graphic[data-protagonist="responsibility-field"],
+.global-en__graphic[data-protagonist="diagnostic-brief"],
+.global-en__graphic[data-protagonist="privacy-route"] {
+	border-radius: 1.25rem;
+	box-shadow: 0 2rem 6rem color-mix(in srgb, var(--ge-ink) 18%, transparent);
+}
+.global-en__graphic[data-protagonist="responsibility-field"] .global-en__model > div:nth-of-type(2),
+.global-en__graphic[data-protagonist="diagnostic-brief"] .global-en__deliverables li:nth-child(2),
+.global-en__graphic[data-protagonist="privacy-route"] .global-en__model > div:nth-of-type(2) {
+	background: var(--ge-signal);
+	color: var(--ge-ink);
+}
+.global-en__graphic[data-protagonist="responsibility-field"] .global-en__model > div:nth-of-type(2) small,
+.global-en__graphic[data-protagonist="diagnostic-brief"] .global-en__deliverables li:nth-child(2) em,
+.global-en__graphic[data-protagonist="privacy-route"] .global-en__model > div:nth-of-type(2) small {
+	color: inherit;
+}
 .global-en__footer {
 	min-height: 22rem;
 	padding: 4rem max(3rem, calc((100vw - 90rem) / 2));
@@ -1268,17 +1615,93 @@
 	.global-en__hero {
 		min-height: auto;
 		grid-template-columns: 1fr;
+		grid-template-rows: auto;
 		padding: 4rem 1.25rem;
+	}
+	.global-en__hero-copy,
+	.global-en__hero > .global-en__graphic {
+		grid-column: 1;
+		grid-row: auto;
+	}
+	.global-en__hero > .global-en__graphic {
+		margin-top: 3rem;
+		transform: none;
 	}
 	.global-en__hero h1 {
 		font-size: clamp(3.2rem, 14vw, 5rem);
+	}
+	.global-en__graphic[data-protagonist="answer-orbit"] {
+		min-height: 0;
+		border-radius: 1rem 1rem 0 0;
+	}
+	.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-layout {
+		display: block;
+		min-height: 0;
+		padding: 0;
+	}
+	.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions {
+		position: static;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(9rem, 1fr));
+		overflow-x: auto;
+		border-bottom: 1px solid var(--yonaris-blue-gray);
+		pointer-events: auto;
+	}
+	.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button,
+	.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-questions button:nth-child(n) {
+		position: static;
+		width: auto;
+		min-height: 5rem;
+		border: 0;
+		border-right: 1px solid var(--yonaris-blue-gray);
+		border-radius: 0;
+		transform: none;
+	}
+	.global-en__graphic[data-protagonist="answer-orbit"] .global-en__studio-panel {
+		width: auto;
+		min-height: 0;
+		margin: 1rem;
+		border-radius: 1rem;
+	}
+	.global-en__graphic[data-protagonist="evidence-path"] .global-en__path::before {
+		display: none;
+	}
+	.global-en__graphic[data-protagonist="evidence-path"] .global-en__path li:nth-child(even) {
+		transform: none;
+	}
+	.global-en__graphic[data-protagonist="answer-constellation"] {
+		min-height: 0;
+	}
+	.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map {
+		position: static;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(8rem, 1fr));
+		overflow-x: auto;
+		border-bottom: 1px solid var(--yonaris-blue-gray);
+	}
+	.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button,
+	.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-map button:nth-child(n) {
+		position: static;
+		width: auto;
+		border-radius: 0;
+	}
+	.global-en__graphic[data-protagonist="answer-constellation"] .global-en__relationship-panel {
+		position: static;
+		min-height: 20rem;
+		margin: 1rem;
+		border-radius: 1rem;
 	}
 	.global-en__section,
 	.global-en__close {
 		padding: 4rem 1.25rem;
 	}
-	.global-en__section-head {
-		grid-template-columns: 2.5rem 1fr;
+	.global-en__story-intro {
+		grid-template-columns: 1fr;
+		row-gap: 1.25rem;
+	}
+	.global-en__section h2,
+	.global-en__story-summary {
+		grid-column: 1;
 	}
 	.global-en__window-body {
 		grid-template-columns: 1fr;

@@ -48,10 +48,36 @@ describe("中国区域完整页面", () => {
 		const markup = renderToStaticMarkup(<subject.ZhHomePage />);
 		expect(markup).toContain("客户正在先问 AI，再认识你的品牌。");
 		expect(markup).toContain('data-graphic="zh-answer-scene"');
+		expect(markup).toContain('data-visual-system="zh-decision"');
+		expect(markup).toContain('data-stage="market-command"');
+		expect(markup).toContain('data-stage="service-system"');
+		expect(markup).toContain('data-stage="delivery-proof"');
+		expect(markup).toContain('data-stage="global-capability"');
+		expect(markup).not.toContain('class="zh-site__section-head"');
 		expect(markup).toContain("看见");
 		expect(markup).toContain("判断");
 		expect(markup).toContain("行动");
 		expect(markup).toContain("验证");
+	});
+
+	it("每个中文页面都有独立的业务主视觉", () => {
+		expect(subject, "中国区域页面必须存在").toBeDefined();
+		if (!subject) return;
+		const protagonists = {
+			home: "anxiety-command",
+			product: "service-system",
+			approach: "delivery-roadmap",
+			research: "evidence-cabinet",
+			geo: "market-answer-map",
+			company: "global-service-field",
+			diagnostic: "contact-brief",
+			privacy: "privacy-guardrail",
+		} as const;
+		for (const [key, protagonist] of Object.entries(protagonists)) {
+			const Page = subject.ZH_PAGES[key as keyof typeof subject.ZH_PAGES];
+			const markup = renderToStaticMarkup(<Page />);
+			expect(markup).toContain(`data-protagonist="${protagonist}"`);
+		}
 	});
 
 	it("诊断页只显示姓名、电话、公司", () => {

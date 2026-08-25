@@ -15,13 +15,13 @@ export function ZhAnswerScene({ initialQuestion = "recommended" }: { initialQues
 	const [activeId, setActiveId] = useState<ZhQuestionId>(initialQuestion);
 	const active = getZhQuestion(activeId);
 	return (
-		<ZhGraphic type="zh-answer-scene" label="AI 品牌问题交互示意">
+		<ZhGraphic type="zh-answer-scene" label="AI 品牌问题交互示意" protagonist="anxiety-command">
 			<div className="zh-site__scene-bar">
 				<span>品牌回答现场</span>
 				<span>界面演示 · 非客户数据</span>
 			</div>
 			<div className="zh-site__scene-layout">
-				<div className="zh-site__scene-tabs" role="tablist" aria-label="选择你最担心的问题">
+				<div className="zh-site__scene-tabs" role="tablist" aria-label="选择你最担心的问题" data-layer="question">
 					{ZH_ANSWER_QUESTIONS.map((item, index) => (
 						<button
 							key={item.id}
@@ -36,24 +36,24 @@ export function ZhAnswerScene({ initialQuestion = "recommended" }: { initialQues
 					))}
 				</div>
 				<article className="zh-site__scene-panel" role="tabpanel" data-question={active.id}>
-					<header>
+					<header data-layer="question">
 						<small>客户正在问</small>
 						<h3>{active.question}</h3>
 					</header>
-					<section>
+					<section data-layer="answer">
 						<small>先看见</small>
 						<p>{active.answer}</p>
 					</section>
 					<div>
-						<section>
+						<section data-layer="judgement">
 							<small>再判断</small>
 							<p>{active.judgement}</p>
 						</section>
-						<section>
+						<section data-layer="evidence">
 							<small>看依据</small>
 							<p>{active.evidence}</p>
 						</section>
-						<section>
+						<section data-layer="action">
 							<small>下一步</small>
 							<p>{active.nextStep}</p>
 						</section>
@@ -68,7 +68,7 @@ export function ZhProductWorkbench({ initialModule = "observe" }: { initialModul
 	const [activeId, setActiveId] = useState<ZhProductModuleId>(initialModule);
 	const active = ZH_PRODUCT_MODULES.find(({ id }) => id === activeId) ?? ZH_PRODUCT_MODULES[0];
 	return (
-		<ZhGraphic type="zh-product-workbench" label="Yonaris 产品能力工作台" dark>
+		<ZhGraphic type="zh-product-workbench" label="Yonaris 产品能力工作台" protagonist="service-system" dark>
 			<div className="zh-site__workbench-tabs" role="tablist" aria-label="选择产品能力">
 				{ZH_PRODUCT_MODULES.map((item, index) => (
 					<button
@@ -111,7 +111,7 @@ export function ZhDeliveryPath({ initialStage = "diagnose" }: { initialStage?: Z
 	const [activeId, setActiveId] = useState<ZhDeliveryStageId>(initialStage);
 	const active = ZH_DELIVERY_STAGES.find(({ id }) => id === activeId) ?? ZH_DELIVERY_STAGES[0];
 	return (
-		<ZhGraphic type="zh-delivery-path" label="五步服务交付路径">
+		<ZhGraphic type="zh-delivery-path" label="五步服务交付路径" protagonist="delivery-roadmap">
 			<div className="zh-site__delivery-tabs" role="tablist" aria-label="选择服务阶段">
 				{ZH_DELIVERY_STAGES.map((item, index) => (
 					<button
@@ -152,7 +152,7 @@ export function ZhMarketContext({ initialContext = "china" }: { initialContext?:
 	const [activeId, setActiveId] = useState<"china" | "global">(initialContext);
 	const active = ZH_MARKET_CONTEXTS.find(({ id }) => id === activeId) ?? ZH_MARKET_CONTEXTS[0];
 	return (
-		<ZhGraphic type="zh-market-context" label="中国与全球市场配置对照">
+		<ZhGraphic type="zh-market-context" label="中国与全球市场配置对照" protagonist="global-service-field">
 			<div className="zh-site__context-tabs" role="tablist" aria-label="选择市场范围">
 				{ZH_MARKET_CONTEXTS.map((item) => (
 					<button
@@ -197,7 +197,7 @@ export function ZhEvidenceRecord() {
 	const [active, setActive] = useState(0);
 	const selected = evidenceFields[active] ?? evidenceFields[0];
 	return (
-		<ZhGraphic type="zh-evidence-record" label="可检查的证据记录">
+		<ZhGraphic type="zh-evidence-record" label="可检查的证据记录" protagonist="evidence-cabinet">
 			<div className="zh-site__record-index" role="tablist" aria-label="选择证据字段">
 				{evidenceFields.map(([label], index) => (
 					<button
@@ -233,7 +233,7 @@ export function ZhAnswerMap() {
 	const [active, setActive] = useState(0);
 	const selected = answerNodes[active] ?? answerNodes[0];
 	return (
-		<ZhGraphic type="zh-answer-map" label="品牌与 AI 答案关系图">
+		<ZhGraphic type="zh-answer-map" label="品牌与 AI 答案关系图" protagonist="market-answer-map">
 			<div className="zh-site__answer-map" role="tablist" aria-label="选择答案关系">
 				{answerNodes.map(([label], index) => (
 					<button

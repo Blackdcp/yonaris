@@ -35,7 +35,11 @@ export function EvidenceExplorer({ initialMetric = "mention-rate" }: { initialMe
 	const active = metrics.find(({ id }) => id === activeId) ?? metrics[0];
 
 	return (
-		<GraphicFrame label="Interactive evidence definition explorer" type="evidence-explorer">
+		<GraphicFrame
+			label="Interactive evidence definition explorer"
+			type="evidence-explorer"
+			protagonist="evidence-ledger"
+		>
 			<div className="global-en__explorer-tabs" role="tablist" aria-label="Choose an evidence definition">
 				{metrics.map((metric) => (
 					<button

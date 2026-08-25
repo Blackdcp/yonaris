@@ -42,7 +42,7 @@ export function EvidenceWindow() {
 
 export function ScopeRings() {
 	return (
-		<GraphicFrame label="Four scope layers" type="scope-rings" dark>
+		<GraphicFrame label="Four scope layers" type="scope-rings" protagonist="operating-system" dark>
 			<div className="global-en__rings" aria-hidden="true">
 				<i />
 				<i />
@@ -75,7 +75,7 @@ export function EvidencePath() {
 		["04", "Next test", "Reviewed decision"],
 	];
 	return (
-		<GraphicFrame label="Evidence path" type="evidence-path">
+		<GraphicFrame label="Evidence path" type="evidence-path" protagonist="evidence-path">
 			<ol className="global-en__path">
 				{steps.map(([n, title, state]) => (
 					<li key={n}>
@@ -91,7 +91,7 @@ export function EvidencePath() {
 
 export function EvidenceLedger() {
 	return (
-		<GraphicFrame label="Measurement ledger" type="evidence-ledger" dark>
+		<GraphicFrame label="Measurement ledger" type="evidence-ledger" protagonist="evidence-ledger" dark>
 			<table className="global-en__ledger">
 				<caption>Schema-only evidence record</caption>
 				<thead>
@@ -147,7 +147,7 @@ export function EntryMap() {
 
 export function OperatingModel() {
 	return (
-		<GraphicFrame label="Operating model" type="operating-model">
+		<GraphicFrame label="Operating model" type="operating-model" protagonist="responsibility-field">
 			<div className="global-en__model">
 				<div>
 					<small>INPUT</small>
@@ -173,7 +173,7 @@ export function OperatingModel() {
 
 export function DiagnosticPreview() {
 	return (
-		<GraphicFrame label="Diagnostic deliverable preview" type="diagnostic-preview">
+		<GraphicFrame label="Diagnostic deliverable preview" type="diagnostic-preview" protagonist="diagnostic-brief">
 			<ol className="global-en__deliverables">
 				<li>
 					<em>01</em>
@@ -198,7 +198,7 @@ export function DiagnosticPreview() {
 
 export function PrivacyFlow() {
 	return (
-		<GraphicFrame label="Privacy verification flow" type="privacy-flow">
+		<GraphicFrame label="Privacy verification flow" type="privacy-flow" protagonist="privacy-route">
 			<div className="global-en__model">
 				<div>
 					<small>01</small>

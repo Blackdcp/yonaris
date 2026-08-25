@@ -52,20 +52,45 @@ describe("global English pages", () => {
 		const markup = renderToStaticMarkup(<HomePage />);
 		const sectionIds = [
 			"hero",
+			"operating-loop",
 			"market-shift",
 			"buyer-questions",
-			"operating-loop",
 			"product-preview",
-			"human-agent-parity",
 			"evidence-boundary",
+			"human-agent-parity",
 			"request-close",
 		] as const;
 		const positions = sectionIds.map((id) => markup.indexOf(`id="${id}"`));
 		expect(positions.every((position) => position >= 0)).toBe(true);
 		expect(positions).toEqual([...positions].sort((a, b) => a - b));
 		expect(markup).toContain('data-graphic="answer-studio"');
+		expect(markup).toContain('data-visual-system="global-cinematic"');
+		expect(markup).toContain('data-stage="global-hero"');
+		expect(markup).toContain('data-stage="operating-system"');
+		expect(markup).toContain('data-layout="editorial-stage"');
+		expect(markup).toContain('data-tone="ink"');
+		expect(markup).not.toContain('class="global-en__section-head"');
+		expect(markup).not.toContain("global-en__section-number");
 		expect(markup).toContain("Know what it says—and what to change.");
 		expect(markup).not.toContain('data-graphic="output-stack"');
+	});
+
+	it("gives every global route a distinct visual protagonist", () => {
+		const protagonists = {
+			home: "answer-orbit",
+			product: "operating-system",
+			approach: "evidence-path",
+			research: "evidence-ledger",
+			geo: "answer-constellation",
+			company: "responsibility-field",
+			diagnostic: "diagnostic-brief",
+			privacy: "privacy-route",
+		} as const;
+		for (const [key, protagonist] of Object.entries(protagonists) as [keyof typeof pages, string][]) {
+			const Page = pages[key];
+			const markup = renderToStaticMarkup(<Page />);
+			expect(markup).toContain(`data-protagonist="${protagonist}"`);
+		}
 	});
 
 	it("turns the product page into one inspectable operating system", () => {

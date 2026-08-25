@@ -3,6 +3,7 @@ import {
 	captureQa,
 	expectNoHorizontalOverflow,
 	expectNoRunningAnimations,
+	expectVisualBaseline,
 	QA_VIEWPORTS,
 	runWcagAa,
 } from "./helpers/core-site";
@@ -119,6 +120,20 @@ test("reduced motion settles every regional Human and representative Agent page"
 	for (const path of [...globalPages.map(({ path }) => path), ...chinaPages.map(({ path }) => path), "/agent", "/zh/agent"]) {
 		await expectNoRunningAnimations(page, path);
 	}
+});
+
+test("global visual baseline", { tag: "@visual-baseline" }, async ({ page }) => {
+	await page.setViewportSize(QA_VIEWPORTS.desktop);
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.goto("/");
+	await expectVisualBaseline(page, "global-human-home-desktop.png");
+});
+
+test("Chinese visual baseline", { tag: "@visual-baseline" }, async ({ page }) => {
+	await page.setViewportSize(QA_VIEWPORTS.desktop);
+	await page.emulateMedia({ reducedMotion: "reduce" });
+	await page.goto("/zh");
+	await expectVisualBaseline(page, "chinese-human-home-desktop.png");
 });
 
 for (const fixture of [...globalPages, ...chinaPages]) {

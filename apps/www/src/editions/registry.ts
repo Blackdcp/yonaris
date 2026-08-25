@@ -3,12 +3,12 @@ import type { EditionDefinition, EditionPage, EditionPageRef, SiteEdition } from
 export const GLOBAL_ENGLISH_SECTION_IDS = {
 	home: [
 		"hero",
+		"operating-loop",
 		"market-shift",
 		"buyer-questions",
-		"operating-loop",
 		"product-preview",
-		"human-agent-parity",
 		"evidence-boundary",
+		"human-agent-parity",
 		"request-close",
 	],
 	product: ["scope-rings-hero", "evidence-workbench", "operating-loop", "responsibility-lanes", "request-close"],

@@ -41,7 +41,11 @@ export function AnswerRelationshipMap({ initialNode = "discovery" }: { initialNo
 	const active = nodes.find(({ id }) => id === activeId) ?? nodes[0];
 
 	return (
-		<GraphicFrame label="Interactive AI answer relationship map" type="answer-relationship-map">
+		<GraphicFrame
+			label="Interactive AI answer relationship map"
+			type="answer-relationship-map"
+			protagonist="answer-constellation"
+		>
 			<div className="global-en__relationship-map" role="tablist" aria-label="Choose an answer relationship">
 				{nodes.map((node, index) => (
 					<button

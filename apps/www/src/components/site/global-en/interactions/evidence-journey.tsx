@@ -29,7 +29,12 @@ export function EvidenceJourney({ initialStep = "define" }: { initialStep?: Glob
 	}
 
 	return (
-		<GraphicFrame label="Interactive four-step evidence journey" type="evidence-journey">
+		<GraphicFrame
+			label="Interactive four-step evidence journey"
+			type="evidence-journey"
+			protagonist="evidence-path"
+			progressive="non-hijacking"
+		>
 			<div className="global-en__journey">
 				<div className="global-en__journey-tabs" role="tablist" aria-label="Choose an evidence journey step">
 					{GLOBAL_EVIDENCE_JOURNEY.map((step, index) => (

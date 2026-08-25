@@ -7,6 +7,9 @@ describe("global English style boundary", () => {
 		expect(css).toContain(".global-en");
 		expect(css).toContain("@media (max-width:");
 		expect(css).toContain("prefers-reduced-motion: reduce");
+		expect(css).toContain("min-height: min(56rem, 88svh)");
+		expect(css).toContain("position: sticky");
+		expect(css).toContain("--ge-signal: var(--yonaris-signal)");
 		expect(css).not.toMatch(/gradient\s*\(/i);
 		const selectorLines = css
 			.split(/\r?\n/)

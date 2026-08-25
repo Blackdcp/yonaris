@@ -31,13 +31,22 @@ export function AnswerStudio({ initialQuestion = "recommended" }: { initialQuest
 	}
 
 	return (
-		<GraphicFrame label="Interactive AI answer evidence demonstration" type="answer-studio">
+		<GraphicFrame
+			label="Interactive AI answer evidence demonstration"
+			type="answer-studio"
+			protagonist="answer-orbit"
+		>
 			<div className="global-en__studio-bar">
 				<span>Yonaris Answer Studio</span>
 				<span>Defined buying question</span>
 			</div>
 			<div className="global-en__studio-layout">
-				<div className="global-en__studio-questions" role="tablist" aria-label="Choose a market question">
+				<div
+					className="global-en__studio-questions"
+					role="tablist"
+					aria-label="Choose a market question"
+					data-layer="question"
+				>
 					{GLOBAL_ANSWER_QUESTIONS.map((question, index) => (
 						<button
 							key={question.id}
@@ -70,6 +79,7 @@ export function AnswerStudio({ initialQuestion = "recommended" }: { initialQuest
 					role="tabpanel"
 					aria-labelledby={`answer-studio-tab-${active.id}`}
 					data-question={active.id}
+					data-layer="answer"
 				>
 					<header>
 						<small>BUYING QUESTION</small>
@@ -80,15 +90,15 @@ export function AnswerStudio({ initialQuestion = "recommended" }: { initialQuest
 						<p>{active.answer}</p>
 					</div>
 					<div className="global-en__studio-fields">
-						<section>
+						<section data-layer="evidence">
 							<small>EVIDENCE</small>
 							<p>{active.evidence}</p>
 						</section>
-						<section>
+						<section data-layer="finding">
 							<small>FINDING</small>
 							<p>{active.finding}</p>
 						</section>
-						<section>
+						<section data-layer="next-test">
 							<small>NEXT TEST</small>
 							<p>{active.nextTest}</p>
 						</section>

@@ -28,6 +28,10 @@ describe("global English interactive figures", () => {
 
 		const markup = renderToStaticMarkup(<answerStudioModule.AnswerStudio initialQuestion="recommended" />);
 		expect(markup).toContain('data-graphic="answer-studio"');
+		expect(markup).toContain('data-protagonist="answer-orbit"');
+		for (const layer of ["question", "answer", "evidence", "next-test"]) {
+			expect(markup).toContain(`data-layer="${layer}"`);
+		}
 		expect(markup).toContain('role="tablist"');
 		expect(markup.match(/role="tab"/g) ?? []).toHaveLength(5);
 		expect(markup).toContain('aria-selected="true"');
@@ -65,6 +69,7 @@ describe("global English interactive figures", () => {
 
 		const markup = renderToStaticMarkup(<evidenceJourneyModule.EvidenceJourney initialStep="define" />);
 		expect(markup).toContain('data-graphic="evidence-journey"');
+		expect(markup).toContain('data-progressive="non-hijacking"');
 		expect(markup.match(/role="tab"/g) ?? []).toHaveLength(4);
 		expect(markup).toContain('data-step="define"');
 		expect(markup).toContain("What decision must this observation support?");

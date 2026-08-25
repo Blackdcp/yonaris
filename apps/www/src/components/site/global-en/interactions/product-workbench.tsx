@@ -31,7 +31,12 @@ export function ProductWorkbench({ initialModule = "scope" }: { initialModule?: 
 	}
 
 	return (
-		<GraphicFrame label="Interactive Yonaris product workbench demonstration" type="product-workbench" dark>
+		<GraphicFrame
+			label="Interactive Yonaris product workbench demonstration"
+			type="product-workbench"
+			protagonist="operating-system"
+			dark
+		>
 			<div className="global-en__workbench-tabs" role="tablist" aria-label="Choose a product module">
 				{GLOBAL_PRODUCT_MODULES.map((module, index) => (
 					<button

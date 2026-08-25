@@ -326,3 +326,13 @@ export async function captureQa(page: Page, capture: QaCapture): Promise<string>
 	});
 	return artifactPath;
 }
+
+export async function expectVisualBaseline(page: Page, name: string): Promise<void> {
+	await waitForSettledLayout(page);
+	await expect(page).toHaveScreenshot(name, {
+		animations: "disabled",
+		caret: "hide",
+		fullPage: true,
+		maxDiffPixelRatio: 0.015,
+	});
+}

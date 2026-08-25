@@ -47,7 +47,7 @@ export function ZhShell({
 	sectionNav?: readonly { href: string; label: string }[];
 }) {
 	return (
-		<div className="zh-site" data-edition="zh-cn" lang="zh-CN">
+		<div className="zh-site" data-edition="zh-cn" data-visual-system="zh-decision" lang="zh-CN">
 			<header className="zh-site__header">
 				<div className="zh-site__header-inner">
 					<a className="zh-site__logo" href="/zh" aria-label="Yonaris 中文首页">

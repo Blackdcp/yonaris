@@ -20,12 +20,12 @@ describe("global English edition registry", () => {
 	it("freezes each page-specific section spine", () => {
 		expect(GLOBAL_ENGLISH_SECTION_IDS.home).toEqual([
 			"hero",
+			"operating-loop",
 			"market-shift",
 			"buyer-questions",
-			"operating-loop",
 			"product-preview",
-			"human-agent-parity",
 			"evidence-boundary",
+			"human-agent-parity",
 			"request-close",
 		]);
 		expect(GLOBAL_ENGLISH_SECTION_IDS.product).toEqual([

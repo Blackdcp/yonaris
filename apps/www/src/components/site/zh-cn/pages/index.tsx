@@ -191,7 +191,7 @@ export function ZhProductPage() {
 				title={content.title}
 				lead={content.lead}
 				visual={
-					<ZhGraphic type="zh-product-architecture" label="四项产品能力">
+					<ZhGraphic type="zh-product-architecture" label="四项产品能力" protagonist="service-system">
 						<div className="zh-site__architecture">
 							{ZH_PRODUCT_MODULES.map((item, index) => (
 								<div key={item.id}>
@@ -255,7 +255,7 @@ export function ZhApproachPage() {
 				title={content.title}
 				lead={content.lead}
 				visual={
-					<ZhGraphic type="zh-delivery-summary" label="五步服务概览">
+					<ZhGraphic type="zh-delivery-summary" label="五步服务概览" protagonist="delivery-roadmap">
 						<div className="zh-site__delivery-summary">
 							{ZH_DELIVERY_STAGES.map((item, index) => (
 								<span key={item.id}>
@@ -465,7 +465,7 @@ export function ZhDiagnosticPage() {
 				title={content.title}
 				lead={content.lead}
 				visual={
-					<ZhGraphic type="zh-diagnostic-preview" label="需求沟通流程">
+					<ZhGraphic type="zh-diagnostic-preview" label="需求沟通流程" protagonist="contact-brief">
 						<div className="zh-site__diagnostic-preview">
 							<span>01 · 提交联系方式</span>
 							<span>02 · 人工了解问题</span>
@@ -533,7 +533,7 @@ export function ZhPrivacyPage() {
 				secondaryHref="/zh/diagnostic"
 				secondaryLabel="返回需求沟通"
 				visual={
-					<ZhGraphic type="zh-privacy-flow" label="表单信息处理路径">
+					<ZhGraphic type="zh-privacy-flow" label="表单信息处理路径" protagonist="privacy-guardrail">
 						<div className="zh-site__diagnostic-preview">
 							<span>01 · 姓名、电话、公司</span>
 							<span>02 · 服务端严格验证</span>
