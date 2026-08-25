@@ -33,4 +33,29 @@ describe("zero-to-one stylesheet boundary", () => {
 		for (const value of ["#0b1220", "#f6f4f1", "#ff6a00"]) expect(output.toLowerCase()).toContain(value);
 		expect(output).not.toMatch(/global-en__|zh-site__|global-cinematic|zh-decision|editorial-stage|decision-canvas/);
 	});
+
+	it("shares bounded motion, mobile type floors, and 44px target tokens", () => {
+		const base = read("styles/experience/base.css");
+		for (const contract of [
+			"--motion-state: 220ms",
+			"--motion-route: 260ms",
+			"--text-functional-mobile: 0.75rem",
+			"--text-body-mobile: 0.875rem",
+			"--target-mobile: 44px",
+		]) {
+			expect(base).toContain(contract);
+		}
+		expect(base).toContain("@media (max-width: 640px)");
+		expect(base).toContain("min-height: var(--target-mobile)");
+		expect(base).toContain("line-height: 1.4");
+		expect(base).toContain("@media (prefers-reduced-motion: reduce)");
+		expect(base).toContain("0.01ms");
+	});
+
+	it("does not use continuous decorative keyframes", () => {
+		const output = ["base.css", "global.css", "china.css", "agent.css"]
+			.map((file) => read(`styles/experience/${file}`))
+			.join("\n");
+		expect(output).not.toMatch(/@keyframes|animation-iteration-count\s*:\s*infinite/i);
+	});
 });

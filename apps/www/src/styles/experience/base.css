@@ -10,6 +10,12 @@
 	--y-line: color-mix(in srgb, var(--y-ink) 14%, transparent);
 	--y-font: "Geist Sans", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
 	--y-mono: "Geist Mono", ui-monospace, monospace;
+	--motion-state: 220ms;
+	--motion-route: 260ms;
+	--motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+	--text-functional-mobile: 0.75rem;
+	--text-body-mobile: 0.875rem;
+	--target-mobile: 44px;
 }
 
 @font-face {
@@ -231,6 +237,25 @@ input {
 	}
 }
 
+@media (max-width: 640px) {
+	[data-human-surface="true"] :where(a, button, input, summary) {
+		min-height: var(--target-mobile);
+	}
+
+	[data-human-surface="true"] :where(p, li, dd) {
+		line-height: 1.4;
+	}
+
+	[data-human-surface="true"] :where(small, dt, .mode-link, .lead-field-message, .lead-disclosure, .lead-message) {
+		font-size: var(--text-functional-mobile);
+	}
+
+	[data-human-surface="true"] :where(.lead-form header p, .lead-confirmation p) {
+		font-size: var(--text-body-mobile);
+		line-height: 1.4;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	html {
 		scroll-behavior: auto;
@@ -239,9 +264,9 @@ input {
 	*,
 	*::before,
 	*::after {
-		animation-duration: 0.001ms !important;
+		animation-duration: 0.01ms !important;
 		animation-iteration-count: 1 !important;
-		transition-duration: 0.001ms !important;
+		transition-duration: 0.01ms !important;
 	}
 }
 

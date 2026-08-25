@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { HumanPageKey } from "@/content/experience/types";
 import { HumanAgentLink } from "../shared/human-agent-link";
 import { LocaleSwitchLink } from "../shared/locale-switch-link";
+import { ScrollProgress } from "../shared/scroll-progress";
 
 const NAV_ITEMS: readonly { key: HumanPageKey; label: string; href: string }[] = [
 	{ key: "product", label: "Product", href: "/product" },
@@ -42,6 +43,7 @@ export function GlobalShell({
 			data-human-surface="true"
 			data-edition="global-en"
 		>
+			<ScrollProgress />
 			<a className="sf-skip-link" href="#main-content">
 				Skip to content
 			</a>

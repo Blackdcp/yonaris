@@ -41,6 +41,34 @@ const homeSituations = [
 	},
 ] as const;
 
+const homeEvidenceItems = [
+	{
+		id: "question",
+		label: "Selected buyer question",
+		detail: "The brand, market, language, and buying decision held in scope.",
+	},
+	{
+		id: "answer",
+		label: "Complete answer",
+		detail: "The full illustrative response, not an isolated mention or score.",
+	},
+	{
+		id: "comparison",
+		label: "Brand and alternatives",
+		detail: "The supplied comparison set shown inside the same answer.",
+	},
+	{
+		id: "citations",
+		label: "Visible citations",
+		detail: "Source labels kept with the response whenever the selected answer displays them.",
+	},
+	{
+		id: "action",
+		label: "Next review item",
+		detail: "One observed description, comparison, or source gap for the team to inspect.",
+	},
+] as const;
+
 export function GlobalHomePage() {
 	const copy = GLOBAL_COPY.home;
 	return (
@@ -54,9 +82,6 @@ export function GlobalHomePage() {
 						<a className="sf-button" href={copy.primaryAction.href}>
 							{copy.primaryAction.label} <span aria-hidden="true">↗</span>
 						</a>
-						<a className="sf-text-link" href={copy.secondaryAction.href}>
-							{copy.secondaryAction.label} <span aria-hidden="true">↓</span>
-						</a>
 					</div>
 					<div className="sf-home-opening__shift">
 						<span>Start focused</span>
@@ -66,6 +91,22 @@ export function GlobalHomePage() {
 					</div>
 				</div>
 				<AnswerFieldScene />
+			</section>
+
+			<section className="sf-evidence-rail" data-evidence-rail="focused-review" aria-labelledby="evidence-rail-title">
+				<header>
+					<span>Illustrative focused review</span>
+					<strong id="evidence-rail-title">What the decision record keeps together</strong>
+				</header>
+				<ol>
+					{homeEvidenceItems.map((item, index) => (
+						<li key={item.id} data-evidence-item={item.id}>
+							<span>{String(index + 1).padStart(2, "0")}</span>
+							<strong>{item.label}</strong>
+							<p>{item.detail}</p>
+						</li>
+					))}
+				</ol>
 			</section>
 
 			<section className="sf-situation-chapter">
@@ -83,42 +124,6 @@ export function GlobalHomePage() {
 						</article>
 					))}
 				</div>
-			</section>
-
-			<section className="sf-home-movement">
-				<div className="sf-home-movement__intro">
-					<p className="sf-kicker">What Yonaris shows</p>
-					<h2>Review the answer before deciding what to change.</h2>
-					<p>
-						See the full response, brand and competitor mentions, available citations, and repeat checks in one
-						workflow.
-					</p>
-					<a className="sf-text-link" href="/product">
-						Explore the full product <span aria-hidden="true">→</span>
-					</a>
-				</div>
-				<section className="sf-home-movement__steps" aria-label="Yonaris product movement">
-					<article>
-						<span>01</span>
-						<strong>Observe</strong>
-						<p>Read the complete answer for a selected buyer question.</p>
-					</article>
-					<article>
-						<span>02</span>
-						<strong>Compare</strong>
-						<p>See how your brand and named alternatives appear.</p>
-					</article>
-					<article>
-						<span>03</span>
-						<strong>Review</strong>
-						<p>Inspect available citations and specific information gaps.</p>
-					</article>
-					<article>
-						<span>04</span>
-						<strong>Recheck</strong>
-						<p>Run the same question again and compare the result.</p>
-					</article>
-				</section>
 			</section>
 
 			<section className="sf-home-world">
@@ -176,53 +181,12 @@ export function GlobalProductPage() {
 				<ProductLensScene />
 			</section>
 
-			<section className="sf-product-question">
-				<div className="sf-product-question__prompt">
-					<span>Illustrative buying question</span>
-					<p>“Which quality platform fits a manufacturer operating across multiple sites?”</p>
-				</div>
-				<div className="sf-product-question__answer">
-					<div>
-						<span>Brand mention</span>
-						<strong>The example brand enters the shortlist</strong>
-					</div>
-					<div>
-						<span>Description</span>
-						<strong>Framed around multi-site deployment</strong>
-					</div>
-					<div>
-						<span>Comparison</span>
-						<strong>Compared on rollout and integrations</strong>
-					</div>
-					<div>
-						<span>Available citations</span>
-						<strong>Product page and buyer guide included</strong>
-					</div>
-				</div>
-			</section>
-
-			<section className="sf-product-decisions">
-				<header>
-					<p className="sf-kicker">Built for decisions</p>
-					<h2>Keep the answer and the comparison in view.</h2>
-				</header>
-				<div className="sf-product-decisions__grid">
-					<article>
-						<span>Answer</span>
-						<h3>What does the answer actually say?</h3>
-						<p>Keep the full response visible alongside brand mentions.</p>
-					</article>
-					<article>
-						<span>Comparison</span>
-						<h3>How are you described beside alternatives?</h3>
-						<p>Review category language and competitor mentions together.</p>
-					</article>
-					<article>
-						<span>Citations</span>
-						<h3>Which citations are visible?</h3>
-						<p>Inspect linked sources when the AI surface provides them.</p>
-					</article>
-				</div>
+			<section className="sf-product-record-boundary">
+				<span>One record, one controlled scope</span>
+				<p>
+					This illustrative walkthrough keeps the input, evidence, decision, and next action together at every stage. It
+					does not substitute an unexplained score for the complete answer.
+				</p>
 			</section>
 
 			<section className="sf-page-close sf-page-close--product">
@@ -255,37 +219,25 @@ export function GlobalApproachPage() {
 				<ChangePathScene />
 			</section>
 
-			<section className="sf-approach-principle">
-				<p className="sf-approach-principle__number">01</p>
-				<div>
-					<span>Set the scope</span>
-					<h2>Choose one buyer question.</h2>
-				</div>
-				<p>Define the brand, market, language, and relevant alternatives.</p>
-			</section>
-			<section className="sf-approach-principle sf-approach-principle--dark">
-				<p className="sf-approach-principle__number">02</p>
-				<div>
-					<span>Review what appears</span>
-					<h2>Read the answer in context.</h2>
-				</div>
-				<p>Compare brand mentions, descriptions, competitors, and citations when available.</p>
-			</section>
-			<section className="sf-approach-principle sf-approach-principle--signal">
-				<p className="sf-approach-principle__number">03</p>
-				<div>
-					<span>Choose what matters next</span>
-					<h2>Turn the answer into a clear decision.</h2>
-				</div>
-				<p>Prioritize the description, citation, or comparison gap most relevant to the buying decision.</p>
-			</section>
-			<section className="sf-approach-principle sf-approach-principle--dark">
-				<p className="sf-approach-principle__number">04</p>
-				<div>
-					<span>Recheck consistently</span>
-					<h2>Compare the same question over time.</h2>
-				</div>
-				<p>Repeat the check with the same brand, market, language, and alternatives.</p>
+			<section className="sf-approach-handoff" aria-labelledby="approach-handoff-title">
+				<header>
+					<p className="sf-kicker">Review handoff</p>
+					<h2 id="approach-handoff-title">A record another team member can inspect.</h2>
+				</header>
+				<dl>
+					<div>
+						<dt>Scope held constant</dt>
+						<dd>The same brand, market, language, question, and alternative set stays visible.</dd>
+					</div>
+					<div>
+						<dt>Evidence kept in context</dt>
+						<dd>The complete answer and visible citation labels stay beside the selected review item.</dd>
+					</div>
+					<div>
+						<dt>Next action named</dt>
+						<dd>The record distinguishes a specific review item from the team action that follows it.</dd>
+					</div>
+				</dl>
 			</section>
 
 			<section className="sf-page-close sf-page-close--approach">
@@ -321,30 +273,6 @@ export function GlobalGeoPage() {
 					</div>
 				</header>
 				<MarketAtlasScene />
-			</section>
-
-			<section className="sf-geo-differences">
-				<header>
-					<p className="sf-kicker">What changes by market</p>
-					<h2>The name can stay the same while the answer moves.</h2>
-				</header>
-				<div>
-					<article>
-						<span>Question</span>
-						<strong>Buyers frame the need differently.</strong>
-						<p>The useful prompt begins with local purchase language, not a translated keyword list.</p>
-					</article>
-					<article>
-						<span>Context</span>
-						<strong>Categories carry different expectations.</strong>
-						<p>The same claim can signal leadership in one market and ambiguity in another.</p>
-					</article>
-					<article>
-						<span>Competition</span>
-						<strong>The comparison set changes.</strong>
-						<p>Local incumbents and global alternatives can occupy very different positions.</p>
-					</article>
-				</div>
 			</section>
 
 			<section className="sf-geo-bridge">
@@ -423,35 +351,6 @@ export function GlobalCompanyPage() {
 				</div>
 			</section>
 
-			<section className="sf-company-capabilities">
-				<header>
-					<span>How we work across markets</span>
-					<h2>One brand core, understood through local buying context.</h2>
-				</header>
-				<div className="sf-company-capabilities__list">
-					<article>
-						<span>01</span>
-						<h3>Start with buyer reality</h3>
-						<p>Use the questions customers actually ask when comparing options.</p>
-					</article>
-					<article>
-						<span>02</span>
-						<h3>Keep the answer in context</h3>
-						<p>Read the complete response, not an isolated score or mention.</p>
-					</article>
-					<article>
-						<span>03</span>
-						<h3>Respect local market language</h3>
-						<p>Reframe the question for each market instead of translating it word for word.</p>
-					</article>
-					<article>
-						<span>04</span>
-						<h3>Make the next choice clearer</h3>
-						<p>Identify which description, comparison, or citation deserves attention next.</p>
-					</article>
-				</div>
-			</section>
-
 			<section className="sf-page-close sf-page-close--company">
 				<div>
 					<p className="sf-kicker">What comes together</p>
@@ -484,21 +383,21 @@ export function GlobalDiagnosticPage() {
 
 			<section className="sf-contact-form-section" id="contact-form">
 				<div className="sf-contact-form-section__aside">
-					<span>One useful starting point</span>
-					<h2>What are customers asking when your brand should be in the answer?</h2>
+					<span>The first conversation determines</span>
+					<h2>The smallest useful scope for a focused AI-answer review.</h2>
 					<p>
-						You do not need to solve the wording before contacting us. The first conversation can begin with the
-						business decision behind it.
+						No prepared report is required. Bring the business decision; together we can define the brand, market,
+						language, buyer question, and supplied alternatives worth reviewing.
 					</p>
 					<ul>
 						<li>
-							<i /> One brand
+							<i /> Brand and target market
 						</li>
 						<li>
-							<i /> One market
+							<i /> Language and buying context
 						</li>
 						<li>
-							<i /> One buying question
+							<i /> Buyer question and supplied alternatives
 						</li>
 					</ul>
 				</div>
