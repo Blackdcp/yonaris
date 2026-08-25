@@ -125,7 +125,8 @@ describe("中国站客户体验", () => {
 
 	it("按中国 ToB 决策顺序呈现首页风险、证据与摸底输出", () => {
 		const home = render("home");
-		expect(home).toContain("客户开始问 AI，品牌的第一解释权还在你手里吗？");
+		const heading = home.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
+		expect(heading.replace(/<[^>]+>/g, "")).toBe("客户开始问 AI，品牌的第一解释权还在你手里吗？");
 		for (const risk of ["没进候选池", "核心卖点被说偏", "竞品占了答案位", "出海后定位漂移"]) {
 			expect(home).toContain(risk);
 		}
@@ -200,6 +201,49 @@ describe("中国站客户体验", () => {
 
 		expect(mobileCss).toMatch(
 			/\.china-command \[data-diagnostic-state\] \[data-output-field\]\s*\{\s*font-size:\s*var\(--text-body-mobile\);\s*line-height:\s*1\.5;\s*\}/,
+		);
+	});
+
+	it("首页标题保留完整可读文案并防止第一被拆行", () => {
+		const markup = render("home");
+		const headingMatch = markup.match(/<h1([^>]*)>([\s\S]*?)<\/h1>/);
+		const headingAttributes = headingMatch?.[1] ?? "";
+		const heading = headingMatch?.[2] ?? "";
+		const readableHeading = heading.replace(/<[^>]+>/g, "");
+
+		expect(readableHeading).toBe("客户开始问 AI，品牌的第一解释权还在你手里吗？");
+		expect(headingAttributes).toContain('aria-label="客户开始问 AI，品牌的第一解释权还在你手里吗？"');
+		expect(heading).toContain('<span class="china-home-title__lexeme">第一解释权</span>');
+		expect(chinaCss).toMatch(/\.china-home-title__lexeme\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/s);
+	});
+
+	it("首页决策路径把两组标签和判断放在完整可读的行内", () => {
+		const markup = render("home");
+
+		expect(markup.match(/class="china-home-hero__shift-row"/g) ?? []).toHaveLength(2);
+		expect(chinaCss).toMatch(
+			/\.china-home-hero__shift-row\s*\{[^}]*grid-template-columns:\s*minmax\(6rem, auto\) minmax\(0, 1fr\);[^}]*\}/s,
+		);
+	});
+
+	it("移动端访问方式和语言切换使用可触达的字号与四十四像素目标", () => {
+		const mobileStart = chinaCss.indexOf("@media (max-width: 800px)");
+		const narrowStart = chinaCss.indexOf("@media (max-width: 520px)", mobileStart);
+		expect(mobileStart).toBeGreaterThan(-1);
+		expect(narrowStart).toBeGreaterThan(mobileStart);
+		const mobileCss = chinaCss.slice(mobileStart, narrowStart);
+
+		expect(mobileCss).toMatch(
+			/\.china-command \.mode-link a,\s*\.china-command \.locale-switch\s*\{[^}]*min-width:\s*var\(--target-mobile\);[^}]*min-height:\s*var\(--target-mobile\);[^}]*font-size:\s*var\(--text-functional-mobile\);[^}]*\}/s,
+		);
+		expect(mobileCss).toMatch(
+			/\.china-footer__brand a\s*\{[^}]*min-width:\s*var\(--target-mobile\);[^}]*min-height:\s*var\(--target-mobile\);[^}]*\}/s,
+		);
+	});
+
+	it("服务优先级在橙色底上强制使用高对比深色文字", () => {
+		expect(chinaCss).toMatch(
+			/\.china-service-route__detail > \.china-service-route__priority\s*\{[^}]*background:\s*var\(--y-orange\);[^}]*color:\s*var\(--y-ink\);[^}]*\}/s,
 		);
 	});
 

@@ -315,6 +315,10 @@
 	text-decoration: none;
 }
 
+.agent-experience .agent-experience__human-return {
+	color: var(--agent-ink);
+}
+
 .agent-experience__facts {
 	border-top: 1px solid var(--agent-line);
 }
@@ -468,6 +472,12 @@
 }
 
 @media (max-width: 560px) {
+	.agent-experience__brand {
+		min-height: var(--target-mobile);
+		display: inline-flex;
+		align-items: center;
+	}
+
 	.agent-experience__masthead {
 		min-height: 6.5rem;
 	}
@@ -483,18 +493,33 @@
 	}
 
 	.agent-experience__masthead .mode-link a {
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
 		padding-inline: 0.55rem;
-		font-size: 0.65rem;
+		font-size: var(--text-functional-mobile);
 	}
 
 	.agent-experience .locale-switch {
-		min-height: 2rem;
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
 		padding: 0.45rem 0.65rem;
+		font-size: var(--text-functional-mobile);
 	}
 
 	.agent-experience__intro {
 		min-height: 36rem;
 		padding-inline: 1.2rem;
+	}
+
+	.agent-experience .agent-experience__intro > p:first-of-type {
+		font-size: var(--text-functional-mobile);
+		line-height: 1.4;
+	}
+
+	.agent-experience .agent-experience__rail nav a em,
+	.agent-experience .agent-experience__facts header em {
+		font-size: var(--text-functional-mobile);
+		line-height: 1.4;
 	}
 
 	.agent-experience__intro h1 {
@@ -512,6 +537,34 @@
 	.agent-experience__signal {
 		right: -16rem;
 		top: 32%;
+	}
+
+	.agent-experience .agent-experience__metadata dt {
+		font-size: var(--text-functional-mobile);
+	}
+
+	.agent-experience .agent-experience__metadata a {
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
+		display: inline-flex;
+		align-items: center;
+		font-size: var(--text-body-mobile);
+		line-height: 1.4;
+	}
+
+	.agent-experience .agent-experience__metadata dd,
+	.agent-experience .agent-experience__facts li p,
+	.agent-experience .agent-experience__limitations li {
+		font-size: var(--text-body-mobile);
+		line-height: 1.4;
+	}
+
+	.agent-experience .agent-experience__facts li a {
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
+		display: inline-flex;
+		align-items: center;
+		font-size: var(--text-functional-mobile);
 	}
 }
 

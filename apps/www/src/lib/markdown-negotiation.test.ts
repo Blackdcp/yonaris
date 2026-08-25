@@ -25,6 +25,11 @@ function agentPath(key: HumanPageKey, locale: "en" | "zh"): string {
 	return key === "home" ? "/zh/agent" : `/zh/agent/${key}`;
 }
 
+function stableMachinePath(key: HumanPageKey, locale: "en" | "zh"): string {
+	const prefix = locale === "zh" ? "/zh" : "";
+	return key === "home" ? `${prefix}/agent/index.md` : `${prefix}/agent/${key}.md`;
+}
+
 function request(path: string, accept?: string, method = "GET"): Request {
 	const headers = new Headers();
 	if (accept !== undefined) headers.set("Accept", accept);
@@ -104,6 +109,28 @@ describe("representation negotiation", () => {
 							});
 						}
 					}
+				}
+			}
+		}
+	});
+
+	test("canonicalizes stable Markdown and catalogue trailing slashes before Accept handling", () => {
+		const resolve = requireResolver();
+		const stablePaths = [
+			...HUMAN_PAGE_KEYS.flatMap((key) =>
+				(["en", "zh"] as const).map((locale) => stableMachinePath(key, locale)),
+			),
+			"/agent/catalog.json",
+			"/zh/agent/catalog.json",
+		];
+		for (const method of ["GET", "HEAD"] as const) {
+			for (const canonicalPath of stablePaths) {
+				for (const accept of ["text/html", "text/markdown", "application/json", "image/avif"]) {
+					expect(resolve(request(`${canonicalPath}/?campaign=agent`, accept, method))).toEqual({
+						kind: "redirect",
+						location: `${canonicalPath}?campaign=agent`,
+						variesOnAccept: true,
+					});
 				}
 			}
 		}

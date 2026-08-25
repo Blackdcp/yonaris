@@ -44,6 +44,8 @@ function fakeExecutor(calls, failAt) {
 	return async (command, args, context = {}) => {
 		calls.push({ command, args: [...args], phase: context.phase });
 		if (context.phase === failAt) throw new Error(`forced ${failAt} failure`);
+		if (context.phase === "route")
+			return { stdout: "904 Accept and trailing-slash cases checked.\n49 routes passed.\n", stderr: "" };
 		return { stdout: "fixture-id\n", stderr: "" };
 	};
 }
@@ -90,6 +92,8 @@ function trackingExecutor(calls, { failEveryFirstCleanup = false, permanentClean
 		if (args[0] === "rm" && args[1] === "-f") {
 			for (const name of args.slice(2)) owned.containers.delete(name);
 		}
+		if (context.phase === "route")
+			return { stdout: "904 Accept and trailing-slash cases checked.\n49 routes passed.\n", stderr: "" };
 		return { stdout: "fixture-id\n", stderr: "" };
 	};
 
@@ -142,6 +146,53 @@ test("orchestration pins Caddy, verifies its CA, and runs trusted-v4, trusted-v6
 		const commandText = calls.flatMap((call) => call.args).join(" ");
 		assert.doesNotMatch(commandText, /(?:^|\s)-k(?:\s|$)|--insecure|NODE_TLS_REJECT_UNAUTHORIZED=0/u);
 		assert.deepEqual(await readdir(root), []);
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
+});
+
+test("candidate permits exactly the thirteen canonical Human trailing-slash variants", { skip: !helperExists }, async () => {
+	const { prepareCaddyCandidate } = await import(helperUrl.href);
+	const source = await import("node:fs/promises").then(({ readFile }) =>
+		readFile(new URL("../../../deploy/las/caddy/yonaris-marketing.caddy", import.meta.url), "utf8"),
+	);
+	const candidate = prepareCaddyCandidate(source, "www:3000");
+	const publicMatcher = candidate.match(/@publicGetHead\s*\{[\s\S]*?\bpath\s+([^\n]+)\n/u)?.[1] ?? "";
+	const paths = new Set(publicMatcher.trim().split(/\s+/u));
+	const trailingPaths = [
+		"/zh/",
+		"/product/",
+		"/zh/product/",
+		"/approach/",
+		"/zh/approach/",
+		"/company/",
+		"/zh/company/",
+		"/geo/",
+		"/zh/geo/",
+		"/diagnostic/",
+		"/zh/diagnostic/",
+		"/privacy/",
+		"/zh/privacy/",
+	];
+	for (const path of trailingPaths) assert.ok(paths.has(path), `Caddy must proxy ${path}`);
+	assert.ok(!paths.has("/zh/*"), "the exact Human policy must not widen to /zh/*");
+});
+
+test("Caddy smoke rejects an exit-zero route probe that did not run the strict release matrix", {
+	skip: !helperExists,
+}, async () => {
+	const { runCaddySmoke } = await import(helperUrl.href);
+	const calls = [];
+	const root = await mkdtemp(join(tmpdir(), "yonaris-caddy-fixture-"));
+	const execute = async (command, args, context = {}) => {
+		const result = await fakeExecutor(calls)(command, args, context);
+		return context.phase === "route" ? { stdout: "49 routes passed.\n", stderr: "" } : result;
+	};
+	try {
+		await assert.rejects(
+			() => runCaddySmoke("yonaris-www:fixture", { execute, tempRoot: root }),
+			/strict release matrix summary/u,
+		);
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}

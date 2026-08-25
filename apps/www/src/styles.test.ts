@@ -77,6 +77,8 @@ describe("zero-to-one stylesheet boundary", () => {
 			".sf-shell .sf-constellation__detail small",
 		];
 		const bodySelectors = [
+			".sf-shell .lead-form header p",
+			".sf-shell .lead-confirmation p",
 			".sf-shell .sf-answer-field__answer dd",
 			".sf-shell .sf-answer-evidence li p",
 			".sf-shell .sf-product-lens__record dd",
@@ -115,6 +117,219 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(footerAnchor).toContain("display: inline-flex");
 		expect(footerAnchor).toContain("min-width: var(--target-mobile)");
 		expect(footerAnchor).toContain("min-height: var(--target-mobile)");
+	});
+
+	it("keeps the detached Global evidence rail headings legible on its dark surface", () => {
+		const global = read("styles/experience/global.css");
+		for (const selector of [".sf-answer-evidence h2", ".sf-answer-evidence li strong"]) {
+			expect(ruleFor(global, selector), `${selector} needs an explicit light foreground`).toContain(
+			"color: var(--sf-paper)",
+		);
+		}
+	});
+
+	it("keeps the Global market language label dark enough on its light panel", () => {
+		const global = read("styles/experience/global.css");
+		expect(ruleFor(global, ".sf-market-atlas__question span")).toContain("color: #713207");
+	});
+
+	it("keeps Global mode and locale text at the mobile functional floor", () => {
+		const global = read("styles/experience/global.css");
+		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		for (const selector of [".sf-shell .mode-link a", ".sf-shell .locale-switch"]) {
+			expect(ruleFor(mobile, selector), `${selector} needs the functional floor`).toContain(
+			"font-size: var(--text-functional-mobile)",
+		);
+		}
+	});
+
+	it("keeps Global market-diagram labels at the mobile functional floor", () => {
+		const global = read("styles/experience/global.css");
+		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		for (const selector of [
+			".sf-shell .sf-market-atlas__choices button span",
+			".sf-shell .sf-market-atlas__question > span",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the functional floor`).toContain(
+				"font-size: var(--text-functional-mobile)",
+			);
+			expect(declarations, `${selector} needs a legible line-height`).toContain("line-height: 1.4");
+		}
+	});
+
+	it("keeps every visible Global micro-label above the mobile functional floor", () => {
+		const global = read("styles/experience/global.css");
+		const mobile = global.slice(global.lastIndexOf("@media (max-width: 640px)"), global.lastIndexOf("@media (prefers-reduced-motion"));
+		for (const selector of [
+			".sf-shell .sf-situation-rail > article > span",
+			".sf-shell .sf-home-contact__statement > span",
+			".sf-shell .lead-form > header > span",
+			".sf-shell .sf-footer__links > div > span",
+			".sf-shell .sf-geo-bridge__origin > span",
+			".sf-shell .sf-geo-bridge__markets > div > span",
+			".sf-shell .sf-constellation__detail > span",
+			".sf-shell .sf-home-opening__shift span",
+			".sf-shell .sf-answer-field__questions button span",
+			".sf-shell .sf-answer-field__answer span",
+			".sf-shell .sf-product-lens__rail button span",
+			".sf-shell .sf-product-lens__screen > header span",
+			".sf-shell .sf-product-lens__narrative > span",
+			".sf-shell .sf-change-path__stages button span",
+			".sf-shell .sf-change-path__detail span",
+			".sf-shell .sf-contact-signal li span",
+			".sf-shell .sf-contact-form-section__aside > span",
+			".sf-shell .sf-contact-shortcut > span",
+			".sf-shell .sf-data-route li span",
+			".sf-shell .sf-privacy-details article > span",
+			".sf-shell .sf-privacy-contact span",
+			".sf-shell .lead-confirmation > span",
+			".sf-shell .lead-form [data-lead-field] > label > span",
+			".sf-shell .sf-answer-evidence li > span",
+			".sf-shell .sf-product-record-boundary span",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the functional floor`).toContain(
+				"font-size: var(--text-functional-mobile)",
+			);
+			expect(declarations, `${selector} needs a legible line-height`).toContain("line-height: 1.4");
+		}
+
+		for (const selector of [
+			".sf-shell .sf-home-opening__shift strong",
+			".sf-shell .sf-change-path__stages button strong",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the body floor`).toContain("font-size: var(--text-body-mobile)");
+			expect(declarations, `${selector} needs the body line-height`).toContain("line-height: 1.4");
+		}
+	});
+
+	it("keeps Agent controls and machine-document metadata readable at mobile widths", () => {
+		const agent = read("styles/experience/agent.css");
+		const mobile = agent.slice(agent.lastIndexOf("@media (max-width: 560px)"), agent.lastIndexOf("@media (prefers-reduced-motion"));
+		for (const selector of [
+			".agent-experience__masthead .mode-link a",
+			".agent-experience .locale-switch",
+			".agent-experience .agent-experience__facts li a",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs a 44px target`).toContain("min-width: var(--target-mobile)");
+			expect(declarations, `${selector} needs a 44px target`).toContain("min-height: var(--target-mobile)");
+			expect(declarations, `${selector} needs the functional floor`).toContain(
+				"font-size: var(--text-functional-mobile)",
+			);
+		}
+
+		for (const selector of [
+			".agent-experience .agent-experience__metadata dd",
+			".agent-experience .agent-experience__metadata a",
+			".agent-experience .agent-experience__facts li p",
+			".agent-experience .agent-experience__limitations li",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the body floor`).toContain("font-size: var(--text-body-mobile)");
+			expect(declarations, `${selector} needs the body line-height`).toContain("line-height: 1.4");
+		}
+
+		const metadataLabel = ruleFor(mobile, ".agent-experience .agent-experience__metadata dt");
+		expect(metadataLabel).toContain("font-size: var(--text-functional-mobile)");
+
+		const publicFactsLabel = ruleFor(mobile, ".agent-experience .agent-experience__intro > p:first-of-type");
+		expect(publicFactsLabel).toContain("font-size: var(--text-functional-mobile)");
+		expect(publicFactsLabel).toContain("line-height: 1.4");
+
+		for (const selector of [
+			".agent-experience .agent-experience__rail nav a em",
+			".agent-experience .agent-experience__facts header em",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the functional floor`).toContain(
+				"font-size: var(--text-functional-mobile)",
+			);
+			expect(declarations, `${selector} needs a legible line-height`).toContain("line-height: 1.4");
+		}
+
+		const brand = ruleFor(mobile, ".agent-experience__brand");
+		expect(brand).toContain("display: inline-flex");
+		expect(brand).toContain("min-height: var(--target-mobile)");
+
+		const metadataLink = ruleFor(mobile, ".agent-experience .agent-experience__metadata a");
+		expect(metadataLink).toContain("display: inline-flex");
+		expect(metadataLink).toContain("min-width: var(--target-mobile)");
+		expect(metadataLink).toContain("min-height: var(--target-mobile)");
+	});
+
+	it("makes the China lead disclosure link a real mobile target", () => {
+		const china = read("styles/experience/china.css");
+		const mobileStart = china.indexOf("@media (max-width: 800px)");
+		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
+		const mobile = china.slice(mobileStart, narrowStart);
+		const disclosure = ruleFor(mobile, ".china-command .lead-disclosure a");
+		expect(disclosure).toContain("display: inline-flex");
+		expect(disclosure).toContain("min-width: var(--target-mobile)");
+		expect(disclosure).toContain("min-height: var(--target-mobile)");
+	});
+
+	it("keeps the China home decision-path label and readout above their mobile floors", () => {
+		const china = read("styles/experience/china.css");
+		const mobileStart = china.indexOf("@media (max-width: 800px)");
+		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
+		const mobile = china.slice(mobileStart, narrowStart);
+		const label = ruleFor(mobile, ".china-command .china-home-hero__shift span");
+		const readout = ruleFor(mobile, ".china-command .china-home-hero__shift strong");
+		expect(label).toContain("font-size: var(--text-functional-mobile)");
+		expect(label).toContain("line-height: 1.4");
+		expect(readout).toContain("font-size: var(--text-body-mobile)");
+		expect(readout).toContain("line-height: 1.4");
+	});
+
+	it("keeps China section micro-labels above the mobile functional floor", () => {
+		const china = read("styles/experience/china.css");
+		const mobileStart = china.indexOf("@media (max-width: 800px)");
+		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
+		const mobile = china.slice(mobileStart, narrowStart);
+		for (const selector of [
+			".china-command .china-answer-flow__question > span",
+			".china-command .china-home-global__copy > span",
+			".china-command .china-home-lead > div > span",
+			".china-command .lead-form > header > span",
+			".china-command .china-product-workspace > header > span",
+			".china-command .china-product-outputs__title > span",
+			".china-command .china-product-outputs__stack > article > span",
+			".china-command .china-product-close > span",
+			".china-command .china-approach-router > header > span",
+			".china-command .china-approach-close > div > span",
+			".china-command .china-geo-bridge > header > span",
+			".china-command .china-geo-close > div > span",
+			".china-command .china-company-belief > header > span",
+			".china-command .china-company-close > span",
+			".china-command .china-diagnostic-form > div > span",
+			".china-command .china-privacy-close > div > span",
+			".china-command .china-company-network__center > p",
+			".china-command .china-approach-promise span",
+			".china-command .china-geo-contrast span",
+			".china-command .china-company-belief article > span",
+			".china-command .china-company-regions span",
+			".china-command .china-privacy-details span",
+		]) {
+			const declarations = ruleFor(mobile, selector);
+			expect(declarations, `${selector} needs the functional floor`).toContain(
+				"font-size: var(--text-functional-mobile)",
+			);
+			expect(declarations, `${selector} needs a legible line-height`).toContain("line-height: 1.4");
+		}
+
+		const answerQuestion = ruleFor(mobile, ".china-command .china-answer-flow__question > div > p");
+		expect(answerQuestion).toContain("font-size: max(var(--text-body-mobile), 14px)");
+		expect(answerQuestion).toContain("line-height: 1.4");
+	});
+
+	it("keeps the Agent Human-return control dark on Signal Orange", () => {
+		const agent = read("styles/experience/agent.css");
+		expect(ruleFor(agent, ".agent-experience .agent-experience__human-return")).toContain(
+			"color: var(--agent-ink)",
+		);
 	});
 
 	it("removes legacy Global selectors once their replacement artefacts own the experience", () => {

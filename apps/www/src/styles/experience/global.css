@@ -1122,7 +1122,7 @@
 }
 
 .sf-market-atlas__question span {
-	color: #9a4a11;
+	color: #713207;
 	font-family: "Geist Mono", monospace;
 	font-size: 0.58rem;
 	letter-spacing: 0.08em;
@@ -2629,6 +2629,7 @@
 }
 
 .sf-answer-evidence h2 {
+	color: var(--sf-paper);
 	font-size: clamp(1.15rem, 1.8vw, 1.65rem);
 	font-weight: 590;
 	letter-spacing: -0.025em;
@@ -2668,6 +2669,7 @@
 .sf-answer-evidence li strong {
 	margin: 0.65rem 0 0.5rem;
 	display: block;
+	color: var(--sf-paper);
 	font-size: 0.86rem;
 	font-weight: 650;
 	line-height: 1.3;
@@ -3016,6 +3018,11 @@
 }
 
 @media (max-width: 640px) {
+	.sf-shell .mode-link a,
+	.sf-shell .locale-switch {
+		font-size: var(--text-functional-mobile);
+	}
+
 	.sf-shell a[href],
 	.sf-shell button,
 	.sf-shell input,
@@ -3036,6 +3043,41 @@
 		overflow-wrap: anywhere;
 	}
 
+	.sf-shell .sf-situation-rail > article > span,
+	.sf-shell .sf-home-contact__statement > span,
+	.sf-shell .lead-form > header > span,
+	.sf-shell .sf-footer__links > div > span,
+	.sf-shell .sf-geo-bridge__origin > span,
+	.sf-shell .sf-geo-bridge__markets > div > span,
+	.sf-shell .sf-constellation__detail > span,
+	.sf-shell .sf-home-opening__shift span,
+	.sf-shell .sf-answer-field__questions button span,
+	.sf-shell .sf-answer-field__answer span,
+	.sf-shell .sf-product-lens__rail button span,
+	.sf-shell .sf-product-lens__screen > header span,
+	.sf-shell .sf-product-lens__narrative > span,
+	.sf-shell .sf-change-path__stages button span,
+	.sf-shell .sf-change-path__detail span,
+	.sf-shell .sf-contact-signal li span,
+	.sf-shell .sf-contact-form-section__aside > span,
+	.sf-shell .sf-contact-shortcut > span,
+	.sf-shell .sf-data-route li span,
+	.sf-shell .sf-privacy-details article > span,
+	.sf-shell .sf-privacy-contact span,
+	.sf-shell .lead-confirmation > span,
+	.sf-shell .lead-form [data-lead-field] > label > span,
+	.sf-shell .sf-answer-evidence li > span,
+	.sf-shell .sf-product-record-boundary span {
+		font-size: var(--text-functional-mobile);
+		line-height: 1.4;
+	}
+
+	.sf-shell .sf-home-opening__shift strong,
+	.sf-shell .sf-change-path__stages button strong {
+		font-size: var(--text-body-mobile);
+		line-height: 1.4;
+	}
+
 	.sf-shell .sf-kicker,
 	.sf-shell small,
 	.sf-shell dt,
@@ -3046,12 +3088,16 @@
 	.sf-shell .sf-answer-evidence header > span,
 	.sf-shell .sf-product-lens__record dt,
 	.sf-shell .sf-change-path__detail dt,
+	.sf-shell .sf-market-atlas__choices button span,
+	.sf-shell .sf-market-atlas__question > span,
 	.sf-shell .sf-market-atlas__question dt,
 	.sf-shell .sf-constellation__detail small {
 		font-size: var(--text-functional-mobile);
 		line-height: 1.4;
 	}
 
+	.sf-shell .lead-form header p,
+	.sf-shell .lead-confirmation p,
 	.sf-shell .sf-answer-field__answer dd,
 	.sf-shell .sf-answer-evidence li p,
 	.sf-shell .sf-product-lens__record dd,

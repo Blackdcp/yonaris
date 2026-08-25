@@ -30,6 +30,17 @@ const representationTargets = new Map<string, string>(
 	),
 );
 
+const stableMachinePaths = new Set([
+	...HUMAN_PAGE_KEYS.flatMap((key) =>
+		(["en", "zh"] as const).map((locale) => {
+			const prefix = locale === "zh" ? "/zh" : "";
+			return key === "home" ? `${prefix}/agent/index.md` : `${prefix}/agent/${key}.md`;
+		}),
+	),
+	"/agent/catalog.json",
+	"/zh/agent/catalog.json",
+]);
+
 interface MediaPreference {
 	quality: number;
 	position: number;
@@ -79,7 +90,7 @@ export function resolveRepresentation(request: Request): RepresentationResolutio
 	const pathname = url.pathname;
 	if (pathname.length > 1 && pathname.endsWith("/")) {
 		const canonicalPath = pathname.slice(0, -1);
-		if (representationTargets.has(canonicalPath)) {
+		if (representationTargets.has(canonicalPath) || stableMachinePaths.has(canonicalPath)) {
 			return { kind: "redirect", location: `${canonicalPath}${url.search}`, variesOnAccept: true };
 		}
 	}

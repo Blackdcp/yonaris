@@ -19,13 +19,18 @@ import "../../../styles/experience/china.css";
 
 export function ChinaHomePage() {
 	const copy = CHINA_COPY.home;
+	const [titleBeforePriority, titleAfterPriority] = copy.title.split("第一解释权");
 	return (
 		<ChinaShell pageKey="home" scene="ai-answer-flow">
 			<div className="china-home">
 				<section className="china-home-hero">
 					<div className="china-home-hero__copy">
 						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
+						<h1 aria-label={copy.title}>
+							{titleBeforePriority}
+							<span className="china-home-title__lexeme">第一解释权</span>
+							{titleAfterPriority}
+						</h1>
 						<p>{copy.lead}</p>
 						<div className="china-actions">
 							<a className="china-action" href="/zh/diagnostic">
@@ -36,11 +41,15 @@ export function ChinaHomePage() {
 							</a>
 						</div>
 						<div className="china-home-hero__shift" role="img" aria-label="客户决策方式变化">
-							<span>客户的新入口</span>
-							<strong>先问 AI → 形成判断 → 缩小选择</strong>
+							<div className="china-home-hero__shift-row">
+								<span>客户的新入口</span>
+								<strong>先问 AI → 形成判断 → 缩小选择</strong>
+							</div>
 							<i aria-hidden="true">↓</i>
-							<span>品牌要核对</span>
-							<strong>有没有出现 → 卖点准不准 → 竞争位置怎样</strong>
+							<div className="china-home-hero__shift-row">
+								<span>品牌要核对</span>
+								<strong>有没有出现 → 卖点准不准 → 竞争位置怎样</strong>
+							</div>
 						</div>
 					</div>
 					<AiAnswerFlow />

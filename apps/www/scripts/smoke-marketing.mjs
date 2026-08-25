@@ -4,23 +4,25 @@ import { pathToFileURL } from "node:url";
 
 export const CORE_ROUTES = [
 	{ path: "/", copy: ["Your next customer may never search. They’ll ask."] },
-	{ path: "/zh", copy: ["客户问 AI 时，你的品牌被怎么说？"] },
+	{ path: "/zh", copy: ["客户开始问 AI，品牌的第一解释权还在你手里吗？"] },
 	{ path: "/product", copy: ["See how AI answers your market’s buying questions."] },
-	{ path: "/zh/product", copy: ["客户怎么问，AI 怎么答，先看哪里"] },
+	{ path: "/zh/product", copy: ["品牌为什么没进客户的候选池？"] },
 	{ path: "/approach", copy: ["Start with the buying question that matters."] },
-	{ path: "/zh/approach", copy: ["从最担心的品牌问题开始"] },
+	{ path: "/zh/approach", copy: ["先做品牌体检，再定 GEO 打法。"] },
 	{ path: "/company", copy: ["Built for the shift from search results to AI answers."] },
-	{ path: "/zh/company", copy: ["让企业看清 AI 如何介绍自己的品牌"] },
+	{ path: "/zh/company", copy: ["不卖玄学排名，先把 AI 怎么说你查清楚"] },
 	{ path: "/geo", copy: ["See how the same brand appears across markets."] },
-	{ path: "/zh/geo", copy: ["服务中国市场，也支持企业进入海外目标市场"] },
+	{ path: "/zh/geo", copy: ["先有中国市场基线，再谈出海本地化"] },
 	{ path: "/diagnostic", copy: ["Start with the question that matters."] },
-	{ path: "/zh/diagnostic", copy: ["先聊清楚，你最想解决什么"] },
+	{ path: "/zh/diagnostic", copy: ["第一次沟通只确认摸底范围"] },
 ];
 
 export const GOVERNED_HTML_ROUTES = [
 	{ path: "/privacy", copy: ["Your details take one short route."] },
-	{ path: "/zh/privacy", copy: ["三项信息，只用于回复咨询"] },
+	{ path: "/zh/privacy", copy: ["姓名、电话、公司，只用于回复这次咨询"] },
 ];
+
+export const HUMAN_HTML_ROUTES = [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES];
 
 export const AGENT_HTML_ROUTES = [
 	{ path: "/agent", copy: ["Agent fact interface"], noindex: true },
@@ -53,6 +55,43 @@ function agentMachinePaths(agentPath) {
 		peerLanguage: zh ? "en" : "zh-CN",
 	};
 }
+
+function humanMachinePaths(humanPath) {
+	const zh = humanPath === "/zh" || humanPath.startsWith("/zh/");
+	const localePrefix = zh ? "/zh" : "";
+	const topic = humanPath === "/" || humanPath === "/zh" ? "index" : humanPath.split("/").at(-1);
+	const peerHumanPath = zh
+		? humanPath === "/zh"
+			? "/"
+			: humanPath.replace(/^\/zh/u, "")
+		: humanPath === "/"
+			? "/zh"
+			: `/zh${humanPath}`;
+	return {
+		locale: zh ? "zh-CN" : "en",
+		canonicalPath: humanPath,
+		peerHumanPath,
+		peerLanguage: zh ? "en" : "zh-CN",
+		defaultPath: zh ? peerHumanPath : humanPath,
+		markdownPath: `${localePrefix}/agent/${topic}.md`,
+		catalogPath: `${localePrefix}/agent/catalog.json`,
+	};
+}
+
+export const ACCEPT_MATRIX = [
+	{ status: 200, contentType: "text/html" },
+	{ accept: "*/*", status: 200, contentType: "text/html" },
+	{ accept: "text/html", status: 200, contentType: "text/html" },
+	{ accept: "text/markdown", status: 200, contentType: "text/markdown" },
+	{ accept: "text/*", status: 200, contentType: "text/markdown" },
+	{ accept: "text/html;q=0.8, text/markdown;q=0.8", status: 200, contentType: "text/html" },
+	{ accept: "text/html;q=0.4, text/markdown;q=0.8", status: 200, contentType: "text/markdown" },
+	{ accept: "text/markdown;q=0", status: 406 },
+	{ accept: "application/json", status: 406 },
+	{ accept: "text/html;q=0, text/markdown;q=0", status: 406 },
+];
+
+export const TRAILING_SLASH_ACCEPTS = ["text/html", "text/markdown", "application/json", "image/avif"];
 
 const AGENT_MARKDOWN_ROUTES = AGENT_HTML_ROUTES.map(({ path }) => ({
 	path: agentMachinePaths(path).markdownPath,
@@ -192,10 +231,19 @@ function typeMatches(actual, expected) {
 	return actual.startsWith(expected);
 }
 
-function parsedHtmlLinks(html) {
-	return [...html.matchAll(/<link\b[^>]*>/giu)].map(([tag]) =>
-		Object.fromEntries([...tag.matchAll(/([\w-]+)=["']([^"']*)["']/gu)].map((match) => [match[1].toLowerCase(), match[2]])),
+function parsedHtmlTags(html, tagName) {
+	return [...html.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, "giu"))].map(([tag]) =>
+		Object.fromEntries(
+			[...tag.matchAll(/([\w-]+)(?:=["']([^"']*)["'])?/gu)].map((match) => [
+				match[1].toLowerCase(),
+				match[2] ?? "",
+			]),
+		),
 	);
+}
+
+function parsedHtmlLinks(html) {
+	return parsedHtmlTags(html, "link");
 }
 
 function linkPath(href) {
@@ -206,12 +254,13 @@ function linkPath(href) {
 	}
 }
 
-function hasHtmlLink(links, { rel, path, type }) {
+function hasHtmlLink(links, { rel, path, type, hrefLang }) {
 	return links.some(
 		(link) =>
 			link.rel === rel &&
 			linkPath(link.href) === path &&
-			(type === undefined || link.type === type),
+			(type === undefined || link.type === type) &&
+			(hrefLang === undefined || link.hreflang === hrefLang),
 	);
 }
 
@@ -237,6 +286,160 @@ function hasHttpLink(links, { rel, path, type, hrefLang }) {
 	);
 }
 
+const decodedPublicTerm = (...codePoints) => String.fromCodePoint(...codePoints);
+
+const PUBLIC_OUTPUT_GUARDS = [
+	{ label: "prohibited origin term", pattern: new RegExp(decodedPublicTerm(101, 108, 109, 111), "iu") },
+	{
+		label: "prohibited licensing term",
+		pattern: new RegExp(
+			`${decodedPublicTerm(111, 112, 101, 110)}[\\s-]?${decodedPublicTerm(115, 111, 117, 114, 99, 101)}`,
+			"iu",
+		),
+	},
+	{ label: "prohibited Chinese licensing term", pattern: new RegExp(decodedPublicTerm(24_320, 28_304), "u") },
+	{
+		label: "implementation commentary",
+		pattern: new RegExp(["implementation", "\\s+", "commentary"].join(""), "iu"),
+	},
+];
+
+function checkPublicOutput(path, body, failures) {
+	for (const guard of PUBLIC_OUTPUT_GUARDS) {
+		if (guard.pattern.test(body)) failures.push(`PUBLIC OUTPUT ${path}: ${guard.label}`);
+	}
+}
+
+function checkHumanDocument(route, body, failures) {
+	const discovery = humanMachinePaths(route.path);
+	const links = parsedHtmlLinks(body);
+	const robots = parsedHtmlTags(body, "meta").find((meta) => meta.name?.toLowerCase() === "robots")?.content ?? "";
+	if (/noindex/iu.test(robots)) failures.push(`HUMAN ROBOTS ${route.path}: must remain indexable`);
+	if (!hasHtmlLink(links, { rel: "canonical", path: discovery.canonicalPath }))
+		failures.push(`HUMAN CANONICAL ${route.path}: expected ${discovery.canonicalPath}`);
+	if (
+		!hasHtmlLink(links, {
+			rel: "alternate",
+			path: discovery.canonicalPath,
+			hrefLang: discovery.locale,
+		})
+	)
+		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.locale} self alternate`);
+	if (
+		!hasHtmlLink(links, {
+			rel: "alternate",
+			path: discovery.peerHumanPath,
+			hrefLang: discovery.peerLanguage,
+		})
+	)
+		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.peerLanguage} peer`);
+	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.defaultPath, hrefLang: "x-default" }))
+		failures.push(`HUMAN HREFLANG ${route.path}: missing x-default`);
+	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+		failures.push(`HUMAN DISCOVERY ${route.path}: missing Markdown alternate`);
+	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+		failures.push(`HUMAN DISCOVERY ${route.path}: missing JSON-LD alternate`);
+	if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+		failures.push(`HUMAN DISCOVERY ${route.path}: missing llms.txt relation`);
+}
+
+function checkAgentDocument(route, body, failures) {
+	const hasSurface = /data-agent-surface=["']true["']/u.test(body);
+	const hasArticle = /<article\b/iu.test(body);
+	const hasGroup = /data-fact-group=["'][a-z0-9.-]+["']/u.test(body);
+	const hasClaim = /data-claim-id=["'][a-z0-9.-]+["']/u.test(body);
+	const hasScope = /agent-experience__metadata-wide/u.test(body);
+	const hasLimitations = /agent-experience__limitations/u.test(body);
+	if (!(hasSurface && hasArticle && hasGroup && hasClaim && hasScope && hasLimitations))
+		failures.push(`AGENT CONTRACT ${route.path}: expected article, stable facts, scope, and limitations`);
+}
+
+function checkLeadForm(path, body, failures) {
+	const expected =
+		path === "/zh/diagnostic"
+			? [
+					["name", "name", undefined],
+					["contact", "phone", "tel"],
+					["company", "company", undefined],
+				]
+			: [
+					["name", "name", undefined],
+					["contact", "email", "email"],
+					["company", "company", undefined],
+				];
+	const fields = [...body.matchAll(/<div\b[^>]*data-lead-field=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/giu)];
+	const form = body.match(/<form\b[^>]*data-lead-state=["'][^"']+["'][^>]*>[\s\S]*?<\/form>/iu)?.[0] ?? "";
+	const visibleControls = parsedHtmlTags(form, "input").filter(
+		(input) => input.type !== "hidden" && input.name !== "companyUrl",
+	);
+	if (fields.length !== expected.length) {
+		failures.push(`FORM ${path}: expected exactly three visible fields`);
+		return;
+	}
+	if (visibleControls.length !== expected.length) {
+		failures.push(`FORM ${path}: expected exactly three visible controls`);
+		return;
+	}
+	for (const [field, name, type] of expected) {
+		const block = fields.find((match) => match[1] === field)?.[2] ?? "";
+		const input = parsedHtmlTags(block, "input")[0];
+		if (!input || input.name !== name || (type !== undefined && input.type !== type) || !("required" in input)) {
+			failures.push(`FORM ${path}: invalid ${field} field contract`);
+		}
+	}
+}
+
+function checkCatalogueGraph(route, graph, failures) {
+	if (graph?.["@context"] !== "https://schema.org" || !Array.isArray(graph?.["@graph"])) {
+		failures.push(`GRAPH ${route.path}: invalid JSON-LD envelope`);
+		return;
+	}
+	const nodes = graph["@graph"];
+	const organizations = nodes.filter((node) => node?.["@type"] === "Organization");
+	const websites = nodes.filter((node) => node?.["@type"] === "WebSite");
+	const pages = nodes.filter((node) => node?.["@type"] === "WebPage");
+	const lists = nodes.filter((node) => node?.["@type"] === "ItemList");
+	const ids = new Set(nodes.map((node) => node?.["@id"]).filter(Boolean));
+	const organizationId = organizations[0]?.["@id"];
+	const websiteId = websites[0]?.["@id"];
+	if (
+		organizations.length !== 1 ||
+		websites.length !== 1 ||
+		pages.length !== 7 ||
+		lists.length !== 7 ||
+		ids.size !== nodes.length ||
+		!String(organizationId).endsWith("/#organization") ||
+		!String(websiteId).endsWith("/#website") ||
+		websites[0]?.publisher?.["@id"] !== organizationId
+	) {
+		failures.push(`GRAPH ${route.path}: expected stable Organization, WebSite, seven WebPage and seven ItemList nodes`);
+		return;
+	}
+	const itemListIds = new Set(lists.map((list) => list?.["@id"]));
+	const mainEntityIds = new Set(pages.map((page) => page?.mainEntity?.["@id"]));
+	if (
+		mainEntityIds.size !== itemListIds.size ||
+		[...mainEntityIds].some((id) => !itemListIds.has(id)) ||
+		[...itemListIds].some((id) => !mainEntityIds.has(id))
+	) {
+		failures.push(`GRAPH ${route.path}: every ItemList must be referenced by exactly one page identity`);
+	}
+	for (const page of pages) {
+		if (
+			page?.isPartOf?.["@id"] !== websiteId ||
+			page?.about?.["@id"] !== organizationId ||
+			!ids.has(page?.mainEntity?.["@id"])
+		) {
+			failures.push(`GRAPH ${route.path}: disconnected WebPage ${page?.["@id"] ?? "without id"}`);
+		}
+	}
+	for (const list of lists) {
+		const claims = list?.itemListElement;
+		if (!Array.isArray(claims) || claims.length === 0 || claims.some((claim) => !/^[a-z0-9.-]+$/u.test(claim?.identifier)))
+			failures.push(`GRAPH ${route.path}: ItemList ${list?.["@id"] ?? "without id"} has unstable claims`);
+	}
+}
+
 async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 	const routeUrl = new URL(route.path, baseUrl);
 	try {
@@ -250,6 +453,7 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 			failures.push(`TYPE ${route.path}: expected text/html, received ${contentType || "none"}`);
 		const body = await response.text();
 		for (const copy of route.copy) if (!body.includes(copy)) failures.push(`COPY ${route.path}: ${copy}`);
+		checkPublicOutput(route.path, body, failures);
 		if (route.noindex && !body.includes("noindex,follow"))
 			failures.push(`ROBOTS ${route.path}: expected noindex,follow`);
 		if (route.noindex) {
@@ -263,7 +467,12 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 				failures.push(`DISCOVERY ${route.path}: missing JSON-LD alternate`);
 			if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
 				failures.push(`DISCOVERY ${route.path}: missing llms.txt relation`);
+			checkAgentDocument(route, body, failures);
+		} else {
+			checkHumanDocument(route, body, failures);
 		}
+		if (route.path === "/diagnostic" || route.path === "/zh/diagnostic")
+			checkLeadForm(route.path, body, failures);
 		collectHtmlAssets(body, routeUrl, baseUrl, assetUrls);
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
@@ -317,6 +526,7 @@ async function checkAgentMarkdownRoute(route, baseUrl, failures) {
 		}
 		checkMachineHeaders(route, response, failures, "text/markdown");
 		const body = await response.text();
+		checkPublicOutput(route.path, body, failures);
 		if (!/- \[[a-z0-9.-]+\] /u.test(body)) failures.push(`CLAIM ${route.path}: missing stable claim ID`);
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
@@ -337,10 +547,10 @@ async function checkAgentCatalogRoute(route, baseUrl, failures) {
 		}
 		checkMachineHeaders(route, response, failures, "application/ld+json");
 		const body = await response.text();
+		checkPublicOutput(route.path, body, failures);
 		try {
 			const parsed = JSON.parse(body);
-			if (parsed?.["@context"] !== "https://schema.org" || !Array.isArray(parsed?.["@graph"]))
-				failures.push(`JSON ${route.path}: invalid JSON-LD graph`);
+			checkCatalogueGraph(route, parsed, failures);
 			if (!/"identifier":"[a-z0-9.-]+"/u.test(JSON.stringify(parsed)))
 				failures.push(`CLAIM ${route.path}: missing stable claim ID`);
 		} catch {
@@ -365,6 +575,7 @@ async function checkMachineRoute(route, baseUrl, failures) {
 			failures.push(`TYPE ${route.path}: expected ${route.contentType}, received ${contentType || "none"}`);
 		}
 		const body = await response.text();
+		if (!contentType.startsWith("image/")) checkPublicOutput(route.path, body, failures);
 		for (const copy of route.copy) if (!body.includes(copy)) failures.push(`COPY ${route.path}: ${copy}`);
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
@@ -408,16 +619,121 @@ async function checkAssets(baseUrl, failures, assetUrls) {
 	}
 }
 
+async function checkNegotiationMatrix(baseUrl, failures) {
+	const routes = [...HUMAN_HTML_ROUTES, ...AGENT_HTML_ROUTES];
+	let cases = 0;
+	for (const route of routes) {
+		for (const method of ["GET", "HEAD"]) {
+			for (const expected of ACCEPT_MATRIX) {
+				cases += 1;
+				const acceptLabel = expected.accept ?? "(absent)";
+				try {
+					const headers = expected.accept === undefined ? {} : { Accept: expected.accept };
+					const response = await fetchWithTimeout(new URL(route.path, baseUrl), {
+						method,
+						redirect: "manual",
+						headers,
+					});
+					const body = await response.text();
+					if (response.status >= 500)
+						failures.push(`NEGOTIATION ${method} ${route.path} ${acceptLabel}: ${response.status}`);
+					if (response.status !== expected.status)
+						failures.push(
+							`NEGOTIATION ${method} ${route.path} ${acceptLabel}: expected ${expected.status}, received ${response.status}`,
+						);
+					const contentType = response.headers.get("content-type") ?? "";
+					if (expected.contentType && !contentType.startsWith(expected.contentType))
+						failures.push(
+							`NEGOTIATION TYPE ${method} ${route.path} ${acceptLabel}: expected ${expected.contentType}, received ${contentType || "none"}`,
+						);
+					if (method === "HEAD" && body.length > 0)
+						failures.push(`NEGOTIATION HEAD ${route.path} ${acceptLabel}: response body must be empty`);
+				} catch (error) {
+					failures.push(
+						`ERR NEGOTIATION ${method} ${route.path} ${acceptLabel}: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				}
+			}
+
+			if (route.path === "/") continue;
+			for (const accept of TRAILING_SLASH_ACCEPTS) {
+				cases += 1;
+				try {
+					const trailingUrl = new URL(`${route.path}/?utm_source=release`, baseUrl);
+					const response = await fetchWithTimeout(trailingUrl, {
+						method,
+						redirect: "manual",
+						headers: { Accept: accept },
+					});
+					const body = await response.text();
+					const location = response.headers.get("location");
+					const resolved = location ? new URL(location, baseUrl) : undefined;
+					if (response.status >= 500)
+						failures.push(`TRAILING ${method} ${route.path}/ ${accept}: ${response.status}`);
+					if (response.status !== 307)
+						failures.push(
+							`TRAILING ${method} ${route.path}/ ${accept}: expected 307, received ${response.status}`,
+						);
+					if (`${resolved?.pathname ?? ""}${resolved?.search ?? ""}` !== `${route.path}?utm_source=release`)
+						failures.push(`TRAILING ${method} ${route.path}/ ${accept}: query-preserving location missing`);
+					if (method === "HEAD" && body.length > 0)
+						failures.push(`TRAILING HEAD ${route.path}/ ${accept}: response body must be empty`);
+				} catch (error) {
+					failures.push(
+						`ERR TRAILING ${method} ${route.path}/ ${accept}: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				}
+			}
+		}
+	}
+
+	for (const route of [...AGENT_MARKDOWN_ROUTES, ...AGENT_CATALOG_ROUTES]) {
+		for (const method of ["GET", "HEAD"]) {
+			for (const accept of TRAILING_SLASH_ACCEPTS) {
+				cases += 1;
+				try {
+					const trailingUrl = new URL(`${route.path}/?utm_source=release`, baseUrl);
+					const response = await fetchWithTimeout(trailingUrl, {
+						method,
+						redirect: "manual",
+						headers: { Accept: accept },
+					});
+					const body = await response.text();
+					const location = response.headers.get("location");
+					const resolved = location ? new URL(location, baseUrl) : undefined;
+					if (response.status >= 500)
+						failures.push(`STABLE TRAILING ${method} ${route.path}/ ${accept}: ${response.status}`);
+					if (response.status !== 307)
+						failures.push(
+							`STABLE TRAILING ${method} ${route.path}/ ${accept}: expected 307, received ${response.status}`,
+						);
+					if (`${resolved?.pathname ?? ""}${resolved?.search ?? ""}` !== `${route.path}?utm_source=release`)
+						failures.push(`STABLE TRAILING ${method} ${route.path}/ ${accept}: query-preserving location missing`);
+					if (method === "HEAD" && body.length > 0)
+						failures.push(`STABLE TRAILING HEAD ${route.path}/ ${accept}: response body must be empty`);
+				} catch (error) {
+					failures.push(
+						`ERR STABLE TRAILING ${method} ${route.path}/ ${accept}: ${error instanceof Error ? error.message : String(error)}`,
+					);
+				}
+			}
+		}
+	}
+	console.log(`${cases} Accept and trailing-slash cases checked.`);
+	return cases;
+}
+
 export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", options = {}) {
 	const baseUrl = new URL(inputUrl);
 	const failures = [];
 	const assetUrls = new Map();
 
-	for (const route of [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES, ...AGENT_HTML_ROUTES])
+	for (const route of [...HUMAN_HTML_ROUTES, ...AGENT_HTML_ROUTES])
 		await checkReadableRoute(route, baseUrl, failures, assetUrls);
 	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures);
 	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);
+	const negotiationCases = await checkNegotiationMatrix(baseUrl, failures);
 
 	const plausibleUrl = new URL("/api/plausible/js/script", baseUrl);
 	try {
@@ -431,7 +747,7 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 		failures.push(`ERR /api/plausible/js/script: ${error instanceof Error ? error.message : String(error)}`);
 	}
 
-	for (const route of CORE_ROUTES) {
+	for (const route of HUMAN_HTML_ROUTES) {
 		try {
 			const response = await fetchWithTimeout(new URL(route.path, baseUrl), { headers: { Accept: "text/markdown" } });
 			const contentType = response.headers.get("content-type") ?? "";
@@ -524,8 +840,7 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 
 	if (failures.length > 0) throw new Error(`Marketing smoke failed:\n${failures.join("\n")}`);
 	const routeCount =
-		CORE_ROUTES.length +
-		GOVERNED_HTML_ROUTES.length +
+		HUMAN_HTML_ROUTES.length +
 		AGENT_HTML_ROUTES.length +
 		AGENT_MARKDOWN_ROUTES.length +
 		AGENT_CATALOG_ROUTES.length +
@@ -533,7 +848,7 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 	console.log(
 		`${routeCount} routes, ${MANUAL_REDIRECTS.length} redirects, and ${assetUrls.size} same-origin assets passed.`,
 	);
-	return { routes: routeCount, redirects: MANUAL_REDIRECTS.length, assets: assetUrls.size };
+	return { routes: routeCount, redirects: MANUAL_REDIRECTS.length, assets: assetUrls.size, negotiationCases };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

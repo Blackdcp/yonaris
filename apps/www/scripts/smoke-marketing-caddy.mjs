@@ -243,7 +243,7 @@ export async function runCaddySmoke(imageRef, options = {}) {
 		await startCaddy(appConfig);
 		await execute("docker", ["cp", `${names.caddy}:${ROOT_CERTIFICATE}`, rootCertificate], { phase: "tls" });
 
-		await execute(
+		const routeResult = await execute(
 			"docker",
 			[
 				"run",
@@ -269,6 +269,9 @@ export async function runCaddySmoke(imageRef, options = {}) {
 			],
 			{ phase: "route" },
 		);
+		if (!routeResult.stdout.includes("904 Accept and trailing-slash cases checked.")) {
+			throw new Error("route probe did not emit the strict release matrix summary");
+		}
 
 		await execute("docker", ["rm", "-f", names.caddy, names.app], { phase: "transition" });
 		await execute(
