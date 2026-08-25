@@ -8,9 +8,9 @@
 
 Rebuild the complete Yonaris public website as one brand system with two regional narratives and two reading modes.
 
-- The global English edition borrows Bluefish's strengths in enterprise confidence, product architecture, product-led explanation, and meaningful interaction.
-- The Chinese edition borrows 智推时代's strengths in market-context framing, decision clarity, delivery certainty, and the connection between Chinese-market understanding and global service capability.
-- Both editions use one factual source rendered as a Human experience and an Agent-first fact view, following the strongest structural lesson from DeepLumen.
+- The global English edition follows a global enterprise-product pattern built around enterprise confidence, product architecture, product-led explanation, and meaningful interaction.
+- The Chinese edition follows a China ToB decision pattern built around market-context framing, decision clarity, delivery certainty, and the connection between Chinese-market understanding and global service capability.
+- Both editions use one factual source rendered as a Human experience and an Agent-first fact view, following the Human/Agent dual-view principle.
 - Competitor visual identity, wording, claims, metrics, and customer proof are not copied.
 
 This specification supersedes earlier marketing-site direction wherever that direction conflicts with the requirements below. Previously retired public sections remain retired. Restricted legacy terminology and positioning must not appear in public output, internal marketing content, route metadata, generated machine documents, comments, tests, fixtures, or deployment artifacts.
@@ -222,17 +222,15 @@ Submitting posts to the same-origin diagnostic endpoint. The server validates th
 
 Success is displayed only after the mail provider confirms acceptance. Failure states are honest, preserve entered data locally where safe, and offer retry without placing submitted private data in a URL or opening a mail client.
 
-## 8. Regional Competitive Design and Interaction Translation
+## 8. Regional Design and Interaction Translation
 
-The regional editions do not share one competitor-inspired design language. Each Human edition follows the habits of its intended market. DeepLumen informs only the Human/Agent relationship.
+The regional editions do not share one design language. Each Human edition follows the habits of its intended market. The Human/Agent dual-view principle governs only the relationship between reading modes.
 
-### 8.1 Global Human edition — Bluefish reference
+### 8.1 Global Human edition — global enterprise-product pattern
 
-Reference: <https://www.bluefishai.com/>
+The global enterprise-product pattern behaves like an enterprise product launch rather than a long marketing document. It creates confidence through a strong opening proposition, cinematic visual staging, an early platform architecture, product-module transitions, and repeated movement from outcome to product proof.
 
-Bluefish is useful because its site behaves like an enterprise product launch rather than a long marketing document. It creates confidence through a strong opening proposition, cinematic visual staging, an early platform architecture, product-module transitions, and repeated movement from outcome to product proof.
-
-| Bluefish strength | Why it works for global buyers | Yonaris translation |
+| Global enterprise-product principle | Why it works for global buyers | Yonaris translation |
 | --- | --- | --- |
 | Large, decisive category statement | Establishes enterprise relevance before explaining method | Lead with the market consequence of AI answering brand questions, then immediately show the Answer Studio |
 | High-contrast cinematic hero | Makes the category feel important and differentiated | Use Yonaris Ink, Paper, and Signal Orange with a product-evidence composition, not competitor imagery or color |
@@ -262,20 +260,18 @@ The rest of the global site extends that standard with distinct visual protagoni
 - Research previews expose enough detail to establish authority before navigating away.
 - Motion is restrained and product-like: state change, selection, connection, and evidence emphasis. There is no decorative cursor effect, continuous ambient animation, or generic parallax.
 
-#### Bluefish patterns not adopted
+#### Global patterns not adopted
 
 - Role-based primary segmentation, because Yonaris begins with shared AI anxiety rather than job title;
 - competitor wording, identity, imagery, teal/yellow palette, or signature compositions;
 - unverified enterprise scale, customer, performance, or exclusivity claims;
 - product breadth that Yonaris cannot currently demonstrate or deliver.
 
-### 8.2 Chinese Human edition — 智推时代 reference
+### 8.2 Chinese Human edition — China ToB decision pattern
 
-Reference: <https://www.zhituishidai.com/>
+The China ToB decision pattern follows a Chinese enterprise decision sequence: explain why the market has changed, make the risk concrete, define the category, show the service system, prove coverage, explain delivery, and provide an immediate contact route. Its strength is not minimalism; it is decision clarity and the feeling that a complete service path exists.
 
-智推时代 is useful because its site follows a Chinese enterprise decision sequence: explain why the market has changed, make the risk concrete, define the category, show the service system, prove coverage, explain delivery, and provide an immediate contact route. Its strength is not minimalism; it is decision clarity and the feeling that a complete service path exists.
-
-| 智推时代 strength | Why it works for Chinese buyers | Yonaris translation |
+| China ToB decision principle | Why it works for Chinese buyers | Yonaris translation |
 | --- | --- | --- |
 | Market-change framing before product detail | Gives the buyer a reason to continue reading | Begin with “客户正在先问 AI，再认识你的品牌” and show the business consequence immediately |
 | Conclusion-first section headlines | Supports fast executive scanning | Every section starts with a complete judgment, followed by evidence and method |
@@ -289,7 +285,7 @@ Reference: <https://www.zhituishidai.com/>
 
 The Chinese Human edition uses the same Yonaris identity but a different information rhythm. It is denser, more explicit, and more directional than the global edition. Each major section combines a conclusion, a visual model, and a concrete output. More information may appear within one viewport, but hierarchy must remain clear through numbered stages, labelled bands, and strong Ink/Paper contrast.
 
-The page does not imitate the competitor's color, logo walls, terminology, decorative technology motifs, or sales packaging. Yonaris Signal Orange marks the exact point of risk, evidence, or next action. It never becomes a general festive accent.
+The page does not imitate another brand's color, logo walls, terminology, decorative technology motifs, or sales packaging. Yonaris Signal Orange marks the exact point of risk, evidence, or next action. It never becomes a general festive accent.
 
 #### Chinese interaction direction
 
@@ -300,20 +296,18 @@ The page does not imitate the competitor's color, logo walls, terminology, decor
 - Report and evidence previews use expandable annotations so Chinese buyers can inspect substance without first opening another page.
 - The Chinese diagnostic uses one compact row or vertical stack for `姓名、电话、公司`, with inline validation and confirmed email-delivery feedback.
 
-#### 智推时代 patterns not adopted
+#### China ToB patterns not adopted
 
 - unsupported market statistics, platform counts, customer counts, logo walls, outcomes, rankings, or delivery guarantees;
 - inflated transformation language, excessive slogans, or fear-based claims;
 - pricing tiers, technical architecture, service promises, or capabilities that Yonaris has not approved;
 - excessive section length or interaction added only to make the page feel busy.
 
-### 8.3 Human/Agent separation — DeepLumen reference only
+### 8.3 Human/Agent separation — dual-view principle
 
-References: <https://www.deeplumen.com/> and <https://www.deeplumen.com/agent/>
+The dual-view principle makes the Human and Agent views visibly related, publicly accessible, and factually aligned while giving each a different reading density. It is not a shared aesthetic system for the global and Chinese Human sites.
 
-DeepLumen contributes one structural idea: make the Human and Agent views visibly related, publicly accessible, and factually aligned while giving each a different reading density. It is not a shared aesthetic reference for the global and Chinese Human sites.
-
-| DeepLumen mechanism | Yonaris translation |
+| Human/Agent dual-view mechanism | Yonaris translation |
 | --- | --- |
 | Visible Human/Agent entry points | Add a branded, accessible `Human / Agent` control to both regional shells |
 | Agent-first site map | Use `/agent` and `/zh/agent` as regional fact maps with concise page summaries |
@@ -321,7 +315,7 @@ DeepLumen contributes one structural idea: make the Human and Agent views visibl
 | Machine-first information hierarchy | Lead Agent pages with entity, capability, evidence, boundary, canonical, and verification facts |
 | Same content represented differently | Generate both views from one factual source while allowing independently written regional narrative |
 
-The global Agent experience uses the global factual vocabulary and English buyer context. The Chinese Agent experience uses Chinese terminology, local market context, and Chinese page relationships. DeepLumen's commerce imagery, visual identity, content categories, and page rhythm are not copied.
+The global Agent experience uses the global factual vocabulary and English buyer context. The Chinese Agent experience uses Chinese terminology, local market context, and Chinese page relationships. The Agent editions do not inherit external commerce imagery, visual identity, content categories, or page rhythm.
 
 ### 8.4 Shared Yonaris interaction rules
 
@@ -477,10 +471,10 @@ The redesign is complete when:
 7. all approved route, content, interaction, visual, build, and production checks pass;
 8. the global slice is deployed first and the Chinese slice follows as the next complete release.
 
-## 15. Reference Sites and Borrowing Boundary
+## 15. Design Principle Boundaries
 
-- Bluefish: <https://www.bluefishai.com/> — enterprise hierarchy, platform architecture, and product-led interaction only.
-- 智推时代: <https://www.zhituishidai.com/> — Chinese-market framing, delivery clarity, and global-service narrative only.
-- DeepLumen: <https://www.deeplumen.com/> and <https://www.deeplumen.com/agent/> — explicit Human/Agent relationship and machine-first companion structure only.
+- Global enterprise-product pattern — enterprise hierarchy, platform architecture, and product-led interaction only.
+- China ToB decision pattern — Chinese-market framing, delivery clarity, and global-service narrative only.
+- Human/Agent dual-view principle — explicit reading-mode relationship and machine-first companion structure only.
 
 Yonaris retains its own identity, approved product facts, visual language, and evidence standards throughout.

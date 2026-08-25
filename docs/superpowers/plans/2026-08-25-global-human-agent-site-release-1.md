@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the complete global English Yonaris site as a Bluefish-informed, Yonaris-branded product experience with visible Human/Agent companion routes, meaningful interaction, and no old-shell inner pages.
+**Goal:** Ship the complete global English Yonaris site as a Yonaris-branded enterprise product experience with visible Human/Agent companion routes, meaningful interaction, and no old-shell inner pages.
 
 **Architecture:** Keep the existing TanStack Start route inventory and global-English edition boundary. Add typed experience content and focused interactive React components to the existing page-specific components; keep core facts in the current machine-fact layer. Convert `/agent` and `/agent/*` into branded semantic HTML for browser requests while extending the existing `Accept: text/markdown` negotiation so machine clients receive the same factual Markdown.
 
@@ -15,7 +15,7 @@
 - Release 1 changes the global English edition only; Chinese Human pages remain unchanged until Release 2.
 - Light surfaces use `/brand/logos/yonaris-wordmark-navy.png`; dark surfaces use `/brand/logos/yonaris-wordmark-white.png`.
 - The exact palette is Ink `#0B1220`, Signal Orange `#FF6A00`, Paper `#F6F4F1`, Slate `#1E2A39`, Blue Gray `#2F3E50`, Stone `#8A95A3`, and Mist `#DDE2E8`.
-- Bluefish informs only global Human design and interaction; competitor identity, copy, imagery, claims, and palette are not copied.
+- Global Human design and interaction follow a global enterprise-product pattern: cinematic staging, early product architecture, product-led explanation, and outcome-to-proof pacing. External brand identity, copy, imagery, claims, and palette are not copied.
 - Primary relevance is organized by the five shared AI-anxiety questions, never by job title.
 - Every global core route receives the new shell and a page-specific visual anchor; a homepage-only release is forbidden.
 - Human and Agent views derive identity, capability, evidence, limitation, and verification facts from one source.
@@ -376,7 +376,7 @@ function nextQuestion(current: GlobalAnswerQuestionId, key: string): GlobalAnswe
 }
 ```
 
-- [ ] **Step 6: Recompose the homepage around the Bluefish-informed product story**
+- [ ] **Step 6: Recompose the homepage around the global enterprise-product story**
 
 Replace the current Home sequence with these section IDs and titles in `registry.ts` and `home-page.tsx`:
 
@@ -966,7 +966,7 @@ Update the machine route manifest so `/llms.mdx/agent` is covered by `markdownIn
 
 - [ ] **Step 6: Style the Agent information surface**
 
-Add `agent.css` and import it after `core.css`. Use the same palette and Logo, a maximum reading width of 78rem, a left fact directory at desktop, one-column order on mobile, and Signal Orange only for active mode, section index, focus, and verification marks. Do not reuse the Human cinematic hero or Bluefish-informed page rhythm.
+Add `agent.css` and import it after `core.css`. Use the same palette and Logo, a maximum reading width of 78rem, a left fact directory at desktop, one-column order on mobile, and Signal Orange only for active mode, section index, focus, and verification marks. Do not reuse the Human cinematic hero or global Human page rhythm.
 
 - [ ] **Step 7: Run focused tests and commit**
 

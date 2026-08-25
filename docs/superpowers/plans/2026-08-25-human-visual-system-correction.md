@@ -13,9 +13,9 @@
 ## Global Constraints
 
 - Use the approved Yonaris wordmarks and Yonaris Ink, Paper, and Signal Orange; do not imitate competitor branding, claims, proof, images, or colors.
-- The global Human edition follows Bluefish only for cinematic staging, early platform architecture, product-led explanation, and outcome-to-proof pacing.
-- The Chinese Human edition follows 智推时代 only for conclusion-first scanning, explicit service-system explanation, delivery certainty, proof rhythm, and China-to-global capability framing.
-- DeepLumen informs only the visible Human/Agent relationship and reading-density separation.
+- The global Human edition follows a global enterprise-product pattern for cinematic staging, early platform architecture, product-led explanation, and outcome-to-proof pacing.
+- The Chinese Human edition follows a China ToB decision pattern for conclusion-first scanning, explicit service-system explanation, delivery certainty, proof rhythm, and China-to-global capability framing.
+- The Human/Agent dual-view principle governs only the visible relationship between the two modes and their reading-density separation.
 - Every active page retains semantic text, keyboard access, touch access, reduced-motion support, and a meaningful non-interactive initial state.
 - Preserve all existing routes, metadata, lead-field contracts, server-side mail delivery, Agent fact parity, and public-output policy.
 - Apply the repository public-output policy to every source, build artifact, and page without restating prohibited origin or licensing vocabulary.

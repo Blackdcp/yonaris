@@ -44,7 +44,7 @@ The site does not segment visitors by job title or function. It organizes around
 
 ### Global English: Signal Field
 
-The global edition takes inspiration from Bluefish's strongest principles: lead with the market shift and commercial value, pair emotion with product evidence, use a different composition for each chapter, and keep one clear conversion path.
+The global edition follows a global enterprise-product pattern: lead with the market shift and commercial value, pair emotion with product evidence, use a different composition for each chapter, and keep one clear conversion path.
 
 Its own visual system is **Signal Field**:
 
@@ -65,7 +65,7 @@ Voice rules:
 
 ### Simplified Chinese: Brand Answer Command
 
-The China edition takes inspiration from GenOptima's strongest principles: result-first communication, urgency without panic, higher information density, early trust, repeated action opportunities, and a concrete global-service story.
+The China edition follows a China ToB decision pattern: result-first communication, urgency without panic, higher information density, early trust, repeated action opportunities, and a concrete global-service story.
 
 Its own visual system is **Brand Answer Command**:
 
@@ -217,10 +217,10 @@ Before release:
 - targeted unit tests, browser smoke tests, production build, and public-output policy checks pass;
 - the deployed site is probed after the release workflow completes.
 
-## 11. Reference principles
+## 11. Regional design principles
 
-- [Bluefish](https://www.bluefishai.com/) — commercial narrative, varied compositions, product scrollytelling, consistent CTA.
-- [GenOptima](https://www.zhituishidai.com/) — Chinese result-first sequence, information density, trust rhythm, global-service visualization.
-- [DeepLumen Human](https://www.deeplumen.com/) and [Agent directory](https://www.deeplumen.com/agent/) — explicit Human/Agent route and visual separation.
+- Global enterprise-product pattern — commercial narrative, varied compositions, product scrollytelling, and a consistent CTA.
+- China ToB decision pattern — result-first sequence, information density, trust rhythm, and global-service visualization.
+- Human/Agent dual-view principle — explicit Human/Agent routes, factual alignment, and visual separation by reading mode.
 
-The rebuild borrows principles only. It does not copy competitor copy, brand assets, metrics, illustrations, or interface designs.
+The rebuild applies these principles through Yonaris's own identity and factual system. It does not copy external copy, brand assets, metrics, illustrations, or interface designs.
