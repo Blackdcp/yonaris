@@ -1,93 +1,65 @@
+import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import type { EditionDefinition, EditionPage, EditionPageRef, SiteEdition } from "./types";
 
-export const GLOBAL_ENGLISH_SECTION_IDS = {
-	home: [
-		"hero",
-		"operating-loop",
-		"market-shift",
-		"buyer-questions",
-		"product-preview",
-		"evidence-boundary",
-		"human-agent-parity",
-		"request-close",
-	],
-	product: ["scope-rings-hero", "evidence-workbench", "operating-loop", "responsibility-lanes", "request-close"],
-	approach: ["premise-hero", "evidence-journey", "review-artifacts", "repeat-observation-boundary", "request-close"],
-	research: ["ledger-hero", "metric-anatomy", "cohort-comparison", "answer-annotation", "limits-and-request-close"],
-	geo: [
-		"entry-map-hero",
-		"buyer-questions-and-artifacts",
-		"applied-workflow",
-		"scope-matrix",
-		"product-evidence-bridge",
-		"request-close",
-	],
-	company: [
-		"operating-model-hero",
-		"purpose-and-current-model",
-		"verified-trust-slot",
-		"principles",
-		"diagnostic-close",
-	],
-	diagnostic: ["deliverable-hero", "request-timeline", "lead-form", "delivery-privacy"],
-	privacy: ["hero", "english-disclosure", "regional-boundaries"],
-} as const;
+const globalPath: Record<HumanPageKey, `/${string}`> = {
+	home: "/",
+	product: "/product",
+	approach: "/approach",
+	geo: "/geo",
+	company: "/company",
+	diagnostic: "/diagnostic",
+	privacy: "/privacy",
+};
 
-const englishKeys = ["home", "product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const;
-const englishPaths = [
-	"/",
-	"/product",
-	"/approach",
-	"/research",
-	"/geo",
-	"/company",
-	"/diagnostic",
-	"/privacy",
-] as const;
-const englishPages = englishKeys.map(
-	(key, index): EditionPage => ({
-		ref: `global-en:${key}`,
-		editionId: "global-en",
-		locale: "en",
-		pathname: englishPaths[index],
-		intentId: key,
-		publication: "published",
-		navigation: key === "privacy" ? ["footer"] : key === "diagnostic" ? ["utility", "footer"] : ["primary", "footer"],
-		seo: { indexable: true, xDefault: true },
-	}),
-);
+const chinaPath: Record<HumanPageKey, `/${string}`> = {
+	home: "/zh",
+	product: "/zh/product",
+	approach: "/zh/approach",
+	geo: "/zh/geo",
+	company: "/zh/company",
+	diagnostic: "/zh/diagnostic",
+	privacy: "/zh/privacy",
+};
 
-const zhKeys = ["home", "product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const;
-const zhPages = zhKeys.map(
-	(key): EditionPage => ({
-		ref: `zh-cn:${key}`,
-		editionId: "zh-cn",
-		locale: "zh-CN",
-		pathname: key === "home" ? "/zh" : `/zh/${key}`,
-		intentId: `zh-${key}`,
+function navigationFor(key: HumanPageKey): EditionPage["navigation"] {
+	if (key === "diagnostic") return ["utility", "footer"];
+	if (key === "privacy" || key === "home") return ["footer"];
+	return ["primary", "footer"];
+}
+
+function pagesFor(editionId: SiteEdition): readonly EditionPage[] {
+	return HUMAN_PAGE_KEYS.map((key) => ({
+		ref: `${editionId}:${key}`,
+		editionId,
+		locale: editionId === "global-en" ? "en" : "zh-CN",
+		pathname: editionId === "global-en" ? globalPath[key] : chinaPath[key],
+		intentId: editionId === "global-en" ? key : `zh-${key}`,
 		publication: "published",
-		navigation: key === "diagnostic" ? ["utility", "footer"] : key === "privacy" ? ["footer"] : ["primary", "footer"],
-		seo: { indexable: true },
-	}),
-);
+		navigation: navigationFor(key),
+		seo: { indexable: true, ...(editionId === "global-en" ? { xDefault: true } : {}) },
+	}));
+}
+
+const globalPages = pagesFor("global-en");
+const chinaPages = pagesFor("zh-cn");
 
 const editions: Record<SiteEdition, EditionDefinition> = {
 	"global-en": {
 		id: "global-en",
 		home: "global-en:home",
-		pages: englishPages,
-		primaryNavigation: ["global-en:product", "global-en:approach", "global-en:research", "global-en:company"],
-		footerNavigation: englishPages.filter((page) => page.navigation.includes("footer")).map((page) => page.ref),
+		pages: globalPages,
+		primaryNavigation: ["global-en:product", "global-en:approach", "global-en:geo", "global-en:company"],
+		footerNavigation: globalPages.filter((page) => page.navigation.includes("footer")).map((page) => page.ref),
 		localeFallbackHome: "global-en:home",
 		analyticsPolicy: "disabled",
-		diagnosticPolicy: "disabled",
+		diagnosticPolicy: "global-v2",
 	},
 	"zh-cn": {
 		id: "zh-cn",
 		home: "zh-cn:home",
-		pages: zhPages,
-		primaryNavigation: ["zh-cn:product", "zh-cn:approach", "zh-cn:research", "zh-cn:company"],
-		footerNavigation: zhPages.map((page) => page.ref),
+		pages: chinaPages,
+		primaryNavigation: ["zh-cn:product", "zh-cn:approach", "zh-cn:geo", "zh-cn:company"],
+		footerNavigation: chinaPages.filter((page) => page.navigation.includes("footer")).map((page) => page.ref),
 		localeFallbackHome: "zh-cn:home",
 		analyticsPolicy: "disabled",
 		diagnosticPolicy: "regional-v2",
@@ -97,6 +69,7 @@ const editions: Record<SiteEdition, EditionDefinition> = {
 export function getEdition(id: SiteEdition): EditionDefinition {
 	return editions[id];
 }
+
 export function getEditionPage(ref: EditionPageRef): EditionPage {
 	const page = Object.values(editions)
 		.flatMap((edition) => edition.pages)
@@ -104,6 +77,7 @@ export function getEditionPage(ref: EditionPageRef): EditionPage {
 	if (!page) throw new Error(`Unknown edition page: ${ref}`);
 	return page;
 }
+
 export function findPublishedEditionPage(pathname: string): EditionPage | undefined {
 	return Object.values(editions)
 		.flatMap((edition) => edition.pages)

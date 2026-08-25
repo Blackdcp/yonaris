@@ -97,12 +97,12 @@ if [[ -n "${CADDY_TEST_FAIL_HEALTH_PATH:-}" && "$url" == *"$CADDY_TEST_FAIL_HEAL
 	exit 0
 fi
 status=200
-body='Yonaris AI market evidence AI is already answering questions about your brand. data-edition="global-en"'
+body='Yonaris data-generation="zero-one" data-edition="global-en"'
 case "$url" in
 	*/platform\?*) status=308; body='' ;;
-	*/resources | */status | */brand | */og/status.png | */recordranks-logo.svg | */llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
+	*/resources | */research | */zh/research | */agent/research | */zh/agent/research | */status | */brand | */og/status.png | */recordranks-logo.svg | */llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
 	*/api/diagnostic) status=400; body='{"ok":false,"code":"invalid_request"}' ;;
-	*/agent/*) body='AI market evidence' ;;
+	*/agent/*) body='Yonaris agent facts' ;;
 esac
 if [[ -n "$output" && "$output" != /dev/null ]]; then printf '%s' "$body" >"$output"; fi
 printf '%s' "$status"
@@ -224,7 +224,7 @@ for state in redirect v1 v2 pre_r0_release global_r0_release final; do
 	[[ -f "$META_OUT/candidate-caddy-sha256" ]] && candidate_binding="$(tr -d '[:space:]' <"$META_OUT/candidate-caddy-sha256")"
 	if [[ -n "$expected_backup_sha" && "$previous_binding" == "$expected_backup_sha" && "$candidate_binding" == "$(sha256sum "$TARGET" | cut -d' ' -f1)" ]]; then pass "$state writes full-file predecessor and candidate Caddy bindings"; else fail "$state writes full-file predecessor and candidate Caddy bindings"; fi
 	if grep -Fq "chown -- $(id -u):$(id -g) $BACKUP_OUT $META_OUT/previous-caddy-sha256 $META_OUT/candidate-caddy-sha256" "$CHOWN_LOG"; then pass "$state returns durable recovery files to the deployment account"; else fail "$state returns durable recovery files to the deployment account"; fi
-	for required in '/product' '/approach' '/research' '/company' '/resources' '/status' '/brand' '/og/status.png' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
+	for required in '/product' '/approach' '/company' '/resources' '/research' '/zh/research' '/agent/research' '/zh/agent/research' '/status' '/brand' '/og/status.png' '/privacy' '/agent/company' '/llms.txt' '/recordranks-logo.svg' '/platform?fixture=1' '/llms.mdx/site/private' '/api/repo-activity/refresh' '/api/diagnostic'; do
 		if ! grep -Fq "$required" "$CURL_LOG"; then fail "$state full health includes $required"; fi
 	done
 done

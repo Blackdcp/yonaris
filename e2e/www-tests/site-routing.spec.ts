@@ -14,8 +14,8 @@ const humanRedirects = [
 	{ from: "/zh/platform", to: "/zh/product" },
 	{ from: "/methodology", to: "/approach" },
 	{ from: "/zh/methodology", to: "/zh/approach" },
-	{ from: "/results", to: "/research" },
-	{ from: "/zh/results", to: "/zh/research" },
+	{ from: "/results", to: "/product" },
+	{ from: "/zh/results", to: "/zh/product" },
 	{ from: "/vision", to: "/company" },
 	{ from: "/pricing", to: "/diagnostic" },
 	{ from: "/off-site-aeo", to: "/geo" },
@@ -24,7 +24,7 @@ const humanRedirects = [
 const agentRedirects = [
 	{ from: "/agent/platform", to: "/agent/product" },
 	{ from: "/agent/methodology", to: "/agent/approach" },
-	{ from: "/agent/results", to: "/agent/research" },
+	{ from: "/agent/results", to: "/agent/product" },
 ] as const;
 
 const query = "tag=one&tag=two&encoded=a%2Fb%3Fc&empty=";
@@ -34,31 +34,17 @@ const notFoundLocales = [
 		locale: "en" as const,
 		path: "/not-on-the-current-map",
 		language: "en",
-		heading: "This page is outside the current map",
-		homeLabel: "Return home",
-		links: [
-			["Return home", "/"],
-			["Product", "/product"],
-			["Approach", "/approach"],
-			["Research", "/research"],
-			["Diagnostic", "/diagnostic"],
-			["Company", "/company"],
-		] as const,
+		heading: "We can’t find that page.",
+		homeLabel: "Back to home ↗",
+		links: [["Back to home ↗", "/"]] as const,
 	},
 	{
 		locale: "zh" as const,
 		path: "/zh/not-on-the-current-map",
 		language: "zh-CN",
-		heading: "这个页面不在当前地图中",
-		homeLabel: "返回首页",
-		links: [
-			["返回首页", "/zh"],
-			["产品", "/zh/product"],
-			["方法", "/zh/approach"],
-			["研究", "/zh/research"],
-			["免费诊断", "/zh/diagnostic"],
-			["公司", "/zh/company"],
-		] as const,
+		heading: "没有找到这个页面",
+		homeLabel: "返回首页 ↗",
+		links: [["返回首页 ↗", "/zh"]] as const,
 	},
 ] as const;
 
@@ -109,8 +95,9 @@ for (const fixture of notFoundLocales) {
 		await waitForHydration(page);
 
 		await expect(page.locator("html")).toHaveAttribute("lang", fixture.language);
-		await expect(page.locator("header.site-header")).toHaveCount(1);
-		await expect(page.locator("footer.site-footer")).toHaveCount(1);
+		await expect(page.locator(`.zero-not-found[lang="${fixture.language}"]`)).toHaveCount(1);
+		await expect(page.locator('img.zero-not-found__logo[src="/brand/logos/yonaris-wordmark-navy.png"]')).toHaveCount(1);
+		await expect(page.locator("header, footer")).toHaveCount(0);
 		await expect(page.locator("main")).toHaveCount(1);
 		await expect(page.getByRole("heading", { level: 1, name: fixture.heading, exact: true })).toHaveCount(1);
 		await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex,follow");
@@ -122,9 +109,8 @@ for (const fixture of notFoundLocales) {
 		for (const [label, href] of fixture.links) {
 			await expect(page.getByRole("main").getByRole("link", { name: label, exact: true })).toHaveAttribute("href", href);
 		}
-		await expect(page.getByRole("main")).not.toContainText(/Docs|Features|Pricing|Status|Portal/);
-		await expect(page.locator(".not-found-page")).toHaveCSS("background-image", "none");
-		await expect(page.locator(".not-found-directory li").first()).toHaveCSS("border-radius", "0px");
+		await expect(page.getByRole("main")).not.toContainText(/Docs|Features|Pricing|Status|Portal|Research/);
+		await expect(page.locator(".zero-not-found")).toHaveCSS("background-image", "none");
 	});
 }
 

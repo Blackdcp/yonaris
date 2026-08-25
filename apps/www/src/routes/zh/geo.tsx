@@ -1,8 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ZhGeoPage } from "@/components/site/zh-cn/pages";
+import { ChinaGeoPage } from "@/components/experience/china/china-pages";
 import { zhPageHead } from "@/editions/zh-cn/edition";
 
-export const Route = createFileRoute("/zh/geo")({
-	head: () => zhPageHead("geo"),
-	component: ZhGeoPage,
-});
+export const Route = createFileRoute("/zh/geo")({ head: () => zhPageHead("geo"), component: ChinaGeoPage });

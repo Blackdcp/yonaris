@@ -1,158 +1,53 @@
 import { describe, expect, test } from "vitest";
-import { CORE_PAGE_KEYS } from "@/content/site";
-import { GLOBAL_ENGLISH_MACHINE_FACTS } from "@/content/site/global-en/machine";
-import { ZH_MACHINE_FACTS } from "@/content/site/zh-cn/machine";
+import { AGENT_FACTS } from "@/content/experience/agent-facts";
+import { HUMAN_PAGE_KEYS } from "@/content/experience/types";
 import type { AgentPageKey } from "@/content/site/types";
-import { getCoreLastVerified, getCorePath, getSiteRoute } from "./site-manifest";
+import {
+	renderAgentDocument,
+	renderAgentIndex,
+	renderCoreMarkdown,
+	renderLlmsFull,
+	renderLlmsIndex,
+	renderZhAgentDocument,
+	renderZhAgentIndex,
+} from "./machine-documents";
 
-type MachineDocumentsModule = typeof import("./machine-documents");
-
-async function loadSubject(): Promise<MachineDocumentsModule | undefined> {
-	try {
-		return (await import("./machine-documents")) as MachineDocumentsModule;
-	} catch {
-		return undefined;
-	}
-}
-
-const subject = await loadSubject();
-const agentPageKeys = ["company", "product", "approach", "research", "geo", "diagnostic"] as const;
-const locales = ["en", "zh"] as const;
-
-function requireSubject(): MachineDocumentsModule | undefined {
-	expect(subject, "the shared machine-document renderer must load").toBeDefined();
-	return subject;
-}
-
-function absolute(path: string): string {
-	return `https://yonaris.com${path}`;
-}
+const agentKeys = HUMAN_PAGE_KEYS.filter((key): key is AgentPageKey => key !== "home");
 
 describe("machine documents", () => {
-	test("renders independent global-English and Chinese regional facts", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		for (const key of CORE_PAGE_KEYS) {
-			for (const locale of locales) {
-				const document = renderer.renderCoreMarkdown(key, locale);
-				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : ZH_MACHINE_FACTS[key];
-
+	test("renders all fourteen regional Human topics from public Agent facts", () => {
+		for (const key of HUMAN_PAGE_KEYS) {
+			for (const locale of ["en", "zh"] as const) {
+				const facts = locale === "en" ? AGENT_FACTS.global[key] : AGENT_FACTS.zh[key];
+				const document = renderCoreMarkdown(key, locale);
 				expect(document).toContain(`# ${facts.title}`);
-				expect(document).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
-				expect(document).toContain(`Language: ${locale === "en" ? "English (en)" : "Simplified Chinese (zh-CN)"}`);
-				expect(document).not.toContain("English (en):");
-				expect(document).not.toContain("Simplified Chinese (zh-CN):");
-				expect(document).toContain(`Last verified: ${getCoreLastVerified(key)}`);
-				expect(document).toContain(facts.currentScope);
-
-				for (const claim of facts.claims) {
-					expect(document).toContain(`### ${claim.id}`);
-					expect(document).toContain(`- Status: ${claim.status}`);
-					expect(document).toContain(`- Claim: ${claim.text}`);
-					if (claim.limitation) expect(document).toContain(`- Limitation: ${claim.limitation}`);
+				expect(document).toContain(facts.summary);
+				expect(document).toContain(locale === "en" ? "Last verified: 2026-08-25" : "最近核对：2026-08-25");
+				for (const group of facts.groups) {
+					expect(document).toContain(`## ${group.title}`);
+					for (const item of group.items) expect(document).toContain(`- ${item}`);
 				}
-				for (const limitation of facts.limitations) expect(document).toContain(`- ${limitation}`);
 			}
 		}
 	});
 
-	test("publishes six scoped English Agent documents and points Home to the Agent index", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		for (const key of agentPageKeys) {
-			const document = renderer.renderAgentDocument(key);
-			expect(document).toBe(renderer.renderCoreMarkdown(key, "en"));
-			expect(document).toContain(`Agent document: ${absolute(getSiteRoute(key).agentPath ?? "")}`);
+	test("publishes English and Chinese Agent topic documents and indexes", () => {
+		for (const key of agentKeys) {
+			expect(renderAgentDocument(key)).toBe(renderCoreMarkdown(key, "en"));
+			expect(renderZhAgentDocument(key)).toBe(renderCoreMarkdown(key, "zh"));
+			expect(renderAgentIndex()).toContain(`https://yonaris.com/agent/${key}`);
+			expect(renderZhAgentIndex()).toContain(`https://yonaris.com/zh/agent/${key}`);
 		}
-
-		expect(renderer.renderCoreMarkdown("home", "en")).toContain("Agent index: https://yonaris.com/agent");
+		expect(renderLlmsIndex()).toContain("https://yonaris.com/llms-full.txt");
 	});
 
-	test("indexes both independent editions and all six current Agent documents", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		for (const output of [renderer.renderAgentIndex(), renderer.renderLlmsIndex()]) {
-			for (const key of CORE_PAGE_KEYS) {
-				expect(output).toContain(
-					`[${GLOBAL_ENGLISH_MACHINE_FACTS[key].title} (en)](${absolute(getCorePath(key, "en"))})`,
-				);
-				expect(output).toContain(`[${ZH_MACHINE_FACTS[key].title} (zh-CN)](${absolute(getCorePath(key, "zh"))})`);
-			}
-			for (const key of agentPageKeys) {
-				expect(output).toContain(absolute(getSiteRoute(key).agentPath ?? ""));
-			}
-			expect(output).not.toContain("autonomous agents");
-			expect(output).not.toContain("autonomous capability");
-		}
-	});
-
-	test("derives the machine index narrative from the global-English edition", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		const homeFacts = GLOBAL_ENGLISH_MACHINE_FACTS.home;
-		const homeDescription = homeFacts.description;
-		const firstClaim = homeFacts.claims[0];
-		expect(firstClaim, "Global Home must declare at least one current fact").toBeDefined();
-
-		for (const output of [renderer.renderAgentIndex(), renderer.renderLlmsIndex()]) {
-			expect(output).toContain(homeDescription);
-			expect(output).toContain(homeFacts.currentScope);
-			expect(output).toContain(firstClaim?.text);
-		}
-	});
-
-	test("makes llms-full the complete two-edition factual set", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		const full = renderer.renderLlmsFull();
-		for (const key of CORE_PAGE_KEYS) {
-			for (const locale of locales) {
-				const facts = locale === "en" ? GLOBAL_ENGLISH_MACHINE_FACTS[key] : ZH_MACHINE_FACTS[key];
-				expect(full).toContain(`Human canonical: ${absolute(getCorePath(key, locale))}`);
-				expect(full).toContain(facts.currentScope);
-			}
-		}
-		expect(full.match(/^Human canonical:/gm)).toHaveLength(14);
-		expect(full).not.toContain("complete localized core facts");
-	});
-
-	test("publishes Chinese Agent documents from the released regional facts", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-		const index = renderer.renderZhAgentIndex();
-		for (const key of ["product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const) {
-			const document = renderer.renderZhAgentDocument(key);
-			expect(document).toContain(`# ${ZH_MACHINE_FACTS[key].title}`);
-			expect(document).toContain(`人类页面：https://yonaris.com/zh/${key}`);
-			expect(document).toContain(ZH_MACHINE_FACTS[key].currentScope);
-			expect(index).toContain(`https://yonaris.com/zh/agent/${key}`);
-		}
-	});
-
-	test("does not serialize retired evidence or imagined product modules", () => {
-		const renderer = requireSubject();
-		if (!renderer) return;
-
-		const output = [
-			renderer.renderAgentIndex(),
-			renderer.renderLlmsIndex(),
-			renderer.renderLlmsFull(),
-			...agentPageKeys.map((key: AgentPageKey) => renderer.renderAgentDocument(key)),
-		].join("\n");
-
-		for (const forbidden of [
-			"93.3%",
-			"four intelligence",
-			"Product Evidence Graph",
-			"Market Learning",
-			"automatic optimization",
-		]) {
-			expect(output).not.toContain(forbidden);
-		}
+	test("keeps retired topics and internal narration out of machine outputs", () => {
+		const output = [renderAgentIndex(), renderZhAgentIndex(), renderLlmsIndex(), renderLlmsFull()].join("\n");
+		expect(output).not.toMatch(/\/(?:zh\/)?(?:research|resources)/i);
+		expect(output).not.toMatch(
+			/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|配置化观察|证据边界|当前演示/i,
+		);
+		expect(renderLlmsFull().match(/Last verified:/g)).toHaveLength(7);
+		expect(renderLlmsFull().match(/最近核对：/g)).toHaveLength(7);
 	});
 });

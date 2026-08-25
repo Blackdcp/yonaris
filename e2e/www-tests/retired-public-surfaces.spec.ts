@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 
 const retiredPaths = [
+	"/research",
+	"/zh/research",
+	"/agent/research",
+	"/zh/agent/research",
 	"/resources",
 	"/brand",
 	"/status",
@@ -27,8 +31,8 @@ const retiredPaths = [
 ] as const;
 
 const retainedPublicPaths = [
-	"/", "/zh", "/product", "/zh/product", "/approach", "/zh/approach", "/research", "/zh/research",
-	"/company", "/zh/company", "/geo", "/zh/geo", "/diagnostic", "/zh/diagnostic", "/privacy",
+	"/", "/zh", "/product", "/zh/product", "/approach", "/zh/approach", "/privacy", "/zh/privacy",
+	"/company", "/zh/company", "/geo", "/zh/geo", "/diagnostic", "/zh/diagnostic",
 	"/sitemap.xml", "/robots.txt",
 ] as const;
 

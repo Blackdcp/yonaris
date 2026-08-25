@@ -1,156 +1,35 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const sourceRoot = dirname(fileURLToPath(import.meta.url));
+const read = (relative: string) => readFileSync(join(sourceRoot, relative), "utf8");
 
-function read(relativePath: string): string {
-	return readFileSync(join(sourceRoot, relativePath), "utf8");
-}
-
-function filesUnder(relativePath: string, extensions: readonly string[]): string[] {
-	const root = join(sourceRoot, relativePath);
-	return readdirSync(root, { recursive: true, withFileTypes: true })
-		.filter((entry) => entry.isFile() && extensions.some((extension) => entry.name.endsWith(extension)))
-		.map((entry) => join(entry.parentPath, entry.name));
-}
-
-describe("site stylesheet boundaries", () => {
-	it("keeps styles.css as the ordered Tailwind and focused stylesheet manifest", () => {
+describe("zero-to-one stylesheet boundary", () => {
+	it("loads only the new regional experience styles", () => {
 		const stylesheet = read("styles.css");
-		const expectedImports = [
+		const expected = [
 			'@import "tailwindcss";',
 			'@import "tw-animate-css";',
-			'@import "./styles/site-core.css";',
-			'@import "./styles/pages/home.css";',
-			'@import "./styles/pages/product.css";',
-			'@import "./styles/pages/approach.css";',
-			'@import "./styles/pages/research.css";',
-			'@import "./styles/pages/company.css";',
-			'@import "./styles/pages/geo.css";',
-			'@import "./styles/pages/diagnostic.css";',
-			'@import "./styles/pages/utility.css";',
+			'@import "./styles/experience/base.css";',
+			'@import "./styles/experience/global.css";',
+			'@import "./styles/experience/china.css";',
+			'@import "./styles/experience/agent.css";',
 		];
-
-		const positions = expectedImports.map((statement) => stylesheet.indexOf(statement));
-		expect(positions[0]).toBeGreaterThanOrEqual(0);
-		for (let index = 1; index < positions.length; index += 1) {
-			expect(positions[index]).toBeGreaterThan(positions[index - 1]);
+		const positions = expected.map((item) => stylesheet.indexOf(item));
+		expect(positions.every((position) => position >= 0)).toBe(true);
+		expect(positions).toEqual([...positions].sort((left, right) => left - right));
+		for (const retired of ["site-core", "styles/pages", "global-en/core", "zh-cn/core", "global-agent/core"]) {
+			expect(stylesheet).not.toContain(retired);
 		}
-		expect(stylesheet).not.toContain(":root {");
-		expect(stylesheet).not.toContain("@layer base");
-		expect(stylesheet).not.toContain(".prose ");
-		expect(read("styles/site-core.css")).toMatch(/:root\s*{/);
-		expect(read("styles/site-core.css")).toContain("@layer base");
-		expect(read("styles/site-core.css")).not.toContain(".prose");
 	});
 
-	it("keeps Utility presentation inside its focused file without gradients", () => {
-		const safeRead = (path: string): string | undefined => {
-			try {
-				return read(path);
-			} catch {
-				return undefined;
-			}
-		};
-		const utility = safeRead("styles/pages/utility.css");
-		expect(safeRead("styles/pages/publication.css"), "publication.css must be absent").toBeUndefined();
-		expect(utility, "utility.css must exist").toBeDefined();
-		if (!utility) return;
-		const otherStyles = [
-			"styles.css",
-			"styles/site-core.css",
-			...filesUnder("styles/pages", [".css"]).filter((path) => !path.endsWith("utility.css")),
-		]
-			.map((path) => (isAbsolute(path) ? readFileSync(path, "utf8") : read(path)))
+	it("keeps the brand palette and rejects retired visible selectors", () => {
+		const output = ["base.css", "global.css", "china.css", "agent.css"]
+			.map((file) => read(`styles/experience/${file}`))
 			.join("\n");
-
-		for (const selector of [".utility-page", ".utility-status-ledger", ".utility-brand-page"]) {
-			expect(utility).toContain(selector);
-			expect(otherStyles).not.toContain(selector);
-		}
-		expect(utility).not.toContain(".utility-docs-");
-		expect(utility).not.toContain(".utility-release-markdown");
-		expect(utility).not.toMatch(/(?:linear|radial|conic)-gradient/i);
-	});
-
-	it("isolates every homepage composition selector in pages/home.css", () => {
-		const home = read("styles/pages/home.css");
-		const otherStyles = [
-			"styles.css",
-			"styles/site-core.css",
-			...filesUnder("styles/pages", [".css"]).filter((path) => !path.endsWith("home.css")),
-		]
-			.map((path) => (isAbsolute(path) ? readFileSync(path, "utf8") : read(path)))
-			.join("\n");
-
-		for (const selector of [
-			".home-page",
-			".home-product-stage",
-			".home-diagnostic-preview",
-			".home-domain-form",
-			".home-hero-copy",
-			".home-stage--product",
-			".home-stage--approach",
-			".home-stage--research",
-			".home-stage--diagnostic",
-		]) {
-			expect(home).toContain(selector);
-			expect(otherStyles).not.toContain(selector);
-		}
-		for (const retiredSelector of [
-			".marketing-product-stage",
-			".marketing-product-preview",
-			".marketing-domain-form",
-			".marketing-hero-copy",
-		]) {
-			expect(home).not.toContain(retiredSelector);
-		}
-	});
-
-	it("uses only approved palette tokens and no gradients across first-party site styles and current pages", () => {
-		const paletteDefinition = join(sourceRoot, "styles/site-core.css");
-		const files = [
-			...filesUnder("styles", [".css"]),
-			...filesUnder("components/site/pages", [".ts", ".tsx"]),
-			join(sourceRoot, "styles.css"),
-		];
-
-		for (const file of files) {
-			const source = readFileSync(file, "utf8");
-			expect(source, file).not.toMatch(/--yonaris-(?:surface|signal-strong)/);
-			expect(source, file).not.toMatch(/(?:linear|radial|conic)-gradient/i);
-			if (file !== paletteDefinition) {
-				expect(source, file).not.toMatch(/#[\da-f]{3,8}\b/i);
-				expect(source, file).not.toMatch(/(?:rgb|hsl|oklab|oklch|lab|lch)a?\(/i);
-			}
-		}
-	});
-
-	it("defines the binding palette without retaining stale aliases", () => {
-		const core = read("styles/site-core.css");
-
-		for (const token of ["ink", "paper", "slate", "stone", "mist", "signal", "blue-gray"]) {
-			expect(core).toContain(`--yonaris-${token}:`);
-		}
-		for (const retainedSelector of [
-			".marketing-site",
-			".marketing-display",
-			".marketing-kicker",
-			".marketing-paper-focus",
-		]) {
-			expect(core).toContain(retainedSelector);
-		}
-		for (const retiredSelector of [
-			".marketing-signal-path",
-			".marketing-condition-markers",
-			".marketing-evidence-anchors",
-			"marketing-path-reveal",
-		]) {
-			expect(core).not.toContain(retiredSelector);
-		}
-		expect(core).not.toContain("--yonaris-surface:");
-		expect(core).not.toContain("--yonaris-signal-strong:");
+		for (const value of ["#0b1220", "#f6f4f1", "#ff6a00"]) expect(output.toLowerCase()).toContain(value);
+		expect(output).not.toMatch(/global-en__|zh-site__|global-cinematic|zh-decision|editorial-stage|decision-canvas/);
 	});
 });

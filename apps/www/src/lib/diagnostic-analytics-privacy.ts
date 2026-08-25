@@ -1,7 +1,3 @@
-import { parseDiagnosticSearch } from "./diagnostic-schema";
-
-export const DIAGNOSTIC_PREFILL_SEARCH_GLOBAL = "__YONARIS_DIAGNOSTIC_PREFILL_SEARCH__" as const;
-
 const SENSITIVE_PROPERTY_KEYS = new Set([
 	"website",
 	"brand",
@@ -21,10 +17,8 @@ const SENSITIVE_PROPERTY_KEYS = new Set([
 ]);
 const URL_PROPERTY_KEYS = new Set(["$current_url", "$referrer", "$initial_referrer", "$initial_current_url"]);
 
-let hydrationPrefill: string | undefined;
-
 export function buildDiagnosticAnalyticsBootstrapScript(): string {
-	return `(()=>{const p=location.pathname;if(p!=="/diagnostic"&&p!=="/zh/diagnostic")return;window.${DIAGNOSTIC_PREFILL_SEARCH_GLOBAL}=location.search;history.replaceState(history.state,"",location.pathname+location.hash)})();`;
+	return '(()=>{const p=location.pathname;if((p==="/diagnostic"||p==="/zh/diagnostic")&&location.search)history.replaceState(history.state,"",location.pathname+location.hash)})();';
 }
 
 function sanitizeUrlLike(value: string): string {
@@ -75,24 +69,4 @@ export function sanitizeAnalyticsProperties(properties: Record<string, unknown>)
 		sanitized[key] = sanitizeNestedValue(value);
 	}
 	return sanitized;
-}
-
-function websiteFromRawSearch(rawSearch: string): string {
-	const params = new URLSearchParams(rawSearch);
-	const websites = params.getAll("website");
-	if (websites.length !== 1) return "";
-	return parseDiagnosticSearch({ website: websites[0] }).website;
-}
-
-export function consumeDiagnosticPrefillWebsite(serverWebsite?: string): string {
-	if (typeof window === "undefined") return serverWebsite ?? "";
-	const rawSearch = window[DIAGNOSTIC_PREFILL_SEARCH_GLOBAL];
-	if (typeof rawSearch !== "string") return hydrationPrefill ?? serverWebsite ?? "";
-	delete window[DIAGNOSTIC_PREFILL_SEARCH_GLOBAL];
-	hydrationPrefill = websiteFromRawSearch(rawSearch) || serverWebsite || "";
-	return hydrationPrefill;
-}
-
-export function clearDiagnosticPrefillWebsite(): void {
-	hydrationPrefill = undefined;
 }

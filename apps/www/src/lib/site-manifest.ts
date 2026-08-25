@@ -1,8 +1,9 @@
+import { HUMAN_PAGE_KEYS } from "@/content/experience/types";
 import type { CorePageKey, Locale, RedirectRule, SiteRouteDefinition, SiteRouteKey } from "@/content/site/types";
 
 export { SITE_ROUTE_KEYS } from "@/content/site/types";
 
-const CORE_LAST_VERIFIED = "2026-08-22" as const;
+const CORE_LAST_VERIFIED = "2026-08-25" as const;
 
 export const SITE_MANIFEST = [
 	{
@@ -11,6 +12,7 @@ export const SITE_MANIFEST = [
 		canonicals: { en: "/", zh: "/zh" },
 		navigation: ["footer"],
 		indexPolicy: "index,follow",
+		agentPath: "/agent",
 		sitemap: { priority: 1, lastVerified: CORE_LAST_VERIFIED },
 	},
 	{
@@ -32,12 +34,12 @@ export const SITE_MANIFEST = [
 		sitemap: { priority: 0.8, lastVerified: CORE_LAST_VERIFIED },
 	},
 	{
-		key: "research",
+		key: "geo",
 		routeClass: "core",
-		canonicals: { en: "/research", zh: "/zh/research" },
+		canonicals: { en: "/geo", zh: "/zh/geo" },
 		navigation: ["primary", "footer"],
 		indexPolicy: "index,follow",
-		agentPath: "/agent/research",
+		agentPath: "/agent/geo",
 		sitemap: { priority: 0.8, lastVerified: CORE_LAST_VERIFIED },
 	},
 	{
@@ -50,15 +52,6 @@ export const SITE_MANIFEST = [
 		sitemap: { priority: 0.7, lastVerified: CORE_LAST_VERIFIED },
 	},
 	{
-		key: "geo",
-		routeClass: "core",
-		canonicals: { en: "/geo", zh: "/zh/geo" },
-		navigation: ["contextual", "footer"],
-		indexPolicy: "index,follow",
-		agentPath: "/agent/geo",
-		sitemap: { priority: 0.8, lastVerified: CORE_LAST_VERIFIED },
-	},
-	{
 		key: "diagnostic",
 		routeClass: "core",
 		canonicals: { en: "/diagnostic", zh: "/zh/diagnostic" },
@@ -69,11 +62,12 @@ export const SITE_MANIFEST = [
 	},
 	{
 		key: "privacy",
-		routeClass: "resource",
+		routeClass: "utility",
 		canonicals: { en: "/privacy", zh: "/zh/privacy" },
 		navigation: ["footer"],
 		indexPolicy: "index,follow",
-		sitemap: { priority: 0.3 },
+		agentPath: "/agent/privacy",
+		sitemap: { priority: 0.3, lastVerified: CORE_LAST_VERIFIED },
 	},
 	{
 		key: "agent",
@@ -145,14 +139,14 @@ export const SITE_REDIRECTS = [
 	{ from: "/zh/platform", to: "/zh/product", statusCode: 308 },
 	{ from: "/methodology", to: "/approach", statusCode: 308 },
 	{ from: "/zh/methodology", to: "/zh/approach", statusCode: 308 },
-	{ from: "/results", to: "/research", statusCode: 308 },
-	{ from: "/zh/results", to: "/zh/research", statusCode: 308 },
+	{ from: "/results", to: "/product", statusCode: 308 },
+	{ from: "/zh/results", to: "/zh/product", statusCode: 308 },
 	{ from: "/vision", to: "/company", statusCode: 308 },
 	{ from: "/pricing", to: "/diagnostic", statusCode: 308 },
 	{ from: "/off-site-aeo", to: "/geo", statusCode: 308 },
 	{ from: "/agent/platform", to: "/agent/product", statusCode: 308 },
 	{ from: "/agent/methodology", to: "/agent/approach", statusCode: 308 },
-	{ from: "/agent/results", to: "/agent/research", statusCode: 308 },
+	{ from: "/agent/results", to: "/agent/product", statusCode: 308 },
 ] as const satisfies readonly RedirectRule[];
 
 function normalizePathname(pathname: string): string {
@@ -176,10 +170,8 @@ export function findSiteRoute(pathname: string): SiteRouteDefinition | undefined
 	const normalized = normalizePathname(pathname);
 	const canonical = siteRoutes.find((route) => Object.values(route.canonicals).includes(normalized as `/${string}`));
 	if (canonical) return canonical;
-
 	const patterned = siteRoutes.find((route) => route.patterns?.some((pattern) => matchesPattern(normalized, pattern)));
 	if (patterned) return patterned;
-
 	const redirect = getRedirect(normalized);
 	return redirect ? findSiteRoute(redirect.to) : undefined;
 }
@@ -197,6 +189,7 @@ export function getRedirect(pathname: string): RedirectRule | undefined {
 }
 
 export function getCoreLastVerified(key: CorePageKey): `${number}-${number}-${number}` {
+	if (!HUMAN_PAGE_KEYS.includes(key)) throw new Error(`Unknown core route: ${key}`);
 	const sitemap = getSiteRoute(key).sitemap;
 	if (sitemap === false || !sitemap.lastVerified) throw new Error(`Missing last-verified date for core route: ${key}`);
 	return sitemap.lastVerified;

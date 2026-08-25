@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GlobalAgentPage } from "@/components/site/global-en/agent/global-agent-page";
+import { AgentPage } from "@/components/experience/agent/agent-pages";
 
 export const Route = createFileRoute("/agent/")({
-	head: () => ({ meta: [{ title: "Yonaris Agent view" }, { name: "robots", content: "noindex,follow" }] }),
-	component: () => <GlobalAgentPage pageKey="index" />,
+	head: () => ({ meta: [{ title: "Yonaris for AI agents" }, { name: "robots", content: "noindex,follow" }] }),
+	component: () => <AgentPage locale="en" pageKey="home" />,
 });

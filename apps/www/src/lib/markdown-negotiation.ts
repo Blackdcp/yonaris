@@ -1,37 +1,36 @@
-import { CORE_PAGE_KEYS } from "@/content/site";
-import type { CorePageKey, Locale } from "@/content/site/types";
-import { getCorePath } from "./site-manifest";
+import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
+import type { Locale } from "@/content/site/types";
 
 export interface MarkdownResolution {
 	targetPath?: string;
 	variesOnAccept: boolean;
 }
 
-const coreCanonicalTargets = new Map<string, { key: CorePageKey; locale: Locale }>(
-	CORE_PAGE_KEYS.flatMap((key) =>
-		(["en", "zh"] as const).map((locale) => [getCorePath(key, locale), { key, locale }] as const),
+function humanPath(key: HumanPageKey, locale: Locale): string {
+	if (locale === "en") return key === "home" ? "/" : `/${key}`;
+	return key === "home" ? "/zh" : `/zh/${key}`;
+}
+
+function agentPath(key: HumanPageKey, locale: Locale): string {
+	if (locale === "en") return key === "home" ? "/agent" : `/agent/${key}`;
+	return key === "home" ? "/zh/agent" : `/zh/agent/${key}`;
+}
+
+const coreCanonicalTargets = new Map<string, { key: HumanPageKey; locale: Locale }>(
+	HUMAN_PAGE_KEYS.flatMap((key) =>
+		(["en", "zh"] as const).map((locale) => [humanPath(key, locale), { key, locale }] as const),
 	),
 );
 
-const agentMarkdownTargets = new Map<string, string>([
-	["/agent", "/llms.mdx/agent/index"],
-	["/agent/", "/llms.mdx/agent/index"],
-	["/agent/product", "/llms.mdx/agent/product"],
-	["/agent/approach", "/llms.mdx/agent/approach"],
-	["/agent/research", "/llms.mdx/agent/research"],
-	["/agent/geo", "/llms.mdx/agent/geo"],
-	["/agent/company", "/llms.mdx/agent/company"],
-	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
-	["/zh/agent", "/llms.mdx/zh-agent/index"],
-	["/zh/agent/", "/llms.mdx/zh-agent/index"],
-	["/zh/agent/product", "/llms.mdx/zh-agent/product"],
-	["/zh/agent/approach", "/llms.mdx/zh-agent/approach"],
-	["/zh/agent/research", "/llms.mdx/zh-agent/research"],
-	["/zh/agent/geo", "/llms.mdx/zh-agent/geo"],
-	["/zh/agent/company", "/llms.mdx/zh-agent/company"],
-	["/zh/agent/diagnostic", "/llms.mdx/zh-agent/diagnostic"],
-	["/zh/agent/privacy", "/llms.mdx/zh-agent/privacy"],
-]);
+const agentMarkdownTargets = new Map<string, string>(
+	HUMAN_PAGE_KEYS.flatMap((key) =>
+		(["en", "zh"] as const).flatMap((locale) => {
+			const path = agentPath(key, locale);
+			const target = `/llms.mdx/${locale === "en" ? "agent" : "zh-agent"}/${key === "home" ? "index" : key}`;
+			return key === "home" ? [[path, target] as const, [`${path}/`, target] as const] : [[path, target] as const];
+		}),
+	),
+);
 
 interface MediaPreference {
 	quality: number;
@@ -51,7 +50,6 @@ function mediaPreference(accept: string, target: string): MediaPreference {
 		const specificity =
 			rawMediaType === target ? 2 : rawMediaType === `${targetType}/*` ? 1 : rawMediaType === "*/*" ? 0 : -1;
 		if (specificity < 0) continue;
-
 		if (
 			specificity > best.specificity ||
 			(specificity === best.specificity && quality > best.quality) ||
@@ -76,18 +74,13 @@ function isCoreMarkdownPreferred(request: Request): boolean {
 
 export function resolveMarkdownRequest(request: Request): MarkdownResolution {
 	if (request.method !== "GET" && request.method !== "HEAD") return { variesOnAccept: false };
-
 	const pathname = new URL(request.url).pathname;
 	const canonical = coreCanonicalTargets.get(pathname);
 	const agentTarget = agentMarkdownTargets.get(pathname);
 	if (!canonical && !agentTarget) return { variesOnAccept: false };
 	if (!isCoreMarkdownPreferred(request)) return { variesOnAccept: true };
 	if (agentTarget) return { targetPath: agentTarget, variesOnAccept: true };
-
-	return {
-		targetPath: `/llms.mdx/site/${canonical?.locale}/${canonical?.key}`,
-		variesOnAccept: true,
-	};
+	return { targetPath: `/llms.mdx/site/${canonical?.locale}/${canonical?.key}`, variesOnAccept: true };
 }
 
 export function rewriteMarkdownRequest(request: Request, targetPath: string): Request {

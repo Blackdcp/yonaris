@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ZhAgentPage } from "@/components/site/zh-cn/agent/zh-agent-page";
+import { AgentPage } from "@/components/experience/agent/agent-pages";
 
 export const Route = createFileRoute("/zh/agent/")({
-	head: () => ({ meta: [{ title: "Yonaris 中国区域 Agent 阅读" }, { name: "robots", content: "noindex,follow" }] }),
-	component: () => <ZhAgentPage pageKey="index" />,
+	head: () => ({ meta: [{ title: "Yonaris Agent 入口" }, { name: "robots", content: "noindex,follow" }] }),
+	component: () => <AgentPage locale="zh" pageKey="home" />,
 });

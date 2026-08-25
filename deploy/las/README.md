@@ -283,7 +283,7 @@ MARKETING_LEAD_RECIPIENT=black.dcp@outlook.com
 For an explicit site-only launch before Resend is configured, use
 `MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only` and leave all three Resend
 values blank. The endpoint then returns an unconfirmed response and the form
-offers the existing email-draft fallback; it never reports delivery or inserts
+retains the visitor's entries for a retry; it never reports delivery or inserts
 synthetic credentials. Any other mode fails the release preflight. In `resend`
 mode, the deployment fails before pulling or starting an image when any value
 is blank or invalid. Only the `www` container receives these variables. An

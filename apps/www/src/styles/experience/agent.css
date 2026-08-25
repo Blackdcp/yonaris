@@ -1,0 +1,412 @@
+.agent-experience {
+	--agent-ink: var(--y-ink, #0b1220);
+	--agent-paper: var(--y-paper, #f6f4f1);
+	--agent-orange: var(--y-orange, #ff6a00);
+	--agent-line: color-mix(in srgb, var(--agent-paper) 18%, transparent);
+	--agent-muted: color-mix(in srgb, var(--agent-paper) 62%, transparent);
+	min-height: 100svh;
+	background: var(--agent-ink);
+	color: var(--agent-paper);
+	font-family: var(--y-font, "Geist Sans", sans-serif);
+}
+
+.agent-experience *,
+.agent-experience *::before,
+.agent-experience *::after {
+	box-sizing: border-box;
+}
+
+.agent-experience a {
+	color: inherit;
+}
+
+.agent-experience__skip {
+	position: fixed;
+	z-index: 100;
+	top: 0.75rem;
+	left: 0.75rem;
+	padding: 0.65rem 0.9rem;
+	background: var(--agent-orange);
+	color: var(--agent-ink);
+	transform: translateY(-180%);
+}
+
+.agent-experience__skip:focus {
+	transform: translateY(0);
+}
+
+.agent-experience__masthead {
+	position: sticky;
+	z-index: 20;
+	top: 0;
+	min-height: 5rem;
+	padding: 0 2rem;
+	display: grid;
+	grid-template-columns: 1fr auto auto;
+	align-items: center;
+	gap: 1.5rem;
+	border-bottom: 1px solid var(--agent-line);
+	background: color-mix(in srgb, var(--agent-ink) 94%, transparent);
+	backdrop-filter: blur(18px);
+}
+
+.agent-experience__brand img {
+	display: block;
+	width: clamp(8rem, 11vw, 10.5rem);
+	height: auto;
+}
+
+.agent-experience__identity {
+	display: flex;
+	align-items: center;
+	gap: 0.8rem;
+	font-family: var(--y-mono, monospace);
+	font-size: 0.64rem;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.agent-experience__identity span {
+	color: var(--agent-orange);
+}
+
+.agent-experience__identity code {
+	padding-left: 0.8rem;
+	border-left: 1px solid var(--agent-line);
+	color: var(--agent-muted);
+}
+
+.agent-experience .mode-link {
+	border-color: var(--agent-line);
+}
+
+.agent-experience .mode-link a {
+	color: var(--agent-muted);
+}
+
+.agent-experience .mode-link a[aria-current="page"] {
+	background: var(--agent-paper);
+	color: var(--agent-ink);
+}
+
+.agent-experience__layout {
+	min-height: calc(100svh - 5rem);
+	display: grid;
+	grid-template-columns: minmax(14rem, 19rem) minmax(0, 1fr);
+}
+
+.agent-experience__rail {
+	min-width: 0;
+	padding: 2rem 1.2rem;
+	border-right: 1px solid var(--agent-line);
+}
+
+.agent-experience__rail > p {
+	margin: 0 0 1.2rem;
+	font: 600 0.62rem / 1 var(--y-mono, monospace);
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--agent-muted);
+}
+
+.agent-experience__rail nav {
+	position: sticky;
+	top: 7rem;
+	display: grid;
+}
+
+.agent-experience__rail nav a {
+	min-height: 4rem;
+	padding: 0.85rem 0.75rem;
+	display: grid;
+	grid-template-columns: 2rem 1fr;
+	align-items: center;
+	gap: 0.5rem;
+	border-top: 1px solid var(--agent-line);
+	text-decoration: none;
+	font-size: 0.82rem;
+}
+
+.agent-experience__rail nav a:last-child {
+	border-bottom: 1px solid var(--agent-line);
+}
+
+.agent-experience__rail nav a em {
+	font: 500 0.65rem / 1 var(--y-mono, monospace);
+	font-style: normal;
+	color: var(--agent-muted);
+}
+
+.agent-experience__rail nav a[aria-current="page"] {
+	background: var(--agent-orange);
+	color: var(--agent-ink);
+}
+
+.agent-experience__rail nav a[aria-current="page"] em {
+	color: currentColor;
+}
+
+.agent-experience__document {
+	min-width: 0;
+}
+
+.agent-experience__intro {
+	position: relative;
+	isolation: isolate;
+	min-height: min(42rem, calc(100svh - 5rem));
+	padding: clamp(3.5rem, 8vw, 7.5rem) clamp(1.5rem, 7vw, 7rem) 4rem;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	justify-content: center;
+	overflow: hidden;
+}
+
+.agent-experience__intro > p:first-of-type {
+	margin: 0;
+	font: 600 0.66rem / 1.2 var(--y-mono, monospace);
+	letter-spacing: 0.13em;
+	text-transform: uppercase;
+	color: var(--agent-orange);
+}
+
+.agent-experience__intro h1 {
+	max-width: 15ch;
+	margin: 1.25rem 0 1.5rem;
+	font-size: clamp(3rem, 7vw, 7rem);
+	font-weight: 500;
+	line-height: 0.9;
+	letter-spacing: -0.065em;
+	text-wrap: balance;
+}
+
+.agent-experience__intro > p:nth-of-type(2) {
+	max-width: 43rem;
+	margin: 0;
+	font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+	line-height: 1.55;
+	color: var(--agent-muted);
+}
+
+.agent-experience__signal {
+	position: absolute;
+	z-index: -1;
+	right: clamp(-12rem, -7vw, -4rem);
+	top: 50%;
+	width: clamp(22rem, 46vw, 44rem);
+	aspect-ratio: 1;
+	border: 1px solid var(--agent-line);
+	border-radius: 50%;
+	transform: translateY(-50%);
+}
+
+.agent-experience__signal::before,
+.agent-experience__signal::after {
+	content: "";
+	position: absolute;
+	inset: 16%;
+	border: 1px solid var(--agent-line);
+	border-radius: 50%;
+}
+
+.agent-experience__signal::after {
+	inset: 34%;
+}
+
+.agent-experience__signal span,
+.agent-experience__signal i {
+	position: absolute;
+	display: block;
+	width: 0.75rem;
+	aspect-ratio: 1;
+	border-radius: 50%;
+	background: var(--agent-orange);
+}
+
+.agent-experience__signal span {
+	left: 7%;
+	top: 48%;
+}
+
+.agent-experience__signal i {
+	right: 22%;
+	top: 22%;
+	background: var(--agent-paper);
+}
+
+.agent-experience__canonical {
+	margin-top: 2.2rem;
+	display: grid;
+	gap: 0.45rem;
+	font-family: var(--y-mono, monospace);
+}
+
+.agent-experience__canonical span {
+	font-size: 0.62rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--agent-muted);
+}
+
+.agent-experience__canonical a {
+	font-size: 0.8rem;
+	text-underline-offset: 0.3rem;
+}
+
+.agent-experience__human-return {
+	min-height: 3rem;
+	margin-top: 1.4rem;
+	padding: 0.8rem 1rem;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.7rem;
+	border: 1px solid var(--agent-orange);
+	background: var(--agent-orange);
+	color: var(--agent-ink);
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.agent-experience__facts {
+	border-top: 1px solid var(--agent-line);
+}
+
+.agent-experience__facts > section {
+	display: grid;
+	grid-template-columns: minmax(10rem, 0.38fr) minmax(0, 1fr);
+	border-bottom: 1px solid var(--agent-line);
+}
+
+.agent-experience__facts > section > header {
+	padding: clamp(1.5rem, 4vw, 3rem);
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	border-right: 1px solid var(--agent-line);
+}
+
+.agent-experience__facts h2 {
+	margin: 0;
+	font-size: clamp(1.25rem, 2.2vw, 2rem);
+	line-height: 1.05;
+	font-weight: 550;
+}
+
+.agent-experience__facts header em {
+	font: 500 0.65rem / 1 var(--y-mono, monospace);
+	font-style: normal;
+	color: var(--agent-orange);
+}
+
+.agent-experience__facts ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.agent-experience__facts li {
+	min-height: 5.25rem;
+	padding: 1.2rem clamp(1.5rem, 4vw, 3rem);
+	display: grid;
+	grid-template-columns: 2rem minmax(0, 1fr);
+	align-items: center;
+	border-bottom: 1px solid var(--agent-line);
+}
+
+.agent-experience__facts li:last-child {
+	border-bottom: 0;
+}
+
+.agent-experience__facts li > span {
+	color: var(--agent-orange);
+	font-family: var(--y-mono, monospace);
+}
+
+.agent-experience__facts li p {
+	margin: 0;
+	line-height: 1.55;
+}
+
+.agent-experience a:focus-visible {
+	outline: 2px solid var(--agent-orange);
+	outline-offset: 3px;
+}
+
+@media (max-width: 880px) {
+	.agent-experience__masthead {
+		padding: 0 1rem;
+		grid-template-columns: 1fr auto;
+	}
+
+	.agent-experience__identity {
+		display: none;
+	}
+
+	.agent-experience__layout {
+		grid-template-columns: 1fr;
+	}
+
+	.agent-experience__rail {
+		padding: 0;
+		border-right: 0;
+		border-bottom: 1px solid var(--agent-line);
+		overflow-x: auto;
+	}
+
+	.agent-experience__rail > p {
+		display: none;
+	}
+
+	.agent-experience__rail nav {
+		position: static;
+		min-width: max-content;
+		display: flex;
+	}
+
+	.agent-experience__rail nav a,
+	.agent-experience__rail nav a:last-child {
+		min-width: 9rem;
+		border: 0;
+		border-right: 1px solid var(--agent-line);
+	}
+
+	.agent-experience__facts > section {
+		grid-template-columns: 1fr;
+	}
+
+	.agent-experience__facts > section > header {
+		border-right: 0;
+		border-bottom: 1px solid var(--agent-line);
+	}
+}
+
+@media (max-width: 560px) {
+	.agent-experience__masthead .mode-link a {
+		padding-inline: 0.55rem;
+		font-size: 0.65rem;
+	}
+
+	.agent-experience__intro {
+		min-height: 36rem;
+		padding-inline: 1.2rem;
+	}
+
+	.agent-experience__intro h1 {
+		font-size: clamp(2.8rem, 15vw, 4.5rem);
+	}
+
+	.agent-experience__signal {
+		right: -16rem;
+		top: 32%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.agent-experience *,
+	.agent-experience *::before,
+	.agent-experience *::after {
+		scroll-behavior: auto;
+		transition-duration: 0.001ms !important;
+		animation-duration: 0.001ms !important;
+	}
+}

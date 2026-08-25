@@ -43,8 +43,3 @@ export function trackEvent(
 	if (!initialized) return;
 	posthog.capture(eventName, properties ? sanitizeAnalyticsProperties(properties) : undefined);
 }
-
-export function identifyByEmail(email: string): void {
-	if (!initialized) return;
-	posthog.identify(email, { email });
-}

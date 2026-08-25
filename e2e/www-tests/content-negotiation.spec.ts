@@ -7,8 +7,8 @@ const coreCases = [
 	["/zh/product", "https://yonaris.com/zh/product", "Simplified Chinese (zh-CN)"],
 	["/approach", "https://yonaris.com/approach", "English (en)"],
 	["/zh/approach", "https://yonaris.com/zh/approach", "Simplified Chinese (zh-CN)"],
-	["/research", "https://yonaris.com/research", "English (en)"],
-	["/zh/research", "https://yonaris.com/zh/research", "Simplified Chinese (zh-CN)"],
+	["/privacy", "https://yonaris.com/privacy", "English (en)"],
+	["/zh/privacy", "https://yonaris.com/zh/privacy", "Simplified Chinese (zh-CN)"],
 	["/company", "https://yonaris.com/company", "English (en)"],
 	["/zh/company", "https://yonaris.com/zh/company", "Simplified Chinese (zh-CN)"],
 	["/geo", "https://yonaris.com/geo", "English (en)"],
@@ -35,10 +35,9 @@ test.describe("human and machine content negotiation", () => {
 			expect(markdown.headers()["x-robots-tag"]).toBe("noindex, follow");
 			expect(markdown.headers().vary?.toLowerCase().split(/\s*,\s*/)).toContain("accept");
 			expect(markdown.headers().vary?.toLowerCase().split(/\s*,\s*/)).toContain("accept-encoding");
-			expect(await markdown.text()).toContain(`Human canonical: ${canonical}`);
-			expect(await (await request.get(path, { headers: { Accept: "text/markdown" } })).text()).toContain(
-				`Language: ${language}`,
-			);
+			const body = await markdown.text();
+			expect(body).toContain(canonical);
+			expect(body).toContain(language === "English (en)" ? "Language: English (en)" : "语言：简体中文（zh-CN）");
 		});
 	}
 
@@ -52,8 +51,8 @@ test.describe("human and machine content negotiation", () => {
 
 	test("serves branded regional Agent HTML and paired Markdown facts", async ({ request }) => {
 		for (const regional of [
-			{ agentPrefix: "/agent", humanPrefix: "", language: "en", topics: ["company", "product", "approach", "research", "geo", "diagnostic"] },
-			{ agentPrefix: "/zh/agent", humanPrefix: "/zh", language: "zh-CN", topics: ["company", "product", "approach", "research", "geo", "diagnostic", "privacy"] },
+			{ agentPrefix: "/agent", humanPrefix: "", language: "en", topics: ["company", "product", "approach", "geo", "diagnostic", "privacy"] },
+			{ agentPrefix: "/zh/agent", humanPrefix: "/zh", language: "zh-CN", topics: ["company", "product", "approach", "geo", "diagnostic", "privacy"] },
 		] as const) {
 			for (const path of regional.topics) {
 				const html = await request.get(`${regional.agentPrefix}/${path}`, { headers: { Accept: "text/html" } });
@@ -73,7 +72,7 @@ test.describe("human and machine content negotiation", () => {
 		for (const [from, to] of [
 			["platform", "product"],
 			["methodology", "approach"],
-			["results", "research"],
+			["results", "product"],
 		] as const) {
 			const response = await request.get(`/agent/${from}?source=legacy`, { maxRedirects: 0 });
 			expect(response.status()).toBe(308);
@@ -107,17 +106,15 @@ test.describe("human and machine content negotiation", () => {
 			expect(response.headers()["x-robots-tag"]).toBe("noindex, follow");
 
 			const body = await response.text();
-			for (const [humanPath] of coreCases) {
-				expect(body).toContain(`https://yonaris.com${humanPath}`);
-			}
-			for (const agentPath of ["company", "product", "approach", "research", "geo", "diagnostic"]) {
+			for (const agentPath of ["company", "product", "approach", "geo", "diagnostic", "privacy"]) {
 				expect(body).toContain(`https://yonaris.com/agent/${agentPath}`);
 			}
 		}
 
 		const full = await request.get("/llms-full.txt");
 		const fullBody = await full.text();
-		expect(fullBody.match(/^Human canonical:/gm)).toHaveLength(14);
+		for (const [humanPath] of coreCases) expect(fullBody).toContain(`https://yonaris.com${humanPath}`);
+		expect(fullBody.match(/^(?:Human canonical|官网对应页面):/gm)).toHaveLength(14);
 		for (const retired of [
 			"93.3%",
 			"four intelligence",

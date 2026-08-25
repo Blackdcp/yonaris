@@ -1,5 +1,3 @@
-import type { ReactNode } from "react";
-
 export type SiteEdition = "global-en" | "zh-cn";
 export type EditionPageRef = `${SiteEdition}:${string}`;
 
@@ -23,13 +21,4 @@ export interface EditionDefinition {
 	localeFallbackHome: EditionPageRef;
 	analyticsPolicy: "disabled" | "global-reviewed";
 	diagnosticPolicy: "disabled" | "global-v2" | "regional-v2";
-}
-
-export interface GlobalEnglishPageContract {
-	key: "home" | "product" | "approach" | "research" | "geo" | "company" | "diagnostic" | "privacy";
-	canonicalPath: `/${string}`;
-	title: string;
-	description: string;
-	sectionIds: readonly string[];
-	page: () => ReactNode;
 }

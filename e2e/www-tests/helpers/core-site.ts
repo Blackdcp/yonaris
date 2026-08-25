@@ -9,7 +9,7 @@ export const CORE_ROUTE_PAIRS = [
 	{ key: "home", en: "/", zh: "/zh" },
 	{ key: "product", en: "/product", zh: "/zh/product" },
 	{ key: "approach", en: "/approach", zh: "/zh/approach" },
-	{ key: "research", en: "/research", zh: "/zh/research" },
+	{ key: "privacy", en: "/privacy", zh: "/zh/privacy" },
 	{ key: "company", en: "/company", zh: "/zh/company" },
 	{ key: "geo", en: "/geo", zh: "/zh/geo" },
 	{ key: "diagnostic", en: "/diagnostic", zh: "/zh/diagnostic" },

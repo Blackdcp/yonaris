@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDiagnosticLead, parseDiagnosticSearch } from "./diagnostic-schema";
+import { parseDiagnosticLead } from "./diagnostic-schema";
 
 const globalLead = {
 	locale: "en",
@@ -39,12 +39,5 @@ describe("regional diagnostic lead schema", () => {
 		});
 		expect(parseDiagnosticLead({ ...globalLead, website: "https://acme.example" }).success).toBe(false);
 		expect(parseDiagnosticLead({ ...globalLead, companyUrl: "https://bot.example" }).success).toBe(false);
-	});
-});
-
-describe("diagnostic search compatibility", () => {
-	it("keeps only a validated absolute website prefill during the transition", () => {
-		expect(parseDiagnosticSearch({ website: " https://acme.example " })).toEqual({ website: "https://acme.example" });
-		expect(parseDiagnosticSearch({ website: "acme.example" })).toEqual({ website: "" });
 	});
 });

@@ -37,9 +37,9 @@ describe("permanent redirects", () => {
 
 		const response = redirects.permanentRedirectResponse(
 			new Request("https://malicious.example/agent/results?ref=legacy#ignored"),
-			"/agent/research",
+			"/agent/product",
 		);
-		expect(response.headers.get("location")).toBe("/agent/research?ref=legacy");
+		expect(response.headers.get("location")).toBe("/agent/product?ref=legacy");
 	});
 
 	test("preserves repeated, empty, and percent-encoded query values byte for byte", async () => {

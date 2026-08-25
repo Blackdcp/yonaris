@@ -1,8 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	buildDiagnosticAnalyticsBootstrapScript,
-	clearDiagnosticPrefillWebsite,
-	consumeDiagnosticPrefillWebsite,
 	sanitizeAnalyticsProperties,
 	sanitizeAnalyticsReferrer,
 	sanitizeAnalyticsUrl,
@@ -23,12 +21,12 @@ function runBootstrap(pathname: string, search: string, hash = "") {
 
 describe("diagnostic analytics bootstrap", () => {
 	it.each(["/diagnostic", "/zh/diagnostic"])(
-		"removes the raw query synchronously on %s while preserving it only in memory",
+		"removes the raw query synchronously on %s without preserving legacy form values",
 		(pathname) => {
 			const raw = "?website=https%3A%2F%2Facme.example%2Fsecret&email=ava%40acme.example";
 			const result = runBootstrap(pathname, raw, "#request");
 
-			expect(result.windowObject.__YONARIS_DIAGNOSTIC_PREFILL_SEARCH__).toBe(raw);
+			expect(result.windowObject).toEqual({});
 			expect(result.calls).toEqual([[result.history.state, "", `${pathname}#request`]]);
 		},
 	);
@@ -37,21 +35,6 @@ describe("diagnostic analytics bootstrap", () => {
 		const result = runBootstrap("/product", "?website=https%3A%2F%2Facme.example");
 		expect(result.calls).toEqual([]);
 		expect(result.windowObject).toEqual({});
-	});
-
-	it("keeps a consumed prefill available across deferred hydration renders", async () => {
-		vi.stubGlobal("window", {
-			__YONARIS_DIAGNOSTIC_PREFILL_SEARCH__: "?website=https%3A%2F%2Facme.example",
-		});
-
-		try {
-			expect(consumeDiagnosticPrefillWebsite()).toBe("https://acme.example");
-			await Promise.resolve();
-			expect(consumeDiagnosticPrefillWebsite()).toBe("https://acme.example");
-		} finally {
-			clearDiagnosticPrefillWebsite();
-			vi.unstubAllGlobals();
-		}
 	});
 });
 

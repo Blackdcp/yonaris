@@ -12,6 +12,30 @@
 	--y-mono: "Geist Mono", ui-monospace, monospace;
 }
 
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 400;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Sans";
+	font-style: normal;
+	font-weight: 500 800;
+	src: url("@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Geist Mono";
+	font-style: normal;
+	font-weight: 400 700;
+	src: url("@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff2") format("woff2");
+	font-display: swap;
+}
+
 * {
 	box-sizing: border-box;
 }
@@ -91,7 +115,7 @@ input {
 
 .lead-form header > span,
 .lead-confirmation > span {
-	font: 600 0.7rem/1 var(--y-mono);
+	font: 600 0.7rem / 1 var(--y-mono);
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--y-orange);
@@ -207,4 +231,56 @@ input {
 		animation-iteration-count: 1 !important;
 		transition-duration: 0.001ms !important;
 	}
+}
+
+.zero-not-found {
+	min-height: 100svh;
+	padding: clamp(1.25rem, 4vw, 3rem);
+	display: grid;
+	grid-template-rows: auto 1fr;
+	background: var(--y-paper);
+}
+
+.zero-not-found__logo {
+	width: 9rem;
+	height: auto;
+}
+
+.zero-not-found main {
+	width: min(100%, 70rem);
+	margin: auto;
+}
+
+.zero-not-found main > span {
+	font: 700 0.75rem / 1 var(--y-mono);
+	color: #93420f;
+}
+
+.zero-not-found h1 {
+	max-width: 10ch;
+	margin: 1rem 0;
+	font-size: clamp(3.5rem, 10vw, 8rem);
+	line-height: 0.9;
+	letter-spacing: -0.07em;
+}
+
+.zero-not-found p {
+	font-size: 1.1rem;
+	color: var(--y-blue-gray);
+}
+
+.zero-not-found main a {
+	margin-top: 1rem;
+	display: inline-flex;
+	padding: 0.8rem 1rem;
+	border-radius: 999px;
+	background: var(--y-orange);
+	text-decoration: none;
+	font-weight: 700;
+}
+
+.zero-not-found a:focus-visible {
+	outline: 2px solid var(--y-ink);
+	outline-offset: 3px;
+	box-shadow: 0 0 0 5px var(--y-orange);
 }

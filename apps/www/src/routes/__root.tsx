@@ -10,13 +10,8 @@ import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@
 import { type ReactNode, useEffect } from "react";
 import { NotFound } from "@/components/not-found";
 import { buildDiagnosticAnalyticsBootstrapScript } from "@/lib/diagnostic-analytics-privacy";
-import { getMarketingOgImage } from "@/lib/og";
 import { initPostHog } from "@/lib/posthog";
-import { canonicalUrl, organizationJsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_URL, websiteJsonLd } from "@/lib/seo";
 import "../styles.css";
-
-const ROOT_TITLE = SITE_NAME;
-const ROOT_OG_IMAGE = canonicalUrl(getMarketingOgImage({ title: ROOT_TITLE, description: SITE_DESCRIPTION }));
 
 export const Route = createRootRoute({
 	notFoundComponent: NotFound,
@@ -30,28 +25,8 @@ export const Route = createRootRoute({
 					name: "viewport",
 					content: "width=device-width, initial-scale=1",
 				},
-				{ title: ROOT_TITLE },
-				{ name: "description", content: SITE_DESCRIPTION },
-				{ property: "og:site_name", content: SITE_NAME },
-				{ property: "og:locale", content: "en_US" },
-				{ property: "og:type", content: "website" },
-				...(SITE_URL ? [{ property: "og:url", content: SITE_URL }] : []),
-				{ property: "og:title", content: ROOT_TITLE },
-				{ property: "og:description", content: SITE_DESCRIPTION },
-				...(ROOT_OG_IMAGE
-					? [
-							{ property: "og:image", content: ROOT_OG_IMAGE },
-							{ property: "og:image:width", content: "1200" },
-							{ property: "og:image:height", content: "630" },
-							{ property: "og:image:alt", content: ROOT_TITLE },
-						]
-					: []),
-				{ name: "twitter:card", content: "summary_large_image" },
-				{ name: "twitter:title", content: ROOT_TITLE },
-				{ name: "twitter:description", content: SITE_DESCRIPTION },
-				...(ROOT_OG_IMAGE ? [{ name: "twitter:image", content: ROOT_OG_IMAGE }] : []),
-				{ name: "theme-color", content: "#0b1220" },
-				{ name: "apple-mobile-web-app-title", content: SITE_NAME },
+				{ name: "theme-color", content: "#f6f4f1" },
+				{ name: "apple-mobile-web-app-title", content: "Yonaris" },
 			],
 			links: [
 				{
@@ -83,8 +58,6 @@ export const Route = createRootRoute({
 			],
 			scripts: [
 				{ children: buildDiagnosticAnalyticsBootstrapScript() },
-				websiteJsonLd(),
-				organizationJsonLd(),
 				...(plausibleDomain
 					? [
 							{

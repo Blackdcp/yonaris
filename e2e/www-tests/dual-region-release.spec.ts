@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
 	captureQa,
 	expectNoHorizontalOverflow,
@@ -9,115 +9,162 @@ import {
 } from "./helpers/core-site";
 
 const globalPages = [
-	{ path: "/", graphic: "answer-studio", agent: "/agent" },
-	{ path: "/product", graphic: "product-workbench", agent: "/agent/product" },
-	{ path: "/approach", graphic: "evidence-journey", agent: "/agent/approach" },
-	{ path: "/research", graphic: "evidence-explorer", agent: "/agent/research" },
-	{ path: "/geo", graphic: "answer-relationship-map", agent: "/agent/geo" },
-	{ path: "/company", graphic: "verified-trust", agent: "/agent/company" },
-	{ path: "/diagnostic", graphic: "request-timeline", agent: "/agent/diagnostic" },
-	{ path: "/privacy", graphic: "privacy-state", agent: "/agent" },
+	{ key: "home", path: "/", scene: "answer-field", agent: "/agent" },
+	{ key: "product", path: "/product", scene: "product-lens", agent: "/agent/product" },
+	{ key: "approach", path: "/approach", scene: "change-path", agent: "/agent/approach" },
+	{ key: "geo", path: "/geo", scene: "market-atlas", agent: "/agent/geo" },
+	{ key: "company", path: "/company", scene: "company-constellation", agent: "/agent/company" },
+	{ key: "diagnostic", path: "/diagnostic", scene: "contact-signal", agent: "/agent/diagnostic" },
+	{ key: "privacy", path: "/privacy", scene: "data-route", agent: "/agent/privacy" },
 ] as const;
 
 const chinaPages = [
-	{ path: "/zh", graphic: "zh-answer-scene", agent: "/zh/agent" },
-	{ path: "/zh/product", graphic: "zh-product-architecture", agent: "/zh/agent/product" },
-	{ path: "/zh/approach", graphic: "zh-delivery-summary", agent: "/zh/agent/approach" },
-	{ path: "/zh/research", graphic: "zh-evidence-record", agent: "/zh/agent/research" },
-	{ path: "/zh/geo", graphic: "zh-answer-map", agent: "/zh/agent/geo" },
-	{ path: "/zh/company", graphic: "zh-market-context", agent: "/zh/agent/company" },
-	{ path: "/zh/diagnostic", graphic: "zh-diagnostic-preview", agent: "/zh/agent/diagnostic" },
-	{ path: "/zh/privacy", graphic: "zh-privacy-flow", agent: "/zh/agent/privacy" },
+	{ key: "home", path: "/zh", scene: "ai-answer-flow", agent: "/zh/agent" },
+	{ key: "product", path: "/zh/product", scene: "brand-gap-console", agent: "/zh/agent/product" },
+	{ key: "approach", path: "/zh/approach", scene: "service-route", agent: "/zh/agent/approach" },
+	{ key: "geo", path: "/zh/geo", scene: "global-market-bridge", agent: "/zh/agent/geo" },
+	{ key: "company", path: "/zh/company", scene: "company-network", agent: "/zh/agent/company" },
+	{ key: "diagnostic", path: "/zh/diagnostic", scene: "consultation-brief", agent: "/zh/agent/diagnostic" },
+	{ key: "privacy", path: "/zh/privacy", scene: "privacy-path", agent: "/zh/agent/privacy" },
 ] as const;
 
-async function waitForHydration(page: import("@playwright/test").Page): Promise<void> {
+const humanPages = [...globalPages, ...chinaPages] as const;
+
+async function waitForHydration(page: Page): Promise<void> {
 	await page.waitForFunction(() => !(window as Window & { $_TSR?: unknown }).$_TSR);
 }
 
-test("both regional Human editions publish complete branded pages", async ({ page }) => {
-	for (const fixture of [...globalPages, ...chinaPages]) {
+async function visitHydrated(page: Page, path: string): Promise<void> {
+	const response = await page.goto(path);
+	expect(response?.status(), path).toBe(200);
+	await waitForHydration(page);
+}
+
+test("all 14 regional Human routes publish the zero-one generation and their intended scene", async ({ page }) => {
+	for (const fixture of humanPages) {
 		const china = fixture.path.startsWith("/zh");
-		const response = await page.goto(fixture.path);
-		expect(response?.status(), fixture.path).toBe(200);
-		await expect(page.locator(china ? '.zh-site[data-edition="zh-cn"]' : '.global-en[data-edition="global-en"]')).toHaveCount(1);
-		await expect(page.locator("main#main-content h1")).toHaveCount(1);
-		await expect(page.locator(`[data-graphic="${fixture.graphic}"]`).first()).toBeVisible();
-		await expect(page.locator('header img[src="/brand/logos/yonaris-wordmark-navy.png"]')).toHaveCount(1);
-		await expect(page.locator('footer img[src="/brand/logos/yonaris-wordmark-white.png"]')).toHaveCount(1);
-		await expect(page.locator(`a[href="${fixture.agent}"]`).first()).toHaveCount(1);
-		await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute(
+		await visitHydrated(page, fixture.path);
+
+		const experience = page.locator(
+			china
+				? '.china-command[data-human-surface="true"][data-edition="zh-cn"]'
+				: '.sf-shell[data-human-surface="true"][data-edition="global-en"]',
+		);
+		await expect(experience, fixture.path).toHaveAttribute("data-generation", "zero-one");
+		await expect(page.locator(`[data-scene="${fixture.scene}"]`), fixture.path).toHaveCount(1);
+		await expect(page.locator("main h1"), fixture.path).toHaveCount(1);
+		await expect(page.locator('header img[src="/brand/logos/yonaris-wordmark-navy.png"]'), fixture.path).toHaveCount(1);
+		await expect(page.locator('footer img[src="/brand/logos/yonaris-wordmark-white.png"]'), fixture.path).toHaveCount(1);
+		await expect(page.locator(`.mode-link a[href="${fixture.agent}"]`).first(), fixture.path).toHaveCount(1);
+		await expect(page.locator('head link[rel="canonical"]'), fixture.path).toHaveAttribute(
 			"href",
 			fixture.path,
 		);
 	}
 });
 
-test("the regional interactions change the evidence shown", async ({ page }) => {
-	await page.goto("/");
-	await waitForHydration(page);
-	await page.getByRole("tab", { name: "Why is a competitor being preferred?" }).click();
-	await expect(page.locator('[role="tabpanel"][data-question="competitor"]')).toBeVisible();
+test("the new regional scenes expose real state-changing interactions", async ({ page }) => {
+	await visitHydrated(page, "/");
+	await page.locator('[data-answer-question="comparison"]').click();
+	await expect(page.locator('[data-answer-question="comparison"]')).toHaveAttribute("aria-pressed", "true");
+	await expect(page.locator(".sf-answer-field__answer")).toContainText("How should I compare");
 
-	await page.goto("/product");
-	await waitForHydration(page);
-	await page.getByRole("tab", { name: "Evidence" }).click();
-	await expect(page.locator('[role="tabpanel"][data-module="evidence"]')).toBeVisible();
+	await visitHydrated(page, "/product");
+	await page.locator('[data-product-step="compare"]').click();
+	await expect(page.locator('[data-product-step="compare"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("#product-panel-compare")).toBeVisible();
 
-	await page.goto("/zh");
-	await waitForHydration(page);
-	await page.getByRole("tab", { name: /为什么更偏向竞品/ }).click();
-	await expect(page.locator('[role="tabpanel"][data-question="competitor"]')).toBeVisible();
+	await visitHydrated(page, "/approach");
+	await page.locator('[data-change-stage="return"] button').click();
+	await expect(page.locator('[data-change-stage="return"] button')).toHaveAttribute("aria-pressed", "true");
+	await expect(page.locator(".sf-change-path__detail")).toContainText("Repeat the same question");
 
-	await page.goto("/zh/product");
-	await waitForHydration(page);
-	await page.getByRole("tab", { name: /依据核验/ }).click();
-	await expect(page.locator('[role="tabpanel"][data-module="evidence"]')).toBeVisible();
+	await visitHydrated(page, "/geo");
+	await page.locator('[data-market-choice="alternatives"]').click();
+	await expect(page.locator('[data-market-choice="alternatives"]')).toHaveAttribute("aria-pressed", "true");
+	await expect(page.locator(".sf-market-atlas__question")).toContainText("Which named alternatives");
+
+	await visitHydrated(page, "/company");
+	await page.locator('[data-constellation-node="decisions"]').click();
+	await expect(page.locator('[data-constellation-node="decisions"]')).toHaveAttribute("aria-pressed", "true");
+	await expect(page.locator(".sf-constellation__detail")).toContainText("deserves attention");
+
+	await visitHydrated(page, "/zh");
+	await page.locator('[data-situation-control="displaced"]').click();
+	await expect(page.locator('[data-situation-control="displaced"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("#china-answer-panel")).toContainText("竞品");
+
+	await visitHydrated(page, "/zh/product");
+	await page.getByRole("tab", { name: /再次检查/ }).click();
+	await expect(page.getByRole("tab", { name: /再次检查/ })).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("#china-product-panel")).toContainText("后来怎么变");
+
+	await visitHydrated(page, "/zh/approach");
+	await page.getByRole("tab", { name: /出海后品牌定位失真/ }).click();
+	await expect(page.getByRole("tab", { name: /出海后品牌定位失真/ })).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("#china-service-panel")).toContainText("比较目标市场");
+
+	await visitHydrated(page, "/zh/geo");
+	await page.locator('[data-market-control="target-market"]').click();
+	await expect(page.locator('[data-market-control="target-market"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.locator("#china-market-panel")).toContainText("当地客户如何描述");
 });
 
 test("regional lead forms expose exactly the approved three fields", async ({ page }) => {
-	await page.goto("/diagnostic");
+	await visitHydrated(page, "/diagnostic");
 	const globalForm = page.locator("form");
 	await expect(globalForm.locator('input:not([name="companyUrl"])')).toHaveCount(3);
 	for (const label of ["Name", "Work email", "Company"]) await expect(globalForm.getByLabel(label, { exact: true })).toHaveCount(1);
 
-	await page.goto("/zh/diagnostic");
+	await visitHydrated(page, "/zh/diagnostic");
 	const chinaForm = page.locator("form");
 	await expect(chinaForm.locator('input:not([name="companyUrl"])')).toHaveCount(3);
 	for (const label of ["姓名", "电话", "公司"]) await expect(chinaForm.getByLabel(label, { exact: true })).toHaveCount(1);
 });
 
-test("Human and Agent pages remain paired in both regions", async ({ page, request }) => {
-	for (const fixture of [
-		{ path: "/agent/product", human: "/product" },
-		{ path: "/zh/agent/product", human: "/zh/product" },
-	] as const) {
-		const response = await page.goto(fixture.path);
-		expect(response?.status()).toBe(200);
-		await expect(page.locator('.global-agent[data-view="agent"]')).toHaveCount(1);
-		await expect(page.locator(`a[href="${fixture.human}"]`).first()).toHaveCount(1);
-		await expect(page.locator('img[src="/brand/logos/yonaris-wordmark-white.png"]')).toHaveCount(1);
+test("all 14 Human routes pair with the new Agent fact interface", async ({ page, request }) => {
+	for (const fixture of humanPages) {
+		const locale = fixture.path.startsWith("/zh") ? "zh" : "en";
+		await visitHydrated(page, fixture.agent);
+		await expect(
+			page.locator(
+				`.agent-experience[data-agent-surface="true"][data-agent-locale="${locale}"][data-page-key="${fixture.key}"]`,
+			),
+			fixture.agent,
+		).toHaveCount(1);
+		await expect(page.locator(`a[data-human-canonical="true"][href="${fixture.path}"]`), fixture.agent).toHaveCount(1);
+		await expect(page.locator(`.mode-link a[href="${fixture.agent}"][aria-current="page"]`), fixture.agent).toHaveCount(1);
+		await expect(page.locator('img[src="/brand/logos/yonaris-wordmark-white.png"]'), fixture.agent).toHaveCount(1);
 
-		const markdown = await request.get(fixture.path, { headers: { Accept: "text/markdown" } });
-		expect(markdown.status()).toBe(200);
-		expect(markdown.headers()["content-type"]).toContain("text/markdown");
-		expect(await markdown.text()).toContain(`https://yonaris.com${fixture.human}`);
+		const markdown = await request.get(fixture.agent, { headers: { Accept: "text/markdown" } });
+		expect(markdown.status(), fixture.agent).toBe(200);
+		expect(markdown.headers()["content-type"], fixture.agent).toContain("text/markdown");
+		if (fixture.key !== "home") expect(await markdown.text(), fixture.agent).toContain(`https://yonaris.com${fixture.path}`);
 	}
 });
 
-test("all regional pages are accessible and overflow-free on desktop and mobile", async ({ page }) => {
+test("all regional Human pages are accessible and overflow-free on desktop and mobile", async ({ page }) => {
 	test.setTimeout(240_000);
+	const issues: string[] = [];
 	for (const viewport of [QA_VIEWPORTS.desktop, QA_VIEWPORTS.mobile]) {
 		await page.setViewportSize(viewport);
-		for (const fixture of [...globalPages, ...chinaPages]) {
-			await page.goto(fixture.path);
-			await expectNoHorizontalOverflow(page);
-			await runWcagAa(page);
+		for (const fixture of humanPages) {
+			await test.step(`${fixture.path} at ${viewport.width}px`, async () => {
+				await visitHydrated(page, fixture.path);
+				try {
+					await expectNoHorizontalOverflow(page);
+					await runWcagAa(page);
+				} catch (error) {
+					issues.push(`${fixture.path} at ${viewport.width}px\n${error instanceof Error ? error.message : String(error)}`);
+				}
+			});
 		}
 	}
+	if (issues.length > 0) throw new Error(`Regional accessibility regressions:\n\n${issues.join("\n\n")}`);
 });
 
 test("reduced motion settles every regional Human and representative Agent page", async ({ page }) => {
-	for (const path of [...globalPages.map(({ path }) => path), ...chinaPages.map(({ path }) => path), "/agent", "/zh/agent"]) {
+	for (const path of [...humanPages.map(({ path }) => path), "/agent", "/zh/agent"]) {
 		await expectNoRunningAnimations(page, path);
 	}
 });
@@ -136,7 +183,7 @@ test("Chinese visual baseline", { tag: "@visual-baseline" }, async ({ page }) =>
 	await expectVisualBaseline(page, "chinese-human-home-desktop.png");
 });
 
-for (const fixture of [...globalPages, ...chinaPages]) {
+for (const fixture of humanPages) {
 	for (const viewport of ["desktop", "mobile"] as const) {
 		test(`${fixture.path} ${viewport} release visual`, { tag: "@visual" }, async ({ page }) => {
 			await page.goto(fixture.path);

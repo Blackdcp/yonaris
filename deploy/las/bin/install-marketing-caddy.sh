@@ -95,7 +95,7 @@ curl_origin() {
 
 check_apex_and_portal() {
 	local state_dir="$1"
-	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET "AI market evidence" &&
+	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET 'data-generation="zero-one"' &&
 		curl_origin portal.yonaris.com / 200 "$state_dir/portal.html"
 }
 
@@ -103,16 +103,18 @@ full_health() {
 	local state_dir="$1"
 	local response="$state_dir/health-response"
 
-	curl_origin yonaris.com / 200 "$response" GET "AI is already answering questions about your brand." || return 1
+	curl_origin yonaris.com / 200 "$response" GET 'data-generation="zero-one"' || return 1
 	grep -Fq 'data-edition="global-en"' "$response" || return 1
 
 	local path
 	for path in \
-		/product /zh/product /approach /research /company /privacy \
+		/product /zh/product /approach /company /privacy \
 		/agent/company /llms.txt; do
 		curl_origin yonaris.com "$path" 200 "$response" || return 1
 	done
-	for path in /resources /status /brand /og/status.png /recordranks-logo.svg; do
+	for path in \
+		/resources /research /zh/research /agent/research /zh/agent/research \
+		/status /brand /og/status.png /recordranks-logo.svg; do
 		curl_origin yonaris.com "$path" 404 "$response" || return 1
 	done
 

@@ -3,38 +3,36 @@
 import { pathToFileURL } from "node:url";
 
 export const CORE_ROUTES = [
-	{ path: "/", copy: ["AI is already answering questions about your brand."] },
-	{ path: "/zh", copy: ["客户正在先问 AI，再认识你的品牌。"] },
-	{ path: "/product", copy: ["Make AI market answers observable."] },
-	{ path: "/zh/product", copy: ["把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。"] },
-	{ path: "/approach", copy: ["Move from uncertainty to a reviewable next test."] },
-	{ path: "/zh/approach", copy: ["先把问题说清楚，再开始观察；先把依据看明白，再决定行动。"] },
-	{ path: "/research", copy: ["Evidence needs a scope, denominator, and boundary."] },
-	{ path: "/zh/research", copy: ["一个结论是否可信，先看它的范围、分母和证据边界。"] },
-	{ path: "/company", copy: ["Evidence before conclusion."] },
-	{ path: "/zh/company", copy: ["理解中国市场，也按目标市场服务中国企业的全球业务。"] },
-	{ path: "/geo", copy: ["See where your brand enters an AI answer."] },
-	{ path: "/zh/geo", copy: ["品牌能否进入 AI 的答案，只是第一步。"] },
-	{ path: "/diagnostic", copy: ["Request a focused AI market diagnostic."] },
-	{ path: "/zh/diagnostic", copy: ["先告诉我们怎么联系你，具体问题由人来一起判断。"] },
+	{ path: "/", copy: ["Your next customer may never search. They’ll ask."] },
+	{ path: "/zh", copy: ["客户问 AI 时，你的品牌被怎么说？"] },
+	{ path: "/product", copy: ["See how AI answers your market’s buying questions."] },
+	{ path: "/zh/product", copy: ["客户怎么问，AI 怎么答，先看哪里"] },
+	{ path: "/approach", copy: ["Start with the buying question that matters."] },
+	{ path: "/zh/approach", copy: ["从最担心的品牌问题开始"] },
+	{ path: "/company", copy: ["Built for the shift from search results to AI answers."] },
+	{ path: "/zh/company", copy: ["让企业看清 AI 如何介绍自己的品牌"] },
+	{ path: "/geo", copy: ["See how the same brand appears across markets."] },
+	{ path: "/zh/geo", copy: ["服务中国市场，也支持企业进入海外目标市场"] },
+	{ path: "/diagnostic", copy: ["Start with the question that matters."] },
+	{ path: "/zh/diagnostic", copy: ["先聊清楚，你最想解决什么"] },
 ];
 
 export const GOVERNED_HTML_ROUTES = [
-	{ path: "/privacy", copy: ["Know what the request form sends—and why."] },
-	{ path: "/zh/privacy", copy: ["表单只提交三项联系信息，并由服务端完成邮件传递。"] },
+	{ path: "/privacy", copy: ["Your details take one short route."] },
+	{ path: "/zh/privacy", copy: ["三项信息，只用于回复咨询"] },
 ];
 
 export const AGENT_HTML_ROUTES = [
-	{ path: "/agent", copy: ["PUBLIC FACT INTERFACE"], noindex: true },
-	...["product", "approach", "research", "company", "geo", "diagnostic"].map((topic) => ({
+	{ path: "/agent", copy: ["Agent fact interface"], noindex: true },
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
 		path: `/agent/${topic}`,
-		copy: ["PUBLIC FACT INTERFACE"],
+		copy: ["Agent fact interface"],
 		noindex: true,
 	})),
-	{ path: "/zh/agent", copy: ["中国区域 · 公开事实界面"], noindex: true },
-	...["product", "approach", "research", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
+	{ path: "/zh/agent", copy: ["Agent 事实入口"], noindex: true },
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
 		path: `/zh/agent/${topic}`,
-		copy: ["中国区域 · 公开事实界面"],
+		copy: ["Agent 事实入口"],
 		noindex: true,
 	})),
 ];
@@ -45,18 +43,23 @@ export const MANUAL_REDIRECTS = [
 	{ from: "/zh/platform", to: "/zh/product" },
 	{ from: "/methodology", to: "/approach" },
 	{ from: "/zh/methodology", to: "/zh/approach" },
-	{ from: "/results", to: "/research" },
-	{ from: "/zh/results", to: "/zh/research" },
+	{ from: "/results", to: "/product" },
+	{ from: "/zh/results", to: "/zh/product" },
 	{ from: "/vision", to: "/company" },
 	{ from: "/pricing", to: "/diagnostic" },
 	{ from: "/off-site-aeo", to: "/geo" },
 	{ from: "/agent/platform", to: "/agent/product" },
 	{ from: "/agent/methodology", to: "/agent/approach" },
-	{ from: "/agent/results", to: "/agent/research" },
+	{ from: "/agent/results", to: "/agent/product" },
 ];
 
 export const HIDDEN_ROUTES = [
 	"/resources",
+	"/zh/resources",
+	"/research",
+	"/zh/research",
+	"/agent/research",
+	"/zh/agent/research",
 	"/brand",
 	"/status",
 	"/og/status.png",
@@ -92,7 +95,7 @@ export const HIDDEN_ROUTES = [
 
 const MACHINE_ROUTES = [
 	{ path: "/llms.txt", contentType: "text/plain", copy: ["Yonaris"] },
-	{ path: "/llms-full.txt", contentType: "text/plain", copy: ["Current scope"] },
+	{ path: "/llms-full.txt", contentType: "text/plain", copy: ["public facts"] },
 	{ path: "/robots.txt", contentType: "text/plain", copy: ["User-agent:"] },
 	{ path: "/sitemap.xml", contentType: "xml", copy: ["http://www.sitemaps.org/schemas/sitemap/0.9"] },
 	{ path: "/og.png", contentType: "image/png", copy: [] },

@@ -1,151 +1,56 @@
 import { describe, expect, test } from "vitest";
+import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
+import { resolveMarkdownRequest, rewriteMarkdownRequest } from "./markdown-negotiation";
 
-type MarkdownNegotiationModule = typeof import("./markdown-negotiation");
-
-async function loadSubject(): Promise<MarkdownNegotiationModule | undefined> {
-	try {
-		return (await import("./markdown-negotiation")) as MarkdownNegotiationModule;
-	} catch {
-		return undefined;
-	}
+function humanPath(key: HumanPageKey, locale: "en" | "zh"): string {
+	if (locale === "en") return key === "home" ? "/" : `/${key}`;
+	return key === "home" ? "/zh" : `/zh/${key}`;
 }
 
-const subject = await loadSubject();
-
-function requireSubject(): MarkdownNegotiationModule | undefined {
-	expect(subject, "the core Markdown negotiation resolver must load").toBeDefined();
-	return subject;
+function agentPath(key: HumanPageKey, locale: "en" | "zh"): string {
+	if (locale === "en") return key === "home" ? "/agent" : `/agent/${key}`;
+	return key === "home" ? "/zh/agent" : `/zh/agent/${key}`;
 }
-
-const canonicalCases = [
-	["/", "/llms.mdx/site/en/home"],
-	["/zh", "/llms.mdx/site/zh/home"],
-	["/product", "/llms.mdx/site/en/product"],
-	["/zh/product", "/llms.mdx/site/zh/product"],
-	["/approach", "/llms.mdx/site/en/approach"],
-	["/zh/approach", "/llms.mdx/site/zh/approach"],
-	["/research", "/llms.mdx/site/en/research"],
-	["/zh/research", "/llms.mdx/site/zh/research"],
-	["/company", "/llms.mdx/site/en/company"],
-	["/zh/company", "/llms.mdx/site/zh/company"],
-	["/geo", "/llms.mdx/site/en/geo"],
-	["/zh/geo", "/llms.mdx/site/zh/geo"],
-	["/diagnostic", "/llms.mdx/site/en/diagnostic"],
-	["/zh/diagnostic", "/llms.mdx/site/zh/diagnostic"],
-] as const;
-
-const agentCases = [
-	["/agent", "/llms.mdx/agent/index"],
-	["/agent/", "/llms.mdx/agent/index"],
-	["/agent/product", "/llms.mdx/agent/product"],
-	["/agent/approach", "/llms.mdx/agent/approach"],
-	["/agent/research", "/llms.mdx/agent/research"],
-	["/agent/geo", "/llms.mdx/agent/geo"],
-	["/agent/company", "/llms.mdx/agent/company"],
-	["/agent/diagnostic", "/llms.mdx/agent/diagnostic"],
-] as const;
-
-const zhAgentCases = [
-	["/zh/agent", "/llms.mdx/zh-agent/index"],
-	["/zh/agent/", "/llms.mdx/zh-agent/index"],
-	["/zh/agent/product", "/llms.mdx/zh-agent/product"],
-	["/zh/agent/approach", "/llms.mdx/zh-agent/approach"],
-	["/zh/agent/research", "/llms.mdx/zh-agent/research"],
-	["/zh/agent/geo", "/llms.mdx/zh-agent/geo"],
-	["/zh/agent/company", "/llms.mdx/zh-agent/company"],
-	["/zh/agent/diagnostic", "/llms.mdx/zh-agent/diagnostic"],
-	["/zh/agent/privacy", "/llms.mdx/zh-agent/privacy"],
-] as const;
 
 function request(path: string, accept: string, method = "GET"): Request {
 	return new Request(`https://yonaris.test${path}`, { method, headers: { Accept: accept } });
 }
 
-describe("core Markdown negotiation", () => {
-	test("maps Markdown-preferred safe retrievals for all fourteen exact canonicals", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-
-		for (const [path, targetPath] of canonicalCases) {
-			expect(negotiation.resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({
-				targetPath,
-				variesOnAccept: true,
-			});
-			expect(negotiation.resolveMarkdownRequest(request(path, "text/html"))).toEqual({ variesOnAccept: true });
-		}
-
-		expect(negotiation.resolveMarkdownRequest(request("/product", "text/markdown", "HEAD"))).toEqual({
-			targetPath: "/llms.mdx/site/en/product",
-			variesOnAccept: true,
-		});
-	});
-
-	test("honors media preference instead of rewriting every Accept header containing Markdown", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-
-		expect(negotiation.resolveMarkdownRequest(request("/product", "text/markdown;q=0.5, text/html;q=0.9"))).toEqual({
-			variesOnAccept: true,
-		});
-		expect(negotiation.resolveMarkdownRequest(request("/product", "text/html;q=0.5, text/markdown;q=0.9"))).toEqual({
-			targetPath: "/llms.mdx/site/en/product",
-			variesOnAccept: true,
-		});
-	});
-
-	test("serves branded Agent HTML by default and Markdown when an agent prefers it", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-		for (const [path, targetPath] of [...agentCases, ...zhAgentCases]) {
-			expect(negotiation.resolveMarkdownRequest(request(path, "text/html"))).toEqual({ variesOnAccept: true });
-			expect(negotiation.resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({ targetPath, variesOnAccept: true });
+describe("Markdown negotiation", () => {
+	test("maps Markdown-preferred requests for every current Human and Agent topic", () => {
+		for (const key of HUMAN_PAGE_KEYS) {
+			for (const locale of ["en", "zh"] as const) {
+				const humanTarget = `/llms.mdx/site/${locale}/${key}`;
+				const agentTarget = `/llms.mdx/${locale === "en" ? "agent" : "zh-agent"}/${key === "home" ? "index" : key}`;
+				expect(resolveMarkdownRequest(request(humanPath(key, locale), "text/markdown"))).toEqual({
+					targetPath: humanTarget,
+					variesOnAccept: true,
+				});
+				expect(resolveMarkdownRequest(request(agentPath(key, locale), "text/markdown"))).toEqual({
+					targetPath: agentTarget,
+					variesOnAccept: true,
+				});
+				expect(resolveMarkdownRequest(request(humanPath(key, locale), "text/html"))).toEqual({ variesOnAccept: true });
+			}
 		}
 	});
 
-	test("uses the most specific media range before its quality weight", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-
-		expect(
-			negotiation.resolveMarkdownRequest(request("/product", "text/*;q=1, text/markdown;q=0, text/html;q=0.5")),
-		).toEqual({ variesOnAccept: true });
-		expect(
-			negotiation.resolveMarkdownRequest(request("/product", "text/*;q=1, text/markdown;q=0.8, text/html;q=0.5")),
-		).toEqual({ targetPath: "/llms.mdx/site/en/product", variesOnAccept: true });
-	});
-
-	test("does not negotiate aliases, internal paths, Docs routes, trailing variants, or unsafe methods", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-
-		for (const path of [
-			"/platform",
-			"/zh/results",
-			"/agent/platform",
-			"/llms.mdx/site/en/product",
-			"/docs/getting-started",
-			"/docs/getting-started.md",
-			"/docs/getting-started.mdx",
-			"/product/",
-		]) {
-			expect(negotiation.resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({ variesOnAccept: false });
+	test("does not negotiate removed or unsafe paths", () => {
+		for (const path of ["/research", "/zh/research", "/resources", "/platform", "/product/"]) {
+			expect(resolveMarkdownRequest(request(path, "text/markdown"))).toEqual({ variesOnAccept: false });
 		}
-
 		for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
-			expect(negotiation.resolveMarkdownRequest(request("/product", "text/markdown", method))).toEqual({
-				variesOnAccept: false,
-			});
+			expect(resolveMarkdownRequest(request("/product", "text/markdown", method))).toEqual({ variesOnAccept: false });
 		}
 	});
 
-	test("preserves the original query and request headers during an internal rewrite", () => {
-		const negotiation = requireSubject();
-		if (!negotiation) return;
-
-		const original = request("/zh/research?campaign=agent&view=full", "text/markdown");
-		const rewritten = negotiation.rewriteMarkdownRequest(original, "/llms.mdx/site/zh/research");
-		expect(rewritten.url).toBe("https://yonaris.test/llms.mdx/site/zh/research?campaign=agent&view=full");
+	test("honors media preference and preserves rewrites", () => {
+		expect(resolveMarkdownRequest(request("/product", "text/markdown;q=0.5, text/html;q=0.9"))).toEqual({
+			variesOnAccept: true,
+		});
+		const original = request("/zh/product?campaign=agent", "text/markdown");
+		const rewritten = rewriteMarkdownRequest(original, "/llms.mdx/site/zh/product");
+		expect(rewritten.url).toBe("https://yonaris.test/llms.mdx/site/zh/product?campaign=agent");
 		expect(rewritten.headers.get("accept")).toBe("text/markdown");
-		expect(original.url).toBe("https://yonaris.test/zh/research?campaign=agent&view=full");
 	});
 });

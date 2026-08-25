@@ -19,7 +19,8 @@ export function HumanAgentLink({
 	pageKey: HumanPageKey;
 	mode?: "human" | "agent";
 }) {
-	const labels = locale === "en" ? { human: "For people", agent: "For AI agents" } : { human: "人类官网", agent: "Agent 入口" };
+	const labels =
+		locale === "en" ? { human: "For people", agent: "For AI agents" } : { human: "官网", agent: "AI Agent" };
 	return (
 		<nav className="mode-link" aria-label={locale === "en" ? "Choose site experience" : "选择访问方式"}>
 			<a href={humanPath(locale, pageKey)} aria-current={mode === "human" ? "page" : undefined}>
@@ -31,4 +32,3 @@ export function HumanAgentLink({
 		</nav>
 	);
 }
-

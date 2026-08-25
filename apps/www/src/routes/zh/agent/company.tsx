@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ZhAgentPage } from "@/components/site/zh-cn/agent/zh-agent-page";
+import { AgentPage } from "@/components/experience/agent/agent-pages";
+
 export const Route = createFileRoute("/zh/agent/company")({
-	head: () => ({ meta: [{ title: "公司事实 | Yonaris Agent" }, { name: "robots", content: "noindex,follow" }] }),
-	component: () => <ZhAgentPage pageKey="company" />,
+	head: () => ({ meta: [{ title: "关于 Yonaris | Agent" }, { name: "robots", content: "noindex,follow" }] }),
+	component: () => <AgentPage locale="zh" pageKey="company" />,
 });

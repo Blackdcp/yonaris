@@ -1,76 +1,54 @@
-import { GLOBAL_ENGLISH_CONTENT } from "@/content/site/global-en";
+import { GLOBAL_COPY } from "@/content/experience";
+import type { HumanPageKey } from "@/content/experience/types";
 import { organizationJsonLd, siteHref, websiteJsonLd } from "@/lib/seo";
-import { GLOBAL_ENGLISH_SECTION_IDS } from "../registry";
 
-export const globalEnglishPageContracts = {
-	home: {
-		canonicalPath: "/",
-		title: GLOBAL_ENGLISH_CONTENT.home.headline,
-		description: GLOBAL_ENGLISH_CONTENT.home.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.home,
-	},
-	product: {
-		canonicalPath: "/product",
-		title: GLOBAL_ENGLISH_CONTENT.product.headline,
-		description: GLOBAL_ENGLISH_CONTENT.product.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.product,
-	},
-	approach: {
-		canonicalPath: "/approach",
-		title: GLOBAL_ENGLISH_CONTENT.approach.headline,
-		description: GLOBAL_ENGLISH_CONTENT.approach.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.approach,
-	},
-	research: {
-		canonicalPath: "/research",
-		title: GLOBAL_ENGLISH_CONTENT.research.headline,
-		description: GLOBAL_ENGLISH_CONTENT.research.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.research,
-	},
-	geo: {
-		canonicalPath: "/geo",
-		title: GLOBAL_ENGLISH_CONTENT.geo.headline,
-		description: GLOBAL_ENGLISH_CONTENT.geo.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.geo,
-	},
-	company: {
-		canonicalPath: "/company",
-		title: GLOBAL_ENGLISH_CONTENT.company.headline,
-		description: GLOBAL_ENGLISH_CONTENT.company.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.company,
-	},
-	diagnostic: {
-		canonicalPath: "/diagnostic",
-		title: GLOBAL_ENGLISH_CONTENT.diagnostic.headline,
-		description: GLOBAL_ENGLISH_CONTENT.diagnostic.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.diagnostic,
-	},
-	privacy: {
-		canonicalPath: "/privacy",
-		title: GLOBAL_ENGLISH_CONTENT.privacy.headline,
-		description: GLOBAL_ENGLISH_CONTENT.privacy.description,
-		sectionIds: GLOBAL_ENGLISH_SECTION_IDS.privacy,
-	},
-} as const;
+const pathFor: Record<HumanPageKey, `/${string}`> = {
+	home: "/",
+	product: "/product",
+	approach: "/approach",
+	geo: "/geo",
+	company: "/company",
+	diagnostic: "/diagnostic",
+	privacy: "/privacy",
+};
 
-export type GlobalEnglishPageKey = keyof typeof globalEnglishPageContracts;
+const chinaPathFor: Record<HumanPageKey, `/${string}`> = {
+	home: "/zh",
+	product: "/zh/product",
+	approach: "/zh/approach",
+	geo: "/zh/geo",
+	company: "/zh/company",
+	diagnostic: "/zh/diagnostic",
+	privacy: "/zh/privacy",
+};
+
+export type GlobalEnglishPageKey = HumanPageKey;
 
 export function globalEnglishPageHead(key: GlobalEnglishPageKey) {
-	const page = globalEnglishPageContracts[key];
-	const title = `${page.title} | Yonaris`;
+	const page = GLOBAL_COPY[key];
+	const title = page.metaTitle;
+	const canonicalPath = pathFor[key];
 	return {
 		meta: [
 			{ title },
-			{ name: "description", content: page.description },
-			{ name: "theme-color", content: "#0b1220" },
+			{ name: "description", content: page.metaDescription },
+			{ name: "theme-color", content: "#f6f4f1" },
+			{ property: "og:locale", content: "en_US" },
 			{ property: "og:title", content: title },
-			{ property: "og:description", content: page.description },
+			{ property: "og:description", content: page.metaDescription },
+			{ name: "twitter:card", content: "summary_large_image" },
+			{ name: "twitter:title", content: title },
+			{ name: "twitter:description", content: page.metaDescription },
 		],
 		links: [
-			{ rel: "canonical", href: siteHref(page.canonicalPath) },
-			{ rel: "alternate", hrefLang: "en", href: siteHref(page.canonicalPath) },
-			{ rel: "alternate", hrefLang: "x-default", href: siteHref(page.canonicalPath) },
+			{ rel: "canonical", href: siteHref(canonicalPath) },
+			{ rel: "alternate", hrefLang: "en", href: siteHref(canonicalPath) },
+			{ rel: "alternate", hrefLang: "zh-CN", href: siteHref(chinaPathFor[key]) },
+			{ rel: "alternate", hrefLang: "x-default", href: siteHref(canonicalPath) },
 		],
-		scripts: [organizationJsonLd(), ...(key === "home" ? [websiteJsonLd()] : [])],
+		scripts: [
+			organizationJsonLd(page.metaDescription, "en"),
+			...(key === "home" ? [websiteJsonLd(page.metaDescription, "en")] : []),
+		],
 	};
 }

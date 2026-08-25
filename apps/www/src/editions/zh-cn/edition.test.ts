@@ -1,19 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { ZH_PAGE_CONTENT } from "@/content/site/zh-cn/experience";
+import { CHINA_COPY, HUMAN_PAGE_KEYS } from "@/content/experience";
 import { zhPageHead } from "./edition";
 
 describe("China edition SEO", () => {
-	it("uses the rebuilt Chinese page copy and canonical Chinese routes", () => {
-		for (const key of ["home", "product", "approach", "research", "geo", "company", "diagnostic", "privacy"] as const) {
+	it("uses native Chinese copy and canonical China routes", () => {
+		for (const key of HUMAN_PAGE_KEYS) {
 			const head = zhPageHead(key);
-			const canonical = head.links.find((link) => "rel" in link && link.rel === "canonical");
-
-			expect(head.meta).toContainEqual({ name: "description", content: ZH_PAGE_CONTENT[key].lead });
-			expect(canonical && "href" in canonical ? canonical.href : undefined).toMatch(
-				key === "home" ? /\/zh$/ : new RegExp(`/zh/${key}$`),
-			);
+			const canonical = head.links.find((link) => link.rel === "canonical");
+			expect(head.meta).toContainEqual({ title: CHINA_COPY[key].metaTitle });
+			expect(head.meta).toContainEqual({ name: "description", content: CHINA_COPY[key].metaDescription });
+			expect(head.meta).toContainEqual({ property: "og:locale", content: "zh_CN" });
+			expect(head.meta).toContainEqual({ name: "twitter:description", content: CHINA_COPY[key].metaDescription });
+			expect(canonical?.href).toMatch(key === "home" ? /\/zh$/ : new RegExp(`/zh/${key}$`));
 			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "zh-CN")).toBe(true);
-			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "x-default")).toBe(false);
+			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "en")).toBe(true);
+			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "x-default")).toBe(true);
+			expect(head.scripts.some((script) => script.children.includes('"inLanguage":"zh-CN"'))).toBe(true);
 		}
 	});
 });

@@ -1,4 +1,5 @@
-import type { CorePageKey, Locale, SiteRouteDefinition, SiteRouteKey } from "@/content/site/types";
+import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
+import type { Locale, SiteRouteDefinition, SiteRouteKey } from "@/content/site/types";
 import { getCorePath, getSiteRoute, SITE_MANIFEST } from "./site-manifest";
 
 export const PORTAL_URL = "https://portal.yonaris.com";
@@ -14,51 +15,40 @@ export interface SiteFooterGroup {
 	items: readonly SiteNavigationItem[];
 }
 
-const CORE_PAGE_KEYS: ReadonlySet<string> = new Set<CorePageKey>([
-	"home",
-	"product",
-	"approach",
-	"research",
-	"company",
-	"geo",
-	"diagnostic",
-]);
-
+const coreKeys: ReadonlySet<string> = new Set(HUMAN_PAGE_KEYS);
 const siteRoutes: readonly SiteRouteDefinition[] = SITE_MANIFEST;
 
 const labels = {
 	en: {
 		home: "Home",
-		product: "Product",
-		approach: "Approach",
-		research: "Research",
+		product: "Platform",
+		approach: "Services",
+		geo: "Global markets",
 		company: "Company",
-		geo: "GEO",
-		diagnostic: "Get a Free Diagnostic",
+		diagnostic: "Talk to us",
 		privacy: "Privacy",
-		agent: "Agent",
+		agent: "For AI agents",
 		llms: "llms.txt",
 		explore: "Explore",
-		machineGroup: "Company & agents",
+		access: "Access",
 	},
 	zh: {
 		home: "首页",
 		product: "产品",
-		approach: "方法",
-		research: "研究",
-		company: "公司",
-		geo: "GEO",
-		diagnostic: "获取免费诊断",
-		privacy: "隐私",
-		agent: "Agent",
+		approach: "服务方案",
+		geo: "全球服务",
+		company: "关于我们",
+		diagnostic: "预约沟通",
+		privacy: "隐私说明",
+		agent: "Agent 入口",
 		llms: "llms.txt",
-		explore: "浏览",
-		machineGroup: "公司与智能体",
+		explore: "了解 Yonaris",
+		access: "访问入口",
 	},
 } as const;
 
-function isCorePageKey(key: SiteRouteKey): key is CorePageKey {
-	return CORE_PAGE_KEYS.has(key);
+function isCorePageKey(key: SiteRouteKey): key is HumanPageKey {
+	return coreKeys.has(key);
 }
 
 function pathFor(key: SiteRouteKey, locale: Locale): string {
@@ -68,11 +58,7 @@ function pathFor(key: SiteRouteKey, locale: Locale): string {
 }
 
 function itemFor(key: SiteRouteKey, locale: Locale): SiteNavigationItem {
-	return {
-		key,
-		label: labels[locale][key as keyof (typeof labels)[Locale]],
-		path: pathFor(key, locale),
-	};
+	return { key, label: labels[locale][key as keyof (typeof labels)[Locale]], path: pathFor(key, locale) };
 }
 
 export function getPrimaryNavigation(locale: Locale): readonly SiteNavigationItem[] {
@@ -85,7 +71,7 @@ export function getDiagnosticNavigation(locale: Locale): SiteNavigationItem {
 	return itemFor("diagnostic", locale);
 }
 
-export function getLocaleSwitchPath(locale: Locale, activeKey: CorePageKey = "home"): string {
+export function getLocaleSwitchPath(locale: Locale, activeKey: HumanPageKey = "home"): string {
 	return getCorePath(activeKey, locale === "en" ? "zh" : "en");
 }
 
@@ -93,10 +79,10 @@ export function getFooterNavigation(locale: Locale): readonly SiteFooterGroup[] 
 	return [
 		{
 			label: labels[locale].explore,
-			items: (["product", "approach", "research", "company", "geo"] as const).map((key) => itemFor(key, locale)),
+			items: (["product", "approach", "geo", "company", "diagnostic"] as const).map((key) => itemFor(key, locale)),
 		},
 		{
-			label: labels[locale].machineGroup,
+			label: labels[locale].access,
 			items: (["privacy", "agent", "llms"] as const).map((key) => itemFor(key, locale)),
 		},
 	];

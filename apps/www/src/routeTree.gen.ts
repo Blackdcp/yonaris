@@ -24,7 +24,6 @@ import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProductRouteImport } from './routes/product'
-import { Route as ResearchRouteImport } from './routes/research'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -36,8 +35,8 @@ import { Route as AgentDiagnosticRouteImport } from './routes/agent/diagnostic'
 import { Route as AgentGeoRouteImport } from './routes/agent/geo'
 import { Route as AgentMethodologyRouteImport } from './routes/agent/methodology'
 import { Route as AgentPlatformRouteImport } from './routes/agent/platform'
+import { Route as AgentPrivacyRouteImport } from './routes/agent/privacy'
 import { Route as AgentProductRouteImport } from './routes/agent/product'
-import { Route as AgentResearchRouteImport } from './routes/agent/research'
 import { Route as AgentResultsRouteImport } from './routes/agent/results'
 import { Route as ApiDiagnosticRouteImport } from './routes/api/diagnostic'
 import { Route as ZhIndexRouteImport } from './routes/zh/index'
@@ -49,7 +48,6 @@ import { Route as ZhMethodologyRouteImport } from './routes/zh/methodology'
 import { Route as ZhPlatformRouteImport } from './routes/zh/platform'
 import { Route as ZhPrivacyRouteImport } from './routes/zh/privacy'
 import { Route as ZhProductRouteImport } from './routes/zh/product'
-import { Route as ZhResearchRouteImport } from './routes/zh/research'
 import { Route as ZhResultsRouteImport } from './routes/zh/results'
 import { Route as LlmsDotmdxAgentSplatRouteImport } from './routes/llms[.]mdx.agent.$'
 import { Route as LlmsDotmdxSiteSplatRouteImport } from './routes/llms[.]mdx.site.$'
@@ -61,7 +59,6 @@ import { Route as ZhAgentDiagnosticRouteImport } from './routes/zh/agent/diagnos
 import { Route as ZhAgentGeoRouteImport } from './routes/zh/agent/geo'
 import { Route as ZhAgentPrivacyRouteImport } from './routes/zh/agent/privacy'
 import { Route as ZhAgentProductRouteImport } from './routes/zh/agent/product'
-import { Route as ZhAgentResearchRouteImport } from './routes/zh/agent/research'
 import { Route as ApiPlausibleEventIndexRouteImport } from './routes/api/plausible/event/index'
 import { Route as ApiPlausibleJsScriptIndexRouteImport } from './routes/api/plausible/js/script/index'
 
@@ -140,11 +137,6 @@ const ProductRoute = ProductRouteImport.update({
   path: '/product',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResearchRoute = ResearchRouteImport.update({
-  id: '/research',
-  path: '/research',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ResultsRoute = ResultsRouteImport.update({
   id: '/results',
   path: '/results',
@@ -200,14 +192,14 @@ const AgentPlatformRoute = AgentPlatformRouteImport.update({
   path: '/agent/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AgentPrivacyRoute = AgentPrivacyRouteImport.update({
+  id: '/agent/privacy',
+  path: '/agent/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AgentProductRoute = AgentProductRouteImport.update({
   id: '/agent/product',
   path: '/agent/product',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentResearchRoute = AgentResearchRouteImport.update({
-  id: '/agent/research',
-  path: '/agent/research',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgentResultsRoute = AgentResultsRouteImport.update({
@@ -265,11 +257,6 @@ const ZhProductRoute = ZhProductRouteImport.update({
   path: '/zh/product',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ZhResearchRoute = ZhResearchRouteImport.update({
-  id: '/zh/research',
-  path: '/zh/research',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ZhResultsRoute = ZhResultsRouteImport.update({
   id: '/zh/results',
   path: '/zh/results',
@@ -325,11 +312,6 @@ const ZhAgentProductRoute = ZhAgentProductRouteImport.update({
   path: '/zh/agent/product',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ZhAgentResearchRoute = ZhAgentResearchRouteImport.update({
-  id: '/zh/agent/research',
-  path: '/zh/agent/research',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiPlausibleEventIndexRoute = ApiPlausibleEventIndexRouteImport.update({
   id: '/api/plausible/event/',
   path: '/api/plausible/event/',
@@ -358,7 +340,6 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
-  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -369,8 +350,8 @@ export interface FileRoutesByFullPath {
   '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/privacy': typeof AgentPrivacyRoute
   '/agent/product': typeof AgentProductRoute
-  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
   '/zh/approach': typeof ZhApproachRoute
@@ -381,7 +362,6 @@ export interface FileRoutesByFullPath {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
-  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/agent/': typeof AgentIndexRoute
   '/zh/': typeof ZhIndexRoute
@@ -394,7 +374,6 @@ export interface FileRoutesByFullPath {
   '/zh/agent/geo': typeof ZhAgentGeoRoute
   '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
   '/zh/agent/product': typeof ZhAgentProductRoute
-  '/zh/agent/research': typeof ZhAgentResearchRoute
   '/zh/agent/': typeof ZhAgentIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
@@ -415,7 +394,6 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
-  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -426,8 +404,8 @@ export interface FileRoutesByTo {
   '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/privacy': typeof AgentPrivacyRoute
   '/agent/product': typeof AgentProductRoute
-  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
   '/zh/approach': typeof ZhApproachRoute
@@ -438,7 +416,6 @@ export interface FileRoutesByTo {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
-  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/agent': typeof AgentIndexRoute
   '/zh': typeof ZhIndexRoute
@@ -451,7 +428,6 @@ export interface FileRoutesByTo {
   '/zh/agent/geo': typeof ZhAgentGeoRoute
   '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
   '/zh/agent/product': typeof ZhAgentProductRoute
-  '/zh/agent/research': typeof ZhAgentResearchRoute
   '/zh/agent': typeof ZhAgentIndexRoute
   '/api/plausible/event': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script': typeof ApiPlausibleJsScriptIndexRoute
@@ -473,7 +449,6 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/product': typeof ProductRoute
-  '/research': typeof ResearchRoute
   '/results': typeof ResultsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -484,8 +459,8 @@ export interface FileRoutesById {
   '/agent/geo': typeof AgentGeoRoute
   '/agent/methodology': typeof AgentMethodologyRoute
   '/agent/platform': typeof AgentPlatformRoute
+  '/agent/privacy': typeof AgentPrivacyRoute
   '/agent/product': typeof AgentProductRoute
-  '/agent/research': typeof AgentResearchRoute
   '/agent/results': typeof AgentResultsRoute
   '/api/diagnostic': typeof ApiDiagnosticRoute
   '/zh/approach': typeof ZhApproachRoute
@@ -496,7 +471,6 @@ export interface FileRoutesById {
   '/zh/platform': typeof ZhPlatformRoute
   '/zh/privacy': typeof ZhPrivacyRoute
   '/zh/product': typeof ZhProductRoute
-  '/zh/research': typeof ZhResearchRoute
   '/zh/results': typeof ZhResultsRoute
   '/agent/': typeof AgentIndexRoute
   '/zh/': typeof ZhIndexRoute
@@ -509,7 +483,6 @@ export interface FileRoutesById {
   '/zh/agent/geo': typeof ZhAgentGeoRoute
   '/zh/agent/privacy': typeof ZhAgentPrivacyRoute
   '/zh/agent/product': typeof ZhAgentProductRoute
-  '/zh/agent/research': typeof ZhAgentResearchRoute
   '/zh/agent/': typeof ZhAgentIndexRoute
   '/api/plausible/event/': typeof ApiPlausibleEventIndexRoute
   '/api/plausible/js/script/': typeof ApiPlausibleJsScriptIndexRoute
@@ -532,7 +505,6 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
-    | '/research'
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -543,8 +515,8 @@ export interface FileRouteTypes {
     | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/privacy'
     | '/agent/product'
-    | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
     | '/zh/approach'
@@ -555,7 +527,6 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/privacy'
     | '/zh/product'
-    | '/zh/research'
     | '/zh/results'
     | '/agent/'
     | '/zh/'
@@ -568,7 +539,6 @@ export interface FileRouteTypes {
     | '/zh/agent/geo'
     | '/zh/agent/privacy'
     | '/zh/agent/product'
-    | '/zh/agent/research'
     | '/zh/agent/'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
@@ -589,7 +559,6 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
-    | '/research'
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -600,8 +569,8 @@ export interface FileRouteTypes {
     | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/privacy'
     | '/agent/product'
-    | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
     | '/zh/approach'
@@ -612,7 +581,6 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/privacy'
     | '/zh/product'
-    | '/zh/research'
     | '/zh/results'
     | '/agent'
     | '/zh'
@@ -625,7 +593,6 @@ export interface FileRouteTypes {
     | '/zh/agent/geo'
     | '/zh/agent/privacy'
     | '/zh/agent/product'
-    | '/zh/agent/research'
     | '/zh/agent'
     | '/api/plausible/event'
     | '/api/plausible/js/script'
@@ -646,7 +613,6 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/privacy'
     | '/product'
-    | '/research'
     | '/results'
     | '/robots.txt'
     | '/sitemap.xml'
@@ -657,8 +623,8 @@ export interface FileRouteTypes {
     | '/agent/geo'
     | '/agent/methodology'
     | '/agent/platform'
+    | '/agent/privacy'
     | '/agent/product'
-    | '/agent/research'
     | '/agent/results'
     | '/api/diagnostic'
     | '/zh/approach'
@@ -669,7 +635,6 @@ export interface FileRouteTypes {
     | '/zh/platform'
     | '/zh/privacy'
     | '/zh/product'
-    | '/zh/research'
     | '/zh/results'
     | '/agent/'
     | '/zh/'
@@ -682,7 +647,6 @@ export interface FileRouteTypes {
     | '/zh/agent/geo'
     | '/zh/agent/privacy'
     | '/zh/agent/product'
-    | '/zh/agent/research'
     | '/zh/agent/'
     | '/api/plausible/event/'
     | '/api/plausible/js/script/'
@@ -704,7 +668,6 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProductRoute: typeof ProductRoute
-  ResearchRoute: typeof ResearchRoute
   ResultsRoute: typeof ResultsRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -715,8 +678,8 @@ export interface RootRouteChildren {
   AgentGeoRoute: typeof AgentGeoRoute
   AgentMethodologyRoute: typeof AgentMethodologyRoute
   AgentPlatformRoute: typeof AgentPlatformRoute
+  AgentPrivacyRoute: typeof AgentPrivacyRoute
   AgentProductRoute: typeof AgentProductRoute
-  AgentResearchRoute: typeof AgentResearchRoute
   AgentResultsRoute: typeof AgentResultsRoute
   ApiDiagnosticRoute: typeof ApiDiagnosticRoute
   ZhApproachRoute: typeof ZhApproachRoute
@@ -727,7 +690,6 @@ export interface RootRouteChildren {
   ZhPlatformRoute: typeof ZhPlatformRoute
   ZhPrivacyRoute: typeof ZhPrivacyRoute
   ZhProductRoute: typeof ZhProductRoute
-  ZhResearchRoute: typeof ZhResearchRoute
   ZhResultsRoute: typeof ZhResultsRoute
   AgentIndexRoute: typeof AgentIndexRoute
   ZhIndexRoute: typeof ZhIndexRoute
@@ -740,7 +702,6 @@ export interface RootRouteChildren {
   ZhAgentGeoRoute: typeof ZhAgentGeoRoute
   ZhAgentPrivacyRoute: typeof ZhAgentPrivacyRoute
   ZhAgentProductRoute: typeof ZhAgentProductRoute
-  ZhAgentResearchRoute: typeof ZhAgentResearchRoute
   ZhAgentIndexRoute: typeof ZhAgentIndexRoute
   ApiPlausibleEventIndexRoute: typeof ApiPlausibleEventIndexRoute
   ApiPlausibleJsScriptIndexRoute: typeof ApiPlausibleJsScriptIndexRoute
@@ -853,13 +814,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/research': {
-      id: '/research'
-      path: '/research'
-      fullPath: '/research'
-      preLoaderRoute: typeof ResearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/results': {
       id: '/results'
       path: '/results'
@@ -937,18 +891,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentPlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/agent/privacy': {
+      id: '/agent/privacy'
+      path: '/agent/privacy'
+      fullPath: '/agent/privacy'
+      preLoaderRoute: typeof AgentPrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/agent/product': {
       id: '/agent/product'
       path: '/agent/product'
       fullPath: '/agent/product'
       preLoaderRoute: typeof AgentProductRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent/research': {
-      id: '/agent/research'
-      path: '/agent/research'
-      fullPath: '/agent/research'
-      preLoaderRoute: typeof AgentResearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agent/results': {
@@ -1028,13 +982,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhProductRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/zh/research': {
-      id: '/zh/research'
-      path: '/zh/research'
-      fullPath: '/zh/research'
-      preLoaderRoute: typeof ZhResearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/zh/results': {
       id: '/zh/results'
       path: '/zh/results'
@@ -1112,13 +1059,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ZhAgentProductRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/zh/agent/research': {
-      id: '/zh/agent/research'
-      path: '/zh/agent/research'
-      fullPath: '/zh/agent/research'
-      preLoaderRoute: typeof ZhAgentResearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/plausible/event/': {
       id: '/api/plausible/event/'
       path: '/api/plausible/event'
@@ -1152,7 +1092,6 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProductRoute: ProductRoute,
-  ResearchRoute: ResearchRoute,
   ResultsRoute: ResultsRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
@@ -1163,8 +1102,8 @@ const rootRouteChildren: RootRouteChildren = {
   AgentGeoRoute: AgentGeoRoute,
   AgentMethodologyRoute: AgentMethodologyRoute,
   AgentPlatformRoute: AgentPlatformRoute,
+  AgentPrivacyRoute: AgentPrivacyRoute,
   AgentProductRoute: AgentProductRoute,
-  AgentResearchRoute: AgentResearchRoute,
   AgentResultsRoute: AgentResultsRoute,
   ApiDiagnosticRoute: ApiDiagnosticRoute,
   ZhApproachRoute: ZhApproachRoute,
@@ -1175,7 +1114,6 @@ const rootRouteChildren: RootRouteChildren = {
   ZhPlatformRoute: ZhPlatformRoute,
   ZhPrivacyRoute: ZhPrivacyRoute,
   ZhProductRoute: ZhProductRoute,
-  ZhResearchRoute: ZhResearchRoute,
   ZhResultsRoute: ZhResultsRoute,
   AgentIndexRoute: AgentIndexRoute,
   ZhIndexRoute: ZhIndexRoute,
@@ -1188,7 +1126,6 @@ const rootRouteChildren: RootRouteChildren = {
   ZhAgentGeoRoute: ZhAgentGeoRoute,
   ZhAgentPrivacyRoute: ZhAgentPrivacyRoute,
   ZhAgentProductRoute: ZhAgentProductRoute,
-  ZhAgentResearchRoute: ZhAgentResearchRoute,
   ZhAgentIndexRoute: ZhAgentIndexRoute,
   ApiPlausibleEventIndexRoute: ApiPlausibleEventIndexRoute,
   ApiPlausibleJsScriptIndexRoute: ApiPlausibleJsScriptIndexRoute,

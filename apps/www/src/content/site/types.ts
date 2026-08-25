@@ -1,55 +1,18 @@
+import type { HumanPageKey } from "@/content/experience/types";
+
 export type Locale = "en" | "zh";
-
-export type CorePageKey = "home" | "product" | "approach" | "research" | "company" | "geo" | "diagnostic";
-
+export type CorePageKey = HumanPageKey;
 export type AgentPageKey = Exclude<CorePageKey, "home">;
 
-export type ClaimStatus = "current-software" | "managed-delivery" | "verified-evidence" | "illustrative" | "direction";
-
-export interface FactualClaim {
-	id: string;
-	status: ClaimStatus;
-	text: string;
-	limitation?: string;
-}
-
-export type DeepReadonly<T> = T extends (...args: never[]) => unknown
-	? T
-	: T extends readonly (infer Item)[]
-		? readonly DeepReadonly<Item>[]
-		: T extends object
-			? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
-			: T;
-
-export function deepFreeze<T>(value: T): DeepReadonly<T> {
-	const visited = new WeakSet<object>();
-
-	function freezeNested(candidate: unknown): void {
-		if (candidate === null || typeof candidate !== "object" || visited.has(candidate)) return;
-
-		visited.add(candidate);
-		Object.freeze(candidate);
-		for (const key of Reflect.ownKeys(candidate)) {
-			freezeNested(Reflect.get(candidate, key));
-		}
-	}
-
-	freezeNested(value);
-
-	return value as DeepReadonly<T>;
-}
-
-export type SiteRouteClass = "core" | "resource" | "utility" | "legacy" | "machine";
-
+export type SiteRouteClass = "core" | "utility" | "legacy" | "machine";
 export type IndexPolicy = "index,follow" | "noindex,follow";
 
 export const SITE_ROUTE_KEYS = [
 	"home",
 	"product",
 	"approach",
-	"research",
-	"company",
 	"geo",
+	"company",
 	"diagnostic",
 	"privacy",
 	"agent",

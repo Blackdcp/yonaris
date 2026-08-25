@@ -9,14 +9,14 @@ const REDIRECTS = new Map([
 	["/zh/platform", "/zh/product"],
 	["/methodology", "/approach"],
 	["/zh/methodology", "/zh/approach"],
-	["/results", "/research"],
-	["/zh/results", "/zh/research"],
+	["/results", "/product"],
+	["/zh/results", "/zh/product"],
 	["/vision", "/company"],
 	["/pricing", "/diagnostic"],
 	["/off-site-aeo", "/geo"],
 	["/agent/platform", "/agent/product"],
 	["/agent/methodology", "/agent/approach"],
-	["/agent/results", "/agent/research"],
+	["/agent/results", "/agent/product"],
 ]);
 
 const CORE_PATHS = [
@@ -26,8 +26,6 @@ const CORE_PATHS = [
 	"/zh/product",
 	"/approach",
 	"/zh/approach",
-	"/research",
-	"/zh/research",
 	"/company",
 	"/zh/company",
 	"/geo",
@@ -38,11 +36,9 @@ const CORE_PATHS = [
 
 const AGENT_HTML_PATHS = [
 	"/agent",
-	...["product", "approach", "research", "company", "geo", "diagnostic"].map((topic) => `/agent/${topic}`),
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/agent/${topic}`),
 	"/zh/agent",
-	...["product", "approach", "research", "company", "geo", "diagnostic", "privacy"].map(
-		(topic) => `/zh/agent/${topic}`,
-	),
+	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => `/zh/agent/${topic}`),
 ];
 
 const HTML_PATHS = [...CORE_PATHS, "/privacy", "/zh/privacy", ...AGENT_HTML_PATHS];
@@ -58,6 +54,11 @@ const MACHINE_PATHS = [
 
 const HIDDEN_PATHS = [
 	"/resources",
+	"/zh/resources",
+	"/research",
+	"/zh/research",
+	"/agent/research",
+	"/zh/agent/research",
 	"/brand",
 	"/status",
 	"/og/status.png",
@@ -92,26 +93,24 @@ const HIDDEN_PATHS = [
 ];
 
 const ALL_COPY = [
-	"AI is already answering questions about your brand.",
-	"Move from uncertainty to a reviewable next test.",
-	"Evidence needs a scope, denominator, and boundary.",
-	"Evidence before conclusion.",
-	"Request a focused AI market diagnostic.",
-	"See where your brand enters an AI answer.",
-	"Know what the request form sends—and why.",
-	"客户正在先问 AI，再认识你的品牌。",
-	"把 AI 对品牌的回答，变成可以看、可以判断、可以行动的证据。",
-	"先把问题说清楚，再开始观察；先把依据看明白，再决定行动。",
-	"一个结论是否可信，先看它的范围、分母和证据边界。",
-	"理解中国市场，也按目标市场服务中国企业的全球业务。",
-	"品牌能否进入 AI 的答案，只是第一步。",
-	"先告诉我们怎么联系你，具体问题由人来一起判断。",
-	"表单只提交三项联系信息，并由服务端完成邮件传递。",
-	"Make AI market answers observable.",
-	"PUBLIC FACT INTERFACE",
-	"中国区域 · 公开事实界面",
+	"Your next customer may never search. They’ll ask.",
+	"See how AI answers your market’s buying questions.",
+	"Start with the buying question that matters.",
+	"Built for the shift from search results to AI answers.",
+	"Start with the question that matters.",
+	"See how the same brand appears across markets.",
+	"Your details take one short route.",
+	"客户问 AI 时，你的品牌被怎么说？",
+	"客户怎么问，AI 怎么答，先看哪里",
+	"从最担心的品牌问题开始",
+	"让企业看清 AI 如何介绍自己的品牌",
+	"服务中国市场，也支持企业进入海外目标市场",
+	"先聊清楚，你最想解决什么",
+	"三项信息，只用于回复咨询",
+	"Agent fact interface",
+	"Agent 事实入口",
 	"Yonaris",
-	"Current scope",
+	"public facts",
 	"User-agent:",
 	"https://yonaris.com",
 ].join(" ");

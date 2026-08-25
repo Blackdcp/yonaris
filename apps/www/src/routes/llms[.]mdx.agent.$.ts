@@ -1,9 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { AgentPageKey } from "@/content/site/types";
 import { renderAgentDocument, renderAgentIndex } from "@/lib/machine-documents";
 import { machineDocumentResponse } from "@/lib/machine-response";
-import type { AgentPageKey } from "@/content/site/types";
 
-const pageKeys = ["product", "approach", "research", "geo", "company", "diagnostic"] as const satisfies readonly AgentPageKey[];
+const pageKeys = [
+	"product",
+	"approach",
+	"geo",
+	"company",
+	"diagnostic",
+	"privacy",
+] as const satisfies readonly AgentPageKey[];
 
 export const Route = createFileRoute("/llms.mdx/agent/$")({
 	server: {

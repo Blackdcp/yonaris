@@ -47,7 +47,7 @@ const copy = {
 		namePlaceholder: "怎么称呼你",
 		contactPlaceholder: "手机号或联系电话",
 		companyPlaceholder: "公司名称",
-		submit: "获取品牌 AI 现状沟通",
+		submit: "提交并预约沟通",
 		submitting: "正在发送…",
 		retry: "重新发送",
 		validation: "请检查姓名、电话和公司。",
@@ -123,7 +123,12 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 	}
 
 	return (
-		<form className={`lead-form${compact ? " lead-form--compact" : ""}`} onSubmit={submit} noValidate data-lead-state={submission}>
+		<form
+			className={`lead-form${compact ? " lead-form--compact" : ""}`}
+			onSubmit={submit}
+			noValidate
+			data-lead-state={submission}
+		>
 			<header>
 				<span>{labels.label}</span>
 				<h2>{labels.title}</h2>
@@ -133,23 +138,66 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 				<legend className="sr-only">{labels.label}</legend>
 				<label data-lead-field="name" htmlFor={`lead-${locale}-name`}>
 					<span>{labels.name}</span>
-					<input id={`lead-${locale}-name`} name="name" value={values.name} maxLength={120} required placeholder={labels.namePlaceholder} autoComplete="name" onChange={(event) => update("name", event.currentTarget.value)} />
+					<input
+						id={`lead-${locale}-name`}
+						name="name"
+						value={values.name}
+						maxLength={120}
+						required
+						placeholder={labels.namePlaceholder}
+						autoComplete="name"
+						onChange={(event) => update("name", event.currentTarget.value)}
+					/>
 				</label>
 				<label data-lead-field="contact" htmlFor={`lead-${locale}-contact`}>
 					<span>{labels.contact}</span>
-					<input id={`lead-${locale}-contact`} name={locale === "en" ? "email" : "phone"} type={locale === "en" ? "email" : "tel"} value={values.contact} maxLength={locale === "en" ? 254 : 32} required placeholder={labels.contactPlaceholder} autoComplete={locale === "en" ? "email" : "tel"} onChange={(event) => update("contact", event.currentTarget.value)} />
+					<input
+						id={`lead-${locale}-contact`}
+						name={locale === "en" ? "email" : "phone"}
+						type={locale === "en" ? "email" : "tel"}
+						value={values.contact}
+						maxLength={locale === "en" ? 254 : 32}
+						required
+						placeholder={labels.contactPlaceholder}
+						autoComplete={locale === "en" ? "email" : "tel"}
+						onChange={(event) => update("contact", event.currentTarget.value)}
+					/>
 				</label>
 				<label data-lead-field="company" htmlFor={`lead-${locale}-company`}>
 					<span>{labels.company}</span>
-					<input id={`lead-${locale}-company`} name="company" value={values.company} maxLength={160} required placeholder={labels.companyPlaceholder} autoComplete="organization" onChange={(event) => update("company", event.currentTarget.value)} />
+					<input
+						id={`lead-${locale}-company`}
+						name="company"
+						value={values.company}
+						maxLength={160}
+						required
+						placeholder={labels.companyPlaceholder}
+						autoComplete="organization"
+						onChange={(event) => update("company", event.currentTarget.value)}
+					/>
 				</label>
 			</fieldset>
 			<div className="lead-trap" aria-hidden="true">
 				<label htmlFor={`lead-${locale}-url`}>Website</label>
-				<input id={`lead-${locale}-url`} name="companyUrl" value={values.companyUrl} tabIndex={-1} autoComplete="off" onChange={(event) => update("companyUrl", event.currentTarget.value)} />
+				<input
+					id={`lead-${locale}-url`}
+					name="companyUrl"
+					value={values.companyUrl}
+					tabIndex={-1}
+					autoComplete="off"
+					onChange={(event) => update("companyUrl", event.currentTarget.value)}
+				/>
 			</div>
-			{validationFailed ? <p className="lead-message" role="alert">{labels.validation}</p> : null}
-			{submission === "unconfirmed" ? <p className="lead-message" role="alert">{labels.failure}</p> : null}
+			{validationFailed ? (
+				<p className="lead-message" role="alert">
+					{labels.validation}
+				</p>
+			) : null}
+			{submission === "unconfirmed" ? (
+				<p className="lead-message" role="alert">
+					{labels.failure}
+				</p>
+			) : null}
 			<button type="submit" disabled={submission === "submitting"}>
 				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
 				<span aria-hidden="true">↗</span>
@@ -160,4 +208,3 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 		</form>
 	);
 }
-
