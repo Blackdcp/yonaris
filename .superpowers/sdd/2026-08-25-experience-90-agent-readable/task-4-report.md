@@ -121,3 +121,73 @@ Additional production-source scans returned no matches for prohibited internal/r
 ## Concerns
 
 The production build emits Vite's non-fatal warning that an existing minified index chunk is larger than 500 kB. Build exit status is `0`; Task 4 adds no dependency or bitmap asset. No Task 4 blocker remains.
+
+## Independent review fix round 1
+
+Starting commit: `a83eb84d4a729b57ea2d15fc4f0eb774e4eaaff4` (`feat localize china brand diagnosis story`).
+
+### Review findings and RED evidence
+
+Source inspection reproduced all three findings: the four generic diagnostic scenes had no explicit example-data contract, the product console scope value could retain the desktop `0.78rem` size on mobile, and the Approach hero used both “掉点” and “出海本地化” after its GEO definition.
+
+Regression tests were added before production changes and run with:
+
+```text
+pnpm --filter @workspace/www test -- src/components/experience/china/china-experience.test.tsx src/content/experience/copy-contract.test.ts
+```
+
+Exit code: `1`
+
+```text
+Test Files  1 failed | 1 passed (2)
+     Tests  3 failed | 13 passed (16)
+```
+
+The three failures were exactly:
+
+```text
+× 把所有通用诊断画面明确标成示意内容，而不是客户证据
+× 移动端让每个诊断输出值使用正文排版
+× 服务首屏在解释 GEO 后用普通业务语言说明下一步
+```
+
+The fixes were applied separately. After qualifying the diagnostic examples, only the typography and Approach tests remained (`2 failed | 14 passed`). After adding the mobile output contract, only the Approach test remained (`1 failed | 15 passed`). Rewriting the hero then produced `2 passed` files and `16 passed` tests.
+
+### Fix evidence
+
+- `AiAnswerFlow`, `BrandGapConsole`, `ServiceRoute`, and `GlobalMarketBridge` now each expose `data-evidence-kind="illustrative"`. Each scene also keeps “不含客户数据” visible in its status/readout, including every selectable service and market panel.
+- Generic output strings now say “示意答案”, “示例中的…答案”, or “示意复查记录”; the unqualified “当次观察”, “范围已确认”, “复查记录显示”, and “当次…答案” formulations are rejected by a rendered-component regression.
+- Inside the `800px` mobile query, `.china-command [data-diagnostic-state] [data-output-field]` sets `font-size: var(--text-body-mobile)` and `line-height: 1.5`. A CSS-source contract scopes its assertion to the `800px` query, so every substantive output value has at least the required body floor while labels/status may remain functional text.
+- The Approach hero still reads “先做品牌体检，再定 GEO 打法。” and immediately defines GEO as “生成式搜索和 AI 答案中的品牌表现”. Its next sentence now uses the plain phrases “出现偏差”, “比较说法”, and “不同市场的定位”; the hero-local “掉点 / 出海本地化” pair is rejected by regression.
+
+Fix-round files changed:
+
+- `apps/www/src/components/experience/china/china-experience.test.tsx`
+- `apps/www/src/components/experience/china/china-scenes.tsx`
+- `apps/www/src/content/experience/china-copy.ts`
+- `apps/www/src/styles/experience/china.css`
+- `.superpowers/sdd/2026-08-25-experience-90-agent-readable/task-4-report.md`
+
+### Fix-round validation
+
+```text
+pnpm --filter @workspace/www test -- src/components/experience/china/china-experience.test.tsx src/content/experience/copy-contract.test.ts src/components/experience/shared/lead-form.test.tsx src/components/experience/shared/use-roving-tabs.test.tsx
+PASS — 4 files, 33 tests
+
+pnpm --filter @workspace/www check-types
+PASS — tsc --noEmit, exit 0
+
+pnpm --filter @workspace/www build
+PASS — client, SSR, and Nitro production output built, exit 0
+
+pnpm --filter @workspace/www test
+PASS — 27 files, 142 tests
+
+pnpm audit:public-output
+PASS — exit 0, output []
+
+git diff --check
+PASS — no whitespace errors (only Git's LF/CRLF working-tree notices)
+```
+
+Self-review confirms the fix changes only the four China implementation/test files above plus this report; it adds no route, dependency, bitmap, customer claim, metric, or outcome promise. The exact China headline, GEO definition, lead-form fields, roving-tab/output contracts, and broader seven-page narrative remain intact. The only concern remains Vite's pre-existing non-fatal warning for a minified index chunk over 500 kB; the build exits `0`.

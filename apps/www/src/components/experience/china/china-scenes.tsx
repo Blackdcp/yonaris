@@ -24,7 +24,11 @@ export function AiAnswerFlow() {
 	});
 
 	return (
-		<section className="china-answer-flow" aria-label="品牌在 AI 答案中的四种处境">
+		<section
+			className="china-answer-flow"
+			aria-label="品牌在 AI 答案中的四种处境"
+			data-evidence-kind="illustrative"
+		>
 			<div className="china-answer-flow__controls" role="tablist" aria-label="选择你最关心的情况">
 				{CHINA_SITUATIONS.map((item, index) => (
 					<button
@@ -52,8 +56,8 @@ export function AiAnswerFlow() {
 							<span aria-hidden="true" />
 							<span aria-hidden="true" />
 							<span aria-hidden="true" />
-							<strong>品牌摸底 · 当次观察</strong>
-							<small>状态：范围已确认</small>
+							<strong>品牌摸底 · 示意观察</strong>
+							<small>状态：示例范围 · 不含客户数据</small>
 						</div>
 						<div className="china-answer-flow__question">
 							<span>Q</span>
@@ -97,7 +101,11 @@ export function BrandGapConsole() {
 	});
 
 	return (
-		<section className="china-gap-console" aria-label="一份品牌摸底记录的四个步骤">
+		<section
+			className="china-gap-console"
+			aria-label="一份品牌摸底记录的四个步骤"
+			data-evidence-kind="illustrative"
+		>
 			<div className="china-gap-console__rail" role="tablist" aria-label="四个摸底步骤">
 				{CHINA_PRODUCT_STAGES.map((stage, index) => (
 					<button key={stage.id} type="button" {...tabs.getTabProps(stage.id, index)}>
@@ -109,8 +117,8 @@ export function BrandGapConsole() {
 			<div className="china-gap-console__workspace">
 				<header>
 					<div>
-						<span>会议用品牌摸底记录</span>
-						<small>状态：范围已确认 · 可逐项核对</small>
+						<span>会议用品牌摸底示意记录</span>
+						<small>状态：示例范围 · 不含客户数据</small>
 					</div>
 					<i aria-hidden="true">Y</i>
 				</header>
@@ -162,7 +170,11 @@ export function ServiceRoute() {
 	});
 
 	return (
-		<section className="china-service-route" aria-label="按品牌问题选择摸底起点">
+		<section
+			className="china-service-route"
+			aria-label="按品牌问题选择摸底起点"
+			data-evidence-kind="illustrative"
+		>
 			<div className="china-service-route__map" role="tablist" aria-label="选择品牌问题">
 				{CHINA_SERVICE_SITUATIONS.map((service, index) => (
 					<button key={service.id} type="button" {...tabs.getTabProps(service.id, index)}>
@@ -180,7 +192,7 @@ export function ServiceRoute() {
 					aria-live="polite"
 					{...tabs.getPanelProps(service.id)}
 				>
-					<span>建议起点 · 范围内观察</span>
+					<span>建议起点 · 示例说明 · 不含客户数据</span>
 					<h3>{service.startingPoint}</h3>
 					<p>{service.description}</p>
 					<div className="china-service-route__readout">
@@ -221,7 +233,11 @@ export function GlobalMarketBridge() {
 	});
 
 	return (
-		<section className="china-market-bridge" aria-label="中国市场基线与海外目标市场对照">
+		<section
+			className="china-market-bridge"
+			aria-label="中国市场基线与海外目标市场对照"
+			data-evidence-kind="illustrative"
+		>
 			<div className="china-market-bridge__controls" role="tablist" aria-label="选择市场视角">
 				{CHINA_MARKETS.map((market, index) => (
 					<button
@@ -260,7 +276,7 @@ export function GlobalMarketBridge() {
 						<p>只增加已定义的国家、语言、购买角色和对标品牌。</p>
 					</section>
 					<article className="china-market-bridge__readout">
-						<small>{market.label} · 状态：可核对</small>
+						<small>{market.label} · 示例说明 · 不含客户数据</small>
 						<h3>{market.question}</h3>
 						<p data-output-field="scope">{market.scope}</p>
 						<strong data-output-field="answer">{market.answer}</strong>

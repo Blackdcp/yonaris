@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AiAnswerFlow, BrandGapConsole, GlobalMarketBridge, ServiceRoute } from "./china-scenes";
@@ -6,6 +7,10 @@ type Page = () => React.ReactNode;
 type ChinaPages = Record<"home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy", Page>;
 
 const subject = (await import("./china-pages").catch(() => undefined)) as { CHINA_PAGES?: ChinaPages } | undefined;
+const chinaCss = readFileSync(new URL("../../../styles/experience/china.css", import.meta.url), "utf8").replace(
+	/\r\n/g,
+	"\n",
+);
 
 function render(page: keyof ChinaPages): string {
 	expect(subject?.CHINA_PAGES, "中国站页面必须完成实现").toBeDefined();
@@ -168,6 +173,45 @@ describe("中国站客户体验", () => {
 		expectDiagnosticTabSet(BrandGapConsole, 4);
 		expectDiagnosticTabSet(ServiceRoute, 4);
 		expectDiagnosticTabSet(GlobalMarketBridge, 2);
+	});
+
+	it("把所有通用诊断画面明确标成示意内容，而不是客户证据", () => {
+		for (const [name, Scene] of [
+			["AI 答案画面", AiAnswerFlow],
+			["品牌差距记录", BrandGapConsole],
+			["服务路径", ServiceRoute],
+			["市场对照", GlobalMarketBridge],
+		] as const) {
+			const markup = renderToStaticMarkup(<Scene />);
+			expect(markup, `${name} 需要机器可读的示意标记`).toContain('data-evidence-kind="illustrative"');
+			expect(markup, `${name} 需要可见的非客户数据说明`).toContain("不含客户数据");
+			expect(markup, `${name} 不应把通用示意写成一次真实观察`).not.toMatch(
+				/当次观察|范围已确认|复查记录显示|当次(?:中文|当地语言|当地)?答案/,
+			);
+		}
+	});
+
+	it("移动端让每个诊断输出值使用正文排版", () => {
+		const mobileStart = chinaCss.indexOf("@media (max-width: 800px)");
+		const narrowStart = chinaCss.indexOf("@media (max-width: 520px)", mobileStart);
+		expect(mobileStart).toBeGreaterThan(-1);
+		expect(narrowStart).toBeGreaterThan(mobileStart);
+		const mobileCss = chinaCss.slice(mobileStart, narrowStart);
+
+		expect(mobileCss).toMatch(
+			/\.china-command \[data-diagnostic-state\] \[data-output-field\]\s*\{\s*font-size:\s*var\(--text-body-mobile\);\s*line-height:\s*1\.5;\s*\}/,
+		);
+	});
+
+	it("服务首屏在解释 GEO 后用普通业务语言说明下一步", () => {
+		const markup = render("approach");
+		const hero = markup.match(/<section class="china-approach-intro">([\s\S]*?)<\/section>/)?.[1] ?? "";
+
+		expect(hero).toContain("先做品牌体检，再定 GEO 打法。");
+		expect(hero).toContain("这里的 GEO，指生成式搜索和 AI 答案中的品牌表现。");
+		expect(hero).toContain("出现偏差");
+		expect(hero).toContain("不同市场的定位");
+		expect(hero).not.toMatch(/掉点|出海本地化/);
 	});
 
 	it("预约表单只呈现姓名、电话、公司三个字段，不要求邮箱", () => {

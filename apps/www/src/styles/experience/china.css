@@ -2584,6 +2584,10 @@
 		font-size: var(--text-body-mobile);
 		line-height: 1.5;
 	}
+	.china-command [data-diagnostic-state] [data-output-field] {
+		font-size: var(--text-body-mobile);
+		line-height: 1.5;
+	}
 	.china-answer-flow {
 		padding: 0.65rem;
 		border-radius: 1.3rem;
