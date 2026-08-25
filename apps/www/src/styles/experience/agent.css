@@ -258,22 +258,46 @@
 	background: var(--agent-paper);
 }
 
-.agent-experience__canonical {
+.agent-experience__metadata {
+	width: min(100%, 48rem);
 	margin-top: 2.2rem;
 	display: grid;
-	gap: 0.45rem;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 1px;
+	border: 1px solid var(--agent-line);
+	background: var(--agent-line);
 	font-family: var(--y-mono, monospace);
 }
 
-.agent-experience__canonical span {
+.agent-experience__metadata > div {
+	min-width: 0;
+	padding: 0.8rem;
+	display: grid;
+	gap: 0.45rem;
+	background: var(--agent-ink);
+}
+
+.agent-experience__metadata .agent-experience__metadata-wide {
+	grid-column: 1 / -1;
+}
+
+.agent-experience__metadata dt {
 	font-size: 0.62rem;
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--agent-muted);
 }
 
-.agent-experience__canonical a {
+.agent-experience__metadata dd {
+	min-width: 0;
+	margin: 0;
 	font-size: 0.8rem;
+	line-height: 1.45;
+}
+
+.agent-experience__metadata a {
+	font-size: 0.8rem;
+	overflow-wrap: anywhere;
 	text-underline-offset: 0.3rem;
 }
 
@@ -351,6 +375,41 @@
 	line-height: 1.55;
 }
 
+.agent-experience__facts li div {
+	display: grid;
+	gap: 0.6rem;
+}
+
+.agent-experience__facts li a {
+	width: fit-content;
+	font: 600 0.68rem / 1 var(--y-mono, monospace);
+	color: var(--agent-muted);
+	text-underline-offset: 0.25rem;
+}
+
+.agent-experience__limitations {
+	padding: clamp(2rem, 5vw, 4rem) clamp(1.5rem, 7vw, 7rem);
+	display: grid;
+	grid-template-columns: minmax(10rem, 0.38fr) minmax(0, 1fr);
+	gap: clamp(1.5rem, 4vw, 4rem);
+	border-bottom: 1px solid var(--agent-line);
+}
+
+.agent-experience__limitations h2 {
+	margin: 0;
+	font-size: clamp(1.25rem, 2.2vw, 2rem);
+	font-weight: 550;
+}
+
+.agent-experience__limitations ul {
+	margin: 0;
+	padding-inline-start: 1.2rem;
+	display: grid;
+	gap: 0.8rem;
+	color: var(--agent-muted);
+	line-height: 1.55;
+}
+
 .agent-experience a:focus-visible {
 	outline: 2px solid var(--agent-orange);
 	outline-offset: 3px;
@@ -402,6 +461,10 @@
 		border-right: 0;
 		border-bottom: 1px solid var(--agent-line);
 	}
+
+	.agent-experience__limitations {
+		grid-template-columns: 1fr;
+	}
 }
 
 @media (max-width: 560px) {
@@ -436,6 +499,14 @@
 
 	.agent-experience__intro h1 {
 		font-size: clamp(2.8rem, 15vw, 4.5rem);
+	}
+
+	.agent-experience__metadata {
+		grid-template-columns: 1fr;
+	}
+
+	.agent-experience__metadata .agent-experience__metadata-wide {
+		grid-column: auto;
 	}
 
 	.agent-experience__signal {

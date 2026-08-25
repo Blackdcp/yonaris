@@ -1,6 +1,6 @@
 import { CHINA_COPY } from "@/content/experience";
 import type { HumanPageKey } from "@/content/experience/types";
-import { organizationJsonLd, pageSocialMeta, siteHref, websiteJsonLd } from "@/lib/seo";
+import { machineDiscoveryLinks, pageSocialMeta, publicEntityGraph, siteHref } from "@/lib/seo";
 
 const pathFor: Record<HumanPageKey, `/${string}`> = {
 	home: "/zh",
@@ -40,10 +40,8 @@ export function zhPageHead(key: ZhPageKey) {
 			{ rel: "alternate", hrefLang: "zh-CN", href: siteHref(canonicalPath) },
 			{ rel: "alternate", hrefLang: "en", href: siteHref(globalPathFor[key]) },
 			{ rel: "alternate", hrefLang: "x-default", href: siteHref(globalPathFor[key]) },
+			...machineDiscoveryLinks("zh", key),
 		],
-		scripts: [
-			organizationJsonLd(page.metaDescription, "zh-CN"),
-			...(key === "home" ? [websiteJsonLd(page.metaDescription, "zh-CN")] : []),
-		],
+		scripts: [publicEntityGraph({ locale: "zh", pageKey: key })],
 	};
 }

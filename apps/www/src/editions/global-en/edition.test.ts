@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { GLOBAL_COPY } from "@/content/experience";
 import { HUMAN_PAGE_KEYS } from "@/content/experience/types";
+import { agentCatalogPath, agentMarkdownPath, getAgentTopic } from "@/lib/machine-documents";
+import { siteHref } from "@/lib/seo";
 import { globalEnglishPageHead } from "./edition";
 
 describe("global English SEO", () => {
@@ -25,7 +27,33 @@ describe("global English SEO", () => {
 			expect(canonical).toBeDefined();
 			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "x-default")).toBe(true);
 			expect(head.links.some((link) => "hrefLang" in link && link.hrefLang === "zh-CN")).toBe(true);
-			expect(head.scripts.some((script) => script.children.includes('"inLanguage":"en"'))).toBe(true);
+			expect(head.links).toContainEqual({
+				rel: "alternate",
+				type: "text/markdown",
+				href: siteHref(agentMarkdownPath("en", key)),
+			});
+			expect(head.links).toContainEqual({
+				rel: "alternate",
+				type: "application/ld+json",
+				href: siteHref(agentCatalogPath("en")),
+			});
+			expect(head.links).toContainEqual({ rel: "describedby", type: "text/plain", href: siteHref("/llms.txt") });
+			const graph = head.scripts.map((script) => JSON.parse(script.children)).find((script) => script["@graph"]);
+			const topic = getAgentTopic("en", key);
+			expect(graph["@graph"].map((node: { "@type": string }) => node["@type"])).toEqual([
+				"Organization",
+				"WebSite",
+				"WebPage",
+				"ItemList",
+			]);
+			expect(graph["@graph"][0]).not.toHaveProperty("inLanguage");
+			expect(graph["@graph"][2]).toMatchObject({
+				"@id": `${siteHref(topic.humanPath)}#webpage`,
+				inLanguage: "en",
+			});
+			expect(graph["@graph"][3].itemListElement.map((item: { identifier: string }) => item.identifier)).toEqual(
+				topic.groups.flatMap((group) => group.facts.map((fact) => fact.id)),
+			);
 		}
 	});
 });

@@ -1,12 +1,11 @@
-import { AGENT_FACTS } from "@/content/experience/agent-facts";
 import { type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
+import { agentCatalogPath, getAgentTopic } from "@/lib/machine-documents";
 import { HumanAgentLink } from "../shared/human-agent-link";
 import { LocaleSwitchLink } from "../shared/locale-switch-link";
 import "@/styles/experience/agent.css";
 
 function agentPath(locale: ExperienceLocale, pageKey: HumanPageKey): string {
-	if (locale === "en") return pageKey === "home" ? "/agent" : `/agent/${pageKey}`;
-	return pageKey === "home" ? "/zh/agent" : `/zh/agent/${pageKey}`;
+	return getAgentTopic(locale, pageKey).agentPath;
 }
 
 const interfaceCopy = {
@@ -15,6 +14,14 @@ const interfaceCopy = {
 		format: "PUBLIC HTML · UTF-8",
 		directory: "Fact directory",
 		canonical: "Human canonical",
+		markdown: "Markdown document",
+		catalogue: "JSON-LD catalogue",
+		language: "Language",
+		lastReviewed: "Last reviewed",
+		reviewedBy: "Reviewed by",
+		scope: "Scope",
+		limitations: "Limitations",
+		evidence: "Human evidence",
 		returnHuman: "Return to the Human site",
 		facts: "Public facts",
 		pageLabels: {
@@ -32,6 +39,14 @@ const interfaceCopy = {
 		format: "公开网页 · UTF-8",
 		directory: "事实目录",
 		canonical: "官网对应页面",
+		markdown: "Markdown 文档",
+		catalogue: "JSON-LD 目录",
+		language: "语言",
+		lastReviewed: "最近核对",
+		reviewedBy: "核对方",
+		scope: "范围",
+		limitations: "限制",
+		evidence: "官网依据",
 		returnHuman: "返回官网",
 		facts: "公开事实",
 		pageLabels: {
@@ -47,8 +62,7 @@ const interfaceCopy = {
 } as const;
 
 export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageKey: HumanPageKey }) {
-	const edition = locale === "en" ? "global" : "zh";
-	const topic = AGENT_FACTS[edition][pageKey];
+	const topic = getAgentTopic(locale, pageKey);
 	const copy = interfaceCopy[locale];
 	const homePath = locale === "en" ? "/" : "/zh";
 
@@ -101,12 +115,44 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 						</p>
 						<h1>{topic.title}</h1>
 						<p>{topic.summary}</p>
-						<div className="agent-experience__canonical">
-							<span>{copy.canonical}</span>
-							<a href={topic.humanPath} data-human-canonical="true">
-								{topic.humanPath}
-							</a>
-						</div>
+						<dl className="agent-experience__metadata">
+							<div>
+								<dt>{copy.canonical}</dt>
+								<dd>
+									<a href={topic.humanPath} data-human-canonical="true">
+										{topic.humanPath}
+									</a>
+								</dd>
+							</div>
+							<div>
+								<dt>{copy.markdown}</dt>
+								<dd>
+									<a href={topic.markdownPath}>{topic.markdownPath}</a>
+								</dd>
+							</div>
+							<div>
+								<dt>{copy.catalogue}</dt>
+								<dd>
+									<a href={agentCatalogPath(locale)}>{agentCatalogPath(locale)}</a>
+								</dd>
+							</div>
+							<div>
+								<dt>{copy.language}</dt>
+								<dd>{topic.language}</dd>
+							</div>
+							<div>
+								<dt>{copy.lastReviewed}</dt>
+								<dd>{topic.lastReviewed}</dd>
+							</div>
+							<div>
+								<dt>{copy.reviewedBy}</dt>
+								<dd>{topic.reviewedBy}</dd>
+							</div>
+							<div className="agent-experience__metadata-wide">
+								<dt>{copy.scope}</dt>
+								<dd>{topic.scope}</dd>
+							</div>
+						</dl>
 						<a className="agent-experience__human-return" href={topic.humanPath}>
 							<span aria-hidden="true">←</span> {copy.returnHuman}
 						</a>
@@ -114,21 +160,33 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 
 					<section className="agent-experience__facts" id="agent-facts" aria-label={copy.facts}>
 						{topic.groups.map((group, groupIndex) => (
-							<section key={group.title} data-fact-group={group.title}>
+							<section key={group.id} data-fact-group={group.id}>
 								<header>
 									<em>{String(groupIndex + 1).padStart(2, "0")}</em>
 									<h2>{group.title}</h2>
 								</header>
 								<ul>
-									{group.items.map((item, itemIndex) => (
-										<li key={item} data-fact-item={itemIndex + 1}>
+									{group.facts.map((fact) => (
+										<li key={fact.id} data-claim-id={fact.id}>
 											<span aria-hidden="true">↳</span>
-											<p>{item}</p>
+											<div>
+												<p>{fact.value}</p>
+												<a href={fact.evidenceUrl}>{copy.evidence}</a>
+											</div>
 										</li>
 									))}
 								</ul>
 							</section>
 						))}
+					</section>
+
+					<section className="agent-experience__limitations" aria-labelledby="agent-limitations">
+						<h2 id="agent-limitations">{copy.limitations}</h2>
+						<ul>
+							{topic.limitations.map((limitation) => (
+								<li key={limitation}>{limitation}</li>
+							))}
+						</ul>
 					</section>
 				</article>
 			</main>

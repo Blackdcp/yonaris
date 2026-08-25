@@ -1,56 +1,86 @@
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
-import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
-import type { AgentPageKey, Locale } from "@/content/site/types";
+import {
+	type AgentTopic,
+	type ExperienceLocale,
+	HUMAN_PAGE_KEYS,
+	type HumanPageKey,
+} from "@/content/experience/types";
+import type { AgentPageKey } from "@/content/site/types";
 import { getCoreLastVerified } from "./site-manifest";
 
 const SITE_ORIGIN = "https://yonaris.com";
-const AGENT_PAGE_KEYS = HUMAN_PAGE_KEYS.filter((key): key is AgentPageKey => key !== "home");
+const ORGANIZATION_DESCRIPTION =
+	"Yonaris helps brands review how they appear when customers use AI to discover, compare, and choose.";
 
 function absolute(path: string): string {
-	return `${SITE_ORIGIN}${path}`;
+	return path.startsWith("http") ? path : `${SITE_ORIGIN}${path}`;
 }
 
-function humanPath(key: HumanPageKey, locale: Locale): string {
-	if (locale === "en") return key === "home" ? "/" : `/${key}`;
-	return key === "home" ? "/zh" : `/zh/${key}`;
+export function agentMarkdownPath(locale: ExperienceLocale, key: HumanPageKey): string {
+	const localePrefix = locale === "zh" ? "/zh" : "";
+	return key === "home" ? `${localePrefix}/agent/index.md` : `${localePrefix}/agent/${key}.md`;
 }
 
-function agentPath(key: HumanPageKey, locale: Locale): string {
-	if (locale === "en") return key === "home" ? "/agent" : `/agent/${key}`;
-	return key === "home" ? "/zh/agent" : `/zh/agent/${key}`;
+export function agentCatalogPath(locale: ExperienceLocale): "/agent/catalog.json" | "/zh/agent/catalog.json" {
+	return locale === "en" ? "/agent/catalog.json" : "/zh/agent/catalog.json";
 }
 
-function factsFor(key: HumanPageKey, locale: Locale) {
+export function getAgentTopic(locale: ExperienceLocale, key: HumanPageKey): AgentTopic {
 	return locale === "en" ? AGENT_FACTS.global[key] : AGENT_FACTS.zh[key];
 }
 
-function renderGroups(key: HumanPageKey, locale: Locale): string {
-	return factsFor(key, locale)
-		.groups.map((group) => `## ${group.title}\n\n${group.items.map((item) => `- ${item}`).join("\n")}`)
+function renderGroups(topic: AgentTopic): string {
+	return topic.groups
+		.map((group) => `## ${group.title}\n\n${group.facts.map((fact) => `- [${fact.id}] ${fact.value}`).join("\n")}`)
 		.join("\n\n");
 }
 
-export function renderCoreMarkdown(key: HumanPageKey, locale: Locale): string {
-	const facts = factsFor(key, locale);
-	const labels =
-		locale === "en"
-			? {
-					human: "Human canonical",
-					agent: "Agent page",
-					language: "Language: English (en)",
-					verified: "Last verified",
-				}
-			: { human: "官网对应页面", agent: "Agent 页面", language: "语言：简体中文（zh-CN）", verified: "最近核对" };
-	return `# ${facts.title}
+function renderMetadata(topic: AgentTopic): string {
+	const reviewLine =
+		topic.locale === "en" ? `Last verified: ${topic.lastReviewed}` : `最近核对：${topic.lastReviewed}`;
+	return [
+		`Topic ID: ${topic.id}`,
+		`Language: ${topic.language}`,
+		`Human canonical: ${absolute(topic.humanPath)}`,
+		`Agent HTML: ${absolute(topic.agentPath)}`,
+		`Markdown document: ${absolute(topic.markdownPath)}`,
+		`JSON-LD catalogue: ${absolute(agentCatalogPath(topic.locale))}`,
+		reviewLine,
+		`Reviewed by: ${topic.reviewedBy}`,
+	].join("\n");
+}
 
-${labels.human}: ${absolute(humanPath(key, locale))}
-${labels.agent}: ${absolute(agentPath(key, locale))}
-${labels.language}
-${labels.verified}${locale === "en" ? ": " : "："}${getCoreLastVerified(key)}
+export function renderCoreMarkdown(key: HumanPageKey, locale: ExperienceLocale): string {
+	const topic = getAgentTopic(locale, key);
+	const lastReviewed = getCoreLastVerified(key);
+	const limitations = topic.limitations.map((limitation) => `- ${limitation}`).join("\n");
+	const related = [
+		`- [Human canonical](${absolute(topic.humanPath)})`,
+		`- [Agent HTML](${absolute(topic.agentPath)})`,
+		`- [Markdown document](${absolute(topic.markdownPath)})`,
+		`- [JSON-LD catalogue](${absolute(agentCatalogPath(locale))})`,
+		`- [Machine directory](${absolute("/llms.txt")})`,
+	].join("\n");
 
-${facts.summary}
+	return `# ${topic.title}
 
-${renderGroups(key, locale)}
+> ${topic.summary}
+
+${renderMetadata({ ...topic, lastReviewed })}
+
+## Scope
+
+${topic.scope}
+
+${renderGroups(topic)}
+
+## Limitations
+
+${limitations}
+
+## Related
+
+${related}
 `;
 }
 
@@ -62,22 +92,23 @@ export function renderZhAgentDocument(key: AgentPageKey): string {
 	return renderCoreMarkdown(key, "zh");
 }
 
-function renderTopicList(locale: Locale): string {
+function topicDirectory(locale: ExperienceLocale, linkTo: "agent" | "markdown"): string {
 	return HUMAN_PAGE_KEYS.map((key) => {
-		const facts = factsFor(key, locale);
-		return `- [${facts.title}](${absolute(agentPath(key, locale))}) — ${facts.summary}`;
+		const topic = getAgentTopic(locale, key);
+		const path = linkTo === "agent" ? topic.agentPath : topic.markdownPath;
+		return `- [${topic.title}](${absolute(path)}): ${topic.summary}`;
 	}).join("\n");
 }
 
 export function renderAgentIndex(): string {
-	const facts = AGENT_FACTS.global.home;
-	return `# ${facts.title}
+	const topic = getAgentTopic("en", "home");
+	return `# ${topic.title}
 
-${facts.summary}
+> ${topic.summary}
 
 ## Topic directory
 
-${renderTopicList("en")}
+${topicDirectory("en", "agent")}
 
 ## Machine-readable endpoints
 
@@ -87,14 +118,14 @@ ${renderTopicList("en")}
 }
 
 export function renderZhAgentIndex(): string {
-	const facts = AGENT_FACTS.zh.home;
-	return `# ${facts.title}
+	const topic = getAgentTopic("zh", "home");
+	return `# ${topic.title}
 
-${facts.summary}
+> ${topic.summary}
 
 ## 主题目录
 
-${renderTopicList("zh")}
+${topicDirectory("zh", "agent")}
 
 ## 机器读取入口
 
@@ -104,11 +135,21 @@ ${renderTopicList("zh")}
 }
 
 export function renderLlmsIndex(): string {
-	return `${renderAgentIndex()}
+	return `# Yonaris machine-readable directory
 
-## 简体中文 Agent 入口
+> Stable public documents for Yonaris topics in English and Simplified Chinese.
 
-- [Yonaris Agent 公开事实](${absolute("/zh/agent")})
+## English
+
+${topicDirectory("en", "markdown")}
+
+## 简体中文
+
+${topicDirectory("zh", "markdown")}
+
+## Related
+
+- [Complete combined reference](${absolute("/llms-full.txt")}): All public claims in both languages.
 `;
 }
 
@@ -116,4 +157,81 @@ export function renderLlmsFull(): string {
 	return `# Yonaris — public facts
 
 ${HUMAN_PAGE_KEYS.flatMap((key) => (["en", "zh"] as const).map((locale) => renderCoreMarkdown(key, locale))).join("\n\n---\n\n")}`;
+}
+
+type HrefBuilder = (path: string) => string;
+
+function organizationNode(href: HrefBuilder) {
+	return {
+		"@type": "Organization",
+		"@id": href("/#organization"),
+		name: "Yonaris",
+		url: href("/"),
+		description: ORGANIZATION_DESCRIPTION,
+		logo: href("/brand/logos/yonaris-wordmark-navy.png"),
+	};
+}
+
+function websiteNode(href: HrefBuilder) {
+	return {
+		"@type": "WebSite",
+		"@id": href("/#website"),
+		name: "Yonaris",
+		url: href("/"),
+		inLanguage: ["en", "zh-CN"],
+		publisher: { "@id": href("/#organization") },
+	};
+}
+
+function topicNodes(topic: AgentTopic, href: HrefBuilder) {
+	const itemListId = `${href(topic.agentPath)}#facts`;
+	const facts = topic.groups.flatMap((group) => group.facts);
+	return [
+		{
+			"@type": "WebPage",
+			"@id": `${href(topic.humanPath)}#webpage`,
+			name: topic.title,
+			description: topic.summary,
+			url: href(topic.humanPath),
+			inLanguage: topic.language,
+			isPartOf: { "@id": href("/#website") },
+			about: { "@id": href("/#organization") },
+			mainEntity: { "@id": itemListId },
+			dateModified: topic.lastReviewed,
+		},
+		{
+			"@type": "ItemList",
+			"@id": itemListId,
+			name: `${topic.title} public facts`,
+			inLanguage: topic.language,
+			numberOfItems: facts.length,
+			itemListElement: facts.map((fact, index) => ({
+				"@type": "ListItem",
+				"@id": `${href(topic.agentPath)}#${fact.id}`,
+				position: index + 1,
+				identifier: fact.id,
+				name: fact.value,
+				url: href(fact.evidenceUrl),
+			})),
+		},
+	] as const;
+}
+
+export function buildAgentEntityGraph(
+	locale: ExperienceLocale,
+	pageKeys: readonly HumanPageKey[],
+	href: HrefBuilder = absolute,
+) {
+	return [
+		organizationNode(href),
+		websiteNode(href),
+		...pageKeys.flatMap((key) => topicNodes(getAgentTopic(locale, key), href)),
+	];
+}
+
+export function renderAgentCatalog(locale: ExperienceLocale): string {
+	return JSON.stringify({
+		"@context": "https://schema.org",
+		"@graph": buildAgentEntityGraph(locale, HUMAN_PAGE_KEYS),
+	});
 }

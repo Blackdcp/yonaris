@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
 import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
+import { agentCatalogPath, getAgentTopic } from "@/lib/machine-documents";
+import { agentPageHead, machineDiscoveryLinks, siteHref } from "@/lib/seo";
 import { AgentPage } from "./agent-pages";
 
 const humanPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
@@ -33,7 +35,7 @@ describe("zero-to-one Agent experience", () => {
 				expect(topic.summary).toBeTruthy();
 				expect(topic.humanPath).toBe(humanPath(locale, pageKey));
 				expect(topic.groups.length).toBeGreaterThan(0);
-				expect(topic.groups.every((group) => group.title && group.items.length > 0)).toBe(true);
+				expect(topic.groups.every((group) => group.title && group.facts.length > 0)).toBe(true);
 			}
 		}
 
@@ -49,6 +51,7 @@ describe("zero-to-one Agent experience", () => {
 				const markup = renderToStaticMarkup(<AgentPage locale={locale} pageKey={pageKey} />);
 				const otherLocale = locale === "en" ? "zh" : "en";
 				expect(markup.match(/<main/g) ?? []).toHaveLength(1);
+				expect(markup.match(/<article/g) ?? []).toHaveLength(1);
 				expect(markup.match(/<h1/g) ?? []).toHaveLength(1);
 				expect(markup).toContain('data-agent-surface="true"');
 				expect(markup).toContain(`data-agent-locale="${locale}"`);
@@ -59,7 +62,23 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain(`href="${agentPath(otherLocale, pageKey)}" data-locale-switch="${otherLocale}"`);
 				expect(markup).toContain(locale === "en" ? "Return to the Human site" : "返回官网");
 				expect(markup).toContain("data-fact-group");
-				expect(markup).toContain("data-fact-item");
+				expect(markup).toContain("data-claim-id");
+				const topic = getAgentTopic(locale, pageKey);
+				expect(markup).toContain("<dl");
+				expect(markup).toContain(`href="${topic.markdownPath}"`);
+				expect(markup).toContain(`href="${agentCatalogPath(locale)}"`);
+				expect(markup).toContain(topic.language);
+				expect(markup).toContain(topic.lastReviewed);
+				expect(markup).toContain(topic.reviewedBy);
+				expect(markup).toContain(topic.scope);
+				for (const limitation of topic.limitations) expect(markup).toContain(limitation);
+				for (const group of topic.groups) {
+					expect(markup).toContain(`data-fact-group="${group.id}"`);
+					for (const fact of group.facts) {
+						expect(markup).toContain(`data-claim-id="${fact.id}"`);
+						expect(markup).toContain(fact.value);
+					}
+				}
 				expect(markup).not.toMatch(retiredRoutes);
 				expect(markup).not.toMatch(internalNarration);
 				expect(markup).not.toMatch(retiredVisuals);
@@ -72,6 +91,21 @@ describe("zero-to-one Agent experience", () => {
 			const markup = renderToStaticMarkup(<AgentPage locale={locale} pageKey="home" />);
 			for (const pageKey of HUMAN_PAGE_KEYS) {
 				expect(markup).toContain(`href="${agentPath(locale, pageKey)}"`);
+			}
+		}
+	});
+
+	it("provides noindex Agent heads with paired Human and machine discovery links", () => {
+		for (const locale of ["en", "zh"] as const) {
+			for (const pageKey of HUMAN_PAGE_KEYS) {
+				const topic = getAgentTopic(locale, pageKey);
+				const head = agentPageHead(locale, pageKey);
+				expect(head.meta).toContainEqual({ name: "robots", content: "noindex,follow" });
+				expect(head.links).toEqual([
+					{ rel: "canonical", href: siteHref(topic.humanPath) },
+					...machineDiscoveryLinks(locale, pageKey),
+				]);
+				expect(JSON.parse(head.scripts[0].children)["@graph"]).toHaveLength(4);
 			}
 		}
 	});

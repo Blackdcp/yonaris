@@ -1,6 +1,6 @@
 import { GLOBAL_COPY } from "@/content/experience";
 import type { HumanPageKey } from "@/content/experience/types";
-import { organizationJsonLd, pageSocialMeta, siteHref, websiteJsonLd } from "@/lib/seo";
+import { machineDiscoveryLinks, pageSocialMeta, publicEntityGraph, siteHref } from "@/lib/seo";
 
 const pathFor: Record<HumanPageKey, `/${string}`> = {
 	home: "/",
@@ -40,10 +40,8 @@ export function globalEnglishPageHead(key: GlobalEnglishPageKey) {
 			{ rel: "alternate", hrefLang: "en", href: siteHref(canonicalPath) },
 			{ rel: "alternate", hrefLang: "zh-CN", href: siteHref(chinaPathFor[key]) },
 			{ rel: "alternate", hrefLang: "x-default", href: siteHref(canonicalPath) },
+			...machineDiscoveryLinks("en", key),
 		],
-		scripts: [
-			organizationJsonLd(page.metaDescription, "en"),
-			...(key === "home" ? [websiteJsonLd(page.metaDescription, "en")] : []),
-		],
+		scripts: [publicEntityGraph({ locale: "en", pageKey: key })],
 	};
 }

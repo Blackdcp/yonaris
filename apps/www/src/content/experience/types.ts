@@ -12,15 +12,30 @@ export interface HumanPageCopy {
 	readonly lead: string;
 }
 
+export interface AgentFact {
+	readonly id: string;
+	readonly value: string;
+	readonly evidenceUrl: string;
+}
+
 export interface AgentFactGroup {
+	readonly id: string;
 	readonly title: string;
-	readonly items: readonly string[];
+	readonly facts: readonly AgentFact[];
 }
 
 export interface AgentTopic {
+	readonly id: string;
+	readonly locale: ExperienceLocale;
+	readonly language: "en" | "zh-CN";
 	readonly title: string;
 	readonly summary: string;
 	readonly humanPath: string;
+	readonly agentPath: string;
+	readonly markdownPath: string;
+	readonly lastReviewed: string;
+	readonly reviewedBy: "Yonaris";
+	readonly scope: string;
+	readonly limitations: readonly string[];
 	readonly groups: readonly AgentFactGroup[];
 }
-
