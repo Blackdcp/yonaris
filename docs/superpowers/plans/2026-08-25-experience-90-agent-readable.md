@@ -262,6 +262,7 @@ git commit -m "fix make agent representations reliably retrievable"
 - Create: `apps/www/src/components/experience/shared/use-roving-tabs.ts`
 - Create: `apps/www/src/components/experience/shared/use-roving-tabs.test.tsx`
 - Create: `apps/www/src/components/experience/shared/scroll-progress.tsx`
+- Modify: `apps/www/src/styles/experience/base.css`
 - Modify: `apps/www/src/components/experience/global/global-scenes.tsx`
 - Modify: `apps/www/src/components/experience/global/global-pages.tsx`
 - Modify: `apps/www/src/content/experience/global-copy.ts`
@@ -271,7 +272,7 @@ git commit -m "fix make agent representations reliably retrievable"
 
 **Interfaces:**
 - Consumes: existing Global shell, `GLOBAL_COPY`, brand assets, and three-field Global lead form.
-- Produces: `useRovingTabs<T>(items, active, onChange, prefix)`, `ScrollProgress`, five-state evidence-rich `AnswerFieldScene`, four-stage decision-record `ProductLensScene`, and reusable motion/type CSS tokens.
+- Produces: `useRovingTabs<T>(items, active, onChange, prefix)`, `ScrollProgress`, five-state evidence-rich `AnswerFieldScene`, four-stage decision-record `ProductLensScene`, and reusable motion/type CSS tokens in `base.css` for both editions.
 
 - [ ] **Step 1: Write failing accessibility and evidence tests**
 
@@ -356,7 +357,7 @@ Expected: all commands exit 0; the Global markup exposes evidence/decision field
 Commit:
 
 ```bash
-git add apps/www/src/components/experience/shared apps/www/src/components/experience/global apps/www/src/content/experience/global-copy.ts apps/www/src/styles/experience/global.css apps/www/src/styles.test.ts
+git add apps/www/src/components/experience/shared apps/www/src/components/experience/global apps/www/src/content/experience/global-copy.ts apps/www/src/styles/experience/base.css apps/www/src/styles/experience/global.css apps/www/src/styles.test.ts
 git commit -m "feat elevate global evidence experience"
 ```
 
