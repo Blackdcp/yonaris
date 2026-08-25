@@ -242,7 +242,7 @@
 	margin: 1.1rem 0 1.5rem;
 	font-size: clamp(3.5rem, 6vw, 6.6rem);
 	line-height: 0.98;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-home-hero__copy > p {
@@ -500,7 +500,7 @@
 	margin-bottom: 0;
 	font-size: clamp(2.2rem, 4vw, 4.7rem);
 	line-height: 1.08;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-situation-band > div {
@@ -578,7 +578,7 @@
 	margin-bottom: 1.4rem;
 	font-size: clamp(2.3rem, 4vw, 4.4rem);
 	line-height: 1.08;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-home-story__statement p {
@@ -719,7 +719,7 @@
 	margin-bottom: 1.4rem;
 	font-size: clamp(2.2rem, 3.6vw, 4rem);
 	line-height: 1.08;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-home-global__copy > p {
@@ -758,7 +758,7 @@
 	margin-bottom: 1rem;
 	font-size: clamp(2.2rem, 4vw, 4.5rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-home-lead > div > span {
@@ -811,7 +811,7 @@
 	margin: 1.1rem 0 0;
 	font-size: clamp(3.4rem, 6.4vw, 7.1rem);
 	line-height: 0.98;
-	letter-spacing: -0.072em;
+	letter-spacing: -0.018em;
 }
 
 .china-product-intro > div:last-child p {
@@ -837,7 +837,7 @@
 	margin: 0;
 	font-size: clamp(2.3rem, 4vw, 4.6rem);
 	line-height: 1.08;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-product-workspace > header p {
@@ -968,7 +968,7 @@
 	margin: 1rem 0;
 	font-size: clamp(2rem, 3.7vw, 4.2rem);
 	line-height: 1.06;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-gap-console__body section > p {
@@ -1036,7 +1036,7 @@
 .china-product-outputs__title h2 {
 	font-size: clamp(2.3rem, 4vw, 4.3rem);
 	line-height: 1.08;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-product-outputs__stack article {
@@ -1083,7 +1083,7 @@
 	max-width: 18em;
 	font-size: clamp(2.2rem, 4.5vw, 5rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-product-close p {
@@ -1126,7 +1126,7 @@
 	margin: 1.2rem 0 1.5rem;
 	font-size: clamp(3.7rem, 6.8vw, 7.5rem);
 	line-height: 0.96;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-approach-intro p {
@@ -1153,7 +1153,7 @@
 	margin: 0;
 	font-size: clamp(2.4rem, 4.3vw, 4.8rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-service-route {
@@ -1229,7 +1229,7 @@
 	margin: 1rem 0;
 	font-size: clamp(2.4rem, 4vw, 4.3rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-service-route__detail > p {
@@ -1311,7 +1311,7 @@
 	margin: 0;
 	font-size: clamp(2.3rem, 4vw, 4.5rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 .china-approach-close > div:last-child {
 	display: flex;
@@ -1342,7 +1342,7 @@
 	margin: 1.2rem 0 1.5rem;
 	font-size: clamp(3.6rem, 6.5vw, 7.2rem);
 	line-height: 0.97;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-geo-intro p {
@@ -1407,7 +1407,7 @@
 	margin: 0;
 	font-size: clamp(2.4rem, 4.4vw, 4.8rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-market-bridge {
@@ -1588,7 +1588,7 @@
 	margin-bottom: 0.8rem;
 	font-size: clamp(2.3rem, 4vw, 4.4rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 .china-geo-close p {
 	max-width: 48rem;
@@ -1611,7 +1611,7 @@
 	margin: 1.2rem 0 1.5rem;
 	font-size: clamp(3.7rem, 6.3vw, 7rem);
 	line-height: 0.97;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-company-intro > div:first-child p {
@@ -1723,7 +1723,7 @@
 	margin: 0;
 	font-size: clamp(2.3rem, 4.4vw, 4.8rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 
 .china-company-belief > div {
@@ -1807,7 +1807,7 @@
 	margin-bottom: 1.2rem;
 	font-size: clamp(3rem, 6vw, 6.7rem);
 	line-height: 0.98;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 .china-company-close p {
 	max-width: 45rem;
@@ -1846,7 +1846,7 @@
 	margin: 1.2rem 0 1.5rem;
 	font-size: clamp(3.8rem, 6.5vw, 7.2rem);
 	line-height: 0.97;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-diagnostic-intro > div:first-child p {
@@ -1930,7 +1930,7 @@
 	margin-bottom: 1rem;
 	font-size: clamp(2rem, 3.7vw, 4rem);
 	line-height: 1.06;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 .china-diagnostic-form > div > span {
 	color: var(--y-ink);
@@ -1957,7 +1957,7 @@
 	margin: 1.2rem 0 1.5rem;
 	font-size: clamp(3.5rem, 6.2vw, 6.8rem);
 	line-height: 0.98;
-	letter-spacing: -0.07em;
+	letter-spacing: -0.018em;
 }
 
 .china-privacy-intro > div:first-child p {
@@ -2063,12 +2063,180 @@
 	margin-bottom: 0.8rem;
 	font-size: clamp(2.2rem, 4vw, 4.4rem);
 	line-height: 1.05;
-	letter-spacing: -0.055em;
+	letter-spacing: -0.018em;
 }
 .china-privacy-close p {
 	max-width: 44rem;
 	margin: 0;
 	color: color-mix(in srgb, var(--y-paper) 68%, transparent);
+}
+
+/* Diagnostic states share the 220ms motion token and keep the result/action relationship visible. */
+
+.china-command {
+	--china-diagnostic-motion: var(--motion-state);
+}
+
+.china-command h1,
+.china-command h2,
+.china-command h3 {
+	letter-spacing: -0.018em;
+}
+
+.china-command [data-diagnostic-state]:not([hidden]) {
+	animation: china-diagnostic-enter var(--china-diagnostic-motion) var(--motion-ease) both;
+}
+
+.china-command [data-output-field] {
+	overflow-wrap: anywhere;
+}
+
+.china-answer-flow__controls button,
+.china-gap-console__rail button,
+.china-service-route__map button,
+.china-market-bridge__controls button {
+	transition:
+		background-color var(--china-diagnostic-motion) var(--motion-ease),
+		border-color var(--china-diagnostic-motion) var(--motion-ease),
+		color var(--china-diagnostic-motion) var(--motion-ease),
+		transform var(--china-diagnostic-motion) var(--motion-ease);
+}
+
+.china-answer-flow__panel {
+	outline: none;
+}
+
+.china-answer-flow__question > div {
+	min-width: 0;
+	display: grid;
+	gap: 0.45rem;
+}
+
+.china-answer-flow__question small {
+	color: var(--china-muted-on-light);
+	font: 600 0.62rem / 1.45 var(--y-mono);
+}
+
+.china-answer-flow__gap {
+	margin-top: 1rem;
+	padding: 0.8rem;
+	display: grid;
+	grid-template-columns: auto 1fr;
+	align-items: start;
+	gap: 0.75rem;
+	background: var(--y-white);
+	border: 1px solid var(--y-line);
+	border-radius: 0.8rem;
+}
+
+.china-answer-flow__gap span {
+	padding: 0.3rem 0.5rem;
+	background: var(--y-ink);
+	border-radius: 999px;
+	color: var(--y-paper);
+	font: 650 0.62rem / 1 var(--y-mono);
+}
+
+.china-answer-flow__gap p {
+	margin: 0;
+	color: var(--y-blue-gray);
+	font-size: 0.78rem;
+	line-height: 1.5;
+}
+
+.china-gap-console__readout {
+	margin: 1rem 0;
+	padding: 1rem;
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0.7rem 1rem;
+	background: color-mix(in srgb, var(--y-mist) 40%, transparent);
+	border: 1px solid var(--y-line);
+	border-radius: 0.9rem;
+}
+
+.china-gap-console__readout span {
+	color: var(--china-muted-on-light);
+	font: 650 0.62rem / 1.5 var(--y-mono);
+}
+
+.china-gap-console__readout strong,
+.china-gap-console__readout p {
+	margin: 0;
+	font-size: 0.8rem;
+	line-height: 1.55;
+}
+
+.china-gap-console__output strong {
+	max-width: 33rem;
+	line-height: 1.5;
+	text-align: right;
+}
+
+.china-service-route__readout {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 0.65rem 1rem;
+}
+
+.china-service-route__readout small {
+	padding-top: 0.15rem;
+}
+
+.china-service-route__readout p,
+.china-service-route__readout strong {
+	margin: 0;
+	font-size: 0.8rem;
+	line-height: 1.55;
+}
+
+.china-service-route__priority {
+	margin: 0.5rem 0 1rem;
+	padding: 0.9rem 1rem;
+	background: var(--y-orange);
+	border-radius: 0.85rem;
+	color: var(--y-ink);
+	font-weight: 750;
+	line-height: 1.55;
+}
+
+.china-market-bridge__readout {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: stretch;
+}
+
+.china-market-bridge__readout small,
+.china-market-bridge__readout h3 {
+	grid-column: 1 / -1;
+}
+
+.china-market-bridge__readout [data-output-field] {
+	grid-column: auto;
+	padding: 0.9rem 1rem;
+	background: var(--y-slate);
+	border: 1px solid color-mix(in srgb, var(--y-paper) 18%, transparent);
+	border-radius: 0.85rem;
+	color: color-mix(in srgb, var(--y-paper) 82%, transparent);
+	font-size: 0.8rem;
+	font-weight: 600;
+	line-height: 1.55;
+}
+
+.china-market-bridge__readout [data-output-field="priority"] {
+	background: var(--y-orange);
+	border-color: var(--y-orange);
+	color: var(--y-ink);
+}
+
+@keyframes china-diagnostic-enter {
+	from {
+		opacity: 0.72;
+		transform: translateY(0.35rem);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 /* Small labels retain the Signal Orange role while meeting AA contrast on light surfaces. */
@@ -2352,6 +2520,70 @@
 	.china-privacy-intro h1 {
 		font-size: clamp(3rem, 14vw, 5rem);
 	}
+	.china-command :where(p, li) {
+		font-size: clamp(var(--text-body-mobile), 2.4vw, 1rem);
+		line-height: 1.5;
+	}
+	.china-command :where(small, button, .china-eyebrow, .china-home-story__route small) {
+		font-size: var(--text-functional-mobile);
+	}
+	.china-command :where(a, button, input, summary) {
+		min-height: var(--target-mobile);
+	}
+	.china-command :is(
+		.china-answer-flow__controls button,
+		.china-answer-flow__controls button span,
+		.china-answer-flow__window-bar strong,
+		.china-answer-flow__window-bar small,
+		.china-answer-flow__question small,
+		.china-answer-flow__answer small,
+		.china-answer-flow__gap span,
+		.china-answer-flow__move span,
+		.china-situation-band > header span,
+		.china-situation-band article > span,
+		.china-home-story__statement > span,
+		.china-home-story__route li > span,
+		.china-home-story__route small,
+		.china-gap-console__rail button span,
+		.china-gap-console__rail button strong,
+		.china-gap-console__workspace > header small,
+		.china-gap-console__body aside span,
+		.china-gap-console__body section > small,
+		.china-gap-console__readout span,
+		.china-gap-console__output span,
+		.china-service-route__map button span,
+		.china-service-route__detail > span,
+		.china-service-route__detail small,
+		.china-market-bridge__canvas > section span,
+		.china-market-bridge__readout small,
+		.china-company-network__center p,
+		.china-company-network__node span,
+		.china-company-network__node strong,
+		.china-consultation-brief > header span,
+		.china-consultation-brief > header i,
+		.china-consultation-brief li > span,
+		.china-privacy-path > div span,
+		.china-privacy-path > b,
+		.china-footer__links strong
+	) {
+		font-size: var(--text-functional-mobile);
+	}
+	.china-command :is(
+		.china-answer-flow__move p,
+		.china-answer-flow__gap p,
+		.china-situation-band article p,
+		.china-home-story__route p,
+		.china-gap-console__readout strong,
+		.china-gap-console__readout p,
+		.china-product-outputs__stack p,
+		.china-service-route__readout p,
+		.china-service-route__readout strong,
+		.china-market-bridge__readout [data-output-field],
+		.china-consultation-brief li p
+	) {
+		font-size: var(--text-body-mobile);
+		line-height: 1.5;
+	}
 	.china-answer-flow {
 		padding: 0.65rem;
 		border-radius: 1.3rem;
@@ -2421,8 +2653,8 @@
 		grid-template-columns: 1fr;
 	}
 	.china-gap-console__rail {
-		grid-template-columns: repeat(4, minmax(8rem, 1fr));
-		overflow-x: auto;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		overflow: visible;
 	}
 	.china-gap-console__rail button {
 		min-height: 5rem;
@@ -2440,6 +2672,17 @@
 	}
 	.china-gap-console__body section {
 		min-height: 28rem;
+	}
+	.china-gap-console__readout,
+	.china-service-route__readout {
+		grid-template-columns: 1fr;
+	}
+	.china-gap-console__output {
+		align-items: start;
+		flex-direction: column;
+	}
+	.china-gap-console__output strong {
+		text-align: left;
 	}
 	.china-service-route__map {
 		border-right: 0;
@@ -2473,6 +2716,10 @@
 	.china-market-bridge__readout {
 		grid-column: auto;
 		grid-template-columns: 1fr;
+	}
+	.china-market-bridge__readout small,
+	.china-market-bridge__readout h3 {
+		grid-column: auto;
 	}
 	.china-market-bridge__readout strong {
 		grid-column: auto;
@@ -2512,6 +2759,21 @@
 	.china-privacy-path > b {
 		position: static;
 		justify-self: start;
+	}
+	.china-geo-intro__signal {
+		min-height: 0;
+		grid-template-columns: 1fr;
+		border-radius: 1.5rem;
+	}
+	.china-geo-intro__signal strong,
+	.china-geo-intro__signal span {
+		width: 100%;
+		border-radius: 1rem;
+	}
+	.china-geo-intro__signal i {
+		width: 1px;
+		height: 1.5rem;
+		justify-self: center;
 	}
 	.china-footer {
 		grid-template-columns: 1fr;
@@ -2569,7 +2831,7 @@
 	.china-company-intro h1,
 	.china-diagnostic-intro h1,
 	.china-privacy-intro h1 {
-		letter-spacing: -0.065em;
+		letter-spacing: -0.012em;
 	}
 	.china-answer-flow__window-bar {
 		grid-template-columns: repeat(3, 0.4rem) 1fr;
@@ -2607,10 +2869,11 @@
 	.china-geo-intro__signal span {
 		min-height: 4.5rem;
 		padding: 0.4rem;
-		font-size: 0.62rem;
+		font-size: var(--text-functional-mobile);
 	}
 	.china-geo-intro__signal i {
-		width: 0.8rem;
+		width: 1px;
+		height: 1.5rem;
 	}
 	.china-company-network {
 		width: calc(100vw - 2rem);
@@ -2637,5 +2900,12 @@
 	}
 	.china-footer__links {
 		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.china-command [data-diagnostic-state]:not([hidden]) {
+		opacity: 1;
+		transform: none;
 	}
 }

@@ -32,9 +32,17 @@ describe("regional customer copy", () => {
 		const china = JSON.stringify(subject?.CHINA_COPY ?? {});
 		expect(global).toContain("See how AI answers your market’s buying questions.");
 		expect(global).not.toMatch(/change the outcome|source influence|signals behind the response/i);
-		expect(china).toContain("客户怎么问，AI 怎么答，先看哪里");
+		expect(china).toContain("客户开始问 AI，品牌的第一解释权还在你手里吗？");
+		expect(china).toContain("品牌为什么没进客户的候选池？");
+		expect(china).toContain("先做品牌体检，再定 GEO 打法");
+		expect(china).toContain("生成式搜索和 AI 答案中的品牌表现");
+		expect(china).toContain("出海不是翻译官网，而是重做一遍当地品类心智。");
+		expect(china).toContain("不卖玄学排名，先把 AI 怎么说你查清楚");
+		expect(china).toContain("第一次沟通只确认摸底范围");
 		expect(china).not.toMatch(/北美市场|欧洲市场|亚太市场|交付物|竞品更靠前/);
 		expect(china).not.toMatch(/四个可核对结果|待核对信息|复查记录|确认范围|在中国扎根|陪中国企业走向全球/);
+		expect(china).not.toMatch(/保证排名|保证推荐|自动改变|全网覆盖|流量承诺/);
+		expect(china).not.toMatch(/客户问 AI 时，你的品牌被怎么说？|从最担心的品牌问题开始|让企业看清 AI 如何介绍自己的品牌/);
 	});
 
 	it("aligns consultation calls to action with the approved three-field handoff", () => {

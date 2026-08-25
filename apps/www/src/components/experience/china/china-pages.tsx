@@ -1,4 +1,9 @@
-import { CHINA_COPY, CHINA_PRODUCT_STAGES, CHINA_SITUATIONS } from "@/content/experience/china-copy";
+import {
+	CHINA_COPY,
+	CHINA_DIAGNOSTIC_OUTPUTS,
+	CHINA_PRODUCT_STAGES,
+	CHINA_SITUATIONS,
+} from "@/content/experience/china-copy";
 import { LeadForm } from "../shared/lead-form";
 import {
 	AiAnswerFlow,
@@ -31,11 +36,11 @@ export function ChinaHomePage() {
 							</a>
 						</div>
 						<div className="china-home-hero__shift" role="img" aria-label="客户决策方式变化">
-							<span>传统路径</span>
-							<strong>搜索 → 浏览 → 比较</strong>
+							<span>客户的新入口</span>
+							<strong>先问 AI → 形成判断 → 缩小选择</strong>
 							<i aria-hidden="true">↓</i>
-							<span>AI 参与的新路径</span>
-							<strong>提问 → 获得答案 → 缩小选择</strong>
+							<span>品牌要核对</span>
+							<strong>有没有出现 → 卖点准不准 → 竞争位置怎样</strong>
 						</div>
 					</div>
 					<AiAnswerFlow />
@@ -43,8 +48,8 @@ export function ChinaHomePage() {
 
 				<section className="china-situation-band" aria-labelledby="china-situations-title">
 					<header>
-						<span>你可能已经遇到</span>
-						<h2 id="china-situations-title">问题不是“要不要做 AI”，而是品牌正在怎样被理解</h2>
+						<span>可能损失的生意判断</span>
+						<h2 id="china-situations-title">客户已经在问，品牌可能在哪一步掉出选择</h2>
 					</header>
 					<div>
 						{CHINA_SITUATIONS.map((item, index) => (
@@ -59,22 +64,22 @@ export function ChinaHomePage() {
 
 				<section className="china-home-story">
 					<div className="china-home-story__statement">
-						<span>你能看到</span>
-						<h2>把担心落到具体答案上</h2>
-						<p>从一个客户问题开始，查看完整答案、品牌描述和竞品；如答案提供引用，再查看相应来源，并比较之后的变化。</p>
+						<span>一次摸底会得到什么</span>
+						<h2>四项输出，直接带进业务会</h2>
+						<p>不是给一个模糊分数，而是把观察范围、答案原文、品牌差距和下一步动作放在同一份记录里。</p>
 						<a className="china-text-link" href="/zh/product">
-							了解产品 <span aria-hidden="true">→</span>
+							看一份摸底记录怎么形成 <span aria-hidden="true">→</span>
 						</a>
 					</div>
 					<ol className="china-home-story__route">
-						{CHINA_PRODUCT_STAGES.map((stage, index) => (
-							<li key={stage.id}>
+						{CHINA_DIAGNOSTIC_OUTPUTS.map((output, index) => (
+							<li key={output.id}>
 								<span>{String(index + 1).padStart(2, "0")}</span>
 								<div>
-									<strong>{stage.label}</strong>
-									<p>{stage.body}</p>
+									<strong>{output.label}</strong>
+									<p>{output.body}</p>
 								</div>
-								<small>{stage.output}</small>
+								<small>可核对</small>
 							</li>
 						))}
 					</ol>
@@ -91,16 +96,14 @@ export function ChinaHomePage() {
 						<span>当地问题</span>
 					</div>
 					<div className="china-home-global__copy">
-						<span>中国市场 × 海外目标市场</span>
-						<h2>服务中国市场，也支持企业进入已确定的海外目标市场</h2>
-						<p>
-							不同市场里的客户，用不同语言、不同标准理解品牌。Yonaris 不做逐句翻译，而是从当地客户会提出的问题重新开始。
-						</p>
+						<span>中国市场基线 × 目标市场对照</span>
+						<h2>出海不是翻译官网，而是重做一遍当地品类心智。</h2>
+						<p>先保留中国市场里的定位基线，再按已确定的国家、语言、当地购买角色和对标品牌重新圈定问题。</p>
 						<div>
 							<a href="/zh/geo">
-								查看全球市场能力 <span aria-hidden="true">→</span>
+								查看目标市场对照 <span aria-hidden="true">→</span>
 							</a>
-							<small>市场 · 语言 · 购买问题 · 竞争语境</small>
+							<small>国家 · 语言 · 购买角色 · 对标品牌</small>
 						</div>
 					</div>
 				</section>
@@ -138,17 +141,17 @@ export function ChinaProductPage() {
 
 				<section className="china-product-workspace" aria-labelledby="product-workspace-title">
 					<header>
-						<span>一个问题，四个业务视角</span>
-						<h2 id="product-workspace-title">客户怎么问，AI 怎么答，品牌先看哪里</h2>
-						<p>切换四个视角，查看同一个问题下的答案、品牌比较和之后的变化。</p>
+						<span>一份记录，四个动作</span>
+						<h2 id="product-workspace-title">圈定问题、拆答案、找掉点、做复盘</h2>
+						<p>每次切换都保留观察结果和下一步优先级，团队可以在会上沿同一条记录继续判断。</p>
 					</header>
 					<BrandGapConsole />
 				</section>
 
 				<section className="china-product-outputs" aria-labelledby="product-output-title">
 					<div className="china-product-outputs__title">
-						<span>每一步都回答一个业务问题</span>
-						<h2 id="product-output-title">客户怎么问、AI 怎么答、先看哪里、后来怎么变</h2>
+						<span>会前有证据，会中能判断</span>
+						<h2 id="product-output-title">不是评分，是一份能逐条核对的业务记录</h2>
 					</div>
 					<div className="china-product-outputs__stack">
 						{CHINA_PRODUCT_STAGES.map((stage, index) => (
@@ -165,7 +168,7 @@ export function ChinaProductPage() {
 				</section>
 
 				<section className="china-product-close">
-					<span>带着你的问题来</span>
+					<span>下一步优先级</span>
 					<h2>{copy.closingTitle}</h2>
 					<p>{copy.closingBody}</p>
 					<a className="china-action" href="/zh/diagnostic">
@@ -200,8 +203,8 @@ export function ChinaApproachPage() {
 
 				<section className="china-approach-router" aria-labelledby="service-router-title">
 					<header>
-						<span>选择你最接近的情况</span>
-						<h2 id="service-router-title">问题不同，服务起点也不同</h2>
+						<span>按生意问题选择起点</span>
+						<h2 id="service-router-title">先查哪一类掉点，再决定怎么做</h2>
 					</header>
 					<ServiceRoute />
 				</section>
@@ -209,18 +212,18 @@ export function ChinaApproachPage() {
 				<section className="china-approach-promise">
 					<div>
 						<span>01</span>
-						<strong>起点清楚</strong>
-						<p>从品牌、市场、语言和客户问题开始。</p>
+						<strong>问题范围先确认</strong>
+						<p>市场、语言、购买问题和对标对象写进同一张范围卡。</p>
 					</div>
 					<div>
 						<span>02</span>
-						<strong>答案看得懂</strong>
-						<p>查看完整回答、品牌描述、竞品和答案列出的引用来源（如有）。</p>
+						<strong>可见答案逐项核对</strong>
+						<p>保留完整回答、品牌描述、对标对象和答案列出的引用（如有）。</p>
 					</div>
 					<div>
 						<span>03</span>
-						<strong>下一步明确</strong>
-						<p>先判断哪一处品牌表达或市场差异更值得关注。</p>
+						<strong>下一步排优先级</strong>
+						<p>根据当前差距决定先核对哪一项，不把范围外结果写进结论。</p>
 					</div>
 				</section>
 
@@ -232,7 +235,7 @@ export function ChinaApproachPage() {
 					<div>
 						<p>{copy.closingBody}</p>
 						<a href="/zh/diagnostic">
-							预约第一次沟通 <span aria-hidden="true">↗</span>
+							预约一次品牌体检 <span aria-hidden="true">↗</span>
 						</a>
 					</div>
 				</section>
@@ -256,47 +259,47 @@ export function ChinaGeoPage() {
 						</a>
 					</div>
 					<div className="china-geo-intro__signal" role="img" aria-label="从中国连接全球市场">
-						<strong>中国</strong>
+						<strong>中国市场基线</strong>
 						<i />
-						<span>目标市场</span>
+						<span>目标国家 / 目标语言</span>
 						<i />
-						<strong>当地客户问题</strong>
+						<strong>当地购买角色</strong>
 					</div>
 				</section>
 
 				<section className="china-geo-bridge" aria-labelledby="market-bridge-title">
 					<header>
-						<span>切换市场，看问题怎样改变</span>
-						<h2 id="market-bridge-title">同一个品牌，在不同市场面对不同的购买问题</h2>
+						<span>先有基线，再做对照</span>
+						<h2 id="market-bridge-title">只增加已定义的国家、语言和购买语境</h2>
 					</header>
 					<GlobalMarketBridge />
 				</section>
 
 				<section className="china-geo-contrast">
 					<div>
-						<span>只换语言</span>
-						<h2>中文表达逐句搬到海外</h2>
+						<span>中国市场基线</span>
+						<h2>先记录品牌在中文购买问题里怎么被理解</h2>
 						<ul>
-							<li>沿用中国市场的问题</li>
-							<li>忽略当地品类定义</li>
-							<li>品牌容易被重新归类</li>
+							<li>中文品类表达</li>
+							<li>企业采购角色</li>
+							<li>同一组购买问题与对标对象</li>
 						</ul>
 					</div>
-					<i aria-hidden="true">≠</i>
+					<i aria-hidden="true">→</i>
 					<div>
-						<span>重新理解市场</span>
-						<h2>从当地客户会怎么问开始</h2>
+						<span>目标市场对照</span>
+						<h2>出海不是翻译官网，而是重做一遍当地品类心智。</h2>
 						<ul>
-							<li>使用目标市场语言</li>
-							<li>进入当地竞争语境</li>
-							<li>保持核心品牌事实一致</li>
+							<li>目标国家与目标语言</li>
+							<li>当地购买角色与问法</li>
+							<li>指定对标品牌</li>
 						</ul>
 					</div>
 				</section>
 
 				<section className="china-geo-close">
 					<div>
-						<span>面向中国企业的全球市场支持</span>
+						<span>支持企业进入已确定的海外目标市场</span>
 						<h2>{copy.closingTitle}</h2>
 						<p>{copy.closingBody}</p>
 					</div>
@@ -328,37 +331,37 @@ export function ChinaCompanyPage() {
 
 				<section className="china-company-belief">
 					<header>
-						<span>我们为什么做 Yonaris</span>
-						<h2>越来越多客户会先问 AI，企业需要先知道答案是什么</h2>
+						<span>范围与限制</span>
+						<h2>查清当次答案，不把范围外结果包装成结论</h2>
 					</header>
 					<div>
 						<article>
-							<span>客户问题</span>
-							<h3>先看客户怎么问</h3>
-							<p>不从抽象趋势开始，从会影响选择的问题开始。</p>
+							<span>范围</span>
+							<h3>先确认观察边界</h3>
+							<p>市场、语言、购买问题和对标品牌没有确认，就不混在一起判断。</p>
 						</article>
 						<article>
-							<span>品牌表达</span>
-							<h3>看清 AI 怎么说</h3>
-							<p>看见品牌被忽略、混淆或说偏的位置。</p>
+							<span>证据</span>
+							<h3>保留答案原文</h3>
+							<p>核对品牌描述、比较项和答案列出的引用（如有），不只给摘要。</p>
 						</article>
 						<article>
-							<span>市场语境</span>
-							<h3>按选定市场重新理解</h3>
-							<p>分别看当地语言、客户问题和竞品怎样改变答案。</p>
+							<span>限制</span>
+							<h3>不替第三方答案下结论</h3>
+							<p>只说明当前范围里观察到什么，并给出可复盘的工作优先级。</p>
 						</article>
 					</div>
 				</section>
 
 				<section className="china-company-regions">
 					<div className="china-company-regions__china">
-						<span>中国市场</span>
-						<strong>理解中文客户如何提问、比较和选择</strong>
+						<span>中国市场基线</span>
+						<strong>记录中文客户如何提问、比较和理解品类</strong>
 					</div>
 					<i aria-hidden="true">Y</i>
 					<div className="china-company-regions__global">
 						<span>海外目标市场</span>
-						<strong>按目标语言与当地语境重新理解品牌</strong>
+						<strong>按目标语言、购买角色和当地品类重新核对品牌</strong>
 					</div>
 				</section>
 
@@ -393,7 +396,7 @@ export function ChinaDiagnosticPage() {
 				</section>
 				<section className="china-diagnostic-form" aria-label="预约沟通表单">
 					<div>
-						<span>只需三项</span>
+						<span>姓名 / 电话 / 公司</span>
 						<h2>{copy.closingTitle}</h2>
 						<p>{copy.closingBody}</p>
 					</div>
@@ -435,7 +438,7 @@ export function ChinaPrivacyPage() {
 					<article>
 						<span>03</span>
 						<h2>这些信息如何使用</h2>
-						<p>只用于回复本次咨询、了解你的需求和安排后续沟通，不会出现在公开页面。</p>
+						<p>用于回复这次咨询、了解基本需求和安排后续沟通，不会显示在公开页面。</p>
 					</article>
 				</section>
 
