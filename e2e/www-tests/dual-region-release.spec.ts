@@ -100,8 +100,8 @@ test("regional switches preserve all seven topics and China navigation remains u
 test("the new regional scenes expose real state-changing interactions", async ({ page }) => {
 	await visitHydrated(page, "/");
 	await page.locator('[data-answer-question="comparison"]').click();
-	await expect(page.locator('[data-answer-question="comparison"]')).toHaveAttribute("aria-pressed", "true");
-	await expect(page.locator(".sf-answer-field__answer")).toContainText("How should I compare");
+	await expect(page.locator('[data-answer-question="comparison"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: "Comparison" })).toContainText("How should I compare");
 
 	await visitHydrated(page, "/product");
 	await page.locator('[data-product-step="compare"]').click();
@@ -178,7 +178,7 @@ test("lead forms focus inline errors, confirm accepted delivery once, and preser
 	await globalForm.getByLabel("Work email", { exact: true }).fill("ava@acme.example");
 	await globalForm.getByLabel("Company", { exact: true }).fill("Acme");
 	await globalForm.getByRole("button", { name: "Talk to Yonaris", exact: true }).click();
-	await expect(page.locator('[data-lead-state="success"]')).toContainText("Thanks. We’ll be in touch.");
+	await expect(page.locator('[data-lead-state="success"]')).toContainText("Request accepted for delivery.");
 	await expect(page.locator("form.lead-form")).toHaveCount(0);
 	await page.keyboard.press("Enter");
 	expect(acceptedRequests).toBe(1);
@@ -199,7 +199,7 @@ test("lead forms focus inline errors, confirm accepted delivery once, and preser
 	await chinaForm.getByLabel("电话", { exact: true }).fill("13800138000");
 	await chinaForm.getByLabel("公司", { exact: true }).fill("示例科技");
 	await chinaForm.getByRole("button", { name: "提交并预约沟通", exact: true }).click();
-	await expect(chinaForm.getByRole("alert")).toContainText("暂时没有发送成功");
+	await expect(chinaForm.getByRole("alert")).toContainText("投递尚未确认");
 	await expect(chinaForm.getByLabel("电话", { exact: true })).toHaveValue("13800138000");
 	await chinaForm.getByRole("button", { name: "重新发送", exact: true }).click();
 	await expect.poll(() => retryKeys).toHaveLength(2);
