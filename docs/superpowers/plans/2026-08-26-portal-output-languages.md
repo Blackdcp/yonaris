@@ -19,6 +19,9 @@
 - Opportunity generation remains platform-admin-only and scored-Program-only.
 - Do not translate raw Prompts, answers, queries, citations, URLs, brand names, or competitor names.
 - Do not apply migrations to a database.
+- Roll out Chinese artifact writes in two phases behind `ARTIFACT_ZH_CN_ENABLED`, default `false`: first deploy an output-language-aware Web/Worker release and record it as rollback-compatible, then enable Chinese writes only when the rollback target is also recorded compatible. Once Chinese has been activated, never roll back to a pre-language runtime even if the flag is later disabled.
+- Explicit artifact/export selections live in tab-scoped `sessionStorage` under surface-specific keys. Seed only when no valid stored value exists, persist immediately, and survive the UI-language switcher's full-page reload without adding locale routes or coupling to Program data.
+- Keep the Portal document `<html lang>` tied to `uiLanguage`, but place every single-language artifact/render/export subtree under an exact `lang={outputLanguage}` boundary.
 
 ---
 
@@ -86,6 +89,8 @@ git commit -m "Persist report and opportunity languages"
 - Modify: `apps/web/src/components/opportunities-report.tsx`
 - Modify: `apps/web/src/i18n/catalogs/admin.ts`
 - Modify: `apps/web/src/i18n/catalogs/customer.ts`
+- Add: shared tab-scoped artifact-language selection helper/tests.
+- Modify: shared server configuration, LAS deploy/runbook/tests, and deployment environment examples for staged Chinese-output activation.
 
 **Interfaces:**
 - `getOpportunitiesFn({ brandId, scopeId, outputLanguage })`.
@@ -131,7 +136,9 @@ Do not translate `relatedPrompts` during enrichment.
 
 - [ ] **Step 5: Add explicit admin and customer selectors**
 
-Admin generation submits the selected language. Customer Opportunities has an independent artifact-language selector; initialize from UI language only on first render, then keep its state/query key independent. Selecting Chinese with no generated row shows the localized not-generated state and never triggers generation.
+Admin generation submits the selected language. Customer Opportunities has an independent artifact-language selector. Store each surface's exact token in tab-scoped `sessionStorage` (keyed by relevant brand/scope), seed only if absent, and preserve it across the UI language switcher's `window.location.reload()`. Selecting Chinese with no generated row shows the localized not-generated state and never triggers generation. Put loaded Opportunity artifact content under `lang={data.outputLanguage}` while selector/page chrome remains under UI language.
+
+Gate every Chinese Opportunity write/generation boundary behind `ARTIFACT_ZH_CN_ENABLED` (default false), with a localized temporary-unavailable result and no DB/LLM side effect while disabled. Add LAS deployment compatibility markers so an activation attempt requires a previously healthy output-language-aware release, and every automatic rollback after activation may target only a recorded compatible release. Add shell/config contract tests and a two-phase activation/roll-forward runbook; the irreversible activation marker must survive later flag disablement.
 
 - [ ] **Step 6: Run Opportunity tests and access-boundary tests**
 
@@ -177,7 +184,7 @@ Add the field to validators, `NewReport`, selects/responses, `sendReportJob`, `R
 
 - [ ] **Step 4: Add the explicit Portal report language selector**
 
-Place it in the report creation form with English/简体中文 choices. It is controlled by form state and submitted independently of current UI language. Resetting the form keeps the user's last explicit choice during the session. Translate the report-operations page title, field labels, helper copy, statuses, loading/empty/error states, and action labels through the admin UI catalog; this UI copy follows `uiLanguage`, while the selected report artifact follows `outputLanguage`.
+Place it in the report creation form with English/简体中文 choices. Persist the exact selection in the shared tab-scoped session helper so the UI language switcher's full reload does not reseed it; resetting the form keeps the explicit choice. Submit independently of current UI language. Translate the report-operations page title, field labels, helper copy, statuses, loading/empty/error states, and action labels through the admin UI catalog; this UI copy follows `uiLanguage`, while the selected report artifact follows `outputLanguage`. Extend the default-off Chinese-write gate to Portal/API report creation and queueing; legacy English remains available while disabled.
 
 - [ ] **Step 5: Run web/worker/API tests**
 
@@ -222,6 +229,10 @@ The persisted report language is default. Accept only `?outputLanguage=en` or `?
 
 Pass selected output language to every print/export child. Use `Intl` with explicit language and existing timezone behavior. Do not modify metric calculations in `packages/lib/src/report-metrics.ts`.
 
+Set `lang={selectedOutputLanguage}` on the printable artifact root and every chart export preview/capture root. Keep surrounding Portal chrome and the document root on `uiLanguage`; set `Content-Language` only on an HTTP response that contains one single-language artifact, never on mixed-language list responses.
+
+For dashboard export, reuse the tab-scoped selection helper with a surface/brand/scope-specific key. Persist immediately so the explicit export token survives the UI language switcher's full reload; do not merely hold mount-time React state.
+
 - [ ] **Step 5: Run report-copy/render/chart tests**
 
 - [ ] **Step 6: Commit**
@@ -247,5 +258,7 @@ git commit -m "Render reports and exports bilingually"
 - [ ] **Step 4: Inspect the final diff for forbidden coupling**
 
 Search changed files for any assignment or default from `measurementScopes.locale` to `uiLanguage` or `outputLanguage`. Verify raw evidence fields are never passed through translation functions.
+
+Verify real remount/reload tests for Opportunity, report-form, and dashboard-export selections; assert artifact subtree `lang` values in both cross-language combinations. Verify the default-off gate prevents every Chinese write before side effects, activation requires a compatible rollback target, and the irreversible activation marker prevents later rollback to a pre-language runtime.
 
 - [ ] **Step 5: Commit verified corrections without amending earlier commits**
