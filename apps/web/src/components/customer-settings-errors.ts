@@ -4,6 +4,9 @@ import { BRAND_CREATION_ERROR_CODES } from "@/lib/brand-settings";
 
 export type CustomerSettingsOperation =
 	| "onboarding"
+	| "wizardAnalyze"
+	| "wizardStatus"
+	| "wizardSave"
 	| "brand"
 	| "competitors"
 	| "prompts"
@@ -25,6 +28,17 @@ const exactMessages: Partial<Record<CustomerSettingsOperation, Readonly<Record<s
 		[BRAND_CREATION_ERROR_CODES.notAllowed]: "customer.new.error.notAllowed",
 		"Not Found: Customer onboarding is not available to platform identities": "customer.onboarding.error.unavailable",
 		"Failed to create brand": "customer.onboarding.error.create",
+	},
+	wizardAnalyze: {
+		"Forbidden: Platform administrator access required": "customer.onboardingWizard.error.notAllowed",
+	},
+	wizardStatus: {
+		"Brand analysis failed. Please try again.": "customer.onboardingWizard.error.analysisFailed",
+	},
+	wizardSave: {
+		"Forbidden: Platform administrator access required": "customer.onboardingWizard.error.notAllowed",
+		"Website URL must use http or https": "customer.onboardingWizard.validation.websiteInvalid",
+		"Website URL must have a valid hostname": "customer.onboardingWizard.validation.websiteInvalid",
 	},
 	brand: {
 		"Brand name must be a non-empty string": "settings.brand.validation.nameRequired",

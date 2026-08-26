@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => ({
 	brand: {
 		id: "brand-raw-id",
 		name: "StepFun 原名",
-		onboarded: true,
+		website: "https://evidence.example.cn/path?q=CN",
+		onboarded: true as boolean,
 		prompts: [{ id: "prompt-raw-id", value: "Which AI IDE works in 中国?" }],
 		delayOverrideHours: 24,
 	},
@@ -49,29 +50,47 @@ vi.mock("@tanstack/react-router", () => ({
 			branding: { name: "Evidence Portal", chartColors: ["#123456"] },
 		},
 	}),
+	useRouter: () => ({ invalidate: vi.fn() }),
 }));
-vi.mock("@/components/prompt-wizard", () => ({ default: () => <div>prompt-wizard</div> }));
+vi.mock("@tanstack/react-query", () => ({
+	useMutation: () => ({ mutate: vi.fn(), isSuccess: false }),
+	useQuery: () => ({ data: undefined }),
+	useQueryClient: () => ({
+		invalidateQueries: vi.fn(),
+		removeQueries: vi.fn(),
+	}),
+}));
 vi.mock("@/components/trend-chart", () => ({
 	TrendChart: ({ label, data }: { label: string; data: unknown }) => (
 		<div data-series={JSON.stringify(data)}>{label}</div>
 	),
 }));
 vi.mock("@/hooks/use-brands", () => ({
+	brandKeys: { all: ["brands"] },
 	useBrand: () => ({ brand: mocks.brand, isLoading: false, isError: mocks.brandError }),
 }));
 vi.mock("@/hooks/use-brand-access", () => ({ useBrandAccess: () => ({ canManageBrand: true }) }));
 vi.mock("@/hooks/use-dashboard-summary", () => ({
+	dashboardKeys: { all: ["dashboard"] },
 	useDashboardSummary: () => ({
 		dashboardSummary: mocks.dashboardSummary,
 		isLoading: false,
 		isError: mocks.summaryError,
 	}),
 }));
+vi.mock("@/hooks/use-citations", () => ({ citationKeys: { all: ["citations"] } }));
+vi.mock("@/hooks/use-prompts-summary", () => ({ promptsSummaryKeys: { all: ["prompts-summary"] } }));
 vi.mock("@/hooks/use-share-of-voice", () => ({
 	useShareOfVoice: () => ({ data: mocks.sovData, isLoading: false, isError: mocks.sovError }),
 }));
 vi.mock("@/hooks/use-list-filters", () => ({ useListFilters: () => ({ scopeId: "scope-cn-literal" }) }));
-vi.mock("@/lib/posthog", () => ({ setPersonProperties: vi.fn() }));
+vi.mock("@/lib/posthog", () => ({ setPersonProperties: vi.fn(), trackEvent: vi.fn() }));
+vi.mock("@/server/onboarding", () => ({
+	cancelAnalyzeBrandFn: vi.fn(),
+	getAnalyzeBrandStatusFn: vi.fn(),
+	startAnalyzeBrandFn: vi.fn(),
+	updateOnboardedBrandFn: vi.fn(),
+}));
 
 import { Route as OverviewRoute } from "./index";
 
@@ -95,6 +114,7 @@ function textFromMarkup(markup: string): string {
 
 describe("customer overview localization", () => {
 	beforeEach(() => {
+		mocks.brand.onboarded = true;
 		mocks.dashboardSummary = {
 			totalRuns: 1234,
 			totalPrompts: 1,
@@ -106,6 +126,19 @@ describe("customer overview localization", () => {
 		mocks.brandError = false;
 		mocks.summaryError = false;
 		mocks.sovError = false;
+	});
+
+	it("renders the real Chinese onboarding route and Wizard initial state for a not-onboarded brand", () => {
+		mocks.brand.onboarded = false;
+
+		const markup = renderOverview("zh-CN");
+
+		expect(markup).toContain("研究品牌数据");
+		expect(markup).toContain("分析网站并找出最适合追踪的生成式 AI 提示词");
+		expect(markup).toContain("https://evidence.example.cn/path?q=CN");
+		expect(markup).toContain("分析品牌");
+		expect(markup).not.toContain("Research Brand Data");
+		expect(markup).not.toContain("Analyze brand");
 	});
 
 	it("renders populated overview analytics in Chinese with stable route hrefs and values", () => {

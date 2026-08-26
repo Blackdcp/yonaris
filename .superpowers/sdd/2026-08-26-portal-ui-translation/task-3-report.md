@@ -160,3 +160,140 @@ No migration, service startup, external call, or server implementation change oc
 ## Concerns
 
 None. The successful production build emitted only the pre-existing/local-environment warnings described above.
+
+---
+
+## Fix Round 1 — onboarding route, Wizard errors, and invite validation
+
+### Status and review findings addressed
+
+All three Important review findings are fixed:
+
+1. The real `brand.onboarded === false` branch in `apps/web/src/routes/_authed/app/$brand/index.tsx` now localizes its intro and every visible/accessibility state reached through the actual `PromptWizard`.
+2. Analyze, worker-status, and save failures now cross a bounded `MessageId` mapping boundary. Stable exact outcomes are localized and every unknown value becomes `common.error.unexpected`; raw provider, worker, database, and stack text is not rendered.
+3. Team invite submission now owns required/invalid-email validation in the catalog, bypasses browser-native copy with `noValidate`, exposes described `aria-invalid` feedback, and still submits the exact email and stable `member | admin` token.
+
+The two deferred Minor findings were intentionally not changed.
+
+### Additional audited production coverage
+
+The review audit added the route branch that the first implementation missed and followed every production child it reaches:
+
+- `apps/web/src/routes/_authed/app/$brand/index.tsx`: not-onboarded route title, description, completion callback, and redirect-template boundary.
+- `apps/web/src/components/prompt-wizard.tsx`: initial, analyzing, cancellation, timeout, analysis failure, review, identity-change/reanalysis, validation, saving, save failure, and save-complete states.
+- `apps/web/src/components/competitors-editor.tsx`, `apps/web/src/components/prompts-list-editor.tsx`, `apps/web/src/components/localized-tags-input.tsx`, and `packages/ui/src/components/tags-input.tsx`: re-audited as reachable Wizard children; their Task 3 localized labels, placeholders, table/control copy, tooltips, validation, read-only states, and accessibility names remain in use.
+- `apps/web/src/routes/_authed/app/$brand/settings/members.tsx`: invite field validation, feedback relationship, pending state, and exact payload boundary.
+
+Thirty-four paired English/Chinese IDs were added: 32 `customer.onboardingWizard.*` IDs and two `settings.team.validation.*` IDs.
+
+### Strict TDD evidence
+
+#### RED
+
+Before production edits, the deterministic unit/SSR command was:
+
+```powershell
+.\node_modules\.bin\vitest.cmd run --project=unit 'src/components/prompt-wizard-localization.test.tsx' 'src/routes/_authed/app/$brand/-overview-localization.test.tsx' 'src/routes/_authed/app/$brand/settings/-settings-localization.test.tsx'
+```
+
+- Test files: 3 failed.
+- Tests: 26 total, 6 failed and 20 passed.
+- Failures proved that the production `PromptWizardView` state boundary and submission builder did not exist; Wizard stable-error operations returned the generic ID; the actual not-onboarded route rendered `Research Brand Data`, its English description, and `Analyze brand`; and a blank invite was sent instead of returning catalog validation.
+- A narrower invite-first RED was also captured at 1 failed / 15 passed: whitespace-only email returned `ok: true` and invoked the invite mutation.
+
+An initial browser-story RED attempt failed before product assertions because Playwright could not launch in this sandbox (`browserType.launch: spawn EPERM`). An escalated retry remained pending for approval and was aborted rather than left open-ended. A scoped process audit found no newly created test/browser process. The test architecture was therefore switched to bounded node SSR/view-state assertions; the real route still renders the real Wizard rather than mocking it away.
+
+#### GREEN
+
+The same amended command finished with:
+
+- Test files: 3 passed.
+- Tests: 27 passed.
+- Coverage includes Chinese route intro; Wizard initial, analyzing, cancellation, generic failure, review, reanalysis, validation, saving, labels, placeholders, accessibility names, stable failures, and arbitrary-error suppression; both-locale exact Wizard save values; team field validation; and both-locale exact invite email/role values.
+
+Original Task 3 focused suite:
+
+```powershell
+.\node_modules\.bin\vitest.cmd run --project=unit 'src/components/localized-tags-input-localization.test.tsx' 'src/components/settings-editors-localization.test.tsx' 'src/routes/_authed/app/$brand/settings/-settings-localization.test.tsx'
+```
+
+- Test files: 3 passed.
+- Tests: 27 passed.
+
+Relevant localization, policy, role, mutation-limit, onboarding, and Prompt-execution regression group:
+
+- Test files: 11 passed.
+- Tests: 204 passed.
+
+Final full web unit suite:
+
+- Test files: 100 passed.
+- Tests: 804 passed.
+- Duration: 12.93 seconds.
+
+### Verification
+
+- Final `apps/web` TypeScript: `.\node_modules\.bin\tsc.cmd --noEmit` passed.
+- Production build: `pnpm.cmd --filter @workspace/web build` passed.
+- Storybook static build: `pnpm.cmd --filter @workspace/web storybook:build` passed, including the real-route Chinese onboarding stories for initial, pending, failure, review/validation, and save-visible states.
+- Browser interaction execution remains unavailable in this sandbox because Playwright process creation returns `spawn EPERM`; deterministic unit/SSR coverage and the successful Storybook compile are the bounded substitute.
+- Biome: 10 changed TypeScript/TSX inputs passed with no fixes or diagnostics after formatting.
+- `git diff --check`: exited 0; output contained only configured LF-to-CRLF working-copy warnings.
+- Literal audit found no user-visible hard-coded English in the Wizard/route branch and no `err.message`, `error.message`, or raw worker-status rendering.
+- The production build emitted only the same pre-existing route-test discovery, browser externalization, missing-Sentry-token, and bundle-size warnings.
+
+### Error policy
+
+Bounded mappings recognize only these stable exact values:
+
+- Analyze/save permission: `Forbidden: Platform administrator access required` → `customer.onboardingWizard.error.notAllowed`.
+- Worker status: `Brand analysis failed. Please try again.` → `customer.onboardingWizard.error.analysisFailed`.
+- Save validation: `Website URL must use http or https` and `Website URL must have a valid hostname` → `customer.onboardingWizard.validation.websiteInvalid`.
+
+Every other analyze exception, worker status string, or save exception maps to `common.error.unexpected`. Tests render the mapped Chinese failure state and prove arbitrary provider, SQL/worker, database, and stack evidence is absent. The Task 2 brand-creation code mappings remain unchanged.
+
+### Value, role, job, route, and access invariants
+
+- In both `en` and `zh-CN`, Wizard tests preserve the exact brand ID, brand name, website including path/query, additional domains, aliases, competitor names/domains/aliases, Prompt text, tags, and enabled token at the save boundary.
+- In both locales, team invite tests preserve `invitee+中国@example.cn` and the exact stable `admin` role token. Validation inspects but never trims or rewrites the submitted valid email.
+- The Wizard keeps the same analyze/cancel/status server functions, two-second polling interval, six-minute timeout, query key, worker suggestion mapping, analytics event identities, cache invalidations, router invalidation, completion callback, and redirect-template navigation.
+- Existing competitor and Prompt filtering/trimming rules are unchanged; stored domain values outside those established rules are not translated.
+- The not-onboarded predicate, route identity, brand parameter, permission predicates, and server behavior are unchanged.
+- No Program market/locale/timezone, LLM key, migration, service, external call, or database shape changed.
+
+### Files changed in Fix Round 1
+
+Production/catalog:
+
+- `apps/web/src/components/customer-settings-errors.ts`
+- `apps/web/src/components/prompt-wizard.tsx`
+- `apps/web/src/i18n/catalogs/customer.ts`
+- `apps/web/src/routes/_authed/app/$brand/index.tsx`
+- `apps/web/src/routes/_authed/app/$brand/settings/members.tsx`
+
+Tests/story support:
+
+- `apps/web/src/components/prompt-wizard-localization.test.tsx`
+- `apps/web/src/routes/_authed/app/$brand/-overview-localization.test.tsx`
+- `apps/web/src/routes/_authed/app/$brand/settings/-settings-localization.test.tsx`
+- `apps/web/src/stories/overview.stories.tsx`
+- `apps/web/src/stories/_mocks/server-onboarding.ts`
+
+The existing customer-portal Changeset still accurately covers this corrective part of the same onboarding/settings localization slice, so no duplicate Changeset was added.
+
+### Self-review
+
+- Compared the pure submission builder field-for-field with the former inline payload construction; its filtering, fallback, and trimming behavior is unchanged.
+- Confirmed all displayed Wizard errors are `MessageId` values and every raw exception/status input enters the bounded mapper.
+- Confirmed labels and tag inputs have catalog-owned accessible names, and the invite error is related with `aria-describedby` only while present.
+- Confirmed `noValidate` suppresses browser-locale validation while `type="email"` and `required` retain semantic input metadata.
+- Re-read the complete production diff and re-ran final unit/type/build/format gates after the last test changes.
+
+### Commit
+
+- Planned imperative subject: `Fix onboarding wizard localization gaps`.
+- This report is included with the implementation; the exact SHA is supplied in the final handoff because a Git commit cannot contain its own final hash.
+
+### Fix Round 1 concerns
+
+- Playwright-backed Story interactions could not execute in the managed sandbox because browser process creation is denied (`spawn EPERM`). The identical state/error/value requirements are covered by deterministic node tests, and the complete Storybook bundle builds successfully.

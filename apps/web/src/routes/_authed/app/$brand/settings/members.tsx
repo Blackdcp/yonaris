@@ -28,7 +28,8 @@ type InviteTeamMember = (input: { data: { brandId: string; email: string; role: 
 
 export type TeamInviteSubmissionResult =
 	| { ok: true; submitted: { brandId: string; email: string; role: InviteRole } }
-	| { ok: false; formError: MessageId };
+	| { ok: false; fieldErrors: { email: MessageId }; formError?: never }
+	| { ok: false; fieldErrors?: never; formError: MessageId };
 
 export function teamErrorMessageId(action: "invite" | "remove" | "cancel", error: unknown): MessageId {
 	const operation = action === "invite" ? "teamInvite" : action === "remove" ? "teamRemove" : "teamCancel";
@@ -39,6 +40,13 @@ export async function submitTeamInviteForm(
 	input: { brandId: string; email: string; role: InviteRole },
 	invite: InviteTeamMember,
 ): Promise<TeamInviteSubmissionResult> {
+	if (!input.email.trim()) {
+		return { ok: false, fieldErrors: { email: "settings.team.validation.emailRequired" } };
+	}
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email)) {
+		return { ok: false, fieldErrors: { email: "settings.team.validation.emailInvalid" } };
+	}
+
 	try {
 		await invite({ data: input });
 		return { ok: true, submitted: input };
@@ -84,6 +92,7 @@ function TeamSettingsPage() {
 	const [inviting, setInviting] = useState(false);
 	const [pendingAction, setPendingAction] = useState<string | null>(null);
 	const [formError, setFormError] = useState<MessageId | null>(null);
+	const [inviteEmailError, setInviteEmailError] = useState<MessageId | null>(null);
 
 	const roleLabel = (role: string | null | undefined) => {
 		if (role === "admin") return t("settings.team.role.admin");
@@ -95,11 +104,13 @@ function TeamSettingsPage() {
 	async function handleInvite(event: React.FormEvent) {
 		event.preventDefault();
 		setFormError(null);
+		setInviteEmailError(null);
 		setInviting(true);
 		try {
 			const result = await submitTeamInviteForm({ brandId, email: inviteEmail, role: inviteRole }, inviteTeamMemberFn);
 			if (!result.ok) {
-				setFormError(result.formError);
+				setInviteEmailError(result.fieldErrors?.email ?? null);
+				setFormError(result.formError ?? null);
 				return;
 			}
 			trackEvent("team_member_invited", { role: result.submitted.role });
@@ -152,19 +163,30 @@ function TeamSettingsPage() {
 				</Alert>
 			)}
 
-			<form onSubmit={handleInvite} className="flex flex-wrap items-end gap-3">
+			<form noValidate onSubmit={handleInvite} className="flex flex-wrap items-end gap-3">
 				<div className="space-y-2">
 					<Label htmlFor="invite-email">{t("settings.team.email")}</Label>
 					<Input
 						id="invite-email"
+						name="email"
 						type="email"
 						placeholder={t("settings.team.emailPlaceholder")}
 						value={inviteEmail}
-						onChange={(event) => setInviteEmail(event.target.value)}
+						onChange={(event) => {
+							setInviteEmail(event.target.value);
+							setInviteEmailError(null);
+						}}
 						required
+						aria-invalid={inviteEmailError !== null}
+						aria-describedby={inviteEmailError ? "invite-email-error" : undefined}
 						disabled={inviting}
 						className="w-64"
 					/>
+					{inviteEmailError && (
+						<p id="invite-email-error" role="alert" className="text-sm text-destructive">
+							{t(inviteEmailError)}
+						</p>
+					)}
 				</div>
 				<div className="space-y-2">
 					<Label htmlFor="invite-role">{t("settings.team.role")}</Label>

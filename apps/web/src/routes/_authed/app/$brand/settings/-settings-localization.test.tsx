@@ -1,7 +1,7 @@
 import type { UiLanguage } from "@workspace/config/language";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MessageId } from "@/i18n/catalog";
+import { type MessageId, translate } from "@/i18n/catalog";
 import { I18nProvider } from "@/i18n/provider";
 
 const mocks = vi.hoisted(() => ({
@@ -160,7 +160,7 @@ type SubmitTeamInviteForm = (
 	invite: Mutation<{ brandId: string; email: string; role: "member" | "admin" }>,
 ) => Promise<
 	| { ok: true; submitted: { brandId: string; email: string; role: "member" | "admin" } }
-	| { ok: false; formError: MessageId }
+	| { ok: false; fieldErrors?: { email?: MessageId }; formError?: MessageId }
 >;
 
 type TeamErrorMessageId = (action: "invite" | "remove" | "cancel", error: unknown) => MessageId;
@@ -475,6 +475,9 @@ describe("brand settings route localization", () => {
 		expect(markup).toContain("到期日期");
 		expect(markup).toContain("移除");
 		expect(markup).toContain("取消");
+		expect(markup).toContain('<form noValidate=""');
+		expect(markup).toContain('name="email"');
+		expect(markup).toContain('aria-invalid="false"');
 		expect(markup).not.toContain("Pending invitations");
 		expect(metadata).toContain("团队 | StepFun 原名 · Evidence Portal");
 		expect(metadata).toContain("邀请团队成员并管理团队成员");
@@ -494,6 +497,26 @@ describe("brand settings route localization", () => {
 		expect(invite).toHaveBeenCalledWith({
 			data: { brandId: "brand-raw-id", email: "invitee+中国@example.cn", role: "admin" },
 		});
+	});
+
+	it("uses catalog-owned Chinese required and invalid-email validation before inviting", async () => {
+		const invite = vi.fn(async () => ({ success: true }));
+		const submit = getSubmitTeamInviteForm();
+		const required = await submit({ brandId: "brand-raw-id", email: "  ", role: "member" }, invite);
+		const invalid = await submit({ brandId: "brand-raw-id", email: "not-an-email", role: "admin" }, invite);
+
+		expect(required).toEqual({
+			ok: false,
+			fieldErrors: { email: "settings.team.validation.emailRequired" },
+		});
+		expect(invalid).toEqual({
+			ok: false,
+			fieldErrors: { email: "settings.team.validation.emailInvalid" },
+		});
+		expect(invite).not.toHaveBeenCalled();
+		if (required.ok || invalid.ok) throw new Error("Expected email validation failures");
+		expect(translate("zh-CN", required.fieldErrors?.email as MessageId)).toBe("请输入邮箱地址。");
+		expect(translate("zh-CN", invalid.fieldErrors?.email as MessageId)).toBe("请输入有效的邮箱地址。");
 	});
 
 	it("maps only bounded team errors and never exposes arbitrary exceptions", async () => {

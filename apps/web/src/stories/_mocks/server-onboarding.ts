@@ -12,11 +12,11 @@ let _suggestion: OnboardingSuggestion | null = null;
 let _delayMs = 0;
 let _shouldThrow: string | null = null;
 let _analyzeRequests: unknown[] = [];
-let _saveCallCount = 0;
+let _saveRequests: unknown[] = [];
 
 export function resetMockOnboardingCalls() {
 	_analyzeRequests = [];
-	_saveCallCount = 0;
+	_saveRequests = [];
 }
 
 export function getMockAnalyzeRequests() {
@@ -24,7 +24,11 @@ export function getMockAnalyzeRequests() {
 }
 
 export function getMockOnboardingSaveCallCount() {
-	return _saveCallCount;
+	return _saveRequests.length;
+}
+
+export function getMockOnboardingSaveRequests() {
+	return _saveRequests;
 }
 
 export function setMockOnboardingSuggestion(suggestion: OnboardingSuggestion | null) {
@@ -66,8 +70,8 @@ export const cancelAnalyzeBrandFn = async (_args: { data: unknown }) => {
 	return { ok: true as const };
 };
 
-export const updateOnboardedBrandFn = async (_args: { data: unknown }) => {
-	_saveCallCount += 1;
+export const updateOnboardedBrandFn = async (args: { data: unknown }) => {
+	_saveRequests.push(args);
 	if (_delayMs > 0) await new Promise((r) => setTimeout(r, Math.min(_delayMs, 800)));
 	return {
 		id: "mock-brand-id",

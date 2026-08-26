@@ -318,11 +318,8 @@ function DashboardPage() {
 		return (
 			<div className="space-y-6 max-w-2xl p-4">
 				<div className="space-y-2">
-					<h2 className="text-2xl font-bold">Research Brand Data</h2>
-					<p className="text-muted-foreground text-balance">
-						We will analyze your website and find the best generative AI prompts to track. This process may take a
-						couple of minutes.
-					</p>
+					<h2 className="text-2xl font-bold">{t("customer.onboardingWizard.routeTitle")}</h2>
+					<p className="text-muted-foreground text-balance">{t("customer.onboardingWizard.routeDescription")}</p>
 				</div>
 				<PromptWizard
 					onComplete={() => {
