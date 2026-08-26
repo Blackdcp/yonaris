@@ -1,5 +1,5 @@
 import type { UiLanguage } from "@workspace/config/language";
-import type { Brand } from "@workspace/lib/db/schema";
+import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -16,7 +16,9 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 vi.mock("recharts", () => ({
 	Bar: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-	BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+	BarChart: ({ children, data }: { children: ReactNode; data: { value: number }[] }) => (
+		<div data-values={JSON.stringify(data.map((point) => point.value))}>{children}</div>
+	),
 	Cell: () => null,
 	ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	XAxis: () => null,
@@ -35,6 +37,7 @@ import { ChartExportPreview } from "./chart-export-preview";
 import { PromptChartPrint } from "./prompt-chart-print";
 
 const brand = { id: "brand-1", name: "Acme" } as Brand;
+const competitor = { id: "competitor-1", name: "Rival" } as Competitor;
 
 function renderWithLocale(locale: UiLanguage, children: ReactNode): string {
 	return renderToStaticMarkup(<I18nProvider locale={locale}>{children}</I18nProvider>);
@@ -73,6 +76,54 @@ describe("chart surface localization", () => {
 
 		expect(firstRun).toContain("首次评估中…");
 		expect(emptyRange).toContain("所选时间范围内没有数据");
+	});
+
+	it("localizes the report-context share-of-voice metric without changing computed values", () => {
+		const markup = renderWithLocale(
+			"zh-CN",
+			<PromptChartPrint
+				lookback="1m"
+				promptName="Best CRM"
+				promptId="prompt-1"
+				brand={brand}
+				competitors={[competitor]}
+				category="strength"
+				promptRuns={[
+					{
+						id: "run-1",
+						promptId: "prompt-1",
+						brandId: "brand-1",
+						brandMentioned: true,
+						competitorsMentioned: [],
+						createdAt: new Date("2025-07-21T00:00:00Z"),
+						model: "gpt-5",
+						provider: "openai",
+						version: "1",
+						webSearchEnabled: false,
+						rawOutput: null,
+						webQueries: [],
+					},
+					{
+						id: "run-2",
+						promptId: "prompt-1",
+						brandId: "brand-1",
+						brandMentioned: false,
+						competitorsMentioned: ["Rival"],
+						createdAt: new Date("2025-07-21T00:00:00Z"),
+						model: "gpt-5",
+						provider: "openai",
+						version: "1",
+						webSearchEnabled: false,
+						rawOutput: null,
+						webQueries: [],
+					},
+				]}
+			/>,
+		);
+
+		expect(markup).toContain("50% 声量份额");
+		expect(markup).not.toContain("SoV");
+		expect(markup).toContain('data-values="[50,50]"');
 	});
 
 	it("localizes exported visibility and logo accessibility without changing chart data", () => {

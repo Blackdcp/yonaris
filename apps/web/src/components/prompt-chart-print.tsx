@@ -138,7 +138,7 @@ export function PromptChartPrint({
 				return lastDataPoint && brand ? (lastDataPoint[brand.id] as number) : null;
 			})();
 
-	const badgeLabel = isReportContext ? "SoV" : t("chart.visibility");
+	const badgeLabel = isReportContext ? t("chart.shareOfVoice") : t("chart.visibility");
 
 	if (hasNoRuns) {
 		const message = hasEverBeenEvaluated ? t("chart.noDataInRange") : t("chart.evaluatingFirstTime");
