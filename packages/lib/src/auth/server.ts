@@ -86,7 +86,7 @@ export function createAuth(options?: CreateAuthOptions) {
 			additionalFields: {
 				uiLanguage: {
 					type: "string",
-					required: false,
+					required: true,
 					defaultValue: "en",
 					input: true,
 				},
