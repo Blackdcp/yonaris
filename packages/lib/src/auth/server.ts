@@ -9,8 +9,11 @@
 import { type SSOOptions, sso } from "@better-auth/sso";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
 import { admin, customSession, organization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
+import { isContentLanguage, UI_LANGUAGE_COOKIE_NAME } from "@workspace/config/language";
+import { z } from "zod";
 import { db } from "../db/db";
 import * as schema from "../db/schema";
 import { ac, adminRole, userRole } from "./permissions";
@@ -41,6 +44,79 @@ export interface CreateAuthOptions {
 	/** Options for the organization plugin (e.g. sendInvitationEmail in cloud). */
 	organizationOptions?: Parameters<typeof organization>[0];
 }
+
+const uiLanguageInput = z.enum(["en", "zh-CN"]);
+
+function isIdentityProviderUserCreation(path: string | undefined): boolean {
+	if (!path) return false;
+	return (
+		path === "/callback/:id" ||
+		path.startsWith("/callback/") ||
+		path === "/sign-in/social" ||
+		path === "/sso/callback" ||
+		path === "/sso/callback/:providerId" ||
+		path.startsWith("/sso/callback/") ||
+		path === "/sso/saml2/callback/:providerId" ||
+		path.startsWith("/sso/saml2/callback/") ||
+		path === "/sso/saml2/sp/acs/:providerId" ||
+		path.startsWith("/sso/saml2/sp/acs/")
+	);
+}
+
+function createLanguageDatabaseHooks(
+	databaseHooks: BetterAuthOptions["databaseHooks"],
+): BetterAuthOptions["databaseHooks"] {
+	const deploymentBeforeCreate = databaseHooks?.user?.create?.before;
+
+	return {
+		...databaseHooks,
+		user: {
+			...databaseHooks?.user,
+			create: {
+				...databaseHooks?.user?.create,
+				before: async (user, context) => {
+					const deploymentResult = await deploymentBeforeCreate?.(user, context);
+					if (deploymentResult === false) return false;
+
+					const deploymentData =
+						deploymentResult && typeof deploymentResult === "object" && "data" in deploymentResult
+							? deploymentResult.data
+							: user;
+					const cookieLanguage = isIdentityProviderUserCreation(context?.path)
+						? context?.getCookie(UI_LANGUAGE_COOKIE_NAME)
+						: undefined;
+					const selectedLanguage = isContentLanguage(cookieLanguage) ? cookieLanguage : deploymentData.uiLanguage;
+
+					if (!isContentLanguage(selectedLanguage)) {
+						throw new APIError("BAD_REQUEST", { message: "Unsupported UI language." });
+					}
+
+					return { data: { ...deploymentData, uiLanguage: selectedLanguage } };
+				},
+			},
+		},
+	};
+}
+
+const protectAdminLanguageUpdate = createAuthMiddleware(async (context) => {
+	if (context.path !== "/admin/update-user") return;
+
+	const body = context.body as { userId?: unknown; data?: unknown } | undefined;
+	if (!body?.data || typeof body.data !== "object" || !("uiLanguage" in body.data)) return;
+
+	const requestedLanguage = (body.data as { uiLanguage?: unknown }).uiLanguage;
+	if (!uiLanguageInput.safeParse(requestedLanguage).success) {
+		throw new APIError("BAD_REQUEST", { message: "Unsupported UI language." });
+	}
+
+	const session = await getAuthoritativeSessionFromCtx(context);
+	if (!session) {
+		throw new APIError("UNAUTHORIZED", { message: "Authentication required." });
+	}
+	if (body.userId !== session.user.id) {
+		throw new APIError("FORBIDDEN", { message: "A user's UI language can only be changed by that user." });
+	}
+});
 
 export function createAuth(options?: CreateAuthOptions) {
 	const appUrl = process.env.APP_URL || process.env.VITE_APP_URL;
@@ -89,6 +165,7 @@ export function createAuth(options?: CreateAuthOptions) {
 					required: true,
 					defaultValue: "en",
 					input: true,
+					validator: { input: uiLanguageInput },
 				},
 				hasReportGeneratorAccess: {
 					type: "boolean",
@@ -109,7 +186,11 @@ export function createAuth(options?: CreateAuthOptions) {
 			},
 		},
 
-		databaseHooks: options?.databaseHooks,
+		databaseHooks: createLanguageDatabaseHooks(options?.databaseHooks),
+
+		hooks: {
+			before: protectAdminLanguageUpdate,
+		},
 
 		plugins: [
 			organization(options?.organizationOptions),

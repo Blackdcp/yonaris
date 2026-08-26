@@ -6,7 +6,7 @@
  */
 
 import { IconBrandGoogle, IconInfoCircle } from "@tabler/icons-react";
-import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
 import { authClient } from "@workspace/lib/auth/client";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
@@ -18,7 +18,16 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import FullPageCard from "@/components/full-page-card";
 import { useI18n } from "@/i18n/provider";
+import { completeAuthenticationNavigation } from "@/lib/auth/navigation";
 import { safeReturnTo } from "@/lib/return-to";
+
+export function buildSocialSignInInput(returnTo?: string) {
+	return { provider: "google" as const, callbackURL: safeReturnTo(returnTo) };
+}
+
+export function buildSsoSignInInput(returnTo?: string) {
+	return { providerId: "auth0-whitelabel", callbackURL: safeReturnTo(returnTo) };
+}
 
 export const Route = createFileRoute("/auth/login")({
 	validateSearch: z.object({
@@ -55,7 +64,7 @@ function SSOLogin({ returnTo }: { returnTo?: string }) {
 		let cancelled = false;
 
 		authClient.signIn
-			.sso({ providerId: "auth0-whitelabel", callbackURL: safeReturnTo(returnTo) })
+			.sso(buildSsoSignInInput(returnTo))
 			.then((result) => {
 				if (cancelled) return;
 				if (result.error) {
@@ -101,7 +110,6 @@ export function EmailPasswordLogin({
 	canRegister?: boolean;
 }) {
 	const { t } = useI18n();
-	const navigate = useNavigate();
 	const [email, setEmail] = useState(isDemo ? "demo@example.com" : "");
 	const [password, setPassword] = useState(isDemo ? "demo" : "");
 	const [error, setError] = useState<string | null>(null);
@@ -128,7 +136,7 @@ export function EmailPasswordLogin({
 				return;
 			}
 
-			navigate({ to: safeReturnTo(returnTo) });
+			completeAuthenticationNavigation(returnTo);
 		} catch {
 			setError(t("common.error.unexpected"));
 			setLoading(false);
@@ -143,7 +151,7 @@ export function EmailPasswordLogin({
 						type="button"
 						variant="outline"
 						className="w-full"
-						onClick={() => authClient.signIn.social({ provider: "google", callbackURL: safeReturnTo(returnTo) })}
+						onClick={() => authClient.signIn.social(buildSocialSignInInput(returnTo))}
 					>
 						<IconBrandGoogle className="size-4" />
 						{t("auth.login.continueGoogle")}

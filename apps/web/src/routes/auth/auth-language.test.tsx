@@ -19,8 +19,8 @@ vi.mock("@/components/logo", () => ({ Logo: () => <span>Yonaris</span> }));
 vi.mock("@/lib/auth/session", () => ({ getSession: vi.fn() }));
 vi.mock("@/lib/posthog", () => ({ identifyUser: vi.fn(), setPersonProperties: vi.fn() }));
 
-import { savedLanguageRequiresReload } from "../_authed";
-import { EmailPasswordLogin } from "./login";
+import { completeAuthenticationNavigation } from "@/lib/auth/navigation";
+import { EmailPasswordLogin, buildSocialSignInInput, buildSsoSignInInput } from "./login";
 import { buildEmailSignUpInput } from "./register";
 
 describe("localized authentication helpers", () => {
@@ -58,9 +58,34 @@ describe("localized authentication helpers", () => {
 		});
 	});
 
-	it("reloads only when a valid saved language differs after authentication", () => {
-		expect(savedLanguageRequiresReload("zh-CN", "en")).toBe(true);
-		expect(savedLanguageRequiresReload("zh-CN", "zh-CN")).toBe(false);
-		expect(savedLanguageRequiresReload("unsupported", "en")).toBe(false);
+	it("uses a hard, same-origin navigation after email authentication", () => {
+		const assign = vi.fn();
+		vi.stubGlobal("window", { location: { origin: "https://portal.example.com", assign } });
+
+		completeAuthenticationNavigation("https://portal.example.com/app/acme?tab=prompts#latest");
+
+		expect(assign).toHaveBeenCalledWith("/app/acme?tab=prompts#latest");
+	});
+
+	it("rejects a cross-origin email-authentication return target", () => {
+		const assign = vi.fn();
+		vi.stubGlobal("window", { location: { origin: "https://portal.example.com", assign } });
+
+		completeAuthenticationNavigation("https://attacker.example/phish");
+
+		expect(assign).toHaveBeenCalledWith("/app");
+	});
+
+	it("uses safe callback URLs for Google and Auth0 SSO", () => {
+		vi.stubGlobal("window", { location: { origin: "https://portal.example.com" } });
+
+		expect(buildSocialSignInInput("//attacker.example/phish")).toEqual({
+			provider: "google",
+			callbackURL: "/app",
+		});
+		expect(buildSsoSignInInput("https://portal.example.com/app/acme")).toEqual({
+			providerId: "auth0-whitelabel",
+			callbackURL: "/app/acme",
+		});
 	});
 });

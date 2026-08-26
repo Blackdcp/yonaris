@@ -1,13 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getCookie, getRequestHeaders, setCookie } from "@tanstack/react-start/server";
-import { type UiLanguage, parseContentLanguage } from "@workspace/config/language";
+import { type UiLanguage, parseContentLanguage, UI_LANGUAGE_COOKIE_NAME } from "@workspace/config/language";
 import { db } from "@workspace/lib/db/db";
 import { user } from "@workspace/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { resolveAuthSession } from "@/lib/auth/resolve-session";
 
-const UI_LANGUAGE_COOKIE = "yonaris_ui_language";
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 type UiLanguageResolutionInput = {
@@ -30,13 +29,34 @@ export function resolveUiLanguage({ saved, cookie, acceptLanguage }: UiLanguageR
 	const cookieLanguage = parseOptionalUiLanguage(cookie);
 	if (cookieLanguage) return cookieLanguage;
 
-	if (
-		acceptLanguage
-			?.toLowerCase()
-			.split(",")
-			.some((language) => language.trim().startsWith("zh"))
-	) {
-		return "zh-CN";
+	const candidates = (acceptLanguage ?? "")
+		.split(",")
+		.map((entry, index) => {
+			const parts = entry.trim().split(";");
+			if (parts.length > 2) return undefined;
+			const range = parts[0]?.trim();
+			if (!range || (range !== "*" && !/^[A-Za-z]{1,8}(?:-[A-Za-z0-9]{1,8})*$/.test(range))) {
+				return undefined;
+			}
+
+			let quality = 1;
+			if (parts[1] !== undefined) {
+				const match = /^q\s*=\s*(0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/i.exec(parts[1].trim());
+				if (!match) return undefined;
+				quality = Number(match[1]);
+			}
+			if (quality === 0) return undefined;
+
+			return { index, quality, range: range.toLowerCase() };
+		})
+		.filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== undefined)
+		.sort((left, right) => right.quality - left.quality || left.index - right.index);
+
+	for (const candidate of candidates) {
+		if (candidate.range === "*") continue;
+		const primaryLanguage = candidate.range.split("-")[0];
+		if (primaryLanguage === "zh") return "zh-CN";
+		if (primaryLanguage === "en") return "en";
 	}
 
 	return "en";
@@ -59,7 +79,7 @@ export const getUiLanguageFn = createServerFn({ method: "GET" }).handler(async (
 
 	return resolveUiLanguage({
 		saved,
-		cookie: getCookie(UI_LANGUAGE_COOKIE),
+		cookie: getCookie(UI_LANGUAGE_COOKIE_NAME),
 		acceptLanguage: headers.get("accept-language"),
 	});
 });
@@ -68,11 +88,17 @@ export const setUiLanguageFn = createServerFn({ method: "POST" })
 	.validator(z.object({ uiLanguage: z.string() }))
 	.handler(async ({ data }): Promise<UiLanguage> => {
 		const uiLanguage = validateUiLanguageUpdate(data.uiLanguage);
-		const session = await resolveAuthSession(getRequestHeaders());
+		let session: Awaited<ReturnType<typeof resolveAuthSession>> = null;
+		try {
+			session = await resolveAuthSession(getRequestHeaders());
+		} catch {
+			// The presentation preference must remain writable on auth recovery
+			// pages even when authoritative session storage is unavailable.
+		}
 		if (session) {
 			await db.update(user).set({ uiLanguage }).where(eq(user.id, session.user.id));
 		}
-		setCookie(UI_LANGUAGE_COOKIE, uiLanguage, {
+		setCookie(UI_LANGUAGE_COOKIE_NAME, uiLanguage, {
 			path: "/",
 			sameSite: "lax",
 			maxAge: ONE_YEAR_SECONDS,

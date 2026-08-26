@@ -7,7 +7,7 @@
  */
 
 import { IconBrandGoogle } from "@tabler/icons-react";
-import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouteContext } from "@tanstack/react-router";
 import type { UiLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
 import { authClient } from "@workspace/lib/auth/client";
@@ -20,7 +20,9 @@ import { useState } from "react";
 import { z } from "zod";
 import FullPageCard from "@/components/full-page-card";
 import { useI18n } from "@/i18n/provider";
+import { completeAuthenticationNavigation } from "@/lib/auth/navigation";
 import { safeReturnTo } from "@/lib/return-to";
+import { buildSocialSignInInput } from "./login";
 
 type EmailSignUpInput = {
 	email: string;
@@ -61,7 +63,6 @@ function RegisterPage() {
 	const canRegister = context.clientConfig?.canRegister ?? false;
 	const hasUsers = context.clientConfig?.hasUsers ?? false;
 	const isCloud = context.clientConfig?.mode === "cloud";
-	const navigate = useNavigate();
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -104,7 +105,7 @@ function RegisterPage() {
 				return;
 			}
 
-			navigate({ to: returnTo ?? "/app" });
+			completeAuthenticationNavigation(returnTo);
 		} catch {
 			setError(t("common.error.unexpected"));
 			setLoading(false);
@@ -141,7 +142,7 @@ function RegisterPage() {
 						type="button"
 						variant="outline"
 						className="w-full"
-						onClick={() => authClient.signIn.social({ provider: "google", callbackURL: safeReturnTo(returnTo) })}
+						onClick={() => authClient.signIn.social(buildSocialSignInInput(returnTo))}
 					>
 						<IconBrandGoogle className="size-4" />
 						{t("auth.login.continueGoogle")}

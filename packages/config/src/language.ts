@@ -1,4 +1,5 @@
 export const CONTENT_LANGUAGES = ["en", "zh-CN"] as const;
+export const UI_LANGUAGE_COOKIE_NAME = "yonaris_ui_language";
 export type ContentLanguage = (typeof CONTENT_LANGUAGES)[number];
 export type UiLanguage = ContentLanguage;
 export type OutputLanguage = ContentLanguage;

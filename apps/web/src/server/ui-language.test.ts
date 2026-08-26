@@ -62,6 +62,20 @@ describe("UI language resolution", () => {
 	});
 
 	it.each([
+		["en-US,en;q=0.9,zh-CN;q=0.8", "en"],
+		["zh-CN,zh;q=0.9,en;q=0.8", "zh-CN"],
+		["en;q=0.8,zh-CN;q=0.8", "en"],
+		["zh-CN;q=0.8,en;q=0.8", "zh-CN"],
+		["fr-FR,zh-CN;q=0.7,en;q=0.6", "zh-CN"],
+		["*,en;q=0.7", "en"],
+		["zh-CN;q=bogus,en;q=0.5", "en"],
+		["zh-CN;q=0,en;q=0.5", "en"],
+		["zh_XX,en;q=0.5", "en"],
+	] as const)("negotiates %s as %s", (acceptLanguage, expected) => {
+		expect(resolveUiLanguage({ acceptLanguage })).toBe(expected);
+	});
+
+	it.each([
 		["zh-CN", "en-US", "zh-CN"],
 		[undefined, "zh-SG,zh;q=0.9", "zh-CN"],
 	] as const)(
@@ -110,5 +124,19 @@ describe("UI language write execution boundary", () => {
 			"zh-CN",
 			expect.objectContaining({ path: "/", sameSite: "lax" }),
 		);
+	});
+
+	it("persists the cookie when authenticated session lookup is unavailable", async () => {
+		mocks.resolveAuthSession.mockRejectedValue(new Error("session storage unavailable"));
+
+		await expect(setUiLanguageFn({ data: { uiLanguage: "zh-CN" } })).resolves.toBe("zh-CN");
+
+		expect(mocks.update).not.toHaveBeenCalled();
+		expect(mocks.setCookie).toHaveBeenCalledWith("yonaris_ui_language", "zh-CN", {
+			path: "/",
+			sameSite: "lax",
+			maxAge: 31_536_000,
+			secure: false,
+		});
 	});
 });
