@@ -7,9 +7,55 @@ import {
 	type FanoutModelTotalRow,
 	normTok,
 	promptKeywords,
+	type QueryTextSegmenter,
 	summarizeFanoutRunExposure,
+	tokenizeQueryText,
 	UNAVAILABLE_SENTINEL,
 } from "@/lib/fanout-analysis";
+
+const fakeSegmenter: QueryTextSegmenter = {
+	segment(input) {
+		const words: Record<string, string[]> = {
+			适合家庭出游的新能源: ["适合", "家庭", "出游", "的", "新能源"],
+			北京: ["北京"],
+			万: ["万"],
+			推荐: ["推荐"],
+			家庭: ["家庭"],
+			家庭新能源: ["家庭", "新能源"],
+			新能源: ["新能源"],
+		};
+		return (words[input] ?? Array.from(input)).map((segment) => ({ segment, isWordLike: true }));
+	},
+};
+
+describe("tokenizeQueryText", () => {
+	it("segments Chinese words through the injected segmenter and normalizes Latin tokens", () => {
+		expect(tokenizeQueryText("适合家庭出游的新能源 SUV", fakeSegmenter)).toEqual([
+			"适合",
+			"家庭",
+			"出游",
+			"的",
+			"新能源",
+			"suv",
+		]);
+		expect(tokenizeQueryText("2026 北京 30万 SUV 推荐", fakeSegmenter)).toEqual([
+			"2026",
+			"北京",
+			"30",
+			"万",
+			"suv",
+			"推荐",
+		]);
+	});
+
+	it("preserves source order across mixed punctuation and repeated spacing", () => {
+		expect(tokenizeQueryText("CRM，家庭  2026/SUV", fakeSegmenter)).toEqual(["crm", "家庭", "2026", "suv"]);
+	});
+
+	it("uses a deterministic Unicode-code-point fallback when segmentation is explicitly unavailable", () => {
+		expect(tokenizeQueryText("新能源 SUV", null)).toEqual(["新", "能", "源", "suv"]);
+	});
+});
 
 describe("summarizeFanoutRunExposure", () => {
 	it("separates exposed prompt echoes from genuine fan-out and unknown runs", () => {
@@ -168,6 +214,43 @@ describe("computeFanoutAnalysis", () => {
 		expect(capped.byPrompt.find((p) => p.promptId === "p1")!.variations).toHaveLength(1);
 		// uniqueQueries still reports the full distinct count, not the capped list size.
 		expect(capped.uniqueQueries).toBe(3);
+	});
+
+	it("aggregates CJK terms and word changes without depending on UI locale", () => {
+		const cjkPromptMap = new Map([["p-zh", "家庭新能源 SUV"]]);
+		const cjk = computeFanoutAnalysis(
+			[
+				{
+					prompt_id: "p-zh",
+					model: "gpt-5.6",
+					query: "家庭 新能源 SUV 推荐",
+					count: 2,
+					brand_mentions: 1,
+				},
+			],
+			[
+				{
+					model: "gpt-5.6",
+					runs: 2,
+					raw_query_runs: 2,
+					exposed_query_runs: 2,
+					fanout_runs: 2,
+					total_queries: 2,
+				},
+			],
+			cjkPromptMap,
+			{ segmenter: fakeSegmenter },
+		);
+
+		expect(cjk.terms).toEqual([
+			{ term: "suv", count: 2 },
+			{ term: "家庭", count: 2 },
+			{ term: "推荐", count: 2 },
+			{ term: "新能源", count: 2 },
+		]);
+		expect(cjk.wordChanges.added).toEqual([{ word: "推荐", count: 2, share: 100, isStop: false }]);
+		expect(cjk.wordChanges.preserved.map((word) => word.word).sort()).toEqual(["suv", "家庭", "新能源"]);
+		expect(cjk.wordChanges.dropped).toEqual([]);
 	});
 });
 

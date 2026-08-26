@@ -1,7 +1,7 @@
-import React from "react";
-import { cn } from "@workspace/ui/lib/utils";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import { getModelMeta, KNOWN_MODELS } from "@workspace/lib/providers/models";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { cn } from "@workspace/ui/lib/utils";
+import React from "react";
 
 export type ProgressBarItem = {
 	/** The label to display */
@@ -55,6 +55,8 @@ export type ProgressBarChartProps = {
 	truncateLabels?: boolean;
 	/** Use flex layout to fill parent height and distribute items evenly */
 	fillHeight?: boolean;
+	/** Caller-controlled display formatting for counts. */
+	formatValue?: (value: number) => string;
 };
 
 export function ProgressBarChart({
@@ -70,6 +72,7 @@ export function ProgressBarChart({
 	className,
 	truncateLabels = true,
 	fillHeight = false,
+	formatValue = (value) => value.toLocaleString(),
 }: ProgressBarChartProps) {
 	// Calculate the total for percentage calculations
 	const total = React.useMemo(() => {
@@ -112,6 +115,23 @@ export function ProgressBarChart({
 				const color = getItemColor(item);
 				const isHighlighted = highlightLabel && item.label === highlightLabel;
 				const isClickable = !!item.onClick;
+				const labelClassName = cn(
+					"text-sm",
+					isHighlighted ? "font-bold" : "font-medium",
+					truncateLabels && "truncate",
+					isClickable ? "cursor-pointer hover:underline" : "cursor-default",
+				);
+				const label = item.onClick ? (
+					<button
+						type="button"
+						className={cn(labelClassName, "border-0 bg-transparent p-0 text-left")}
+						onClick={item.onClick}
+					>
+						{item.label}
+					</button>
+				) : (
+					<span className={labelClassName}>{item.label}</span>
+				);
 
 				return (
 					<div key={item.label} className="space-y-2">
@@ -119,38 +139,16 @@ export function ProgressBarChart({
 							<div className="flex items-center gap-1 min-w-0 flex-1">
 								{item.tooltip ? (
 									<Tooltip>
-										<TooltipTrigger asChild>
-											<span
-												className={cn(
-													"text-sm cursor-default",
-													isHighlighted ? "font-bold" : "font-medium",
-													truncateLabels && "truncate",
-													isClickable && "cursor-pointer hover:underline",
-												)}
-												onClick={item.onClick}
-											>
-												{item.label}
-											</span>
-										</TooltipTrigger>
+										<TooltipTrigger asChild>{label}</TooltipTrigger>
 										<TooltipContent className="max-w-xs text-xs font-normal">{item.tooltip}</TooltipContent>
 									</Tooltip>
 								) : (
-									<span
-										className={cn(
-											"text-sm",
-											isHighlighted ? "font-bold" : "font-medium",
-											truncateLabels && "truncate",
-											isClickable && "cursor-pointer hover:underline",
-										)}
-										onClick={item.onClick}
-									>
-										{item.label}
-									</span>
+									label
 								)}
 								{item.action}
 							</div>
 							<div className="flex items-center gap-2 ml-2 shrink-0">
-								<span className="text-sm">{item.count.toLocaleString()}</span>
+								<span className="text-sm">{formatValue(item.count)}</span>
 								{item.suffix}
 							</div>
 						</div>

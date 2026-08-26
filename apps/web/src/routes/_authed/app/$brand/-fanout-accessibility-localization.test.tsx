@@ -203,7 +203,7 @@ describe("fan-out InfoTip accessibility localization", () => {
 			expect(infoTipAccessibleNames(words)).toEqual([...expected.stats, expected.words]);
 			expect(textFromMarkup(fanout)).toContain(rawQuery);
 			expect(textFromMarkup(fanout)).toContain(rawPrompt);
-			expect(textFromMarkup(fanout)).toContain("Query Fan-Out");
+			expect(textFromMarkup(fanout)).toContain(locale === "zh-CN" ? "AI 检索脉络" : "Query Fan-Out");
 		});
 	}
 });

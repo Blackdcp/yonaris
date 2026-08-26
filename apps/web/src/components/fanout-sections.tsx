@@ -20,7 +20,7 @@ import { useI18n } from "@/i18n/provider";
 import {
 	type FanoutQueryStat,
 	type ModelFanoutStat,
-	normTok,
+	segmentQueryTextSlices,
 	type TermStat,
 	type WordChangeStat,
 	type WordChanges,
@@ -50,13 +50,13 @@ export function InfoTip({ children, label }: { children: React.ReactNode; label:
  * queries.
  */
 export function UnknownQueriesNote({ byModel }: { byModel: ModelFanoutStat[] }) {
-	const { t } = useI18n();
+	const { t, formatList } = useI18n();
 	const hidden = byModel.filter((m) => m.runs > 0 && m.totalQueries === 0);
 	if (hidden.length === 0) return null;
 	return (
 		<div className="text-muted-foreground text-xs">
 			{t("prompt.fanout.hiddenQueries", {
-				models: hidden.map((m) => getModelDisplayName(m.model)).join(", "),
+				models: formatList(hidden.map((m) => getModelDisplayName(m.model))),
 			})}
 		</div>
 	);
@@ -83,21 +83,24 @@ export function VariationLine({
 	modelCounts?: VariationModelCount[];
 }) {
 	const { t, formatNumber } = useI18n();
-	const seen = new Map<string, number>();
-	const segs = variation.query
-		.split(/\s+/)
-		.filter(Boolean)
-		.map((w) => {
-			const n = seen.get(w) ?? 0;
-			seen.set(w, n + 1);
-			return { text: w, bold: keywords.has(normTok(w)), key: `${w}:${n}` };
-		});
+	const slices = segmentQueryTextSlices(variation.query);
+	const seenSlices = new Map<string, number>();
+	const renderedSlices = slices.map((slice) => {
+		const occurrence = seenSlices.get(slice.text) ?? 0;
+		seenSlices.set(slice.text, occurrence + 1);
+		return { ...slice, key: `${slice.text}:${occurrence}` };
+	});
 	return (
 		<div className="flex items-baseline justify-between gap-4">
 			<div className="min-w-0 text-sm leading-6 break-words">
-				{segs.map((s) => (
-					<span key={s.key} className={s.bold ? "text-foreground font-semibold" : "text-muted-foreground"}>
-						{s.text}{" "}
+				{renderedSlices.map((slice) => (
+					<span
+						key={slice.key}
+						className={
+							slice.token && keywords.has(slice.token) ? "text-foreground font-semibold" : "text-muted-foreground"
+						}
+					>
+						{slice.text}
 					</span>
 				))}
 			</div>
@@ -164,7 +167,7 @@ const WORD_TAB_HELP: Record<WordTab, MessageId> = {
 };
 
 export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; wordChanges: WordChanges }) {
-	const { t } = useI18n();
+	const { t, formatNumber } = useI18n();
 	const [tab, setTab] = useState<WordTab>("added");
 	const [hideStop, setHideStop] = useState(true);
 
@@ -174,7 +177,11 @@ export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; w
 	const items = shown.slice(0, 18).map((w) => ({
 		label: w.word,
 		count: w.count,
-		suffix: <span className="text-muted-foreground tabular-nums text-xs">{w.share}%</span>,
+		suffix: (
+			<span className="text-muted-foreground tabular-nums text-xs">
+				{formatNumber(w.share / 100, { style: "percent", maximumFractionDigits: 0 })}
+			</span>
+		),
 	}));
 
 	return (
@@ -215,7 +222,7 @@ export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; w
 				<Separator />
 				<CardContent>
 					{items.length > 0 ? (
-						<ProgressBarChart items={items} defaultColor={FANOUT_ACCENT} />
+						<ProgressBarChart items={items} defaultColor={FANOUT_ACCENT} formatValue={formatNumber} />
 					) : (
 						<div className="text-muted-foreground py-6 text-center text-sm">
 							{t(hideStop ? "prompt.fanout.emptyWordsWithStop" : "prompt.fanout.emptyWords", {

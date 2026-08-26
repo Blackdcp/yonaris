@@ -536,6 +536,61 @@ export const customerCatalog = defineCatalog(
 		"opportunity.insufficient": "We need more tracking data before opportunities can be recommended.",
 		"opportunity.meta.description": "Review prioritized opportunities for this brand.",
 
+		"fanout.metaDescription":
+			"See the web searches AI engines run when answering your prompts, and how they rewrite your wording.",
+		"fanout.subtitle": "The web searches AI engines run when answering your prompts.",
+		"fanout.helper":
+			"When an AI engine with web search capabilities responds to a prompt, it may choose to make a number of web searches before creating its answer. These underlying web searches, or web queries, are only available for some engines.",
+		"fanout.error": "Couldn't load query fan-out right now. Reload the page to try again.",
+		"fanout.noSearchRuns":
+			"No runs with web search enabled for the selected filters. Fan-out appears once your prompts have been run by an engine with web search.",
+		"fanout.queriesNotExposed":
+			"The platform did not expose verifiable web queries for these prompt runs. Query availability is unknown; this is not evidence that no search occurred.",
+		"fanout.echoOnly.one":
+			"{count} prompt run exposed web queries, but it only repeated the original prompt; no fan-out rewrites were observed.",
+		"fanout.echoOnly.many":
+			"{count} prompt runs exposed web queries, but they only repeated the original prompt; no fan-out rewrites were observed.",
+		"fanout.echoOnlyUnknown.one": "{count} other run did not expose a query string.",
+		"fanout.echoOnlyUnknown.many": "{count} other runs did not expose a query string.",
+		"fanout.tabsLabel": "Query Fan-Out views",
+		"fanout.loading": "Loading Query Fan-Out…",
+		"fanout.stats.searchRuns": "Search Prompt Runs",
+		"fanout.stats.searchRunsHelp":
+			"How many times your prompts were run against engines configured with web search. An engine may still choose not to execute a search on a given run.",
+		"fanout.stats.unknownRuns": "Prompt Runs w/ Unknown Queries",
+		"fanout.stats.unknownRunsDetail":
+			"Search-enabled runs where the platform did not expose a usable query string. This is not evidence that no search occurred.",
+		"fanout.stats.exposedRuns": "Prompt Runs w/ Exposed Queries",
+		"fanout.stats.exposedRunsDetail":
+			"Prompt runs where the platform exposed at least one usable query string, including the original prompt.",
+		"fanout.stats.average": "Average Fan-Out",
+		"fanout.stats.averageHelp":
+			"Average rewritten fan-out queries per run that exposed at least one genuine query rewrite. Exact prompt echoes are excluded.",
+		"fanout.prompts.title": "Prompts",
+		"fanout.prompts.help":
+			"Each prompt's search paths: how many derived queries it generates and how many per prompt run that searched. Expand a prompt to see the searches, with your prompt's keywords emphasized.",
+		"fanout.prompts.description": "The web searches each prompt triggers.",
+		"fanout.prompts.searchPlaceholder": "Search prompts…",
+		"fanout.prompts.searchLabel": "Search prompts",
+		"fanout.prompts.promptColumn": "Prompt",
+		"fanout.prompts.averageColumn": "Avg/Prompt Run",
+		"fanout.prompts.expand": "Expand search paths for {prompt}",
+		"fanout.prompts.collapse": "Collapse search paths for {prompt}",
+		"fanout.prompts.noMatches": "No prompts match your search.",
+		"fanout.untitledPrompt": "(untitled prompt)",
+		"fanout.variation.one": "{count} derived query",
+		"fanout.variation.many": "{count} derived queries",
+		"fanout.topQueries.title": "Top Derived Queries",
+		"fanout.topQueries.help":
+			"The searches with the widest reach — sort by how many distinct prompts triggered them, or how many prompt runs issued them. Expand a query to see the prompts behind it.",
+		"fanout.topQueries.description": "The searches that recur across your prompts.",
+		"fanout.topQueries.promptRuns": "Prompt Runs",
+		"fanout.topQueries.expand": "Expand prompts for {query}",
+		"fanout.topQueries.collapse": "Collapse prompts for {query}",
+		"fanout.topQueries.promptRunsTitle": "Runs of this prompt that issued the search",
+		"fanout.topQueries.empty": "No derived queries for this period.",
+		"prompt.fanout.emptyTerms": "No terms for this period.",
+
 		"prompt.title": "Prompt",
 		"prompt.detailTitle": "Prompt Details",
 		"prompt.meta.description": "Review prompt evaluation history and evidence.",
@@ -1168,6 +1223,54 @@ export const customerCatalog = defineCatalog(
 		"opportunity.disclaimer": "内容由 AI 根据追踪的引用数据生成。请将建议作为起点，并结合自己的判断。",
 		"opportunity.insufficient": "需要更多追踪数据后才能推荐优化机会。",
 		"opportunity.meta.description": "查看此品牌的优先优化机会。",
+
+		"fanout.metaDescription": "查看 AI 为回答当前问题而展开的实际联网搜索词。",
+		"fanout.subtitle": "AI 引擎回答提示词时实际执行的联网搜索。",
+		"fanout.helper": "查看 AI 为回答当前问题而展开的实际联网搜索词。",
+		"fanout.error": "目前无法加载 AI 检索脉络，请重新加载页面后重试。",
+		"fanout.noSearchRuns":
+			"所选筛选条件下没有启用联网搜索的运行记录。提示词由支持联网搜索的 AI 引擎运行后，检索路径会显示在这里。",
+		"fanout.queriesNotExposed": "平台未公开可验证的衍生检索词。衍生检索词的可用性未知，这并不表示没有发生联网搜索。",
+		"fanout.echoOnly.one": "{count} 次提示词运行公开了衍生检索词，但仅重复了原提示词；未观察到检索路径改写。",
+		"fanout.echoOnly.many": "{count} 次提示词运行公开了衍生检索词，但仅重复了原提示词；未观察到检索路径改写。",
+		"fanout.echoOnlyUnknown.one": "另有 {count} 次运行未公开衍生检索词。",
+		"fanout.echoOnlyUnknown.many": "另有 {count} 次运行未公开衍生检索词。",
+		"fanout.tabsLabel": "AI 检索脉络视图",
+		"fanout.loading": "正在加载 AI 检索脉络…",
+		"fanout.stats.searchRuns": "联网搜索提示词运行次数",
+		"fanout.stats.searchRunsHelp": "提示词由已配置联网搜索的引擎运行的次数。引擎在某次运行中仍可能选择不执行搜索。",
+		"fanout.stats.unknownRuns": "未公开衍生检索词的提示词运行次数",
+		"fanout.stats.unknownRunsDetail":
+			"已启用联网搜索，但平台未公开可用衍生检索词的运行次数。这并不表示没有发生联网搜索。",
+		"fanout.stats.exposedRuns": "已公开衍生检索词的提示词运行次数",
+		"fanout.stats.exposedRunsDetail": "平台至少公开了一个可用衍生检索词（包括原提示词）的提示词运行。",
+		"fanout.stats.average": "平均检索路径数",
+		"fanout.stats.averageHelp":
+			"每次至少公开一个实际改写的衍生检索词的运行所产生的平均衍生检索词数，不包括原提示词的完全重复。",
+		"fanout.prompts.title": "提示词",
+		"fanout.prompts.help":
+			"每个提示词的检索路径：它生成了多少衍生检索词，以及每次联网搜索运行平均生成多少。展开提示词可查看衍生检索词，其中会突出显示原提示词中的关键词。",
+		"fanout.prompts.description": "每个提示词触发的实际联网搜索。",
+		"fanout.prompts.searchPlaceholder": "搜索提示词…",
+		"fanout.prompts.searchLabel": "搜索提示词",
+		"fanout.prompts.promptColumn": "提示词",
+		"fanout.prompts.averageColumn": "平均每次提示词运行",
+		"fanout.prompts.expand": "展开 {prompt} 的检索路径",
+		"fanout.prompts.collapse": "收起 {prompt} 的检索路径",
+		"fanout.prompts.noMatches": "没有提示词符合搜索条件。",
+		"fanout.untitledPrompt": "（未命名提示词）",
+		"fanout.variation.one": "{count} 个衍生检索词",
+		"fanout.variation.many": "{count} 个衍生检索词",
+		"fanout.topQueries.title": "热门衍生检索词",
+		"fanout.topQueries.help":
+			"覆盖范围最广的衍生检索词，可按触发它们的不同提示词数量或发出它们的提示词运行次数排序。展开衍生检索词可查看其背后的提示词。",
+		"fanout.topQueries.description": "在多个提示词中重复出现的衍生检索词。",
+		"fanout.topQueries.promptRuns": "提示词运行次数",
+		"fanout.topQueries.expand": "展开 {query} 对应的提示词",
+		"fanout.topQueries.collapse": "收起 {query} 对应的提示词",
+		"fanout.topQueries.promptRunsTitle": "发出此衍生检索词的提示词运行次数",
+		"fanout.topQueries.empty": "此期间没有衍生检索词。",
+		"prompt.fanout.emptyTerms": "此期间没有可分析的词语。",
 
 		"prompt.title": "提示词",
 		"prompt.detailTitle": "提示词详情",

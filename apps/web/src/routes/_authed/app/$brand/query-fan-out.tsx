@@ -29,6 +29,7 @@ import { type BrandFilterSearch, useListFilters } from "@/hooks/use-list-filters
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
 import { useScopeModels } from "@/hooks/use-scope-models";
+import { translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
 	describeFanoutAvailability,
@@ -52,13 +53,13 @@ export const Route = createFileRoute("/_authed/app/$brand/query-fan-out")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Query Fan-Out", { appName, brandName }) },
+				{ title: buildTitle(translate(uiLanguage, "prompt.tab.webQueries"), { appName, brandName }) },
 				{
 					name: "description",
-					content:
-						"See the web searches AI engines run when answering your prompts, and how they rewrite your wording.",
+					content: translate(uiLanguage, "fanout.metaDescription"),
 				},
 			],
 		};
@@ -71,6 +72,7 @@ function QueryFanoutPage() {
 	const { scopeId, isScopeResolving, model, lookback, tags } = useListFilters();
 	const tab = Route.useSearch({ select: (s) => s.tab ?? "fanout" });
 	const navigate = Route.useNavigate();
+	const { t, formatNumber } = useI18n();
 	const setTab = (next: FanoutTab) =>
 		navigate({
 			search: (prev: FanoutRouteSearch) => ({ ...prev, tab: next === "fanout" ? undefined : next }),
@@ -94,25 +96,17 @@ function QueryFanoutPage() {
 	});
 	const availability = data ? describeFanoutAvailability(data) : null;
 
-	const infoContent = (
-		<p>
-			When an AI engine with web search capabilities responds to a prompt, it may choose to make a number of web
-			searches before creating its answer. These underlying web searches, or web queries, are only available for some
-			engines.
-		</p>
-	);
+	const infoContent = <p>{t("fanout.helper")}</p>;
 
 	let content: React.ReactNode;
 	if (isScopeResolving || (isLoading && !data)) {
 		content = <LoadingState />;
 	} else if (isError && !data) {
-		content = <EmptyState message="Couldn't load query fan-out right now. Reload the page to try again." />;
+		content = <EmptyState message={t("fanout.error")} />;
 	} else if (!data || availability?.kind === "no_search_enabled_runs") {
 		// totalRuns counts only web-search-enabled runs — a brand whose models all
 		// run without web search lands here even with plenty of runs.
-		content = (
-			<EmptyState message="No runs with web search enabled for the selected filters. Fan-out appears once your prompts have been run by an engine with web search." />
-		);
+		content = <EmptyState message={t("fanout.noSearchRuns")} />;
 	} else if (availability?.kind === "queries_not_exposed") {
 		// Runs happened but none exposed fan-out — still show the KPIs (run counts)
 		// above the explanation rather than hiding everything.
@@ -120,7 +114,7 @@ function QueryFanoutPage() {
 			<TooltipProvider delayDuration={150}>
 				<div className="space-y-6">
 					<StatRow data={data} />
-					<EmptyState message="The platform did not expose verifiable web queries for these prompt runs. Query availability is unknown; this is not evidence that no search occurred." />
+					<EmptyState message={t("fanout.queriesNotExposed")} />
 				</div>
 			</TooltipProvider>
 		);
@@ -130,7 +124,15 @@ function QueryFanoutPage() {
 				<div className="space-y-6">
 					<StatRow data={data} />
 					<EmptyState
-						message={`${availability.exposedRuns} prompt runs exposed web queries, but they only repeated the original prompt; no fan-out rewrites were observed.${availability.unknownRuns > 0 ? ` ${availability.unknownRuns} other runs did not expose a query string.` : ""}`}
+						message={`${t(availability.exposedRuns === 1 ? "fanout.echoOnly.one" : "fanout.echoOnly.many", {
+							count: formatNumber(availability.exposedRuns),
+						})}${
+							availability.unknownRuns > 0
+								? ` ${t(availability.unknownRuns === 1 ? "fanout.echoOnlyUnknown.one" : "fanout.echoOnlyUnknown.many", {
+										count: formatNumber(availability.unknownRuns),
+									})}`
+								: ""
+						}`}
 					/>
 				</div>
 			</TooltipProvider>
@@ -141,10 +143,10 @@ function QueryFanoutPage() {
 				<div className="space-y-6">
 					<StatRow data={data} />
 					<Tabs value={tab} onValueChange={(v) => setTab(v as FanoutTab)} className="gap-4">
-						<TabsList>
-							<TabsTrigger value="fanout">Prompt Fan-Out</TabsTrigger>
-							<TabsTrigger value="top-queries">Top Queries</TabsTrigger>
-							<TabsTrigger value="words">Query Words</TabsTrigger>
+						<TabsList aria-label={t("fanout.tabsLabel")}>
+							<TabsTrigger value="fanout">{t("prompt.webQueries.fanout")}</TabsTrigger>
+							<TabsTrigger value="top-queries">{t("fanout.topQueries.title")}</TabsTrigger>
+							<TabsTrigger value="words">{t("prompt.webQueries.words")}</TabsTrigger>
 						</TabsList>
 						<TabsContent value="fanout">
 							<Prompts prompts={data.byPrompt} brandId={brandId} />
@@ -162,11 +164,7 @@ function QueryFanoutPage() {
 	}
 
 	return (
-		<PageHeader
-			title="Query Fan-Out"
-			subtitle="The web searches AI engines run when answering your prompts."
-			infoContent={infoContent}
-		>
+		<PageHeader title={t("prompt.tab.webQueries")} subtitle={t("fanout.subtitle")} infoContent={infoContent}>
 			<FilterSection>
 				<FilterBar
 					availableTags={availableTags}
@@ -213,15 +211,16 @@ function StatCard({
 }
 
 function RunsTooltip({ breakdown }: { breakdown: FanoutData["byModel"] }) {
+	const { t, formatNumber } = useI18n();
 	return (
 		<>
-			<p>Prompt runs where the platform exposed at least one usable query string, including the original prompt.</p>
+			<p>{t("fanout.stats.exposedRunsDetail")}</p>
 			{breakdown.length > 0 && (
 				<div className="border-border/60 mt-2 space-y-0.5 border-t pt-2">
 					{breakdown.map((m) => (
 						<div key={m.model} className="flex items-center justify-between gap-3">
 							<span>{getModelDisplayName(m.model)}</span>
-							<span className="tabular-nums">{m.exposedQueryRuns.toLocaleString()}</span>
+							<span className="tabular-nums">{formatNumber(m.exposedQueryRuns)}</span>
 						</div>
 					))}
 				</div>
@@ -231,22 +230,20 @@ function RunsTooltip({ breakdown }: { breakdown: FanoutData["byModel"] }) {
 }
 
 function UnknownRunsTooltip({ byModel }: { byModel: FanoutData["byModel"] }) {
+	const { t, formatNumber } = useI18n();
 	const rows = byModel
 		.map((m) => ({ model: m.model, unknown: m.runs - m.exposedQueryRuns }))
 		.filter((m) => m.unknown > 0)
 		.sort((a, b) => b.unknown - a.unknown);
 	return (
 		<>
-			<p>
-				Search-enabled runs where the platform did not expose a usable query string. This is not evidence that no search
-				occurred.
-			</p>
+			<p>{t("fanout.stats.unknownRunsDetail")}</p>
 			{rows.length > 0 && (
 				<div className="border-border/60 mt-2 space-y-0.5 border-t pt-2">
 					{rows.map((m) => (
 						<div key={m.model} className="flex items-center justify-between gap-3">
 							<span>{getModelDisplayName(m.model)}</span>
-							<span className="tabular-nums">{m.unknown.toLocaleString()}</span>
+							<span className="tabular-nums">{formatNumber(m.unknown)}</span>
 						</div>
 					))}
 				</div>
@@ -256,7 +253,7 @@ function UnknownRunsTooltip({ byModel }: { byModel: FanoutData["byModel"] }) {
 }
 
 function StatRow({ data }: { data: FanoutData }) {
-	const { t } = useI18n();
+	const { t, formatNumber } = useI18n();
 	const exposure = summarizeFanoutRunExposure(data);
 	const breakdown = data.byModel
 		.filter((m) => m.exposedQueryRuns > 0)
@@ -264,27 +261,27 @@ function StatRow({ data }: { data: FanoutData }) {
 	return (
 		<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<StatCard
-				label="Search Prompt Runs"
-				value={data.totalRuns.toLocaleString()}
-				tip="How many times your prompts were run against engines configured with web search. An engine may still choose not to execute a search on a given run."
+				label={t("fanout.stats.searchRuns")}
+				value={formatNumber(data.totalRuns)}
+				tip={t("fanout.stats.searchRunsHelp")}
 				tipLabel={t("prompt.fanout.accessibility.searchRuns")}
 			/>
 			<StatCard
-				label="Prompt Runs w/ Unknown Queries"
-				value={exposure.unknownRuns.toLocaleString()}
+				label={t("fanout.stats.unknownRuns")}
+				value={formatNumber(exposure.unknownRuns)}
 				tip={<UnknownRunsTooltip byModel={data.byModel} />}
 				tipLabel={t("prompt.fanout.accessibility.unknownRuns")}
 			/>
 			<StatCard
-				label="Prompt Runs w/ Exposed Queries"
-				value={exposure.exposedRuns.toLocaleString()}
+				label={t("fanout.stats.exposedRuns")}
+				value={formatNumber(exposure.exposedRuns)}
 				tip={<RunsTooltip breakdown={breakdown} />}
 				tipLabel={t("prompt.fanout.accessibility.exposedRuns")}
 			/>
 			<StatCard
-				label="Average Fan-Out"
-				value={data.avgPerExecution.toLocaleString()}
-				tip="Average rewritten fan-out queries per run that exposed at least one genuine query rewrite. Exact prompt echoes are excluded."
+				label={t("fanout.stats.average")}
+				value={formatNumber(data.avgPerExecution)}
+				tip={t("fanout.stats.averageHelp")}
 				tipLabel={t("prompt.fanout.accessibility.average")}
 			/>
 		</div>
@@ -292,8 +289,9 @@ function StatRow({ data }: { data: FanoutData }) {
 }
 
 function LoadingState() {
+	const { t } = useI18n();
 	return (
-		<div className="space-y-6">
+		<div className="space-y-6" role="status" aria-busy="true" aria-label={t("fanout.loading")}>
 			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 				{["a", "b", "c", "d"].map((k) => (
 					<Card key={k} className="py-4">
@@ -362,7 +360,7 @@ function SortHead<K extends string>({
 const GRID = "grid grid-cols-[1.25rem_1fr_4.5rem_7rem] items-center gap-3";
 
 function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: string }) {
-	const { t } = useI18n();
+	const { t, formatNumber } = useI18n();
 	const [expanded, setExpanded] = useState<Set<string>>(
 		() => new Set(prompts.length === 1 ? [prompts[0].promptId] : []),
 	);
@@ -393,20 +391,18 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 				<div className="flex items-center justify-between gap-4">
 					<div>
 						<CardTitle className="flex items-center gap-1.5 text-base">
-							Prompts
-							<InfoTip label={t("prompt.fanout.accessibility.prompts")}>
-								Each prompt's fan-out: how many searches it generates (Queries) and how many per run that searched
-								(Avg/Prompt Run). Expand a prompt to see the searches, with your prompt's keywords bolded.
-							</InfoTip>
+							{t("fanout.prompts.title")}
+							<InfoTip label={t("prompt.fanout.accessibility.prompts")}>{t("fanout.prompts.help")}</InfoTip>
 						</CardTitle>
-						<CardDescription>The web searches each prompt triggers.</CardDescription>
+						<CardDescription>{t("fanout.prompts.description")}</CardDescription>
 					</div>
 					<div className="relative w-64 shrink-0">
 						<IconSearch className="text-muted-foreground pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2" />
 						<Input
 							value={search}
 							onChange={(e) => setSearch(e.target.value)}
-							placeholder="Search prompts..."
+							placeholder={t("fanout.prompts.searchPlaceholder")}
+							aria-label={t("fanout.prompts.searchLabel")}
 							className="h-8 pl-8 text-sm"
 						/>
 					</div>
@@ -415,12 +411,12 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 			<CardContent>
 				<div className={cn(GRID, "text-muted-foreground/80 border-b py-2 text-[11px] font-medium")}>
 					<span />
-					<span className="uppercase tracking-wide">Prompt</span>
+					<span className="uppercase tracking-wide">{t("fanout.prompts.promptColumn")}</span>
 					<span className="text-right">
-						<SortHead k="queries" label="Queries" sort={sort} setSort={setSort} />
+						<SortHead k="queries" label={t("prompt.webQueries.label")} sort={sort} setSort={setSort} />
 					</span>
 					<span className="text-right">
-						<SortHead k="avg" label="Avg/Prompt Run" sort={sort} setSort={setSort} />
+						<SortHead k="avg" label={t("fanout.prompts.averageColumn")} sort={sort} setSort={setSort} />
 					</span>
 				</div>
 				<div className="divide-border divide-y">
@@ -434,18 +430,25 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 									onClick={() => toggle(p.promptId)}
 									className={cn(GRID, "hover:bg-muted/50 w-full cursor-pointer rounded-sm py-2 text-left")}
 									aria-expanded={isOpen}
+									aria-label={t(isOpen ? "fanout.prompts.collapse" : "fanout.prompts.expand", {
+										prompt: p.promptValue || t("fanout.untitledPrompt"),
+									})}
 								>
 									<span className="text-muted-foreground">
 										{isOpen ? <IconChevronDown className="size-4" /> : <IconChevronRight className="size-4" />}
 									</span>
 									<span className="min-w-0">
 										<span className="block truncate text-sm font-medium" title={p.promptValue}>
-											{p.promptValue || "(untitled prompt)"}
+											{p.promptValue || t("fanout.untitledPrompt")}
 										</span>
-										<span className="text-muted-foreground text-xs">{p.uniqueQueries.toLocaleString()} variations</span>
+										<span className="text-muted-foreground text-xs">
+											{t(p.uniqueQueries === 1 ? "fanout.variation.one" : "fanout.variation.many", {
+												count: formatNumber(p.uniqueQueries),
+											})}
+										</span>
 									</span>
-									<span className="text-right text-sm tabular-nums">{p.totalQueries.toLocaleString()}</span>
-									<span className="text-right text-sm tabular-nums">{p.avgPerExecution.toLocaleString()}</span>
+									<span className="text-right text-sm tabular-nums">{formatNumber(p.totalQueries)}</span>
+									<span className="text-right text-sm tabular-nums">{formatNumber(p.avgPerExecution)}</span>
 								</button>
 								{isOpen && keywords && (
 									<div className="border-border mb-3 ml-8 mr-2 space-y-2 border-l pl-4">
@@ -454,7 +457,10 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 										))}
 										{p.uniqueQueries > p.variations.length && (
 											<div className="text-muted-foreground text-xs">
-												Top {p.variations.length} of {p.uniqueQueries.toLocaleString()} variations shown
+												{t("prompt.fanout.topShown", {
+													shown: formatNumber(p.variations.length),
+													total: formatNumber(p.uniqueQueries),
+												})}
 											</div>
 										)}
 										<div className="pt-1">
@@ -471,7 +477,7 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 						);
 					})}
 					{rows.length === 0 && (
-						<div className="text-muted-foreground py-6 text-center text-sm">No prompts match your search.</div>
+						<div className="text-muted-foreground py-6 text-center text-sm">{t("fanout.prompts.noMatches")}</div>
 					)}
 				</div>
 			</CardContent>
@@ -488,7 +494,7 @@ type TopSort = "prompts" | "runs";
 const TOP_GRID = "grid grid-cols-[1.25rem_1fr_5rem_5.5rem] items-center gap-3";
 
 function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
-	const { t } = useI18n();
+	const { t, formatNumber } = useI18n();
 	const [sort, setSort] = useState<TopSort>("prompts");
 	const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -506,23 +512,20 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 		<Card className="gap-4">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5 text-base">
-					Top Queries
-					<InfoTip label={t("prompt.fanout.accessibility.topQueries")}>
-						The searches with the widest reach — sort by how many distinct prompts triggered them, or how many prompt
-						runs issued them. Expand a query to see the prompts behind it.
-					</InfoTip>
+					{t("fanout.topQueries.title")}
+					<InfoTip label={t("prompt.fanout.accessibility.topQueries")}>{t("fanout.topQueries.help")}</InfoTip>
 				</CardTitle>
-				<CardDescription>The searches that recur across your prompts.</CardDescription>
+				<CardDescription>{t("fanout.topQueries.description")}</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div className={cn(TOP_GRID, "text-muted-foreground/80 border-b py-2 text-[11px] font-medium")}>
 					<span />
-					<span className="uppercase tracking-wide">Query</span>
+					<span className="uppercase tracking-wide">{t("prompt.webQueries.label")}</span>
 					<span className="text-right">
-						<SortHead k="prompts" label="Prompts" sort={sort} setSort={setSort} />
+						<SortHead k="prompts" label={t("fanout.prompts.title")} sort={sort} setSort={setSort} />
 					</span>
 					<span className="text-right">
-						<SortHead k="runs" label="Prompt Runs" sort={sort} setSort={setSort} />
+						<SortHead k="runs" label={t("fanout.topQueries.promptRuns")} sort={sort} setSort={setSort} />
 					</span>
 				</div>
 				<div className="divide-border divide-y">
@@ -535,6 +538,9 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 									onClick={() => toggle(q.query)}
 									className={cn(TOP_GRID, "hover:bg-muted/50 w-full cursor-pointer rounded-sm py-2 text-left")}
 									aria-expanded={isOpen}
+									aria-label={t(isOpen ? "fanout.topQueries.collapse" : "fanout.topQueries.expand", {
+										query: q.query,
+									})}
 								>
 									<span className="text-muted-foreground">
 										{isOpen ? <IconChevronDown className="size-4" /> : <IconChevronRight className="size-4" />}
@@ -542,8 +548,8 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 									<span className="min-w-0 truncate text-sm" title={q.query}>
 										{q.query}
 									</span>
-									<span className="text-right text-sm tabular-nums">{q.prompts.toLocaleString()}</span>
-									<span className="text-right text-sm tabular-nums">{q.runs.toLocaleString()}</span>
+									<span className="text-right text-sm tabular-nums">{formatNumber(q.prompts)}</span>
+									<span className="text-right text-sm tabular-nums">{formatNumber(q.runs)}</span>
 								</button>
 								{isOpen && (
 									<div className="border-border mb-3 ml-8 mr-2 space-y-1.5 border-l pl-4">
@@ -556,13 +562,13 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 													className="min-w-0 truncate text-sm hover:underline"
 													title={p.promptValue}
 												>
-													{p.promptValue || "(untitled prompt)"}
+													{p.promptValue || t("fanout.untitledPrompt")}
 												</Link>
 												<span
 													className="text-muted-foreground shrink-0 text-sm tabular-nums"
-													title="Runs of this prompt that issued the search"
+													title={t("fanout.topQueries.promptRunsTitle")}
 												>
-													{p.runs.toLocaleString()}×
+													{formatNumber(p.runs)}×
 												</span>
 											</div>
 										))}
@@ -572,7 +578,7 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 						);
 					})}
 					{rows.length === 0 && (
-						<div className="text-muted-foreground py-6 text-center text-sm">No queries for this period.</div>
+						<div className="text-muted-foreground py-6 text-center text-sm">{t("fanout.topQueries.empty")}</div>
 					)}
 				</div>
 			</CardContent>

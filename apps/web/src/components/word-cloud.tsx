@@ -6,6 +6,7 @@
  */
 import { cn } from "@workspace/ui/lib/utils";
 import { YONARIS_WORD_CLOUD_COLORS } from "@/brand/chart-theme";
+import { useI18n } from "@/i18n/provider";
 
 export interface WordCloudTerm {
 	term: string;
@@ -27,11 +28,12 @@ export function WordCloud({
 	maxItems?: number;
 	className?: string;
 }) {
+	const { t, formatNumber } = useI18n();
 	// Sort here rather than relying on the caller: slicing the top terms and the
 	// center-weighted ordering below both assume descending counts.
 	const items = [...terms].sort((a, b) => b.count - a.count).slice(0, maxItems);
 	if (items.length === 0) {
-		return <div className="text-muted-foreground py-6 text-center text-sm">No terms for this period.</div>;
+		return <div className="text-muted-foreground py-6 text-center text-sm">{t("prompt.fanout.emptyTerms")}</div>;
 	}
 
 	const counts = items.map((i) => i.count);
@@ -57,7 +59,7 @@ export function WordCloud({
 				return (
 					<span
 						key={it.term}
-						title={`${it.term} · ${it.count.toLocaleString()}`}
+						title={`${it.term} · ${formatNumber(it.count)}`}
 						className="font-semibold"
 						style={{ fontSize: Math.round(MIN_PX + t * (MAX_PX - MIN_PX)), color, opacity: 0.62 + t * 0.38 }}
 					>

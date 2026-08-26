@@ -326,6 +326,77 @@ export function isStopword(word: string): boolean {
 /** Normalize a display word for keyword matching: lowercase, alphanumerics only. */
 export const normTok = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+export interface QueryTextSegmenter {
+	segment(input: string): Iterable<{ segment: string; isWordLike?: boolean }>;
+}
+
+export interface QueryTextSlice {
+	/** Exact source slice. Concatenating every slice recreates the input byte-for-byte. */
+	text: string;
+	/** Normalized analysis token when the slice is a supported word. */
+	token?: string;
+}
+
+type IntlWithSegmenter = typeof Intl & {
+	Segmenter?: new (locale: string, options: { granularity: "word" }) => QueryTextSegmenter;
+};
+
+let runtimeHanSegmenter: QueryTextSegmenter | null | undefined;
+
+function getRuntimeHanSegmenter(): QueryTextSegmenter | null {
+	if (runtimeHanSegmenter !== undefined) return runtimeHanSegmenter;
+	const Segmenter = (Intl as IntlWithSegmenter).Segmenter;
+	runtimeHanSegmenter = Segmenter ? new Segmenter("zh-CN", { granularity: "word" }) : null;
+	return runtimeHanSegmenter;
+}
+
+const QUERY_TEXT_RUN = /\p{Script=Han}+|[\p{Script=Latin}\p{Number}]+/gu;
+const HAN_RUN = /^\p{Script=Han}+$/u;
+
+function segmentHanRun(run: string, segmenter: QueryTextSegmenter | null): QueryTextSlice[] {
+	if (segmenter) {
+		const segmented = [...segmenter.segment(run)]
+			.filter(({ segment }) => segment.length > 0)
+			.map(({ segment, isWordLike }) => ({ text: segment, token: isWordLike === false ? undefined : segment }));
+		if (segmented.map(({ text }) => text).join("") === run) return segmented;
+	}
+
+	return Array.from(run, (text) => ({ text, token: text }));
+}
+
+/**
+ * Splits analysis words while retaining every raw separator and code point.
+ * Passing `null` selects the deterministic Han-code-point fallback; omitting
+ * the dependency lazily uses the runtime's Chinese word segmenter when present.
+ */
+export function segmentQueryTextSlices(text: string, segmenter?: QueryTextSegmenter | null): QueryTextSlice[] {
+	const resolvedSegmenter = segmenter === undefined ? getRuntimeHanSegmenter() : segmenter;
+	const slices: QueryTextSlice[] = [];
+	let cursor = 0;
+
+	for (const match of text.matchAll(QUERY_TEXT_RUN)) {
+		const start = match.index;
+		if (start > cursor) slices.push({ text: text.slice(cursor, start) });
+
+		const run = match[0];
+		if (HAN_RUN.test(run)) {
+			slices.push(...segmentHanRun(run, resolvedSegmenter));
+		} else {
+			const token = run.toLowerCase();
+			slices.push({ text: run, token: token.length >= 2 ? token : undefined });
+		}
+		cursor = start + run.length;
+	}
+
+	if (cursor < text.length) slices.push({ text: text.slice(cursor) });
+	return slices;
+}
+
+/** Locale-independent analysis tokens in source order. Display text is never normalized. */
+export function tokenizeQueryText(text: string, segmenter?: QueryTextSegmenter | null): string[] {
+	return segmentQueryTextSlices(text, segmenter).flatMap(({ token }) => (token ? [token] : []));
+}
+
 /**
  * Non-stop-word tokens from the prompt — the page bolds these in each fan-out
  * query. A possessive contributes its base form too ("Acme's" yields "acmes"
@@ -333,7 +404,7 @@ export const normTok = (w: string) => w.toLowerCase().replace(/[^a-z0-9]/g, "");
  * not match the prompt's possessive token.
  */
 export function promptKeywords(promptValue: string): Set<string> {
-	const out = new Set<string>();
+	const out = new Set(tokenizeQueryText(promptValue).filter((token) => !isStopword(token)));
 	for (const raw of promptValue.split(/\s+/)) {
 		for (const form of [raw, raw.replace(/['’]s$/i, "")]) {
 			const tok = normTok(form);
@@ -349,6 +420,7 @@ export function promptKeywords(promptValue: string): Set<string> {
 
 const norm = (s: string) => s.trim().toLowerCase();
 const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 100) : 0);
+const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
  * Sentinel some providers store in `web_queries` when a web search happened but
@@ -359,11 +431,6 @@ const pct = (num: number, den: number) => (den > 0 ? Math.round((num / den) * 10
  * provider implementations write, so the two sides can't drift.
  */
 export const UNAVAILABLE_SENTINEL = WEB_QUERIES_UNAVAILABLE;
-
-/** Lowercase word tokens; keeps alphanumerics (so "2026", "vs", "g2" survive), drops 1-char noise. */
-function tokenize(s: string): string[] {
-	return (s.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((t) => t.length >= 2);
-}
 
 type Tally = { count: number; brand: number };
 function bump(map: Map<string, Tally>, key: string, count: number, brand: number) {
@@ -379,7 +446,7 @@ function bump(map: Map<string, Tally>, key: string, count: number, brand: number
 function toQueryStats(map: Map<string, Tally>, limit: number): FanoutQueryStat[] {
 	return [...map.entries()]
 		.map(([query, t]) => ({ query, count: t.count, brandMentionRate: pct(t.brand, t.count) }))
-		.sort((a, b) => b.count - a.count || a.query.localeCompare(b.query))
+		.sort((a, b) => b.count - a.count || compareText(a.query, b.query))
 		.slice(0, limit);
 }
 
@@ -396,9 +463,11 @@ export function computeFanoutAnalysis(
 		promptRuns?: Map<string, number>;
 		/** Raise/lower the list caps (e.g. effectively uncapped for a single prompt). */
 		limits?: FanoutLimitOverrides;
+		/** Injectable for deterministic CJK analysis tests; omitted in production. */
+		segmenter?: QueryTextSegmenter | null;
 	} = {},
 ): FanoutAnalysis {
-	const { promptRuns } = opts;
+	const { promptRuns, segmenter } = opts;
 	const L = { ...LIMITS, ...opts.limits };
 
 	const overall = new Map<string, Tally>();
@@ -419,7 +488,7 @@ export function computeFanoutAnalysis(
 	const promptTokensFor = (promptId: string, promptValue: string): Set<string> => {
 		let set = promptTokensByPrompt.get(promptId);
 		if (!set) {
-			set = new Set(tokenize(promptValue));
+			set = new Set(tokenizeQueryText(promptValue, segmenter));
 			promptTokensByPrompt.set(promptId, set);
 		}
 		return set;
@@ -453,7 +522,7 @@ export function computeFanoutAnalysis(
 		bump(pp.queries, query, row.count, row.brand_mentions);
 
 		// Term cloud — unigram frequency across fan-out queries, weighted by count.
-		for (const tok of tokenize(query)) {
+		for (const tok of tokenizeQueryText(query, segmenter)) {
 			if (STOPWORDS.has(tok)) continue;
 			terms.set(tok, (terms.get(tok) ?? 0) + row.count);
 		}
@@ -461,7 +530,7 @@ export function computeFanoutAnalysis(
 		// Word transformations — how the prompt's wording changes in this query.
 		// Each fan-out query votes once per distinct token (weighted by count).
 		const promptTokens = promptTokensFor(row.prompt_id, promptValue);
-		const queryTokens = new Set(tokenize(query));
+		const queryTokens = new Set(tokenizeQueryText(query, segmenter));
 		for (const tok of queryTokens) {
 			if (!promptTokens.has(tok)) added.set(tok, (added.get(tok) ?? 0) + row.count);
 		}
@@ -477,13 +546,13 @@ export function computeFanoutAnalysis(
 
 	const termStats: TermStat[] = [...terms.entries()]
 		.map(([term, count]) => ({ term, count }))
-		.sort((a, b) => b.count - a.count || a.term.localeCompare(b.term))
+		.sort((a, b) => b.count - a.count || compareText(a.term, b.term))
 		.slice(0, L.terms);
 
 	const toWordChanges = (map: Map<string, number>): WordChangeStat[] =>
 		[...map.entries()]
 			.map(([word, count]) => ({ word, count, share: pct(count, totalQueries), isStop: STOPWORDS.has(word) }))
-			.sort((a, b) => b.count - a.count || a.word.localeCompare(b.word))
+			.sort((a, b) => b.count - a.count || compareText(a.word, b.word))
 			.slice(0, L.wordChanges);
 	const wordChanges: WordChanges = {
 		added: toWordChanges(added),
@@ -529,14 +598,14 @@ export function computeFanoutAnalysis(
 		const per = promptsPerQuery.get(query) ?? new Map<string, number>();
 		const promptRefs: QueryPromptRef[] = [...per.entries()]
 			.map(([promptId, runs]) => ({ promptId, promptValue: promptValueMap.get(promptId) ?? "", runs }))
-			.sort((a, b) => b.runs - a.runs || a.promptValue.localeCompare(b.promptValue));
+			.sort((a, b) => b.runs - a.runs || compareText(a.promptValue, b.promptValue));
 		return { query, prompts: per.size, runs: t.count, promptRefs };
 	});
 	const topByPrompts = [...breadthStats]
-		.sort((a, b) => b.prompts - a.prompts || b.runs - a.runs || a.query.localeCompare(b.query))
+		.sort((a, b) => b.prompts - a.prompts || b.runs - a.runs || compareText(a.query, b.query))
 		.slice(0, L.breadth);
 	const topByRuns = [...breadthStats]
-		.sort((a, b) => b.runs - a.runs || b.prompts - a.prompts || a.query.localeCompare(b.query))
+		.sort((a, b) => b.runs - a.runs || b.prompts - a.prompts || compareText(a.query, b.query))
 		.slice(0, L.breadth);
 
 	const totalRuns = modelTotals.reduce((s, m) => s + m.runs, 0);
