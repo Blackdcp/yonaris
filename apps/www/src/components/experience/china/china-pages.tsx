@@ -1,474 +1,303 @@
-import {
-	CHINA_COPY,
-	CHINA_DIAGNOSTIC_OUTPUTS,
-	CHINA_PRODUCT_STAGES,
-	CHINA_SITUATIONS,
-} from "@/content/experience/china-copy";
+import type { ReactNode } from "react";
+import { CHINA_COPY } from "@/content/experience/china-copy";
+import type { HumanPageKey } from "@/content/experience/types";
 import { LeadForm } from "../shared/lead-form";
-import { DeliveryTruth, ManagedReviewTrust, PublicRecordTrust } from "../shared/public-trust";
 import {
-	AiAnswerFlow,
-	BrandGapConsole,
-	CompanyNetwork,
-	ConsultationBrief,
-	GlobalMarketBridge,
-	PrivacyPath,
-	ServiceRoute,
+	AnxietySelector,
+	BreakdownReplay,
+	CompanyReadingScene,
+	HomeReadingScene,
+	MarketConditionsRecord,
+	SystemRelationshipMap,
 } from "./china-scenes";
 import { ChinaShell } from "./china-shell";
-import "../../../styles/experience/china.css";
+
+function ActionLink({ href, children }: { href: string; children: ReactNode }) {
+	return (
+		<a className="site-06-action" href={href}>
+			{children}
+		</a>
+	);
+}
+
+function Photo({ src, alt, credit }: { src: string; alt: string; credit: string }) {
+	return (
+		<figure className="site-06-hero__media">
+			<img src={src} alt={alt} />
+			<figcaption>{credit}</figcaption>
+		</figure>
+	);
+}
+
+function Hero({ pageKey, media }: { pageKey: HumanPageKey; media: ReactNode }) {
+	const copy = CHINA_COPY[pageKey];
+	return (
+		<section className="site-06-hero">
+			<div className="site-06-hero__copy">
+				<p className="site-06-kicker">{copy.eyebrow}</p>
+				<h1>{copy.title}</h1>
+				<p className="site-06-hero__lead">{copy.lead}</p>
+				<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
+			</div>
+			{media}
+		</section>
+	);
+}
+
+function ClosingSection({ pageKey }: { pageKey: HumanPageKey }) {
+	const copy = CHINA_COPY[pageKey];
+	return (
+		<section className="site-06-section site-06-close">
+			<h2>{copy.closingTitle}</h2>
+			<p className="site-06-hero__lead">{copy.closingBody}</p>
+			<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
+		</section>
+	);
+}
 
 export function ChinaHomePage() {
-	const copy = CHINA_COPY.home;
-	const [titleBeforePriority, titleAfterPriority] = copy.title.split("第一解释权");
 	return (
-		<ChinaShell pageKey="home" scene="ai-answer-flow">
-			<div className="china-home">
-				<section className="china-home-hero">
-					<div className="china-home-hero__copy">
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1 aria-label={copy.title}>
-							{titleBeforePriority}
-							<span className="china-home-title__lexeme">第一解释权</span>
-							{titleAfterPriority}
-						</h1>
-						<p>{copy.lead}</p>
-						<div className="china-actions">
-							<a className="china-action" href="/zh/diagnostic">
-								{copy.primaryCta} <span aria-hidden="true">↗</span>
-							</a>
-							<a className="china-text-link" href="/zh/product">
-								先看产品怎么工作 <span aria-hidden="true">→</span>
-							</a>
-						</div>
-						<div className="china-home-hero__shift" role="img" aria-label="客户决策方式变化">
-							<div className="china-home-hero__shift-row">
-								<span>客户的新入口</span>
-								<strong>先问 AI → 形成判断 → 缩小选择</strong>
-							</div>
-							<i aria-hidden="true">↓</i>
-							<div className="china-home-hero__shift-row">
-								<span>品牌要核对</span>
-								<strong>有没有出现 → 卖点准不准 → 竞争位置怎样</strong>
-							</div>
-						</div>
-					</div>
-					<AiAnswerFlow />
-				</section>
+		<ChinaShell pageKey="home">
+			<Hero
+				pageKey="home"
+				media={
+					<Photo
+						src="/brand/site-06/business-walk.jpg"
+						alt="两位商务人士在现代办公园区交流"
+						credit="Photo: Mikhail Nilov / Pexels"
+					/>
+				}
+			/>
 
-				<section className="china-situation-band" aria-labelledby="china-situations-title">
-					<header>
-						<span>可能损失的生意判断</span>
-						<h2 id="china-situations-title">客户已经在问，品牌可能在哪一步掉出选择</h2>
-					</header>
-					<div>
-						{CHINA_SITUATIONS.map((item, index) => (
-							<article key={item.id}>
-								<span>{String(index + 1).padStart(2, "0")}</span>
-								<h3>{item.label}</h3>
-								<p>{item.answer}</p>
-							</article>
-						))}
-					</div>
-				</section>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<p className="site-06-kicker">真正要担心的，不是 AI 有没有提到你</p>
+					<h2>客户已经拿着答案做选择，你却看不见自己在哪里被漏掉。</h2>
+					<p className="site-06-hero__lead">选一个最接近当前处境的问题，看它怎样改变诊断和生意影响。</p>
+				</header>
+				<AnxietySelector />
+			</section>
 
-				<section className="china-home-story">
-					<div className="china-home-story__statement">
-						<span>一次摸底会得到什么</span>
-						<h2>四项输出，直接带进业务会</h2>
-						<p>不是给一个模糊分数，而是把观察范围、答案原文、品牌差距和下一步动作放在同一份记录里。</p>
-						<a className="china-text-link" href="/zh/product">
-							看一份摸底记录怎么形成 <span aria-hidden="true">→</span>
-						</a>
-					</div>
-					<ol className="china-home-story__route">
-						{CHINA_DIAGNOSTIC_OUTPUTS.map((output, index) => (
-							<li key={output.id}>
-								<span>{String(index + 1).padStart(2, "0")}</span>
-								<div>
-									<strong>{output.label}</strong>
-									<p>{output.body}</p>
-								</div>
-								<small>可核对</small>
-							</li>
-						))}
-					</ol>
-				</section>
-
-				<section className="china-home-global">
-					<div className="china-home-global__map" aria-hidden="true">
-						<span className="china-home-global__cn">中国</span>
-						<i />
-						<i />
-						<i />
-						<span>目标市场</span>
-						<span>目标语言</span>
-						<span>当地问题</span>
-					</div>
-					<div className="china-home-global__copy">
-						<span>中国市场基线 × 目标市场对照</span>
-						<h2>出海不是翻译官网，而是重做一遍当地品类心智。</h2>
-						<p>先保留中国市场里的定位基线，再按已确定的国家、语言、当地购买角色和对标品牌重新圈定问题。</p>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<p className="site-06-kicker">把业务问题接回证据</p>
+					<h2>目标不是更多曝光，而是把“为什么选你”接到可信依据上。</h2>
+					<p className="site-06-hero__lead">
+						当客户问题、品牌事实、公开内容和答案各说各话，预算只会继续分散。把它们接到可观察的客户行为上，团队才能判断下一步先动哪里。
+					</p>
+				</header>
+				<article className="site-06-evidence-document" aria-label="业务问题与证据连接示例">
+					<p className="site-06-evidence-document__answer">谁能降低复杂交付中的决策风险？</p>
+					<dl>
 						<div>
-							<a href="/zh/geo">
-								查看目标市场对照 <span aria-hidden="true">→</span>
-							</a>
-							<small>国家 · 语言 · 购买角色 · 对标品牌</small>
+							<dt>客户真正关心</dt>
+							<dd>这是进入比较的业务条件，不是一句传播口号。</dd>
 						</div>
-					</div>
-				</section>
+						<div>
+							<dt>品牌需要证明</dt>
+							<dd>把适用条件、能力范围与可核对来源放在一起。</dd>
+						</div>
+						<div>
+							<dt>客户行为</dt>
+							<dd>观察是否进入进一步了解、询盘或真实比较，不把提及当成选择。</dd>
+						</div>
+					</dl>
+				</article>
+			</section>
 
-				<section className="china-home-lead">
-					<div>
-						<span>从一个具体问题开始</span>
-						<h2>{copy.closingTitle}</h2>
-						<p>{copy.closingBody}</p>
-					</div>
-					<LeadForm locale="zh" compact />
-				</section>
-			</div>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<p className="site-06-kicker">同一条公开事实，两种阅读需要</p>
+					<h2>人需要决策语境，Agent 需要事实、证据与适用范围。</h2>
+				</header>
+				<HomeReadingScene />
+			</section>
+
+			<ClosingSection pageKey="home" />
 		</ChinaShell>
 	);
 }
 
 export function ChinaProductPage() {
-	const copy = CHINA_COPY.product;
 	return (
-		<ChinaShell pageKey="product" scene="brand-gap-console">
-			<div className="china-product">
-				<section className="china-product-intro">
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-					</div>
-					<div>
-						<p>{copy.lead}</p>
-						<a className="china-action" href="/zh/diagnostic">
-							{copy.primaryCta} <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-				</section>
+		<ChinaShell pageKey="product">
+			<Hero pageKey="product" media={<SystemRelationshipMap />} />
 
-				<section className="china-product-workspace" aria-labelledby="product-workspace-title">
-					<header>
-						<span>一份记录，四个动作</span>
-						<h2 id="product-workspace-title">圈定问题、拆答案、找掉点、做复盘</h2>
-						<p>每次切换都保留观察结果和下一步优先级，团队可以在会上沿同一条记录继续判断。</p>
-					</header>
-					<BrandGapConsole />
-				</section>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<p className="site-06-kicker">连接比堆叠更重要</p>
+					<h2>任何一个节点断开，预算都会失去判断依据。</h2>
+					<p className="site-06-hero__lead">
+						这不是线性流程，也不是一次性报告。团队围绕同一道市场问题，查看品牌事实在哪里被承接、当时观察到什么、客户怎样回应，以及下一次要复核什么。
+					</p>
+				</header>
+				<article className="site-06-evidence-document">
+					<dl>
+						<div>
+							<dt>预算判断</dt>
+							<dd>先投到影响当前选择的断点，不用同时重做所有公开内容。</dd>
+						</div>
+						<div>
+							<dt>可观察记录</dt>
+							<dd>保留特定市场、语言、问题和时间下的答案，不包装成实时能力。</dd>
+						</div>
+						<div>
+							<dt>复核条件</dt>
+							<dd>只有问题与观察条件可比较，前后变化才值得进入下一次决定。</dd>
+						</div>
+					</dl>
+				</article>
+			</section>
 
-				<section className="china-product-outputs" aria-labelledby="product-output-title">
-					<div className="china-product-outputs__title">
-						<span>会前有证据，会中能判断</span>
-						<h2 id="product-output-title">不是评分，是一份能逐条核对的业务记录</h2>
-					</div>
-					<div className="china-product-outputs__stack">
-						{CHINA_PRODUCT_STAGES.map((stage, index) => (
-							<article key={stage.id}>
-								<span>{String(index + 1).padStart(2, "0")}</span>
-								<div>
-									<h3>{stage.output}</h3>
-									<p>{stage.body}</p>
-								</div>
-								<i aria-hidden="true">↗</i>
-							</article>
-						))}
-					</div>
-				</section>
-
-				<ManagedReviewTrust locale="zh" />
-
-				<section className="china-product-close">
-					<span>下一步优先级</span>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-					<a className="china-action" href="/zh/diagnostic">
-						开始沟通 <span aria-hidden="true">↗</span>
-					</a>
-				</section>
-			</div>
+			<ClosingSection pageKey="product" />
 		</ChinaShell>
 	);
 }
 
 export function ChinaApproachPage() {
-	const copy = CHINA_COPY.approach;
 	return (
-		<ChinaShell pageKey="approach" scene="service-route">
-			<div className="china-approach">
-				<section className="china-approach-intro">
-					<div className="china-approach-intro__index" aria-hidden="true">
-						<span>01</span>
-						<i />
-						<span>04</span>
-					</div>
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-						<p>{copy.lead}</p>
-						<a className="china-action" href="/zh/diagnostic">
-							{copy.primaryCta} <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-				</section>
+		<ChinaShell pageKey="approach">
+			<Hero
+				pageKey="approach"
+				media={
+					<Photo
+						src="/brand/site-06/conference-room.jpg"
+						alt="暖色日光中的会议空间"
+						credit="Photo: Nastuh Abootalebi / Unsplash"
+					/>
+				}
+			/>
 
-				<section className="china-approach-router" aria-labelledby="service-router-title">
-					<header>
-						<span>按生意问题选择起点</span>
-						<h2 id="service-router-title">先查哪一类掉点，再决定怎么做</h2>
-					</header>
-					<ServiceRoute />
-				</section>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<h2>同一道问题不动，让证据和判断接受复核。</h2>
+					<p className="site-06-hero__lead">
+						以下去标识记录只演示怎么从答案走到行动。它不代表真实客户，也不把一次变化写成因果结论。
+					</p>
+				</header>
+				<BreakdownReplay />
+			</section>
 
-				<section className="china-approach-promise">
-					<div>
-						<span>01</span>
-						<strong>问题范围先确认</strong>
-						<p>市场、语言、购买问题和对标对象写进同一张范围卡。</p>
-					</div>
-					<div>
-						<span>02</span>
-						<strong>可见答案逐项核对</strong>
-						<p>保留完整回答、品牌描述、对标对象和答案列出的引用（如有）。</p>
-					</div>
-					<div>
-						<span>03</span>
-						<strong>下一步排优先级</strong>
-						<p>根据当前差距决定先核对哪一项，不把范围外结果写进结论。</p>
-					</div>
-				</section>
-
-				<section className="china-approach-close">
-					<div>
-						<span>从小处开始</span>
-						<h2>{copy.closingTitle}</h2>
-					</div>
-					<div>
-						<p>{copy.closingBody}</p>
-						<a href="/zh/diagnostic">
-							预约一次品牌体检 <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-				</section>
-			</div>
+			<ClosingSection pageKey="approach" />
 		</ChinaShell>
 	);
 }
 
 export function ChinaGeoPage() {
-	const copy = CHINA_COPY.geo;
 	return (
-		<ChinaShell pageKey="geo" scene="global-market-bridge">
-			<div className="china-geo">
-				<section className="china-geo-intro">
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-						<p>{copy.lead}</p>
-						<a className="china-action" href="/zh/diagnostic">
-							{copy.primaryCta} <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-					<div className="china-geo-intro__signal" role="img" aria-label="从中国连接全球市场">
-						<strong>中国市场基线</strong>
-						<i />
-						<span>目标国家 / 目标语言</span>
-						<i />
-						<strong>当地购买角色</strong>
-					</div>
-				</section>
+		<ChinaShell pageKey="geo" tone="paper">
+			<Hero pageKey="geo" media={<MarketConditionsRecord />} />
 
-				<section className="china-geo-bridge" aria-labelledby="market-bridge-title">
-					<header>
-						<span>先有基线，再做对照</span>
-						<h2 id="market-bridge-title">只增加已定义的国家、语言和购买语境</h2>
-					</header>
-					<GlobalMarketBridge />
-				</section>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<h2>变化的是判断条件，不是公司身份。</h2>
+					<p className="site-06-hero__lead">
+						同一项品牌事实，在不同语言和商业语境里可能进入不同的品类框架，也会面对不同替代选择。每次观察都把这些条件留在记录里。
+					</p>
+				</header>
+				<article className="site-06-evidence-document">
+					<dl>
+						<div>
+							<dt>市场与语言</dt>
+							<dd>客户怎样描述问题，以及哪些公开材料能被找到。</dd>
+						</div>
+						<div>
+							<dt>当地品类表述与替代选择</dt>
+							<dd>答案采用什么比较框架，客户会把哪些方案放在一起看。</dd>
+						</div>
+						<div>
+							<dt>证据条件</dt>
+							<dd>来源、适用范围、核对日期和限制共同决定这次阅读能说明什么。</dd>
+						</div>
+					</dl>
+				</article>
+			</section>
 
-				<section className="china-geo-contrast">
-					<div>
-						<span>中国市场基线</span>
-						<h2>先记录品牌在中文购买问题里怎么被理解</h2>
-						<ul>
-							<li>中文品类表达</li>
-							<li>企业采购角色</li>
-							<li>同一组购买问题与对标对象</li>
-						</ul>
-					</div>
-					<i aria-hidden="true">→</i>
-					<div>
-						<span>目标市场对照</span>
-						<h2>出海不是翻译官网，而是重做一遍当地品类心智。</h2>
-						<ul>
-							<li>目标国家与目标语言</li>
-							<li>当地购买角色与问法</li>
-							<li>指定对标品牌</li>
-						</ul>
-					</div>
-				</section>
-
-				<section className="china-geo-close">
-					<div>
-						<span>支持企业进入已确定的海外目标市场</span>
-						<h2>{copy.closingTitle}</h2>
-						<p>{copy.closingBody}</p>
-					</div>
-					<a className="china-action" href="/zh/diagnostic">
-						告诉我们目标市场 <span aria-hidden="true">↗</span>
-					</a>
-				</section>
-			</div>
+			<ClosingSection pageKey="geo" />
 		</ChinaShell>
 	);
 }
 
 export function ChinaCompanyPage() {
-	const copy = CHINA_COPY.company;
 	return (
-		<ChinaShell pageKey="company" scene="company-network">
-			<div className="china-company">
-				<section className="china-company-intro">
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-						<p>{copy.lead}</p>
-						<a className="china-action" href="/zh/diagnostic">
-							和 Yonaris 沟通 <span aria-hidden="true">↗</span>
-						</a>
-					</div>
-					<CompanyNetwork />
-				</section>
+		<ChinaShell pageKey="company">
+			<Hero
+				pageKey="company"
+				media={
+					<Photo
+						src="/brand/site-06/glass-venue.jpg"
+						alt="人们穿行在通透的商务空间"
+						credit="Photo: Zerrin Velizade / Pexels"
+					/>
+				}
+			/>
 
-				<section className="china-company-belief">
-					<header>
-						<span>范围与限制</span>
-						<h2>查清当次答案，不把范围外结果包装成结论</h2>
-					</header>
-					<div>
-						<article>
-							<span>范围</span>
-							<h3>先确认观察边界</h3>
-							<p>市场、语言、购买问题和对标品牌没有确认，就不混在一起判断。</p>
-						</article>
-						<article>
-							<span>证据</span>
-							<h3>保留答案原文</h3>
-							<p>核对品牌描述、比较项和答案列出的引用（如有），不只给摘要。</p>
-						</article>
-						<article>
-							<span>限制</span>
-							<h3>不替第三方答案下结论</h3>
-							<p>只说明当前范围里观察到什么，并给出可复盘的工作优先级。</p>
-						</article>
-					</div>
-				</section>
+			<section className="site-06-section">
+				<header className="site-06-section__intro">
+					<p className="site-06-kicker">品类、目的与范围</p>
+					<h2>公开事实只有一份，人的判断和 Agent 的读取各取所需。</h2>
+				</header>
+				<CompanyReadingScene />
+			</section>
 
-				<PublicRecordTrust locale="zh" />
+			<section className="site-06-section">
+				<h2>机器可读，不等于机器写作。</h2>
+				<p className="site-06-hero__lead">
+					清楚的标题、稳定地址、可见来源、有范围的事实和一致公开记录有助于检索与核对，但不保证排名、收录、检索或引用。
+				</p>
+				<ActionLink href="/zh/agent/company">阅读对应的 Agent 记录</ActionLink>
+			</section>
 
-				<section className="china-company-regions">
-					<div className="china-company-regions__china">
-						<span>中国市场基线</span>
-						<strong>记录中文客户如何提问、比较和理解品类</strong>
-					</div>
-					<i aria-hidden="true">Y</i>
-					<div className="china-company-regions__global">
-						<span>海外目标市场</span>
-						<strong>按目标语言、购买角色和当地品类重新核对品牌</strong>
-					</div>
-				</section>
-
-				<section className="china-company-close">
-					<span>Yonaris</span>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-					<div>
-						<a className="china-action" href="/zh/diagnostic">
-							开始沟通 <span aria-hidden="true">↗</span>
-						</a>
-						<a href="/zh/geo">查看全球市场能力 →</a>
-					</div>
-				</section>
-			</div>
+			<ClosingSection pageKey="company" />
 		</ChinaShell>
 	);
 }
 
 export function ChinaDiagnosticPage() {
-	const copy = CHINA_COPY.diagnostic;
 	return (
-		<ChinaShell pageKey="diagnostic" scene="consultation-brief">
-			<div className="china-diagnostic">
-				<section className="china-diagnostic-intro">
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-						<p>{copy.lead}</p>
-					</div>
-					<ConsultationBrief />
-				</section>
-				<section className="china-diagnostic-form" id="china-contact-form" aria-label="预约沟通表单">
-					<div>
-						<span>姓名 / 电话 / 公司</span>
-						<h2>{copy.closingTitle}</h2>
-						<p>{copy.closingBody}</p>
-					</div>
-					<LeadForm locale="zh" />
-				</section>
-			</div>
+		<ChinaShell pageKey="diagnostic">
+			<Hero
+				pageKey="diagnostic"
+				media={
+					<Photo
+						src="/brand/site-06/glass-venue.jpg"
+						alt="人们在商务空间里交流"
+						credit="Photo: Zerrin Velizade / Pexels"
+					/>
+				}
+			/>
+
+			<section className="site-06-section" id="contact-form">
+				<LeadForm locale="zh" />
+			</section>
 		</ChinaShell>
 	);
 }
 
 export function ChinaPrivacyPage() {
-	const copy = CHINA_COPY.privacy;
 	return (
-		<ChinaShell pageKey="privacy" scene="privacy-path">
-			<div className="china-privacy">
-				<section className="china-privacy-intro">
-					<div>
-						<span className="china-eyebrow">{copy.eyebrow}</span>
-						<h1>{copy.title}</h1>
-						<p>{copy.lead}</p>
-						<a className="china-text-link" href="/zh/diagnostic">
-							{copy.primaryCta} <span aria-hidden="true">→</span>
-						</a>
-					</div>
-					<PrivacyPath />
-				</section>
-
-				<section className="china-privacy-details">
-					<article>
-						<span>01</span>
-						<h2>收集哪些信息</h2>
-						<p>咨询表单只需要姓名、电话和公司，不要求填写职位、行业或详细业务资料。</p>
+		<ChinaShell pageKey="privacy" tone="paper">
+			<Hero
+				pageKey="privacy"
+				media={
+					<article className="site-06-evidence-document" aria-label="咨询表单可见字段">
+						<span>咨询申请</span>
+						<p className="site-06-evidence-document__answer">姓名 · 电话 · 公司</p>
+						<p>只要求这三个可见字段；隐藏的反滥用字段不会要求你填写。</p>
 					</article>
-					<article>
-						<span>02</span>
-						<h2>为什么需要这些信息</h2>
-						<p>姓名用于确认称呼，电话用于回复咨询，公司帮助我们了解基本业务背景。</p>
-					</article>
-					<article>
-						<span>03</span>
-						<h2>这些信息如何使用</h2>
-						<p>用于回复这次咨询、了解基本需求和安排后续沟通，不会显示在公开页面。</p>
-					</article>
-				</section>
+				}
+			/>
 
-				<DeliveryTruth locale="zh" />
+			<section className="site-06-section">
+				<h2>投递服务接受申请后，页面才显示已送出。</h2>
+				<article className="site-06-evidence-document">
+					<p>
+						表单使用这些信息回复本次咨询。若投递没有确认，页面会保留已填内容并提供重试；浏览器分析不会收到表单字段内容。
+					</p>
+				</article>
+			</section>
 
-				<section className="china-privacy-close">
-					<div>
-						<span>信息用途</span>
-						<h2>{copy.closingTitle}</h2>
-						<p>{copy.closingBody}</p>
-					</div>
-					<a className="china-action" href="/zh/diagnostic">
-						返回预约沟通 <span aria-hidden="true">↗</span>
-					</a>
-				</section>
-			</div>
+			<ClosingSection pageKey="privacy" />
 		</ChinaShell>
 	);
 }
@@ -481,4 +310,4 @@ export const CHINA_PAGES = {
 	company: ChinaCompanyPage,
 	diagnostic: ChinaDiagnosticPage,
 	privacy: ChinaPrivacyPage,
-} as const;
+} as const satisfies Record<HumanPageKey, () => ReactNode>;

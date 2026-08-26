@@ -1,382 +1,140 @@
-"use client";
-
 import { useState } from "react";
 import {
-	CHINA_MARKETS,
-	CHINA_PRODUCT_STAGES,
-	CHINA_SERVICE_SITUATIONS,
-	CHINA_SITUATIONS,
+	CHINA_ANXIETIES,
+	CHINA_BREAKDOWN_QUESTION,
+	CHINA_BREAKDOWN_STATES,
+	CHINA_READING_RECORDS,
+	CHINA_SYSTEM_NODES,
 } from "@/content/experience/china-copy";
+import { OrbitField } from "../shared/orbit-field";
+import { ReadingLens } from "../shared/reading-lens";
+import { ReviewSwitch } from "../shared/review-switch";
 import { useRovingTabs } from "../shared/use-roving-tabs";
 
-const situationIds = CHINA_SITUATIONS.map((item) => item.id);
-const productStageIds = CHINA_PRODUCT_STAGES.map((item) => item.id);
-const serviceIds = CHINA_SERVICE_SITUATIONS.map((item) => item.id);
-const marketIds = CHINA_MARKETS.map((item) => item.id);
-
-export function AiAnswerFlow() {
-	const [activeId, setActiveId] = useState<(typeof CHINA_SITUATIONS)[number]["id"]>("missing");
-	const tabs = useRovingTabs({
-		items: situationIds,
-		active: activeId,
-		onChange: setActiveId,
-		idPrefix: "china-answer",
-	});
+export function AnxietySelector() {
+	const ids = CHINA_ANXIETIES.map((item) => item.id);
+	const [active, setActive] = useState<(typeof ids)[number]>("shortlist");
+	const tabs = useRovingTabs({ items: ids, active, onChange: setActive, idPrefix: "zh-anxiety" });
 
 	return (
-		<section
-			className="china-answer-flow"
-			aria-label="品牌在 AI 答案中的四种处境"
-			data-evidence-kind="illustrative"
-		>
-			<div className="china-answer-flow__controls" role="tablist" aria-label="选择你最关心的情况">
-				{CHINA_SITUATIONS.map((item, index) => (
-					<button
-						key={item.id}
-						type="button"
-						data-situation-control={item.id}
-						{...tabs.getTabProps(item.id, index)}
-					>
-						<span>{String(index + 1).padStart(2, "0")}</span>
+		<section className="site-06-anxiety" data-anxiety-selector aria-label="选择最接近当前生意的问题">
+			<div className="site-06-tabs" role="tablist" aria-label="选择业务焦虑">
+				{CHINA_ANXIETIES.map((item, index) => (
+					<button key={item.id} type="button" {...tabs.getTabProps(item.id, index)}>
 						{item.label}
 					</button>
 				))}
 			</div>
-
-			<div className="china-answer-flow__stage">
-				{CHINA_SITUATIONS.map((item) => (
-					<section
-						key={item.id}
-						className="china-answer-flow__panel"
-						data-diagnostic-state={item.id}
-						aria-live="polite"
-						{...tabs.getPanelProps(item.id)}
-					>
-						<div className="china-answer-flow__window-bar">
-							<span aria-hidden="true" />
-							<span aria-hidden="true" />
-							<span aria-hidden="true" />
-							<strong>品牌摸底 · 示意观察</strong>
-							<small>状态：示例范围 · 不含客户数据</small>
-						</div>
-						<div className="china-answer-flow__question">
-							<span>Q</span>
-							<div>
-								<p>{item.question}</p>
-								<small data-output-field="scope">{item.scope}</small>
-							</div>
-						</div>
-						<div className="china-answer-flow__answer">
-							<div className="china-answer-flow__avatar" aria-hidden="true">
-								AI
-							</div>
-							<div>
-								<small>观察到的答案</small>
-								<strong data-output-field="answer">{item.answer}</strong>
-								<div className="china-answer-flow__gap">
-									<span>差距</span>
-									<p data-output-field="gap">{item.gap}</p>
-								</div>
-							</div>
-						</div>
-						<div className="china-answer-flow__move">
-							<span>下一步优先级</span>
-							<p data-output-field="priority">{item.priority}</p>
-							<i aria-hidden="true">↗</i>
-						</div>
-					</section>
-				))}
-			</div>
-		</section>
-	);
-}
-
-export function BrandGapConsole() {
-	const [activeId, setActiveId] = useState<(typeof CHINA_PRODUCT_STAGES)[number]["id"]>("ask");
-	const tabs = useRovingTabs({
-		items: productStageIds,
-		active: activeId,
-		onChange: setActiveId,
-		idPrefix: "china-product",
-	});
-
-	return (
-		<section
-			className="china-gap-console"
-			aria-label="一份品牌摸底记录的四个步骤"
-			data-evidence-kind="illustrative"
-		>
-			<div className="china-gap-console__rail" role="tablist" aria-label="四个摸底步骤">
-				{CHINA_PRODUCT_STAGES.map((stage, index) => (
-					<button key={stage.id} type="button" {...tabs.getTabProps(stage.id, index)}>
-						<span>{String(index + 1).padStart(2, "0")}</span>
-						<strong>{stage.label}</strong>
-					</button>
-				))}
-			</div>
-			<div className="china-gap-console__workspace">
-				<header>
-					<div>
-						<span>会议用品牌摸底示意记录</span>
-						<small>状态：示例范围 · 不含客户数据</small>
-					</div>
-					<i aria-hidden="true">Y</i>
-				</header>
-				{CHINA_PRODUCT_STAGES.map((stage) => (
-					<div
-						key={stage.id}
-						className="china-gap-console__body"
-						data-diagnostic-state={stage.id}
-						aria-live="polite"
-						{...tabs.getPanelProps(stage.id)}
-					>
-						<aside aria-label="问题上下文">
-							<span>问题范围</span>
-							<strong data-output-field="scope">{stage.scope}</strong>
-							<span>当前步骤</span>
-							<strong>{stage.label}</strong>
-							<span>会议输出</span>
-							<strong>{stage.output}</strong>
-						</aside>
-						<section>
-							<small>{stage.label}</small>
-							<h3>{stage.title}</h3>
-							<p>{stage.body}</p>
-							<div className="china-gap-console__readout">
-								<span>观察结果</span>
-								<strong data-output-field="answer">{stage.answer}</strong>
-								<span>当前掉点</span>
-								<p data-output-field="gap">{stage.gap}</p>
-							</div>
-							<div className="china-gap-console__output">
-								<span>下一步优先级</span>
-								<strong data-output-field="priority">{stage.priority}</strong>
-							</div>
-						</section>
-					</div>
-				))}
-			</div>
-		</section>
-	);
-}
-
-export function ServiceRoute() {
-	const [activeId, setActiveId] = useState<(typeof CHINA_SERVICE_SITUATIONS)[number]["id"]>("visibility");
-	const tabs = useRovingTabs({
-		items: serviceIds,
-		active: activeId,
-		onChange: setActiveId,
-		idPrefix: "china-service",
-	});
-
-	return (
-		<section
-			className="china-service-route"
-			aria-label="按品牌问题选择摸底起点"
-			data-evidence-kind="illustrative"
-		>
-			<div className="china-service-route__map" role="tablist" aria-label="选择品牌问题">
-				{CHINA_SERVICE_SITUATIONS.map((service, index) => (
-					<button key={service.id} type="button" {...tabs.getTabProps(service.id, index)}>
-						<span>{service.number}</span>
-						<strong>{service.situation}</strong>
-						<i aria-hidden="true">→</i>
-					</button>
-				))}
-			</div>
-			{CHINA_SERVICE_SITUATIONS.map((service) => (
-				<article
-					key={service.id}
-					className="china-service-route__detail"
-					data-diagnostic-state={service.id}
-					aria-live="polite"
-					{...tabs.getPanelProps(service.id)}
-				>
-					<span>建议起点 · 示例说明 · 不含客户数据</span>
-					<h3>{service.startingPoint}</h3>
-					<p>{service.description}</p>
-					<div className="china-service-route__readout">
-						<small>问题范围</small>
-						<p data-output-field="scope">{service.scope}</p>
-						<small>观察结果</small>
-						<strong data-output-field="answer">{service.answer}</strong>
-						<small>业务差距</small>
-						<p data-output-field="gap">{service.gap}</p>
-					</div>
-					<div>
-						<small>摸底时逐项核对</small>
-						<ul>
-							{service.visibleItems.map((item) => (
-								<li key={item}>{item}</li>
-							))}
-						</ul>
-					</div>
-					<p className="china-service-route__priority" data-output-field="priority">
-						{service.priority}
-					</p>
-					<a href="/zh/diagnostic">
-						从这个问题开始沟通 <span aria-hidden="true">↗</span>
-					</a>
-				</article>
-			))}
-		</section>
-	);
-}
-
-export function GlobalMarketBridge() {
-	const [activeId, setActiveId] = useState<(typeof CHINA_MARKETS)[number]["id"]>("china");
-	const tabs = useRovingTabs({
-		items: marketIds,
-		active: activeId,
-		onChange: setActiveId,
-		idPrefix: "china-market",
-	});
-
-	return (
-		<section
-			className="china-market-bridge"
-			aria-label="中国市场基线与海外目标市场对照"
-			data-evidence-kind="illustrative"
-		>
-			<div className="china-market-bridge__controls" role="tablist" aria-label="选择市场视角">
-				{CHINA_MARKETS.map((market, index) => (
-					<button
-						key={market.id}
-						type="button"
-						data-market-control={market.id}
-						{...tabs.getTabProps(market.id, index)}
-					>
-						{market.label}
-					</button>
-				))}
-			</div>
-			{CHINA_MARKETS.map((market) => (
-				<div
-					key={market.id}
-					className="china-market-bridge__canvas"
-					data-diagnostic-state={market.id}
-					aria-live="polite"
-					{...tabs.getPanelProps(market.id)}
-				>
-					<section data-market-track="china">
-						<span>01 · 服务中国市场 · 建立基线</span>
-						<strong>先记录中文客户的购买问题</strong>
-						<p>固定品类表达、购买角色和同一组对标对象。</p>
-					</section>
-					<div className="china-market-bridge__route" aria-hidden="true">
-						<i />
-						<i />
-						<b>Y</b>
-						<i />
-						<i />
-					</div>
-					<section data-market-track="global">
-						<span>02 · 支持企业进入海外目标市场</span>
-						<strong>按当地买家的品类心智重做问题</strong>
-						<p>只增加已定义的国家、语言、购买角色和对标品牌。</p>
-					</section>
-					<article className="china-market-bridge__readout">
-						<small>{market.label} · 示例说明 · 不含客户数据</small>
-						<h3>{market.question}</h3>
-						<p data-output-field="scope">{market.scope}</p>
-						<strong data-output-field="answer">{market.answer}</strong>
-						<p data-output-field="gap">{market.gap}</p>
-						<strong data-output-field="priority">{market.priority}</strong>
+			<div className="site-06-anxiety__records" aria-live="polite">
+				{CHINA_ANXIETIES.map((item) => (
+					<article key={item.id} className="site-06-evidence-document" {...tabs.getPanelProps(item.id)}>
+						<span>答案里发生了什么</span>
+						<h3>{item.diagnosis}</h3>
+						<p className="site-06-evidence-document__answer">{item.answer}</p>
+						<strong>{item.impact}</strong>
 					</article>
+				))}
+			</div>
+		</section>
+	);
+}
+
+export function SystemRelationshipMap() {
+	const ids = CHINA_SYSTEM_NODES.map((item) => item.id);
+	const [active, setActive] = useState<(typeof ids)[number]>("question");
+	const tabs = useRovingTabs({ items: ids, active, onChange: setActive, idPrefix: "zh-system" });
+
+	return (
+		<section className="site-06-system" data-system-map aria-label="六个相互连接的系统节点">
+			<OrbitField label="一套相互连接的品牌判断系统" interactive>
+				<strong>同一道业务问题</strong>
+			</OrbitField>
+			<div className="site-06-system__records">
+				<div className="site-06-tabs" role="tablist" aria-label="选择系统节点">
+					{CHINA_SYSTEM_NODES.map((item, index) => (
+						<button key={item.id} type="button" {...tabs.getTabProps(item.id, index)}>
+							{item.label}
+						</button>
+					))}
 				</div>
-			))}
+				<div className="site-06-system__panels" aria-live="polite">
+					{CHINA_SYSTEM_NODES.map((item) => (
+						<article key={item.id} className="site-06-evidence-document" {...tabs.getPanelProps(item.id)}>
+							<span>正在查看 · {item.label}</span>
+							<h3>{item.question}</h3>
+							<dl>
+								<div>
+									<dt>接通之后</dt>
+									<dd>{item.connected}</dd>
+								</div>
+								<div>
+									<dt>断开之后</dt>
+									<dd>{item.disconnected}</dd>
+								</div>
+							</dl>
+						</article>
+					))}
+				</div>
+			</div>
 		</section>
 	);
 }
 
-export function CompanyNetwork() {
+export function HomeReadingScene() {
 	return (
-		<div className="china-company-network" role="img" aria-label="Yonaris 的工作连接">
-			<div className="china-company-network__orbit" aria-hidden="true">
-				<span />
-				<span />
-				<span />
-			</div>
-			<div className="china-company-network__center">
-				<img src="/brand/logos/yonaris-wordmark-navy.png" alt="Yonaris" width="174" height="38" />
-				<p>从可核对答案出发</p>
-			</div>
-			<div className="china-company-network__node china-company-network__node--one">
-				<span>01</span>
-				<strong>问题范围</strong>
-			</div>
-			<div className="china-company-network__node china-company-network__node--two">
-				<span>02</span>
-				<strong>答案快照</strong>
-			</div>
-			<div className="china-company-network__node china-company-network__node--three">
-				<span>03</span>
-				<strong>业务差距</strong>
-			</div>
-			<div className="china-company-network__node china-company-network__node--four">
-				<span>04</span>
-				<strong>下一步优先级</strong>
-			</div>
+		<div className="site-06-reading-scene">
+			<OrbitField label="同一条公开事实的人类与 Agent 双阅读" interactive>
+				<strong>同一条公开事实</strong>
+			</OrbitField>
+			<ReadingLens locale="zh" records={CHINA_READING_RECORDS.slice(2)} initialId="scope" />
 		</div>
 	);
 }
 
-export function ConsultationBrief() {
+export function CompanyReadingScene() {
+	return <ReadingLens locale="zh" records={CHINA_READING_RECORDS} initialId="category" />;
+}
+
+export function BreakdownReplay() {
 	return (
-		<section className="china-consultation-brief" aria-label="首次沟通内容">
+		<ReviewSwitch
+			locale="zh"
+			question={CHINA_BREAKDOWN_QUESTION}
+			states={CHINA_BREAKDOWN_STATES}
+			initialId="baseline"
+		/>
+	);
+}
+
+export function MarketConditionsRecord() {
+	return (
+		<article className="site-06-evidence-document site-06-market-conditions" aria-label="跨市场判断条件">
 			<header>
-				<span>第一次沟通</span>
-				<strong>只确认摸底范围</strong>
-				<i aria-hidden="true">不在此步给结论</i>
+				<span>同一道选择题旁边保留的条件</span>
+				<strong>公司事实可以一致，市场判断必须有语境</strong>
 			</header>
-			<ol>
-				<li>
-					<span>01</span>
-					<div>
-						<strong>确认市场与语言</strong>
-						<p>先选中国市场，或一个已经明确的目标国家与目标语言。</p>
-					</div>
-				</li>
-				<li>
-					<span>02</span>
-					<div>
-						<strong>确认购买问题</strong>
-						<p>从一组会影响选择的真实问题开始，不把不同场景混在一起。</p>
-					</div>
-				</li>
-				<li>
-					<span>03</span>
-					<div>
-						<strong>确认对标对象</strong>
-						<p>说明需要一起核对的品牌，以及当前最担心的一类差距。</p>
-					</div>
-				</li>
-			</ol>
-		</section>
-	);
-}
-
-export function PrivacyPath() {
-	return (
-		<div className="china-privacy-path" role="img" aria-label="联系信息用途">
-			<div>
-				<span>01</span>
-				<strong>姓名</strong>
-				<small>确认如何称呼你</small>
-			</div>
-			<i aria-hidden="true">→</i>
-			<div>
-				<span>02</span>
-				<strong>电话</strong>
-				<small>回复本次咨询</small>
-			</div>
-			<i aria-hidden="true">→</i>
-			<div>
-				<span>03</span>
-				<strong>公司</strong>
-				<small>了解基本业务背景</small>
-			</div>
-			<b>只用于本次联系</b>
-		</div>
+			<dl>
+				<div>
+					<dt>市场</dt>
+					<dd>客户做出选择时所在的商业环境与约束。</dd>
+				</div>
+				<div>
+					<dt>语言</dt>
+					<dd>客户描述需求、风险和选择条件时真正使用的词。</dd>
+				</div>
+				<div>
+					<dt>当地品类表述</dt>
+					<dd>市场用什么框架理解这家公司属于哪一类选择。</dd>
+				</div>
+				<div>
+					<dt>替代选择</dt>
+					<dd>客户在同一道问题下真正会拿来比较的其他方案。</dd>
+				</div>
+				<div>
+					<dt>证据条件</dt>
+					<dd>当时可获得的来源、核对日期、适用范围和限制。</dd>
+				</div>
+			</dl>
+		</article>
 	);
 }

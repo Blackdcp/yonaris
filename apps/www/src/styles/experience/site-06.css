@@ -551,6 +551,60 @@
 	gap: 7px;
 }
 
+.site-06-anxiety {
+	border: 1px solid var(--site-rule);
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	box-shadow: var(--site-shadow);
+}
+
+.site-06-anxiety__records,
+.site-06-system__panels {
+	padding: clamp(20px, 4vw, 42px);
+}
+
+.site-06-anxiety .site-06-evidence-document,
+.site-06-system .site-06-evidence-document {
+	display: grid;
+	gap: 16px;
+}
+
+.site-06-anxiety h3,
+.site-06-system h3 {
+	margin: 0;
+	font-size: clamp(21px, 2.2vw, 28px);
+	font-weight: 590;
+	line-height: 1.25;
+}
+
+.site-06-anxiety .site-06-evidence-document__answer {
+	margin-bottom: 0;
+}
+
+.site-06-system {
+	display: grid;
+	min-width: 0;
+	gap: 22px;
+}
+
+.site-06-system .site-06-orbit {
+	width: min(100%, 350px);
+}
+
+.site-06-system__records {
+	min-width: 0;
+	border: 1px solid var(--site-rule);
+	background: color-mix(in srgb, currentColor 4%, transparent);
+	box-shadow: var(--site-shadow);
+}
+
+.site-06-system .site-06-tabs {
+	max-width: min(100%, 560px);
+}
+
+.site-06-system .site-06-evidence-document dl {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .site-06 .lead-form {
 	display: grid;
 	width: min(100%, 760px);
@@ -860,7 +914,8 @@
 	.site-06-reading__panel dl,
 	.site-06-reading__panel--agent dl,
 	.site-06-evidence-document dl,
-	.site-06-review .site-06-evidence-document dl {
+	.site-06-review .site-06-evidence-document dl,
+	.site-06-system .site-06-evidence-document dl {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
@@ -870,6 +925,13 @@
 
 	.site-06-evidence-document {
 		padding: 24px;
+	}
+
+	.site-06 .lead-disclosure a {
+		display: inline-flex;
+		align-items: center;
+		min-width: var(--target-mobile);
+		min-height: var(--target-mobile);
 	}
 
 	.site-06-footer__inner {

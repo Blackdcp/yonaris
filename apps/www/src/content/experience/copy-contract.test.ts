@@ -32,16 +32,17 @@ describe("regional customer copy", () => {
 		const china = JSON.stringify(subject?.CHINA_COPY ?? {});
 		expect(global).toContain("See how AI answers your market’s buying questions.");
 		expect(global).not.toMatch(/change the outcome|source influence|signals behind the response/i);
-		expect(china).toContain("客户开始问 AI，品牌的第一解释权还在你手里吗？");
-		expect(china).toContain("品牌为什么没进客户的候选池？");
-		expect(china).toContain("先做品牌体检，再定 GEO 打法");
-		expect(china).toContain("生成式搜索和 AI 答案中的品牌表现");
-		expect(china).toContain("出海不是翻译官网，而是重做一遍当地品类心智。");
-		expect(china).toContain("不卖玄学排名，先把 AI 怎么说你查清楚");
-		expect(china).toContain("第一次沟通只确认摸底范围");
+		expect(china).toContain("AI 正在替客户认识你、比较你，也可能误解你。");
+		expect(china).toContain("不是再做一层内容，而是重建品牌被理解的基础设施。");
+		expect(china).toContain("从一句 AI 答案，追到真正影响选择的那个断点。");
+		expect(china).toContain("公开方法演示 · 示例场景，不代表客户结果。");
+		expect(china).toContain("换一个市场，先换判断条件，不是只换语言。");
+		expect(china).toContain("同一家公司，应该让人和 Agent 都读得清楚。");
+		expect(china).toContain("带一道你最不想让 AI 答错的问题来。");
 		expect(china).not.toMatch(/北美市场|欧洲市场|亚太市场|交付物|竞品更靠前/);
-		expect(china).not.toMatch(/四个可核对结果|待核对信息|复查记录|确认范围|在中国扎根|陪中国企业走向全球/);
-		expect(china).not.toMatch(/保证排名|保证推荐|自动改变|全网覆盖|流量承诺/);
+		expect(china).not.toMatch(/四个可核对结果|待核对信息|确认范围|在中国扎根|陪中国企业走向全球/);
+		expect(china).not.toMatch(/中国市场基线|海外目标|出海|进入海外|服务中国市场/);
+		expect(china).not.toMatch(/(?<!不)保证(?:排名|推荐)|自动改变|全网覆盖|流量承诺/);
 		expect(china).not.toMatch(
 			/客户问 AI 时，你的品牌被怎么说？|从最担心的品牌问题开始|让企业看清 AI 如何介绍自己的品牌/,
 		);

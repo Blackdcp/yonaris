@@ -34,16 +34,13 @@ describe("zero-to-one stylesheet boundary", () => {
 		}
 		for (const regional of ["global.css", "china.css", "agent.css"]) expect(stylesheet).not.toContain(regional);
 		expect(read("components/experience/global/global-pages.tsx")).not.toContain("global.css");
-		expect(read("components/experience/china/china-pages.tsx")).toContain(
-			'import "../../../styles/experience/china.css";',
-		);
+		expect(read("components/experience/china/china-pages.tsx")).not.toContain("china.css");
+		expect(existsSync(join(sourceRoot, "styles/experience/china.css"))).toBe(false);
 		expect(read("components/experience/agent/agent-pages.tsx")).toContain('import "@/styles/experience/agent.css";');
 	});
 
 	it("keeps the brand palette and rejects retired visible selectors", () => {
-		const output = ["base.css", "site-06.css", "china.css", "agent.css"]
-			.map((file) => read(`styles/experience/${file}`))
-			.join("\n");
+		const output = ["base.css", "site-06.css", "agent.css"].map((file) => read(`styles/experience/${file}`)).join("\n");
 		for (const value of ["#0b1220", "#f6f4f1", "#ff6a00"]) expect(output.toLowerCase()).toContain(value);
 		for (const value of ["#071724", "#f2ede3", "#ef5a1a"]) expect(output.toLowerCase()).toContain(value);
 		expect(output).not.toMatch(/global-en__|zh-site__|global-cinematic|zh-decision|editorial-stage|decision-canvas/);
@@ -154,76 +151,16 @@ describe("zero-to-one stylesheet boundary", () => {
 		);
 	});
 
-	it("makes the China lead disclosure link a real mobile target", () => {
-		const china = read("styles/experience/china.css");
-		const mobileStart = china.indexOf("@media (max-width: 800px)");
-		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
-		const mobile = china.slice(mobileStart, narrowStart);
-		const disclosure = ruleFor(mobile, ".china-command .lead-disclosure a");
+	it("styles the Chinese anxiety and system interactions inside Site 06", () => {
+		const site = read("styles/experience/site-06.css");
+		expect(ruleFor(site, ".site-06-anxiety")).toContain("box-shadow: var(--site-shadow)");
+		expect(ruleFor(site, ".site-06-system")).toContain("display: grid");
+		expect(ruleFor(site, ".site-06-system__records")).toContain("min-width: 0");
+		const mobile = site.slice(site.indexOf("@media (max-width: 720px)"));
+		const disclosure = ruleFor(mobile, ".site-06 .lead-disclosure a");
 		expect(disclosure).toContain("display: inline-flex");
 		expect(disclosure).toContain("min-width: var(--target-mobile)");
 		expect(disclosure).toContain("min-height: var(--target-mobile)");
-	});
-
-	it("keeps the China home decision-path label and readout above their mobile floors", () => {
-		const china = read("styles/experience/china.css");
-		const mobileStart = china.indexOf("@media (max-width: 800px)");
-		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
-		const mobile = china.slice(mobileStart, narrowStart);
-		const label = ruleFor(mobile, ".china-command .china-home-hero__shift span");
-		const readout = ruleFor(mobile, ".china-command .china-home-hero__shift strong");
-		expect(label).toContain("font-size: var(--text-functional-mobile)");
-		expect(label).toContain("line-height: 1.4");
-		expect(readout).toContain("font-size: var(--text-body-mobile)");
-		expect(readout).toContain("line-height: 1.4");
-	});
-
-	it("keeps China section micro-labels above the mobile functional floor", () => {
-		const china = read("styles/experience/china.css");
-		const mobileStart = china.indexOf("@media (max-width: 800px)");
-		const narrowStart = china.indexOf("@media (max-width: 520px)", mobileStart);
-		const mobile = china.slice(mobileStart, narrowStart);
-		for (const selector of [
-			".china-command .china-answer-flow__question > span",
-			".china-command .china-home-global__copy > span",
-			".china-command .china-home-lead > div > span",
-			".china-command .lead-form > header > span",
-			".china-command .china-product-workspace > header > span",
-			".china-command .china-product-outputs__title > span",
-			".china-command .china-product-outputs__stack > article > span",
-			".china-command .china-product-close > span",
-			".china-command .china-approach-router > header > span",
-			".china-command .china-approach-close > div > span",
-			".china-command .china-geo-bridge > header > span",
-			".china-command .china-geo-close > div > span",
-			".china-command .china-company-belief > header > span",
-			".china-command .china-company-close > span",
-			".china-command .china-diagnostic-form > div > span",
-			".china-command .china-privacy-close > div > span",
-			".china-command .china-company-network__center > p",
-			".china-command .china-approach-promise span",
-			".china-command .china-geo-contrast span",
-			".china-command .china-company-belief article > span",
-			".china-command .china-company-regions span",
-			".china-command .china-privacy-details span",
-		]) {
-			const declarations = ruleFor(mobile, selector);
-			expect(declarations, `${selector} needs the functional floor`).toContain(
-				"font-size: var(--text-functional-mobile)",
-			);
-			expect(declarations, `${selector} needs a legible line-height`).toContain("line-height: 1.4");
-		}
-
-		const answerQuestion = ruleFor(mobile, ".china-command .china-answer-flow__question > div > p");
-		expect(answerQuestion).toContain("font-size: max(var(--text-body-mobile), 14px)");
-		expect(answerQuestion).toContain("line-height: 1.4");
-	});
-
-	it("keeps the China Approach index numerals above the tablet functional floor", () => {
-		const china = read("styles/experience/china.css");
-		const declarations = ruleFor(china, ".china-command .china-approach-intro__index > span");
-		expect(declarations).toContain("font-size: var(--text-functional-mobile)");
-		expect(declarations).toContain("line-height: 1.4");
 	});
 
 	it("keeps the Agent Human-return control dark on Signal Orange", () => {
@@ -237,9 +174,7 @@ describe("zero-to-one stylesheet boundary", () => {
 	});
 
 	it("does not use continuous decorative keyframes", () => {
-		const output = ["base.css", "site-06.css", "china.css", "agent.css"]
-			.map((file) => read(`styles/experience/${file}`))
-			.join("\n");
+		const output = ["base.css", "site-06.css", "agent.css"].map((file) => read(`styles/experience/${file}`)).join("\n");
 		expect(output).not.toMatch(/animation(?:-iteration-count)?\s*:[^;{}]*\binfinite\b/i);
 	});
 
