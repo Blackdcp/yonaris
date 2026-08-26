@@ -26,6 +26,7 @@ export interface TagsInputProps {
   placeholder?: string;
   searchPlaceholder?: string;
   emptyText?: string;
+  ariaLabel?: string;
   removeTagLabel?: (value: string) => string;
   maximumReachedText?: string;
   entryHintText?: string;
@@ -51,6 +52,7 @@ export function TagsInput({
   placeholder = "Select...",
   searchPlaceholder = "Search...",
   emptyText = "No results.",
+  ariaLabel,
   removeTagLabel = (tag) => `Remove ${tag}`,
   maximumReachedText = "Maximum reached",
   entryHintText = "Type or paste to add a value",
@@ -161,6 +163,7 @@ export function TagsInput({
         <PopoverTrigger asChild>
           <div
             role="combobox"
+            aria-label={ariaLabel}
             aria-expanded={open}
             aria-disabled={disabled || undefined}
             tabIndex={disabled ? -1 : 0}

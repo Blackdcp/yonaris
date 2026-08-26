@@ -7,6 +7,7 @@ export function LocalizedTagsInput(props: TagsInputProps) {
 	return (
 		<TagsInput
 			{...props}
+			emptyText={props.emptyText ?? t("customer.filters.noResults")}
 			removeTagLabel={props.removeTagLabel ?? ((tag) => t("accessibility.removeTag", { tag }))}
 			maximumReachedText={props.maximumReachedText ?? t("filter.maximumReached")}
 			entryHintText={props.entryHintText ?? t("filter.entryHint")}

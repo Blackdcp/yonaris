@@ -17,6 +17,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import BrandOnboarding from "@/components/brand-onboarding";
 import { SiteHeader } from "@/components/site-header";
 import { validateBrandFilterSearch } from "@/hooks/use-list-filters";
+import { translate } from "@/i18n/catalog";
 import {
 	checkOrgAccess,
 	checkOrgWriteAccess,
@@ -173,12 +174,15 @@ export const Route = createFileRoute("/_authed/app/$brand")({
 	head: ({ match, loaderData }) => {
 		const appName = getAppName(match);
 		const brandName = (loaderData as { brandName?: string | null } | undefined)?.brandName;
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
 				{ title: brandName ? `${brandName} · ${appName}` : appName },
 				{
 					name: "description",
-					content: brandName ? `AI answer presence tracking for ${brandName}.` : "AI answer presence tracking and optimization.",
+					content: brandName
+						? translate(uiLanguage, "customer.brand.metaDescription", { brand: brandName })
+						: translate(uiLanguage, "customer.brand.metaDescriptionGeneric"),
 				},
 			],
 		};

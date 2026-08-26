@@ -12,22 +12,94 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { useCallback, useEffect, useState } from "react";
+import { customerSettingsErrorMessageId } from "@/components/customer-settings-errors";
 import { LocalizedTagsInput as TagsInput } from "@/components/localized-tags-input";
 import { useBrand } from "@/hooks/use-brands";
 import { citationKeys } from "@/hooks/use-citations";
 import { dashboardKeys } from "@/hooks/use-dashboard-summary";
+import type { MessageId } from "@/i18n/catalog";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { MAX_BRAND_NAME_LENGTH, MAX_WEBSITE_INPUT_LENGTH } from "@/lib/brand-settings";
+import { validateWebsiteUrl } from "@/lib/brand-website";
 import { cleanAndValidateDomain } from "@/lib/domain-categories";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { updateBrandFn } from "@/server/brands";
+
+type BrandSettingsField = "name" | "website" | "additionalDomains";
+type BrandSettingsFieldErrors = Partial<Record<BrandSettingsField, MessageId>>;
+type UpdateBrand = (input: {
+	data: {
+		brandId: string;
+		name: string;
+		website: string;
+		additionalDomains: string[];
+		aliases: string[];
+	};
+}) => Promise<unknown>;
+
+export type BrandSettingsSubmissionResult =
+	| {
+			ok: true;
+			submitted: {
+				brandId: string;
+				name: string;
+				website: string;
+				additionalDomains: string[];
+				aliases: string[];
+			};
+	  }
+	| { ok: false; fieldErrors: BrandSettingsFieldErrors; formError?: MessageId };
+
+export async function submitBrandSettingsForm(
+	formData: FormData,
+	context: { brandId: string; additionalDomains: string[]; aliases: string[] },
+	updateBrand: UpdateBrand,
+): Promise<BrandSettingsSubmissionResult> {
+	const rawName = formData.get("name");
+	const rawWebsite = formData.get("website");
+	const name = typeof rawName === "string" ? rawName : "";
+	const website = typeof rawWebsite === "string" ? rawWebsite : "";
+	const fieldErrors: BrandSettingsFieldErrors = {};
+
+	if (!name.trim()) fieldErrors.name = "settings.brand.validation.nameRequired";
+	else if (name.length > MAX_BRAND_NAME_LENGTH) fieldErrors.name = "settings.brand.validation.nameTooLong";
+
+	if (!website.trim()) fieldErrors.website = "settings.brand.validation.websiteRequired";
+	else if (website.length > MAX_WEBSITE_INPUT_LENGTH) {
+		fieldErrors.website = "settings.brand.validation.websiteTooLong";
+	} else if (!validateWebsiteUrl(website).isValid) {
+		fieldErrors.website = "settings.brand.validation.websiteInvalid";
+	}
+
+	if (context.additionalDomains.some((domain) => !cleanAndValidateDomain(domain))) {
+		fieldErrors.additionalDomains = "settings.brand.validation.domainInvalid";
+	}
+
+	if (Object.keys(fieldErrors).length > 0) return { ok: false, fieldErrors };
+
+	const submitted = { ...context, name, website };
+	try {
+		await updateBrand({ data: submitted });
+		return { ok: true, submitted };
+	} catch (error) {
+		return {
+			ok: false,
+			fieldErrors: {},
+			formError: customerSettingsErrorMessageId("brand", error),
+		};
+	}
+}
 
 export const Route = createFileRoute("/_authed/app/$brand/settings/brand")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Brand Settings", { appName, brandName }) },
-				{ name: "description", content: "Manage your brand name and website." },
+				{ title: buildTitle(translate(uiLanguage, "settings.brand.metaTitle"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "settings.brand.metaDescription") },
 			],
 		};
 	},
@@ -35,34 +107,39 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/brand")({
 });
 
 function BrandSettingsPage() {
+	const { t } = useI18n();
 	const { brand, isLoading, revalidate } = useBrand();
 	const queryClient = useQueryClient();
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [error, setError] = useState("");
-	const [success, setSuccess] = useState("");
-	const [additionalDomains, setAdditionalDomains] = useState<string[]>([]);
-	const [aliases, setAliases] = useState<string[]>([]);
+	const [fieldErrors, setFieldErrors] = useState<BrandSettingsFieldErrors>({});
+	const [formError, setFormError] = useState<MessageId | null>(null);
+	const [success, setSuccess] = useState(false);
+	const [additionalDomains, setAdditionalDomains] = useState<string[]>(() => brand?.additionalDomains || []);
+	const [aliases, setAliases] = useState<string[]>(() => brand?.aliases || []);
 
 	useEffect(() => {
 		if (brand) {
 			setAdditionalDomains(brand.additionalDomains || []);
 			setAliases(brand.aliases || []);
 		}
-	}, [brand?.updatedAt]);
+	}, [brand]);
 
-	const validateDomain = useCallback((val: string): true | string => {
-		const cleaned = cleanAndValidateDomain(val);
-		if (!cleaned) return `"${val}" is not a valid domain`;
-		return true;
-	}, []);
+	const validateDomain = useCallback(
+		(val: string): true | string => {
+			const cleaned = cleanAndValidateDomain(val);
+			if (!cleaned) return t("settings.brand.validation.domainInvalid");
+			return true;
+		},
+		[t],
+	);
 	const handleAliasesChange = useCallback((values: string[]) => setAliases(values), []);
 
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-3xl font-bold">Brand</h1>
-					<p className="text-muted-foreground">Loading...</p>
+					<h1 className="text-3xl font-bold">{t("settings.brand.title")}</h1>
+					<p className="text-muted-foreground">{t("settings.loading")}</p>
 				</div>
 			</div>
 		);
@@ -72,8 +149,8 @@ function BrandSettingsPage() {
 		return (
 			<div className="space-y-6">
 				<div>
-					<h1 className="text-3xl font-bold">Brand</h1>
-					<p className="text-destructive">Brand not found</p>
+					<h1 className="text-3xl font-bold">{t("settings.brand.title")}</h1>
+					<p className="text-destructive">{t("settings.brandNotFound")}</p>
 				</div>
 			</div>
 		);
@@ -81,31 +158,28 @@ function BrandSettingsPage() {
 
 	const handleSubmit = async (formData: FormData) => {
 		setIsSubmitting(true);
-		setError("");
-		setSuccess("");
+		setFieldErrors({});
+		setFormError(null);
+		setSuccess(false);
 
 		try {
-			const name = formData.get("name") as string;
-			const website = formData.get("website") as string;
+			const result = await submitBrandSettingsForm(
+				formData,
+				{ brandId: brand.id, additionalDomains, aliases },
+				updateBrandFn,
+			);
+			if (!result.ok) {
+				setFieldErrors(result.fieldErrors);
+				setFormError(result.formError ?? null);
+				return;
+			}
 
-			await updateBrandFn({
-				data: {
-					brandId: brand.id,
-					name,
-					website,
-					additionalDomains,
-					aliases,
-				},
-			});
-
-			// Domain/alias changes affect citation categorization and mention detection
 			queryClient.invalidateQueries({ queryKey: citationKeys.all });
 			queryClient.invalidateQueries({ queryKey: dashboardKeys.all });
-
-			setSuccess("Brand details updated successfully!");
+			setSuccess(true);
 			await revalidate();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "An error occurred");
+		} catch {
+			setFormError("common.error.unexpected");
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -114,95 +188,132 @@ function BrandSettingsPage() {
 	return (
 		<div className="space-y-6 max-w-2xl">
 			<div>
-				<h1 className="text-3xl font-bold">Brand</h1>
-				<p className="text-muted-foreground">Manage your brand name and website</p>
+				<h1 className="text-3xl font-bold">{t("settings.brand.title")}</h1>
+				<p className="text-muted-foreground">{t("settings.brand.description")}</p>
 			</div>
 
-			<form action={handleSubmit} className="space-y-6">
+			<form action={handleSubmit} className="space-y-6" noValidate>
 				<div className="space-y-4">
 					<div className="space-y-2">
-						<Label htmlFor="name">Brand Name</Label>
+						<Label htmlFor="name">{t("settings.brand.name")}</Label>
 						<Input
 							id="name"
 							name="name"
 							type="text"
-							placeholder="Brand Name"
+							placeholder={t("settings.brand.namePlaceholder")}
 							defaultValue={brand.name}
 							required
 							disabled={isSubmitting}
+							aria-invalid={Boolean(fieldErrors.name)}
+							aria-describedby={fieldErrors.name ? "brand-name-error" : "brand-name-hint"}
 						/>
-						<p className="text-xs text-muted-foreground">Enter your brand&apos;s name</p>
+						<p id="brand-name-hint" className="text-xs text-muted-foreground">
+							{t("settings.brand.nameHint")}
+						</p>
+						{fieldErrors.name && (
+							<p id="brand-name-error" className="text-sm text-destructive">
+								{t(fieldErrors.name, { max: MAX_BRAND_NAME_LENGTH })}
+							</p>
+						)}
 					</div>
 
 					<div className="space-y-2">
-						<Label htmlFor="website">Website</Label>
+						<Label htmlFor="website">{t("settings.brand.website")}</Label>
 						<Input
 							id="website"
 							name="website"
 							type="text"
-							placeholder="example.com"
+							placeholder={t("settings.brand.websitePlaceholder")}
 							defaultValue={brand.website}
 							required
 							disabled={isSubmitting}
+							aria-invalid={Boolean(fieldErrors.website)}
+							aria-describedby={fieldErrors.website ? "brand-website-error" : "brand-website-hint"}
 						/>
-						<p className="text-xs text-muted-foreground">Your brand&apos;s primary website</p>
+						<p id="brand-website-hint" className="text-xs text-muted-foreground">
+							{t("settings.brand.websiteHint")}
+						</p>
+						{fieldErrors.website && (
+							<p id="brand-website-error" className="text-sm text-destructive">
+								{t(fieldErrors.website, { max: MAX_WEBSITE_INPUT_LENGTH })}
+							</p>
+						)}
 					</div>
 
 					<div className="space-y-2">
 						<Label className="flex items-center gap-1.5">
-							Additional Domains
+							{t("settings.brand.additionalDomains")}
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+									<IconInfoCircle
+										className="h-3.5 w-3.5 text-muted-foreground cursor-help"
+										aria-label={t("settings.brand.additionalDomainsLabel")}
+										tabIndex={0}
+									/>
 								</TooltipTrigger>
 								<TooltipContent className="max-w-xs text-xs font-normal">
-									Other domains your brand owns (e.g. blog.example.com, shop.example.com). Citations from these domains
-									will be counted as your brand&apos;s citations. <strong>Updates retroactively</strong> &mdash;
-									existing citations will be reclassified immediately.
+									{t("settings.brand.additionalDomainsHelp")}
 								</TooltipContent>
 							</Tooltip>
 						</Label>
 						<TagsInput
 							value={additionalDomains}
 							onValueChange={setAdditionalDomains}
-							placeholder="Add domain..."
-							searchPlaceholder="Add domain..."
+							placeholder={t("settings.brand.additionalDomainsPlaceholder")}
+							searchPlaceholder={t("settings.brand.additionalDomainsPlaceholder")}
+							ariaLabel={t("settings.brand.additionalDomains")}
 							maxItems={10}
 							normalizeValue={(raw) => cleanAndValidateDomain(raw) ?? raw.trim()}
 							onValidate={validateDomain}
+							disabled={isSubmitting}
 						/>
+						{fieldErrors.additionalDomains && (
+							<p className="text-sm text-destructive">{t(fieldErrors.additionalDomains)}</p>
+						)}
 					</div>
 
 					<div className="space-y-2">
 						<Label className="flex items-center gap-1.5">
-							Brand Aliases
+							{t("settings.brand.aliases")}
 							<Tooltip>
 								<TooltipTrigger asChild>
-									<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+									<IconInfoCircle
+										className="h-3.5 w-3.5 text-muted-foreground cursor-help"
+										aria-label={t("settings.brand.aliasesLabel")}
+										tabIndex={0}
+									/>
 								</TooltipTrigger>
 								<TooltipContent className="max-w-xs text-xs font-normal">
-									Alternative names for your brand (sub-brands, product lines, abbreviations). Used for mention
-									detection in <strong>future</strong> prompt runs only &mdash; does not apply retroactively to past
-									results.
+									{t("settings.brand.aliasesHelp")}
 								</TooltipContent>
 							</Tooltip>
 						</Label>
 						<TagsInput
 							value={aliases}
 							onValueChange={handleAliasesChange}
-							placeholder="Add alias..."
-							searchPlaceholder="Add alias..."
+							placeholder={t("settings.brand.aliasesPlaceholder")}
+							searchPlaceholder={t("settings.brand.aliasesPlaceholder")}
+							ariaLabel={t("settings.brand.aliases")}
 							maxItems={10}
+							disabled={isSubmitting}
 						/>
 					</div>
 				</div>
 
-				{error && <div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md">{error}</div>}
-				{success && <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md">{success}</div>}
+				{formError && (
+					<div className="text-sm text-destructive bg-destructive/10 p-3 rounded-md" role="alert">
+						{t(formError)}
+					</div>
+				)}
+				{success && (
+					<div className="text-sm text-green-600 bg-green-50 p-3 rounded-md" role="status">
+						{t("settings.brand.success")}
+					</div>
+				)}
 
 				<div className="flex gap-2">
 					<Button type="submit" disabled={isSubmitting} className="cursor-pointer">
-						{isSubmitting ? "Saving..." : "Save Changes"}
+						{isSubmitting ? t("settings.action.saving") : t("settings.action.saveChanges")}
 					</Button>
 				</div>
 			</form>

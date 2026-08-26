@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/component
 import { Inbox, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LocalizedTagsInput as TagsInput } from "@/components/localized-tags-input";
+import { useI18n } from "@/i18n/provider";
 
 export interface EditablePrompt {
 	id?: string;
@@ -48,6 +49,7 @@ interface PromptsListEditorProps {
 }
 
 export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: PromptsListEditorProps) {
+	const { t } = useI18n();
 	const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
 	const allTagOptions = useMemo(() => {
@@ -99,9 +101,7 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 		<div className="space-y-4">
 			{liveSelectedCount > 0 && (
 				<div className="hidden md:flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-					<span className="text-muted-foreground">
-						<strong className="text-foreground">{liveSelectedCount}</strong> selected
-					</span>
+					<span className="text-muted-foreground">{t("settings.prompts.selected", { count: liveSelectedCount })}</span>
 					<div className="flex items-center gap-2">
 						<Button
 							type="button"
@@ -110,7 +110,7 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 							onClick={() => applyEnabledToSelection(true)}
 							className="cursor-pointer"
 						>
-							Enable
+							{t("settings.prompts.enable")}
 						</Button>
 						<Button
 							type="button"
@@ -119,10 +119,10 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 							onClick={() => applyEnabledToSelection(false)}
 							className="cursor-pointer"
 						>
-							Disable
+							{t("settings.prompts.disable")}
 						</Button>
 						<Button type="button" size="sm" variant="ghost" onClick={clearSelection} className="cursor-pointer">
-							Clear
+							{t("settings.prompts.clear")}
 						</Button>
 					</div>
 				</div>
@@ -134,50 +134,58 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 						checked={allSelected}
 						onCheckedChange={toggleSelectAll}
 						disabled={prompts.length === 0}
-						aria-label={allSelected ? "Deselect all prompts" : "Select all prompts"}
+						aria-label={allSelected ? t("settings.prompts.deselectAll") : t("settings.prompts.selectAll")}
 					/>
 				</div>
 				<div className="flex items-center gap-1 min-w-0">
-					Prompt Text
+					{t("settings.prompts.promptText")}
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+							<IconInfoCircle
+								className="h-3.5 w-3.5 text-muted-foreground cursor-help"
+								aria-label={t("settings.prompts.promptTextHelpLabel")}
+								tabIndex={0}
+							/>
 						</TooltipTrigger>
 						<TooltipContent>
-							<p className="max-w-xs">
-								The exact question sent for evaluation. Saved prompt text is immutable; add a new prompt to change it.
-							</p>
+							<p className="max-w-xs">{t("settings.prompts.readOnlyHelp")}</p>
 						</TooltipContent>
 					</Tooltip>
 				</div>
 				{showSystemTags && (
 					<div className="hidden md:flex items-center gap-1">
-						System
+						{t("settings.prompts.system")}
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+								<IconInfoCircle
+									className="h-3.5 w-3.5 text-muted-foreground cursor-help"
+									aria-label={t("settings.prompts.systemHelpLabel")}
+									tabIndex={0}
+								/>
 							</TooltipTrigger>
 							<TooltipContent>
-								<p className="max-w-xs">
-									Auto-generated tags like &quot;branded&quot; or &quot;unbranded&quot; based on prompt content.
-								</p>
+								<p className="max-w-xs">{t("settings.prompts.systemHelp")}</p>
 							</TooltipContent>
 						</Tooltip>
 					</div>
 				)}
 				<div className="flex items-center gap-1 min-w-0">
-					Tags
+					{t("settings.prompts.tags")}
 					<Tooltip>
 						<TooltipTrigger asChild>
-							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+							<IconInfoCircle
+								className="h-3.5 w-3.5 text-muted-foreground cursor-help"
+								aria-label={t("settings.prompts.tagsHelpLabel")}
+								tabIndex={0}
+							/>
 						</TooltipTrigger>
 						<TooltipContent>
-							<p className="max-w-xs">Custom labels to organize and filter prompts.</p>
+							<p className="max-w-xs">{t("settings.prompts.tagsHelp")}</p>
 						</TooltipContent>
 					</Tooltip>
 				</div>
 				<div className="flex justify-center">
-					<span className="sr-only">Enabled</span>
+					<span className="sr-only">{t("settings.prompts.enabled")}</span>
 				</div>
 			</div>
 
@@ -185,13 +193,18 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 				<div className="border-2 border-dashed border-muted rounded-lg min-h-48 flex items-center justify-center">
 					<div className="text-center py-8 text-muted-foreground">
 						<Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
-						<p>No prompts yet.</p>
+						<p>{t("settings.prompts.empty")}</p>
 					</div>
 				</div>
 			) : (
 				<div className="space-y-3">
 					{prompts.map((prompt, index) => (
 						<div key={prompt._key} className={!prompt.enabled ? "opacity-60" : ""}>
+							{prompt.id && (
+								<span id={`prompt-${prompt._key}-readonly`} className="sr-only">
+									{t("settings.prompts.readOnlyHelp")}
+								</span>
+							)}
 							{/* Mobile: stacked, no selection/bulk */}
 							<div className={`md:hidden flex flex-col gap-2 pb-3 ${index < prompts.length - 1 ? "border-b" : ""}`}>
 								<div className="flex items-start gap-2">
@@ -199,14 +212,18 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 										value={prompt.value}
 										onChange={(e) => update(index, { value: e.target.value })}
 										disabled={Boolean(prompt.id)}
-										placeholder="Enter prompt text..."
+										placeholder={t("settings.prompts.textPlaceholder")}
+										aria-label={t("settings.prompts.promptTextLabel")}
+										aria-describedby={prompt.id ? `prompt-${prompt._key}-readonly` : undefined}
 										className="min-w-0 flex-1"
 									/>
 									<div className="pt-2">
 										<Switch
 											checked={prompt.enabled}
 											onCheckedChange={(checked) => update(index, { enabled: checked })}
-											aria-label={prompt.enabled ? "Disable prompt" : "Enable prompt"}
+											aria-label={
+												prompt.enabled ? t("settings.prompts.disablePrompt") : t("settings.prompts.enablePrompt")
+											}
 										/>
 									</div>
 								</div>
@@ -214,8 +231,9 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 									value={prompt.tags}
 									onValueChange={(tags) => update(index, { tags })}
 									options={allTagOptions}
-									placeholder="Add tag..."
-									searchPlaceholder="Search or create tag..."
+									placeholder={t("settings.prompts.tagPlaceholder")}
+									searchPlaceholder={t("settings.prompts.tagSearchPlaceholder")}
+									ariaLabel={t("settings.prompts.tagsLabel")}
 									normalizeValue={(raw) => raw.toLowerCase().trim()}
 								/>
 							</div>
@@ -226,32 +244,43 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 									<Checkbox
 										checked={selectedKeys.has(prompt._key)}
 										onCheckedChange={() => toggleSelect(prompt._key)}
-										aria-label="Select prompt"
+										aria-label={t("settings.prompts.selectPrompt")}
 									/>
 								</div>
 								<Input
 									value={prompt.value}
 									onChange={(e) => update(index, { value: e.target.value })}
 									disabled={Boolean(prompt.id)}
-									placeholder="Enter prompt text..."
+									placeholder={t("settings.prompts.textPlaceholder")}
+									aria-label={t("settings.prompts.promptTextLabel")}
+									aria-describedby={prompt.id ? `prompt-${prompt._key}-readonly` : undefined}
 									className="min-w-0"
 								/>
 								{showSystemTags && (
-									<TagsInput value={prompt.systemTags} onValueChange={() => {}} disabled placeholder="—" />
+									<TagsInput
+										value={prompt.systemTags}
+										onValueChange={() => {}}
+										disabled
+										placeholder="—"
+										ariaLabel={t("settings.prompts.systemTagsLabel")}
+									/>
 								)}
 								<TagsInput
 									value={prompt.tags}
 									onValueChange={(tags) => update(index, { tags })}
 									options={allTagOptions}
-									placeholder="Add tag..."
-									searchPlaceholder="Search or create tag..."
+									placeholder={t("settings.prompts.tagPlaceholder")}
+									searchPlaceholder={t("settings.prompts.tagSearchPlaceholder")}
+									ariaLabel={t("settings.prompts.tagsLabel")}
 									normalizeValue={(raw) => raw.toLowerCase().trim()}
 								/>
 								<div className="flex justify-center pt-2">
 									<Switch
 										checked={prompt.enabled}
 										onCheckedChange={(checked) => update(index, { enabled: checked })}
-										aria-label={prompt.enabled ? "Disable prompt" : "Enable prompt"}
+										aria-label={
+											prompt.enabled ? t("settings.prompts.disablePrompt") : t("settings.prompts.enablePrompt")
+										}
 									/>
 								</div>
 							</div>
@@ -268,21 +297,16 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 					onClick={add}
 					className="flex items-center gap-2 cursor-pointer"
 				>
-					<Plus className="h-4 w-4" /> Add Prompt
+					<Plus className="h-4 w-4" /> {t("settings.prompts.add")}
 				</Button>
 			)}
 
 			{prompts.length >= MAX_PROMPTS && (
-				<p className="text-xs text-muted-foreground">
-					Maximum of {MAX_PROMPTS} prompts allowed. Remove a prompt to add a new one.
-				</p>
+				<p className="text-xs text-muted-foreground">{t("settings.prompts.maximum", { max: MAX_PROMPTS })}</p>
 			)}
 
 			<p className="text-xs text-muted-foreground">
-				<strong>
-					{validCount}/{MAX_PROMPTS}
-				</strong>{" "}
-				prompts configured
+				{t("settings.prompts.configured", { count: validCount, max: MAX_PROMPTS })}
 			</p>
 		</div>
 	);

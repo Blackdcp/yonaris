@@ -12,6 +12,8 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { PromptsEditor } from "@/components/prompts-editor";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
@@ -76,10 +78,11 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Prompts", { appName, brandName }) },
-				{ name: "description", content: "Add, edit, or remove tracked prompts." },
+				{ title: buildTitle(translate(uiLanguage, "settings.prompts.metaTitle"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "settings.prompts.metaDescription") },
 			],
 		};
 	},
@@ -88,8 +91,10 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 });
 
 function PromptsSettingsPage() {
+	const { t } = useI18n();
 	const { prompts: brandPrompts, scopeId, scopeName } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
+	const displayScopeName = scopeName === "Legacy / Unspecified" ? t("settings.prompts.legacyScope") : scopeName;
 
 	return (
 		<PromptsEditor
@@ -97,8 +102,8 @@ function PromptsSettingsPage() {
 			initialPrompts={brandPrompts}
 			brandId={brandId}
 			scopeId={scopeId}
-			pageTitle={`Prompts - ${scopeName}`}
-			pageDescription="Add, edit, or remove prompts for this measurement scope"
+			pageTitle={t("settings.prompts.title", { scope: displayScopeName })}
+			pageDescription={t("settings.prompts.description")}
 		/>
 	);
 }

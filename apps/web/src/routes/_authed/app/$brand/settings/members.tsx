@@ -14,10 +14,38 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { useState } from "react";
+import { customerSettingsErrorMessageId } from "@/components/customer-settings-errors";
+import type { MessageId } from "@/i18n/catalog";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { getDeployment } from "@/lib/config/server";
 import { trackEvent } from "@/lib/posthog";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { cancelInvitationFn, inviteTeamMemberFn, listTeamFn, removeTeamMemberFn, type TeamData } from "@/server/team";
+
+type InviteRole = "member" | "admin";
+type InviteTeamMember = (input: { data: { brandId: string; email: string; role: InviteRole } }) => Promise<unknown>;
+
+export type TeamInviteSubmissionResult =
+	| { ok: true; submitted: { brandId: string; email: string; role: InviteRole } }
+	| { ok: false; formError: MessageId };
+
+export function teamErrorMessageId(action: "invite" | "remove" | "cancel", error: unknown): MessageId {
+	const operation = action === "invite" ? "teamInvite" : action === "remove" ? "teamRemove" : "teamCancel";
+	return customerSettingsErrorMessageId(operation, error);
+}
+
+export async function submitTeamInviteForm(
+	input: { brandId: string; email: string; role: InviteRole },
+	invite: InviteTeamMember,
+): Promise<TeamInviteSubmissionResult> {
+	try {
+		await invite({ data: input });
+		return { ok: true, submitted: input };
+	} catch (error) {
+		return { ok: false, formError: teamErrorMessageId("invite", error) };
+	}
+}
 
 const getTeamInvitesEnabled = createServerFn({ method: "GET" }).handler(async () => {
 	return { teamInvites: getDeployment().features.teamInvites };
@@ -34,10 +62,11 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/members")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Team", { appName, brandName }) },
-				{ name: "description", content: "Invite teammates and manage team members." },
+				{ title: buildTitle(translate(uiLanguage, "settings.team.metaTitle"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "settings.team.metaDescription") },
 			],
 		};
 	},
@@ -45,109 +74,135 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/members")({
 });
 
 function TeamSettingsPage() {
+	const { t, formatDate } = useI18n();
 	const { brand: brandId } = Route.useParams();
 	const team: TeamData = Route.useLoaderData();
 	const { members, invitations, currentUserId } = team;
 	const router = useRouter();
 	const [inviteEmail, setInviteEmail] = useState("");
-	const [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
+	const [inviteRole, setInviteRole] = useState<InviteRole>("member");
 	const [inviting, setInviting] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [pendingAction, setPendingAction] = useState<string | null>(null);
+	const [formError, setFormError] = useState<MessageId | null>(null);
 
-	async function handleInvite(e: React.FormEvent) {
-		e.preventDefault();
-		setError(null);
+	const roleLabel = (role: string | null | undefined) => {
+		if (role === "admin") return t("settings.team.role.admin");
+		if (role === "owner") return t("settings.team.role.owner");
+		if (!role || role === "member") return t("settings.team.role.member");
+		return role;
+	};
+
+	async function handleInvite(event: React.FormEvent) {
+		event.preventDefault();
+		setFormError(null);
 		setInviting(true);
 		try {
-			await inviteTeamMemberFn({ data: { brandId, email: inviteEmail, role: inviteRole } });
-			trackEvent("team_member_invited", { role: inviteRole });
+			const result = await submitTeamInviteForm({ brandId, email: inviteEmail, role: inviteRole }, inviteTeamMemberFn);
+			if (!result.ok) {
+				setFormError(result.formError);
+				return;
+			}
+			trackEvent("team_member_invited", { role: result.submitted.role });
 			setInviteEmail("");
 			setInviteRole("member");
 			await router.invalidate();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to send invitation");
+		} catch {
+			setFormError("common.error.unexpected");
 		} finally {
 			setInviting(false);
 		}
 	}
 
 	async function handleRemove(memberId: string) {
-		setError(null);
+		setFormError(null);
+		setPendingAction(`remove:${memberId}`);
 		try {
 			await removeTeamMemberFn({ data: { brandId, memberId } });
 			await router.invalidate();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to remove member");
+		} catch (error) {
+			setFormError(teamErrorMessageId("remove", error));
+		} finally {
+			setPendingAction(null);
 		}
 	}
 
 	async function handleCancel(invitationId: string) {
-		setError(null);
+		setFormError(null);
+		setPendingAction(`cancel:${invitationId}`);
 		try {
 			await cancelInvitationFn({ data: { brandId, invitationId } });
 			await router.invalidate();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to cancel invitation");
+		} catch (error) {
+			setFormError(teamErrorMessageId("cancel", error));
+		} finally {
+			setPendingAction(null);
 		}
 	}
 
 	return (
 		<div className="space-y-6">
 			<div>
-				<h1 className="text-3xl font-bold">Team</h1>
-				<p className="text-muted-foreground">Invite teammates and manage who has access to this brand.</p>
+				<h1 className="text-3xl font-bold">{t("settings.team.title")}</h1>
+				<p className="text-muted-foreground">{t("settings.team.description")}</p>
 			</div>
 
-			{error && (
+			{formError && (
 				<Alert variant="destructive">
-					<AlertDescription>{error}</AlertDescription>
+					<AlertDescription>{t(formError)}</AlertDescription>
 				</Alert>
 			)}
 
 			<form onSubmit={handleInvite} className="flex flex-wrap items-end gap-3">
 				<div className="space-y-2">
-					<Label htmlFor="invite-email">Email</Label>
+					<Label htmlFor="invite-email">{t("settings.team.email")}</Label>
 					<Input
 						id="invite-email"
 						type="email"
-						placeholder="teammate@example.com"
+						placeholder={t("settings.team.emailPlaceholder")}
 						value={inviteEmail}
-						onChange={(e) => setInviteEmail(e.target.value)}
+						onChange={(event) => setInviteEmail(event.target.value)}
 						required
+						disabled={inviting}
 						className="w-64"
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="invite-role">Role</Label>
-					<Select value={inviteRole} onValueChange={(value) => setInviteRole(value as "member" | "admin")}>
-						<SelectTrigger id="invite-role" className="w-32">
-							<SelectValue />
+					<Label htmlFor="invite-role">{t("settings.team.role")}</Label>
+					<Select value={inviteRole} onValueChange={(value) => setInviteRole(value as InviteRole)} disabled={inviting}>
+						<SelectTrigger id="invite-role" className="w-32" aria-label={t("settings.team.role")}>
+							<SelectValue>{roleLabel(inviteRole)}</SelectValue>
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="member">Member</SelectItem>
-							<SelectItem value="admin">Admin</SelectItem>
+							<SelectItem value="member">{t("settings.team.role.member")}</SelectItem>
+							<SelectItem value="admin">{t("settings.team.role.admin")}</SelectItem>
 						</SelectContent>
 					</Select>
 				</div>
 				<Button type="submit" disabled={inviting}>
-					{inviting ? "Inviting..." : "Invite"}
+					{inviting ? t("settings.team.inviting") : t("settings.team.invite")}
 				</Button>
 			</form>
 
 			<div className="space-y-3">
-				<h2 className="text-lg font-semibold">Members</h2>
+				<h2 className="text-lg font-semibold">{t("settings.team.members")}</h2>
 				<div className="divide-y rounded-md border">
-					{members.map((m) => (
-						<div key={m.id} className="flex items-center justify-between gap-3 p-3">
+					{members.map((member) => (
+						<div key={member.id} className="flex items-center justify-between gap-3 p-3">
 							<div className="min-w-0">
-								<p className="truncate font-medium">{m.name}</p>
-								<p className="truncate text-sm text-muted-foreground">{m.email}</p>
+								<p className="truncate font-medium">{member.name}</p>
+								<p className="truncate text-sm text-muted-foreground">{member.email}</p>
 							</div>
 							<div className="flex shrink-0 items-center gap-3">
-								<Badge variant="secondary">{m.role}</Badge>
-								{m.userId !== currentUserId && (
-									<Button type="button" variant="outline" size="sm" onClick={() => handleRemove(m.id)}>
-										Remove
+								<Badge variant="secondary">{roleLabel(member.role)}</Badge>
+								{member.userId !== currentUserId && (
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => handleRemove(member.id)}
+										disabled={pendingAction !== null}
+									>
+										{pendingAction === `remove:${member.id}` ? t("settings.team.removing") : t("settings.team.remove")}
 									</Button>
 								)}
 							</div>
@@ -158,20 +213,30 @@ function TeamSettingsPage() {
 
 			{invitations.length > 0 && (
 				<div className="space-y-3">
-					<h2 className="text-lg font-semibold">Pending invitations</h2>
+					<h2 className="text-lg font-semibold">{t("settings.team.pending")}</h2>
 					<div className="divide-y rounded-md border">
-						{invitations.map((inv) => (
-							<div key={inv.id} className="flex items-center justify-between gap-3 p-3">
+						{invitations.map((invitation) => (
+							<div key={invitation.id} className="flex items-center justify-between gap-3 p-3">
 								<div className="min-w-0">
-									<p className="truncate font-medium">{inv.email}</p>
+									<p className="truncate font-medium">{invitation.email}</p>
 									<p className="text-sm text-muted-foreground">
-										Expires {new Date(inv.expiresAt).toLocaleDateString()}
+										{t("settings.team.expires", {
+											date: formatDate(new Date(invitation.expiresAt)),
+										})}
 									</p>
 								</div>
 								<div className="flex shrink-0 items-center gap-3">
-									<Badge variant="secondary">{inv.role ?? "member"}</Badge>
-									<Button type="button" variant="outline" size="sm" onClick={() => handleCancel(inv.id)}>
-										Cancel
+									<Badge variant="secondary">{roleLabel(invitation.role)}</Badge>
+									<Button
+										type="button"
+										variant="outline"
+										size="sm"
+										onClick={() => handleCancel(invitation.id)}
+										disabled={pendingAction !== null}
+									>
+										{pendingAction === `cancel:${invitation.id}`
+											? t("settings.team.cancelling")
+											: t("settings.team.cancel")}
 									</Button>
 								</div>
 							</div>
