@@ -8,8 +8,9 @@
  * packages/lib/src/auth/server.ts, re-run the generation script
  * and it will overwrite this file.
  */
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
+  check,
   pgTable,
   text,
   timestamp,
@@ -18,26 +19,32 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-export const user = pgTable("user", {
-  id: text("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
-  image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => /* @__PURE__ */ new Date())
-    .notNull(),
-  role: text("role"),
-  banned: boolean("banned").default(false),
-  banReason: text("ban_reason"),
-  banExpires: timestamp("ban_expires"),
-  uiLanguage: text("ui_language").default("en").notNull(),
-  hasReportGeneratorAccess: boolean("has_report_generator_access").default(
-    false,
-  ),
-});
+export const user = pgTable(
+  "user",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").default(false).notNull(),
+    image: text("image"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    role: text("role"),
+    banned: boolean("banned").default(false),
+    banReason: text("ban_reason"),
+    banExpires: timestamp("ban_expires"),
+    uiLanguage: text("ui_language").default("en").notNull(),
+    hasReportGeneratorAccess: boolean("has_report_generator_access").default(
+      false,
+    ),
+  },
+  (table) => ({
+    uiLanguageSupported: check("user_ui_language_supported", sql`${table.uiLanguage} IN ('en', 'zh-CN')`),
+  }),
+);
 
 export const session = pgTable(
   "session",

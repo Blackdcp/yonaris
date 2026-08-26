@@ -115,6 +115,8 @@ jobs:
           DROP TYPE public.response_snapshot_storage_backend;
           DROP TYPE public.overseas_run_call_status;
           DROP TYPE public.overseas_run_cohort_status;
+          ALTER TABLE public."user" DROP CONSTRAINT user_ui_language_supported;
+          ALTER TABLE public."user" DROP COLUMN ui_language;
           ALTER TABLE public.brand_opportunities DROP CONSTRAINT brand_opportunities_scope_fk;
           DROP INDEX public.brand_opportunities_brand_scope_created_at_idx;
           ALTER TABLE public.brand_opportunities DROP COLUMN scope_id;
@@ -122,7 +124,7 @@ jobs:
           DELETE FROM drizzle.__drizzle_migrations
           WHERE created_at IN (1786726866790, 1786893768101, 1786985859772, 1787019758271);
           DELETE FROM drizzle.__drizzle_migrations
-          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161, 1787325725764, 1787456563742);
+          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161, 1787325725764, 1787456563742, 1787735383309);
           SQL
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
             'select count(*) from drizzle.__drizzle_migrations;')" = "22"
@@ -157,4 +159,4 @@ jobs:
           done
 
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
-            'select count(*) from drizzle.__drizzle_migrations;')" = "31"
+            'select count(*) from drizzle.__drizzle_migrations;')" = "32"

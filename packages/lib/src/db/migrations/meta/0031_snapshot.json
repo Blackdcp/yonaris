@@ -5057,7 +5057,12 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "user_ui_language_supported": {
+          "name": "user_ui_language_supported",
+          "value": "\"user\".\"ui_language\" IN ('en', 'zh-CN')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.verification": {

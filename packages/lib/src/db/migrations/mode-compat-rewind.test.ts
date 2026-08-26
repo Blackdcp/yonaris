@@ -21,6 +21,7 @@ describe("mode compatibility migration rewind", () => {
 			"0028_browser_runner_six_surfaces",
 			"0029_browser_runner_zhipu_surface",
 			"0030_overseas_dataforseo_provider",
+			"0031_user_ui_language",
 		]);
 		for (const migration of post0021) expect(workflow).toContain(String(migration.when));
 		expect(workflow).toContain("DROP TABLE public.overseas_run_calls;");
@@ -30,6 +31,8 @@ describe("mode compatibility migration rewind", () => {
 		expect(workflow).toContain("DROP CONSTRAINT brand_opportunities_scope_fk;");
 		expect(workflow).toContain("DROP INDEX public.brand_opportunities_brand_scope_created_at_idx;");
 		expect(workflow).toContain("DROP COLUMN scope_id;");
+		expect(workflow).toContain('ALTER TABLE public."user" DROP CONSTRAINT user_ui_language_supported;');
+		expect(workflow).toContain('ALTER TABLE public."user" DROP COLUMN ui_language;');
 		expect(workflow).toContain("CREATE INDEX brand_opportunities_brand_id_created_at_idx");
 		expect(workflow).toContain(`'select count(*) from drizzle.__drizzle_migrations;')" = "${journal.entries.length}"`);
 	});
