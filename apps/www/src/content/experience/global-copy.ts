@@ -75,9 +75,8 @@ export const GLOBAL_COPY = {
 		lead: "Your team gets the context to decide; agents get the same fact, source and boundary.",
 		primaryAction: { label: "Talk to Yonaris", href: "/diagnostic" },
 		secondaryAction: { label: "Open the Agent surface", href: "/agent/company" },
-		closingTitle: "Machine-readable does not mean machine-written.",
-		closingBody:
-			"Clear headings, stable addresses, visible sources and scoped facts are editorial discipline, not a retrieval guarantee.",
+		closingTitle: "Bring the next buying question into focus.",
+		closingBody: "Start with one question, the public evidence behind it and the decision your team needs to make.",
 	},
 	diagnostic: {
 		navLabel: "Contact",

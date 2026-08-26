@@ -1,4 +1,6 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
+import { Site06Shell } from "@/components/experience/shared/site-06-shell";
 import type { HumanPageKey } from "@/content/experience/types";
 import { getLocaleSwitchPath } from "./locale-paths";
 
@@ -18,5 +20,32 @@ describe("Human site locale navigation", () => {
 			expect(getLocaleSwitchPath("en", pair.key)).toBe(pair.zh);
 			expect(getLocaleSwitchPath("zh", pair.key)).toBe(pair.en);
 		}
+	});
+
+	test("keeps the people and Agent control beside the primary navigation", () => {
+		const english = renderToStaticMarkup(
+			Site06Shell({
+				locale: "en",
+				pageKey: "product",
+				children: "Content",
+			}),
+		);
+		const chinese = renderToStaticMarkup(
+			Site06Shell({
+				locale: "zh",
+				pageKey: "product",
+				children: "内容",
+			}),
+		);
+
+		expect(english).toContain('class="site-06-header__actions"');
+		expect(english).toContain('aria-label="Choose reading mode"');
+		expect(english).toContain('href="/agent/product"');
+		expect(english).toContain("For people");
+		expect(english).toContain("For agents");
+		expect(chinese).toContain('aria-label="选择阅读方式"');
+		expect(chinese).toContain('href="/zh/agent/product"');
+		expect(chinese).toContain("人类阅读");
+		expect(chinese).toContain("Agent 阅读");
 	});
 });

@@ -10,6 +10,7 @@ if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
 	throw new Error(`WWW_E2E_PORT must be an integer from 1 to 65535; received ${JSON.stringify(rawPort)}`);
 }
 const baseURL = `http://127.0.0.1:${port}`;
+const productionBuild = process.env.WWW_E2E_PRODUCTION === "true";
 export default defineConfig({
 	testDir: "./www-tests",
 	testIgnore: ["diagnostic-analytics.spec.ts"],
@@ -32,9 +33,19 @@ export default defineConfig({
 		},
 	],
 	webServer: {
-		command: `${pnpm} --filter @workspace/www exec vite dev --host 127.0.0.1 --port ${port} --strictPort`,
+		command: productionBuild
+			? `${pnpm} --filter @workspace/www start`
+			: `${pnpm} --filter @workspace/www exec vite dev --host 127.0.0.1 --port ${port} --strictPort`,
 		env: {
 			...process.env,
+			...(productionBuild
+				? {
+						HOST: "127.0.0.1",
+						NODE_ENV: "production",
+						PORT: rawPort,
+						VITE_SITE_URL: "https://yonaris.com",
+					}
+				: {}),
 			VITE_PLAUSIBLE_DOMAIN: "",
 			VITE_POSTHOG_KEY: "",
 			VITE_POSTHOG_HOST: "",

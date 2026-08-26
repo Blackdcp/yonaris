@@ -297,6 +297,10 @@
 	text-transform: uppercase;
 }
 
+.site-06--paper .site-06-kicker {
+	color: color-mix(in srgb, var(--site-amber) 48%, var(--site-ink));
+}
+
 .site-06-action {
 	display: inline-flex;
 	align-items: center;

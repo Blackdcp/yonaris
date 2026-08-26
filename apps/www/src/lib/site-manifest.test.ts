@@ -31,12 +31,12 @@ describe("site manifest", () => {
 		expect(subject.SITE_MANIFEST.map((route) => route.key).sort()).toEqual([...subject.SITE_ROUTE_KEYS].sort());
 	});
 
-	test("orders the four customer navigation destinations", () => {
+	test("orders the approved Site 06 primary destinations", () => {
 		expect(
 			subject.SITE_MANIFEST.filter((route) => (route.navigation as readonly string[]).includes("primary")).map(
 				(route) => route.key,
 			),
-		).toEqual(["product", "approach", "geo", "company"]);
+		).toEqual(["product", "approach", "company", "diagnostic"]);
 	});
 
 	test("maps every Human topic to an Agent page", () => {
