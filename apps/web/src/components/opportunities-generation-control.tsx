@@ -4,22 +4,23 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Label } from "@workspace/ui/components/label";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { translate } from "@/i18n/catalog";
+import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { OpportunitiesResponse } from "@/server/opportunities";
 import { type AdminOpportunityBrand, getOpportunityScopesForBrand } from "@/server/opportunities-admin-scopes";
 
-export function opportunityGenerationMessage(result: OpportunitiesResponse, locale: UiLanguage = "en"): string {
+export function opportunityGenerationMessageId(result: OpportunitiesResponse): MessageId {
 	if (!result.report) {
 		if (result.reason === "insufficient-data") {
-			return translate(locale, "providerTool.opportunity.result.insufficient");
+			return "providerTool.opportunity.result.insufficient";
 		}
-		return translate(locale, "providerTool.opportunity.result.none");
+		return "providerTool.opportunity.result.none";
 	}
-	return translate(
-		locale,
-		result.generatedFor ? "providerTool.opportunity.result.generated" : "providerTool.opportunity.result.current",
-	);
+	return result.generatedFor ? "providerTool.opportunity.result.generated" : "providerTool.opportunity.result.current";
+}
+
+export function opportunityGenerationMessage(result: OpportunitiesResponse, locale: UiLanguage = "en"): string {
+	return translate(locale, opportunityGenerationMessageId(result));
 }
 
 export function OpportunitiesGenerationControl({
@@ -29,27 +30,27 @@ export function OpportunitiesGenerationControl({
 	onGenerate(input: { brandId: string; scopeId: string }): Promise<OpportunitiesResponse>;
 	brands?: AdminOpportunityBrand[];
 }) {
-	const { locale, t } = useI18n();
+	const { t } = useI18n();
 	const [brandId, setBrandId] = useState("");
 	const [scopeId, setScopeId] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [message, setMessage] = useState<string | null>(null);
-	const [rawError, setRawError] = useState<string | null>(null);
+	const [message, setMessage] = useState<LocalizedMessage | null>(null);
 
 	const generate = async () => {
 		if (!brandId || !scopeId) {
-			setMessage(t("providerTool.opportunity.validation.selection"));
+			setMessage({ id: "providerTool.opportunity.validation.selection" });
 			return;
 		}
 		setIsLoading(true);
 		setMessage(null);
-		setRawError(null);
 		try {
 			const result = await onGenerate({ brandId, scopeId });
-			setMessage(opportunityGenerationMessage(result, locale));
+			setMessage({ id: opportunityGenerationMessageId(result) });
 		} catch (caught) {
-			setMessage(t("providerTool.opportunity.error"));
-			setRawError(caught instanceof Error ? caught.message : null);
+			setMessage({
+				id: "providerTool.opportunity.error",
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setIsLoading(false);
 		}
@@ -107,11 +108,11 @@ export function OpportunitiesGenerationControl({
 					{isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
 					{isLoading ? t("providerTool.opportunity.generating") : t("providerTool.opportunity.generate")}
 				</Button>
-				{message && <p className="text-sm text-muted-foreground">{message}</p>}
-				{rawError && (
+				{message && <p className="text-sm text-muted-foreground">{t(message.id, message.values)}</p>}
+				{message?.detail && (
 					<div className="text-sm text-destructive">
 						<p>{t("admin.raw.errorDetails")}</p>
-						<pre className="whitespace-pre-wrap">{rawError}</pre>
+						<pre className="whitespace-pre-wrap">{message.detail}</pre>
 					</div>
 				)}
 			</CardContent>

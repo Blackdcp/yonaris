@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/provider";
-import { SamplingTaskWorkbench } from "./sampling-task-workbench";
+import * as workbenchModule from "./sampling-task-workbench";
 import type { SamplingEvidenceArtifactView, SamplingTaskView } from "./types";
 
 function asHtmlText(value: string): string {
@@ -54,7 +54,39 @@ function task(overrides: Partial<SamplingTaskView> = {}): SamplingTaskView {
 	};
 }
 
+const SamplingTaskWorkbench = workbenchModule.SamplingTaskWorkbench;
+
 describe("SamplingTaskWorkbench Browser Runner handoff", () => {
+	it("maps typed evidence blockers and isolates unknown legacy text as byte-identical raw detail", () => {
+		const presentation = Reflect.get(workbenchModule, "samplingEvidenceIssuePresentation") as
+			| ((
+					issue: unknown,
+					category?: "validation" | "blocker",
+			  ) => { id: string; values?: Record<string, string | number>; detail?: string })
+			| undefined;
+
+		expect(presentation).toBeTypeOf("function");
+		if (!presentation) return;
+
+		expect(presentation({ ok: false, code: "file_too_large" })).toEqual({
+			id: "sampling.workbench.evidence.validation.fileSize",
+		});
+		expect(presentation({ code: "minimum", minimumArtifacts: 2 })).toEqual({
+			id: "sampling.workbench.evidence.blocker.minimum",
+			values: { count: 2 },
+		});
+
+		const rawLegacyDetail = 'LEGACY_EVIDENCE_RAW::{"message":"Upload at least one artifact."}';
+		expect(presentation(rawLegacyDetail)).toEqual({
+			id: "sampling.workbench.evidence.validation.unknown",
+			detail: rawLegacyDetail,
+		});
+		expect(presentation(rawLegacyDetail, "blocker")).toEqual({
+			id: "sampling.workbench.evidence.blocker.unknown",
+			detail: rawLegacyDetail,
+		});
+	});
+
 	it("does not expose ordinary observation, upload, release, or replay controls after submit intent", () => {
 		const markup = renderToStaticMarkup(
 			<I18nProvider locale="en">
@@ -205,5 +237,26 @@ describe("SamplingTaskWorkbench Browser Runner handoff", () => {
 		expect(errorMarkup).toContain("无法恢复暂存证据");
 		expect(errorMarkup).toContain("原始错误详情");
 		expect(errorMarkup).toContain(asHtmlText(rawError));
+	});
+
+	it("shows a generic localized heartbeat error for a non-Error rejection without inventing raw detail", () => {
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<SamplingTaskWorkbench
+					task={task({ automation: null })}
+					lease={{ leaseToken: "lease-token", leaseGeneration: 2, leaseExpiresAt: null }}
+					heartbeatError={true as never}
+					initialEvidenceArtifacts={[]}
+					evidenceArtifactsLoading={false}
+					evidenceArtifactsError={null}
+					onRelease={vi.fn(async () => undefined)}
+					onSubmit={vi.fn(async () => undefined)}
+					onFail={vi.fn(async () => undefined)}
+				/>
+			</I18nProvider>,
+		);
+
+		expect(markup).toContain("认领心跳失败。");
+		expect(markup).not.toContain("原始错误详情");
 	});
 });

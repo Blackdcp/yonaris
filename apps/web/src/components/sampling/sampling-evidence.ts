@@ -35,9 +35,21 @@ export interface SamplingEvidenceValidationContext {
 	totalBytes: number;
 }
 
+export type SamplingEvidenceValidationCode =
+	| "unsupported_type"
+	| "invalid_filename"
+	| "empty_file"
+	| "file_too_large"
+	| "too_many_files"
+	| "task_total_too_large";
+
 export type SamplingEvidenceValidationResult =
 	| { ok: true; kind: SamplingEvidenceKind }
-	| { ok: false; message: string };
+	| { ok: false; code: SamplingEvidenceValidationCode };
+
+export type SamplingEvidenceSubmitBlocker =
+	| { code: "recovering" | "recovery_error" | "pending" | "failed" }
+	| { code: "minimum"; minimumArtifacts: number };
 
 export interface SamplingEvidenceSubmitState {
 	state: SamplingEvidenceTransferState;
@@ -104,22 +116,22 @@ export function validateSamplingEvidenceFile(
 ): SamplingEvidenceValidationResult {
 	const kind = evidenceKindForFile(file);
 	if (!kind) {
-		return { ok: false, message: "Only PNG, JPEG, WebP, and PDF evidence files are supported." };
+		return { ok: false, code: "unsupported_type" };
 	}
 	if (!file.name.trim() || file.name.length > 255 || encodeURIComponent(file.name).length > 1_000) {
-		return { ok: false, message: "Evidence filenames must be between 1 and 255 characters." };
+		return { ok: false, code: "invalid_filename" };
 	}
 	if (!Number.isSafeInteger(file.size) || file.size <= 0) {
-		return { ok: false, message: "Evidence files must not be empty." };
+		return { ok: false, code: "empty_file" };
 	}
 	if (file.size > MAX_SAMPLING_EVIDENCE_FILE_BYTES) {
-		return { ok: false, message: "Each evidence file must be 8 MiB or smaller." };
+		return { ok: false, code: "file_too_large" };
 	}
 	if (context.artifactCount >= MAX_SAMPLING_EVIDENCE_ARTIFACTS) {
-		return { ok: false, message: `A task can contain at most ${MAX_SAMPLING_EVIDENCE_ARTIFACTS} evidence files.` };
+		return { ok: false, code: "too_many_files" };
 	}
 	if (context.totalBytes + file.size > MAX_SAMPLING_EVIDENCE_TASK_BYTES) {
-		return { ok: false, message: "Evidence files for one task must total 40 MiB or less." };
+		return { ok: false, code: "task_total_too_large" };
 	}
 	return { ok: true, kind };
 }
@@ -128,19 +140,19 @@ export function samplingEvidenceSubmitBlocker(input: {
 	states: SamplingEvidenceSubmitState[];
 	minimumArtifacts: number;
 	recovering: boolean;
-	recoveryError: string | null;
-}): string | null {
-	if (input.recovering) return "Wait for staged evidence to finish loading.";
-	if (input.recoveryError) return "Staged evidence could not be loaded. Refresh before submitting.";
+	recoveryError: string | true | null;
+}): SamplingEvidenceSubmitBlocker | null {
+	if (input.recovering) return { code: "recovering" };
+	if (input.recoveryError) return { code: "recovery_error" };
 	if (input.states.some(({ state }) => state === "uploading" || state === "deleting")) {
-		return "Wait for all evidence operations to finish before submitting.";
+		return { code: "pending" };
 	}
 	if (input.states.some(({ state }) => state === "failed")) {
-		return "Retry or remove every failed evidence upload before submitting.";
+		return { code: "failed" };
 	}
 	const readyCount = input.states.filter(({ state }) => state === "ready").length;
 	if (readyCount < input.minimumArtifacts) {
-		return `This task requires at least ${input.minimumArtifacts} uploaded evidence artifact(s).`;
+		return { code: "minimum", minimumArtifacts: input.minimumArtifacts };
 	}
 	return null;
 }

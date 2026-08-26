@@ -24,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Settings, TrendingDown, TrendingUp } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
-import { translate } from "@/i18n/catalog";
+import { type LocalizedMessage, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName } from "@/lib/route-head";
 import { getAdminStatsFn, updateDelayOverrideFn } from "@/server/admin";
@@ -83,7 +83,7 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 	const [open, setOpen] = useState(false);
 	const [timeUnits, setTimeUnits] = useState({ weeks: 0, days: 0, hours: 0 });
 	const [isUpdating, setIsUpdating] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 	const currentDelay = brand.delayOverrideHours ?? defaultDelayHours;
 
 	useEffect(() => {
@@ -102,11 +102,11 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 		setError(null);
 		const totalHours = timeUnitsToHours(timeUnits);
 		if (totalHours === 0) {
-			setError({ summary: t("admin.delay.validation.required") });
+			setError({ id: "admin.delay.validation.required" });
 			return;
 		}
 		if (totalHours < 1) {
-			setError({ summary: t("admin.delay.validation.minimum") });
+			setError({ id: "admin.delay.validation.minimum" });
 			return;
 		}
 		setIsUpdating(true);
@@ -115,7 +115,7 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 			onUpdate();
 			setOpen(false);
 		} catch (err) {
-			setError({ summary: t("admin.delay.error.update"), detail: err instanceof Error ? err.message : undefined });
+			setError({ id: "admin.delay.error.update", detail: err instanceof Error ? err.message : undefined });
 		} finally {
 			setIsUpdating(false);
 		}
@@ -129,7 +129,7 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 			onUpdate();
 			setOpen(false);
 		} catch (err) {
-			setError({ summary: t("admin.delay.error.clear"), detail: err instanceof Error ? err.message : undefined });
+			setError({ id: "admin.delay.error.clear", detail: err instanceof Error ? err.message : undefined });
 		} finally {
 			setIsUpdating(false);
 		}
@@ -213,7 +213,7 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 					</div>
 					{error && (
 						<div className="text-sm text-destructive">
-							<p>{error.summary}</p>
+							<p>{t(error.id, error.values)}</p>
 							{error.detail && (
 								<>
 									<p>{t("admin.raw.errorDetails")}</p>

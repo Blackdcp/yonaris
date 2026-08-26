@@ -85,7 +85,9 @@ describe("BrowserRunnerDeviceList", () => {
 		expect(markup).toContain("已退出登录");
 		expect(markup).toContain("Office Windows PC 原始");
 		expect(markup).toContain("Chrome 140.0.0");
-		expect(markup).toContain("extension 1.0.0");
+		expect(markup).toContain("扩展版本 1.0.0");
+		expect(markup).toContain("例如：营销团队的 MacBook");
+		expect(markup).not.toContain("extension 1.0.0");
 		expect(markup).toContain("DeepSeek");
 		expect(markup).toContain("Doubao");
 		expect(markup).toContain("yrp_byte_identical_01");

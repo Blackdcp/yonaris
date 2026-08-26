@@ -22,7 +22,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Check, Copy, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { OpportunitiesGenerationControl } from "@/components/opportunities-generation-control";
-import { translate } from "@/i18n/catalog";
+import { type LocalizedMessage, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName } from "@/lib/route-head";
 import { adminAnalyzeBrandFn, getAdminOpportunityScopesFn } from "@/server/admin";
@@ -39,13 +39,13 @@ function AnalyzeBrandDialog() {
 	const [website, setWebsite] = useState("");
 	const [brandName, setBrandName] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 	const [result, setResult] = useState<OnboardingSuggestion | null>(null);
 	const [copied, setCopied] = useState(false);
 
 	const handleAnalyze = async () => {
 		if (!website.trim()) {
-			setError({ summary: t("providerTool.analysis.validation.website") });
+			setError({ id: "providerTool.analysis.validation.website" });
 			return;
 		}
 		setError(null);
@@ -60,7 +60,7 @@ function AnalyzeBrandDialog() {
 			});
 			setResult(data);
 		} catch (err) {
-			setError({ summary: t("providerTool.analysis.error"), detail: err instanceof Error ? err.message : undefined });
+			setError({ id: "providerTool.analysis.error", detail: err instanceof Error ? err.message : undefined });
 		} finally {
 			setIsLoading(false);
 		}
@@ -139,7 +139,7 @@ function AnalyzeBrandDialog() {
 
 					{error && (
 						<div className="text-sm text-destructive">
-							<p>{error.summary}</p>
+							<p>{t(error.id, error.values)}</p>
 							{error.detail && (
 								<>
 									<p>{t("admin.raw.errorDetails")}</p>

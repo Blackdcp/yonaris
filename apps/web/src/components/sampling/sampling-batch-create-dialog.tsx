@@ -14,6 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import type { LocalizedMessage } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
 	captureRouteForExecution,
@@ -65,6 +66,11 @@ function defaultMeasurementWindow(timezone: string): { startsAt: string; endsAt:
 	};
 }
 
+export function defaultSamplingBatchName(brandName: string, now = new Date()): string {
+	if (!brandName) return "";
+	return `${brandName} sampling ${now.toISOString().slice(0, 10)}`;
+}
+
 export function SamplingBatchCreateDialog({
 	context,
 	onCreate,
@@ -72,7 +78,7 @@ export function SamplingBatchCreateDialog({
 	context: SamplingContextView;
 	onCreate: (input: CreateSamplingBatchInput) => Promise<void>;
 }) {
-	const { t, formatDate, formatNumber } = useI18n();
+	const { t, formatNumber } = useI18n();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
 	const [scopeId, setScopeId] = useState(
@@ -88,7 +94,7 @@ export function SamplingBatchCreateDialog({
 	const [windowStartsAt, setWindowStartsAt] = useState(() => defaultMeasurementWindow("UTC").startsAt);
 	const [windowEndsAt, setWindowEndsAt] = useState(() => defaultMeasurementWindow("UTC").endsAt);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 
 	const brand = context.selectedBrand;
 	const brandId = brand?.id;
@@ -117,18 +123,11 @@ export function SamplingBatchCreateDialog({
 		setTargetDrafts({});
 		setIdempotencyKey(newIdempotencyKey());
 		setError(null);
-		setName(
-			brandId
-				? t("sampling.batch.create.defaultName", {
-						brandName,
-						date: formatDate(new Date(), { year: "numeric", month: "numeric", day: "numeric" }),
-					})
-				: "",
-		);
+		setName(brandId ? defaultSamplingBatchName(brandName) : "");
 		const defaults = defaultMeasurementWindow(firstScopeTimezone);
 		setWindowStartsAt(defaults.startsAt);
 		setWindowEndsAt(defaults.endsAt);
-	}, [brandId, brandName, firstScopeId, firstScopeTimezone, formatDate, t]);
+	}, [brandId, brandName, firstScopeId, firstScopeTimezone]);
 
 	const togglePrompt = (promptId: string) => {
 		setPromptIds((previous) => {
@@ -167,33 +166,39 @@ export function SamplingBatchCreateDialog({
 		const evaluationRole = selectedScope?.samplingEvaluationRole;
 		const programTimezone = selectedScope?.timezone;
 		if (!evaluationRole || !programTimezone) {
-			setError({ summary: t("sampling.batch.validation.scope") });
+			setError({ id: "sampling.batch.validation.scope" });
 			return;
 		}
 		if (!name.trim()) {
-			setError({ summary: t("sampling.batch.validation.name") });
+			setError({ id: "sampling.batch.validation.name" });
 			return;
 		}
 		if (promptIds.size === 0) {
-			setError({ summary: t("sampling.batch.validation.prompt") });
+			setError({ id: "sampling.batch.validation.prompt" });
 			return;
 		}
 		if (executionMode === "browser_runner" && context.browserRunnerEnabled !== true) {
-			setError({ summary: t("sampling.batch.validation.runner") });
+			setError({ id: "sampling.batch.validation.runner" });
 			return;
 		}
 		const selectedTargets = availableTargets.filter((target) => targetDrafts[target.surfaceTargetKey]);
 		if (selectedTargets.length === 0) {
-			setError({ summary: t("sampling.batch.validation.surface") });
+			setError({ id: "sampling.batch.validation.surface" });
 			return;
 		}
-		const resolvedTargets = selectedTargets.map((target) => {
+		const resolvedTargets: Array<{
+			target: SamplingTargetOption;
+			draft: TargetDraft;
+			captureRouteKey: SamplingTargetOption["captureRouteKey"];
+		}> = [];
+		for (const target of selectedTargets) {
 			const draft = targetDrafts[target.surfaceTargetKey];
 			if (!draft) {
-				throw new Error(t("sampling.batch.validation.targetGone", { targetKey: target.surfaceTargetKey }));
+				setError({ id: "sampling.batch.validation.targetGone", values: { targetKey: target.surfaceTargetKey } });
+				return;
 			}
-			return { target, draft, captureRouteKey: captureRouteForExecution(executionMode, target) };
-		});
+			resolvedTargets.push({ target, draft, captureRouteKey: captureRouteForExecution(executionMode, target) });
+		}
 		let startsAt: Date;
 		let endsAt: Date;
 		try {
@@ -201,13 +206,13 @@ export function SamplingBatchCreateDialog({
 			endsAt = parseZonedDateTimeInput(windowEndsAt, programTimezone);
 		} catch (caught) {
 			setError({
-				summary: t("sampling.batch.validation.window"),
+				id: "sampling.batch.validation.window",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 			return;
 		}
 		if (endsAt <= startsAt) {
-			setError({ summary: t("sampling.batch.validation.windowOrder") });
+			setError({ id: "sampling.batch.validation.windowOrder" });
 			return;
 		}
 
@@ -246,7 +251,7 @@ export function SamplingBatchCreateDialog({
 			setIdempotencyKey(newIdempotencyKey());
 		} catch (caught) {
 			setError({
-				summary: t("sampling.batch.error.create"),
+				id: "sampling.batch.error.create",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -534,7 +539,7 @@ export function SamplingBatchCreateDialog({
 
 					{error && (
 						<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-							<p>{error.summary}</p>
+							<p>{t(error.id, error.values)}</p>
 							{error.detail && (
 								<>
 									<p className="mt-2 font-medium">{t("sampling.raw.errorDetails")}</p>

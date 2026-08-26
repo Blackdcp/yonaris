@@ -14,7 +14,7 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import type { MessageId } from "@/i18n/catalog";
+import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { BrowserRunnerDeviceView, SamplingRunNowInput, SamplingRunNowProgram } from "./types";
 
@@ -92,7 +92,7 @@ export function SamplingRunNowDialog({
 	const [scopeId, setScopeId] = useState(programs[0]?.id ?? "");
 	const [surfaceSelectionOverride, setSurfaceSelectionOverride] = useState<BrowserExtensionSurface[] | null>(null);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 	const selectedProgram = programs.find((program) => program.id === scopeId) ?? programs[0];
 	const availability = useMemo(
 		() => new Map(CHANNELS.map(({ surface }) => [surface, channelAvailability(devices, brandId, surface, now)])),
@@ -133,7 +133,7 @@ export function SamplingRunNowDialog({
 				idempotencyKey: `run-now-${crypto.randomUUID()}`,
 			});
 		} catch (caught) {
-			setError({ summary: t("sampling.run.error"), detail: caught instanceof Error ? caught.message : undefined });
+			setError({ id: "sampling.run.error", detail: caught instanceof Error ? caught.message : undefined });
 		} finally {
 			setSubmitting(false);
 		}
@@ -232,7 +232,7 @@ export function SamplingRunNowDialog({
 				)}
 				{error && (
 					<Alert variant="destructive">
-						<AlertTitle>{error.summary}</AlertTitle>
+						<AlertTitle>{t(error.id, error.values)}</AlertTitle>
 						{error.detail && (
 							<AlertDescription>
 								<p>{t("sampling.raw.errorDetails")}</p>

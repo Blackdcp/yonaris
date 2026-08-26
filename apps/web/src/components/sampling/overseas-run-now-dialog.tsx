@@ -5,7 +5,7 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
-import type { MessageId } from "@/i18n/catalog";
+import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
 	OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
@@ -158,7 +158,7 @@ export function OverseasRunNowDialog({
 		OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
 	);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 	const submittingRef = useRef(false);
 	const submissionControllerRef = useRef<OverseasRunNowSubmissionController | null>(null);
 	submissionControllerRef.current ??= createOverseasRunNowSubmissionController();
@@ -201,7 +201,7 @@ export function OverseasRunNowDialog({
 				onRun,
 			);
 		} catch (caught) {
-			setError({ summary: t("sampling.overseas.error"), detail: caught instanceof Error ? caught.message : undefined });
+			setError({ id: "sampling.overseas.error", detail: caught instanceof Error ? caught.message : undefined });
 		} finally {
 			submittingRef.current = false;
 			setSubmitting(false);
@@ -320,7 +320,7 @@ export function OverseasRunNowDialog({
 				)}
 				{error && (
 					<Alert variant="destructive">
-						<AlertTitle>{error.summary}</AlertTitle>
+						<AlertTitle>{t(error.id, error.values)}</AlertTitle>
 						{error.detail && (
 							<AlertDescription>
 								<p>{t("sampling.raw.errorDetails")}</p>

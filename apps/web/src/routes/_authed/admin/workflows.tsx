@@ -184,6 +184,11 @@ function formatFutureTime(timestamp: number | null, locale: UiLanguage = "en"): 
 	return translate(locale, "workflow.time.future", { duration: formatDuration(diffMs, locale) });
 }
 
+function rawErrorDetail(error: unknown): string | null {
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : null;
+}
+
 // ============================================================================
 // Sub-components
 // ============================================================================
@@ -280,7 +285,7 @@ function ModelStatus({ status }: { status?: LastRunByModel }) {
 function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: string; onSuccess: () => void }) {
 	const { t } = useI18n();
 	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<string | true | null>(null);
 	const [success, setSuccess] = useState<"queued" | "recreated" | false>(false);
 
 	const handleRetry = async () => {
@@ -293,7 +298,7 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 			setSuccess("queued");
 			setTimeout(() => onSuccess(), 1000);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : null);
+			setError(rawErrorDetail(err) ?? true);
 		} finally {
 			setIsLoading(false);
 		}
@@ -317,8 +322,12 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 			{error && (
 				<div className="text-xs text-red-500">
 					<p>{t("workflow.retry.error")}</p>
-					<p>{t("admin.raw.errorDetails")}</p>
-					<pre className="whitespace-pre-wrap">{error}</pre>
+					{typeof error === "string" && (
+						<>
+							<p>{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{error}</pre>
+						</>
+					)}
 				</div>
 			)}
 		</div>
@@ -331,9 +340,9 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 	const [isOpen, setIsOpen] = useState(false);
 	const [logs, setLogs] = useState<string[]>([]);
 	const [logsLoading, setLogsLoading] = useState(false);
-	const [logsError, setLogsError] = useState<string | null>(null);
+	const [logsError, setLogsError] = useState<string | true | null>(null);
 	const [retryLoading, setRetryLoading] = useState(false);
-	const [retryError, setRetryError] = useState<string | null>(null);
+	const [retryError, setRetryError] = useState<string | true | null>(null);
 	const [retrySuccess, setRetrySuccess] = useState(false);
 
 	useEffect(() => {
@@ -342,7 +351,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 			setLogsError(null);
 			getJobLogsFn({ data: { jobId: job.id } })
 				.then((data) => setLogs(data.logs || []))
-				.catch((err) => setLogsError(err.message))
+				.catch((err: unknown) => setLogsError(rawErrorDetail(err) ?? true))
 				.finally(() => setLogsLoading(false));
 		}
 	}, [isOpen, job.id]);
@@ -360,7 +369,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 				onRetrySuccess?.();
 			}, 1000);
 		} catch (err) {
-			setRetryError(err instanceof Error ? err.message : "Unknown error");
+			setRetryError(rawErrorDetail(err) ?? true);
 		} finally {
 			setRetryLoading(false);
 		}
@@ -430,8 +439,12 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 						) : logsError ? (
 							<div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
 								<p>{t("workflow.job.errorLogs")}</p>
-								<p>{t("admin.raw.errorDetails")}</p>
-								<pre className="whitespace-pre-wrap">{logsError}</pre>
+								{typeof logsError === "string" && (
+									<>
+										<p>{t("admin.raw.errorDetails")}</p>
+										<pre className="whitespace-pre-wrap">{logsError}</pre>
+									</>
+								)}
 							</div>
 						) : logs.length > 0 ? (
 							<pre className="bg-muted rounded p-3 text-xs overflow-x-auto max-h-80 whitespace-pre-wrap">
@@ -462,8 +475,12 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 									{retryError && (
 										<div className="text-sm text-red-600">
 											<p>{t("workflow.retry.error")}</p>
-											<p>{t("admin.raw.errorDetails")}</p>
-											<pre className="whitespace-pre-wrap">{retryError}</pre>
+											{typeof retryError === "string" && (
+												<>
+													<p>{t("admin.raw.errorDetails")}</p>
+													<pre className="whitespace-pre-wrap">{retryError}</pre>
+												</>
+											)}
 										</div>
 									)}
 								</>

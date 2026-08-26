@@ -29,19 +29,19 @@ describe("sampling evidence validation", () => {
 				{ name: "large.png", type: "image/png", size: MAX_SAMPLING_EVIDENCE_FILE_BYTES + 1 },
 				{ artifactCount: 0, totalBytes: 0 },
 			),
-		).toMatchObject({ ok: false, message: expect.stringContaining("8 MiB") });
+		).toEqual({ ok: false, code: "file_too_large" });
 		expect(
 			validateSamplingEvidenceFile(
 				{ name: "last.pdf", type: "application/pdf", size: 2 },
 				{ artifactCount: 2, totalBytes: MAX_SAMPLING_EVIDENCE_TASK_BYTES - 1 },
 			),
-		).toMatchObject({ ok: false, message: expect.stringContaining("40 MiB") });
+		).toEqual({ ok: false, code: "task_total_too_large" });
 		expect(
 			validateSamplingEvidenceFile(
 				{ name: "extra.png", type: "image/png", size: 1 },
 				{ artifactCount: 20, totalBytes: 20 },
 			),
-		).toMatchObject({ ok: false, message: expect.stringContaining("at most 20") });
+		).toEqual({ ok: false, code: "too_many_files" });
 	});
 });
 
@@ -74,7 +74,7 @@ describe("sampling evidence submit gate", () => {
 	it("blocks recovery, transfers, failures, and an insufficient ready count", () => {
 		expect(
 			samplingEvidenceSubmitBlocker({ states: [], minimumArtifacts: 1, recovering: true, recoveryError: null }),
-		).toContain("loading");
+		).toEqual({ code: "recovering" });
 		expect(
 			samplingEvidenceSubmitBlocker({
 				states: [{ state: "uploading" }],
@@ -82,7 +82,7 @@ describe("sampling evidence submit gate", () => {
 				recovering: false,
 				recoveryError: null,
 			}),
-		).toContain("finish");
+		).toEqual({ code: "pending" });
 		expect(
 			samplingEvidenceSubmitBlocker({
 				states: [{ state: "ready" }, { state: "failed" }],
@@ -90,10 +90,10 @@ describe("sampling evidence submit gate", () => {
 				recovering: false,
 				recoveryError: null,
 			}),
-		).toContain("failed");
+		).toEqual({ code: "failed" });
 		expect(
 			samplingEvidenceSubmitBlocker({ states: [], minimumArtifacts: 1, recovering: false, recoveryError: null }),
-		).toContain("at least 1");
+		).toEqual({ code: "minimum", minimumArtifacts: 1 });
 	});
 
 	it("allows submit only when every row is ready and the minimum is met", () => {

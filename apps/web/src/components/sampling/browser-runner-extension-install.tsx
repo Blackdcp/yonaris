@@ -95,7 +95,8 @@ export function BrowserRunnerExtensionInstall({
 					<li>{t("sampling.extension.step.extract")}</li>
 					<li>
 						{t("sampling.extension.step.chrome.before")} <code className="text-foreground">chrome://extensions</code>
-						{t("sampling.extension.step.chrome.middle")} <strong className="text-foreground">Load unpacked</strong>
+						{t("sampling.extension.step.chrome.middle")}{" "}
+						<strong className="text-foreground">{t("sampling.extension.step.chrome.control")}</strong>
 						{t("sampling.extension.step.chrome.after")}
 					</li>
 					<li>{t("sampling.extension.step.signIn")}</li>

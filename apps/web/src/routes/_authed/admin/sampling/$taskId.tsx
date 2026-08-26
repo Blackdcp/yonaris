@@ -69,7 +69,7 @@ function SamplingTaskPage() {
 	const navigate = useNavigate();
 	const [lease, setLease] = useState<StoredSamplingLease | null>(null);
 	const [leaseLoaded, setLeaseLoaded] = useState(false);
-	const [heartbeatError, setHeartbeatError] = useState<string | null>(null);
+	const [heartbeatError, setHeartbeatError] = useState<string | true | null>(null);
 	const [returning, setReturning] = useState(false);
 	const leaseBrandId = lease?.brandId;
 	const leaseTaskId = lease?.taskId;
@@ -131,7 +131,7 @@ function SamplingTaskPage() {
 				storeSamplingLease(refreshed);
 				setHeartbeatError(null);
 			} catch (caught) {
-				if (active) setHeartbeatError(caught instanceof Error ? caught.message : null);
+				if (active) setHeartbeatError(rawErrorDetail(caught) ?? true);
 			}
 		};
 		void heartbeat();
@@ -299,7 +299,7 @@ function SamplingTaskPage() {
 		try {
 			await release();
 		} catch (caught) {
-			setHeartbeatError(caught instanceof Error ? caught.message : null);
+			setHeartbeatError(rawErrorDetail(caught) ?? true);
 			setReturning(false);
 		}
 	};
@@ -343,7 +343,7 @@ function SamplingTaskPage() {
 					evidenceArtifactsQuery.isError
 						? evidenceArtifactsQuery.error instanceof Error
 							? evidenceArtifactsQuery.error.message
-							: "Could not recover staged evidence."
+							: true
 						: null
 				}
 				onRelease={release}

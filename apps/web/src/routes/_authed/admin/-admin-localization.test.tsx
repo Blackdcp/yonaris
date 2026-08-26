@@ -10,6 +10,9 @@ function asHtmlText(value: string): string {
 
 const mocks = vi.hoisted(() => ({
 	stateValues: [] as unknown[],
+	stateIndex: 0,
+	stateWrites: new Map<number, unknown[]>(),
+	buttons: [] as Array<{ onClick?: () => void | Promise<void> }>,
 	queryResults: new Map<string, Record<string, unknown>>(),
 	mutationPending: false,
 }));
@@ -19,9 +22,19 @@ vi.mock("react", async () => {
 	return {
 		...actual,
 		useState<T>(initial: T | (() => T)) {
+			const index = mocks.stateIndex++;
 			const state = actual.useState(initial);
 			if (mocks.stateValues.length > 0) {
-				return [mocks.stateValues.shift() as T, state[1]] as const;
+				const value = mocks.stateValues.shift() as T;
+				return [
+					value,
+					(next: T | ((previous: T) => T)) => {
+						const resolved = typeof next === "function" ? (next as (previous: T) => T)(value) : next;
+						const writes = mocks.stateWrites.get(index) ?? [];
+						writes.push(resolved);
+						mocks.stateWrites.set(index, writes);
+					},
+				] as const;
 			}
 			return state;
 		},
@@ -43,6 +56,25 @@ vi.mock("@tanstack/react-router", () => ({
 			branding: { name: "Evidence Portal" },
 		},
 	}),
+}));
+
+vi.mock("@workspace/ui/components/button", () => ({
+	Button: ({
+		children,
+		onClick,
+		disabled,
+	}: {
+		children: ReactNode;
+		onClick?: () => void | Promise<void>;
+		disabled?: boolean;
+	}) => {
+		mocks.buttons.push({ onClick });
+		return (
+			<button type="button" disabled={disabled}>
+				{children}
+			</button>
+		);
+	},
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -125,6 +157,7 @@ vi.mock("@/server/customer-access", () => ({
 }));
 vi.mock("@/server/opportunities", () => ({ generateOpportunitiesFn: vi.fn() }));
 
+import { retryJobFn } from "@/server/admin";
 import { Route as AccessRoute } from "./access";
 import { Route as AdminRoute } from "./index";
 import { Route as ToolsRoute } from "./tools";
@@ -137,6 +170,8 @@ type TestRoute = {
 
 function renderRoute(route: TestRoute, locale: UiLanguage = "zh-CN") {
 	const Component = route.component;
+	mocks.stateIndex = 0;
+	mocks.buttons.length = 0;
 	return renderToStaticMarkup(
 		<I18nProvider locale={locale}>
 			<Component />
@@ -246,6 +281,9 @@ const workflowData = {
 describe("platform administration localization", () => {
 	beforeEach(() => {
 		mocks.stateValues.length = 0;
+		mocks.stateIndex = 0;
+		mocks.stateWrites.clear();
+		mocks.buttons.length = 0;
 		mocks.queryResults.clear();
 		mocks.mutationPending = false;
 	});
@@ -366,6 +404,46 @@ describe("platform administration localization", () => {
 		expect(errorMarkup).toContain("无法加载自动化工作流");
 		expect(errorMarkup).toContain("原始错误详情");
 		expect(errorMarkup).toContain(asHtmlText(rawError));
+	});
+
+	it("renders a generic retry failure for a non-Error rejection without a fabricated raw detail", () => {
+		const dataWithoutJobDetail = { ...workflowData, recentJobs: [] };
+		mocks.stateValues.push(
+			dataWithoutJobDetail,
+			false,
+			null,
+			new Set(["brand-raw-stepfun"]),
+			false,
+			false,
+			true,
+			false,
+		);
+
+		const markup = renderRoute(WorkflowsRoute as unknown as TestRoute);
+
+		expect(markup).toContain("无法重试此任务。");
+		expect(markup).not.toContain("原始错误详情");
+	});
+
+	it("normalizes a non-Error workflow retry rejection to the generic error sentinel", async () => {
+		vi.mocked(retryJobFn).mockRejectedValueOnce({ kind: "opaque-rejection" });
+		mocks.stateValues.push(
+			{ ...workflowData, recentJobs: [] },
+			false,
+			null,
+			new Set(["brand-raw-stepfun"]),
+			false,
+			false,
+			null,
+			false,
+		);
+		renderRoute(WorkflowsRoute as unknown as TestRoute);
+
+		const retry = mocks.buttons.at(-1)?.onClick;
+		expect(retry).toBeTypeOf("function");
+		await retry?.();
+
+		expect(mocks.stateWrites.get(6)?.at(-1)).toBe(true);
 	});
 
 	it("renders provider tools and opportunity operations in Chinese while preserving raw API and scope identity", () => {

@@ -33,7 +33,7 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MessageId, MessageValues } from "@/i18n/catalog";
+import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
 	deleteSamplingEvidence,
@@ -41,7 +41,10 @@ import {
 	MAX_SAMPLING_EVIDENCE_ARTIFACTS,
 	MAX_SAMPLING_EVIDENCE_TASK_BYTES,
 	SAMPLING_EVIDENCE_ACCEPT,
+	type SamplingEvidenceSubmitBlocker,
 	type SamplingEvidenceTransferState,
+	type SamplingEvidenceValidationCode,
+	type SamplingEvidenceValidationResult,
 	samplingEvidenceSubmitBlocker,
 	uploadSamplingEvidence,
 	validateSamplingEvidenceFile,
@@ -70,6 +73,7 @@ interface EvidenceDraft {
 	file?: File;
 	artifact?: SamplingEvidenceArtifactView;
 	error?: string;
+	failureSummary?: "upload_failed" | "unusable";
 }
 
 function lines(value: string): string[] {
@@ -82,8 +86,6 @@ function lines(value: string): string[] {
 		),
 	];
 }
-
-type TranslateMessage = (id: MessageId, values?: MessageValues) => string;
 
 const SESSION_LABELS: Record<SamplingSessionRequirement, MessageId> = {
 	anonymous_clean: "sampling.session.anonymousClean",
@@ -103,40 +105,78 @@ const EVALUATION_LABELS: Record<SamplingEvaluationRole, MessageId> = {
 	observation: "sampling.evaluation.observation",
 };
 
-function localizeEvidenceValidation(message: string, t: TranslateMessage): string {
-	switch (message) {
-		case "Only PNG, JPEG, WebP, and PDF evidence files are supported.":
-			return t("sampling.workbench.evidence.validation.type");
-		case "Evidence filenames must be between 1 and 255 characters.":
-			return t("sampling.workbench.evidence.validation.name");
-		case "Evidence files must not be empty.":
-			return t("sampling.workbench.evidence.validation.empty");
-		case "Each evidence file must be 8 MiB or smaller.":
-			return t("sampling.workbench.evidence.validation.fileSize");
-		case `A task can contain at most ${MAX_SAMPLING_EVIDENCE_ARTIFACTS} evidence files.`:
-			return t("sampling.workbench.evidence.validation.count", { count: MAX_SAMPLING_EVIDENCE_ARTIFACTS });
-		case "Evidence files for one task must total 40 MiB or less.":
-			return t("sampling.workbench.evidence.validation.totalSize");
-		default:
-			return message;
-	}
+type SamplingEvidenceValidationFailure = Extract<SamplingEvidenceValidationResult, { ok: false }>;
+
+interface EvidenceValidationIssue {
+	clientId: string;
+	fileName: string;
+	issue: SamplingEvidenceValidationFailure | string;
 }
 
-function localizeEvidenceBlocker(message: string, minimum: number, t: TranslateMessage): string {
-	switch (message) {
-		case "Wait for staged evidence to finish loading.":
-			return t("sampling.workbench.evidence.blocker.recovering");
-		case "Staged evidence could not be loaded. Refresh before submitting.":
-			return t("sampling.workbench.evidence.blocker.recoveryError");
-		case "Wait for all evidence operations to finish before submitting.":
-			return t("sampling.workbench.evidence.blocker.pending");
-		case "Retry or remove every failed evidence upload before submitting.":
-			return t("sampling.workbench.evidence.blocker.failed");
-		case `This task requires at least ${minimum} uploaded evidence artifact(s).`:
-			return t("sampling.workbench.evidence.blocker.minimum", { count: minimum });
-		default:
-			return message;
+type WorkbenchError = LocalizedMessage & { validationIssues?: EvidenceValidationIssue[] };
+
+const EVIDENCE_VALIDATION_MESSAGES = {
+	unsupported_type: "sampling.workbench.evidence.validation.type",
+	invalid_filename: "sampling.workbench.evidence.validation.name",
+	empty_file: "sampling.workbench.evidence.validation.empty",
+	file_too_large: "sampling.workbench.evidence.validation.fileSize",
+	too_many_files: "sampling.workbench.evidence.validation.count",
+	task_total_too_large: "sampling.workbench.evidence.validation.totalSize",
+} as const satisfies Record<SamplingEvidenceValidationCode, MessageId>;
+
+const EVIDENCE_BLOCKER_MESSAGES = {
+	recovering: "sampling.workbench.evidence.blocker.recovering",
+	recovery_error: "sampling.workbench.evidence.blocker.recoveryError",
+	pending: "sampling.workbench.evidence.blocker.pending",
+	failed: "sampling.workbench.evidence.blocker.failed",
+	minimum: "sampling.workbench.evidence.blocker.minimum",
+} as const satisfies Record<SamplingEvidenceSubmitBlocker["code"], MessageId>;
+
+function validationCode(value: unknown): SamplingEvidenceValidationCode | null {
+	if (!value || typeof value !== "object" || !("ok" in value) || value.ok !== false || !("code" in value)) return null;
+	const code = value.code;
+	return typeof code === "string" && Object.hasOwn(EVIDENCE_VALIDATION_MESSAGES, code)
+		? (code as SamplingEvidenceValidationCode)
+		: null;
+}
+
+function blockerCode(value: unknown): SamplingEvidenceSubmitBlocker["code"] | null {
+	if (!value || typeof value !== "object" || !("code" in value)) return null;
+	const code = value.code;
+	return typeof code === "string" && Object.hasOwn(EVIDENCE_BLOCKER_MESSAGES, code)
+		? (code as SamplingEvidenceSubmitBlocker["code"])
+		: null;
+}
+
+export function samplingEvidenceIssuePresentation(
+	issue: unknown,
+	category: "validation" | "blocker" = "validation",
+): LocalizedMessage {
+	const validation = validationCode(issue);
+	if (validation) {
+		return validation === "too_many_files"
+			? { id: EVIDENCE_VALIDATION_MESSAGES[validation], values: { count: MAX_SAMPLING_EVIDENCE_ARTIFACTS } }
+			: { id: EVIDENCE_VALIDATION_MESSAGES[validation] };
 	}
+	const blocker = blockerCode(issue);
+	if (blocker) {
+		if (blocker === "minimum") {
+			const minimumArtifacts = (issue as Partial<Extract<SamplingEvidenceSubmitBlocker, { code: "minimum" }>>)
+				.minimumArtifacts;
+			if (typeof minimumArtifacts !== "number") {
+				return { id: "sampling.workbench.evidence.blocker.unknown" };
+			}
+			return { id: EVIDENCE_BLOCKER_MESSAGES[blocker], values: { count: minimumArtifacts } };
+		}
+		return { id: EVIDENCE_BLOCKER_MESSAGES[blocker] };
+	}
+	return {
+		id:
+			category === "blocker"
+				? "sampling.workbench.evidence.blocker.unknown"
+				: "sampling.workbench.evidence.validation.unknown",
+		...(typeof issue === "string" ? { detail: issue } : {}),
+	};
 }
 
 export function SamplingTaskWorkbench({
@@ -152,10 +192,10 @@ export function SamplingTaskWorkbench({
 }: {
 	task: SamplingTaskView;
 	lease: SamplingLease;
-	heartbeatError: string | null;
+	heartbeatError: string | true | null;
 	initialEvidenceArtifacts: SamplingEvidenceArtifactView[];
 	evidenceArtifactsLoading: boolean;
-	evidenceArtifactsError: string | null;
+	evidenceArtifactsError: string | true | null;
 	onRelease: () => Promise<void>;
 	onSubmit: (observation: SamplingObservationInput) => Promise<void>;
 	onFail: (input: { errorCode?: string; errorMessage: string }) => Promise<void>;
@@ -174,7 +214,7 @@ export function SamplingTaskWorkbench({
 	const [copied, setCopied] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [releasing, setReleasing] = useState(false);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<WorkbenchError | null>(null);
 	const [failureOpen, setFailureOpen] = useState(false);
 	const [failureMessage, setFailureMessage] = useState("");
 	const [failureCode, setFailureCode] = useState("");
@@ -199,15 +239,16 @@ export function SamplingTaskWorkbench({
 		[formatDate, lease.leaseExpiresAt, t],
 	);
 	const evidenceTotalBytes = useMemo(() => evidence.reduce((total, item) => total + item.sizeBytes, 0), [evidence]);
-	const evidenceBlocker = useMemo(() => {
-		const blocker = samplingEvidenceSubmitBlocker({
-			states: evidence,
-			minimumArtifacts: evidenceMinimum,
-			recovering: evidenceArtifactsLoading,
-			recoveryError: evidenceArtifactsError,
-		});
-		return blocker ? localizeEvidenceBlocker(blocker, evidenceMinimum, t) : null;
-	}, [evidence, evidenceArtifactsError, evidenceArtifactsLoading, evidenceMinimum, t]);
+	const evidenceBlocker = useMemo(
+		() =>
+			samplingEvidenceSubmitBlocker({
+				states: evidence,
+				minimumArtifacts: evidenceMinimum,
+				recovering: evidenceArtifactsLoading,
+				recoveryError: evidenceArtifactsError,
+			}),
+		[evidence, evidenceArtifactsError, evidenceArtifactsLoading, evidenceMinimum],
+	);
 	const evidenceOperationPending = evidence.some(({ state }) => state === "uploading" || state === "deleting");
 
 	useEffect(() => {
@@ -224,11 +265,11 @@ export function SamplingTaskWorkbench({
 					sizeBytes: artifact.sizeBytes,
 					progress: 100,
 					artifact,
-					error: artifact.status === "staged" ? undefined : t("sampling.workbench.evidence.unusable"),
+					failureSummary: artifact.status === "staged" ? undefined : "unusable",
 				}));
 			return recovered.length ? [...previous, ...recovered] : previous;
 		});
-	}, [initialEvidenceArtifacts, t]);
+	}, [initialEvidenceArtifacts]);
 
 	useEffect(
 		() => () => {
@@ -244,7 +285,7 @@ export function SamplingTaskWorkbench({
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1_500);
 		} catch {
-			setError({ summary: t("sampling.workbench.error.clipboard") });
+			setError({ id: "sampling.workbench.error.clipboard" });
 		}
 	};
 
@@ -255,7 +296,7 @@ export function SamplingTaskWorkbench({
 	const startEvidenceUpload = (draft: EvidenceDraft) => {
 		if (!draft.file) return;
 		setError(null);
-		patchEvidence(draft.clientId, { state: "uploading", progress: 0, error: undefined });
+		patchEvidence(draft.clientId, { state: "uploading", progress: 0, error: undefined, failureSummary: undefined });
 		const upload = uploadSamplingEvidence({
 			file: draft.file,
 			kind: draft.kind,
@@ -283,6 +324,7 @@ export function SamplingTaskWorkbench({
 									file: undefined,
 									artifact,
 									error: undefined,
+									failureSummary: undefined,
 								}
 							: item,
 					);
@@ -294,6 +336,7 @@ export function SamplingTaskWorkbench({
 					state: "failed",
 					progress: 0,
 					error: caught instanceof Error ? caught.message : undefined,
+					failureSummary: "upload_failed",
 				});
 			})
 			.finally(() => uploadAborters.current.delete(draft.clientId));
@@ -304,11 +347,15 @@ export function SamplingTaskWorkbench({
 		let artifactCount = evidence.length;
 		let totalBytes = evidenceTotalBytes;
 		const accepted: EvidenceDraft[] = [];
-		const rejected: string[] = [];
+		const rejected: EvidenceValidationIssue[] = [];
 		for (const file of Array.from(files)) {
 			const result = validateSamplingEvidenceFile(file, { artifactCount, totalBytes });
 			if (!result.ok) {
-				rejected.push(`${file.name}: ${localizeEvidenceValidation(result.message, t)}`);
+				rejected.push({
+					clientId: `evidence-rejection-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`,
+					fileName: file.name,
+					issue: result,
+				});
 				continue;
 			}
 			const draft: EvidenceDraft = {
@@ -329,7 +376,9 @@ export function SamplingTaskWorkbench({
 			setEvidence((previous) => [...previous, ...accepted]);
 			for (const draft of accepted) startEvidenceUpload(draft);
 		}
-		if (rejected.length) setError({ summary: rejected.join("\n") });
+		if (rejected.length) {
+			setError({ id: "sampling.workbench.evidence.validation.files", validationIssues: rejected });
+		}
 	};
 
 	const removeEvidence = async (item: EvidenceDraft) => {
@@ -357,22 +406,22 @@ export function SamplingTaskWorkbench({
 		} catch (caught) {
 			const message = caught instanceof Error ? caught.message : undefined;
 			patchEvidence(item.clientId, { state: "ready", error: message });
-			setError({ summary: t("sampling.workbench.error.delete"), detail: message });
+			setError({ id: "sampling.workbench.error.delete", detail: message });
 		}
 	};
 
 	const handleSubmit = async () => {
 		setError(null);
 		if (requiresSameSessionRecovery) {
-			setError({ summary: t("sampling.workbench.validation.sameSession") });
+			setError({ id: "sampling.workbench.validation.sameSession" });
 			return;
 		}
 		if (!answerText.trim()) {
-			setError({ summary: t("sampling.workbench.validation.answer") });
+			setError({ id: "sampling.workbench.validation.answer" });
 			return;
 		}
 		if (!operatorAttested) {
-			setError({ summary: t("sampling.workbench.validation.attestation") });
+			setError({ id: "sampling.workbench.validation.attestation" });
 			return;
 		}
 		let observedDate: Date;
@@ -380,7 +429,7 @@ export function SamplingTaskWorkbench({
 			observedDate = parseZonedDateTimeInput(observedAt, task.timezone);
 		} catch (caught) {
 			setError({
-				summary: t("sampling.workbench.validation.observedAt"),
+				id: "sampling.workbench.validation.observedAt",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 			return;
@@ -388,15 +437,15 @@ export function SamplingTaskWorkbench({
 		const windowStartsAt = new Date(task.measurementWindowStartsAt);
 		const windowEndsAt = new Date(task.measurementWindowEndsAt);
 		if (observedDate < windowStartsAt || observedDate > windowEndsAt) {
-			setError({ summary: t("sampling.workbench.validation.window") });
+			setError({ id: "sampling.workbench.validation.window" });
 			return;
 		}
 		if (task.requirePageUrl && !pageUrl.trim()) {
-			setError({ summary: t("sampling.workbench.validation.pageUrl") });
+			setError({ id: "sampling.workbench.validation.pageUrl" });
 			return;
 		}
 		if (evidenceBlocker) {
-			setError({ summary: evidenceBlocker });
+			setError(samplingEvidenceIssuePresentation(evidenceBlocker, "blocker"));
 			return;
 		}
 		const evidenceArtifactIds = evidence.flatMap(({ artifact, state }) =>
@@ -427,7 +476,7 @@ export function SamplingTaskWorkbench({
 			});
 		} catch (caught) {
 			setError({
-				summary: t("sampling.workbench.error.submit"),
+				id: "sampling.workbench.error.submit",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -437,7 +486,7 @@ export function SamplingTaskWorkbench({
 
 	const handleRelease = async () => {
 		if (requiresSameSessionRecovery) {
-			setError({ summary: t("sampling.workbench.validation.postSubmitRelease") });
+			setError({ id: "sampling.workbench.validation.postSubmitRelease" });
 			return;
 		}
 		setReleasing(true);
@@ -446,7 +495,7 @@ export function SamplingTaskWorkbench({
 			await onRelease();
 		} catch (caught) {
 			setError({
-				summary: t("sampling.workbench.error.release"),
+				id: "sampling.workbench.error.release",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -465,7 +514,7 @@ export function SamplingTaskWorkbench({
 			setFailureOpen(false);
 		} catch (caught) {
 			setError({
-				summary: t("sampling.workbench.error.failure"),
+				id: "sampling.workbench.error.failure",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -760,10 +809,12 @@ export function SamplingTaskWorkbench({
 									<Alert variant="destructive">
 										<AlertTriangle />
 										<AlertTitle>{t("sampling.workbench.evidence.recoveryError")}</AlertTitle>
-										<AlertDescription>
-											<p>{t("sampling.raw.errorDetails")}</p>
-											<pre className="whitespace-pre-wrap">{evidenceArtifactsError}</pre>
-										</AlertDescription>
+										{typeof evidenceArtifactsError === "string" && (
+											<AlertDescription>
+												<p>{t("sampling.raw.errorDetails")}</p>
+												<pre className="whitespace-pre-wrap">{evidenceArtifactsError}</pre>
+											</AlertDescription>
+										)}
 									</Alert>
 								)}
 								{!evidenceArtifactsLoading && !evidence.length && (
@@ -856,7 +907,13 @@ export function SamplingTaskWorkbench({
 											)}
 											{item.state === "failed" && (
 												<div className="text-sm text-destructive" role="alert">
-													<p>{t("sampling.workbench.evidence.uploadFailed")}</p>
+													<p>
+														{t(
+															item.failureSummary === "unusable"
+																? "sampling.workbench.evidence.unusable"
+																: "sampling.workbench.evidence.uploadFailed",
+														)}
+													</p>
 													{item.error && (
 														<>
 															<p>{t("sampling.raw.errorDetails")}</p>
@@ -892,7 +949,27 @@ export function SamplingTaskWorkbench({
 						<AlertTriangle />
 						<AlertTitle>{t("sampling.workbench.actionFailed")}</AlertTitle>
 						<AlertDescription>
-							<p>{error.summary}</p>
+							<p>{t(error.id, error.values)}</p>
+							{error.validationIssues && (
+								<ul className="mt-2 space-y-2">
+									{error.validationIssues.map(({ clientId, fileName, issue }) => {
+										const presentation = samplingEvidenceIssuePresentation(issue);
+										return (
+											<li key={clientId}>
+												<p>
+													{fileName}: {t(presentation.id, presentation.values)}
+												</p>
+												{presentation.detail && (
+													<>
+														<p>{t("sampling.raw.errorDetails")}</p>
+														<pre className="whitespace-pre-wrap">{presentation.detail}</pre>
+													</>
+												)}
+											</li>
+										);
+									})}
+								</ul>
+							)}
 							{error.detail && (
 								<>
 									<p>{t("sampling.raw.errorDetails")}</p>
@@ -1053,8 +1130,12 @@ export function SamplingTaskWorkbench({
 						{heartbeatError && (
 							<div className="text-destructive">
 								<p>{t("sampling.task.heartbeatError")}</p>
-								<p>{t("sampling.raw.errorDetails")}</p>
-								<pre className="whitespace-pre-wrap">{heartbeatError}</pre>
+								{typeof heartbeatError === "string" && (
+									<>
+										<p>{t("sampling.raw.errorDetails")}</p>
+										<pre className="whitespace-pre-wrap">{heartbeatError}</pre>
+									</>
+								)}
 							</div>
 						)}
 					</CardContent>

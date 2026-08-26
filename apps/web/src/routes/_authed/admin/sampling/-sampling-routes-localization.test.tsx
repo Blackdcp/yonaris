@@ -10,6 +10,9 @@ function asHtmlText(value: string): string {
 
 const mocks = vi.hoisted(() => ({
 	stateValues: [] as unknown[],
+	stateIndex: 0,
+	stateWrites: new Map<number, unknown[]>(),
+	buttons: [] as Array<{ onClick?: () => void | Promise<void> }>,
 	queryResults: new Map<string, Record<string, unknown>>(),
 }));
 
@@ -18,8 +21,20 @@ vi.mock("react", async () => {
 	return {
 		...actual,
 		useState<T>(initial: T | (() => T)) {
+			const index = mocks.stateIndex++;
 			const state = actual.useState(initial);
-			if (mocks.stateValues.length > 0) return [mocks.stateValues.shift() as T, state[1]] as const;
+			if (mocks.stateValues.length > 0) {
+				const value = mocks.stateValues.shift() as T;
+				return [
+					value,
+					(next: T | ((previous: T) => T)) => {
+						const resolved = typeof next === "function" ? (next as (previous: T) => T)(value) : next;
+						const writes = mocks.stateWrites.get(index) ?? [];
+						writes.push(resolved);
+						mocks.stateWrites.set(index, writes);
+					},
+				] as const;
+			}
 			return state;
 		},
 	};
@@ -34,6 +49,25 @@ vi.mock("@tanstack/react-router", () => ({
 	}),
 	Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 	useNavigate: () => vi.fn(async () => undefined),
+}));
+
+vi.mock("@workspace/ui/components/button", () => ({
+	Button: ({
+		children,
+		onClick,
+		disabled,
+	}: {
+		children: ReactNode;
+		onClick?: () => void | Promise<void>;
+		disabled?: boolean;
+	}) => {
+		mocks.buttons.push({ onClick });
+		return (
+			<button type="button" disabled={disabled}>
+				{children}
+			</button>
+		);
+	},
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -83,6 +117,7 @@ vi.mock("@/server/sampling", () => ({
 	submitSamplingTaskFn: vi.fn(),
 }));
 
+import { releaseSamplingTaskFn } from "@/server/sampling";
 import { Route as TaskRoute } from "./$taskId";
 import { Route as DevicesRoute } from "./devices";
 import { Route as SamplingRoute } from "./index";
@@ -94,6 +129,8 @@ type TestRoute = {
 
 function renderRoute(route: TestRoute, locale: UiLanguage = "zh-CN") {
 	const Component = route.component;
+	mocks.stateIndex = 0;
+	mocks.buttons.length = 0;
 	return renderToStaticMarkup(
 		<I18nProvider locale={locale}>
 			<Component />
@@ -202,6 +239,9 @@ function setSamplingQueries() {
 describe("sampling route localization", () => {
 	beforeEach(() => {
 		mocks.stateValues.length = 0;
+		mocks.stateIndex = 0;
+		mocks.stateWrites.clear();
+		mocks.buttons.length = 0;
 		mocks.queryResults.clear();
 	});
 
@@ -275,6 +315,67 @@ describe("sampling route localization", () => {
 		expect(markup).toContain('href="/admin/sampling"');
 		expect(markup).not.toContain("task-raw-0001");
 		expect(markup).not.toContain("lease-token");
+	});
+
+	it("normalizes a non-Error task release rejection to visible generic feedback", async () => {
+		const lease = {
+			brandId: "brand-raw-stepfun",
+			taskId: "task-raw-0001",
+			leaseToken: "lease-token-byte-identical",
+			leaseGeneration: 2,
+			leaseExpiresAt: "2099-08-27T10:00:00.000Z",
+		};
+		mocks.stateValues.push(lease, true, null, false);
+		setQuery(["admin", "sampling", "task", "brand-raw-stepfun", "task-raw-0001"], {
+			data: {
+				id: "task-raw-0001",
+				batchId: "batch-raw-0001",
+				batchName: "StepFun batch 原始",
+				brandId: "brand-raw-stepfun",
+				brandName: "StepFun 原名",
+				status: "claimed",
+				promptId: "prompt-raw-01",
+				promptText: "阶跃星辰 StepFun 是一家什么公司？",
+				surfaceTargetKey: "doubao.consumer_web",
+				captureRouteKey: "browser_extension.doubao",
+				targetLabel: "豆包 原始目标",
+				model: "doubao-model/raw-v1",
+				launchUrl: "https://www.doubao.com/chat/",
+				scopeId: "scope-raw-cn-01",
+				scopeName: "China scored 原始",
+				market: "CN",
+				locale: "zh-CN",
+				timezone: "Asia/Shanghai",
+				sessionRequirement: "anonymous_clean",
+				searchRequirement: "forbidden",
+				evaluationRole: "scored",
+				sampleIndex: 1,
+				claimCount: 1,
+				leaseGeneration: 2,
+				leaseExpiresAt: lease.leaseExpiresAt,
+				protocol: {
+					measurementWindow: {
+						startsAt: "2026-08-27T00:00:00.000Z",
+						endsAt: "2026-09-03T00:00:00.000Z",
+					},
+				},
+				minimumEvidenceArtifacts: 1,
+				requireEvidenceSha256: true,
+				requirePageUrl: true,
+				automation: null,
+			},
+		});
+		setQuery(["admin", "sampling", "evidence", "brand-raw-stepfun", "task-raw-0001", 2], {
+			data: { artifacts: [] },
+		});
+		vi.mocked(releaseSamplingTaskFn).mockRejectedValueOnce({ kind: "opaque-rejection" });
+
+		renderRoute(TaskRoute as unknown as TestRoute);
+		const release = mocks.buttons[0]?.onClick;
+		expect(release).toBeTypeOf("function");
+		await release?.();
+
+		expect(mocks.stateWrites.get(2)?.at(-1)).toBe(true);
 	});
 
 	it("uses the route language for all sampling heads", () => {

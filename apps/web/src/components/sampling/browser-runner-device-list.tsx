@@ -15,7 +15,7 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Copy, KeyRound, Laptop, Loader2, ShieldX } from "lucide-react";
 import { useState } from "react";
-import { type MessageId, translate } from "@/i18n/catalog";
+import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { browserRunnerDeviceIsOnline } from "./sampling-run-now-dialog";
 import type { BrowserRunnerDeviceView, BrowserRunnerPairingView, SamplingBrandOption } from "./types";
@@ -57,7 +57,7 @@ export function BrowserRunnerDeviceList({
 	const [displayName, setDisplayName] = useState("");
 	const [pairing, setPairing] = useState<BrowserRunnerPairingView | undefined>(initialPairing);
 	const [busy, setBusy] = useState<string | null>(null);
-	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [error, setError] = useState<LocalizedMessage | null>(null);
 
 	const createPairing = async () => {
 		if (!brandId || !displayName.trim()) return;
@@ -69,7 +69,7 @@ export function BrowserRunnerDeviceList({
 			setDisplayName("");
 		} catch (caught) {
 			setError({
-				summary: t("sampling.device.error.pair"),
+				id: "sampling.device.error.pair",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -87,7 +87,7 @@ export function BrowserRunnerDeviceList({
 					await onRevoke(deviceId);
 				} catch (caught) {
 					setError({
-						summary: t("sampling.device.error.revoke"),
+						id: "sampling.device.error.revoke",
 						detail: caught instanceof Error ? caught.message : undefined,
 					});
 				} finally {
@@ -177,7 +177,7 @@ export function BrowserRunnerDeviceList({
 					)}
 					{error && (
 						<Alert variant="destructive">
-							<AlertTitle>{error.summary}</AlertTitle>
+							<AlertTitle>{t(error.id, error.values)}</AlertTitle>
 							{error.detail && (
 								<AlertDescription>
 									<p>{t("sampling.raw.errorDetails")}</p>
@@ -206,8 +206,8 @@ export function BrowserRunnerDeviceList({
 											<Laptop className="size-4" /> {device.displayName}
 										</CardTitle>
 										<CardDescription>
-											{device.platform === "windows" ? "Windows" : "macOS"} · Chrome {device.browserVersion} · extension{" "}
-											{device.extensionVersion}
+											{device.platform === "windows" ? "Windows" : "macOS"} · Chrome {device.browserVersion} ·{" "}
+											{t("sampling.device.extensionVersion", { version: device.extensionVersion })}
 										</CardDescription>
 									</div>
 									<Badge variant={revoked ? "destructive" : online ? "default" : "outline"}>

@@ -28,7 +28,7 @@ import type {
 	SamplingHumanQueue,
 	SamplingRunNowInput,
 } from "@/components/sampling/types";
-import { type MessageId, translate } from "@/i18n/catalog";
+import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName } from "@/lib/route-head";
 import { listBrowserRunnerDevicesFn } from "@/server/browser-runner-devices";
@@ -101,7 +101,7 @@ function SamplingQueuePage() {
 	const page = search.page ?? 1;
 	const selectedBrandId = search.brand;
 	const [actingBatchId, setActingBatchId] = useState<string | null>(null);
-	const [actionError, setActionError] = useState<{ summary: string; detail?: string } | null>(null);
+	const [actionError, setActionError] = useState<LocalizedMessage | null>(null);
 
 	const contextQuery = useQuery({
 		queryKey: ["admin", "sampling", "context", search.brand ?? "all"],
@@ -266,7 +266,7 @@ function SamplingQueuePage() {
 			await listQuery.refetch();
 		} catch (caught) {
 			setActionError({
-				summary: t("sampling.queue.cancelError"),
+				id: "sampling.queue.cancelError",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -282,7 +282,7 @@ function SamplingQueuePage() {
 				data: { brandId: batch.brandId, batchId: batch.id, ...(queue ? { queue } : {}) },
 			});
 			if (!claimed) {
-				setActionError({ summary: t("sampling.queue.noTask") });
+				setActionError({ id: "sampling.queue.noTask" });
 				await listQuery.refetch();
 				return;
 			}
@@ -300,7 +300,7 @@ function SamplingQueuePage() {
 			});
 		} catch (caught) {
 			setActionError({
-				summary: t("sampling.queue.claimError"),
+				id: "sampling.queue.claimError",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -316,7 +316,7 @@ function SamplingQueuePage() {
 			await listQuery.refetch();
 		} catch (caught) {
 			setActionError({
-				summary: t("sampling.queue.startError"),
+				id: "sampling.queue.startError",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -336,7 +336,7 @@ function SamplingQueuePage() {
 			await listQuery.refetch();
 		} catch (caught) {
 			setActionError({
-				summary: t("sampling.queue.finalizeError"),
+				id: "sampling.queue.finalizeError",
 				detail: caught instanceof Error ? caught.message : undefined,
 			});
 		} finally {
@@ -512,7 +512,7 @@ function SamplingQueuePage() {
 					<AlertTriangle />
 					<AlertTitle>{t("sampling.queue.actionError")}</AlertTitle>
 					<AlertDescription>
-						<p>{actionError.summary}</p>
+						<p>{t(actionError.id, actionError.values)}</p>
 						{actionError.detail && (
 							<>
 								<p>{t("sampling.raw.errorDetails")}</p>

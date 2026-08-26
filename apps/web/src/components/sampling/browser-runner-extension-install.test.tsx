@@ -59,7 +59,8 @@ describe("BrowserRunnerExtensionInstall", () => {
 		expect(readyMarkup).toContain("下载扩展 ZIP");
 		expect(readyMarkup).toContain("Windows 或 macOS");
 		expect(readyMarkup).toContain("chrome://extensions");
-		expect(readyMarkup).toContain("Load unpacked");
+		expect(readyMarkup).toContain("加载已解压的扩展程序");
+		expect(readyMarkup).not.toContain("Load unpacked");
 		expect(readyMarkup).toContain(metadata.fileName);
 		expect(readyMarkup).toContain(metadata.version);
 		expect(readyMarkup).toContain(metadata.sha256);

@@ -28,6 +28,11 @@ const catalogs = {
 
 export type MessageId = keyof typeof englishCatalog;
 export type MessageValues = Readonly<Record<string, string | number>>;
+export type LocalizedMessage = {
+	id: MessageId;
+	values?: MessageValues;
+	detail?: string;
+};
 
 function interpolate(message: string, values?: MessageValues): string {
 	let missingValue = false;
