@@ -84,6 +84,12 @@ export function createAuth(options?: CreateAuthOptions) {
 
 		user: {
 			additionalFields: {
+				uiLanguage: {
+					type: "string",
+					required: false,
+					defaultValue: "en",
+					input: true,
+				},
 				hasReportGeneratorAccess: {
 					type: "boolean",
 					required: false,
@@ -121,6 +127,7 @@ export function createAuth(options?: CreateAuthOptions) {
 					user: {
 						...user,
 						role: (u.role as string) ?? "user",
+						uiLanguage: (u.uiLanguage as string) ?? "en",
 						hasReportGeneratorAccess: u.hasReportGeneratorAccess === true,
 					},
 					session,

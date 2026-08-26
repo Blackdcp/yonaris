@@ -4,6 +4,7 @@
  * Reads the session from route context (set by _authed layout).
  */
 import { useRouteContext } from "@tanstack/react-router";
+import type { UiLanguage } from "@workspace/config/language";
 
 export interface AuthUser {
 	id: string;
@@ -12,6 +13,7 @@ export interface AuthUser {
 	picture?: string;
 	given_name?: string;
 	family_name?: string;
+	uiLanguage: UiLanguage;
 }
 
 export interface UseAuthResult {
@@ -29,7 +31,7 @@ export interface UseAuthResult {
 export function useAuth(): UseAuthResult {
 	const context = useRouteContext({ strict: false }) as {
 		session?: {
-			user: { id: string; name?: string; email?: string; image?: string | null };
+			user: { id: string; name?: string; email?: string; image?: string | null; uiLanguage: UiLanguage };
 		} | null;
 	};
 	const session = context.session;
@@ -40,6 +42,7 @@ export function useAuth(): UseAuthResult {
 					name: session.user.name,
 					email: session.user.email,
 					picture: session.user.image ?? undefined,
+					uiLanguage: session.user.uiLanguage,
 				}
 			: null,
 		isLoading: false,
