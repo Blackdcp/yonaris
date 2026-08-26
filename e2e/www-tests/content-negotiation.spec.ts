@@ -1,20 +1,20 @@
 import { expect, test } from "@playwright/test";
 
 const coreCases = [
-	["/", "https://yonaris.com/", "English (en)"],
-	["/zh", "https://yonaris.com/zh", "Simplified Chinese (zh-CN)"],
-	["/product", "https://yonaris.com/product", "English (en)"],
-	["/zh/product", "https://yonaris.com/zh/product", "Simplified Chinese (zh-CN)"],
-	["/approach", "https://yonaris.com/approach", "English (en)"],
-	["/zh/approach", "https://yonaris.com/zh/approach", "Simplified Chinese (zh-CN)"],
-	["/privacy", "https://yonaris.com/privacy", "English (en)"],
-	["/zh/privacy", "https://yonaris.com/zh/privacy", "Simplified Chinese (zh-CN)"],
-	["/company", "https://yonaris.com/company", "English (en)"],
-	["/zh/company", "https://yonaris.com/zh/company", "Simplified Chinese (zh-CN)"],
-	["/geo", "https://yonaris.com/geo", "English (en)"],
-	["/zh/geo", "https://yonaris.com/zh/geo", "Simplified Chinese (zh-CN)"],
-	["/diagnostic", "https://yonaris.com/diagnostic", "English (en)"],
-	["/zh/diagnostic", "https://yonaris.com/zh/diagnostic", "Simplified Chinese (zh-CN)"],
+	["/", "https://yonaris.com/", "en"],
+	["/zh", "https://yonaris.com/zh", "zh-CN"],
+	["/product", "https://yonaris.com/product", "en"],
+	["/zh/product", "https://yonaris.com/zh/product", "zh-CN"],
+	["/approach", "https://yonaris.com/approach", "en"],
+	["/zh/approach", "https://yonaris.com/zh/approach", "zh-CN"],
+	["/privacy", "https://yonaris.com/privacy", "en"],
+	["/zh/privacy", "https://yonaris.com/zh/privacy", "zh-CN"],
+	["/company", "https://yonaris.com/company", "en"],
+	["/zh/company", "https://yonaris.com/zh/company", "zh-CN"],
+	["/geo", "https://yonaris.com/geo", "en"],
+	["/zh/geo", "https://yonaris.com/zh/geo", "zh-CN"],
+	["/diagnostic", "https://yonaris.com/diagnostic", "en"],
+	["/zh/diagnostic", "https://yonaris.com/zh/diagnostic", "zh-CN"],
 ] as const;
 
 test.describe("human and machine content negotiation", () => {
@@ -31,13 +31,13 @@ test.describe("human and machine content negotiation", () => {
 			});
 			expect(markdown.status()).toBe(200);
 			expect(markdown.headers()["content-type"]).toContain("text/markdown");
-			expect(markdown.headers()["content-language"]).toBe(language === "English (en)" ? "en" : "zh-CN");
+			expect(markdown.headers()["content-language"]).toBe(language);
 			expect(markdown.headers()["x-robots-tag"]).toBe("noindex, follow");
 			expect(markdown.headers().vary?.toLowerCase().split(/\s*,\s*/)).toContain("accept");
 			expect(markdown.headers().vary?.toLowerCase().split(/\s*,\s*/)).toContain("accept-encoding");
 			const body = await markdown.text();
 			expect(body).toContain(canonical);
-			expect(body).toContain(language === "English (en)" ? "Language: English (en)" : "语言：简体中文（zh-CN）");
+			expect(body).toContain(`Language: ${language}`);
 		});
 	}
 
@@ -63,7 +63,7 @@ test.describe("human and machine content negotiation", () => {
 				expect(markdown.status()).toBe(200);
 				expect(markdown.headers()["content-type"]).toContain("text/markdown");
 				expect(markdown.headers()["content-language"]).toBe(regional.language);
-				expect(markdown.headers()["cache-control"]).toBe("public, max-age=300");
+				expect(markdown.headers()["cache-control"]).toBe("public, max-age=300, stale-while-revalidate=3600");
 				expect(markdown.headers()["x-robots-tag"]).toBe("noindex, follow");
 				expect(await markdown.text()).toContain(`https://yonaris.com${regional.humanPrefix}/${path}`);
 			}
@@ -95,14 +95,14 @@ test.describe("human and machine content negotiation", () => {
 		}
 
 		for (const [path, contentType, language] of [
-			["/llms.txt", "text/plain", "en"],
+			["/llms.txt", "text/plain", "en, zh-CN"],
 			["/llms-full.txt", "text/plain", "en, zh-CN"],
 		] as const) {
 			const response = await request.get(path);
 			expect(response.status()).toBe(200);
 			expect(response.headers()["content-type"]).toContain(contentType);
 			expect(response.headers()["content-language"]).toBe(language);
-			expect(response.headers()["cache-control"]).toBe("public, max-age=300");
+			expect(response.headers()["cache-control"]).toBe("public, max-age=300, stale-while-revalidate=3600");
 			expect(response.headers()["x-robots-tag"]).toBe("noindex, follow");
 
 			const body = await response.text();
