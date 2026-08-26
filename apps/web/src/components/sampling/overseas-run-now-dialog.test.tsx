@@ -12,7 +12,12 @@ describe("OverseasRunNowDialog", () => {
 		const observedKeys: string[] = [];
 		let sequence = 0;
 		const controller = createOverseasRunNowSubmissionController(() => `intent-${++sequence}`);
-		const selection = { brandId: "ppio", scopeId: "scope-1", channelKeys: ["chatgpt"] as ["chatgpt"] };
+		const selection = {
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"] as ["chatgpt"],
+			samplesPerChannel: 1 as const,
+		};
 		const first = controller.begin(selection);
 		if (first) {
 			observedKeys.push(first.input.idempotencyKey);
@@ -34,7 +39,12 @@ describe("OverseasRunNowDialog", () => {
 		let sequence = 0;
 		let calls = 0;
 		const controller = createOverseasRunNowSubmissionController(() => `intent-${++sequence}`);
-		const selection = { brandId: "ppio", scopeId: "scope-1", channelKeys: ["chatgpt"] as ["chatgpt"] };
+		const selection = {
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"] as ["chatgpt"],
+			samplesPerChannel: 1 as const,
+		};
 		const onRun = async ({ idempotencyKey }: { idempotencyKey: string }) => {
 			observedKeys.push(idempotencyKey);
 			calls += 1;
@@ -49,7 +59,12 @@ describe("OverseasRunNowDialog", () => {
 
 	it("claims a submission synchronously so a same-frame second click cannot dispatch", () => {
 		const controller = createOverseasRunNowSubmissionController(() => "intent-1");
-		const selection = { brandId: "ppio", scopeId: "scope-1", channelKeys: ["chatgpt"] as ["chatgpt"] };
+		const selection = {
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"] as ["chatgpt"],
+			samplesPerChannel: 1 as const,
+		};
 
 		const first = controller.begin(selection);
 		const sameFrameSecond = controller.begin(selection);
@@ -61,7 +76,12 @@ describe("OverseasRunNowDialog", () => {
 	it("does not rotate an active intent while its paid submission result is unknown", () => {
 		let sequence = 0;
 		const controller = createOverseasRunNowSubmissionController(() => `intent-${++sequence}`);
-		const selection = { brandId: "ppio", scopeId: "scope-1", channelKeys: ["chatgpt"] as ["chatgpt"] };
+		const selection = {
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"] as ["chatgpt"],
+			samplesPerChannel: 1 as const,
+		};
 		const active = controller.begin(selection);
 		if (!active) throw new Error("Expected the first submission to be claimed");
 
@@ -79,6 +99,7 @@ describe("OverseasRunNowDialog", () => {
 			brandId: "ppio",
 			scopeId: "scope-1",
 			channelKeys: ["chatgpt"],
+			samplesPerChannel: 1,
 		});
 		if (!first) throw new Error("Expected the first submission to be claimed");
 		controller.finish(first, false);
@@ -87,16 +108,45 @@ describe("OverseasRunNowDialog", () => {
 			brandId: "ppio",
 			scopeId: "scope-2",
 			channelKeys: ["perplexity"],
+			samplesPerChannel: 1,
 		});
 
 		expect(first.input.idempotencyKey).toBe("intent-1");
 		expect(changedSelection?.input.idempotencyKey).toBe("intent-2");
 	});
 
+	it("starts a new intent when the administrator upgrades the sample count", () => {
+		let sequence = 0;
+		const controller = createOverseasRunNowSubmissionController(() => `intent-${++sequence}`);
+		const standard = controller.begin({
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"],
+			samplesPerChannel: 1,
+		});
+		if (!standard) throw new Error("Expected the standard submission to be claimed");
+		controller.finish(standard, false);
+
+		const paid = controller.begin({
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"],
+			samplesPerChannel: 5,
+		});
+
+		expect(standard.input.idempotencyKey).toBe("intent-1");
+		expect(paid?.input.idempotencyKey).toBe("intent-2");
+	});
+
 	it("invalidates a failed intent as soon as the administrator changes the selection", () => {
 		let sequence = 0;
 		const controller = createOverseasRunNowSubmissionController(() => `intent-${++sequence}`);
-		const selection = { brandId: "ppio", scopeId: "scope-1", channelKeys: ["chatgpt"] as ["chatgpt"] };
+		const selection = {
+			brandId: "ppio",
+			scopeId: "scope-1",
+			channelKeys: ["chatgpt"] as ["chatgpt"],
+			samplesPerChannel: 1 as const,
+		};
 		const failed = controller.begin(selection);
 		if (!failed) throw new Error("Expected the failed submission to be claimed");
 		controller.finish(failed, false);
@@ -107,7 +157,7 @@ describe("OverseasRunNowDialog", () => {
 		expect(afterSelectionChange?.input.idempotencyKey).toBe("intent-2");
 	});
 
-	it("defaults all six Bright Data channels and five samples for PPIO", () => {
+	it("defaults all six Bright Data channels to one sample and offers the paid five-sample option", () => {
 		const markup = renderToStaticMarkup(
 			<OverseasRunNowDialog
 				brandId="ppio"
@@ -121,8 +171,9 @@ describe("OverseasRunNowDialog", () => {
 		for (const label of ["ChatGPT", "Perplexity", "Gemini", "Copilot", "Google AI Mode", "Google AI Overview"]) {
 			expect(markup).toContain(label);
 		}
-		expect(markup).toContain("10 × 6 × 5 = 300 calls");
-		expect(markup).toContain("Run 300 overseas calls now");
+		expect(markup).toContain("5 samples (paid add-on)");
+		expect(markup).toContain("10 × 6 × 1 = 60 calls");
+		expect(markup).toContain("Run 60 overseas calls now");
 		expect(markup).not.toContain('type="number"');
 	});
 
@@ -140,13 +191,13 @@ describe("OverseasRunNowDialog", () => {
 		expect(markup).toContain("Google AI Overview");
 		expect(markup).toContain("Configure BRIGHTDATA_SERP_ZONE to enable Google AI Overview.");
 		expect(markup).toMatch(/<button[^>]*disabled[^>]*id="overseas-google-ai-overview"/);
-		expect(markup).toContain("10 × 5 × 5 = 250 calls");
-		expect(markup).toContain("Run 250 overseas calls now");
-		expect(markup).not.toContain("10 × 6 × 5 = 300 calls");
+		expect(markup).toContain("10 × 5 × 1 = 50 calls");
+		expect(markup).toContain("Run 50 overseas calls now");
+		expect(markup).not.toContain("10 × 6 × 1 = 60 calls");
 	});
 
-	it("uses the same fixed five samples for any selected channel count", () => {
-		expect(calculateOverseasRunNowCallCount(10, 6)).toBe(300);
-		expect(calculateOverseasRunNowCallCount(10, 1)).toBe(50);
+	it("calculates one sample by default and five only for the paid option", () => {
+		expect(calculateOverseasRunNowCallCount(10, 6)).toBe(60);
+		expect(calculateOverseasRunNowCallCount(10, 6, 5)).toBe(300);
 	});
 });

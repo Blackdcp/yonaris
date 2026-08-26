@@ -6,7 +6,8 @@ import {
 	assertOverseasRunNowProvidersConfigured,
 	getOverseasRunNowReadiness,
 	OVERSEAS_RUN_NOW_CHANNELS,
-	OVERSEAS_RUN_NOW_SAMPLES,
+	OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+	OVERSEAS_RUN_NOW_PAID_SAMPLES,
 	planOverseasRunNow,
 } from "./overseas-run-now-policy";
 
@@ -76,20 +77,35 @@ describe("Overseas Run now planning", () => {
 		});
 	});
 
-	it("plans 300 unique calls for PPIO's 10 prompts, all channels, and five samples", () => {
+	it("defaults PPIO's 10 prompts across all channels to one sample and 60 unique calls", () => {
 		const plan = planOverseasRunNow({
 			prompts: ppioPrompts,
 			channelKeys: OVERSEAS_RUN_NOW_CHANNELS.map(({ key }) => key),
 			scope: { market: "US", locale: "en-US", timezone: "America/Los_Angeles" },
 		});
 
-		expect(plan.samplesPerChannel).toBe(OVERSEAS_RUN_NOW_SAMPLES);
+		expect(plan.samplesPerChannel).toBe(OVERSEAS_RUN_NOW_DEFAULT_SAMPLES);
+		expect(plan.callCount).toBe(60);
+		expect(plan.calls).toHaveLength(60);
+		expect(new Set(plan.calls.map(({ identity }) => identity)).size).toBe(60);
+		expect(new Set(plan.calls.map(({ sampleIndex }) => sampleIndex))).toEqual(new Set([1]));
+		expect(plan.channels.map(({ key }) => key)).toEqual(OVERSEAS_RUN_NOW_CHANNELS.map(({ key }) => key));
+		expect(plan.manifestFingerprint).toMatch(/^[a-f0-9]{64}$/);
+	});
+
+	it("plans five samples only when the paid sampling option is explicit", () => {
+		const plan = planOverseasRunNow({
+			prompts: ppioPrompts,
+			channelKeys: OVERSEAS_RUN_NOW_CHANNELS.map(({ key }) => key),
+			samplesPerChannel: OVERSEAS_RUN_NOW_PAID_SAMPLES,
+			scope: { market: "US", locale: "en-US", timezone: "America/Los_Angeles" },
+		});
+
+		expect(plan.samplesPerChannel).toBe(5);
 		expect(plan.callCount).toBe(300);
 		expect(plan.calls).toHaveLength(300);
 		expect(new Set(plan.calls.map(({ identity }) => identity)).size).toBe(300);
 		expect(new Set(plan.calls.map(({ sampleIndex }) => sampleIndex))).toEqual(new Set([1, 2, 3, 4, 5]));
-		expect(plan.channels.map(({ key }) => key)).toEqual(OVERSEAS_RUN_NOW_CHANNELS.map(({ key }) => key));
-		expect(plan.manifestFingerprint).toMatch(/^[a-f0-9]{64}$/);
 	});
 
 	it("rejects China Programs and duplicate or unknown channels", () => {
@@ -112,6 +128,7 @@ describe("Overseas Run now planning", () => {
 		const input = {
 			prompts: ppioPrompts,
 			channelKeys: ["chatgpt", "perplexity"] as const,
+			samplesPerChannel: OVERSEAS_RUN_NOW_PAID_SAMPLES,
 			scope: { market: "US", locale: "en-US", timezone: "UTC" },
 		};
 		expect(planOverseasRunNow(input).manifestFingerprint).toBe(planOverseasRunNow(input).manifestFingerprint);
@@ -123,6 +140,17 @@ describe("Overseas Run now planning", () => {
 		expect(() => planOverseasRunNow({ ...input, prompts: tooManyPrompts, channelKeys: ["chatgpt"] })).toThrow(
 			/10,000/i,
 		);
+	});
+
+	it("rejects unsupported sample counts instead of silently creating a paid cohort", () => {
+		expect(() =>
+			planOverseasRunNow({
+				prompts: ppioPrompts.slice(0, 1),
+				channelKeys: ["chatgpt"],
+				samplesPerChannel: 2 as never,
+				scope: { market: "US", locale: "en-US", timezone: "UTC" },
+			}),
+		).toThrow(/one or five/i);
 	});
 
 	it("rejects an unavailable channel before a cohort can dispatch paid calls", () => {

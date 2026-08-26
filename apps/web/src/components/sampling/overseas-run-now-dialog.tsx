@@ -5,6 +5,11 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
+import {
+	OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+	OVERSEAS_RUN_NOW_PAID_SAMPLES,
+	type OverseasRunNowSamplesPerChannel,
+} from "@/lib/overseas-run-now-contract";
 
 const CHANNELS = [
 	{ key: "chatgpt", label: "ChatGPT" },
@@ -36,6 +41,7 @@ export interface OverseasRunNowInput {
 	brandId: string;
 	scopeId: string;
 	channelKeys: OverseasRunNowChannelKey[];
+	samplesPerChannel: OverseasRunNowSamplesPerChannel;
 	idempotencyKey: string;
 }
 
@@ -60,7 +66,12 @@ export function createOverseasRunNowSubmissionController(
 	return {
 		begin(input) {
 			if (activeSubmission) return null;
-			const nextSignature = JSON.stringify([input.brandId, input.scopeId, [...input.channelKeys].sort()]);
+			const nextSignature = JSON.stringify([
+				input.brandId,
+				input.scopeId,
+				[...input.channelKeys].sort(),
+				input.samplesPerChannel,
+			]);
 			if (intentSignature !== nextSignature) {
 				intentSignature = nextSignature;
 				intentKey = createKey();
@@ -109,8 +120,12 @@ export async function executeOverseasRunNowSubmission(
 	}
 }
 
-export function calculateOverseasRunNowCallCount(promptCount: number, channelCount: number): number {
-	return promptCount * channelCount * 5;
+export function calculateOverseasRunNowCallCount(
+	promptCount: number,
+	channelCount: number,
+	samplesPerChannel: OverseasRunNowSamplesPerChannel = OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+): number {
+	return promptCount * channelCount * samplesPerChannel;
 }
 
 export function OverseasRunNowDialog({
@@ -130,6 +145,9 @@ export function OverseasRunNowDialog({
 	const [channelKeys, setChannelKeys] = useState<OverseasRunNowChannelKey[]>(() =>
 		CHANNELS.filter(({ key }) => key !== "google-ai-overview" || googleAiOverviewReady).map(({ key }) => key),
 	);
+	const [samplesPerChannel, setSamplesPerChannel] = useState<OverseasRunNowSamplesPerChannel>(
+		OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+	);
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const submittingRef = useRef(false);
@@ -137,7 +155,11 @@ export function OverseasRunNowDialog({
 	submissionControllerRef.current ??= createOverseasRunNowSubmissionController();
 	const selectedProgram = programs.find((program) => program.id === scopeId) ?? programs[0];
 	const selectedChannelKeys = channelKeys.filter((key) => key !== "google-ai-overview" || googleAiOverviewReady);
-	const callCount = calculateOverseasRunNowCallCount(selectedProgram?.promptCount ?? 0, selectedChannelKeys.length);
+	const callCount = calculateOverseasRunNowCallCount(
+		selectedProgram?.promptCount ?? 0,
+		selectedChannelKeys.length,
+		samplesPerChannel,
+	);
 
 	const toggleChannel = (key: OverseasRunNowChannelKey, checked: boolean) => {
 		if (submittingRef.current || (key === "google-ai-overview" && !googleAiOverviewReady)) return;
@@ -165,6 +187,7 @@ export function OverseasRunNowDialog({
 					brandId,
 					scopeId: selectedProgram.id,
 					channelKeys: selectedChannelKeys,
+					samplesPerChannel,
 				},
 				onRun,
 			);
@@ -184,7 +207,7 @@ export function OverseasRunNowDialog({
 					Overseas Bright Data run
 				</CardTitle>
 				<CardDescription>
-					Run every enabled Prompt once as a five-sample cohort on each selected channel. No schedule is created.
+					Run every enabled Prompt once on each selected channel. One sample is standard; five samples is a paid add-on.
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">
@@ -196,28 +219,51 @@ export function OverseasRunNowDialog({
 					</Alert>
 				) : (
 					<>
-						<div className="grid gap-2">
-							<Label htmlFor="overseas-run-program">Program</Label>
-							<select
-								id="overseas-run-program"
-								className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-								value={selectedProgram?.id ?? ""}
-								disabled={submitting}
-								onChange={(event) => {
-									if (submittingRef.current) return;
-									submissionControllerRef.current?.resetIntent();
-									setScopeId(event.target.value);
-								}}
-							>
-								{programs.map((program) => (
-									<option key={program.id} value={program.id}>
-										{program.name}
-									</option>
-								))}
-							</select>
-							<p className="text-sm text-muted-foreground">
-								All {selectedProgram?.promptCount ?? 0} enabled Prompts · {selectedProgram?.timezone}
-							</p>
+						<div className="grid gap-4 sm:grid-cols-2">
+							<div className="grid gap-2">
+								<Label htmlFor="overseas-run-program">Program</Label>
+								<select
+									id="overseas-run-program"
+									className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+									value={selectedProgram?.id ?? ""}
+									disabled={submitting}
+									onChange={(event) => {
+										if (submittingRef.current) return;
+										submissionControllerRef.current?.resetIntent();
+										setScopeId(event.target.value);
+									}}
+								>
+									{programs.map((program) => (
+										<option key={program.id} value={program.id}>
+											{program.name}
+										</option>
+									))}
+								</select>
+								<p className="text-sm text-muted-foreground">
+									All {selectedProgram?.promptCount ?? 0} enabled Prompts · {selectedProgram?.timezone}
+								</p>
+							</div>
+							<div className="grid content-start gap-2">
+								<Label htmlFor="overseas-run-samples">Samples per Prompt</Label>
+								<select
+									id="overseas-run-samples"
+									className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+									value={samplesPerChannel}
+									disabled={submitting}
+									onChange={(event) => {
+										if (submittingRef.current) return;
+										submissionControllerRef.current?.resetIntent();
+										setSamplesPerChannel(
+											event.target.value === String(OVERSEAS_RUN_NOW_PAID_SAMPLES)
+												? OVERSEAS_RUN_NOW_PAID_SAMPLES
+												: OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+										);
+									}}
+								>
+									<option value={OVERSEAS_RUN_NOW_DEFAULT_SAMPLES}>1 sample (standard)</option>
+									<option value={OVERSEAS_RUN_NOW_PAID_SAMPLES}>5 samples (paid add-on)</option>
+								</select>
+							</div>
 						</div>
 						<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 							{CHANNELS.map(({ key, label }) => {
@@ -248,7 +294,8 @@ export function OverseasRunNowDialog({
 						</div>
 						<div className="flex flex-col gap-3 rounded-md bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<p className="font-medium tabular-nums">
-								{selectedProgram?.promptCount ?? 0} × {selectedChannelKeys.length} × 5 = {callCount} calls
+								{selectedProgram?.promptCount ?? 0} × {selectedChannelKeys.length} × {samplesPerChannel} = {callCount}{" "}
+								calls
 							</p>
 							<Button disabled={submitting || callCount === 0 || selectedChannelKeys.length === 0} onClick={submit}>
 								{submitting && <Loader2 className="animate-spin" />}

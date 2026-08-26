@@ -11,6 +11,7 @@ import { getProvider } from "@workspace/lib/providers";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
+import { OVERSEAS_RUN_NOW_DEFAULT_SAMPLES, OVERSEAS_RUN_NOW_PAID_SAMPLES } from "@/lib/overseas-run-now-contract";
 import { dispatchOverseasRunCalls } from "./overseas-run-dispatch";
 import {
 	assertOverseasRunNowChannelsReady,
@@ -26,6 +27,9 @@ const runInputSchema = z
 		brandId: z.string().trim().min(1).max(200),
 		scopeId: z.guid(),
 		channelKeys: z.array(channelKeySchema).min(1).max(6),
+		samplesPerChannel: z
+			.union([z.literal(OVERSEAS_RUN_NOW_DEFAULT_SAMPLES), z.literal(OVERSEAS_RUN_NOW_PAID_SAMPLES)])
+			.default(OVERSEAS_RUN_NOW_DEFAULT_SAMPLES),
 		idempotencyKey: z.string().trim().min(1).max(200),
 	})
 	.strict();
@@ -75,6 +79,7 @@ export const runOverseasNowFn = createServerFn({ method: "POST" })
 		const plan = planOverseasRunNow({
 			prompts: enabledPrompts,
 			channelKeys: data.channelKeys,
+			samplesPerChannel: data.samplesPerChannel,
 			scope: { market: scope.market, locale: scope.locale, timezone: scope.timezone },
 		});
 		assertOverseasRunNowProvidersConfigured(plan.channels, (provider) => getProvider(provider).isConfigured());

@@ -1,8 +1,13 @@
 import { createHash } from "node:crypto";
 import type { ModelConfig } from "@workspace/config/scrape-targets";
 import { assertObservationRouteSupportsScope, resolveObservationTarget } from "@workspace/lib/observation-targets";
+import {
+	OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
+	OVERSEAS_RUN_NOW_PAID_SAMPLES,
+	type OverseasRunNowSamplesPerChannel,
+} from "@/lib/overseas-run-now-contract";
 
-export const OVERSEAS_RUN_NOW_SAMPLES = 5;
+export { OVERSEAS_RUN_NOW_DEFAULT_SAMPLES, OVERSEAS_RUN_NOW_PAID_SAMPLES } from "@/lib/overseas-run-now-contract";
 export const OVERSEAS_RUN_NOW_MAX_CALLS = 10_000;
 
 export const OVERSEAS_RUN_NOW_CHANNELS = [
@@ -106,6 +111,7 @@ export interface OverseasRunNowCall {
 export function planOverseasRunNow(input: {
 	prompts: readonly { id: string; value: string }[];
 	channelKeys: readonly OverseasRunNowChannelKey[];
+	samplesPerChannel?: OverseasRunNowSamplesPerChannel;
 	scope: { market: string; locale: string; timezone: string };
 }) {
 	if (input.scope.market.trim().toUpperCase() === "CN") {
@@ -115,6 +121,10 @@ export function planOverseasRunNow(input: {
 	if (input.channelKeys.length === 0) throw new Error("Overseas Run now requires at least one channel");
 	if (new Set(input.channelKeys).size !== input.channelKeys.length) {
 		throw new Error("Overseas Run now received a duplicate channel");
+	}
+	const samplesPerChannel = input.samplesPerChannel ?? OVERSEAS_RUN_NOW_DEFAULT_SAMPLES;
+	if (samplesPerChannel !== OVERSEAS_RUN_NOW_DEFAULT_SAMPLES && samplesPerChannel !== OVERSEAS_RUN_NOW_PAID_SAMPLES) {
+		throw new Error("Overseas Run now samples per Prompt must be one or five");
 	}
 
 	const promptIds = input.prompts.map(({ id }) => requiredText(id, "Prompt id"));
@@ -129,7 +139,7 @@ export function planOverseasRunNow(input: {
 		}
 	}
 	const channels = OVERSEAS_RUN_NOW_CHANNELS.filter(({ key }) => selected.has(key));
-	const callCount = prompts.length * channels.length * OVERSEAS_RUN_NOW_SAMPLES;
+	const callCount = prompts.length * channels.length * samplesPerChannel;
 	if (callCount > OVERSEAS_RUN_NOW_MAX_CALLS) {
 		throw new Error(
 			`Overseas Run now cannot contain more than ${OVERSEAS_RUN_NOW_MAX_CALLS.toLocaleString("en-US")} calls`,
@@ -148,7 +158,7 @@ export function planOverseasRunNow(input: {
 		for (const channel of channels) {
 			const descriptor = descriptors.get(channel.key);
 			if (!descriptor) throw new Error(`Overseas Run now channel ${channel.key} is not registered`);
-			for (let sampleIndex = 1; sampleIndex <= OVERSEAS_RUN_NOW_SAMPLES; sampleIndex += 1) {
+			for (let sampleIndex = 1; sampleIndex <= samplesPerChannel; sampleIndex += 1) {
 				const identity = `${prompt.id}:${descriptor.surfaceTargetKey}:${sampleIndex}`;
 				calls.push({
 					identity,
@@ -166,7 +176,7 @@ export function planOverseasRunNow(input: {
 	const manifest = {
 		schemaVersion: 1 as const,
 		scope: { ...input.scope },
-		samplesPerChannel: OVERSEAS_RUN_NOW_SAMPLES,
+		samplesPerChannel,
 		calls,
 	};
 	return {
@@ -175,7 +185,7 @@ export function planOverseasRunNow(input: {
 		calls,
 		callCount,
 		channels,
-		samplesPerChannel: OVERSEAS_RUN_NOW_SAMPLES,
+		samplesPerChannel,
 	};
 }
 
