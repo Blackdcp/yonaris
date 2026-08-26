@@ -21,7 +21,7 @@ describe("LanguageSwitcher", () => {
 	it.each([
 		["en", "true", "false"],
 		["zh-CN", "false", "true"],
-	] as const)("renders both choices and marks %s as current", (locale, englishChecked, chineseChecked) => {
+	] as const)("renders a native radio group and marks %s as current", (locale, englishChecked, chineseChecked) => {
 		const markup = renderToStaticMarkup(
 			<I18nProvider locale={locale}>
 				<LanguageSwitcher />
@@ -30,8 +30,16 @@ describe("LanguageSwitcher", () => {
 
 		expect(markup).toContain("English");
 		expect(markup).toContain("简体中文");
-		expect(markup).toContain(`data-language="en" aria-checked="${englishChecked}"`);
-		expect(markup).toContain(`data-language="zh-CN" aria-checked="${chineseChecked}"`);
+		expect(markup).toContain("<fieldset");
+		expect(markup).toContain("<legend");
+		expect(markup).toContain('type="radio"');
+		expect(markup).toContain('name="ui-language"');
+		const englishControl = markup.match(/<label data-language="en"[^>]*>.*?<\/label>/)?.[0] ?? "";
+		const chineseControl = markup.match(/<label data-language="zh-CN"[^>]*>.*?<\/label>/)?.[0] ?? "";
+		expect(englishControl).toContain('value="en"');
+		expect(chineseControl).toContain('value="zh-CN"');
+		expect(englishControl.includes('checked=""')).toBe(englishChecked === "true");
+		expect(chineseControl.includes('checked=""')).toBe(chineseChecked === "true");
 	});
 
 	it.each(["en", "zh-CN"] as const)("writes only %s and reloads the unchanged URL", async (uiLanguage) => {

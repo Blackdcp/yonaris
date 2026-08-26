@@ -21,7 +21,8 @@ export type MessageId = keyof typeof englishCatalog;
 export type MessageValues = Readonly<Record<string, string | number>>;
 
 function interpolate(message: string, values?: MessageValues): string {
-	return message.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (placeholder, name: string) => {
+	let missingValue = false;
+	const interpolated = message.replace(/\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_placeholder, name: string) => {
 		const value = values?.[name];
 		if (value !== undefined) return String(value);
 
@@ -29,8 +30,11 @@ function interpolate(message: string, values?: MessageValues): string {
 			throw new Error(`Missing value for "${name}"`);
 		}
 
-		return placeholder;
+		missingValue = true;
+		return "";
 	});
+
+	return missingValue ? englishCatalog["common.error.unexpected"] : interpolated;
 }
 
 export function translate(locale: UiLanguage, id: MessageId, values?: MessageValues): string {
@@ -40,7 +44,7 @@ export function translate(locale: UiLanguage, id: MessageId, values?: MessageVal
 }
 
 export function formatDate(locale: UiLanguage, value: Date | number, options?: Intl.DateTimeFormatOptions): string {
-	return new Intl.DateTimeFormat(locale, options).format(value);
+	return new Intl.DateTimeFormat(locale, { timeZone: "UTC", ...options }).format(value);
 }
 
 export function formatNumber(locale: UiLanguage, value: number, options?: Intl.NumberFormatOptions): string {

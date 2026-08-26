@@ -48,7 +48,7 @@ type CapturedAuthOptions = {
 				before?: (
 					user: Record<string, unknown>,
 					context: { path?: string; getCookie?: (name: string) => string | null } | null,
-				) => Promise<false | void | { data: Record<string, unknown> }>;
+				) => Promise<false | undefined | { data: Record<string, unknown> }>;
 			};
 		};
 	};

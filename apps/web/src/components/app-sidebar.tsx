@@ -32,6 +32,7 @@ import {
 import type * as React from "react";
 import { Logo } from "@/components/logo";
 import { type NavGroup, NavMain } from "@/components/nav-main";
+import { useI18n } from "@/i18n/provider";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 	isAdmin?: boolean;
@@ -53,6 +54,7 @@ export function AppSidebar({
 	...props
 }: AppSidebarProps) {
 	const { setOpenMobile } = useSidebar();
+	const { t } = useI18n();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	// Reports are disabled entirely in cloud; hide the nav entry there.
 	const reportsEnabled = context.clientConfig?.features.reportGeneration ?? true;
@@ -65,7 +67,7 @@ export function AppSidebar({
 	if (!adminOnly) {
 		const dashboardItems = [
 			{
-				title: "Overview",
+				title: t("navigation.overview"),
 				url: "/",
 				icon: IconDashboard,
 			},
@@ -75,32 +77,32 @@ export function AppSidebar({
 		if (brand?.onboarded) {
 			dashboardItems.push(
 				{
-					title: "Programs",
+					title: t("navigation.programs"),
 					url: "/programs",
 					icon: IconFolders,
 				},
 				{
-					title: "Visibility",
+					title: t("navigation.visibility"),
 					url: "/visibility",
 					icon: IconChartBar,
 				},
 				{
-					title: "Share of Voice",
+					title: t("navigation.shareOfVoice"),
 					url: "/share-of-voice",
 					icon: IconSpeakerphone,
 				},
 				{
-					title: "Query Fan-Out",
+					title: t("navigation.queryFanOut"),
 					url: "/query-fan-out",
 					icon: IconSitemap,
 				},
 				{
-					title: "Citations",
+					title: t("navigation.citations"),
 					url: "/citations",
 					icon: IconLink,
 				},
 				{
-					title: "Opportunities",
+					title: t("navigation.opportunities"),
 					url: "/opportunities",
 					icon: IconTarget,
 				},
@@ -108,32 +110,32 @@ export function AppSidebar({
 		}
 
 		groups.push({
-			label: "Dashboard",
+			label: t("navigation.dashboard"),
 			items: dashboardItems,
 		});
 
 		// Settings section - only show if onboarded
 		if (brand?.onboarded && canManageBrand) {
 			groups.push({
-				label: "Settings",
+				label: t("navigation.settings"),
 				items: [
 					{
-						title: "Brand",
+						title: t("navigation.brand"),
 						url: "/settings/brand",
 						icon: IconBuilding,
 					},
 					{
-						title: "Competitors",
+						title: t("navigation.competitors"),
 						url: "/settings/competitors",
 						icon: IconBuildings,
 					},
 					{
-						title: "Prompts",
+						title: t("navigation.prompts"),
 						url: "/settings/prompts",
 						icon: IconListDetails,
 					},
 					...(context.clientConfig?.features.teamInvites
-						? [{ title: "Team", url: "/settings/members", icon: IconUsers }]
+						? [{ title: t("navigation.team"), url: "/settings/members", icon: IconUsers }]
 						: []),
 				],
 			});
@@ -143,7 +145,7 @@ export function AppSidebar({
 	// Admin section
 	if (showAdminSection) {
 		const reportsItem = {
-			title: "Reports",
+			title: t("navigation.reports"),
 			url: "/reports",
 			icon: IconReport,
 			absolute: true,
@@ -151,32 +153,32 @@ export function AppSidebar({
 		const adminItems = isAdmin
 			? [
 					{
-						title: "Customers",
+						title: t("navigation.customers"),
 						url: "/admin",
 						icon: IconTable,
 						absolute: true,
 					},
 					{
-						title: "Customer access",
+						title: t("navigation.customerAccess"),
 						url: "/admin/access",
 						icon: IconBuildingCommunity,
 						absolute: true,
 					},
 					...(reportsEnabled ? [reportsItem] : []),
 					{
-						title: "Automation",
+						title: t("navigation.automation"),
 						url: "/admin/workflows",
 						icon: IconTimeline,
 						absolute: true,
 					},
 					{
-						title: "Sampling operations",
+						title: t("navigation.samplingOperations"),
 						url: "/admin/sampling",
 						icon: IconClipboardCheck,
 						absolute: true,
 					},
 					{
-						title: "Provider tools",
+						title: t("navigation.providerTools"),
 						url: "/admin/tools",
 						icon: IconTool,
 						absolute: true,
@@ -185,7 +187,7 @@ export function AppSidebar({
 			: [reportsItem];
 
 		groups.push({
-			label: "Platform administration",
+			label: t("navigation.platformAdministration"),
 			items: adminItems,
 		});
 	}
@@ -196,7 +198,17 @@ export function AppSidebar({
 				<SidebarMenu>
 					<SidebarMenuItem>
 						<SidebarMenuButton size="lg" asChild>
-							<Link to={adminOnly ? (isAdmin ? "/admin" : "/reports") : "/app"} onClick={() => setOpenMobile(false)}>
+							<Link
+								to={adminOnly ? (isAdmin ? "/admin" : "/reports") : "/app"}
+								aria-label={
+									adminOnly
+										? isAdmin
+											? t("navigation.openPlatformAdministration")
+											: t("navigation.openReportOperations")
+										: t("navigation.openCustomerWorkspace")
+								}
+								onClick={() => setOpenMobile(false)}
+							>
 								<Logo iconClassName="!size-5" />
 							</Link>
 						</SidebarMenuButton>

@@ -55,6 +55,9 @@ describe("root locale SSR integration", () => {
 
 		const markup = renderToStaticMarkup(<RootComponent />);
 		const head = rootHeadContent({ appName: "Yonaris", uiLanguage: locale });
+		const routeHead = (Route.options.head as (input: unknown) => { meta: Array<Record<string, string>> })({
+			match: { context: mocks.context },
+		});
 
 		expect(markup).toContain(`<html lang="${locale}">`);
 		expect(head).toEqual({
@@ -65,6 +68,8 @@ describe("root locale SSR integration", () => {
 					: "追踪并优化品牌在各类 AI 模型中的可见度。",
 			ogLocale,
 		});
+		expect(routeHead.meta).toContainEqual({ property: "og:locale", content: ogLocale });
+		expect(routeHead.meta).toContainEqual({ title });
 	});
 
 	it("keeps the missing-environment document language in sync", () => {
@@ -86,5 +91,14 @@ describe("root locale SSR integration", () => {
 		expect(englishRequest.uiLanguage).toBe("en");
 		expect(chineseRequest.uiLanguage).toBe("zh-CN");
 		expect(mocks.getUiLanguage).toHaveBeenCalledTimes(2);
+	});
+
+	it("preserves the negotiated locale when another root dependency fails", async () => {
+		mocks.getClientConfig.mockRejectedValueOnce(new Error("configuration storage unavailable"));
+		mocks.getEnvValidationState.mockResolvedValue(mocks.context.envValidation);
+		mocks.getUiLanguage.mockResolvedValue("zh-CN");
+		const beforeLoad = Route.options.beforeLoad as unknown as () => Promise<unknown>;
+
+		await expect(beforeLoad()).rejects.toMatchObject({ uiLanguage: "zh-CN" });
 	});
 });

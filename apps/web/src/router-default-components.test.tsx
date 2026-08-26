@@ -24,6 +24,17 @@ describe("router default components", () => {
 		expect(error).not.toContain("root loader failed");
 	});
 
+	it("renders a localized root-loader failure without an i18n provider", () => {
+		const rootError = Object.assign(new Error("root loader failed"), { uiLanguage: "zh-CN" as const });
+		const error = renderToStaticMarkup(
+			<DefaultErrorComponent error={rootError} reset={vi.fn()} info={{ componentStack: "" }} />,
+		);
+
+		expect(error).toContain("出现了问题");
+		expect(error).toContain("加载此页面时发生意外错误");
+		expect(error).not.toContain("root loader failed");
+	});
+
 	it.each([
 		["en", "404 Not Found", "Something went wrong"],
 		["zh-CN", "404 页面未找到", "出现了问题"],

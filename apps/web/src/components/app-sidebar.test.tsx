@@ -1,9 +1,15 @@
+import type { UiLanguage } from "@workspace/config/language";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/provider";
 
 vi.mock("@tanstack/react-router", () => ({
-	Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+	Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
+		<a href={to} {...props}>
+			{children}
+		</a>
+	),
 	useRouteContext: () => ({ clientConfig: { features: { reportGeneration: true } } }),
 }));
 
@@ -37,9 +43,17 @@ import { AppSidebar } from "./app-sidebar";
 
 const onboardedBrand = { id: "brand-1", name: "Acme", onboarded: true };
 
+function renderSidebar(props: React.ComponentProps<typeof AppSidebar>, locale: UiLanguage = "en"): string {
+	return renderToStaticMarkup(
+		<I18nProvider locale={locale}>
+			<AppSidebar {...props} />
+		</I18nProvider>,
+	);
+}
+
 describe("AppSidebar workspace separation", () => {
 	it("shows only customer navigation inside a brand workspace, even for a platform admin", () => {
-		const markup = renderToStaticMarkup(<AppSidebar isAdmin hasReportAccess canManageBrand brand={onboardedBrand} />);
+		const markup = renderSidebar({ isAdmin: true, hasReportAccess: true, canManageBrand: true, brand: onboardedBrand });
 
 		expect(markup).toContain("Dashboard");
 		expect(markup).toContain("Programs");
@@ -51,7 +65,7 @@ describe("AppSidebar workspace separation", () => {
 	});
 
 	it("shows only platform navigation inside the platform administration shell", () => {
-		const markup = renderToStaticMarkup(<AppSidebar isAdmin hasReportAccess adminOnly brand={onboardedBrand} />);
+		const markup = renderSidebar({ isAdmin: true, hasReportAccess: true, adminOnly: true, brand: onboardedBrand });
 
 		expect(markup).toContain("Platform administration");
 		expect(markup).toContain("Customers");
@@ -65,9 +79,7 @@ describe("AppSidebar workspace separation", () => {
 	});
 
 	it("keeps report-only access in the platform shell without exposing other platform tools", () => {
-		const markup = renderToStaticMarkup(
-			<AppSidebar isAdmin={false} hasReportAccess adminOnly brand={onboardedBrand} />,
-		);
+		const markup = renderSidebar({ isAdmin: false, hasReportAccess: true, adminOnly: true, brand: onboardedBrand });
 
 		expect(markup).toContain("Platform administration");
 		expect(markup).toContain("Reports");
@@ -75,5 +87,30 @@ describe("AppSidebar workspace separation", () => {
 		expect(markup).not.toContain("Customer access");
 		expect(markup).not.toContain("Sampling");
 		expect(markup).not.toContain("Programs");
+	});
+
+	it("localizes customer navigation labels and the workspace link without changing its destination", () => {
+		const markup = renderSidebar({ brand: onboardedBrand }, "zh-CN");
+
+		expect(markup).toContain("控制台");
+		expect(markup).toContain("AI 检索脉络");
+		expect(markup).toContain("竞争对手");
+		expect(markup).toContain('href="/app"');
+		expect(markup).toContain('aria-label="打开客户工作区"');
+		expect(markup).not.toContain("Query Fan-Out");
+	});
+
+	it("localizes the complete platform navigation while preserving access gates", () => {
+		const markup = renderSidebar(
+			{ isAdmin: true, hasReportAccess: true, adminOnly: true, brand: onboardedBrand },
+			"zh-CN",
+		);
+
+		expect(markup).toContain("平台管理");
+		expect(markup).toContain("客户访问");
+		expect(markup).toContain("抽样运营");
+		expect(markup).toContain("供应商工具");
+		expect(markup).toContain('href="/admin"');
+		expect(markup).not.toContain("Customer access");
 	});
 });

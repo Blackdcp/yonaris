@@ -1,19 +1,20 @@
 /// <reference types="vite/client" />
-import { useEffect } from "react";
-import { HeadContent, Outlet, ScriptOnce, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
-import { NotFound } from "@/router-default-components";
+
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
+import { createRootRouteWithContext, HeadContent, Outlet, ScriptOnce, Scripts } from "@tanstack/react-router";
 import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_THEME_COLOR } from "@workspace/config/constants";
+import type { MissingEnvVar } from "@workspace/config/env";
 import type { UiLanguage } from "@workspace/config/language";
 import type { DeploymentMode } from "@workspace/config/types";
-import type { MissingEnvVar } from "@workspace/config/env";
-import { getClientConfig, getEnvValidationStateFn, type PublicClientConfig } from "@/server/config";
+import { useEffect } from "react";
 import MissingEnvPage from "@/components/missing-env-page";
 import { translate } from "@/i18n/catalog";
 import { I18nProvider } from "@/i18n/provider";
 import queryDevtools from "@/integrations/tanstack-query/devtools";
 import { initPostHog } from "@/lib/posthog";
+import { NotFound } from "@/router-default-components";
+import { getClientConfig, getEnvValidationStateFn, type PublicClientConfig } from "@/server/config";
 import { getUiLanguageFn } from "@/server/ui-language";
 import appCss from "../styles.css?url";
 
@@ -35,6 +36,16 @@ let cachedRootData: {
 	uiLanguage: UiLanguage;
 } | null = null;
 
+export class RootLoaderError extends Error {
+	readonly uiLanguage: UiLanguage;
+
+	constructor(cause: unknown, uiLanguage: UiLanguage) {
+		super("The application shell could not be loaded.", { cause });
+		this.name = "RootLoaderError";
+		this.uiLanguage = uiLanguage;
+	}
+}
+
 export function rootHeadContent({ appName, uiLanguage }: { appName: string; uiLanguage: UiLanguage }) {
 	return {
 		title: translate(uiLanguage, "root.meta.title", { appName }),
@@ -47,14 +58,22 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	notFoundComponent: NotFound,
 	beforeLoad: async () => {
 		if (typeof window !== "undefined" && cachedRootData) return cachedRootData;
-		const [clientConfig, envValidation, uiLanguage] = await Promise.all([
-			getClientConfig(),
-			getEnvValidationStateFn(),
-			getUiLanguageFn(),
-		]);
-		const rootData = { clientConfig, envValidation, uiLanguage };
-		if (typeof window !== "undefined") cachedRootData = rootData;
-		return rootData;
+		const uiLanguagePromise = Promise.resolve()
+			.then(() => getUiLanguageFn())
+			.catch(() => "en" as const);
+
+		try {
+			const [clientConfig, envValidation, uiLanguage] = await Promise.all([
+				Promise.resolve().then(() => getClientConfig()),
+				Promise.resolve().then(() => getEnvValidationStateFn()),
+				uiLanguagePromise,
+			]);
+			const rootData = { clientConfig, envValidation, uiLanguage };
+			if (typeof window !== "undefined") cachedRootData = rootData;
+			return rootData;
+		} catch (error) {
+			throw new RootLoaderError(error, await uiLanguagePromise);
+		}
 	},
 	head: ({ match }) => {
 		const branding = match.context?.clientConfig?.branding;

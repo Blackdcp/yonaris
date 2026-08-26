@@ -14,29 +14,33 @@ import { DemoModePill } from "@/components/demo-mode-pill";
 import { MeasurementScopeSwitcher } from "@/components/measurement-scope-switcher";
 import { NavUser } from "@/components/nav-user";
 import { useBrand } from "@/hooks/use-brands";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 
 /** Map of page segments to display names */
-const PAGE_NAMES: Record<string, string> = {
-	visibility: "Visibility",
-	"share-of-voice": "Share of Voice",
-	"query-fan-out": "Query Fan-Out",
-	opportunities: "Opportunities",
-	prompts: "Prompts",
-	citations: "Citations",
-	brand: "Brand",
-	competitors: "Competitors",
-	llms: "LLMs",
-	workflows: "Automation",
-	sampling: "Sampling Operations",
-	tools: "Provider Tools",
-	access: "Customer Access",
+const PAGE_NAME_IDS: Record<string, MessageId> = {
+	visibility: "navigation.visibility",
+	"share-of-voice": "navigation.shareOfVoice",
+	"query-fan-out": "navigation.queryFanOut",
+	opportunities: "navigation.opportunities",
+	prompts: "navigation.prompts",
+	citations: "navigation.citations",
+	brand: "navigation.brand",
+	competitors: "navigation.competitors",
+	llms: "navigation.llms",
+	workflows: "navigation.automation",
+	sampling: "navigation.samplingOperations",
+	tools: "navigation.providerTools",
+	access: "navigation.customerAccess",
 };
 
-function getPageDisplayName(segment: string): string {
-	return PAGE_NAMES[segment] || segment.charAt(0).toUpperCase() + segment.slice(1);
+function getPageDisplayName(segment: string, t: (id: MessageId) => string): string {
+	const messageId = PAGE_NAME_IDS[segment];
+	return messageId ? t(messageId) : segment.charAt(0).toUpperCase() + segment.slice(1);
 }
 
 function AdminBreadcrumbs({ pathname }: { pathname: string }) {
+	const { t } = useI18n();
 	const segments = pathname.split("/").filter(Boolean);
 	// /admin -> ["admin"]
 	// /admin/workflows -> ["admin", "workflows"]
@@ -50,12 +54,12 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 				<>
 					<BreadcrumbItem className="hidden md:block">
 						<BreadcrumbLink asChild>
-							<Link to="/reports">Reports</Link>
+							<Link to="/reports">{t("navigation.reports")}</Link>
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator className="hidden md:block" />
 					<BreadcrumbItem>
-						<BreadcrumbPage>View Report</BreadcrumbPage>
+						<BreadcrumbPage>{t("navigation.viewReport")}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</>
 			);
@@ -64,11 +68,11 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 		return (
 			<>
 				<BreadcrumbItem className="hidden md:block">
-					<span className="text-muted-foreground">Platform</span>
+					<span className="text-muted-foreground">{t("navigation.platform")}</span>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator className="hidden md:block" />
 				<BreadcrumbItem>
-					<BreadcrumbPage>Reports</BreadcrumbPage>
+					<BreadcrumbPage>{t("navigation.reports")}</BreadcrumbPage>
 				</BreadcrumbItem>
 			</>
 		);
@@ -79,11 +83,11 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 		return (
 			<>
 				<BreadcrumbItem className="hidden md:block">
-					<span className="text-muted-foreground">Platform</span>
+					<span className="text-muted-foreground">{t("navigation.platform")}</span>
 				</BreadcrumbItem>
 				<BreadcrumbSeparator className="hidden md:block" />
 				<BreadcrumbItem>
-					<BreadcrumbPage>Customers</BreadcrumbPage>
+					<BreadcrumbPage>{t("navigation.customers")}</BreadcrumbPage>
 				</BreadcrumbItem>
 			</>
 		);
@@ -94,11 +98,11 @@ function AdminBreadcrumbs({ pathname }: { pathname: string }) {
 	return (
 		<>
 			<BreadcrumbItem className="hidden md:block">
-				<span className="text-muted-foreground">Platform</span>
+				<span className="text-muted-foreground">{t("navigation.platform")}</span>
 			</BreadcrumbItem>
 			<BreadcrumbSeparator className="hidden md:block" />
 			<BreadcrumbItem>
-				<BreadcrumbPage>{getPageDisplayName(subPage)}</BreadcrumbPage>
+				<BreadcrumbPage>{getPageDisplayName(subPage, t)}</BreadcrumbPage>
 			</BreadcrumbItem>
 		</>
 	);
@@ -113,6 +117,7 @@ function BrandBreadcrumbs({
 	brandId: string | undefined;
 	brandName: string;
 }) {
+	const { t } = useI18n();
 	// Extract the page segment from the path (e.g., /app/foo/prompts -> prompts)
 	const pathSegments = pathname.split("/");
 	const brandIndex = pathSegments.indexOf("app");
@@ -133,7 +138,7 @@ function BrandBreadcrumbs({
 	const isSettingsSubPage = pageSegment === "settings" && subSegment;
 
 	// Determine page name
-	const pageName = pageSegment ? getPageDisplayName(pageSegment) : "Overview";
+	const pageName = pageSegment ? getPageDisplayName(pageSegment, t) : t("navigation.overview");
 
 	return (
 		<>
@@ -155,26 +160,26 @@ function BrandBreadcrumbs({
 						<BreadcrumbLink asChild>
 							{brandId ? (
 								<Link to="/app/$brand/visibility" params={{ brand: brandId }}>
-									Visibility
+									{t("navigation.visibility")}
 								</Link>
 							) : (
-								<span>Visibility</span>
+								<span>{t("navigation.visibility")}</span>
 							)}
 						</BreadcrumbLink>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator className="hidden md:block" />
 					<BreadcrumbItem>
-						<BreadcrumbPage>Prompt History</BreadcrumbPage>
+						<BreadcrumbPage>{t("navigation.promptHistory")}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</>
 			) : isSettingsSubPage ? (
 				<>
 					<BreadcrumbItem className="hidden md:block">
-						<span className="text-muted-foreground">Settings</span>
+						<span className="text-muted-foreground">{t("navigation.settings")}</span>
 					</BreadcrumbItem>
 					<BreadcrumbSeparator className="hidden md:block" />
 					<BreadcrumbItem>
-						<BreadcrumbPage>{getPageDisplayName(subSegment)}</BreadcrumbPage>
+						<BreadcrumbPage>{getPageDisplayName(subSegment, t)}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</>
 			) : isEditPage ? (
@@ -186,7 +191,7 @@ function BrandBreadcrumbs({
 					</BreadcrumbItem>
 					<BreadcrumbSeparator className="hidden md:block" />
 					<BreadcrumbItem>
-						<BreadcrumbPage>Edit</BreadcrumbPage>
+						<BreadcrumbPage>{t("navigation.edit")}</BreadcrumbPage>
 					</BreadcrumbItem>
 				</>
 			) : (
@@ -203,12 +208,15 @@ interface SiteHeaderProps {
 }
 
 export function SiteHeader({ isPlatformAdmin = false }: SiteHeaderProps) {
+	const { t } = useI18n();
 	const { brandId, brand } = useBrand();
 	const { pathname } = useLocation();
 
 	const isAdminPage = pathname.startsWith("/admin") || pathname.startsWith("/reports");
 	const platformContextLabel =
-		pathname.startsWith("/reports") && !isPlatformAdmin ? "Report operations" : "Platform administration";
+		pathname.startsWith("/reports") && !isPlatformAdmin
+			? t("navigation.reportOperations")
+			: t("navigation.platformAdministration");
 
 	return (
 		<header
@@ -218,7 +226,7 @@ export function SiteHeader({ isPlatformAdmin = false }: SiteHeaderProps) {
 		>
 			<div className="flex w-full items-center gap-3 px-4 lg:px-6">
 				<div className="flex min-w-0 flex-1 items-center gap-1 lg:gap-2">
-					<SidebarTrigger className="-ml-1 cursor-pointer" />
+					<SidebarTrigger className="-ml-1 cursor-pointer" aria-label={t("navigation.toggleSidebar")} />
 					<Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
 					<Breadcrumb>
 						<BreadcrumbList>
@@ -230,7 +238,7 @@ export function SiteHeader({ isPlatformAdmin = false }: SiteHeaderProps) {
 						</BreadcrumbList>
 					</Breadcrumb>
 					<Badge variant="outline" className="ml-2 hidden shrink-0 lg:inline-flex">
-						{isAdminPage ? platformContextLabel : "Customer workspace"}
+						{isAdminPage ? platformContextLabel : t("navigation.customerWorkspace")}
 					</Badge>
 				</div>
 				<div data-slot="site-header-actions" className="ml-auto flex shrink-0 items-center gap-2">
