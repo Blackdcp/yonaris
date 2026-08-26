@@ -1,12 +1,11 @@
 /**
  * Better-auth Drizzle schema — tables and relations.
  *
- * Generated via:  pnpm run generate:auth-schema
- * Source of truth: npx @better-auth/cli@latest generate
+ * Generated via: pnpm run generate:auth-schema
+ * Source of truth: Better Auth CLI output plus repository post-processing.
  *
- * DO NOT EDIT BY HAND. If you add/remove better-auth plugins in
- * packages/lib/src/auth/server.ts, re-run the generation script
- * and it will overwrite this file.
+ * DO NOT EDIT BY HAND. Re-run packages/lib/scripts/generate-auth-schema.sh
+ * after changing Better Auth configuration or repository schema constraints.
  */
 import { relations, sql } from "drizzle-orm";
 import {

@@ -36,21 +36,4 @@ if [ ! -s "$TMP_OUTPUT" ]; then
   exit 1
 fi
 
-# Prepend our header and write to the real output file
-{
-cat <<'HEADER'
-/**
- * Better-auth Drizzle schema — tables and relations.
- *
- * Generated via:  pnpm run generate:auth-schema
- * Source of truth: npx @better-auth/cli@latest generate
- *
- * DO NOT EDIT BY HAND. If you add/remove better-auth plugins in
- * packages/lib/src/auth/server.ts, re-run the generation script
- * and it will overwrite this file.
- */
-HEADER
-cat "$TMP_OUTPUT"
-} > "$OUTPUT"
-
-echo "[generate-auth-schema] Written $(wc -l < "$OUTPUT") lines to $OUTPUT"
+node "$SCRIPT_DIR/postprocess-auth-schema.mjs" "$TMP_OUTPUT" "$OUTPUT"

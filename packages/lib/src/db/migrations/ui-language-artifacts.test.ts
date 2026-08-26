@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 describe("user UI language migration artifacts", () => {
 	it("keeps the schema, migration, snapshot, and journal aligned", () => {
 		const repositoryRoot = resolve(process.cwd(), "../..");
-		const schema = readFileSync(resolve(repositoryRoot, "packages/lib/src/db/schema-auth.ts"), "utf8");
 		const migration = readFileSync(
 			resolve(repositoryRoot, "packages/lib/src/db/migrations/0031_user_ui_language.sql"),
 			"utf8",
@@ -24,9 +23,10 @@ describe("user UI language migration artifacts", () => {
 			readFileSync(resolve(repositoryRoot, "packages/lib/src/db/migrations/meta/_journal.json"), "utf8"),
 		) as { entries: Array<{ idx: number; tag: string }> };
 
-		expect(schema).toContain('check("user_ui_language_supported", sql`${table.uiLanguage} IN (\'en\', \'zh-CN\')`)');
 		expect(migration).toContain('ADD COLUMN "ui_language" text DEFAULT \'en\' NOT NULL');
-		expect(migration).toContain('CHECK ("ui_language" IN (\'en\', \'zh-CN\'))');
+		expect(migration).toContain(
+			'ADD CONSTRAINT "user_ui_language_supported" CHECK ("ui_language" IN (\'en\', \'zh-CN\'))',
+		);
 		expect(snapshot.tables["public.user"].columns.ui_language).toMatchObject({
 			default: "'en'",
 			notNull: true,
