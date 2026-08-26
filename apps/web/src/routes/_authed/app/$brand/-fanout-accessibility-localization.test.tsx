@@ -163,12 +163,12 @@ const expectedNames = {
 	en: {
 		stats: [
 			"About search prompt runs",
-			"About prompt runs with unknown queries",
-			"About prompt runs with exposed queries",
-			"About average fan-out",
+			"About prompt runs with unknown derived queries",
+			"About prompt runs with exposed derived queries",
+			"About average search paths",
 		],
-		fanout: "About prompt fan-out",
-		topQueries: "About top queries",
+		fanout: "About prompt search paths",
+		topQueries: "About top derived queries",
 		words: "Words engines add that were not in your prompt.",
 	},
 	"zh-CN": {

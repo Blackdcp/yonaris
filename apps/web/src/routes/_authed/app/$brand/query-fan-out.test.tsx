@@ -208,6 +208,9 @@ describe("Query Fan-Out route localization", () => {
 		expect(english).toContain("Query Fan-Out");
 		expect(english).toContain("Search Paths");
 		expect(english).toContain("Derived Queries");
+		expect(english).toContain("Prompt Runs w/ Unknown Derived Queries");
+		expect(english).toContain("Prompt Runs w/ Exposed Derived Queries");
+		expect(english).toContain("Average Search Paths");
 		expect(english).toContain("The web searches AI engines run when answering your prompts.");
 	});
 
@@ -266,6 +269,21 @@ describe("Query Fan-Out route localization", () => {
 			isError: false,
 		};
 		expect(textFromMarkup(renderRoute("zh-CN", "words"))).toContain("此期间没有可分析的词语。");
+	});
+
+	it("uses exact Derived Queries terminology for capped counts and query count titles", () => {
+		const populated = populatedFanoutData();
+		populated.byPrompt[0].uniqueQueries = 3;
+		mocks.query = { data: populated, isLoading: false, isError: false };
+
+		const english = renderRoute("en", "fanout");
+		expect(textFromMarkup(english)).toContain("Top 1 of 3 derived queries shown");
+		expect(english).toContain('title="Times engines ran this derived query"');
+		expect(english).not.toContain("variations shown");
+
+		const chinese = renderRoute("zh-CN", "fanout");
+		expect(textFromMarkup(chinese)).toContain("仅显示前 1 条，共 3 条衍生检索词");
+		expect(chinese).toContain('title="引擎运行此衍生检索词的次数"');
 	});
 
 	it("formats word-change counts through the UI locale instead of the ambient runtime locale", () => {
