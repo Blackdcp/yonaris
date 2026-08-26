@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EN_CATEGORY, ZH_CATEGORY } from "@/content/experience/canonical-public-facts";
 import type { HumanPageKey } from "@/content/experience/types";
 import { getLocaleSwitchPath } from "@/lib/locale-paths";
 
@@ -151,11 +152,7 @@ export function Site06Shell({
 					>
 						<img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" width="340" height="94" />
 					</a>
-					<p>
-						{locale === "en"
-							? "AI-native MarTech infrastructure for human decisions and agent-shaped markets."
-							: "面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。"}
-					</p>
+					<p>{locale === "en" ? EN_CATEGORY : ZH_CATEGORY}</p>
 					<nav aria-label={locale === "en" ? "Footer navigation" : "页脚导航"}>
 						<a href={contact}>{locale === "en" ? "Contact" : "预约沟通"}</a>
 						<a href={privacy}>{locale === "en" ? "Privacy" : "隐私说明"}</a>

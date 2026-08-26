@@ -57,12 +57,14 @@ describe("regional customer copy", () => {
 		expect(global).toContain("Share three details");
 	});
 
-	it("never presents an unconfirmed form attempt as delivered", () => {
+	it("explains response and retry without exposing submission plumbing", () => {
 		const global = JSON.stringify(subject?.GLOBAL_COPY ?? {});
 		const china = JSON.stringify(subject?.CHINA_COPY ?? {});
-		expect(global).toContain("The page confirms form delivery only after the delivery service accepts the request");
-		expect(global).not.toContain("They are sent to Yonaris");
-		expect(china).toContain("只有投递服务接受申请后，页面才显示已送出");
+		expect(global).toContain("used to understand and respond to your request");
+		expect(global).toContain("your entries stay in place so you can try again");
+		expect(china).toContain("只用于理解并回复这次咨询");
+		expect(china).toContain("会保留已填内容，方便再次尝试");
+		expect(`${global}\n${china}`).not.toMatch(/provider|delivery service|服务商|投递服务|交付通道|接收机制/i);
 	});
 
 	it("keeps the machine copy on the approved company category without exposing a personal fallback", () => {

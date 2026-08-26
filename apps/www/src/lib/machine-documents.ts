@@ -1,11 +1,9 @@
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
+import { EN_CATEGORY } from "@/content/experience/canonical-public-facts";
 import { type AgentTopic, type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import type { AgentPageKey } from "@/content/site/types";
 import type { MachineLinkSet } from "./machine-response";
 import { siteHref } from "./site-origin";
-
-const ORGANIZATION_DESCRIPTION =
-	"AI-native MarTech infrastructure built for decisions made by people and shaped by agents.";
 
 export function agentMarkdownPath(locale: ExperienceLocale, key: HumanPageKey): string {
 	const localePrefix = locale === "zh" ? "/zh" : "";
@@ -202,7 +200,7 @@ function organizationNode(href: HrefBuilder) {
 		"@id": href("/#organization"),
 		name: "Yonaris",
 		url: href("/"),
-		description: ORGANIZATION_DESCRIPTION,
+		description: EN_CATEGORY,
 		logo: href("/brand/logos/yonaris-wordmark-navy.png"),
 	};
 }

@@ -31,24 +31,43 @@ function Photo({ src, alt, credit }: { src: string; alt: string; credit: string 
 	);
 }
 
-const heroFactIds = {
-	product: PAGE_FACTS.en.product.id,
-	approach: PAGE_FACTS.en.approach.id,
-	geo: PAGE_FACTS.en.geo.id,
-	diagnostic: PAGE_FACTS.en.diagnostic.id,
-	privacy: PAGE_FACTS.en.privacy.id,
-} as const satisfies Partial<Record<HumanPageKey, string>>;
+const heroFacts = {
+	product: PAGE_FACTS.en.product,
+	approach: PAGE_FACTS.en.approach,
+	geo: PAGE_FACTS.en.geo,
+	diagnostic: PAGE_FACTS.en.diagnostic,
+	privacy: PAGE_FACTS.en.privacy,
+} as const;
 
 function Hero({ pageKey, media }: { pageKey: HumanPageKey; media: ReactNode }) {
 	const copy = GLOBAL_COPY[pageKey];
+	const fact = heroFacts[pageKey as keyof typeof heroFacts];
 	return (
-		<section className="site-06-hero" id={heroFactIds[pageKey as keyof typeof heroFactIds]}>
-			<div className="site-06-hero__copy">
+		<section className="site-06-hero">
+			<article className="site-06-hero__copy" id={fact?.id} tabIndex={fact ? -1 : undefined}>
 				<p className="site-06-kicker">{copy.eyebrow}</p>
 				<h1>{copy.title}</h1>
 				<p className="site-06-hero__lead">{copy.lead}</p>
 				<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
-			</div>
+				{fact ? (
+					<dl className="site-06-public-fact__meta">
+						{copy.lead !== fact.value ? (
+							<div>
+								<dt>Public fact</dt>
+								<dd>{fact.value}</dd>
+							</div>
+						) : null}
+						<div>
+							<dt>Evidence</dt>
+							<dd>{fact.source}</dd>
+						</div>
+						<div>
+							<dt>Boundary</dt>
+							<dd>{fact.boundary}</dd>
+						</div>
+					</dl>
+				) : null}
+			</article>
 			{media}
 		</section>
 	);
@@ -318,11 +337,11 @@ export function GlobalPrivacyPage() {
 			/>
 
 			<section className="site-06-section">
-				<h2>Delivery is confirmed only after provider acceptance.</h2>
+				<h2>Your details stay with this request.</h2>
 				<div className="site-06-evidence-document">
 					<p>
-						The form uses your details to respond to the request. If delivery is not confirmed, the page keeps the
-						entered values and offers another attempt. Browser analytics do not receive the form values.
+						We use your details to understand and respond to the request. If it cannot be completed, the page keeps your
+						entries so you can try again. Browser analytics do not receive the form values.
 					</p>
 				</div>
 			</section>

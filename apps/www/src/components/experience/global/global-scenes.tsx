@@ -88,7 +88,7 @@ export function BuyingQuestionDossier() {
 					<strong>Answer and evidence reading</strong>
 				</header>
 				<p className="site-06-evidence-document__answer">
-					Which partner can support a complex B2B decision across markets without reducing it to a media metric?
+					Which partner can support a complex B2B decision across markets with evidence the buying team can review?
 				</p>
 				<p>
 					A defensible recommendation depends on what the company can prove, how the market describes the decision, and

@@ -1,4 +1,4 @@
-import { PAGE_FACTS, ZH_READING_RECORDS } from "./canonical-public-facts";
+import { PAGE_FACTS, ZH_CATEGORY, ZH_READING_RECORDS } from "./canonical-public-facts";
 import type { HumanPageCopy } from "./types";
 
 interface ChinaPageCopy extends HumanPageCopy {
@@ -134,7 +134,7 @@ export const CHINA_COPY = {
 		navLabel: "为什么现在",
 		metaTitle: "Yonaris｜看清 AI 如何认识、比较和理解你的品牌",
 		metaDescription: "从业务焦虑出发，把客户问题、品牌事实、公开证据与可观察行为接成可复核的判断。",
-		eyebrow: "面向人与 Agent 的 AI 原生营销科技基础设施",
+		eyebrow: ZH_CATEGORY,
 		title: "AI 正在替客户认识你、比较你，也可能误解你。",
 		lead: "客户可能在第一次联系你之前，就已经从 AI 答案里形成了备选和判断。Yonaris 把客户问题、品牌事实、公开证据、市场观测与行动复核接在一起，让团队知道哪里值得先投入。",
 		primaryAction: { label: "带一道真实问题来聊", href: "/zh/diagnostic" },
@@ -202,7 +202,7 @@ export const CHINA_COPY = {
 		metaDescription: "说明中文咨询表单收集姓名、电话和公司的用途。",
 		eyebrow: "咨询信息说明",
 		title: "姓名、电话、公司，只用于回复这次咨询。",
-		lead: "中文咨询表单只要求这三项可见信息。只有投递服务接受申请后，页面才显示已送出；未确认时会保留已填内容。",
+		lead: "中文咨询表单只要求这三项可见信息，只用于理解并回复这次咨询。若申请未完成，会保留已填内容，方便再次尝试。",
 		primaryAction: { label: "返回预约沟通", href: "/zh/diagnostic" },
 		closingTitle: "咨询内容不会显示在公开页面。",
 		closingBody: "这些信息用于回复本次咨询、了解基本需求和安排后续沟通。",

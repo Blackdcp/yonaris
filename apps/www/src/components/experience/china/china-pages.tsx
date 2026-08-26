@@ -30,24 +30,43 @@ function Photo({ src, alt, credit }: { src: string; alt: string; credit: string 
 	);
 }
 
-const heroFactIds = {
-	product: PAGE_FACTS.zh.product.id,
-	approach: PAGE_FACTS.zh.approach.id,
-	geo: PAGE_FACTS.zh.geo.id,
-	diagnostic: PAGE_FACTS.zh.diagnostic.id,
-	privacy: PAGE_FACTS.zh.privacy.id,
-} as const satisfies Partial<Record<HumanPageKey, string>>;
+const heroFacts = {
+	product: PAGE_FACTS.zh.product,
+	approach: PAGE_FACTS.zh.approach,
+	geo: PAGE_FACTS.zh.geo,
+	diagnostic: PAGE_FACTS.zh.diagnostic,
+	privacy: PAGE_FACTS.zh.privacy,
+} as const;
 
 function Hero({ pageKey, media }: { pageKey: HumanPageKey; media: ReactNode }) {
 	const copy = CHINA_COPY[pageKey];
+	const fact = heroFacts[pageKey as keyof typeof heroFacts];
 	return (
-		<section className="site-06-hero" id={heroFactIds[pageKey as keyof typeof heroFactIds]}>
-			<div className="site-06-hero__copy">
+		<section className="site-06-hero">
+			<article className="site-06-hero__copy" id={fact?.id} tabIndex={fact ? -1 : undefined}>
 				<p className="site-06-kicker">{copy.eyebrow}</p>
 				<h1>{copy.title}</h1>
 				<p className="site-06-hero__lead">{copy.lead}</p>
 				<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
-			</div>
+				{fact ? (
+					<dl className="site-06-public-fact__meta">
+						{copy.lead !== fact.value ? (
+							<div>
+								<dt>公开事实</dt>
+								<dd>{fact.value}</dd>
+							</div>
+						) : null}
+						<div>
+							<dt>依据</dt>
+							<dd>{fact.source}</dd>
+						</div>
+						<div>
+							<dt>边界</dt>
+							<dd>{fact.boundary}</dd>
+						</div>
+					</dl>
+				) : null}
+			</article>
 			{media}
 		</section>
 	);
@@ -292,17 +311,15 @@ export function ChinaPrivacyPage() {
 					<article className="site-06-evidence-document" aria-label="咨询表单可见字段">
 						<span>咨询申请</span>
 						<p className="site-06-evidence-document__answer">姓名 · 电话 · 公司</p>
-						<p>这些信息用于回复本次咨询；投递未确认时会保留已填内容供你重试。</p>
+						<p>这些信息只用于回复本次咨询；若申请未完成，会保留已填内容，方便再次尝试。</p>
 					</article>
 				}
 			/>
 
 			<section className="site-06-section">
-				<h2>投递服务接受申请后，页面才显示已送出。</h2>
+				<h2>这些信息只用于回复这次咨询。</h2>
 				<article className="site-06-evidence-document">
-					<p>
-						表单使用这些信息回复本次咨询。若投递没有确认，页面会保留已填内容并提供重试；浏览器分析不会收到表单字段内容。
-					</p>
+					<p>若申请未完成，页面会保留已填内容，方便再次尝试；浏览器分析不会收到表单字段内容。</p>
 				</article>
 			</section>
 

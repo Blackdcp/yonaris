@@ -1,3 +1,4 @@
+import { EN_CATEGORY } from "@/content/experience/canonical-public-facts";
 import type { ExperienceLocale, HumanPageKey } from "@/content/experience/types";
 import { agentCatalogPath, agentMarkdownPath, buildAgentEntityGraph, getAgentTopic } from "./machine-documents";
 import { getMarketingOgImage } from "./og";
@@ -5,8 +6,7 @@ import { canonicalUrl, SITE_URL, siteHref } from "./site-origin";
 
 export { canonicalUrl, SITE_URL, siteHref } from "./site-origin";
 export const SITE_NAME = "Yonaris";
-export const SITE_DESCRIPTION =
-	"AI-native MarTech infrastructure built for decisions made by people and shaped by agents.";
+export const SITE_DESCRIPTION = EN_CATEGORY;
 export const SITE_LOGO_URL = SITE_URL ? `${SITE_URL}/brand/logos/yonaris-wordmark-navy.png` : undefined;
 
 export function pageSocialMeta(options: {

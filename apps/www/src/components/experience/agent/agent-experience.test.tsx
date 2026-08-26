@@ -36,6 +36,24 @@ const retiredRoutes = /href="\/(?:zh\/)?(?:research|resources)(?:[/#"])/i;
 const internalNarration =
 	/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof|supply chain|implementation detail|upstream AI surface|配置化观察|证据边界|当前演示|非客户数据|内部策略|实现细节|供应链/i;
 const retiredVisuals = /global-cinematic|zh-decision|editorial-stage|decision-canvas|global-en__|zh-site__/i;
+const publicImplementationNarration =
+	/provider acceptance|provider accepts?|delivery service|服务商|投递服务|交付通道|接收机制|without reducing [^.]+ to (?:a )?[^.]+|single AI-search tactic|planned capabilit|规划中的能力|缩成一个 AI 搜索技巧/iu;
+
+function textContent(markup: string): string {
+	return markup
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&quot;/g, '"')
+		.replace(/&#x27;/g, "'")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function escapeRegex(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 describe("zero-to-one Agent experience", () => {
 	it("publishes the seven approved topics for both regional fact sets", () => {
@@ -85,7 +103,7 @@ describe("zero-to-one Agent experience", () => {
 		expect(zh).not.toMatch(/提供持续监控|自动持续监控|自动排名|实时排名|保证结果/);
 	});
 
-	it("keeps every public fact on a real stable anchor in the paired Human page", () => {
+	it("keeps every Agent fact on a visible semantic Human target with matching evidence", () => {
 		for (const [locale, edition, pages] of [
 			["en", "global", GLOBAL_PAGES],
 			["zh", "zh", CHINA_PAGES],
@@ -95,7 +113,16 @@ describe("zero-to-one Agent experience", () => {
 				const humanMarkup = renderToStaticMarkup(<Page />);
 				for (const group of AGENT_FACTS[edition][pageKey].groups) {
 					for (const fact of group.facts) {
-						expect(humanMarkup, `${locale}/${pageKey} missing ${fact.id}`).toContain(`id="${fact.id}"`);
+						const target = humanMarkup.match(
+							new RegExp(`<article(?=[^>]*\\bid="${escapeRegex(fact.id)}")[^>]*>[\\s\\S]*?<\\/article>`),
+						)?.[0];
+						expect(target, `${locale}/${pageKey} must expose visible article ${fact.id}`).toBeTruthy();
+						const openingTag = target?.match(/^<article[^>]*>/)?.[0] ?? "";
+						expect(openingTag).not.toMatch(/\bhidden(?:=|\s|>)/);
+						const visibleText = textContent(target ?? "");
+						expect(visibleText).toContain(fact.value);
+						expect(visibleText).toContain(fact.source);
+						expect(visibleText).toContain(fact.boundary);
 					}
 				}
 			}
@@ -120,6 +147,7 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain(locale === "en" ? "Read this topic for people" : "以人类视角阅读本主题");
 				expect(markup).toContain("data-fact-group");
 				expect(markup).toContain("data-claim-id");
+				expect(markup).toContain('id="agent-facts" tabindex="-1"');
 				const topic = getAgentTopic(locale, pageKey);
 				expect(markup).toContain("<dl");
 				expect(markup).toContain(`href="${topic.markdownPath}"`);
@@ -154,6 +182,25 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain("application/ld+json");
 			}
 		}
+	});
+
+	it("keeps implementation and positioning narration out of every Human and Agent surface", () => {
+		const globalHuman = HUMAN_PAGE_KEYS.map((pageKey) => {
+			const Page = GLOBAL_PAGES[pageKey];
+			return renderToStaticMarkup(<Page />);
+		});
+		const chinaHuman = HUMAN_PAGE_KEYS.map((pageKey) => {
+			const Page = CHINA_PAGES[pageKey];
+			return renderToStaticMarkup(<Page />);
+		});
+		const rendered = [
+			...globalHuman,
+			...chinaHuman,
+			...HUMAN_PAGE_KEYS.map((pageKey) => renderToStaticMarkup(<AgentPage locale="en" pageKey={pageKey} />)),
+			...HUMAN_PAGE_KEYS.map((pageKey) => renderToStaticMarkup(<AgentPage locale="zh" pageKey={pageKey} />)),
+		].join("\n");
+
+		expect(textContent(rendered)).not.toMatch(publicImplementationNarration);
 	});
 
 	it("makes the Agent home a complete topic directory", () => {

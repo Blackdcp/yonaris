@@ -1,4 +1,4 @@
-import { PAGE_FACTS } from "./canonical-public-facts";
+import { EN_CATEGORY, PAGE_FACTS } from "./canonical-public-facts";
 import type { HumanPageCopy, HumanPageKey } from "./types";
 
 type LinkCopy = {
@@ -19,7 +19,7 @@ export const GLOBAL_COPY = {
 		metaTitle: "Yonaris — See what shapes the buyer shortlist",
 		metaDescription:
 			"See the questions, evidence, and comparisons behind an AI-shaped buyer shortlist before the first conversation.",
-		eyebrow: "AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
+		eyebrow: EN_CATEGORY,
 		title: "See what buyers are being told before the first conversation.",
 		lead: "Yonaris makes the questions, evidence and comparisons behind an AI-shaped shortlist visible—so your team can act on the decision, not chase another visibility score.",
 		primaryAction: { label: "Bring us one buying question", href: "/diagnostic" },
@@ -94,10 +94,11 @@ export const GLOBAL_COPY = {
 	privacy: {
 		navLabel: "Privacy",
 		metaTitle: "Yonaris Privacy — Contact request data",
-		metaDescription: "What the Yonaris contact form asks for and when delivery is confirmed.",
+		metaDescription:
+			"How Yonaris uses the three contact details and what happens when a request needs another attempt.",
 		eyebrow: "Contact request privacy.",
 		title: "Your contact request takes one short route.",
-		lead: "The form asks for three visible details. The page confirms form delivery only after the delivery service accepts the request; otherwise your entries stay in place.",
+		lead: "The form asks for three visible details, used to understand and respond to your request. If the request cannot be completed, your entries stay in place so you can try again.",
 		primaryAction: { label: "Return to contact", href: "/diagnostic" },
 		secondaryAction: { label: "Visit the homepage", href: "/" },
 		closingTitle: "Ready to begin with a buying decision?",

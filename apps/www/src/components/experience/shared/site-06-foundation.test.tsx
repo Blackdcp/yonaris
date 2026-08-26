@@ -1,7 +1,39 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { OrbitField } from "./orbit-field";
-import { ReadingLens } from "./reading-lens";
+import * as readingLens from "./reading-lens";
+
+const { ReadingLens } = readingLens;
+
+type HashTarget = {
+	location: { hash: string };
+	addEventListener(type: "hashchange", listener: () => void): void;
+	removeEventListener(type: "hashchange", listener: () => void): void;
+};
+
+type BindReadingLensHash = (options: {
+	target: HashTarget;
+	records: readonly { id: string; stableId: string }[];
+	onSelect: (id: string) => void;
+	onReveal: (stableId: string) => void;
+	schedule?: (callback: () => void) => void;
+}) => () => void;
+
+function fakeHashTarget(hash: string) {
+	const listeners = new Set<() => void>();
+	return {
+		location: { hash },
+		addEventListener(_type: "hashchange", listener: () => void) {
+			listeners.add(listener);
+		},
+		removeEventListener(_type: "hashchange", listener: () => void) {
+			listeners.delete(listener);
+		},
+		dispatchHashChange() {
+			for (const listener of listeners) listener();
+		},
+	};
+}
 
 describe("Site 06 shared foundation", () => {
 	it("renders one meaningful orbit and an accessible dual reading", () => {
@@ -46,5 +78,72 @@ describe("Site 06 shared foundation", () => {
 		);
 		expect(orbit).not.toContain("data-orbit-interactive");
 		expect(orbit).not.toContain('tabindex="0"');
+	});
+
+	it("selects and reveals the matching public fact on initial and later hash navigation", () => {
+		const bindReadingLensHash = (readingLens as typeof readingLens & { bindReadingLensHash?: BindReadingLensHash })
+			.bindReadingLensHash;
+		expect(bindReadingLensHash, "ReadingLens must bind stable record hashes").toBeTypeOf("function");
+		if (!bindReadingLensHash) return;
+
+		const target = fakeHashTarget("#yonaris.purpose.decision-system");
+		const selected: string[] = [];
+		const revealed: string[] = [];
+		const cleanup = bindReadingLensHash({
+			target,
+			records: [
+				{ id: "category", stableId: "yonaris.category.ai-native-martech" },
+				{ id: "purpose", stableId: "yonaris.purpose.decision-system" },
+				{ id: "scope", stableId: "yonaris.scope.martech-system" },
+			],
+			onSelect: (id) => selected.push(id),
+			onReveal: (stableId) => revealed.push(stableId),
+			schedule: (callback) => callback(),
+		});
+
+		expect(selected).toEqual(["purpose"]);
+		expect(revealed).toEqual(["yonaris.purpose.decision-system"]);
+
+		target.location.hash = "#yonaris.scope.martech-system";
+		target.dispatchHashChange();
+		expect(selected).toEqual(["purpose", "scope"]);
+		expect(revealed).toEqual(["yonaris.purpose.decision-system", "yonaris.scope.martech-system"]);
+
+		target.location.hash = "#unrelated-section";
+		target.dispatchHashChange();
+		expect(selected).toEqual(["purpose", "scope"]);
+
+		cleanup();
+		target.location.hash = "#yonaris.category.ai-native-martech";
+		target.dispatchHashChange();
+		expect(selected).toEqual(["purpose", "scope"]);
+	});
+
+	it("keeps the matching fact, evidence and boundary visible at each stable Human target", () => {
+		const lens = renderToStaticMarkup(
+			<ReadingLens
+				locale="en"
+				initialId="scope"
+				records={[
+					{
+						id: "scope",
+						prompt: "What is the scope?",
+						human: "Human context",
+						meaning: "Decision meaning",
+						fact: "Canonical fact",
+						evidence: "Public company statement",
+						boundary: "No outcome guarantee",
+						stableId: "yonaris.scope.martech-system",
+					},
+				]}
+			/>,
+		);
+		const target = lens.match(/<article(?=[^>]*id="yonaris\.scope\.martech-system")[^>]*>[\s\S]*?<\/article>/)?.[0];
+
+		expect(target, "stable Human fact target must be a visible semantic article").toBeTruthy();
+		expect(target).toContain('tabindex="-1"');
+		expect(target).toContain("Canonical fact");
+		expect(target).toContain("Public company statement");
+		expect(target).toContain("No outcome guarantee");
 	});
 });

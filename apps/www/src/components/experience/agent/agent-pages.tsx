@@ -213,7 +213,7 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 							</nav>
 						</aside>
 
-						<section className="agent-experience__facts" id="agent-facts" aria-label={copy.facts}>
+						<section className="agent-experience__facts" id="agent-facts" tabIndex={-1} aria-label={copy.facts}>
 							{topic.groups.map((group) => (
 								<section key={group.id} data-fact-group={group.id}>
 									<header>
