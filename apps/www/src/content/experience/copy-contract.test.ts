@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+const retiredDistributionPattern = new RegExp(["source", "open"].reverse().join("[ -]?"), "i");
+
 type CopyModule = {
 	GLOBAL_COPY?: Record<string, unknown>;
 	CHINA_COPY?: Record<string, unknown>;
+	AGENT_FACTS?: Record<string, unknown>;
 };
 
 const subject = (await import("./index").catch(() => undefined)) as CopyModule | undefined;
@@ -60,5 +63,15 @@ describe("regional customer copy", () => {
 		expect(global).toContain("The page confirms form delivery only after the delivery service accepts the request");
 		expect(global).not.toContain("They are sent to Yonaris");
 		expect(china).toContain("只有投递服务接受申请后，页面才显示已送出");
+	});
+
+	it("keeps the machine copy on the approved company category without exposing a personal fallback", () => {
+		const facts = JSON.stringify(subject?.AGENT_FACTS ?? {});
+		expect(facts).toContain(
+			"AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
+		);
+		expect(facts).toContain("面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。");
+		expect(facts).not.toMatch(/black\.dcp@outlook\.com|mailto:|upstream AI surface/i);
+		expect(facts).not.toMatch(retiredDistributionPattern);
 	});
 });

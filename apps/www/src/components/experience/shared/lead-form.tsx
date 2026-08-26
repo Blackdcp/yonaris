@@ -26,8 +26,8 @@ type FieldRefs = { current: Record<LeadField, HTMLInputElement | null> };
 const copy = {
 	en: {
 		label: "Start a conversation",
-		title: "Where should we reach you?",
-		summary: "Share three details to request a scope-setting conversation about your brand and market.",
+		title: "Tell us where we should reach you.",
+		summary: "Share your name, work email and company. We’ll begin with the buying decision.",
 		name: "Name",
 		contact: "Work email",
 		company: "Company",
@@ -44,17 +44,16 @@ const copy = {
 		submitting: "Sending…",
 		retry: "Try again",
 		validation: "Please check the highlighted field.",
-		failure: "Delivery is not confirmed. Your details are still here—please try again.",
-		fallback: "The email link opens a draft; nothing is sent until you send it.",
-		successTitle: "Request accepted for delivery.",
-		successBody: "The delivery service accepted the request. This does not confirm inbox delivery.",
+		failure: "We couldn’t send that yet. Your details are still here—please try again.",
+		successTitle: "Thanks. We received your request and will be in touch.",
+		successBody: "We’ll follow up using the details you provided.",
 		disclosure: "We’ll use these details only to respond to your request.",
 		privacy: "Privacy",
 	},
 	zh: {
 		label: "预约沟通",
-		title: "留下联系方式，先确认摸底范围",
-		summary: "只填三项，用于申请一次围绕业务和目标市场的范围沟通。",
+		title: "怎么联系你？",
+		summary: "留下姓名、电话和公司。我们会从你最不想让 AI 答错的问题开始。",
 		name: "姓名",
 		contact: "电话",
 		company: "公司",
@@ -71,10 +70,9 @@ const copy = {
 		submitting: "正在发送…",
 		retry: "重新发送",
 		validation: "请检查标出的字段。",
-		failure: "投递尚未确认。你填写的内容还在，请重试。",
-		fallback: "邮件链接只会打开草稿；在你主动发送前，不会发出任何内容。",
-		successTitle: "投递服务已接受这次申请",
-		successBody: "这表示服务方已接受请求，不代表邮件已经进入收件箱。",
+		failure: "暂时没能发送。你填写的内容还在，请重试。",
+		successTitle: "已收到，我们会尽快联系你。",
+		successBody: "我们会使用你填写的联系方式跟进。",
 		disclosure: "这些信息只用于本次需求沟通。",
 		privacy: "隐私说明",
 	},
@@ -265,7 +263,7 @@ export function LeadFormView({
 			) : null}
 			{submission === "unconfirmed" ? (
 				<p className="lead-message" role="alert">
-					{labels.failure} <a href="mailto:black.dcp@outlook.com">black.dcp@outlook.com</a>. {labels.fallback}
+					{labels.failure}
 				</p>
 			) : null}
 			<button type="submit" disabled={submission === "submitting"}>

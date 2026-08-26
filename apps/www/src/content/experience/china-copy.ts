@@ -1,3 +1,4 @@
+import { PAGE_FACTS, ZH_READING_RECORDS } from "./canonical-public-facts";
 import type { HumanPageCopy } from "./types";
 
 interface ChinaPageCopy extends HumanPageCopy {
@@ -126,38 +127,7 @@ export const CHINA_BREAKDOWN_STATES = [
 	},
 ] as const;
 
-export const CHINA_READING_RECORDS = [
-	{
-		id: "category",
-		prompt: "品类",
-		human: "Yonaris 是面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。",
-		meaning: "这让购买者能理解公司所处的品类，而不是把它缩成一个 AI 搜索技巧。",
-		fact: "面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。",
-		evidence: "Yonaris 公司公开描述 · 公司声明 · 2026 年 8 月 26 日核对",
-		boundary: "这是一项公司品类声明，不代表所有规划中的能力已经可用。",
-		stableId: "yonaris.category.ai-native-martech",
-	},
-	{
-		id: "purpose",
-		prompt: "目的",
-		human: "Yonaris 让团队看见 AI 怎样描述和比较一家公司、哪些来源支撑答案，以及什么最值得先改。",
-		meaning: "购买者得到的是一份可核对的判断记录，不是另一个曝光分数。",
-		fact: "Yonaris 展示 AI 如何描述和比较一家公司、哪些来源支撑答案，以及什么最值得先改。",
-		evidence: "Yonaris 公司公开描述 · 公司声明 · 2026 年 8 月 26 日核对",
-		boundary: "这说明工作的目的，不保证特定商业结果。",
-		stableId: "yonaris.purpose.answer-evidence",
-	},
-	{
-		id: "scope",
-		prompt: "范围",
-		human: "Yonaris 把客户问题、品牌事实、证据与下一步行动接在一起。",
-		meaning: "团队能看见品牌为什么进入比较、判断依据是否可信，以及什么值得先处理。",
-		fact: "Yonaris 连接客户问题、品牌事实、证据与下一步行动。",
-		evidence: "Yonaris 公开范围说明 · 公司声明 · 2026 年 8 月 26 日核对",
-		boundary: "AI 答案可见性是一处可观察入口，不是公司的全部能力。",
-		stableId: "yonaris.scope.martech-system",
-	},
-] as const;
+export const CHINA_READING_RECORDS = ZH_READING_RECORDS;
 
 export const CHINA_COPY = {
 	home: {
@@ -177,7 +147,7 @@ export const CHINA_COPY = {
 		metaDescription: "连接市场问题、品牌事实、内容与渠道、AI 与市场观测、客户行为、行动与复核。",
 		eyebrow: "让一次判断变成可以持续运营的能力",
 		title: "不是再做一层内容，而是重建品牌被理解的基础设施。",
-		lead: "市场问题、品牌事实、内容与渠道、AI 与市场观测、客户行为和行动复核不再各说各话。选一个节点，就能看见它断开后会浪费哪一笔预算或破坏哪一个判断。",
+		lead: PAGE_FACTS.zh.product.value,
 		primaryAction: { label: "带一道问题看系统", href: "/zh/diagnostic" },
 		closingTitle: "先把一个断开的节点接回来。",
 		closingBody: "不需要同时重做所有内容。先找到影响当前选择的断点，再决定下一笔预算。",
@@ -188,7 +158,7 @@ export const CHINA_COPY = {
 		metaDescription: "用去标识示例重放基线、断点、行动与复核，不预先承诺结果。",
 		eyebrow: "公开方法演示 · 示例场景，不代表客户结果。",
 		title: "从一句 AI 答案，追到真正影响选择的那个断点。",
-		lead: "固定一道采购问题，保留当时的答案和来源，定位为什么没进备选，再把唯一最该先做的动作放回复核里。",
+		lead: PAGE_FACTS.zh.approach.value,
 		primaryAction: { label: "用你的问题开始", href: "/zh/diagnostic" },
 		closingTitle: "把问题带进来，先找一个断点。",
 		closingBody: "我们会先判断这道问题是否足够具体，能不能在可比较条件下留下记录。",
@@ -199,7 +169,7 @@ export const CHINA_COPY = {
 		metaDescription: "同一套系统随市场、语言、当地品类表述、替代选择与证据条件改变。",
 		eyebrow: "同一套系统，不同的市场条件",
 		title: "换一个市场，先换判断条件，不是只换语言。",
-		lead: "公司事实可以保持一致，但市场、语言、当地品类表述、替代选择和证据条件会改变。Yonaris 把这些条件留在同一道问题旁边，避免跨市场判断失去语境。",
+		lead: PAGE_FACTS.zh.geo.value,
 		primaryAction: { label: "讨论一个市场问题", href: "/zh/diagnostic" },
 		closingTitle: "先定义条件，再比较答案。",
 		closingBody: "告诉我们客户在哪里做什么选择、用什么语言，以及会比较哪些替代方案。",

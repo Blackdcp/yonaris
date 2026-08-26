@@ -1,3 +1,4 @@
+import { PAGE_FACTS } from "./canonical-public-facts";
 import type { HumanPageCopy, HumanPageKey } from "./types";
 
 type LinkCopy = {
@@ -33,7 +34,7 @@ export const GLOBAL_COPY = {
 			"See how AI answers your market’s buying questions. Follow one answer into its source, boundary, and effect on the shortlist.",
 		eyebrow: "A market answer, made inspectable.",
 		title: "See what shaped the shortlist.",
-		lead: "Start with one buying question. Follow the answer into the source, the boundary and the buying effect—then decide what deserves attention first.",
+		lead: PAGE_FACTS.en.product.value,
 		primaryAction: { label: "Bring us a buying question", href: "/diagnostic" },
 		secondaryAction: { label: "Review the evidence method", href: "/approach" },
 		closingTitle: "Make one market judgment clear enough to act on.",
@@ -45,7 +46,7 @@ export const GLOBAL_COPY = {
 		metaDescription: "Keep the original question, answer, evidence, judgment, and retest in one readable record.",
 		eyebrow: "Evidence that survives the meeting.",
 		title: "Proof should be something your team can review.",
-		lead: "The original question, observed answer, source material, recommendation and retest stay in one readable record.",
+		lead: PAGE_FACTS.en.approach.value,
 		primaryAction: { label: "Discuss your buying question", href: "/diagnostic" },
 		secondaryAction: { label: "Inspect the platform", href: "/product" },
 		closingTitle: "A retest only compares when the conditions remain visible.",
@@ -58,7 +59,7 @@ export const GLOBAL_COPY = {
 			"Review how market, language, category wording, alternatives, and evidence change one buying decision.",
 		eyebrow: "One system, different market conditions.",
 		title: "Markets change the conditions around the decision.",
-		lead: "Market, language, category wording, alternatives and evidence conditions stay visible around the buying decision. Yonaris keeps them beside the answer so your team can compare like with like and decide what to review.",
+		lead: PAGE_FACTS.en.geo.value,
 		primaryAction: { label: "Discuss a market question", href: "/diagnostic" },
 		secondaryAction: { label: "See the evidence record", href: "/approach" },
 		closingTitle: "Keep the company fact stable and the market context visible.",

@@ -39,7 +39,7 @@ export function NotFound() {
 				<span>{content.label}</span>
 				<h1>{content.title}</h1>
 				<p>{content.body}</p>
-				<a href={content.href}>{content.home} ↗</a>
+				<a href={content.href}>{content.home}</a>
 			</main>
 		</div>
 	);

@@ -1,8 +1,9 @@
 import { type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import { agentCatalogPath, getAgentTopic } from "@/lib/machine-documents";
+import "@/styles/experience/agent.css";
 import { HumanAgentLink } from "../shared/human-agent-link";
 import { LocaleSwitchLink } from "../shared/locale-switch-link";
-import "@/styles/experience/agent.css";
+import { OrbitField } from "../shared/orbit-field";
 
 function agentPath(locale: ExperienceLocale, pageKey: HumanPageKey): string {
 	return getAgentTopic(locale, pageKey).agentPath;
@@ -10,53 +11,65 @@ function agentPath(locale: ExperienceLocale, pageKey: HumanPageKey): string {
 
 const interfaceCopy = {
 	en: {
-		interfaceLabel: "Agent fact interface",
-		format: "PUBLIC HTML · UTF-8",
-		directory: "Fact directory",
+		interfaceLabel: "Agent reading",
+		format: "PUBLIC FACT DOCUMENT · UTF-8",
+		topics: "Topics",
+		factDirectory: "Fact directory",
 		canonical: "Human canonical",
-		markdown: "Markdown document",
+		markdown: "Markdown",
 		catalogue: "JSON-LD catalogue",
+		requestMethods: "Request methods",
+		negotiation: "Content negotiation",
 		language: "Language",
 		lastReviewed: "Last reviewed",
 		reviewedBy: "Reviewed by",
 		scope: "Scope",
-		limitations: "Limitations",
-		evidence: "Human evidence",
-		returnHuman: "Return to the Human site",
+		limitations: "Boundaries that apply to this topic",
+		evidence: "Open the Human evidence",
+		source: "Evidence",
+		boundary: "Boundary",
+		stableId: "Stable ID",
+		returnHuman: "Read this topic for people",
 		facts: "Public facts",
-		railHint: "Swipe topics",
+		orbitLabel: "One public fact read as fact, evidence and boundary",
 		pageLabels: {
 			home: "Overview",
-			product: "Product",
-			approach: "How it works",
-			geo: "Markets & GEO",
-			company: "Company",
+			product: "Platform",
+			approach: "Evidence",
+			geo: "Across markets",
+			company: "Human + Agent",
 			diagnostic: "Contact",
 			privacy: "Privacy",
 		},
 	},
 	zh: {
-		interfaceLabel: "Agent 事实入口",
-		format: "公开网页 · UTF-8",
-		directory: "事实目录",
-		canonical: "官网对应页面",
-		markdown: "Markdown 文档",
+		interfaceLabel: "Agent 阅读",
+		format: "公开事实文档 · UTF-8",
+		topics: "主题",
+		factDirectory: "事实目录",
+		canonical: "人类阅读对应页",
+		markdown: "Markdown",
 		catalogue: "JSON-LD 目录",
+		requestMethods: "请求方法",
+		negotiation: "内容协商",
 		language: "语言",
 		lastReviewed: "最近核对",
 		reviewedBy: "核对方",
 		scope: "范围",
-		limitations: "限制",
-		evidence: "官网依据",
-		returnHuman: "返回官网",
+		limitations: "本主题适用的边界",
+		evidence: "打开人类阅读依据",
+		source: "证据",
+		boundary: "边界",
+		stableId: "稳定 ID",
+		returnHuman: "以人类视角阅读本主题",
 		facts: "公开事实",
-		railHint: "横向滑动查看更多",
+		orbitLabel: "同一条公开事实的事实、证据与边界",
 		pageLabels: {
 			home: "概览",
-			product: "产品能力",
-			approach: "服务方式",
-			geo: "全球市场",
-			company: "关于 Yonaris",
+			product: "系统",
+			approach: "证据",
+			geo: "跨市场",
+			company: "人类与 Agent",
 			diagnostic: "联系",
 			privacy: "隐私",
 		},
@@ -67,6 +80,7 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 	const topic = getAgentTopic(locale, pageKey);
 	const copy = interfaceCopy[locale];
 	const homePath = locale === "en" ? "/" : "/zh";
+	const facts = topic.groups.flatMap((group) => group.facts);
 
 	return (
 		<div
@@ -93,40 +107,46 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 				</div>
 			</header>
 
-			<main className="agent-experience__layout">
-				<aside className="agent-experience__rail">
-					<p>{copy.directory}</p>
-					<p className="agent-experience__rail-hint">
-						{copy.railHint} <span aria-hidden="true">→</span>
-					</p>
-					<nav aria-label={copy.directory}>
-						{HUMAN_PAGE_KEYS.map((key, index) => (
-							<a key={key} href={agentPath(locale, key)} aria-current={key === pageKey ? "page" : undefined}>
-								<em>{String(index + 1).padStart(2, "0")}</em>
-								<span>{copy.pageLabels[key]}</span>
-							</a>
-						))}
-					</nav>
-				</aside>
+			<nav className="agent-experience__topics" aria-label={copy.topics}>
+				{HUMAN_PAGE_KEYS.map((key) => (
+					<a key={key} href={agentPath(locale, key)} aria-current={key === pageKey ? "page" : undefined}>
+						{copy.pageLabels[key]}
+					</a>
+				))}
+			</nav>
 
+			<main className="agent-experience__main">
 				<article className="agent-experience__document">
 					<header className="agent-experience__intro">
-						<div className="agent-experience__signal" aria-hidden="true">
-							<span />
-							<i />
+						<div className="agent-experience__intro-copy">
+							<p className="agent-experience__kicker">
+								{copy.facts} · {copy.pageLabels[pageKey]}
+							</p>
+							<h1>{topic.title}</h1>
+							<p>{topic.summary}</p>
+							<a className="agent-experience__human-return" href={topic.humanPath} data-human-canonical="true">
+								{copy.returnHuman}
+							</a>
 						</div>
-						<p>
-							{copy.facts} / {copy.pageLabels[pageKey]}
-						</p>
-						<h1>{topic.title}</h1>
-						<p>{topic.summary}</p>
-						<dl className="agent-experience__metadata">
+						<OrbitField label={copy.orbitLabel}>
+							<span className="agent-experience__orbit-reading">
+								<strong>{copy.facts}</strong>
+								<small>
+									{copy.source} · {copy.boundary}
+								</small>
+							</span>
+						</OrbitField>
+					</header>
+
+					<section
+						className="agent-experience__transport"
+						aria-label={locale === "en" ? "Document access" : "文档访问方式"}
+					>
+						<dl>
 							<div>
 								<dt>{copy.canonical}</dt>
 								<dd>
-									<a href={topic.humanPath} data-human-canonical="true">
-										{topic.humanPath}
-									</a>
+									<a href={topic.humanPath}>{topic.humanPath}</a>
 								</dd>
 							</div>
 							<div>
@@ -142,6 +162,26 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 								</dd>
 							</div>
 							<div>
+								<dt>{copy.requestMethods}</dt>
+								<dd>
+									<code>GET · HEAD</code>
+								</dd>
+							</div>
+							<div className="agent-experience__transport-wide">
+								<dt>{copy.negotiation}</dt>
+								<dd>
+									<code>text/html · text/markdown · application/ld+json</code>
+								</dd>
+							</div>
+						</dl>
+					</section>
+
+					<section
+						className="agent-experience__record-meta"
+						aria-label={locale === "en" ? "Record metadata" : "记录信息"}
+					>
+						<dl>
+							<div>
 								<dt>{copy.language}</dt>
 								<dd>{topic.language}</dd>
 							</div>
@@ -153,37 +193,58 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 								<dt>{copy.reviewedBy}</dt>
 								<dd>{topic.reviewedBy}</dd>
 							</div>
-							<div className="agent-experience__metadata-wide">
+							<div>
 								<dt>{copy.scope}</dt>
 								<dd>{topic.scope}</dd>
 							</div>
 						</dl>
-						<a className="agent-experience__human-return" href={topic.humanPath}>
-							<span aria-hidden="true">←</span> {copy.returnHuman}
-						</a>
-					</header>
-
-					<section className="agent-experience__facts" id="agent-facts" aria-label={copy.facts}>
-						{topic.groups.map((group, groupIndex) => (
-							<section key={group.id} data-fact-group={group.id}>
-								<header>
-									<em>{String(groupIndex + 1).padStart(2, "0")}</em>
-									<h2>{group.title}</h2>
-								</header>
-								<ul>
-									{group.facts.map((fact) => (
-										<li key={fact.id} data-claim-id={fact.id}>
-											<span aria-hidden="true">↳</span>
-											<div>
-												<p>{fact.value}</p>
-												<a href={fact.evidenceUrl}>{copy.evidence}</a>
-											</div>
-										</li>
-									))}
-								</ul>
-							</section>
-						))}
 					</section>
+
+					<div className="agent-experience__reading">
+						<aside className="agent-experience__fact-index">
+							<h2>{copy.factDirectory}</h2>
+							<nav aria-label={copy.factDirectory}>
+								{facts.map((fact) => (
+									<a key={fact.id} href={`#${fact.id}`}>
+										<code>{fact.id}</code>
+										<span>{fact.value}</span>
+									</a>
+								))}
+							</nav>
+						</aside>
+
+						<section className="agent-experience__facts" id="agent-facts" aria-label={copy.facts}>
+							{topic.groups.map((group) => (
+								<section key={group.id} data-fact-group={group.id}>
+									<header>
+										<h2>{group.title}</h2>
+									</header>
+									{group.facts.map((fact) => (
+										<article key={fact.id} id={fact.id} data-claim-id={fact.id} tabIndex={-1}>
+											<h3>{fact.value}</h3>
+											<dl>
+												<div>
+													<dt>{copy.source}</dt>
+													<dd>{fact.source}</dd>
+												</div>
+												<div>
+													<dt>{copy.boundary}</dt>
+													<dd>{fact.boundary}</dd>
+												</div>
+												<div>
+													<dt>{copy.stableId}</dt>
+													<dd>
+														<code>{fact.id}</code>
+													</dd>
+												</div>
+											</dl>
+											<a href={fact.evidenceUrl}>{copy.evidence}</a>
+										</article>
+									))}
+								</section>
+							))}
+						</section>
+					</div>
 
 					<section className="agent-experience__limitations" aria-labelledby="agent-limitations">
 						<h2 id="agent-limitations">{copy.limitations}</h2>
@@ -195,6 +256,13 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 					</section>
 				</article>
 			</main>
+
+			<footer className="agent-experience__footer">
+				<a href={homePath} aria-label="Yonaris">
+					<img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" />
+				</a>
+				<a href={topic.humanPath}>{copy.returnHuman}</a>
+			</footer>
 		</div>
 	);
 }

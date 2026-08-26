@@ -106,10 +106,20 @@ describe("LeadForm delivery states", () => {
 		const markup = renderView({ locale: "en", values, submission, errors: {} });
 		expect(submission).toBe("success");
 		expect(markup).toContain('data-lead-state="success"');
-		expect(markup).toContain("Request accepted for delivery.");
-		expect(markup).toContain("This does not confirm inbox delivery.");
+		expect(markup).toContain("Thanks. We received your request and will be in touch.");
+		expect(markup).not.toMatch(/delivery service|inbox delivery/i);
 		expect(markup).not.toContain("<form");
 		expect(markup).not.toContain('type="submit"');
+	});
+
+	it("uses the concise Chinese confirmation only after a confirmed result", () => {
+		expect(subject.submissionStateFromResult).toBeDefined();
+		if (!subject.submissionStateFromResult) return;
+		const submission = subject.submissionStateFromResult({ status: "confirmed" });
+		const markup = renderView({ locale: "zh", values, submission, errors: {} });
+		expect(markup).toContain("已收到，我们会尽快联系你。");
+		expect(markup).not.toMatch(/投递服务|收件箱/);
+		expect(markup).not.toContain("<form");
 	});
 
 	it("keeps entered values and a retry action after a 503 response", async () => {
@@ -124,15 +134,17 @@ describe("LeadForm delivery states", () => {
 		expect(markup).toContain('data-lead-state="unconfirmed"');
 		expect(markup).toContain('value="ava@acme.example"');
 		expect(markup).toContain("Try again");
-		expect(markup).toContain("Delivery is not confirmed.");
-		expect(markup).toContain('href="mailto:black.dcp@outlook.com"');
-		expect(markup).not.toContain("Request accepted for delivery.");
+		expect(markup).toContain("We couldn’t send that yet. Your details are still here—please try again.");
+		expect(markup).not.toContain("mailto:");
+		expect(markup).not.toMatch(/[↗→]/);
+		expect(markup).not.toContain("Thanks. We received your request");
 	});
 
-	it("gives an honest Chinese email fallback when delivery is unconfirmed", () => {
+	it("keeps Chinese failure feedback simple and preserves the retry form", () => {
 		const markup = renderView({ locale: "zh", values, submission: "unconfirmed", errors: {} });
-		expect(markup).toContain("投递尚未确认");
-		expect(markup).toContain('href="mailto:black.dcp@outlook.com"');
-		expect(markup).not.toContain("投递服务已接受这次申请");
+		expect(markup).toContain("暂时没能发送。你填写的内容还在，请重试。");
+		expect(markup).toContain("重新发送");
+		expect(markup).not.toContain("mailto:");
+		expect(markup).not.toMatch(/投递服务|收件箱/);
 	});
 });

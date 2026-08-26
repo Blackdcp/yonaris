@@ -23,10 +23,7 @@ export function LocaleSwitchLink({
 			lang={targetLocale === "zh" ? "zh-CN" : "en"}
 			aria-label={accessibleLabel}
 		>
-			{label}{" "}
-			<span className="locale-switch__arrow" aria-hidden="true">
-				↗
-			</span>
+			{label}
 		</a>
 	);
 }

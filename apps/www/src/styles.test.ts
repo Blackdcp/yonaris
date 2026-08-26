@@ -71,9 +71,10 @@ describe("zero-to-one stylesheet boundary", () => {
 			agent.lastIndexOf("@media (prefers-reduced-motion"),
 		);
 		for (const selector of [
-			".agent-experience__masthead .mode-link a",
+			".agent-experience .mode-link a",
 			".agent-experience .locale-switch",
-			".agent-experience .agent-experience__facts li a",
+			".agent-experience__topics a",
+			".agent-experience__facts article > a",
 		]) {
 			const declarations = ruleFor(mobile, selector);
 			expect(declarations, `${selector} needs a 44px target`).toContain("min-width: var(--target-mobile)");
@@ -84,26 +85,22 @@ describe("zero-to-one stylesheet boundary", () => {
 		}
 
 		for (const selector of [
-			".agent-experience .agent-experience__metadata dd",
-			".agent-experience .agent-experience__metadata a",
-			".agent-experience .agent-experience__facts li p",
-			".agent-experience .agent-experience__limitations li",
+			".agent-experience__transport dd",
+			".agent-experience__record-meta dd",
+			".agent-experience__facts article h3",
+			".agent-experience__facts dd",
+			".agent-experience__limitations li",
 		]) {
 			const declarations = ruleFor(mobile, selector);
 			expect(declarations, `${selector} needs the body floor`).toContain("font-size: var(--text-body-mobile)");
 			expect(declarations, `${selector} needs the body line-height`).toContain("line-height: 1.4");
 		}
 
-		const metadataLabel = ruleFor(mobile, ".agent-experience .agent-experience__metadata dt");
-		expect(metadataLabel).toContain("font-size: var(--text-functional-mobile)");
-
-		const publicFactsLabel = ruleFor(mobile, ".agent-experience .agent-experience__intro > p:first-of-type");
-		expect(publicFactsLabel).toContain("font-size: var(--text-functional-mobile)");
-		expect(publicFactsLabel).toContain("line-height: 1.4");
-
 		for (const selector of [
-			".agent-experience .agent-experience__rail nav a em",
-			".agent-experience .agent-experience__facts header em",
+			".agent-experience__transport dt",
+			".agent-experience__record-meta dt",
+			".agent-experience__facts dt",
+			".agent-experience__kicker",
 		]) {
 			const declarations = ruleFor(mobile, selector);
 			expect(declarations, `${selector} needs the functional floor`).toContain(
@@ -116,14 +113,10 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(brand).toContain("display: inline-flex");
 		expect(brand).toContain("min-height: var(--target-mobile)");
 
-		const metadataLink = ruleFor(mobile, ".agent-experience .agent-experience__metadata a");
-		expect(metadataLink).toContain("display: inline-flex");
-		expect(metadataLink).toContain("min-width: var(--target-mobile)");
-		expect(metadataLink).toContain("min-height: var(--target-mobile)");
-
-		const topicRailLink = ruleFor(mobile, ".agent-experience .agent-experience__rail nav a");
-		expect(topicRailLink).toContain("min-width: 9rem");
-		expect(topicRailLink).toContain("flex: 0 0 9rem");
+		const transportLink = ruleFor(mobile, ".agent-experience__transport a");
+		expect(transportLink).toContain("display: inline-flex");
+		expect(transportLink).toContain("min-width: var(--target-mobile)");
+		expect(transportLink).toContain("min-height: var(--target-mobile)");
 	});
 
 	it("keeps Agent desktop micro-labels readable and Chinese headings stable at tablet width", () => {
@@ -132,12 +125,11 @@ describe("zero-to-one stylesheet boundary", () => {
 			".agent-experience__identity",
 			".agent-experience .mode-link a",
 			".agent-experience .locale-switch",
-			".agent-experience__rail > p",
-			".agent-experience__rail nav a em",
-			".agent-experience__intro > p:first-of-type",
-			".agent-experience__metadata dt",
-			".agent-experience__facts header em",
-			".agent-experience__facts li a",
+			".agent-experience__kicker",
+			".agent-experience__transport dt",
+			".agent-experience__record-meta dt",
+			".agent-experience__facts dt",
+			".agent-experience__fact-index code",
 		]) {
 			expect(ruleFor(agent, selector), `${selector} needs the desktop supplementary floor`).toContain(
 				"font-size: 0.75rem",
@@ -146,9 +138,7 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(agent).toMatch(
 			/@media \(max-width: 1100px\)[\s\S]*?\.agent-experience\[data-agent-locale="zh"\] \.agent-experience__intro h1[^{]*\{[^}]*word-break:\s*keep-all;[^}]*overflow-wrap:\s*break-word;/,
 		);
-		expect(agent).toMatch(
-			/@media \(max-width: 880px\)[\s\S]*?\.agent-experience__rail-hint\s*\{[^}]*display:\s*flex;[^}]*position:\s*sticky;/,
-		);
+		expect(ruleFor(agent, ".agent-experience__topics")).toContain("overflow-x: auto");
 	});
 
 	it("styles the Chinese anxiety and system interactions inside Site 06", () => {
@@ -163,9 +153,11 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(disclosure).toContain("min-height: var(--target-mobile)");
 	});
 
-	it("keeps the Agent Human-return control dark on Signal Orange", () => {
+	it("keeps the Agent Human-return control editorial instead of a filled orange button", () => {
 		const agent = read("styles/experience/agent.css");
-		expect(ruleFor(agent, ".agent-experience .agent-experience__human-return")).toContain("color: var(--agent-ink)");
+		const action = ruleFor(agent, ".agent-experience__human-return");
+		expect(action).toContain("border-bottom: 2px solid var(--site-orange)");
+		expect(action).not.toContain("background: var(--site-orange)");
 	});
 
 	it("removes the retired English stylesheet after Site 06 takes ownership", () => {

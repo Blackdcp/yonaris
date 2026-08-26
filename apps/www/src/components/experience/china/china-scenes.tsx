@@ -86,7 +86,7 @@ export function HomeReadingScene() {
 			<OrbitField label="同一条公开事实的人类与 Agent 双阅读" interactive>
 				<strong>同一条公开事实</strong>
 			</OrbitField>
-			<ReadingLens locale="zh" records={CHINA_READING_RECORDS.slice(2)} initialId="scope" />
+			<ReadingLens locale="zh" records={CHINA_READING_RECORDS} initialId="category" />
 		</div>
 	);
 }

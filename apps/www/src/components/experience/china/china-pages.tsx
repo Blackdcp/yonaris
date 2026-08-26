@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PAGE_FACTS } from "@/content/experience/canonical-public-facts";
 import { CHINA_COPY } from "@/content/experience/china-copy";
 import type { HumanPageKey } from "@/content/experience/types";
 import { LeadForm } from "../shared/lead-form";
@@ -29,10 +30,18 @@ function Photo({ src, alt, credit }: { src: string; alt: string; credit: string 
 	);
 }
 
+const heroFactIds = {
+	product: PAGE_FACTS.zh.product.id,
+	approach: PAGE_FACTS.zh.approach.id,
+	geo: PAGE_FACTS.zh.geo.id,
+	diagnostic: PAGE_FACTS.zh.diagnostic.id,
+	privacy: PAGE_FACTS.zh.privacy.id,
+} as const satisfies Partial<Record<HumanPageKey, string>>;
+
 function Hero({ pageKey, media }: { pageKey: HumanPageKey; media: ReactNode }) {
 	const copy = CHINA_COPY[pageKey];
 	return (
-		<section className="site-06-hero">
+		<section className="site-06-hero" id={heroFactIds[pageKey as keyof typeof heroFactIds]}>
 			<div className="site-06-hero__copy">
 				<p className="site-06-kicker">{copy.eyebrow}</p>
 				<h1>{copy.title}</h1>

@@ -119,7 +119,7 @@ describe("Site 06 English experience", () => {
 		expect(company).toContain('aria-label="Read public facts"');
 		expect(company.match(/data-stable-id=/g) ?? []).toHaveLength(3);
 		expect(company).toContain("yonaris.category.ai-native-martech");
-		expect(company).toContain("yonaris.purpose.answer-evidence");
+		expect(company).toContain("yonaris.purpose.decision-system");
 		expect(company).toContain("yonaris.scope.martech-system");
 	});
 

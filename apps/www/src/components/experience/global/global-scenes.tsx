@@ -1,43 +1,10 @@
+import { EN_READING_RECORDS } from "@/content/experience/canonical-public-facts";
 import { EvidenceInspector, type EvidenceRecord } from "../shared/evidence-inspector";
 import { OrbitField } from "../shared/orbit-field";
-import { ReadingLens, type ReadingRecord } from "../shared/reading-lens";
+import { ReadingLens } from "../shared/reading-lens";
 import { type ReviewRecord, ReviewSwitch } from "../shared/review-switch";
 
-export const EN_READING_RECORDS = [
-	{
-		id: "category",
-		prompt: "Category",
-		human: "Yonaris is AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
-		meaning: "For a buyer, this establishes the category without reducing the company to a single AI-search tactic.",
-		fact: "AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
-		evidence: "Yonaris public company description · company statement · reviewed 26 Aug 2026",
-		boundary:
-			"This identifies the company category. It does not claim every planned capability is currently available.",
-		stableId: "yonaris.category.ai-native-martech",
-	},
-	{
-		id: "purpose",
-		prompt: "Purpose",
-		human:
-			"Yonaris shows how AI describes and compares a company, which sources shape the answer and what should change first.",
-		meaning: "For a buyer, the purpose is an inspectable decision record rather than another visibility score.",
-		fact: "Yonaris shows how AI describes and compares a company, which sources shape the answer and what should change first.",
-		evidence: "Yonaris public company description · company statement · reviewed 26 Aug 2026",
-		boundary: "This describes the purpose of the work; it is not a guarantee of a specific commercial outcome.",
-		stableId: "yonaris.purpose.answer-evidence",
-	},
-	{
-		id: "scope",
-		prompt: "Scope",
-		human: "Yonaris connects buyer questions, company facts, evidence and next action.",
-		meaning:
-			"For a buyer, see why the company enters a comparison, what supports the judgment and what deserves attention first.",
-		fact: "Yonaris connects buyer questions, company facts, evidence and next action.",
-		evidence: "Yonaris public scope statement · company statement · reviewed 26 Aug 2026",
-		boundary: "AI-answer visibility is one observable entry, not the whole company category.",
-		stableId: "yonaris.scope.martech-system",
-	},
-] as const satisfies readonly ReadingRecord[];
+export { EN_READING_RECORDS } from "@/content/experience/canonical-public-facts";
 
 export const EN_PLATFORM_RECORDS = [
 	{
@@ -107,7 +74,7 @@ export function HomeReadingScene() {
 			<OrbitField label="One market claim shown for human and agent reading" interactive>
 				<strong>One public claim, read in two ways</strong>
 			</OrbitField>
-			<ReadingLens locale="en" records={EN_READING_RECORDS.slice(2)} initialId="scope" />
+			<ReadingLens locale="en" records={EN_READING_RECORDS} initialId="category" />
 		</div>
 	);
 }

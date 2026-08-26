@@ -1,20 +1,11 @@
 import { AGENT_FACTS } from "@/content/experience/agent-facts";
-import {
-	type AgentTopic,
-	type ExperienceLocale,
-	HUMAN_PAGE_KEYS,
-	type HumanPageKey,
-} from "@/content/experience/types";
+import { type AgentTopic, type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import type { AgentPageKey } from "@/content/site/types";
 import type { MachineLinkSet } from "./machine-response";
+import { siteHref } from "./site-origin";
 
-const SITE_ORIGIN = "https://yonaris.com";
 const ORGANIZATION_DESCRIPTION =
-	"Yonaris helps brands review how they appear when customers use AI to discover, compare, and choose.";
-
-function absolute(path: string): string {
-	return path.startsWith("http") ? path : `${SITE_ORIGIN}${path}`;
-}
+	"AI-native MarTech infrastructure built for decisions made by people and shaped by agents.";
 
 export function agentMarkdownPath(locale: ExperienceLocale, key: HumanPageKey): string {
 	const localePrefix = locale === "zh" ? "/zh" : "";
@@ -63,20 +54,33 @@ export function getAgentTopic(locale: ExperienceLocale, key: HumanPageKey): Agen
 
 function renderGroups(topic: AgentTopic): string {
 	return topic.groups
-		.map((group) => `## ${group.title}\n\n${group.facts.map((fact) => `- [${fact.id}] ${fact.value}`).join("\n")}`)
+		.map(
+			(group) => `## ${group.title}
+
+${group.facts
+	.map(
+		(fact) => `### ${fact.id}
+
+Stable ID: ${fact.id}
+Fact: ${fact.value}
+Evidence: ${fact.source}
+Boundary: ${fact.boundary}
+Human anchor: ${siteHref(fact.evidenceUrl)}`,
+	)
+	.join("\n\n")}`,
+		)
 		.join("\n\n");
 }
 
 function renderMetadata(topic: AgentTopic): string {
-	const reviewLine =
-		topic.locale === "en" ? `Last verified: ${topic.lastReviewed}` : `最近核对：${topic.lastReviewed}`;
+	const reviewLine = topic.locale === "en" ? `Last verified: ${topic.lastReviewed}` : `最近核对：${topic.lastReviewed}`;
 	return [
 		`Topic ID: ${topic.id}`,
 		`Language: ${topic.language}`,
-		`Human canonical: ${absolute(topic.humanPath)}`,
-		`Agent HTML: ${absolute(topic.agentPath)}`,
-		`Markdown document: ${absolute(topic.markdownPath)}`,
-		`JSON-LD catalogue: ${absolute(agentCatalogPath(topic.locale))}`,
+		`Human canonical: ${siteHref(topic.humanPath)}`,
+		`Agent HTML: ${siteHref(topic.agentPath)}`,
+		`Markdown document: ${siteHref(topic.markdownPath)}`,
+		`JSON-LD catalogue: ${siteHref(agentCatalogPath(topic.locale))}`,
 		reviewLine,
 		`Reviewed by: ${topic.reviewedBy}`,
 	].join("\n");
@@ -86,11 +90,11 @@ export function renderCoreMarkdown(key: HumanPageKey, locale: ExperienceLocale):
 	const topic = getAgentTopic(locale, key);
 	const limitations = topic.limitations.map((limitation) => `- ${limitation}`).join("\n");
 	const related = [
-		`- [Human canonical](${absolute(topic.humanPath)})`,
-		`- [Agent HTML](${absolute(topic.agentPath)})`,
-		`- [Markdown document](${absolute(topic.markdownPath)})`,
-		`- [JSON-LD catalogue](${absolute(agentCatalogPath(locale))})`,
-		`- [Machine directory](${absolute("/llms.txt")})`,
+		`- [Human canonical](${siteHref(topic.humanPath)})`,
+		`- [Agent HTML](${siteHref(topic.agentPath)})`,
+		`- [Markdown document](${siteHref(topic.markdownPath)})`,
+		`- [JSON-LD catalogue](${siteHref(agentCatalogPath(locale))})`,
+		`- [Machine directory](${siteHref("/llms.txt")})`,
 	].join("\n");
 
 	return `# ${topic.title}
@@ -127,7 +131,7 @@ function topicDirectory(locale: ExperienceLocale, linkTo: "agent" | "markdown"):
 	return HUMAN_PAGE_KEYS.map((key) => {
 		const topic = getAgentTopic(locale, key);
 		const path = linkTo === "agent" ? topic.agentPath : topic.markdownPath;
-		return `- [${topic.title}](${absolute(path)}): ${topic.summary}`;
+		return `- [${topic.title}](${siteHref(path)}): ${topic.summary}`;
 	}).join("\n");
 }
 
@@ -143,8 +147,8 @@ ${topicDirectory("en", "agent")}
 
 ## Machine-readable endpoints
 
-- [llms.txt](${absolute("/llms.txt")})
-- [llms-full.txt](${absolute("/llms-full.txt")})
+- [llms.txt](${siteHref("/llms.txt")})
+- [llms-full.txt](${siteHref("/llms-full.txt")})
 `;
 }
 
@@ -160,8 +164,8 @@ ${topicDirectory("zh", "agent")}
 
 ## 机器读取入口
 
-- [llms.txt](${absolute("/llms.txt")})
-- [llms-full.txt](${absolute("/llms-full.txt")})
+- [llms.txt](${siteHref("/llms.txt")})
+- [llms-full.txt](${siteHref("/llms-full.txt")})
 `;
 }
 
@@ -180,7 +184,7 @@ ${topicDirectory("zh", "markdown")}
 
 ## Related
 
-- [Complete combined reference](${absolute("/llms-full.txt")}): All public claims in both languages.
+- [Complete combined reference](${siteHref("/llms-full.txt")}): All public claims in both languages.
 `;
 }
 
@@ -215,7 +219,8 @@ function websiteNode(href: HrefBuilder) {
 }
 
 function topicNodes(topic: AgentTopic, href: HrefBuilder) {
-	const itemListId = `${href(topic.agentPath)}#facts`;
+	const humanPage = href(topic.humanPath);
+	const itemListId = `${humanPage}#facts`;
 	const facts = topic.groups.flatMap((group) => group.facts);
 	return [
 		{
@@ -238,11 +243,12 @@ function topicNodes(topic: AgentTopic, href: HrefBuilder) {
 			numberOfItems: facts.length,
 			itemListElement: facts.map((fact, index) => ({
 				"@type": "ListItem",
-				"@id": `${href(topic.agentPath)}#${fact.id}`,
+				"@id": `${humanPage}#${fact.id}`,
 				position: index + 1,
 				identifier: fact.id,
 				name: fact.value,
-				url: href(fact.evidenceUrl),
+				description: `${fact.source} Boundary: ${fact.boundary}`,
+				url: `${humanPage}#${fact.id}`,
 			})),
 		},
 	] as const;
@@ -251,7 +257,7 @@ function topicNodes(topic: AgentTopic, href: HrefBuilder) {
 export function buildAgentEntityGraph(
 	locale: ExperienceLocale,
 	pageKeys: readonly HumanPageKey[],
-	href: HrefBuilder = absolute,
+	href: HrefBuilder = siteHref,
 ) {
 	return [
 		organizationNode(href),

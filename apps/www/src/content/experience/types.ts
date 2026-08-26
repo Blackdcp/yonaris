@@ -16,6 +16,8 @@ export interface AgentFact {
 	readonly id: string;
 	readonly value: string;
 	readonly evidenceUrl: string;
+	readonly source: string;
+	readonly boundary: string;
 }
 
 export interface AgentFactGroup {

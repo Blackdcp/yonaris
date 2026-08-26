@@ -2,19 +2,21 @@
 
 ## What this is
 
-Yonaris is a private AI answer presence and GEO platform. It tracks how AI answer engines like ChatGPT, Claude, Perplexity, Gemini, DeepSeek, and Google AI surfaces mention, cite, and describe brands. The codebase is a **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**.
+Yonaris is AI-native MarTech infrastructure built for decisions made by people and shaped by agents. It connects market questions, company facts, public evidence, content and channels, AI and market observation, customer behaviour, and action and review. The codebase is a private **pnpm + Turborepo monorepo** on **Node.js 24** (enforced via `engines`), **TypeScript**, and **PostgreSQL**.
 
 - `apps/web` — product dashboard (TanStack Start + Vite, port 3000)
 - `apps/worker` — pg-boss background jobs (AI evaluations, citation tracking, reports)
-- `apps/www` — marketing site, docs, and blog (port 3001)
+- `apps/www` — bilingual marketing site, Human pages, Agent documents, and lead delivery (port 3001)
+- `apps/browser-extension` — signed browser extension package for approved collection workflows
+- `apps/browser-runner` — isolated browser execution and approved egress service
 - `packages/lib` — shared logic and the Drizzle schema/migrations
 - `packages/ui` — shared shadcn-based UI components
 - `packages/deployment` — deployment-mode config (reads `DEPLOYMENT_MODE`, exposes per-mode features)
 - `packages/config` — env validation and shared constants/types
 - `packages/api-spec` — OpenAPI spec
+- `packages/cloud`, `packages/local`, and `packages/whitelabel` — deployment-specific integrations
+- `packages/og` — shared social-image generation
 - `e2e/` — Playwright end-to-end tests
-
-Full setup instructions are in the developer guide at `packages/docs/content/docs/developer-guide/`.
 
 ## Commands
 

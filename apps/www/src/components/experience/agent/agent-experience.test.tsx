@@ -18,6 +18,8 @@ import { Route as zhAgentGeoRoute } from "@/routes/zh/agent/geo";
 import { Route as zhAgentHomeRoute } from "@/routes/zh/agent/index";
 import { Route as zhAgentPrivacyRoute } from "@/routes/zh/agent/privacy";
 import { Route as zhAgentProductRoute } from "@/routes/zh/agent/product";
+import { CHINA_PAGES } from "../china/china-pages";
+import { GLOBAL_PAGES } from "../global/global-pages";
 import { AgentPage } from "./agent-pages";
 
 const humanPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
@@ -32,7 +34,7 @@ const agentPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
 
 const retiredRoutes = /href="\/(?:zh\/)?(?:research|resources)(?:[/#"])/i;
 const internalNarration =
-	/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof|supply chain|implementation detail|配置化观察|证据边界|当前演示|非客户数据|内部策略|实现细节|供应链/i;
+	/managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof|supply chain|implementation detail|upstream AI surface|配置化观察|证据边界|当前演示|非客户数据|内部策略|实现细节|供应链/i;
 const retiredVisuals = /global-cinematic|zh-decision|editorial-stage|decision-canvas|global-en__|zh-site__/i;
 
 describe("zero-to-one Agent experience", () => {
@@ -59,84 +61,43 @@ describe("zero-to-one Agent experience", () => {
 		expect(serialized).not.toMatch(/sources that shape|help brands become|影响答案|持续改善后|获得改善/iu);
 	});
 
-	it("keeps the managed product model, handoff fields, operator, and delivery truth aligned across Agent facts", () => {
+	it("publishes the approved category and wider MarTech system instead of a search tactic", () => {
 		const en = JSON.stringify(AGENT_FACTS.global);
 		const zh = JSON.stringify(AGENT_FACTS.zh);
 
 		for (const topic of [...Object.values(AGENT_FACTS.global), ...Object.values(AGENT_FACTS.zh)]) {
 			expect(topic.reviewedBy).toBe("Yonaris");
 		}
+		expect(en).toContain("AI-native MarTech infrastructure built for decisions made by people and shaped by agents.");
+		expect(zh).toContain("面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。");
 		for (const phrase of [
-			"managed review",
-			"customer-visible evidence workspace and record",
-			"not a self-serve ranking dashboard",
-			"complete answer snapshot",
-			"citations only when the answer exposes them",
-			"named-alternative comparison",
-			"prioritized next review",
-			"recheck record",
-			"scheduled around the agreed questions rather than run as continuous monitoring",
-			"black.dcp@outlook.com",
+			"buyer questions",
+			"company facts",
+			"public evidence",
+			"customer behaviour",
+			"action and review",
 		])
 			expect(en).toContain(phrase);
-		for (const phrase of [
-			"托管式品牌复核",
-			"证据工作空间和记录",
-			"不是自助排名看板",
-			"完整答案快照",
-			"仅记录答案明确展示的引用",
-			"指定对标对象的比较",
-			"下一次优先复核项",
-			"复查记录",
-			"按项目节奏围绕约定问题复盘，不包装成实时监控",
-			"black.dcp@outlook.com",
-		])
-			expect(zh).toContain(phrase);
+		for (const phrase of ["市场问题", "品牌事实", "公开证据", "客户行为", "行动与复核"]) expect(zh).toContain(phrase);
+		expect(en).not.toMatch(/GEO platform|single AI-search tactic|black\.dcp@outlook\.com/i);
+		expect(zh).not.toMatch(/单纯的 GEO|AI 搜索技巧|black\.dcp@outlook\.com/i);
 		expect(en).not.toMatch(/\bmonitor\b|track changes|automatic ranking|real-time ranking|guaranteed outcome/i);
 		expect(zh).not.toMatch(/提供持续监控|自动持续监控|自动排名|实时排名|保证结果/);
 	});
 
-	it("keeps established claim IDs on their original meaning and adds new delivery facts under new IDs", () => {
-		for (const [edition, locale] of [
-			["global", "en"],
-			["zh", "zh"],
+	it("keeps every public fact on a real stable anchor in the paired Human page", () => {
+		for (const [locale, edition, pages] of [
+			["en", "global", GLOBAL_PAGES],
+			["zh", "zh", CHINA_PAGES],
 		] as const) {
-			const facts = (key: "product" | "diagnostic" | "privacy") =>
-				new Map<string, string>(
-					AGENT_FACTS[edition][key].groups.flatMap((group) =>
-						group.facts.map((fact) => [fact.id, fact.value] as const),
-					),
-				);
-			const product = facts("product");
-			const diagnostic = facts("diagnostic");
-			const privacy = facts("privacy");
-
-			expect(product.get("product.answer-workspace")).toMatch(
-				locale === "en" ? /workspace.*answers.*brand mentions/i : /工作空间.*答案.*品牌提及/,
-			);
-			expect(product.get("product.review-items")).toMatch(
-				locale === "en" ? /workspace lists.*omissions.*review/i : /工作空间.*列出.*复核/,
-			);
-			for (const id of [
-				"product.service-led",
-				"product.customer-visible",
-				"product.yonaris-operated",
-				"product.handoff",
-				"product.recheck-cadence",
-			]) {
-				expect(product.has(id), `${edition} ${id}`).toBe(true);
-			}
-			expect(diagnostic.get("diagnostic.contact-purpose")).toMatch(
-				locale === "en" ? /use these details to understand.*make contact/i : /使用这些信息了解需求.*联系/,
-			);
-			for (const id of ["diagnostic.scope-setting", "diagnostic.delivery-state", "diagnostic.support-contact"]) {
-				expect(diagnostic.has(id), `${edition} ${id}`).toBe(true);
-			}
-			expect(privacy.get("privacy.contact-purpose")).toMatch(
-				locale === "en" ? /used to understand.*respond/i : /用于确认称呼.*联系/,
-			);
-			for (const id of ["privacy.unconfirmed-delivery", "privacy.support-contact"]) {
-				expect(privacy.has(id), `${edition} ${id}`).toBe(true);
+			for (const pageKey of HUMAN_PAGE_KEYS) {
+				const Page = pages[pageKey];
+				const humanMarkup = renderToStaticMarkup(<Page />);
+				for (const group of AGENT_FACTS[edition][pageKey].groups) {
+					for (const fact of group.facts) {
+						expect(humanMarkup, `${locale}/${pageKey} missing ${fact.id}`).toContain(`id="${fact.id}"`);
+					}
+				}
 			}
 		}
 	});
@@ -147,7 +108,7 @@ describe("zero-to-one Agent experience", () => {
 				const markup = renderToStaticMarkup(<AgentPage locale={locale} pageKey={pageKey} />);
 				const otherLocale = locale === "en" ? "zh" : "en";
 				expect(markup.match(/<main/g) ?? []).toHaveLength(1);
-				expect(markup.match(/<article/g) ?? []).toHaveLength(1);
+				expect(markup.match(/<article/g)?.length ?? 0).toBeGreaterThan(1);
 				expect(markup.match(/<h1/g) ?? []).toHaveLength(1);
 				expect(markup).toContain('data-agent-surface="true"');
 				expect(markup).toContain(`data-agent-locale="${locale}"`);
@@ -156,7 +117,7 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain(`href="${humanPath(locale, pageKey)}" data-human-canonical="true"`);
 				expect(markup).toContain(`href="${agentPath(locale, pageKey)}" aria-current="page"`);
 				expect(markup).toContain(`href="${agentPath(otherLocale, pageKey)}" data-locale-switch="${otherLocale}"`);
-				expect(markup).toContain(locale === "en" ? "Return to the Human site" : "返回官网");
+				expect(markup).toContain(locale === "en" ? "Read this topic for people" : "以人类视角阅读本主题");
 				expect(markup).toContain("data-fact-group");
 				expect(markup).toContain("data-claim-id");
 				const topic = getAgentTopic(locale, pageKey);
@@ -171,13 +132,26 @@ describe("zero-to-one Agent experience", () => {
 				for (const group of topic.groups) {
 					expect(markup).toContain(`data-fact-group="${group.id}"`);
 					for (const fact of group.facts) {
+						const publicFact = fact as typeof fact & { source?: string; boundary?: string };
+						expect(markup).toContain(`id="${fact.id}"`);
 						expect(markup).toContain(`data-claim-id="${fact.id}"`);
 						expect(markup).toContain(fact.value);
+						expect(markup).toContain(`href="${fact.evidenceUrl}"`);
+						expect(publicFact.source?.trim()).toBeTruthy();
+						expect(publicFact.boundary?.trim()).toBeTruthy();
+						expect(markup).toContain(publicFact.source ?? "missing source");
+						expect(markup).toContain(publicFact.boundary ?? "missing boundary");
 					}
 				}
 				expect(markup).not.toMatch(retiredRoutes);
 				expect(markup).not.toMatch(internalNarration);
 				expect(markup).not.toMatch(retiredVisuals);
+				expect(markup).not.toMatch(/[↗→↳←]/);
+				expect(markup).not.toMatch(/>0[1-9]</);
+				expect(markup).toContain("GET");
+				expect(markup).toContain("HEAD");
+				expect(markup).toContain("text/markdown");
+				expect(markup).toContain("application/ld+json");
 			}
 		}
 	});
@@ -191,13 +165,13 @@ describe("zero-to-one Agent experience", () => {
 		}
 	});
 
-	it("announces the horizontal topic rail affordance in both independently written interfaces", () => {
-		expect(renderToStaticMarkup(<AgentPage locale="en" pageKey="product" />)).toContain(
-			'<p class="agent-experience__rail-hint">Swipe topics <span aria-hidden="true">→</span></p>',
-		);
-		expect(renderToStaticMarkup(<AgentPage locale="zh" pageKey="product" />)).toContain(
-			'<p class="agent-experience__rail-hint">横向滑动查看更多 <span aria-hidden="true">→</span></p>',
-		);
+	it("renders stable facts without template rails", () => {
+		const html = renderToStaticMarkup(<AgentPage locale="en" pageKey="company" />);
+		expect(html).toContain('id="yonaris.category.ai-native-martech"');
+		expect(html).toContain("AI-native MarTech infrastructure built for decisions made by people and shaped by agents.");
+		expect(html).toContain('aria-label="Fact directory"');
+		expect(html).not.toMatch(/[↗→↳←]/);
+		expect(html).not.toMatch(/>0[1-9]</);
 	});
 
 	it("provides noindex Agent heads with paired Human and machine discovery links", () => {

@@ -27,7 +27,7 @@ export function HumanAgentLink({
 				{labels.human}
 			</a>
 			<a href={agentPath(locale, pageKey)} aria-current={mode === "agent" ? "page" : undefined}>
-				<span aria-hidden="true">✦</span> {labels.agent}
+				{labels.agent}
 			</a>
 		</nav>
 	);
