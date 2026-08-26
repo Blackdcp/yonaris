@@ -95,6 +95,14 @@ describe("Site 06 中国站", () => {
 		expect(form).not.toMatch(/工作邮箱|name="email"|type="email"/);
 	});
 
+	it("keeps anti-abuse implementation details out of public Chinese copy", () => {
+		const rendered = (["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const)
+			.map(render)
+			.join("\n");
+
+		expect(rendered).not.toMatch(/隐藏字段|蜜罐|honeypot|反滥用字段/i);
+	});
+
 	it("rejects the retired visual and narrative grammar", () => {
 		const rendered = (["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const)
 			.map(render)

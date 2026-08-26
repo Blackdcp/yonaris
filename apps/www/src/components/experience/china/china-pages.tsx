@@ -283,7 +283,7 @@ export function ChinaPrivacyPage() {
 					<article className="site-06-evidence-document" aria-label="咨询表单可见字段">
 						<span>咨询申请</span>
 						<p className="site-06-evidence-document__answer">姓名 · 电话 · 公司</p>
-						<p>只要求这三个可见字段；隐藏的反滥用字段不会要求你填写。</p>
+						<p>这些信息用于回复本次咨询；投递未确认时会保留已填内容供你重试。</p>
 					</article>
 				}
 			/>
