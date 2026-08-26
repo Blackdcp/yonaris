@@ -239,6 +239,29 @@ describe("customer analytical page localization", () => {
 		expect(errorMarkup).not.toContain("No mention data yet");
 	});
 
+	it("keeps literal cached Share of Voice data visible during a transient polling error", () => {
+		mocks.sov = {
+			isLoading: false,
+			isError: true,
+			data: {
+				brandName: "StepFun 原名",
+				totalRuns: 12,
+				entries: [
+					{ name: "StepFun 原名", mentions: 8, prompts: 3, share: 0.8, isBrand: true },
+					{ name: "DeepSeek 原名", mentions: 2, prompts: 1, share: 0.2, isBrand: false },
+				],
+				shareTimeSeries: [{ date: "2026-08-15", share: 80 }],
+			},
+		};
+
+		const markup = renderRoute(ShareOfVoiceRoute);
+
+		expect(markup).toContain("StepFun 原名");
+		expect(markup).toContain("DeepSeek 原名");
+		expect(markup).toContain("80%");
+		expect(markup).not.toContain("无法加载声量份额数据，请重试");
+	});
+
 	it("renders populated citation evidence in Chinese while preserving the literal URL and title", () => {
 		mocks.citations = { citations: populatedCitations(), isLoading: false, isError: false };
 		const markup = renderRoute(CitationsRoute);
@@ -277,6 +300,17 @@ describe("customer analytical page localization", () => {
 		expect(errorMarkup).toContain("无法加载引用数据，请重试");
 		expect(errorMarkup).not.toContain("Failed to load citation data");
 		expect(emptyMarkup).toContain("此项目和时间范围内暂无匹配的提示词运行记录");
+	});
+
+	it("keeps literal cached citation evidence visible during a transient polling error", () => {
+		mocks.citations = { citations: populatedCitations(), isLoading: false, isError: true };
+
+		const markup = renderRoute(CitationsRoute);
+
+		expect(markup).toContain("Raw Evidence 标题");
+		expect(markup).toContain(`href="${rawCitationUrl.replaceAll("&", "&amp;")}"`);
+		expect(markup).toContain("evidence.example");
+		expect(markup).not.toContain("无法加载引用数据，请重试");
 	});
 
 	it("localizes Opportunity presentation without translating generated artifacts, Prompts, URLs, or href identity", () => {

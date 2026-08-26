@@ -29,13 +29,13 @@ import { getModelDisplayName } from "@/lib/utils";
 
 export const FANOUT_ACCENT = YONARIS_CHART_FOCUS;
 
-export function InfoTip({ children }: { children: React.ReactNode }) {
+export function InfoTip({ children, label }: { children: React.ReactNode; label?: string }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
-				<span className="cursor-help">
+				<button type="button" className="cursor-help" aria-label={label}>
 					<IconInfoCircle className="text-muted-foreground/60 size-3.5" />
-				</span>
+				</button>
 			</TooltipTrigger>
 			<TooltipContent className="max-w-xs text-sm font-normal">{children}</TooltipContent>
 		</Tooltip>

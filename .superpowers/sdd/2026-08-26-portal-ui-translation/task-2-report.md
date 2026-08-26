@@ -141,3 +141,95 @@ These tests would fail under the requested realistic mutations: translating a Pr
 ## Concerns
 
 None. Production-build warnings are pre-existing/local-environment warnings and did not affect the successful build.
+
+## Fix Round 1 (2026-08-27)
+
+### Status
+
+DONE. All four Important review findings are fixed. This round adds caller-owned Optimize labels, binding Prompt-detail Query Fan-Out terminology, catalog-controlled brand-creation validation with stable server failure codes, and stale-data preservation during transient dashboard polling errors. The deferred sentence-fragment Minor was intentionally not addressed.
+
+The original report's statement that no server behavior changed is refined for this round: the two existing brand-creation denial branches now expose stable machine-readable error codes, as required by the binding design, while their access predicates and allow/deny outcomes remain unchanged. No business operation, route contract, loader, database write shape, or external service behavior changed.
+
+### Exact coverage and files
+
+Nineteen implementation/config/test files changed in this round:
+
+- Shared Optimize interface and live caller path: `packages/config/src/types.ts`, `packages/whitelabel/src/components/optimize-button.tsx`, `apps/web/src/components/chart-actions-footer.tsx`, `apps/web/src/i18n/catalogs/charts.ts`, `apps/web/src/components/visibility-localization.test.tsx`, and `apps/web/vitest.config.ts`.
+- Prompt-detail terminology and real child rendering: `apps/web/src/i18n/catalogs/customer.ts`, `apps/web/src/components/fanout-sections.tsx`, `apps/web/src/routes/_authed/app/$brand/prompts/$promptId.tsx`, and `apps/web/src/routes/_authed/app/$brand/prompts/-prompt-history-localization.test.tsx`.
+- New-customer validation and stable failures: `apps/web/src/lib/brand-settings.ts`, `apps/web/src/routes/_authed/app/new.tsx`, `apps/web/src/server/brands.ts`, and `apps/web/src/routes/_authed/app/-customer-entry-localization.test.tsx`.
+- Cached-data polling behavior: `apps/web/src/routes/_authed/app/$brand/index.tsx`, `apps/web/src/routes/_authed/app/$brand/share-of-voice.tsx`, `apps/web/src/routes/_authed/app/$brand/citations.tsx`, `apps/web/src/routes/_authed/app/$brand/-overview-localization.test.tsx`, and `apps/web/src/routes/_authed/app/$brand/-analytics-localization.test.tsx`.
+
+No additional Changeset was added because the existing Task 2 patch Changeset already covers this customer-portal translation feature on the same branch.
+
+### Finding 1: live Optimize control
+
+- `OptimizeButtonProps` now has an optional, typed `OptimizeButtonLabels` interface. The whitelabel package remains application-agnostic and keeps backward-compatible English fallbacks; it does not import web messages or read Program locale.
+- `ChartActionsFooter` supplies localized `Optimize with {provider}` and `Optimize for {model}` messages from the UI-language provider.
+- The existing deployment feature gate, optimization URL template interpolation, web-query fetch, click behavior, and window-opening actions are unchanged.
+- The visibility test now traverses the real `CachedPromptChart -> ChartActionsFooter -> OptimizeButton` production path instead of mocking away the footer. It asserts Chinese visible copy while preserving literal provider `Optimizer 原名` and Prompt `Which AI IDE works in 中国?`.
+- The first direct live-child attempt exposed duplicate React installations in the workspace test resolver and failed with an invalid-hook harness error. Adding Vitest React/ReactDOM deduplication repaired the harness. The resulting product RED was 1 failed and 3 passed: Chinese was expected but the live control rendered `Optimize with Optimizer 原名`. GREEN was 4/4.
+
+### Finding 2: binding Query Fan-Out terminology
+
+- English page/tab copy is `Query Fan-Out`.
+- Chinese page/tab, group, item/query, and helper copy is exactly `AI 检索脉络`, `检索路径`, `衍生检索词`, and `查看 AI 为回答当前问题而展开的实际联网搜索词。`.
+- Wrong Prompt-detail terms `联网检索词`, `提示词检索扩展`, and `检索词用词` were removed from production Prompt-detail messages. A targeted source audit finds those literals only in negative assertions.
+- `InfoTip` now supports an optional caller-provided accessibility label and uses a semantic button, making the exact helper available to keyboard/screen-reader users without coupling the shared child to the catalog.
+- The Prompt-detail test renders the real fan-out children, checks all binding terms, rejects all three wrong terms, and proves the raw observed query is unchanged even though the highlighter splits it across markup.
+- RED was 1 failed and 4 passed with the old terminology. GREEN was 5/5.
+
+### Finding 3: new-customer validation and failures
+
+- The form now uses `noValidate` so catalog-owned UI feedback is authoritative while retaining semantic `required` attributes.
+- Pure client validation covers required and bounded brand name, required/bounded website, and valid URL/domain syntax. Field errors are typed message IDs rendered with `aria-invalid` and `aria-describedby`.
+- The server's existing two creation-denial branches now throw shared stable codes `BRAND_CREATION_FORBIDDEN` and `BRAND_CREATION_NOT_ALLOWED`. The client localizes these bounded outcomes and maps every other thrown value to `common.error.unexpected`, never exposing arbitrary backend detail.
+- The test submits blank/invalid field values, verifies exact Chinese catalog feedback and that the server is not called, covers a bounded denial and generic fallback, and proves valid `StepFun 原名` plus `evidence.example.cn/path?q=CN` reach the server unchanged.
+- Initial RED was 4 failed and 2 passed because `noValidate` and the validation submission boundary did not exist. The first GREEN was 6/6. Tightening the bounded failure from human exception text to the binding stable code produced a second expected RED of 1 failed and 5 passed, followed by GREEN 6/6 after the shared producer/consumer code was implemented.
+
+### Finding 4: stale cached polling data
+
+- Dashboard renders a full error only when the specific errored query has no corresponding brand, summary, or Share-of-Voice data.
+- Share of Voice renders a full error only for `isError && !data`.
+- Citations renders a full error only for a resolved scope with an error and no citation data.
+- Literal cached-data-plus-error tests cover all three route families: Dashboard keeps `42%`, `35%`, `1,234`, and its exact series; Share of Voice keeps `StepFun 原名`, `DeepSeek 原名`, and `80%`; Citations keeps `Raw Evidence 标题`, `evidence.example`, and its exact URL. Separate no-data error tests retain localized Chinese copy.
+- RED was 3 failed and 12 passed across the overview/analytics files because all three routes replaced cached data. GREEN was 15/15.
+
+### Final GREEN and quality evidence
+
+- Amended five-file review suite: 5 files passed, 30 tests passed, 5.32 seconds.
+- Original Task 2 ten-file suite: 10 files passed, 49 tests passed, 5.65 seconds.
+- Full `apps/web` unit suite: 95 files passed, 769 tests passed, 12.41 seconds.
+- `packages/config` tests: 4 files passed, 25 tests passed, 309 milliseconds.
+- Direct TypeScript checks for `packages/config`, `packages/whitelabel`, and `packages/local`: passed.
+- `apps/web` `tsc --noEmit`: passed.
+- Production Vite/Nitro build: passed. Output contains only the same two pre-existing route-test discovery warnings, missing-Sentry-token notices, and native-builder informational warning.
+- Biome and `git diff --check`: passed for the round's changed source/test files; Git reports only configured LF-to-CRLF notices.
+
+`packages/deployment` has no typecheck script, and its standalone `tsc -p packages/deployment/tsconfig.json --noEmit` is not a healthy independent check: its existing `lib: ["esnext"]` configuration transitively includes the whitelabel browser component and reports the pre-existing `window` DOM-global errors. The directly changed config/whitelabel packages and the web application that consumes deployment all typecheck successfully.
+
+### Evidence, route, access, and scope invariants
+
+- Raw brand/competitor/provider names, Prompt text, observed queries, domain inputs, citation titles/domains/URLs, metric values, chart series, model keys, and href/query identity remain literal in the amended tests.
+- Optimize labels are the only live-control change; feature gates, templates, URLs, fetch parameters, and actions are untouched.
+- Brand-creation denial predicates, authentication, admin/deployment gates, valid submitted values, server call shape, route ID, navigation params, analytics event name, and database work are unchanged. Only the two user-visible denial representations became stable codes.
+- Dashboard/SOV/Citations query keys, polling behavior, and server calls are unchanged; only presentation precedence now favors valid cached data over a transient error flag.
+- The separate Query Fan-Out route/analysis remains Task 5 and was not modified. Only the in-scope Prompt-detail page and genuinely required shared child were changed.
+- No Task 3 onboarding/settings work, Opportunity output-language persistence, migration, service startup, or external call was performed.
+
+### Self-review
+
+- Reviewed the complete 19-file diff after formatting and corrected the whitelabel English fallback to preserve the prior empty-provider rendering behavior.
+- Confirmed shared package labels are optional and caller-owned, and package/web typechecks enforce the interface.
+- Confirmed binding Chinese terms are exact and rejected terms are absent from production Prompt-detail copy.
+- Confirmed form feedback uses typed semantic catalog IDs and arbitrary exception text cannot reach the UI.
+- Confirmed every changed polling route distinguishes cached data from absent data.
+- Confirmed the deferred sentence-fragment Minor remains untouched.
+
+### Commit
+
+- Planned imperative subject: `Fix customer portal localization gaps`
+- The exact SHA is supplied in the final handoff because a Git commit cannot contain its own final hash.
+
+### Concerns
+
+No product concern. The standalone deployment tsconfig limitation and production-build warnings above are pre-existing repository/local-environment constraints; the affected shared packages and full application verification are green.

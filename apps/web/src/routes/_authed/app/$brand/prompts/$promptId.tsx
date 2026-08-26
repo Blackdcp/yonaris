@@ -514,6 +514,7 @@ function WebQueriesTab({
 	if (!data || data.totalQueries === 0) {
 		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.webQueries.noData")}</div>;
 	}
+	const fanoutTooltip = t("prompt.webQueries.fanoutTooltip");
 
 	return (
 		<Tabs defaultValue="fanout" className="gap-4">
@@ -526,7 +527,7 @@ function WebQueriesTab({
 					<CardHeader>
 						<CardTitle className="flex items-center gap-1.5 text-base">
 							{t("prompt.webQueries.fanout")}
-							<InfoTip>{t("prompt.webQueries.fanoutTooltip")}</InfoTip>
+							<InfoTip label={fanoutTooltip}>{fanoutTooltip}</InfoTip>
 						</CardTitle>
 						<CardDescription>
 							{t("prompt.webQueries.distinct", { count: formatNumber(data.uniqueQueries) })}
@@ -537,6 +538,7 @@ function WebQueriesTab({
 						<div className="mb-3 space-y-1 empty:hidden">
 							<UnknownQueriesNote byModel={data.byModel} />
 						</div>
+						<div className="mb-2 text-xs font-medium text-muted-foreground">{t("prompt.webQueries.query")}</div>
 						<VariationsList
 							variations={data.topQueries}
 							keywords={promptKeywords(promptValue)}

@@ -7,6 +7,13 @@ import { I18nProvider } from "@/i18n/provider";
 const mocks = vi.hoisted(() => ({
 	selectedOrder: "default",
 	chartContext: null as Record<string, unknown> | null,
+	routeContext: {
+		clientConfig: {
+			mode: "local",
+			features: { showOptimizeButton: false },
+			branding: {},
+		},
+	},
 }));
 
 function hrefFor(to: string, params?: Record<string, string>, search?: Record<string, string>) {
@@ -29,6 +36,7 @@ vi.mock("@tanstack/react-router", () => ({
 		search?: Record<string, string>;
 	}) => <a href={hrefFor(to, params, search)}>{children}</a>,
 	useNavigate: () => vi.fn(),
+	useRouteContext: () => mocks.routeContext,
 	useSearch: ({ select }: { select: (value: Record<string, string>) => unknown }) =>
 		select({ order: mocks.selectedOrder }),
 }));
@@ -48,7 +56,6 @@ vi.mock("@/hooks/use-chart-export", () => ({
 	useChartExport: () => ({ isExporting: false, handleExport: vi.fn(), portal: null }),
 }));
 vi.mock("./base-chart", () => ({ BaseChart: () => <div data-testid="base-chart" /> }));
-vi.mock("./chart-actions-footer", () => ({ ChartActionsFooter: () => <div data-testid="chart-actions" /> }));
 
 import { CachedPromptChart } from "./cached-prompt-chart";
 import { HistoryButton } from "./history-button";
@@ -71,6 +78,13 @@ const chartProps = {
 describe("visibility component localization", () => {
 	beforeEach(() => {
 		mocks.selectedOrder = "default";
+		mocks.routeContext = {
+			clientConfig: {
+				mode: "local",
+				features: { showOptimizeButton: false },
+				branding: {},
+			},
+		};
 		mocks.chartContext = {
 			isLoading: false,
 			brand: { id: "brand-raw-id", name: "StepFun 原名" },
@@ -82,6 +96,34 @@ describe("visibility component localization", () => {
 				lastBrandVisibility: null,
 			}),
 		};
+	});
+
+	it("localizes the live whitelabel Optimize control reached by a populated visibility card", () => {
+		mocks.routeContext = {
+			clientConfig: {
+				mode: "whitelabel",
+				features: { showOptimizeButton: true },
+				branding: {
+					parentName: "Optimizer 原名",
+					optimizationUrlTemplate: "https://optimize.example/{brandId}?prompt={prompt}&webQuery={webQuery}",
+				},
+			},
+		};
+		mocks.chartContext = {
+			...(mocks.chartContext ?? {}),
+			getChartDataForPrompt: () => ({
+				chartData: [{ date: "2026-08-15", "brand-raw-id": 42 }],
+				totalRuns: 1,
+				hasVisibilityData: true,
+				lastBrandVisibility: 42,
+			}),
+		};
+
+		const markup = renderWithLocale("zh-CN", <CachedPromptChart {...chartProps} />);
+
+		expect(markup).toContain("使用 Optimizer 原名优化");
+		expect(markup).toContain("Which AI IDE works in 中国?");
+		expect(markup).not.toContain("Optimize with");
 	});
 
 	it("localizes populated and empty visibility summaries without changing computed values", () => {

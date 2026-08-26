@@ -153,6 +153,13 @@ export interface WebQueryResult {
 	modelWebQueries: Record<string, string>;
 }
 
+export interface OptimizeButtonLabels {
+	/** Fully formatted trigger/button label, including the optimization provider name. */
+	optimizeWith: string;
+	/** Format a model-specific dropdown label from its display name. */
+	optimizeFor: (modelName: string) => string;
+}
+
 export interface OptimizeButtonProps {
 	brandId?: string;
 	selectedModel?: string;
@@ -163,6 +170,7 @@ export interface OptimizeButtonProps {
 	parentName?: string;
 	optimizationUrlTemplate?: string;
 	fetchWebQuery?: (promptId: string, lookback: string, model?: string) => Promise<WebQueryResult>;
+	labels?: OptimizeButtonLabels;
 }
 
 // ============================================================================

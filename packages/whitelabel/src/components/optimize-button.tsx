@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { IconExternalLink, IconChevronDown, IconLoader2 } from "@tabler/icons-react";
+import { IconChevronDown, IconExternalLink, IconLoader2 } from "@tabler/icons-react";
+import type { OptimizeButtonProps } from "@workspace/config/types";
 import { Button } from "@workspace/ui/components/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuTrigger,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
-import type { OptimizeButtonProps } from "@workspace/config/types";
+import { useState } from "react";
 
 export type { OptimizeButtonProps };
 
@@ -54,6 +54,7 @@ export function OptimizeButton({
 	parentName,
 	optimizationUrlTemplate,
 	fetchWebQuery,
+	labels,
 }: OptimizeButtonProps) {
 	const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
@@ -98,6 +99,8 @@ export function OptimizeButton({
 	const isLoading = (model: string | undefined) => {
 		return loadingKey === `${model || "all"}-${promptId}`;
 	};
+	const optimizeWithLabel = labels?.optimizeWith ?? `Optimize with ${parentName ?? ""}`;
+	const optimizeForLabel = labels?.optimizeFor ?? ((modelName: string) => `Optimize for ${modelName}`);
 
 	// Simple button for single model selection
 	if (selectedModel !== "all") {
@@ -110,7 +113,7 @@ export function OptimizeButton({
 				disabled={loading}
 			>
 				{loading && <IconLoader2 size={12} className="size-3 mr-0.5 animate-spin" />}
-				Optimize with {parentName}
+				{optimizeWithLabel}
 				<IconExternalLink size={12} className="size-3 ml-0.5" />
 			</Button>
 		);
@@ -121,7 +124,7 @@ export function OptimizeButton({
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button size="sm" className="text-xs cursor-pointer p-0 m-0 h-6">
-					Optimize with {parentName}
+					{optimizeWithLabel}
 					<IconChevronDown size={12} className="size-3 ml-0.5" />
 				</Button>
 			</DropdownMenuTrigger>
@@ -132,7 +135,7 @@ export function OptimizeButton({
 					return (
 						<div key={model}>
 							{index > 0 && <DropdownMenuSeparator />}
-							<DropdownMenuLabel>Optimize for {modelName}</DropdownMenuLabel>
+							<DropdownMenuLabel>{optimizeForLabel(modelName)}</DropdownMenuLabel>
 							<DropdownMenuItem
 								className="cursor-pointer"
 								onClick={(e) => handleOptimizeClick(e, model)}

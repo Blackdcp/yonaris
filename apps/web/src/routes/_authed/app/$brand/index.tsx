@@ -308,7 +308,7 @@ function DashboardPage() {
 		);
 	}
 
-	if (brandError || summaryError || sovError) {
+	if ((brandError && !brand) || (summaryError && !dashboardSummary) || (sovError && !sovData)) {
 		return <div className="m-auto p-8 text-center text-muted-foreground">{t("customer.overview.error")}</div>;
 	}
 

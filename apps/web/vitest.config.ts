@@ -15,6 +15,7 @@ export default defineConfig({
 		alias: {
 			"@/": `${path.resolve(dirname, "./src")}/`,
 		},
+		dedupe: ["react", "react-dom"],
 	},
 	test: {
 		projects: [

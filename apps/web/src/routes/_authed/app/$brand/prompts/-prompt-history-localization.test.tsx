@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 	statsError: false,
 	runsError: false,
 	runs: [] as unknown[],
+	activeTab: "responses",
+	fanoutData: null as unknown,
 	redirect: vi.fn(),
 }));
 
@@ -43,7 +45,7 @@ vi.mock("@tanstack/react-router", () => ({
 		...options,
 		options,
 		useParams: () => ({ brand: "brand-raw-id", promptId: "prompt-raw-id" }),
-		useSearch: ({ select }: { select: (value: Record<string, string>) => unknown }) => select({ tab: "responses" }),
+		useSearch: ({ select }: { select: (value: Record<string, string>) => unknown }) => select({ tab: mocks.activeTab }),
 		useNavigate: () => vi.fn(),
 	}),
 	Link: ({
@@ -65,12 +67,6 @@ vi.mock("@tanstack/react-router", () => ({
 		select({ scope: "scope-cn-literal" }),
 }));
 vi.mock("@/components/citations-display", () => ({ CitationsDisplay: () => <div /> }));
-vi.mock("@/components/fanout-sections", () => ({
-	InfoTip: ({ children }: { children: ReactNode }) => <span>{children}</span>,
-	QueryWordsSection: () => <div />,
-	UnknownQueriesNote: () => null,
-	VariationsList: () => <div />,
-}));
 vi.mock("@/components/lookback-selector", () => ({
 	LookbackSelector: () => <button type="button">lookback</button>,
 	useLookbackPeriod: () => "1m",
@@ -95,7 +91,9 @@ vi.mock("@/hooks/use-prompt-stats", () => ({
 		aggregations: { totalRuns: mocks.runs.length, mentionStats: [], citationStats: undefined },
 	}),
 }));
-vi.mock("@/hooks/use-query-fanout", () => ({ useQueryFanout: () => ({ data: null, isLoading: false }) }));
+vi.mock("@/hooks/use-query-fanout", () => ({
+	useQueryFanout: () => ({ data: mocks.fanoutData, isLoading: false, isError: false }),
+}));
 vi.mock("@/server/prompts", () => ({ getPromptMetadataFn: vi.fn() }));
 
 import { Route as PromptHistoryRoute } from "./$promptId";
@@ -116,6 +114,10 @@ function renderPrompt(locale: UiLanguage = "zh-CN") {
 			<Component />
 		</I18nProvider>,
 	);
+}
+
+function textFromMarkup(markup: string): string {
+	return markup.replace(/<[^>]+>/g, "");
 }
 
 const readySnapshot = {
@@ -145,6 +147,8 @@ describe("Prompt history localization", () => {
 		};
 		mocks.statsError = false;
 		mocks.runsError = false;
+		mocks.activeTab = "responses";
+		mocks.fanoutData = null;
 		mocks.runs = [
 			{
 				id: "run-raw-id",
@@ -161,6 +165,36 @@ describe("Prompt history localization", () => {
 		mocks.redirect.mockClear();
 	});
 
+	it("renders binding Query Fan-Out terminology through the real Prompt-detail fan-out child", () => {
+		mocks.activeTab = "web-queries";
+		mocks.fanoutData = {
+			totalQueries: 2,
+			uniqueQueries: 1,
+			topQueries: [{ query: rawQuery, count: 2 }],
+			byModel: [
+				{
+					model: "gpt-5.6",
+					runs: 2,
+					totalQueries: 2,
+					topQueries: [{ query: rawQuery, count: 2 }],
+				},
+			],
+			terms: [],
+			wordChanges: { added: [], preserved: [], dropped: [] },
+		};
+
+		const markup = renderPrompt();
+
+		expect(markup).toContain("AI 检索脉络");
+		expect(markup).toContain("检索路径");
+		expect(markup).toContain("衍生检索词");
+		expect(markup).toContain("查看 AI 为回答当前问题而展开的实际联网搜索词。");
+		expect(textFromMarkup(markup)).toContain(rawQuery);
+		expect(markup).not.toContain("联网检索词");
+		expect(markup).not.toContain("提示词检索扩展");
+		expect(markup).not.toContain("检索词用词");
+	});
+
 	it("renders populated Prompt history in Chinese while preserving all observed evidence", () => {
 		const markup = renderPrompt();
 
@@ -168,7 +202,8 @@ describe("Prompt history localization", () => {
 		expect(markup).toContain("下次运行");
 		expect(markup).toContain("标签");
 		expect(markup).toContain("提及情况");
-		expect(markup).toContain("联网检索词");
+		expect(markup).toContain("AI 检索脉络");
+		expect(markup).toContain("衍生检索词");
 		expect(markup).toContain("大模型回答");
 		expect(markup).toContain("单次提示词运行记录");
 		expect(markup).toContain(rawPrompt);

@@ -10,6 +10,12 @@ export const MAX_ALIAS_LENGTH = 200;
 export const MAX_DOMAIN_INPUT_LENGTH = 253;
 export const MAX_COMPETITOR_NAME_LENGTH = 200;
 
+/** Stable machine-readable failures shared by customer-brand creation server and client code. */
+export const BRAND_CREATION_ERROR_CODES = {
+	forbidden: "BRAND_CREATION_FORBIDDEN",
+	notAllowed: "BRAND_CREATION_NOT_ALLOWED",
+} as const;
+
 /**
  * Pure normalization/validation for the "edit brand settings" flow, extracted
  * from the updateBrand server function so the rules can be unit-tested without a

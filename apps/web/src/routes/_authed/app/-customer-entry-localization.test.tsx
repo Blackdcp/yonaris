@@ -2,6 +2,8 @@ import type { UiLanguage } from "@workspace/config/language";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { MessageId } from "@/i18n/catalog";
+import { translate } from "@/i18n/catalog";
 import { I18nProvider } from "@/i18n/provider";
 
 const mocks = vi.hoisted(() => ({
@@ -56,7 +58,31 @@ vi.mock("@/lib/posthog", () => ({ trackEvent: vi.fn() }));
 vi.mock("@/server/brands", () => ({ createBrandWithOrgFn: vi.fn() }));
 
 import { Route as CustomerEntryRoute } from "./index";
-import { Route as NewCustomerRoute } from "./new";
+import * as NewCustomerModule from "./new";
+
+const NewCustomerRoute = NewCustomerModule.Route;
+
+type SubmitNewBrandForm = (
+	formData: FormData,
+	createBrand: (input: { data: { brandName: string; website: string } }) => Promise<{ brandId: string }>,
+) => Promise<
+	| {
+			ok: true;
+			brandId: string;
+			submitted: { brandName: string; website: string };
+	  }
+	| {
+			ok: false;
+			fieldErrors: Partial<Record<"brandName" | "website", MessageId>>;
+			formError?: MessageId;
+	  }
+>;
+
+function getSubmitNewBrandForm(): SubmitNewBrandForm {
+	const submit = (NewCustomerModule as unknown as { submitNewBrandForm?: SubmitNewBrandForm }).submitNewBrandForm;
+	expect(submit).toBeTypeOf("function");
+	return submit as SubmitNewBrandForm;
+}
 
 type TestRoute = {
 	component: React.ComponentType;
@@ -117,7 +143,75 @@ describe("customer entry localization", () => {
 		expect(formMarkup).toContain("创建品牌");
 		expect(formMarkup).toContain('placeholder="Acme"');
 		expect(formMarkup).toContain('placeholder="example.com"');
+		expect(formMarkup).toContain('noValidate=""');
 		expect(formMarkup).not.toContain("Create a customer workspace");
+	});
+
+	it("submits invalid Chinese forms through catalog-controlled field validation", async () => {
+		const formData = new FormData();
+		formData.set("brandName", "   ");
+		formData.set("website", "not a domain");
+		const createBrand = vi.fn(async () => ({ brandId: "must-not-run" }));
+
+		const result = await getSubmitNewBrandForm()(formData, createBrand);
+
+		expect(result).toEqual({
+			ok: false,
+			fieldErrors: {
+				brandName: "customer.new.validation.brandRequired",
+				website: "customer.new.validation.websiteInvalid",
+			},
+		});
+		if (result.ok) throw new Error("Expected validation failure");
+		expect(translate("zh-CN", result.fieldErrors.brandName as MessageId)).toBe("请输入品牌名称。");
+		expect(translate("zh-CN", result.fieldErrors.website as MessageId)).toBe("请输入有效的网站网址或域名。");
+		expect(createBrand).not.toHaveBeenCalled();
+	});
+
+	it("maps a bounded server rejection and an unexpected failure to stable localized outcomes", async () => {
+		const formData = new FormData();
+		formData.set("brandName", "StepFun 原名");
+		formData.set("website", "evidence.example.cn");
+		const submit = getSubmitNewBrandForm();
+
+		const bounded = await submit(formData, async () => {
+			throw new Error("BRAND_CREATION_NOT_ALLOWED");
+		});
+		const generic = await submit(formData, async () => {
+			throw new Error("backend detail must stay hidden");
+		});
+
+		expect(bounded).toEqual({
+			ok: false,
+			fieldErrors: {},
+			formError: "customer.new.error.notAllowed",
+		});
+		expect(generic).toEqual({
+			ok: false,
+			fieldErrors: {},
+			formError: "common.error.unexpected",
+		});
+		if (bounded.ok || generic.ok) throw new Error("Expected server failures");
+		expect(translate("zh-CN", bounded.formError as MessageId)).toBe("当前部署不允许创建品牌。");
+		expect(translate("zh-CN", generic.formError as MessageId)).not.toContain("backend detail");
+	});
+
+	it("passes valid submitted names and domain values to the server unchanged", async () => {
+		const formData = new FormData();
+		formData.set("brandName", "StepFun 原名");
+		formData.set("website", "evidence.example.cn/path?q=CN");
+		const createBrand = vi.fn(async () => ({ brandId: "brand-created-id" }));
+
+		const result = await getSubmitNewBrandForm()(formData, createBrand);
+
+		expect(result).toEqual({
+			ok: true,
+			brandId: "brand-created-id",
+			submitted: { brandName: "StepFun 原名", website: "evidence.example.cn/path?q=CN" },
+		});
+		expect(createBrand).toHaveBeenCalledWith({
+			data: { brandName: "StepFun 原名", website: "evidence.example.cn/path?q=CN" },
+		});
 	});
 
 	it("localizes customer entry metadata from the explicit route-context language", () => {

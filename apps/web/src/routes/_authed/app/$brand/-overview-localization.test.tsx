@@ -22,6 +22,9 @@ const mocks = vi.hoisted(() => ({
 	sovData: {
 		shareTimeSeries: [{ date: "2026-08-25", share: 35 }],
 	},
+	brandError: false,
+	summaryError: false,
+	sovError: false,
 }));
 
 function hrefFor(to: string, params?: Record<string, string>) {
@@ -54,14 +57,18 @@ vi.mock("@/components/trend-chart", () => ({
 	),
 }));
 vi.mock("@/hooks/use-brands", () => ({
-	useBrand: () => ({ brand: mocks.brand, isLoading: false }),
+	useBrand: () => ({ brand: mocks.brand, isLoading: false, isError: mocks.brandError }),
 }));
 vi.mock("@/hooks/use-brand-access", () => ({ useBrandAccess: () => ({ canManageBrand: true }) }));
 vi.mock("@/hooks/use-dashboard-summary", () => ({
-	useDashboardSummary: () => ({ dashboardSummary: mocks.dashboardSummary, isLoading: false, isError: false }),
+	useDashboardSummary: () => ({
+		dashboardSummary: mocks.dashboardSummary,
+		isLoading: false,
+		isError: mocks.summaryError,
+	}),
 }));
 vi.mock("@/hooks/use-share-of-voice", () => ({
-	useShareOfVoice: () => ({ data: mocks.sovData, isLoading: false, isError: false }),
+	useShareOfVoice: () => ({ data: mocks.sovData, isLoading: false, isError: mocks.sovError }),
 }));
 vi.mock("@/hooks/use-list-filters", () => ({ useListFilters: () => ({ scopeId: "scope-cn-literal" }) }));
 vi.mock("@/lib/posthog", () => ({ setPersonProperties: vi.fn() }));
@@ -82,6 +89,10 @@ function renderOverview(locale: UiLanguage) {
 	);
 }
 
+function textFromMarkup(markup: string): string {
+	return markup.replace(/<[^>]+>/g, "");
+}
+
 describe("customer overview localization", () => {
 	beforeEach(() => {
 		mocks.dashboardSummary = {
@@ -92,6 +103,9 @@ describe("customer overview localization", () => {
 			visibilityTimeSeries: [{ date: "2026-08-25", overall: 42 }],
 		};
 		mocks.sovData = { shareTimeSeries: [{ date: "2026-08-25", share: 35 }] };
+		mocks.brandError = false;
+		mocks.summaryError = false;
+		mocks.sovError = false;
 	});
 
 	it("renders populated overview analytics in Chinese with stable route hrefs and values", () => {
@@ -106,6 +120,30 @@ describe("customer overview localization", () => {
 		expect(markup).toContain('href="/app/brand-raw-id/visibility"');
 		expect(markup).toContain('href="/app/brand-raw-id/share-of-voice"');
 		expect(markup).not.toContain("View Visibility");
+	});
+
+	it("keeps literal cached dashboard and share data visible during transient polling errors", () => {
+		mocks.brandError = true;
+		mocks.summaryError = true;
+		mocks.sovError = true;
+
+		const markup = renderOverview("zh-CN");
+
+		expect(textFromMarkup(markup)).toContain("42%");
+		expect(textFromMarkup(markup)).toContain("35%");
+		expect(markup).toContain("1,234");
+		expect(markup).toContain('data-series="[{&quot;date&quot;:&quot;2026-08-25&quot;,&quot;value&quot;:42}]"');
+		expect(markup).not.toContain("无法加载概览数据，请重试");
+	});
+
+	it("keeps the localized full error state when dashboard data is absent", () => {
+		mocks.summaryError = true;
+		mocks.dashboardSummary = null as never;
+
+		const markup = renderOverview("zh-CN");
+
+		expect(markup).toContain("无法加载概览数据，请重试");
+		expect(markup).not.toContain("Unable to load overview data");
 	});
 
 	it("renders the first-evaluation empty state in Chinese without changing the settings href", () => {

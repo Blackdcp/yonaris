@@ -88,7 +88,7 @@ function ShareOfVoicePage() {
 				</CardContent>
 			</Card>
 		);
-	} else if (isError) {
+	} else if (isError && !data) {
 		content = (
 			<Card>
 				<CardContent className="pt-6">

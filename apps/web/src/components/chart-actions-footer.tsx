@@ -97,6 +97,10 @@ export function ChartActionsFooter({
 						parentName={parentName ?? ""}
 						optimizationUrlTemplate={optimizationUrlTemplate ?? ""}
 						fetchWebQuery={fetchWebQuery}
+						labels={{
+							optimizeWith: t("chart.optimizeWith", { provider: parentName ?? "" }),
+							optimizeFor: (modelName) => t("chart.optimizeFor", { model: modelName }),
+						}}
 					/>
 				)}
 			</div>

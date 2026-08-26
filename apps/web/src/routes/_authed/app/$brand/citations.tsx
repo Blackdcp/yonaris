@@ -116,7 +116,7 @@ function CitationsPage() {
 						</CardContent>
 					</Card>
 				}
-				isError={!filters.isScopeResolving && (Boolean(isError) || !citationData)}
+				isError={!filters.isScopeResolving && Boolean(isError) && !citationData}
 				errorState={
 					<Card>
 						<CardContent className="pt-6">

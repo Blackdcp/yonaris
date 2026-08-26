@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth/helpers";
 import { evaluateRequireCanCreateBrands } from "@/lib/auth/policies";
 import {
+	BRAND_CREATION_ERROR_CODES,
 	MAX_ALIAS_LENGTH,
 	MAX_BRAND_DOMAINS,
 	MAX_BRAND_NAME_LENGTH,
@@ -266,11 +267,11 @@ export const createBrandWithOrgFn = createServerFn({ method: "POST" })
 		const session = await requireAuthSession();
 		const deployment = getDeployment();
 		if (!canInitiatePlatformExecution(isAdmin(session))) {
-			throw new Error("Forbidden: Platform administrator access required");
+			throw new Error(BRAND_CREATION_ERROR_CODES.forbidden);
 		}
 
 		if (evaluateRequireCanCreateBrands(deployment.features.canCreateBrands) === "deny") {
-			throw new Error("Brand creation is not allowed in this deployment");
+			throw new Error(BRAND_CREATION_ERROR_CODES.notAllowed);
 		}
 
 		const urlValidation = validateWebsiteUrl(data.website);
