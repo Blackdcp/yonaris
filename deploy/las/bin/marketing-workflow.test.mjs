@@ -13,6 +13,8 @@ const regionalPreTrailingSlashUrl = new URL(
 	repoRoot,
 );
 const REGIONAL_PRE_TRAILING_SLASH_SHA = "804857e0867dfff19a5369eebf06cfe1d7865eff6d28e78309921d3cfd38ab52";
+const regionalReleaseUrl = new URL("deploy/las/caddy/yonaris-marketing-regional.caddy", repoRoot);
+const REGIONAL_RELEASE_SHA = "59e6772ec564e2e0e099cadd7a45e67379efcb53879627eb38e86ea8635536f5";
 
 const ACTION_PINS = [
 	"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -45,7 +47,7 @@ test("release supply chain uses immutable action and image references", () => {
 	);
 });
 
-test("release fixtures bind the deployed regional pre-trailing-slash predecessor byte-for-byte", async () => {
+test("release fixtures bind both deployed regional predecessors byte-for-byte", async () => {
 	ordered(
 		"Verify release fixtures",
 		"bash deploy/las/bin/install-marketing-caddy.test.sh",
@@ -58,7 +60,14 @@ test("release fixtures bind the deployed regional pre-trailing-slash predecessor
 		caddyInstaller,
 		new RegExp(`REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA="${REGIONAL_PRE_TRAILING_SLASH_SHA}"`, "u"),
 	);
-	assert.match(caddyInstaller, /"\$REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA"\) return 0/u);
+	assert.equal(existsSync(regionalReleaseUrl), true, "missing deployed regional release snapshot");
+	const regionalRelease = await readFile(regionalReleaseUrl);
+	assert.equal(createHash("sha256").update(regionalRelease).digest("hex"), REGIONAL_RELEASE_SHA);
+	assert.match(caddyInstaller, new RegExp(`REGIONAL_RELEASE_SHA="${REGIONAL_RELEASE_SHA}"`, "u"));
+	assert.match(
+		caddyInstaller,
+		/"\$REGIONAL_PRE_TRAILING_SLASH_RELEASE_SHA" \| "\$REGIONAL_RELEASE_SHA"\) return 0/u,
+	);
 });
 
 test("the exact image is tested directly and through pinned Caddy before its only push", () => {
