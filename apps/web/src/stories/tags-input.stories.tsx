@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState, useMemo } from "react";
-import { expect, userEvent, within } from "storybook/test";
 import { Label } from "@workspace/ui/components/label";
 import { TagsInput } from "@workspace/ui/components/tags-input";
+import { useMemo, useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { cleanAndValidateDomain } from "@/lib/domain-categories";
 
 const meta = {
@@ -188,5 +188,30 @@ export const KeyboardSelection: Story = {
 		await userEvent.keyboard("{ArrowDown}{Enter}");
 
 		await expect(canvas.getByTestId("selected-tags")).toHaveTextContent(/^marketing$/);
+	},
+};
+
+export const CallerControlledLabels: Story = {
+	render: () => (
+		<div className="p-8 max-w-xl space-y-4">
+			<TagsInput
+				value={["seo"]}
+				onValueChange={() => {}}
+				maxItems={1}
+				removeTagLabel={(tag) => `移除 ${tag}`}
+				maximumReachedText="已达到上限"
+			/>
+			<TagsInput value={[]} onValueChange={() => {}} entryHintText="输入或粘贴以添加值" addValueText="添加" />
+		</div>
+	),
+	play: async ({ canvasElement }) => {
+		const canvas = within(canvasElement);
+		const documentBody = within(canvasElement.ownerDocument.body);
+
+		await expect(canvas.getByRole("button", { name: "移除 seo" })).toBeVisible();
+		await userEvent.click(canvas.getAllByRole("combobox")[0]);
+		await expect(documentBody.findByPlaceholderText("已达到上限")).resolves.toBeVisible();
+		await userEvent.click(canvas.getAllByRole("combobox")[1]);
+		await expect(documentBody.findByText("输入或粘贴以添加值")).resolves.toBeVisible();
 	},
 };

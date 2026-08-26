@@ -15,10 +15,10 @@ import { Button } from "@workspace/ui/components/button";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Input } from "@workspace/ui/components/input";
 import { Switch } from "@workspace/ui/components/switch";
-import { TagsInput } from "@workspace/ui/components/tags-input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { Inbox, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
+import { LocalizedTagsInput as TagsInput } from "@/components/localized-tags-input";
 
 export interface EditablePrompt {
 	id?: string;

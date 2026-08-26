@@ -4,8 +4,18 @@ import { Slot } from "radix-ui"
 
 import { cn } from "@workspace/ui/lib/utils"
 
-function Breadcrumb({ ...props }: React.ComponentProps<"nav">) {
-  return <nav aria-label="breadcrumb" data-slot="breadcrumb" {...props} />
+const BreadcrumbLabelsContext = React.createContext({ more: "More" })
+
+function Breadcrumb({
+  label = "breadcrumb",
+  moreLabel = "More",
+  ...props
+}: React.ComponentProps<"nav"> & { label?: string; moreLabel?: string }) {
+  return (
+    <BreadcrumbLabelsContext.Provider value={{ more: moreLabel }}>
+      <nav aria-label={label} data-slot="breadcrumb" {...props} />
+    </BreadcrumbLabelsContext.Provider>
+  )
 }
 
 function BreadcrumbList({ className, ...props }: React.ComponentProps<"ol">) {
@@ -81,9 +91,12 @@ function BreadcrumbSeparator({
 }
 
 function BreadcrumbEllipsis({
+  label,
   className,
   ...props
-}: React.ComponentProps<"span">) {
+}: React.ComponentProps<"span"> & { label?: string }) {
+  const labels = React.useContext(BreadcrumbLabelsContext)
+
   return (
     <span
       data-slot="breadcrumb-ellipsis"
@@ -93,7 +106,7 @@ function BreadcrumbEllipsis({
       {...props}
     >
       <MoreHorizontal className="size-4" />
-      <span className="sr-only">More</span>
+      <span className="sr-only">{label ?? labels.more}</span>
     </span>
   )
 }

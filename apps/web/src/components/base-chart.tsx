@@ -1,27 +1,28 @@
-import * as React from "react";
-import { Line, LineChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useRouteContext } from "@tanstack/react-router";
+import type { ClientConfig } from "@workspace/config/types";
+import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { Badge } from "@workspace/ui/components/badge";
 import {
-	ChartConfig,
+	type ChartConfig,
 	ChartContainer,
 	ChartLegend,
 	ChartLegendContent,
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@workspace/ui/components/chart";
-import { Badge } from "@workspace/ui/components/badge";
-import { useRouteContext } from "@tanstack/react-router";
-import type { ClientConfig } from "@workspace/config/types";
+import * as React from "react";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { useI18n } from "@/i18n/provider";
 import {
-	LookbackPeriod,
-	ChartDataPoint,
-	filterAndCompleteChartData,
+	type ChartDataPoint,
 	extendLinesToChartEdges,
-	isExtendedDataPoint,
-	getBadgeVariant,
+	filterAndCompleteChartData,
 	getBadgeClassName,
+	getBadgeVariant,
+	isExtendedDataPoint,
+	type LookbackPeriod,
 	selectCompetitorsToDisplay,
 } from "@/lib/chart-utils";
-import type { Brand, Competitor } from "@workspace/lib/db/schema";
 
 interface BaseChartProps {
 	data: ChartDataPoint[];
@@ -52,6 +53,7 @@ export function BaseChart({
 	chartColors: chartColorsProp,
 	chartHeight = "250px",
 }: BaseChartProps) {
+	const { t, formatDate, formatNumber } = useI18n();
 	const completeData = filterAndCompleteChartData(data, lookback);
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 
@@ -68,7 +70,7 @@ export function BaseChart({
 	const chartColors = chartColorsProp ?? context.clientConfig?.branding.chartColors ?? [];
 	const chartConfig: ChartConfig = {
 		visitors: {
-			label: "Visibility",
+			label: t("chart.visibility"),
 		},
 		[brand.id]: {
 			label: brand.name,
@@ -131,7 +133,7 @@ export function BaseChart({
 					{title && <h3 className="text-sm font-medium capitalize">{title}</h3>}
 					{showBadge && visibility !== null && (
 						<Badge variant={getBadgeVariant(visibility!)} className={`text-xs ${getBadgeClassName(visibility!)}`}>
-							{visibility}%
+							{formatNumber(visibility!)}%
 						</Badge>
 					)}
 				</div>
@@ -152,8 +154,8 @@ export function BaseChart({
 								// Fix: Parse date string directly to avoid double timezone conversion
 								// value is already a properly bucketed date string like "2025-07-21"
 								const [year, month, day] = value.split("-").map(Number);
-								const date = new Date(year, month - 1, day); // Create local date
-								return date.toLocaleDateString("en-US", {
+								const date = new Date(Date.UTC(year, month - 1, day));
+								return formatDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -167,7 +169,7 @@ export function BaseChart({
 							axisLine={false}
 							tickMargin={8}
 							tickCount={6}
-							tickFormatter={(value) => `${value}%`}
+							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
 						/>
 						<ChartTooltip
 							isAnimationActive={false}
@@ -176,8 +178,8 @@ export function BaseChart({
 								<ChartTooltipContent
 									labelFormatter={(value) => {
 										const [year, month, day] = String(value).split("-").map(Number);
-										const date = new Date(year, month - 1, day);
-										return date.toLocaleDateString("en-US", {
+										const date = new Date(Date.UTC(year, month - 1, day));
+										return formatDate(date, {
 											month: "short",
 											day: "numeric",
 										});
@@ -198,7 +200,9 @@ export function BaseChart({
 														<span className="text-muted-foreground">{chartConfig[name as string]?.label || name}</span>
 													</div>
 													{value !== null && value !== undefined && (
-														<span className="text-foreground font-mono font-xs tabular-nums">{value}%</span>
+														<span className="text-foreground font-mono font-xs tabular-nums">
+															{formatNumber(Number(value))}%
+														</span>
 													)}
 												</div>
 											</>
@@ -231,8 +235,8 @@ export function BaseChart({
 								// Fix: Parse date string directly to avoid double timezone conversion
 								// value is already a properly bucketed date string like "2025-07-21"
 								const [year, month, day] = value.split("-").map(Number);
-								const date = new Date(year, month - 1, day); // Create local date
-								return date.toLocaleDateString("en-US", {
+								const date = new Date(Date.UTC(year, month - 1, day));
+								return formatDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -246,7 +250,7 @@ export function BaseChart({
 							axisLine={false}
 							tickMargin={8}
 							tickCount={6}
-							tickFormatter={(value) => `${value}%`}
+							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
 						/>
 						<ChartTooltip
 							isAnimationActive={false}
@@ -273,8 +277,8 @@ export function BaseChart({
 
 								// Format the date label
 								const [year, month, day] = (label as string).split("-").map(Number);
-								const date = new Date(year, month - 1, day);
-								const formattedDate = date.toLocaleDateString("en-US", {
+								const date = new Date(Date.UTC(year, month - 1, day));
+								const formattedDate = formatDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -295,7 +299,9 @@ export function BaseChart({
 															<span className="text-muted-foreground">
 																{chartConfig[item.dataKey as string]?.label || item.dataKey}
 															</span>
-															<span className="text-foreground font-mono font-xs tabular-nums">{item.value}%</span>
+															<span className="text-foreground font-mono font-xs tabular-nums">
+																{formatNumber(Number(item.value))}%
+															</span>
 														</div>
 													</div>
 												);

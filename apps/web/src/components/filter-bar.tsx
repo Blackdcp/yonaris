@@ -1,22 +1,6 @@
-import { type ReactNode, useEffect, useRef, useState, useMemo } from "react";
 import { useSearch } from "@tanstack/react-router";
-import {
-	SiGoogle,
-	SiAnthropic,
-	SiPerplexity,
-	SiX,
-	SiGithubcopilot,
-	SiMistralai,
-	SiDeepseek,
-	SiMoonshotai,
-} from "react-icons/si";
-// OpenAI's logo was removed from Simple Icons (react-icons `si`) in 5.7.0 for
-// trademark reasons; Remix Icon still ships the blossom mark.
-import { RiOpenaiFill } from "react-icons/ri";
-import { MdSelectAll } from "react-icons/md";
-import { Sparkles } from "lucide-react";
+import { getModelMeta } from "@workspace/lib/providers/models";
 import { Button } from "@workspace/ui/components/button";
-import { Input } from "@workspace/ui/components/input";
 import { Checkbox } from "@workspace/ui/components/checkbox";
 import {
 	DropdownMenu,
@@ -25,13 +9,29 @@ import {
 	DropdownMenuRadioItem,
 	DropdownMenuTrigger,
 } from "@workspace/ui/components/dropdown-menu";
+import { Input } from "@workspace/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@workspace/ui/components/popover";
-import { ChevronDown, Search, Tag as TagIcon, Clock, X } from "lucide-react";
-import { type LookbackPeriod, getDefaultLookbackPeriod } from "@/lib/chart-utils";
+import { ChevronDown, Clock, Search, Sparkles, Tag as TagIcon, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { MdSelectAll } from "react-icons/md";
+// OpenAI's logo was removed from Simple Icons (react-icons `si`) in 5.7.0 for
+// trademark reasons; Remix Icon still ships the blossom mark.
+import { RiOpenaiFill } from "react-icons/ri";
+import {
+	SiAnthropic,
+	SiDeepseek,
+	SiGithubcopilot,
+	SiGoogle,
+	SiMistralai,
+	SiMoonshotai,
+	SiPerplexity,
+	SiX,
+} from "react-icons/si";
 import { useBrand } from "@/hooks/use-brands";
-import { getModelMeta } from "@workspace/lib/providers/models";
+import { getDefaultLookbackPeriod, type LookbackPeriod } from "@/lib/chart-utils";
+
 export { ALL_MODELS_VALUE, getAvailableModels } from "@/lib/model-filter";
-import { ALL_MODELS_VALUE } from "@/lib/model-filter";
+
 // Filter state lives in the URL, validated by the `$brand` layout route's
 // search schema (see `validateBrandFilterSearch`). The widgets here keep
 // per-key `useSearch` selectors so one filter's click doesn't re-render the
@@ -39,7 +39,10 @@ import { ALL_MODELS_VALUE } from "@/lib/model-filter";
 // The router commits search updates synchronously within the interaction, so
 // no optimistic layer is needed (nuqs throttled URL writes, which is why the
 // old code wrapped every change in `useOptimistic` + `startTransition`).
-import { useFilterNavigate, splitTags, joinTags, coerceLookback } from "@/hooks/use-list-filters";
+import { coerceLookback, joinTags, splitTags, useFilterNavigate } from "@/hooks/use-list-filters";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { ALL_MODELS_VALUE } from "@/lib/model-filter";
 
 /** "all" is the no-filter sentinel; any other string is a concrete model id
  *  from the deployment's `SCRAPE_TARGETS`. Deployments can configure arbitrary
@@ -77,21 +80,22 @@ export function iconForModel(model: string, className = "size-3.5") {
 	}
 }
 
-export function labelForModel(model: string): string {
-	if (model === ALL_MODELS_VALUE) return "All models";
+export function labelForModel(model: string, allModelsLabel = "All models"): string {
+	if (model === ALL_MODELS_VALUE) return allModelsLabel;
 	return getModelMeta(model).label;
 }
 
-const LOOKBACK_OPTIONS: { value: LookbackPeriod; label: string }[] = [
-	{ value: "1w", label: "Last 7 days" },
-	{ value: "1m", label: "Last 30 days" },
-	{ value: "3m", label: "Last 3 months" },
-	{ value: "6m", label: "Last 6 months" },
-	{ value: "1y", label: "Last 12 months" },
+const LOOKBACK_OPTIONS: { value: LookbackPeriod; labelId: MessageId }[] = [
+	{ value: "1w", labelId: "filter.lookback.1w" },
+	{ value: "1m", labelId: "filter.lookback.1m" },
+	{ value: "3m", labelId: "filter.lookback.3m" },
+	{ value: "6m", labelId: "filter.lookback.6m" },
+	{ value: "1y", labelId: "filter.lookback.1y" },
 ];
 
-function getLookbackLabel(lookback: LookbackPeriod): string {
-	return LOOKBACK_OPTIONS.find((o) => o.value === lookback)?.label ?? lookback;
+function getLookbackLabel(lookback: LookbackPeriod, t: (id: MessageId) => string): string {
+	const option = LOOKBACK_OPTIONS.find((candidate) => candidate.value === lookback);
+	return option ? t(option.labelId) : lookback;
 }
 
 // ------------------------------------------------------------------
@@ -144,6 +148,8 @@ export function FilterTriggerButton({
 // ------------------------------------------------------------------
 
 export function ModelDropdown({ availableModels }: { availableModels: string[] }) {
+	const { t } = useI18n();
+	const allModelsLabel = t("filter.allModels");
 	const defaultModel = availableModels.includes(ALL_MODELS_VALUE)
 		? ALL_MODELS_VALUE
 		: (availableModels[0] ?? ALL_MODELS_VALUE);
@@ -163,14 +169,18 @@ export function ModelDropdown({ availableModels }: { availableModels: string[] }
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<FilterTriggerButton icon={iconForModel(selected)} label={labelForModel(selected)} active={isFiltered} />
+				<FilterTriggerButton
+					icon={iconForModel(selected)}
+					label={labelForModel(selected, allModelsLabel)}
+					active={isFiltered}
+				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">
 				<DropdownMenuRadioGroup value={selected} onValueChange={handleChange}>
 					{availableModels.map((model) => (
 						<DropdownMenuRadioItem key={model} value={model} className="cursor-pointer gap-2">
 							{iconForModel(model)}
-							{labelForModel(model)}
+							{labelForModel(model, allModelsLabel)}
 						</DropdownMenuRadioItem>
 					))}
 				</DropdownMenuRadioGroup>
@@ -184,6 +194,7 @@ export function ModelDropdown({ availableModels }: { availableModels: string[] }
 // ------------------------------------------------------------------
 
 export function LookbackDropdown() {
+	const { t } = useI18n();
 	const { brand } = useBrand();
 	const defaultLookback = useMemo(() => getDefaultLookbackPeriod(brand?.earliestDataDate), [brand?.earliestDataDate]);
 	const urlLookback = useSearch({ strict: false, select: (s) => s.lookback });
@@ -197,13 +208,13 @@ export function LookbackDropdown() {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<FilterTriggerButton icon={<Clock className="size-3.5" />} label={getLookbackLabel(selected)} />
+				<FilterTriggerButton icon={<Clock className="size-3.5" />} label={getLookbackLabel(selected, t)} />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="start" className="w-48">
 				<DropdownMenuRadioGroup value={selected} onValueChange={(v) => handleChange(v as LookbackPeriod)}>
 					{LOOKBACK_OPTIONS.map((opt) => (
 						<DropdownMenuRadioItem key={opt.value} value={opt.value} className="cursor-pointer">
-							{opt.label}
+							{t(opt.labelId)}
 						</DropdownMenuRadioItem>
 					))}
 				</DropdownMenuRadioGroup>
@@ -219,6 +230,7 @@ export function LookbackDropdown() {
 // ------------------------------------------------------------------
 
 export function TagsDropdown({ availableTags }: { availableTags: readonly string[] }) {
+	const { t } = useI18n();
 	const urlTags = useSearch({ strict: false, select: (s) => s.tags });
 	const setFilters = useFilterNavigate();
 	const selected = useMemo(() => splitTags(urlTags), [urlTags]);
@@ -237,26 +249,26 @@ export function TagsDropdown({ availableTags }: { availableTags: readonly string
 			<PopoverTrigger asChild>
 				<FilterTriggerButton
 					icon={<TagIcon className="size-3.5" />}
-					label="Tags"
+					label={t("filter.tags")}
 					active={selected.length > 0}
 					badgeCount={selected.length > 0 ? selected.length : undefined}
 				/>
 			</PopoverTrigger>
 			<PopoverContent align="start" className="w-64 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
 				<div className="flex items-center justify-between px-3 h-10 border-b">
-					<span className="font-medium text-sm">Tags</span>
+					<span className="font-medium text-sm">{t("filter.tags")}</span>
 					{selected.length > 0 && (
 						<button
 							type="button"
 							onClick={() => commit([])}
 							className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
 						>
-							Clear
+							{t("filter.clear")}
 						</button>
 					)}
 				</div>
 				{availableTags.length === 0 ? (
-					<p className="text-sm text-muted-foreground py-6 text-center">No tags available</p>
+					<p className="text-sm text-muted-foreground py-6 text-center">{t("filter.noTagsAvailable")}</p>
 				) : (
 					<div className="py-1 max-h-64 overflow-y-auto">
 						{availableTags.map((tag) => {
@@ -299,7 +311,8 @@ export function TagsDropdown({ availableTags }: { availableTags: readonly string
 // setState) to avoid flashing back when the URL echo races with typing.
 // ------------------------------------------------------------------
 
-export function SearchInput({ placeholder = "Search prompts..." }: { placeholder?: string }) {
+export function SearchInput({ placeholder }: { placeholder?: string }) {
+	const { t } = useI18n();
 	const urlValue = useSearch({ strict: false, select: (s) => s.q });
 	const setFilters = useFilterNavigate();
 	const value = urlValue ?? "";
@@ -354,7 +367,7 @@ export function SearchInput({ placeholder = "Search prompts..." }: { placeholder
 			<Input
 				value={local}
 				onChange={(e) => setLocal(e.target.value)}
-				placeholder={placeholder}
+				placeholder={placeholder ?? t("filter.searchPrompts")}
 				className="h-8 pl-8 pr-8 text-sm"
 			/>
 			{local && (
@@ -362,7 +375,7 @@ export function SearchInput({ placeholder = "Search prompts..." }: { placeholder
 					type="button"
 					onClick={clear}
 					className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-					aria-label="Clear search"
+					aria-label={t("accessibility.clearSearch")}
 				>
 					<X className="h-3.5 w-3.5" />
 				</button>
@@ -378,17 +391,17 @@ export function SearchInput({ placeholder = "Search prompts..." }: { placeholder
 // ------------------------------------------------------------------
 
 export function ResultCount({ count, total }: { count: number | undefined; total?: number }) {
+	const { t, formatNumber } = useI18n();
 	const tags = useSearch({ strict: false, select: (s) => s.tags });
 	const q = useSearch({ strict: false, select: (s) => s.q });
 	const active = Boolean(tags) || Boolean(q);
 	if (!active || count === undefined) return null;
 	const showTotal = total !== undefined && total !== count;
-	return (
-		<span className="text-xs text-muted-foreground tabular-nums ml-1">
-			{count.toLocaleString()}
-			{showTotal && ` of ${total.toLocaleString()}`} {count === 1 && !showTotal ? "result" : "results"}
-		</span>
-	);
+	const formattedCount = formatNumber(count);
+	const label = showTotal
+		? t("filter.result.of", { count: formattedCount, total: formatNumber(total) })
+		: t(count === 1 ? "filter.result.one" : "filter.result.many", { count: formattedCount });
+	return <span className="text-xs text-muted-foreground tabular-nums ml-1">{label}</span>;
 }
 
 // ------------------------------------------------------------------

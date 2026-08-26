@@ -7,12 +7,12 @@
  */
 
 import { type SSOOptions, sso } from "@better-auth/sso";
+import { isContentLanguage, UI_LANGUAGE_COOKIE_NAME } from "@workspace/config/language";
 import { type BetterAuthOptions, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError, createAuthMiddleware, getAuthoritativeSessionFromCtx } from "better-auth/api";
 import { admin, customSession, organization } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { isContentLanguage, UI_LANGUAGE_COOKIE_NAME } from "@workspace/config/language";
 import { z } from "zod";
 import { db } from "../db/db";
 import * as schema from "../db/schema";
@@ -85,7 +85,10 @@ function createLanguageDatabaseHooks(
 					const cookieLanguage = isIdentityProviderUserCreation(context?.path)
 						? context?.getCookie(UI_LANGUAGE_COOKIE_NAME)
 						: undefined;
-					const selectedLanguage = isContentLanguage(cookieLanguage) ? cookieLanguage : deploymentData.uiLanguage;
+					const suppliedLanguage = isContentLanguage(cookieLanguage)
+						? cookieLanguage
+						: (deploymentData.uiLanguage ?? user.uiLanguage);
+					const selectedLanguage = suppliedLanguage === undefined ? "en" : suppliedLanguage;
 
 					if (!isContentLanguage(selectedLanguage)) {
 						throw new APIError("BAD_REQUEST", { message: "Unsupported UI language." });

@@ -1,19 +1,20 @@
+import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { getSoVBadgeClasses, type PromptCategory } from "@workspace/lib/report-metrics";
+import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
-import { Badge } from "@workspace/ui/components/badge";
+import { useChartDownload } from "@/hooks/use-chart-download";
+import { useI18n } from "@/i18n/provider";
+import {
+	type ChartDataPoint,
+	calculateVisibilityPercentages,
+	getBadgeClassName,
+	getBadgeVariant,
+	type LookbackPeriod,
+	selectCompetitorsToDisplay,
+} from "@/lib/chart-utils";
 import { BaseChartPrint } from "./base-chart-print";
 import { ChartDownloadFooter } from "./chart-download-footer";
-import { useChartDownload } from "@/hooks/use-chart-download";
-import type { Brand, Competitor } from "@workspace/lib/db/schema";
-import {
-	LookbackPeriod,
-	getBadgeVariant,
-	getBadgeClassName,
-	calculateVisibilityPercentages,
-	selectCompetitorsToDisplay,
-	type ChartDataPoint,
-} from "@/lib/chart-utils";
-import { getSoVBadgeClasses, type PromptCategory } from "@workspace/lib/report-metrics";
 
 interface PromptRunData {
 	id: string;
@@ -93,6 +94,7 @@ export function PromptChartPrint({
 	hasEverBeenEvaluated = false,
 	category,
 }: PromptChartPrintProps) {
+	const { t, formatNumber } = useI18n();
 	const fileName = `${brand.name}-${promptName.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)}`;
 	const { chartRef, isDownloading, handleDownload } = useChartDownload(fileName);
 
@@ -136,10 +138,10 @@ export function PromptChartPrint({
 				return lastDataPoint && brand ? (lastDataPoint[brand.id] as number) : null;
 			})();
 
-	const badgeLabel = isReportContext ? "SoV" : "Visibility";
+	const badgeLabel = isReportContext ? "SoV" : t("chart.visibility");
 
 	if (hasNoRuns) {
-		const message = hasEverBeenEvaluated ? "No data in selected time range" : "Evaluating for the first time...";
+		const message = hasEverBeenEvaluated ? t("chart.noDataInRange") : t("chart.evaluatingFirstTime");
 
 		return (
 			<Card ref={chartRef} className="py-3 gap-3 print:shadow-none print:border">
@@ -170,9 +172,9 @@ export function PromptChartPrint({
 				<CardContent className="px-3">
 					<div className="h-[250px] flex items-center justify-center">
 						<div className="flex flex-col items-center text-center max-w-xs">
-							<p className="text-sm font-medium text-muted-foreground print:text-xs">No brands found in responses</p>
+							<p className="text-sm font-medium text-muted-foreground print:text-xs">{t("chart.noBrandsFound")}</p>
 							<p className="text-xs text-muted-foreground/70 mt-1 print:text-[10px]">
-								Your brand and competitors weren't mentioned in the evaluated responses for this prompt.
+								{t("chart.noBrandsFoundDescription")}
 							</p>
 						</div>
 					</div>
@@ -199,7 +201,7 @@ export function PromptChartPrint({
 				<div className="flex items-center gap-2">
 					{badgeClasses && badgeValue !== null && (
 						<Badge variant={badgeClasses.variant} className={`${badgeClasses.className} print:text-xs`}>
-							{badgeValue}% {badgeLabel}
+							{formatNumber(badgeValue)}% {badgeLabel}
 						</Badge>
 					)}
 				</div>

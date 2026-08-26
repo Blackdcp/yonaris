@@ -1,6 +1,7 @@
 import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK, YONARIS_COLORS } from "@workspace/config/constants";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Badge } from "@workspace/ui/components/badge";
+import { useI18n } from "@/i18n/provider";
 import type { ChartDataPoint, LookbackPeriod } from "@/lib/chart-utils";
 import { getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
 import { BaseChart } from "./base-chart";
@@ -60,6 +61,7 @@ export function ChartExportPreview({
 	competitors,
 	branding,
 }: ChartExportPreviewProps) {
+	const { t, formatNumber } = useI18n();
 	const name = branding.name || DEFAULT_APP_NAME;
 	const domain = formatBrandDomain(branding.parentUrl || branding.url);
 	const usesDefaultBrand = name === DEFAULT_APP_NAME && (!branding.icon || branding.icon === DEFAULT_APP_ICON);
@@ -95,7 +97,7 @@ export function ChartExportPreview({
 						className={`${getBadgeClassName(visibility)} shrink-0`}
 						style={{ fontSize: 16, padding: "4px 14px" }}
 					>
-						{visibility}% Visibility
+						{formatNumber(visibility)}% {t("chart.visibility")}
 					</Badge>
 				)}
 			</div>
@@ -130,7 +132,7 @@ export function ChartExportPreview({
 					{wordmark ? (
 						<img
 							src={wordmark}
-							alt={`${name} logo`}
+							alt={t("chart.logoAlt", { name })}
 							style={{ width: 148, height: 36 }}
 							className="object-contain"
 							crossOrigin="anonymous"
@@ -140,7 +142,7 @@ export function ChartExportPreview({
 							{hasCustomIcon && (
 								<img
 									src={branding.icon}
-									alt={`${name} logo`}
+									alt={t("chart.logoAlt", { name })}
 									style={{ width: 28, height: 28 }}
 									className="object-contain"
 									crossOrigin="anonymous"

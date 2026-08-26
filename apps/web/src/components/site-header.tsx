@@ -19,6 +19,7 @@ import { useI18n } from "@/i18n/provider";
 
 /** Map of page segments to display names */
 const PAGE_NAME_IDS: Record<string, MessageId> = {
+	programs: "navigation.programs",
 	visibility: "navigation.visibility",
 	"share-of-voice": "navigation.shareOfVoice",
 	"query-fan-out": "navigation.queryFanOut",
@@ -27,6 +28,8 @@ const PAGE_NAME_IDS: Record<string, MessageId> = {
 	citations: "navigation.citations",
 	brand: "navigation.brand",
 	competitors: "navigation.competitors",
+	settings: "navigation.settings",
+	members: "navigation.members",
 	llms: "navigation.llms",
 	workflows: "navigation.automation",
 	sampling: "navigation.samplingOperations",
@@ -226,14 +229,18 @@ export function SiteHeader({ isPlatformAdmin = false }: SiteHeaderProps) {
 		>
 			<div className="flex w-full items-center gap-3 px-4 lg:px-6">
 				<div className="flex min-w-0 flex-1 items-center gap-1 lg:gap-2">
-					<SidebarTrigger className="-ml-1 cursor-pointer" aria-label={t("navigation.toggleSidebar")} />
+					<SidebarTrigger className="-ml-1 cursor-pointer" label={t("accessibility.toggleSidebar")} />
 					<Separator orientation="vertical" className="mx-2 data-[orientation=vertical]:h-4" />
-					<Breadcrumb>
+					<Breadcrumb label={t("accessibility.breadcrumb")} moreLabel={t("accessibility.more")}>
 						<BreadcrumbList>
 							{isAdminPage ? (
 								<AdminBreadcrumbs pathname={pathname} />
 							) : (
-								<BrandBreadcrumbs pathname={pathname} brandId={brandId} brandName={brand?.name || "Dashboard"} />
+								<BrandBreadcrumbs
+									pathname={pathname}
+									brandId={brandId}
+									brandName={brand?.name || t("navigation.dashboard")}
+								/>
 							)}
 						</BreadcrumbList>
 					</Breadcrumb>

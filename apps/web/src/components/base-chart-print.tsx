@@ -1,10 +1,11 @@
-import * as React from "react";
-import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
-import { Badge } from "@workspace/ui/components/badge";
 import { useRouteContext } from "@tanstack/react-router";
 import type { ClientConfig } from "@workspace/config/types";
-import { ChartDataPoint, getBadgeVariant, getBadgeClassName } from "@/lib/chart-utils";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
+import { Badge } from "@workspace/ui/components/badge";
+import * as React from "react";
+import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { useI18n } from "@/i18n/provider";
+import { type ChartDataPoint, getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
 
 interface BaseChartPrintProps {
 	data: ChartDataPoint[];
@@ -53,6 +54,7 @@ export function BaseChartPrint({
 	brand,
 	competitors,
 }: BaseChartPrintProps) {
+	const { t, formatNumber } = useI18n();
 	const routeContext = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	// Get the most recent data point that has actual data
 	const latestDataPoint = data
@@ -72,7 +74,7 @@ export function BaseChartPrint({
 					</div>
 				)}
 				<div className="h-[200px] print:h-[150px] flex items-center justify-center text-muted-foreground text-sm print:text-xs">
-					No data available
+					{t("chart.noDataAvailable")}
 				</div>
 			</div>
 		);
@@ -120,7 +122,7 @@ export function BaseChartPrint({
 							variant={getBadgeVariant(visibility!)}
 							className={`text-xs ${getBadgeClassName(visibility!)} print:text-xs`}
 						>
-							{visibility}%
+							{formatNumber(visibility!)}%
 						</Badge>
 					)}
 				</div>
@@ -144,7 +146,7 @@ export function BaseChartPrint({
 								fontSize: 10,
 								fill: "var(--yonaris-stone, #6B7280)",
 							}}
-							tickFormatter={(value) => `${value}%`}
+							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
 							width={40}
 						/>
 						<Bar
@@ -156,7 +158,7 @@ export function BaseChartPrint({
 								fontSize: 11,
 								fontWeight: "bold",
 								fill: "var(--yonaris-slate, #374151)",
-								formatter: (value: unknown) => `${value}%`,
+								formatter: (value: unknown) => `${formatNumber(Number(value))}%`,
 							}}
 						>
 							{sortedEntities.map((entry) => (

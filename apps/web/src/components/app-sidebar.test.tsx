@@ -10,6 +10,8 @@ vi.mock("@tanstack/react-router", () => ({
 			{children}
 		</a>
 	),
+	useLocation: () => ({ pathname: "/app/brand-1" }),
+	useParams: () => ({ brand: "brand-1" }),
 	useRouteContext: () => ({ clientConfig: { features: { reportGeneration: true } } }),
 }));
 
@@ -17,6 +19,8 @@ vi.mock("@workspace/ui/components/sidebar", () => ({
 	Sidebar: ({ children }: { children: ReactNode }) => <aside>{children}</aside>,
 	SidebarContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	SidebarHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
+	SidebarGroup: ({ children }: { children: ReactNode }) => <section>{children}</section>,
+	SidebarGroupLabel: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
 	SidebarMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	SidebarMenuButton: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	SidebarMenuItem: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -24,20 +28,6 @@ vi.mock("@workspace/ui/components/sidebar", () => ({
 }));
 
 vi.mock("@/components/logo", () => ({ Logo: () => <span>Yonaris</span> }));
-vi.mock("@/components/nav-main", () => ({
-	NavMain: ({ groups }: { groups: { label: string; items: { title: string }[] }[] }) => (
-		<nav>
-			{groups.map((group) => (
-				<section key={group.label}>
-					<h2>{group.label}</h2>
-					{group.items.map((item) => (
-						<span key={item.title}>{item.title}</span>
-					))}
-				</section>
-			))}
-		</nav>
-	),
-}));
 
 import { AppSidebar } from "./app-sidebar";
 
@@ -93,11 +83,24 @@ describe("AppSidebar workspace separation", () => {
 		const markup = renderSidebar({ brand: onboardedBrand }, "zh-CN");
 
 		expect(markup).toContain("控制台");
+		expect(markup).toContain("概览");
+		expect(markup).toContain("项目");
 		expect(markup).toContain("AI 检索脉络");
 		expect(markup).toContain("竞争对手");
 		expect(markup).toContain('href="/app"');
+		expect(markup).toContain('href="/app/brand-1/programs"');
 		expect(markup).toContain('aria-label="打开客户工作区"');
+		expect(markup).not.toContain("Programs");
 		expect(markup).not.toContain("Query Fan-Out");
+	});
+
+	it("renders the English overview and programs destinations unchanged", () => {
+		const markup = renderSidebar({ brand: onboardedBrand }, "en");
+
+		expect(markup).toContain("Overview");
+		expect(markup).toContain("Programs");
+		expect(markup).toContain('href="/app/brand-1/"');
+		expect(markup).toContain('href="/app/brand-1/programs"');
 	});
 
 	it("localizes the complete platform navigation while preserving access gates", () => {

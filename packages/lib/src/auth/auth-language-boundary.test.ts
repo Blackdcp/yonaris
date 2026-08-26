@@ -125,6 +125,34 @@ describe("Better Auth UI language boundary", () => {
 		});
 	});
 
+	it("defaults an admin-created user with no supplied language to English", async () => {
+		createAuth();
+		const beforeCreate = capturedOptions().databaseHooks?.user?.create?.before;
+
+		const result = await beforeCreate?.(
+			{ email: "invited@example.com" },
+			callbackContext("/admin/create-user", "other=value"),
+		);
+
+		expect(result).toEqual({
+			data: expect.objectContaining({ uiLanguage: "en" }),
+		});
+	});
+
+	it("rejects an explicitly unsupported language during user creation", async () => {
+		const deploymentHook = vi.fn(async () => ({ data: { role: "user" } }));
+		createAuth({ databaseHooks: { user: { create: { before: deploymentHook } } } });
+		const beforeCreate = capturedOptions().databaseHooks?.user?.create?.before;
+
+		await expect(
+			beforeCreate?.(
+				{ email: "invited@example.com", uiLanguage: "zh" },
+				callbackContext("/admin/create-user", "other=value"),
+			),
+		).rejects.toMatchObject({ status: "BAD_REQUEST" });
+		expect(deploymentHook).toHaveBeenCalledOnce();
+	});
+
 	it("blocks an admin from changing another user's language", async () => {
 		mocks.getAuthoritativeSessionFromCtx.mockResolvedValue({ user: { id: "admin-user" } });
 		createAuth();

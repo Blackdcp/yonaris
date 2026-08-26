@@ -1,7 +1,8 @@
-import { ReactNode } from "react";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import type { ReactNode } from "react";
+import { useI18n } from "@/i18n/provider";
 
 interface PageHeaderProps {
 	title: string;
@@ -13,6 +14,7 @@ interface PageHeaderProps {
 /** Title + subtitle block. No filter state, no data fetching — callers
  *  compose the filter section and content as children. */
 export function PageHeader({ title, subtitle, infoContent, children }: PageHeaderProps) {
+	const { t } = useI18n();
 	return (
 		<div className="space-y-0">
 			<div className="mb-4">
@@ -21,7 +23,10 @@ export function PageHeader({ title, subtitle, infoContent, children }: PageHeade
 					{infoContent && (
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<IconInfoCircle className="h-5 w-5 text-muted-foreground cursor-help" />
+								<IconInfoCircle
+									className="h-5 w-5 text-muted-foreground cursor-help"
+									aria-label={t("accessibility.moreInformation")}
+								/>
 							</TooltipTrigger>
 							<TooltipContent className="max-w-xs text-sm font-normal">{infoContent}</TooltipContent>
 						</Tooltip>

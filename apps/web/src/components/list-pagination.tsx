@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useI18n } from "@/i18n/provider";
 
 const PAGER_BUTTON_CLASS =
 	"text-xs text-muted-foreground hover:text-foreground cursor-pointer px-2.5 py-1 rounded-md border border-border hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
@@ -16,6 +17,7 @@ interface ListPaginationProps {
  *  fetched data (v1, via `usePagedList`) or drives page/total from the
  *  server later. Renders nothing when everything fits on one page. */
 export function ListPagination({ page, pageSize, totalItems, onPageChange }: ListPaginationProps) {
+	const { t, formatNumber } = useI18n();
 	const totalPages = Math.ceil(totalItems / pageSize);
 	if (totalPages <= 1) return null;
 	const start = page * pageSize + 1;
@@ -23,7 +25,11 @@ export function ListPagination({ page, pageSize, totalItems, onPageChange }: Lis
 	return (
 		<div className="mt-3 flex items-center justify-between">
 			<span className="text-[11px] text-muted-foreground tabular-nums">
-				{start.toLocaleString()}–{end.toLocaleString()} of {totalItems.toLocaleString()}
+				{t("filter.pagination.range", {
+					start: formatNumber(start),
+					end: formatNumber(end),
+					total: formatNumber(totalItems),
+				})}
 			</span>
 			<div className="flex items-center gap-1.5">
 				<button
@@ -32,7 +38,7 @@ export function ListPagination({ page, pageSize, totalItems, onPageChange }: Lis
 					disabled={page === 0}
 					className={PAGER_BUTTON_CLASS}
 				>
-					Previous
+					{t("filter.pagination.previous")}
 				</button>
 				<button
 					type="button"
@@ -40,7 +46,7 @@ export function ListPagination({ page, pageSize, totalItems, onPageChange }: Lis
 					disabled={page >= totalPages - 1}
 					className={PAGER_BUTTON_CLASS}
 				>
-					Next
+					{t("filter.pagination.next")}
 				</button>
 			</div>
 		</div>

@@ -193,7 +193,12 @@ export function AppSidebar({
 	}
 
 	return (
-		<Sidebar variant="inset" {...props}>
+		<Sidebar
+			variant="inset"
+			{...props}
+			mobileTitle={t("accessibility.sidebarTitle")}
+			mobileDescription={t("accessibility.sidebarDescription")}
+		>
 			<SidebarHeader>
 				<SidebarMenu>
 					<SidebarMenuItem>
