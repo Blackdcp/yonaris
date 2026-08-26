@@ -233,3 +233,61 @@ No additional Changeset was added because the existing Task 2 patch Changeset al
 ### Concerns
 
 No product concern. The standalone deployment tsconfig limitation and production-build warnings above are pre-existing repository/local-environment constraints; the affected shared packages and full application verification are green.
+
+## Fix Round 2 (2026-08-27)
+
+### Status
+
+DONE. The `InfoTip` accessibility regression is fixed at the typed shared boundary and every production caller now supplies a semantic localized accessible name. This round supersedes Fix Round 1's optional-label statement: `InfoTip.label` is required, so future unlabeled callers fail TypeScript compilation.
+
+### Exact coverage and files
+
+- `apps/web/src/components/fanout-sections.tsx`: requires `label` and reuses the active localized word-change helper as the Query Words button name.
+- `apps/web/src/i18n/catalogs/customer.ts`: adds six paired semantic accessibility messages for Query Fan-Out statistics, Prompt Fan-Out, and Top Queries.
+- `apps/web/src/routes/_authed/app/$brand/query-fan-out.tsx`: supplies localized names for all four metric `InfoTip` buttons plus Prompt Fan-Out and Top Queries without changing tooltip children or visible route copy.
+- `apps/web/src/routes/_authed/app/$brand/-fanout-accessibility-localization.test.tsx`: new bilingual live-route caller coverage across all three Query Fan-Out tabs.
+- `apps/web/src/routes/_authed/app/$brand/prompts/-prompt-history-localization.test.tsx`: adds bilingual Prompt-detail accessible-name assertions through the real fan-out child.
+
+The report is the sixth changed file. The existing Task 2 Changeset continues to cover this fix on the same branch.
+
+### TDD RED/GREEN evidence
+
+- RED command rendered the new Query Fan-Out route test and existing Prompt-detail test before any production change.
+- RED result: 1 file failed and 1 passed; 2 tests failed and 5 passed. Both English and Chinese route cases found exactly five live `cursor-help` buttons, but every accessible name was `null`. Prompt-detail's one previously labeled button passed, proving the failure was the omitted-caller regression rather than the test harness.
+- Minimal GREEN made `InfoTip.label` required, reused the shared word-help translation, and supplied six exact typed catalog messages at the Query Fan-Out callers.
+- First GREEN: 2 files passed, 7 tests passed, 1.13 seconds.
+- Post-format affected fanout/Prompt-detail suite: 3 files passed, 27 tests passed, 1.16 seconds.
+
+The new route test renders `fanout`, `top-queries`, and `words` in both `en` and `zh-CN`. Each render queries every live `InfoTip` button's `aria-label`-defined accessible name: four metric names plus the active tab's Prompt Fan-Out, Top Queries, or localized word-change helper name. The Prompt-detail test independently queries its exact helper name in both locales.
+
+### Final verification
+
+- Amended six-file Task 2 review suite: 6 files passed, 32 tests passed, 6.62 seconds.
+- Original Task 2 ten-file suite: 10 files passed, 49 tests passed, 6.20 seconds.
+- `apps/web` `tsc --noEmit`: passed; this compile proves no production `InfoTip` caller can omit the now-required prop.
+- Biome checked the five changed code/test files with no remaining diagnostics after one formatting fix.
+- `git diff --check`: passed with only configured LF-to-CRLF notices.
+
+### Evidence and scope invariants
+
+- The accessibility test keeps literal `Raw Prompt 中国` and `raw observed query 中国` visible through the real route children.
+- Query Fan-Out's visible English title, descriptions, tooltips, tabs, columns, and other presentation copy are unchanged; only non-visible `aria-label` values vary by UI language.
+- No route ID, search/tab key, href, query key, data fixture shape, server call, hook behavior, analysis function, raw observed query, or Prompt value changed.
+- The Query Fan-Out route file is touched only because it owns the previously unlabeled callers; Task 5 analysis/localization work was not preempted.
+- No migration, service startup, external call, access gate, onboarding/settings, or Opportunity output-language behavior changed.
+
+### Self-review
+
+- `git grep` confirms every production `<InfoTip>` call supplies `label`.
+- The route test does not mock `InfoTip`, `fanout-sections`, Tabs, Tooltip, word cloud, or progress-bar children; it exercises the real button boundary and all active-tab call sites.
+- Accessible labels are caller-specific typed catalog messages, not a generic fallback and not Program-locale-derived.
+- Existing tooltip children remain unchanged, so mouse/keyboard tooltip content and visible Task 5 copy are preserved.
+
+### Commit
+
+- Planned imperative subject: `Require accessible fan-out info labels`
+- The exact SHA is supplied in the final handoff because a Git commit cannot contain its own final hash.
+
+### Concerns
+
+None.

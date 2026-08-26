@@ -29,7 +29,7 @@ import { getModelDisplayName } from "@/lib/utils";
 
 export const FANOUT_ACCENT = YONARIS_CHART_FOCUS;
 
-export function InfoTip({ children, label }: { children: React.ReactNode; label?: string }) {
+export function InfoTip({ children, label }: { children: React.ReactNode; label: string }) {
 	return (
 		<Tooltip>
 			<TooltipTrigger asChild>
@@ -170,6 +170,7 @@ export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; w
 
 	const words: WordChangeStat[] = wordChanges[tab];
 	const shown = hideStop ? words.filter((w) => !w.isStop) : words;
+	const help = t(WORD_TAB_HELP[tab]);
 	const items = shown.slice(0, 18).map((w) => ({
 		label: w.word,
 		count: w.count,
@@ -190,7 +191,7 @@ export function QueryWordsSection({ terms, wordChanges }: { terms: TermStat[]; w
 						<div>
 							<CardTitle className="flex items-center gap-1.5 text-base">
 								{t("prompt.fanout.wordChanges")}
-								<InfoTip>{t(WORD_TAB_HELP[tab])}</InfoTip>
+								<InfoTip label={help}>{help}</InfoTip>
 							</CardTitle>
 							<CardDescription>{t("prompt.fanout.wordChangesDescription")}</CardDescription>
 						</div>

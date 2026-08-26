@@ -120,6 +120,11 @@ function textFromMarkup(markup: string): string {
 	return markup.replace(/<[^>]+>/g, "");
 }
 
+function infoTipAccessibleNames(markup: string): Array<string | null> {
+	const buttons = markup.match(/<button\b[^>]*cursor-help[^>]*>/g) ?? [];
+	return buttons.map((button) => button.match(/aria-label="([^"]+)"/)?.[1] ?? null);
+}
+
 const readySnapshot = {
 	id: "11111111-1111-4111-8111-111111111111",
 	status: "ready",
@@ -184,11 +189,16 @@ describe("Prompt history localization", () => {
 		};
 
 		const markup = renderPrompt();
+		const englishMarkup = renderPrompt("en");
 
 		expect(markup).toContain("AI 检索脉络");
 		expect(markup).toContain("检索路径");
 		expect(markup).toContain("衍生检索词");
 		expect(markup).toContain("查看 AI 为回答当前问题而展开的实际联网搜索词。");
+		expect(infoTipAccessibleNames(markup)).toEqual(["查看 AI 为回答当前问题而展开的实际联网搜索词。"]);
+		expect(infoTipAccessibleNames(englishMarkup)).toEqual([
+			"Every distinct search run while answering this prompt, with prompt keywords emphasized.",
+		]);
 		expect(textFromMarkup(markup)).toContain(rawQuery);
 		expect(markup).not.toContain("联网检索词");
 		expect(markup).not.toContain("提示词检索扩展");

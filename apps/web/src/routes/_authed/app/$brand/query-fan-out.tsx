@@ -29,6 +29,7 @@ import { type BrandFilterSearch, useListFilters } from "@/hooks/use-list-filters
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
 import { useScopeModels } from "@/hooks/use-scope-models";
+import { useI18n } from "@/i18n/provider";
 import {
 	describeFanoutAvailability,
 	type PromptFanoutStat,
@@ -185,13 +186,23 @@ type FanoutData = NonNullable<ReturnType<typeof useQueryFanout>["data"]>;
 // Shared bits
 // ---------------------------------------------------------------------------
 
-function StatCard({ label, value, tip }: { label: string; value: React.ReactNode; tip: React.ReactNode }) {
+function StatCard({
+	label,
+	value,
+	tip,
+	tipLabel,
+}: {
+	label: string;
+	value: React.ReactNode;
+	tip: React.ReactNode;
+	tipLabel: string;
+}) {
 	return (
 		<Card data-yonaris-slot="metric-card" className="py-4">
 			<CardContent>
 				<div data-yonaris-slot="metric-label" className="flex items-center gap-1">
 					{label}
-					<InfoTip>{tip}</InfoTip>
+					<InfoTip label={tipLabel}>{tip}</InfoTip>
 				</div>
 				<div data-yonaris-slot="metric-value" className="mt-2 text-3xl tabular-nums">
 					{value}
@@ -245,6 +256,7 @@ function UnknownRunsTooltip({ byModel }: { byModel: FanoutData["byModel"] }) {
 }
 
 function StatRow({ data }: { data: FanoutData }) {
+	const { t } = useI18n();
 	const exposure = summarizeFanoutRunExposure(data);
 	const breakdown = data.byModel
 		.filter((m) => m.exposedQueryRuns > 0)
@@ -255,21 +267,25 @@ function StatRow({ data }: { data: FanoutData }) {
 				label="Search Prompt Runs"
 				value={data.totalRuns.toLocaleString()}
 				tip="How many times your prompts were run against engines configured with web search. An engine may still choose not to execute a search on a given run."
+				tipLabel={t("prompt.fanout.accessibility.searchRuns")}
 			/>
 			<StatCard
 				label="Prompt Runs w/ Unknown Queries"
 				value={exposure.unknownRuns.toLocaleString()}
 				tip={<UnknownRunsTooltip byModel={data.byModel} />}
+				tipLabel={t("prompt.fanout.accessibility.unknownRuns")}
 			/>
 			<StatCard
 				label="Prompt Runs w/ Exposed Queries"
 				value={exposure.exposedRuns.toLocaleString()}
 				tip={<RunsTooltip breakdown={breakdown} />}
+				tipLabel={t("prompt.fanout.accessibility.exposedRuns")}
 			/>
 			<StatCard
 				label="Average Fan-Out"
 				value={data.avgPerExecution.toLocaleString()}
 				tip="Average rewritten fan-out queries per run that exposed at least one genuine query rewrite. Exact prompt echoes are excluded."
+				tipLabel={t("prompt.fanout.accessibility.average")}
 			/>
 		</div>
 	);
@@ -346,6 +362,7 @@ function SortHead<K extends string>({
 const GRID = "grid grid-cols-[1.25rem_1fr_4.5rem_7rem] items-center gap-3";
 
 function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: string }) {
+	const { t } = useI18n();
 	const [expanded, setExpanded] = useState<Set<string>>(
 		() => new Set(prompts.length === 1 ? [prompts[0].promptId] : []),
 	);
@@ -377,7 +394,7 @@ function Prompts({ prompts, brandId }: { prompts: PromptFanoutStat[]; brandId: s
 					<div>
 						<CardTitle className="flex items-center gap-1.5 text-base">
 							Prompts
-							<InfoTip>
+							<InfoTip label={t("prompt.fanout.accessibility.prompts")}>
 								Each prompt's fan-out: how many searches it generates (Queries) and how many per run that searched
 								(Avg/Prompt Run). Expand a prompt to see the searches, with your prompt's keywords bolded.
 							</InfoTip>
@@ -471,6 +488,7 @@ type TopSort = "prompts" | "runs";
 const TOP_GRID = "grid grid-cols-[1.25rem_1fr_5rem_5.5rem] items-center gap-3";
 
 function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
+	const { t } = useI18n();
 	const [sort, setSort] = useState<TopSort>("prompts");
 	const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -489,7 +507,7 @@ function TopQueries({ data, brandId }: { data: FanoutData; brandId: string }) {
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5 text-base">
 					Top Queries
-					<InfoTip>
+					<InfoTip label={t("prompt.fanout.accessibility.topQueries")}>
 						The searches with the widest reach — sort by how many distinct prompts triggered them, or how many prompt
 						runs issued them. Expand a query to see the prompts behind it.
 					</InfoTip>
