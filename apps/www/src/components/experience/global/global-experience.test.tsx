@@ -4,8 +4,12 @@ import { describe, expect, it } from "vitest";
 type PageKey = "home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy";
 type Page = () => React.ReactNode;
 type GlobalModule = { GLOBAL_PAGES?: Record<PageKey, Page> };
+type ReadingScenesModule = {
+	EN_READING_RECORDS?: readonly { id: string; fact: string }[];
+};
 
 const subject = (await import("./global-pages").catch(() => undefined)) as GlobalModule | undefined;
+const scenes = (await import("./global-scenes").catch(() => undefined)) as ReadingScenesModule | undefined;
 const keys: PageKey[] = ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"];
 
 function markupFor(page: PageKey): string {
@@ -29,6 +33,30 @@ describe("Site 06 English experience", () => {
 		expect(text("approach")).toContain("Proof should be something your team can review.");
 		expect(text("company")).toContain("The same company should remain clear to people and agents.");
 		expect(text("diagnostic")).toContain("Tell us who to contact. We’ll begin with the buying decision.");
+	});
+
+	it("publishes the canonical category fact without category drift", () => {
+		const category = scenes?.EN_READING_RECORDS?.find((record) => record.id === "category");
+		expect(category?.fact).toBe(
+			"AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
+		);
+	});
+
+	it("presents across-market value without internal origin framing", () => {
+		const geo = text("geo");
+		expect(geo).toContain(
+			"Market, language, category wording, alternatives and evidence conditions stay visible around the buying decision.",
+		);
+		expect(geo).not.toContain("without turning geography into a customer-origin story");
+		expect(geo).not.toMatch(/\b(?:customer[- ]origin|origin|destination|inbound|outbound)\b/i);
+	});
+
+	it("uses a market-conditions document instead of an orbit motif across markets", () => {
+		const geo = markupFor("geo");
+		expect(geo).not.toContain("data-orbit-field");
+		expect(geo).not.toContain('class="site-06-orbit"');
+		expect(text("geo")).toMatch(/market.*language.*category.*alternatives.*evidence/i);
+		expect(geo).toContain('aria-label="Market conditions record"');
 	});
 
 	it("keeps rejected template patterns out of the English site", () => {

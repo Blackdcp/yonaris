@@ -256,8 +256,11 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("styles Site 06 actions, photo credits, section leads, and the shared contact form", () => {
 		const css = read("styles/experience/site-06.css");
-		expect(ruleFor(css, ".site-06-action")).toContain("min-height: 44px");
-		expect(ruleFor(css, ".site-06-action")).toContain("background: var(--site-orange)");
+		const action = ruleFor(css, ".site-06-action");
+		expect(action).toContain("min-height: 44px");
+		expect(action).toContain("background: transparent");
+		expect(action).toContain("border-bottom: 2px solid var(--site-orange)");
+		expect(action).not.toContain("background: var(--site-orange)");
 		expect(ruleFor(css, ".site-06-hero__media figcaption")).toContain("position: absolute");
 		expect(ruleFor(css, ".site-06-section__intro")).toContain("display: grid");
 		expect(ruleFor(css, ".site-06 .lead-form")).toContain("display: grid");

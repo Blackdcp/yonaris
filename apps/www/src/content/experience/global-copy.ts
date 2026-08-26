@@ -58,7 +58,7 @@ export const GLOBAL_COPY = {
 			"Review how market, language, category wording, alternatives, and evidence change one buying decision.",
 		eyebrow: "One system, different market conditions.",
 		title: "Markets change the conditions around the decision.",
-		lead: "A buyer question carries a market, language, category wording, set of alternatives and evidence conditions. Yonaris keeps those conditions explicit without turning geography into a customer-origin story.",
+		lead: "Market, language, category wording, alternatives and evidence conditions stay visible around the buying decision. Yonaris keeps them beside the answer so your team can compare like with like and decide what to review.",
 		primaryAction: { label: "Discuss a market question", href: "/diagnostic" },
 		secondaryAction: { label: "See the evidence record", href: "/approach" },
 		closingTitle: "Keep the company fact stable and the market context visible.",

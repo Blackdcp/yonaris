@@ -9,7 +9,7 @@ export const EN_READING_RECORDS = [
 		prompt: "Category",
 		human: "Yonaris is AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
 		meaning: "For a buyer, this establishes the category without reducing the company to a single AI-search tactic.",
-		fact: "Yonaris is an AI-native MarTech infrastructure company built for decisions made by people and shaped by agents.",
+		fact: "AI-native MarTech infrastructure built for decisions made by people and shaped by agents.",
 		evidence: "Yonaris public company description · company statement · reviewed 26 Aug 2026",
 		boundary:
 			"This identifies the company category. It does not claim every planned capability is currently available.",

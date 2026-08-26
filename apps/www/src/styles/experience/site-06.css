@@ -279,9 +279,10 @@
 	align-items: center;
 	justify-content: center;
 	min-height: 44px;
-	padding: 10px 17px;
-	background: var(--site-orange);
-	color: var(--site-navy);
+	padding: 8px 0 5px;
+	border-bottom: 2px solid var(--site-orange);
+	background: transparent;
+	color: inherit;
 	font-size: 0.84rem;
 	font-weight: 680;
 }
@@ -493,6 +494,20 @@
 	font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
 	font-size: clamp(20px, 2.1vw, 28px);
 	line-height: 1.4;
+}
+
+.site-06-market-conditions dl {
+	grid-template-columns: minmax(0, 1fr);
+	margin-top: 24px;
+	border-top: 1px solid rgb(7 23 36 / 18%);
+	background: transparent;
+}
+
+.site-06-market-conditions dl > div {
+	display: grid;
+	grid-template-columns: minmax(7rem, 0.34fr) minmax(0, 1fr);
+	padding-inline: 0;
+	border-bottom: 1px solid rgb(7 23 36 / 18%);
 }
 
 .site-06-review__question {

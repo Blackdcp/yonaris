@@ -184,9 +184,37 @@ export function GlobalGeoPage() {
 			<Hero
 				pageKey="geo"
 				media={
-					<OrbitField label="Market, language, alternatives and evidence conditions">
-						<strong>Market · language · category · alternatives · evidence</strong>
-					</OrbitField>
+					<article
+						className="site-06-evidence-document site-06-market-conditions"
+						aria-label="Market conditions record"
+					>
+						<header>
+							<span>Conditions held beside one question</span>
+							<strong>One decision, read in its actual context</strong>
+						</header>
+						<dl>
+							<div>
+								<dt>Market</dt>
+								<dd>The commercial context surrounding the choice.</dd>
+							</div>
+							<div>
+								<dt>Language</dt>
+								<dd>The words a buyer uses to describe the need.</dd>
+							</div>
+							<div>
+								<dt>Category</dt>
+								<dd>The frame used to understand the company.</dd>
+							</div>
+							<div>
+								<dt>Alternatives</dt>
+								<dd>The options considered under the same question.</dd>
+							</div>
+							<div>
+								<dt>Evidence</dt>
+								<dd>The sources and boundaries available for review.</dd>
+							</div>
+						</dl>
+					</article>
 				}
 			/>
 
