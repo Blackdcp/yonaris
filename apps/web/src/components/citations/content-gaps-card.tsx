@@ -1,9 +1,10 @@
+import { IconAlertTriangle, IconInfoCircle } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
-import { IconInfoCircle, IconAlertTriangle } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { ListPagination, usePagedList } from "@/components/list-pagination";
+import { useI18n } from "@/i18n/provider";
 
 const PAGE_SIZE = 6;
 
@@ -14,24 +15,22 @@ export function ContentGapsCard({
 	prompts: Array<{ id: string; value: string; competitorCitationCount: number; uniqueCompetitors: number }>;
 	brandId: string;
 }) {
+	const { t, formatNumber } = useI18n();
 	const { page, setPage, pageItems, totalItems } = usePagedList(prompts, PAGE_SIZE);
 
 	return (
 		<Card className="h-full flex flex-col">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5">
-					Content Gaps
+					{t("citation.contentGaps")}
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 						</TooltipTrigger>
-						<TooltipContent className="max-w-xs text-sm font-normal">
-							Prompts where competitors are cited but your brand isn&apos;t — opportunities to improve your citation
-							presence.
-						</TooltipContent>
+						<TooltipContent className="max-w-xs text-sm font-normal">{t("citation.gapsTooltip")}</TooltipContent>
 					</Tooltip>
 				</CardTitle>
-				<CardDescription>Prompts where competitors are cited but your brand isn&apos;t</CardDescription>
+				<CardDescription>{t("citation.gapsDescription")}</CardDescription>
 			</CardHeader>
 			<Separator />
 			<CardContent className="flex-1 flex flex-col">
@@ -53,9 +52,17 @@ export function ContentGapsCard({
 									</span>
 								</div>
 								<p className="text-xs text-muted-foreground mt-0.5">
-									{prompt.uniqueCompetitors} {prompt.uniqueCompetitors === 1 ? "competitor" : "competitors"} cited{" "}
-									{prompt.competitorCitationCount} {prompt.competitorCitationCount === 1 ? "time" : "times"} &mdash;
-									your brand cited 0 times
+									{t("citation.gapsRow", {
+										competitors: t(
+											prompt.uniqueCompetitors === 1 ? "citation.competitor.one" : "citation.competitor.many",
+											{
+												count: formatNumber(prompt.uniqueCompetitors),
+											},
+										),
+										times: t(prompt.competitorCitationCount === 1 ? "citation.time.one" : "citation.time.many", {
+											count: formatNumber(prompt.competitorCitationCount),
+										}),
+									})}
 								</p>
 							</div>
 						</Link>

@@ -3,19 +3,19 @@ import { ContentGapsCard } from "@/components/citations/content-gaps-card";
 import { GoogleShoppingCard } from "@/components/citations/google-shopping-card";
 import { RecentChangesCard } from "@/components/citations/recent-changes-card";
 import { RedditCard, useSubredditData } from "@/components/citations/reddit-card";
-import { CATEGORY_META, PAGE_TYPE_META } from "@/components/citations/shared";
+import {
+	CATEGORY_MESSAGE_IDS,
+	getCategoryMeta,
+	getPageTypeMeta,
+	PAGE_TYPE_MESSAGE_IDS,
+} from "@/components/citations/shared";
 import { CitationStatsCards } from "@/components/citations/stats-cards";
 import { TopDomainsCard } from "@/components/citations/top-domains-card";
 import { TopUrlsCard } from "@/components/citations/top-urls-card";
 import { TrendAreaChart } from "@/components/citations/trend-area-chart";
 import type { CitationData } from "@/components/citations/types";
-import {
-	CATEGORY_CONFIG,
-	CITATION_CATEGORIES,
-	CITATION_PAGE_TYPES,
-	type CitationCategory,
-	PAGE_TYPE_CONFIG,
-} from "@/lib/domain-categories";
+import { useI18n } from "@/i18n/provider";
+import { CITATION_CATEGORIES, CITATION_PAGE_TYPES, type CitationCategory } from "@/lib/domain-categories";
 import { hasGoogleModuleContent } from "@/lib/google-module";
 
 export type {
@@ -52,6 +52,9 @@ export function CitationsDisplay({
 	canManageBrand = true,
 	onCompetitorAdded,
 }: CitationsDisplayProps) {
+	const { t } = useI18n();
+	const categoryMeta = useMemo(() => getCategoryMeta(t), [t]);
+	const pageTypeMeta = useMemo(() => getPageTypeMeta(t), [t]);
 	// Match the last point of the Citation Categories chart exactly (smoothed daily
 	// brand share), falling back to the window aggregate if there's no time series.
 	const lastTrendPoint = citationData.citationTimeSeries?.[citationData.citationTimeSeries.length - 1];
@@ -61,7 +64,8 @@ export function CitationsDisplay({
 			? Math.round((citationData.categoryCounts.brand / citationData.totalCitations) * 100)
 			: 0;
 
-	const hasGaps = !!(citationData.competitorOnlyPrompts && citationData.competitorOnlyPrompts.length > 0 && brandId);
+	const gapPrompts = citationData.competitorOnlyPrompts ?? [];
+	const hasGaps = gapPrompts.length > 0 && Boolean(brandId);
 
 	// Single source of truth for which categories / page types appear. Derived from
 	// the RAW aggregates (categoryCounts / pageTypeDistribution), NOT the smoothed %
@@ -81,18 +85,18 @@ export function CitationsDisplay({
 	}, [citationData.pageTypeDistribution]);
 	const urlSourceTabs = useMemo<{ key: string; label: string }[]>(
 		() => [
-			{ key: "all", label: "All Sources" },
-			...chartSourceCategories.map((c) => ({ key: c as string, label: CATEGORY_CONFIG[c].label })),
+			{ key: "all", label: t("citation.allSources") },
+			...chartSourceCategories.map((c) => ({ key: c as string, label: t(CATEGORY_MESSAGE_IDS[c]) })),
 		],
-		[chartSourceCategories],
+		[chartSourceCategories, t],
 	);
 	const domainSourceTabs = urlSourceTabs; // identical by construction (same chart-category list)
 	const urlPageTypeTabs = useMemo<{ key: string; label: string }[]>(
 		() => [
-			{ key: "all", label: "All Page Types" },
-			...chartPageTypes.map((p) => ({ key: p as string, label: PAGE_TYPE_CONFIG[p].label })),
+			{ key: "all", label: t("citation.allPageTypes") },
+			...chartPageTypes.map((p) => ({ key: p as string, label: t(PAGE_TYPE_MESSAGE_IDS[p]) })),
 		],
-		[chartPageTypes],
+		[chartPageTypes, t],
 	);
 
 	const googleModule = citationData.googleModule;
@@ -123,22 +127,22 @@ export function CitationsDisplay({
 			{/* Citation Categories over time */}
 			{citationData.citationTimeSeries && citationData.citationTimeSeries.length > 0 && (
 				<TrendAreaChart
-					title="Citation Categories"
-					tooltip="Share of citations by source category over time, as a percentage of all citations each day. Smoothed to account for staggered prompt schedules; Google AI Mode search/shopping are excluded (see the Google Shopping section)."
+					title={t("citation.categories")}
+					tooltip={t("citation.categoriesTooltip")}
 					data={(citationData.citationTimeSeries ?? []) as unknown as Array<Record<string, number | string>>}
 					keys={chartSourceCategories}
-					meta={CATEGORY_META}
+					meta={categoryMeta}
 				/>
 			)}
 
 			{/* Citation Page Types over time */}
 			{citationData.pageTypeTimeSeries && citationData.pageTypeTimeSeries.length > 0 && (
 				<TrendAreaChart
-					title="Citation Page Types"
-					tooltip="Share of citations by page type over time — what kind of page each citation points to, inferred from the URL and title."
+					title={t("citation.pageTypes")}
+					tooltip={t("citation.pageTypesTooltip")}
 					data={(citationData.pageTypeTimeSeries ?? []) as unknown as Array<Record<string, number | string>>}
 					keys={chartPageTypes}
-					meta={PAGE_TYPE_META}
+					meta={pageTypeMeta}
 				/>
 			)}
 
@@ -148,7 +152,7 @@ export function CitationsDisplay({
 					className={totalChanges > 0 && hasGaps ? "grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch" : "contents"}
 				>
 					{totalChanges > 0 && whatsChanged && <RecentChangesCard whatsChanged={whatsChanged} days={days} />}
-					{hasGaps && <ContentGapsCard prompts={citationData.competitorOnlyPrompts!} brandId={brandId!} />}
+					{hasGaps && brandId && <ContentGapsCard prompts={gapPrompts} brandId={brandId} />}
 				</div>
 			)}
 

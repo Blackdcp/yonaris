@@ -9,6 +9,7 @@ import { TrackDomainPopover } from "@/components/citations/track-domain-popover"
 import type { CitationData } from "@/components/citations/types";
 import { ListPagination, usePagedList } from "@/components/list-pagination";
 import { DOMAIN_CATEGORY_COLORS, ProgressBarChart } from "@/components/progress-bar-chart";
+import { useI18n } from "@/i18n/provider";
 
 export function TopDomainsCard({
 	domains,
@@ -29,6 +30,7 @@ export function TopDomainsCard({
 	canManageBrand?: boolean;
 	onCompetitorAdded?: () => void;
 }) {
+	const { t } = useI18n();
 	const [domainSearch, setDomainSearch] = useState("");
 	const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
@@ -52,23 +54,20 @@ export function TopDomainsCard({
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 					<div className="space-y-1 min-w-0">
 						<CardTitle className="flex items-center gap-1.5">
-							Top Cited Domains
+							{t("citation.topDomains")}
 							<Tooltip>
 								<TooltipTrigger asChild>
 									<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 								</TooltipTrigger>
-								<TooltipContent className="max-w-xs text-sm font-normal">
-									The most frequently cited domains across all prompt evaluations. Each domain is colored by its
-									category (brand, competitor, etc.).
-								</TooltipContent>
+								<TooltipContent className="max-w-xs text-sm font-normal">{t("citation.domainsTooltip")}</TooltipContent>
 							</Tooltip>
 						</CardTitle>
-						<CardDescription>Which domains LLMs reference most when responding to your prompts</CardDescription>
+						<CardDescription>{t("citation.domainsDescription")}</CardDescription>
 					</div>
 					<div className="relative w-full sm:w-48 shrink-0">
 						<IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
 						<Input
-							placeholder="Search domains..."
+							placeholder={t("citation.searchDomains")}
 							value={domainSearch}
 							onChange={(e) => {
 								setDomainSearch(e.target.value);
@@ -104,7 +103,7 @@ export function TopDomainsCard({
 								count: domain.count,
 								category: domain.category || "other",
 								action:
-								domain.category === "other" && brandId && competitors && canManageBrand ? (
+									domain.category === "other" && brandId && competitors && canManageBrand ? (
 										<TrackDomainPopover
 											domain={domain.domain}
 											brandId={brandId}
@@ -120,7 +119,7 @@ export function TopDomainsCard({
 						<ListPagination page={page} pageSize={maxDomains} totalItems={totalItems} onPageChange={setPage} />
 					</>
 				) : (
-					<p className="text-sm text-muted-foreground text-center py-4">No domains match the current filters.</p>
+					<p className="text-sm text-muted-foreground text-center py-4">{t("citation.emptyDomains")}</p>
 				)}
 			</CardContent>
 		</Card>

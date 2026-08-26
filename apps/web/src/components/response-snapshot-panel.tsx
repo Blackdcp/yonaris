@@ -1,28 +1,22 @@
 import { useState } from "react";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import type { CustomerPromptRunDto } from "@/server/customer-data-dto";
 
 type ResponseSnapshot = NonNullable<CustomerPromptRunDto["snapshot"]>;
 
-const SOURCE_LABELS: Record<NonNullable<ResponseSnapshot["contentSource"]>, string> = {
-	native_answer_html: "Provider answer HTML",
-	browser_answer_html: "Browser answer HTML",
-	rendered_from_structured_response: "Rendered structured response",
-	reconstructed_from_historical_run: "Historical reconstruction",
+const SOURCE_LABELS: Record<NonNullable<ResponseSnapshot["contentSource"]>, MessageId> = {
+	native_answer_html: "snapshot.source.nativeHtml",
+	browser_answer_html: "snapshot.source.browserHtml",
+	rendered_from_structured_response: "snapshot.source.renderedStructured",
+	reconstructed_from_historical_run: "snapshot.source.historical",
 };
 
-const STATE_MESSAGES: Partial<Record<ResponseSnapshot["status"], string>> = {
-	pending: "Snapshot is being prepared",
-	failed: "Snapshot is unavailable",
-	expired: "Snapshot has expired",
+const STATE_MESSAGES: Partial<Record<ResponseSnapshot["status"], MessageId>> = {
+	pending: "snapshot.state.pending",
+	failed: "snapshot.state.failed",
+	expired: "snapshot.state.expired",
 };
-
-function formatBeijingDate(value: string) {
-	return new Intl.DateTimeFormat("en-CA", {
-		dateStyle: "medium",
-		timeStyle: "short",
-		timeZone: "Asia/Shanghai",
-	}).format(new Date(value));
-}
 
 function assetUrl(snapshotId: string, asset: "html" | "json" | "manifest" | "screenshot", download: boolean) {
 	return `/api/app/response-snapshots/${encodeURIComponent(snapshotId)}?asset=${asset}&download=${download ? 1 : 0}`;
@@ -36,6 +30,7 @@ type ExportEstimate = {
 };
 
 export function ResponseSnapshotExportControls({ brandId, initialDate }: { brandId: string; initialDate?: string }) {
+	const { t, formatNumber } = useI18n();
 	const endDefault = initialDate ?? beijingToday();
 	const [startDate, setStartDate] = useState(() => shiftIsoDate(endDefault, -30));
 	const [endDate, setEndDate] = useState(endDefault);
@@ -53,27 +48,25 @@ export function ResponseSnapshotExportControls({ brandId, initialDate }: { brand
 		setEstimate(null);
 		try {
 			const response = await fetch(url("estimate"), { headers: { Accept: "application/json" } });
-			const payload = (await response.json()) as ExportEstimate & { message?: string };
-			if (!response.ok) throw new Error(payload.message ?? "Could not estimate the export");
+			const payload = (await response.json()) as ExportEstimate;
+			if (!response.ok) throw new Error("export-estimate-failed");
 			setEstimate(payload);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not estimate the export");
+		} catch {
+			setError(t("snapshot.estimateError"));
 		} finally {
 			setLoading(false);
 		}
 	};
 
 	return (
-		<section className="space-y-3 rounded-lg border bg-muted/20 p-4" aria-label="Export response snapshots">
+		<section className="space-y-3 rounded-lg border bg-muted/20 p-4" aria-label={t("snapshot.export")}>
 			<div>
-				<h3 className="text-sm font-medium">Export response snapshots</h3>
-				<p className="text-xs text-muted-foreground">
-					Download the archived HTML, JSON and manifest files. Up to 31 days and 2 GiB per ZIP.
-				</p>
+				<h3 className="text-sm font-medium">{t("snapshot.export")}</h3>
+				<p className="text-xs text-muted-foreground">{t("snapshot.exportDescription")}</p>
 			</div>
 			<div className="flex flex-wrap items-end gap-3">
 				<label className="grid gap-1 text-xs text-muted-foreground">
-					Start date (Beijing)
+					{t("snapshot.startDate")}
 					<input
 						type="date"
 						value={startDate}
@@ -86,7 +79,7 @@ export function ResponseSnapshotExportControls({ brandId, initialDate }: { brand
 					/>
 				</label>
 				<label className="grid gap-1 text-xs text-muted-foreground">
-					End date (Beijing)
+					{t("snapshot.endDate")}
 					<input
 						type="date"
 						value={endDate}
@@ -104,14 +97,14 @@ export function ResponseSnapshotExportControls({ brandId, initialDate }: { brand
 					disabled={loading}
 					className="rounded-md border bg-background px-3 py-2 text-sm font-medium disabled:opacity-50"
 				>
-					{loading ? "Estimating…" : "Estimate export"}
+					{loading ? t("snapshot.estimating") : t("snapshot.estimate")}
 				</button>
 				{estimate && estimate.count > 0 && (
 					<a
 						className="rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
 						href={url("download")}
 					>
-						Download ZIP
+						{t("snapshot.downloadZip")}
 					</a>
 				)}
 			</div>
@@ -119,52 +112,62 @@ export function ResponseSnapshotExportControls({ brandId, initialDate }: { brand
 				{error && <span className="text-destructive">{error}</span>}
 				{estimate &&
 					(estimate.count > 0
-						? `${estimate.count.toLocaleString()} snapshots · ${formatBytes(estimate.uncompressedBytes)} before ZIP compression`
-						: "No ready snapshots are available in this date range.")}
+						? t("snapshot.exportCount", {
+								count: formatNumber(estimate.count),
+								size: formatBytes(estimate.uncompressedBytes, formatNumber),
+							})
+						: t("snapshot.exportEmpty"))}
 			</div>
 		</section>
 	);
 }
 
 export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: ResponseSnapshot; channel: string }) {
+	const { t, formatDate } = useI18n();
 	const stateMessage = STATE_MESSAGES[snapshot.status];
+	const expiresAt = formatDate(new Date(snapshot.expiresAt), {
+		dateStyle: "medium",
+		timeStyle: "short",
+		timeZone: "Asia/Shanghai",
+	});
 
 	return (
-		<section className="space-y-3 rounded-md border bg-background p-4" aria-label="Response snapshot">
+		<section className="space-y-3 rounded-md border bg-background p-4" aria-label={t("snapshot.title")}>
 			<div className="flex flex-wrap items-start justify-between gap-2">
 				<div>
-					<h4 className="text-sm font-medium">Response snapshot</h4>
+					<h4 className="text-sm font-medium">{t("snapshot.title")}</h4>
 					<p className="text-xs text-muted-foreground">
-						{snapshot.contentSource ? SOURCE_LABELS[snapshot.contentSource] : "Preparing"} · {channel}
+						{snapshot.contentSource ? t(SOURCE_LABELS[snapshot.contentSource]) : t("snapshot.preparing")} · {channel}
 					</p>
 				</div>
 				<p className="text-xs text-muted-foreground">
-					Retained until {formatBeijingDate(snapshot.expiresAt)} (Beijing)
+					{t("snapshot.retainedUntil", { date: expiresAt })} ({t("snapshot.beijing")})
 				</p>
 			</div>
 
 			{snapshot.status !== "ready" ? (
 				<p className="rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-					{stateMessage ?? "Snapshot is unavailable"}
+					{t(stateMessage ?? "snapshot.state.failed")}
 				</p>
 			) : (
 				<>
 					{snapshot.visualEvidence && (
 						<figure className="space-y-2 rounded-md border bg-muted/20 p-3">
-							<figcaption className="text-sm font-medium">Captured browser evidence</figcaption>
+							<figcaption className="text-sm font-medium">{t("snapshot.browserEvidence")}</figcaption>
 							<img
 								src={assetUrl(snapshot.id, "screenshot", false)}
-								alt={`Captured browser evidence for ${channel}`}
+								alt={t("snapshot.visualAlt", { channel })}
 								loading="lazy"
 								className="max-h-[32rem] w-auto max-w-full rounded-md border bg-white"
 							/>
 							<p className="text-xs text-muted-foreground">
-								Screenshot SHA-256: <code className="break-all text-foreground">{snapshot.visualEvidence.sha256}</code>
+								{t("snapshot.screenshotHash")}:{" "}
+								<code className="break-all text-foreground">{snapshot.visualEvidence.sha256}</code>
 							</p>
 						</figure>
 					)}
 					<iframe
-						title={`Archived response from ${channel}`}
+						title={t("snapshot.archivedTitle", { channel })}
 						src={assetUrl(snapshot.id, "html", false)}
 						sandbox=""
 						referrerPolicy="no-referrer"
@@ -173,26 +176,28 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 					/>
 					<div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
 						<p>
-							HTML SHA-256: <code className="break-all text-foreground">{snapshot.htmlSha256 ?? "Unavailable"}</code>
+							{t("snapshot.htmlHash")}:{" "}
+							<code className="break-all text-foreground">{snapshot.htmlSha256 ?? t("snapshot.hashUnavailable")}</code>
 						</p>
 						<p>
-							JSON SHA-256: <code className="break-all text-foreground">{snapshot.jsonSha256 ?? "Unavailable"}</code>
+							{t("snapshot.jsonHash")}:{" "}
+							<code className="break-all text-foreground">{snapshot.jsonSha256 ?? t("snapshot.hashUnavailable")}</code>
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
 						{snapshot.visualEvidence && (
 							<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "screenshot", true)}>
-								Download screenshot
+								{t("snapshot.downloadScreenshot")}
 							</a>
 						)}
 						<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "html", true)}>
-							Download HTML
+							{t("snapshot.downloadHtml")}
 						</a>
 						<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "json", true)}>
-							Download JSON
+							{t("snapshot.downloadJson")}
 						</a>
 						<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "manifest", true)}>
-							Download manifest
+							{t("snapshot.downloadManifest")}
 						</a>
 					</div>
 				</>
@@ -211,9 +216,12 @@ function shiftIsoDate(value: string, days: number): string {
 	return date.toISOString().slice(0, 10);
 }
 
-function formatBytes(bytes: number): string {
-	if (bytes < 1024) return `${bytes} B`;
-	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-	if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
-	return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
+function formatBytes(
+	bytes: number,
+	formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string,
+): string {
+	if (bytes < 1024) return `${formatNumber(bytes)} B`;
+	if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, { maximumFractionDigits: 1 })} KiB`;
+	if (bytes < 1024 * 1024 * 1024) return `${formatNumber(bytes / (1024 * 1024), { maximumFractionDigits: 1 })} MiB`;
+	return `${formatNumber(bytes / (1024 * 1024 * 1024), { maximumFractionDigits: 2 })} GiB`;
 }

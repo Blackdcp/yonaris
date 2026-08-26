@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { CustomerProgramsView } from "@/components/customer-programs-view";
 import type { ProvisionSamplingScopeInput } from "@/components/sampling/types";
+import { translate } from "@/i18n/catalog";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { getCustomerProgramContextFn, provisionCustomerProgramScopeFn } from "@/server/customer-programs";
 
@@ -10,10 +11,11 @@ export const Route = createFileRoute("/_authed/app/$brand/programs")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Programs", { appName, brandName }) },
-				{ name: "description", content: "View and create market-specific measurement programs for this brand." },
+				{ title: buildTitle(translate(uiLanguage, "program.title"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "program.meta.description") },
 			],
 		};
 	},

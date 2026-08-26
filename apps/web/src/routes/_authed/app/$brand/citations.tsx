@@ -18,6 +18,8 @@ import { useCitations } from "@/hooks/use-citations";
 import { dashboardKeys } from "@/hooks/use-dashboard-summary";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useScopeModels } from "@/hooks/use-scope-models";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { getDaysFromLookback } from "@/lib/chart-utils";
 import { getGoogleModuleCitationCount } from "@/lib/google-module";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
@@ -26,10 +28,11 @@ export const Route = createFileRoute("/_authed/app/$brand/citations")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Citations", { appName, brandName }) },
-				{ name: "description", content: "See which sources LLMs cite in responses to your prompts." },
+				{ title: buildTitle(translate(uiLanguage, "citation.title"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "citation.meta.description") },
 			],
 		};
 	},
@@ -37,6 +40,7 @@ export const Route = createFileRoute("/_authed/app/$brand/citations")({
 });
 
 function CitationsPage() {
+	const { t, formatNumber } = useI18n();
 	const { brand: brandId } = Route.useParams();
 	const { canManageBrand } = useBrandAccess();
 	const queryClient = useQueryClient();
@@ -67,20 +71,14 @@ function CitationsPage() {
 
 	const infoContent = (
 		<>
-			<p className="mb-2">
-				Citations are the links and sources that AI models include in their responses when answering your prompts. They
-				show which websites the AI considers authoritative or relevant to your topics.
-			</p>
+			<p className="mb-2">{t("citation.info")}</p>
 			<p>
-				<strong>Competitor</strong> domains are only those you&apos;ve added to your{" "}
+				{t("citation.competitorInfo")}{" "}
 				{canManageBrand ? (
 					<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-						tracked competitors list
+						{t("citation.trackedCompetitors")}
 					</Link>
-				) : (
-					"tracked competitors list"
-				)}
-				. Other domains appear under their detected category (Google, Social Media, Institutional, or Other).
+				) : null}
 			</p>
 		</>
 	);
@@ -88,17 +86,16 @@ function CitationsPage() {
 	const showFullSkeleton = filters.isScopeResolving || (isLoading && !citationData);
 	const emptyDescription =
 		citationData?.citationAvailability.kind === "no_evaluated_runs"
-			? "No prompt runs match this scope and time period yet."
+			? t("citation.noRuns")
 			: citationData?.citationAvailability.kind === "no_search_enabled_runs"
-				? `${citationData.evaluatedRuns} prompt runs completed, but none used web search, so no links could be extracted.`
-				: `${citationData?.evaluatedRuns ?? 0} prompt runs completed, including ${citationData?.searchEnabledRuns ?? 0} search-enabled runs, but this platform did not expose any extractable source links in the captured answers.`;
+				? t("citation.availability.noSearch", { runs: formatNumber(citationData.evaluatedRuns) })
+				: t("citation.availability.noLinks", {
+						runs: formatNumber(citationData?.evaluatedRuns ?? 0),
+						searchRuns: formatNumber(citationData?.searchEnabledRuns ?? 0),
+					});
 
 	return (
-		<PageHeader
-			title="Citations"
-			subtitle="See which sources LLMs cite when responding to your prompts."
-			infoContent={infoContent}
-		>
+		<PageHeader title={t("citation.title")} subtitle={t("citation.description")} infoContent={infoContent}>
 			<FilteredListShell
 				filters={filters}
 				availableTags={citationData?.availableTags || []}
@@ -123,9 +120,7 @@ function CitationsPage() {
 				errorState={
 					<Card>
 						<CardContent className="pt-6">
-							<div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-								Failed to load citation data. Please try again.
-							</div>
+							<div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">{t("citation.error")}</div>
 						</CardContent>
 					</Card>
 				}
@@ -134,8 +129,8 @@ function CitationsPage() {
 						? citationData.totalCitations + getGoogleModuleCitationCount(citationData.googleModule)
 						: undefined
 				}
-				noMatchesTitle="No citations found for the selected filters."
-				noMatchesDescription="Try adjusting your filters or time period."
+				noMatchesTitle={t("citation.noMatches")}
+				noMatchesDescription={t("customer.filters.tryAdjust")}
 				emptyState={
 					<Card>
 						<CardContent className="pt-6">

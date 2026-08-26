@@ -2,17 +2,20 @@ import type { UiLanguage } from "@workspace/config/language";
 import { authCatalog } from "./catalogs/auth";
 import { chartsCatalog } from "./catalogs/charts";
 import { commonCatalog } from "./catalogs/common";
+import { customerCatalog } from "./catalogs/customer";
 
 const englishCatalog = {
 	...commonCatalog.english,
 	...authCatalog.english,
 	...chartsCatalog.english,
+	...customerCatalog.english,
 };
 
 const chineseCatalog = {
 	...commonCatalog.chinese,
 	...authCatalog.chinese,
 	...chartsCatalog.chinese,
+	...customerCatalog.chinese,
 };
 
 const catalogs = {

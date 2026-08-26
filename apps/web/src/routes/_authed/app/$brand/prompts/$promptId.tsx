@@ -32,6 +32,9 @@ import type { BrandFilterSearch } from "@/hooks/use-list-filters";
 import { usePromptRunsOnly } from "@/hooks/use-prompt-runs-only";
 import { usePromptStats } from "@/hooks/use-prompt-stats";
 import { useQueryFanout } from "@/hooks/use-query-fanout";
+import type { MessageId } from "@/i18n/catalog";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { getDaysFromLookback } from "@/lib/chart-utils";
 import { promptKeywords } from "@/lib/fanout-analysis";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
@@ -58,12 +61,12 @@ const TAB_KEYS = ["mentions", "web-queries", "citations", "responses"] as const;
 type TabKey = (typeof TAB_KEYS)[number];
 type PromptRouteSearch = BrandFilterSearch & { tab?: TabKey };
 
-const TABS: { key: TabKey; label: string }[] = [
-	{ key: "mentions", label: "Mentions" },
-	{ key: "web-queries", label: "Web Queries" },
-	{ key: "citations", label: "Citations" },
-	{ key: "responses", label: "LLM Responses" },
-];
+const TAB_MESSAGE_IDS: Record<TabKey, MessageId> = {
+	mentions: "prompt.mentions",
+	"web-queries": "prompt.tab.webQueries",
+	citations: "prompt.tab.citations",
+	responses: "prompt.tab.answers",
+};
 const SKELETON_KEYS = ["first", "second", "third", "fourth", "fifth", "sixth"] as const;
 
 export const Route = createFileRoute("/_authed/app/$brand/prompts/$promptId")({
@@ -75,10 +78,11 @@ export const Route = createFileRoute("/_authed/app/$brand/prompts/$promptId")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Prompt Details", { appName, brandName }) },
-				{ name: "description", content: "Detailed analysis of a tracked prompt's performance." },
+				{ title: buildTitle(translate(uiLanguage, "prompt.detailTitle"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "prompt.meta.description") },
 			],
 		};
 	},
@@ -86,6 +90,7 @@ export const Route = createFileRoute("/_authed/app/$brand/prompts/$promptId")({
 });
 
 function PromptHistoryPage() {
+	const { t, formatDate, formatNumber } = useI18n();
 	const { brand: brandId, promptId } = Route.useParams();
 	const { canManageBrand } = useBrandAccess();
 
@@ -108,6 +113,7 @@ function PromptHistoryPage() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [promptMeta, setPromptMeta] = useState<PromptMetadata | null>(null);
 	const [isMetaLoading, setIsMetaLoading] = useState(true);
+	const [isMetaError, setIsMetaError] = useState(false);
 
 	const { brand } = useBrand(brandId);
 
@@ -137,6 +143,7 @@ function PromptHistoryPage() {
 		let cancelled = false;
 		setPromptMeta(null);
 		setIsMetaLoading(true);
+		setIsMetaError(false);
 		getPromptMetadataFn({ data: { brandId, promptId } })
 			.then((data) => {
 				if (!cancelled && data) {
@@ -149,8 +156,8 @@ function PromptHistoryPage() {
 					}
 				}
 			})
-			.catch((error) => {
-				if (!cancelled) console.error(error);
+			.catch(() => {
+				if (!cancelled) setIsMetaError(true);
 			})
 			.finally(() => {
 				if (!cancelled) setIsMetaLoading(false);
@@ -188,18 +195,16 @@ function PromptHistoryPage() {
 	const userTags = promptMeta?.tags || [];
 	const hasTags = systemTags.length > 0 || userTags.length > 0;
 
-	if (isStatsError || isRunsError) {
+	if (isMetaError || isStatsError || isRunsError) {
 		return (
 			<div className="space-y-6">
 				<div className="flex justify-between items-start">
-					<h1 className="text-3xl font-bold">Prompt Details</h1>
+					<h1 className="text-3xl font-bold">{t("prompt.detailTitle")}</h1>
 					<LookbackSelector onLookbackChange={handleLookbackChange} />
 				</div>
 				<Card>
 					<CardContent className="pt-6">
-						<div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">
-							Failed to load prompt data. Please try again.
-						</div>
+						<div className="text-red-600 text-sm bg-red-50 p-3 rounded-md">{t("prompt.error")}</div>
 					</CardContent>
 				</Card>
 			</div>
@@ -209,10 +214,10 @@ function PromptHistoryPage() {
 	if (!isMetaLoading && !promptMeta) {
 		return (
 			<div className="space-y-6">
-				<h1 className="text-3xl font-bold">Prompt Details</h1>
+				<h1 className="text-3xl font-bold">{t("prompt.detailTitle")}</h1>
 				<Card>
 					<CardContent className="pt-6">
-						<div className="text-muted-foreground">No prompt data found.</div>
+						<div className="text-muted-foreground">{t("prompt.notFound")}</div>
 					</CardContent>
 				</Card>
 			</div>
@@ -249,19 +254,19 @@ function PromptHistoryPage() {
 									<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
 									<span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
 								</span>
-								Active
+								{t("prompt.status.active")}
 							</span>
 						) : (
-							<span className="text-muted-foreground">Disabled</span>
+							<span className="text-muted-foreground">{t("prompt.status.disabled")}</span>
 						)}
 
 						{promptMeta?.nextRunAt && (
 							<>
 								<span className="text-border">|</span>
 								<span className="text-muted-foreground">
-									Next run:{" "}
+									{t("prompt.nextRun")}:{" "}
 									<span className="text-foreground tabular-nums">
-										{new Date(promptMeta.nextRunAt).toLocaleString(undefined, {
+										{formatDate(new Date(promptMeta.nextRunAt), {
 											month: "short",
 											day: "numeric",
 											hour: "numeric",
@@ -276,7 +281,7 @@ function PromptHistoryPage() {
 
 						{hasTags && (
 							<div className="flex items-center gap-1.5">
-								<span className="text-muted-foreground">Tags:</span>
+								<span className="text-muted-foreground">{t("prompt.tags")}:</span>
 								{systemTags.map((tag) => (
 									<Badge key={`sys-${tag}`} variant="secondary" className="text-xs capitalize font-normal">
 										{tag}
@@ -298,7 +303,7 @@ function PromptHistoryPage() {
 									params={{ brand: brandId }}
 									className="text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 decoration-muted-foreground/40 hover:decoration-foreground/40"
 								>
-									Edit prompts
+									{t("prompt.edit")}
 								</Link>
 							</>
 						)}
@@ -309,8 +314,8 @@ function PromptHistoryPage() {
 			{/* TABS */}
 			<div className="border-b border-border">
 				<div className="flex items-end justify-between">
-					<nav className="-mb-px flex gap-6" aria-label="Tabs">
-						{TABS.map(({ key, label }) => (
+					<nav className="-mb-px flex gap-6" aria-label={t("prompt.tabs")}>
+						{TAB_KEYS.map((key) => (
 							<button
 								key={key}
 								type="button"
@@ -321,13 +326,13 @@ function PromptHistoryPage() {
 										: "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
 								}`}
 							>
-								{label}
+								{t(TAB_MESSAGE_IDS[key])}
 							</button>
 						))}
 					</nav>
 					{aggregations?.totalRuns != null && (
 						<span className="pb-3 text-xs text-muted-foreground tabular-nums">
-							{aggregations.totalRuns.toLocaleString()} runs in period
+							{t("prompt.runsInPeriod", { count: formatNumber(aggregations.totalRuns) })}
 						</span>
 					)}
 				</div>
@@ -417,14 +422,11 @@ function MentionsTab({
 	brandId: string;
 	canManageBrand: boolean;
 }) {
+	const { t, formatNumber } = useI18n();
 	if (isLoading) return <TabLoadingSkeleton lines={5} />;
 
 	if (mentionStats.length === 0) {
-		return (
-			<div className="py-12 text-center text-muted-foreground text-sm">
-				No mention data available for this time period.
-			</div>
-		);
+		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.mentionsEmpty")}</div>;
 	}
 
 	const brandMentionPct = Math.round(
@@ -435,30 +437,29 @@ function MentionsTab({
 		<Card className="gap-4">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5 text-base">
-					Mentions
+					{t("prompt.mentions")}
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 						</TooltipTrigger>
 						<TooltipContent className="max-w-xs text-sm font-normal">
 							<p>
-								Only competitors from the{" "}
+								{t("prompt.mentionsTooltip")}{" "}
 								{canManageBrand ? (
 									<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-										tracked competitors list
+										{t("citation.trackedCompetitors")}
 									</Link>
-								) : (
-									"tracked competitors list"
-								)}{" "}
-								are shown here.
+								) : null}
 							</p>
-							{canManageBrand && <p className="mt-2">If a competitor isn&apos;t showing up, add it to your list.</p>}
 						</TooltipContent>
 					</Tooltip>
 				</CardTitle>
 				<CardDescription>
-					{brandName} was mentioned in <strong>{brandMentionPct}%</strong> of prompt evaluations (
-					{totalRuns.toLocaleString()} total runs).
+					{t("prompt.mentionsDescription", {
+						brand: brandName ?? "",
+						share: formatNumber(brandMentionPct),
+						runs: t("prompt.runsInPeriod", { count: formatNumber(totalRuns) }),
+					})}
 				</CardDescription>
 			</CardHeader>
 			<Separator />
@@ -485,6 +486,7 @@ function WebQueriesTab({
 	promptValue: string;
 	lookback: ReturnType<typeof useLookbackPeriod>;
 }) {
+	const { t, formatNumber } = useI18n();
 	// Same pipeline as the Query Fan-Out page, scoped to this prompt — echo and
 	// "unavailable" sentinels filtered, and (unlike the brand-wide page) every
 	// variation returned.
@@ -507,37 +509,28 @@ function WebQueriesTab({
 
 	if (isLoading && !data) return <TabLoadingSkeleton lines={6} />;
 	if (isError && !data) {
-		return (
-			<div className="py-12 text-center text-muted-foreground text-sm">
-				Couldn't load web queries right now. Reload the page to try again.
-			</div>
-		);
+		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.webQueries.error")}</div>;
 	}
 	if (!data || data.totalQueries === 0) {
-		return (
-			<div className="py-12 text-center text-muted-foreground text-sm">
-				No web query data available for this time period.
-			</div>
-		);
+		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.webQueries.noData")}</div>;
 	}
 
 	return (
 		<Tabs defaultValue="fanout" className="gap-4">
 			<TabsList>
-				<TabsTrigger value="fanout">Prompt Fan-Out</TabsTrigger>
-				<TabsTrigger value="words">Query Words</TabsTrigger>
+				<TabsTrigger value="fanout">{t("prompt.webQueries.fanout")}</TabsTrigger>
+				<TabsTrigger value="words">{t("prompt.webQueries.words")}</TabsTrigger>
 			</TabsList>
 			<TabsContent value="fanout">
 				<Card>
 					<CardHeader>
 						<CardTitle className="flex items-center gap-1.5 text-base">
-							Prompt Fan-Out
-							<InfoTip>
-								Every distinct search engines ran while answering this prompt, with how many runs each engine issued it.
-								Your prompt's keywords are bolded.
-							</InfoTip>
+							{t("prompt.webQueries.fanout")}
+							<InfoTip>{t("prompt.webQueries.fanoutTooltip")}</InfoTip>
 						</CardTitle>
-						<CardDescription>{data.uniqueQueries.toLocaleString()} distinct searches.</CardDescription>
+						<CardDescription>
+							{t("prompt.webQueries.distinct", { count: formatNumber(data.uniqueQueries) })}
+						</CardDescription>
 					</CardHeader>
 					<Separator />
 					<CardContent>
@@ -573,14 +566,11 @@ function CitationsTab({
 	brandName?: string;
 	canManageBrand: boolean;
 }) {
+	const { t } = useI18n();
 	if (isLoading) return <TabLoadingSkeleton lines={6} />;
 
 	if (!citationStats || citationStats.totalCitations === 0) {
-		return (
-			<div className="py-12 text-center text-muted-foreground text-sm">
-				No citation data available for this time period.
-			</div>
-		);
+		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.citationsEmpty")}</div>;
 	}
 
 	return (
@@ -613,7 +603,7 @@ function ResponsesTab({
 	onPageChange: (page: number) => void;
 	brandName?: string;
 }) {
-	const formatDate = (dateString: string) => new Date(dateString).toLocaleString(undefined, { timeZoneName: "short" });
+	const { t, formatDate } = useI18n();
 
 	if (isLoading && runs.length === 0) {
 		return (
@@ -647,31 +637,29 @@ function ResponsesTab({
 	}
 
 	if (runs.length === 0) {
-		return (
-			<div className="py-12 text-center text-muted-foreground text-sm">No prompt runs found for this time period.</div>
-		);
+		return <div className="py-12 text-center text-muted-foreground text-sm">{t("prompt.noRuns")}</div>;
 	}
 
 	return (
 		<div className="space-y-4">
 			<ResponseSnapshotExportControls brandId={brandId} />
-			<h3 className="text-base font-medium">Individual Prompt Runs</h3>
+			<h3 className="text-base font-medium">{t("prompt.history.title")}</h3>
 
 			{runs.map((run) => (
 				<Card key={run.id}>
 					<CardHeader className="pb-0 gap-y-0">
 						<div className="grid grid-cols-3 gap-x-4 text-sm">
 							<div>
-								<span className="text-muted-foreground block text-xs mb-0.5">Model</span>
+								<span className="text-muted-foreground block text-xs mb-0.5">{t("prompt.model")}</span>
 								<span>{getModelDisplayName(run.model)}</span>
 							</div>
 							<div>
-								<span className="text-muted-foreground block text-xs mb-0.5">Version</span>
+								<span className="text-muted-foreground block text-xs mb-0.5">{t("prompt.version")}</span>
 								<span>{run.version}</span>
 							</div>
 							<div>
-								<span className="text-muted-foreground block text-xs mb-0.5">Evaluated</span>
-								<span>{formatDate(run.observedAt)}</span>
+								<span className="text-muted-foreground block text-xs mb-0.5">{t("prompt.evaluated")}</span>
+								<span>{formatDate(new Date(run.observedAt), { dateStyle: "medium", timeStyle: "short" })}</span>
 							</div>
 						</div>
 					</CardHeader>
@@ -679,7 +667,7 @@ function ResponsesTab({
 					<CardContent className="space-y-5">
 						{run.webQueries && run.webQueries.length > 0 && (
 							<div>
-								<span className="text-xs text-muted-foreground block mb-1.5">Web Queries</span>
+								<span className="text-xs text-muted-foreground block mb-1.5">{t("prompt.webQueries.label")}</span>
 								<div className="flex flex-wrap gap-1.5">
 									{run.webQueries.map((query: string) => (
 										<Badge key={query} variant="outline" className="text-xs font-normal">
@@ -691,7 +679,7 @@ function ResponsesTab({
 						)}
 
 						<div>
-							<span className="text-xs text-muted-foreground block mb-1.5">Brands Mentioned</span>
+							<span className="text-xs text-muted-foreground block mb-1.5">{t("prompt.brandsMentioned")}</span>
 							<div className="flex flex-wrap gap-1.5">
 								{run.brandMentioned && brandName && <Badge className="text-xs font-normal">{brandName}</Badge>}
 								{run.competitorsMentioned?.map((competitor: string) => (
@@ -700,15 +688,15 @@ function ResponsesTab({
 									</Badge>
 								))}
 								{!run.brandMentioned && (!run.competitorsMentioned || run.competitorsMentioned.length === 0) && (
-									<span className="text-xs text-muted-foreground">None</span>
+									<span className="text-xs text-muted-foreground">{t("prompt.none")}</span>
 								)}
 							</div>
 						</div>
 
 						<div>
-							<span className="text-xs text-muted-foreground block mb-1.5">LLM Response</span>
+							<span className="text-xs text-muted-foreground block mb-1.5">{t("prompt.response")}</span>
 							<div className="rounded-md border bg-muted/30 p-4 max-h-64 overflow-auto prose prose-sm max-w-none">
-								<ReactMarkdown>{run.answerText || "No response text was recorded for this run."}</ReactMarkdown>
+								<ReactMarkdown>{run.answerText || t("prompt.responseEmpty")}</ReactMarkdown>
 							</div>
 						</div>
 

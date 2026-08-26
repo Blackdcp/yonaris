@@ -14,9 +14,12 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { useState } from "react";
 import FullPageCard from "@/components/full-page-card";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
 import { trackEvent } from "@/lib/posthog";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import { createBrandWithOrgFn } from "@/server/brands";
 
 const getCanCreateBrands = createServerFn({ method: "GET" }).handler(async () => {
@@ -29,6 +32,16 @@ const getCanCreateBrands = createServerFn({ method: "GET" }).handler(async () =>
 });
 
 export const Route = createFileRoute("/_authed/app/new")({
+	head: ({ match }) => {
+		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
+		return {
+			meta: [
+				{ title: buildTitle(translate(uiLanguage, "customer.new.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "customer.new.subtitle") },
+			],
+		};
+	},
 	loader: async () => {
 		const { platformIdentity } = await getCanCreateBrands();
 		throw redirect({ to: platformIdentity ? "/admin/access" : "/app" });
@@ -37,6 +50,7 @@ export const Route = createFileRoute("/_authed/app/new")({
 });
 
 function NewBrandPage() {
+	const { t } = useI18n();
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState("");
 	const navigate = useNavigate();
@@ -57,30 +71,30 @@ function NewBrandPage() {
 
 			await router.invalidate();
 			await navigate({ to: "/app/$brand", params: { brand: brandId } });
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "An error occurred");
+		} catch {
+			setError(t("common.error.unexpected"));
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
 	return (
-		<FullPageCard title="Create a customer workspace" subtitle="Set up one organization and one brand" showBackButton>
+		<FullPageCard title={t("customer.new.title")} subtitle={t("customer.new.subtitle")} showBackButton>
 			<form action={handleSubmit} className="space-y-4">
 				<div className="space-y-2">
-					<Label htmlFor="brandName">Brand name</Label>
+					<Label htmlFor="brandName">{t("customer.new.brandName")}</Label>
 					<Input id="brandName" name="brandName" type="text" placeholder="Acme" required disabled={isLoading} />
 				</div>
 
 				<div className="space-y-2">
-					<Label htmlFor="website">Website</Label>
+					<Label htmlFor="website">{t("customer.new.website")}</Label>
 					<Input id="website" name="website" type="text" placeholder="example.com" required disabled={isLoading} />
 				</div>
 
 				{error && <p className="text-sm text-destructive">{error}</p>}
 
 				<Button type="submit" className="w-full" disabled={isLoading}>
-					{isLoading ? "Creating..." : "Create brand"}
+					{isLoading ? t("customer.new.creating") : t("customer.new.submit")}
 				</Button>
 			</form>
 		</FullPageCard>

@@ -8,8 +8,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { PromptsDisplay } from "@/components/prompts-display";
 import { useBrandAccess } from "@/hooks/use-brand-access";
-import { getAppName, getBrandName, buildTitle } from "@/lib/route-head";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { coercePromptOrder, DEFAULT_PROMPT_ORDER, type PromptOrder } from "@/lib/prompt-order";
+import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
 export const Route = createFileRoute("/_authed/app/$brand/visibility")({
 	// The prompts list's sort order (#60) is this route's own search key, on top
@@ -22,10 +24,11 @@ export const Route = createFileRoute("/_authed/app/$brand/visibility")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Visibility", { appName, brandName }) },
-				{ name: "description", content: "Track how LLMs respond to prompts about your brand." },
+				{ title: buildTitle(translate(uiLanguage, "visibility.title"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "visibility.meta.description") },
 			],
 		};
 	},
@@ -35,16 +38,17 @@ export const Route = createFileRoute("/_authed/app/$brand/visibility")({
 function VisibilityPage() {
 	const { brand: brandId } = Route.useParams();
 	const { canManageBrand } = useBrandAccess();
+	const { t } = useI18n();
 
 	const infoContent = (
 		<>
-			Track how different LLMs respond to prompts related to your brand, products, and{" "}
+			{t("visibility.infoPrefix")}{" "}
 			{canManageBrand ? (
 				<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-					competitors
+					{t("visibility.competitors")}
 				</Link>
 			) : (
-				"competitors"
+				t("visibility.competitors")
 			)}
 			.
 		</>
@@ -52,8 +56,8 @@ function VisibilityPage() {
 
 	return (
 		<PromptsDisplay
-			pageTitle="Visibility"
-			pageDescription="See how LLMs are evaluating prompts related to your brand."
+			pageTitle={t("visibility.title")}
+			pageDescription={t("visibility.description")}
 			pageInfoContent={infoContent}
 			editLink={canManageBrand ? `/app/${brandId}/settings/prompts` : undefined}
 		/>

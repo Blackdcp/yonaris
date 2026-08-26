@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, Loader2, MapPinned } from "lucide-react";
 import { useEffect, useState } from "react";
 import type { ProvisionSamplingScopeInput, SamplingEvaluationRole } from "@/components/sampling/types";
+import { useI18n } from "@/i18n/provider";
 
 export interface MeasurementScopeProvisionSource {
 	id: string;
@@ -29,14 +30,6 @@ interface MeasurementScopeProvisionDialogCopy {
 	submit: string;
 	successTitle: string;
 }
-
-const defaultCopy: MeasurementScopeProvisionDialogCopy = {
-	trigger: "Provision scope",
-	title: "Provision sampling scope",
-	description: "Create an explicit market, language, and timezone context for manual consumer-surface sampling.",
-	submit: "Create manual scope",
-	successTitle: "Scope ready",
-};
 
 function detectedTimezone(): string {
 	try {
@@ -76,6 +69,14 @@ export function MeasurementScopeProvisionDialog({
 	copy?: Partial<MeasurementScopeProvisionDialogCopy>;
 	defaultSource?: "first-with-prompts" | "none";
 }) {
+	const { t, formatNumber } = useI18n();
+	const defaultCopy: MeasurementScopeProvisionDialogCopy = {
+		trigger: t("program.provision.trigger"),
+		title: t("program.provision.title"),
+		description: t("program.provision.description"),
+		submit: t("program.provision.submit"),
+		successTitle: t("program.provision.ready"),
+	};
 	const labels = { ...defaultCopy, ...copy };
 	const initialSourceScopeId =
 		defaultSource === "first-with-prompts"
@@ -112,23 +113,23 @@ export function MeasurementScopeProvisionDialog({
 		const normalizedLocale = locale.trim();
 		const normalizedTimezone = timezone.trim();
 		if (!/^[a-z0-9]+(?:[-_][a-z0-9]+)*$/.test(normalizedKey)) {
-			setError("Key must be a lowercase slug using letters, numbers, hyphens, or underscores.");
+			setError(t("program.provision.keyError"));
 			return;
 		}
 		if (!name.trim()) {
-			setError("Scope name is required.");
+			setError(t("program.provision.nameError"));
 			return;
 		}
 		if (!/^[A-Z]{2}$/.test(normalizedMarket) || normalizedMarket === "ZZ") {
-			setError("Market must be an explicit two-letter ISO-style code, such as CN, US, SG, or JP.");
+			setError(t("program.provision.marketError"));
 			return;
 		}
 		if (!isValidLocale(normalizedLocale)) {
-			setError("Locale must be a valid explicit BCP 47 tag, such as zh-CN, en-US, or ja-JP.");
+			setError(t("program.provision.localeError"));
 			return;
 		}
 		if (!isValidTimezone(normalizedTimezone)) {
-			setError("Timezone must be a valid IANA name, such as Asia/Shanghai or America/New_York.");
+			setError(t("program.provision.timezoneError"));
 			return;
 		}
 
@@ -146,10 +147,12 @@ export function MeasurementScopeProvisionDialog({
 				...(sourceScopeId === "none" ? {} : { sourceScopeId }),
 			});
 			setSuccess(
-				`Manual-only scope created. ${result.copiedPromptCount} enabled prompt${result.copiedPromptCount === 1 ? "" : "s"} copied.`,
+				t(result.copiedPromptCount === 1 ? "program.provision.success.one" : "program.provision.success.many", {
+					count: formatNumber(result.copiedPromptCount),
+				}),
 			);
-		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Failed to provision the measurement scope.");
+		} catch {
+			setError(t("program.provision.error"));
 		} finally {
 			setSubmitting(false);
 		}
@@ -171,7 +174,7 @@ export function MeasurementScopeProvisionDialog({
 
 				<div className="grid gap-4 sm:grid-cols-2">
 					<div className="space-y-2">
-						<Label htmlFor="measurement-scope-key">Key</Label>
+						<Label htmlFor="measurement-scope-key">{t("program.provision.key")}</Label>
 						<Input
 							id="measurement-scope-key"
 							value={key}
@@ -182,18 +185,18 @@ export function MeasurementScopeProvisionDialog({
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="measurement-scope-name">Name</Label>
+						<Label htmlFor="measurement-scope-name">{t("program.provision.name")}</Label>
 						<Input
 							id="measurement-scope-name"
 							value={name}
 							onChange={(event) => setName(event.target.value)}
-							placeholder="China - Simplified Chinese"
+							placeholder={t("program.provision.namePlaceholder")}
 							maxLength={120}
 							disabled={submitting || Boolean(success)}
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="measurement-scope-market">Market</Label>
+						<Label htmlFor="measurement-scope-market">{t("program.provision.market")}</Label>
 						<Input
 							id="measurement-scope-market"
 							value={market}
@@ -202,10 +205,10 @@ export function MeasurementScopeProvisionDialog({
 							maxLength={2}
 							disabled={submitting || Boolean(success)}
 						/>
-						<p className="text-xs text-muted-foreground">Two-letter ISO-style market code.</p>
+						<p className="text-xs text-muted-foreground">{t("program.provision.marketHint")}</p>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="measurement-scope-locale">Locale</Label>
+						<Label htmlFor="measurement-scope-locale">{t("program.provision.locale")}</Label>
 						<Input
 							id="measurement-scope-locale"
 							value={locale}
@@ -214,10 +217,10 @@ export function MeasurementScopeProvisionDialog({
 							maxLength={35}
 							disabled={submitting || Boolean(success)}
 						/>
-						<p className="text-xs text-muted-foreground">BCP 47 language tag.</p>
+						<p className="text-xs text-muted-foreground">{t("program.provision.localeHint")}</p>
 					</div>
 					<div className="space-y-2 sm:col-span-2">
-						<Label>Evaluation pool</Label>
+						<Label>{t("program.provision.pool")}</Label>
 						<Select
 							value={evaluationRole}
 							onValueChange={(value: SamplingEvaluationRole) => setEvaluationRole(value)}
@@ -227,16 +230,14 @@ export function MeasurementScopeProvisionDialog({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="scored">Scored - counts toward assessment</SelectItem>
-								<SelectItem value="observation">Observation - monitoring only</SelectItem>
+								<SelectItem value="scored">{t("program.provision.scored")}</SelectItem>
+								<SelectItem value="observation">{t("program.provision.observation")}</SelectItem>
 							</SelectContent>
 						</Select>
-						<p className="text-xs text-muted-foreground">
-							The role is fixed for this scope; provision another scope for the other pool.
-						</p>
+						<p className="text-xs text-muted-foreground">{t("program.provision.poolHint")}</p>
 					</div>
 					<div className="space-y-2 sm:col-span-2">
-						<Label htmlFor="measurement-scope-timezone">Timezone</Label>
+						<Label htmlFor="measurement-scope-timezone">{t("program.provision.timezone")}</Label>
 						<Input
 							id="measurement-scope-timezone"
 							value={timezone}
@@ -245,26 +246,27 @@ export function MeasurementScopeProvisionDialog({
 							maxLength={100}
 							disabled={submitting || Boolean(success)}
 						/>
-						<p className="text-xs text-muted-foreground">IANA timezone; browser detection is only a default.</p>
+						<p className="text-xs text-muted-foreground">{t("program.provision.timezoneHint")}</p>
 					</div>
 					<div className="space-y-2 sm:col-span-2">
-						<Label>Copy enabled prompts from</Label>
+						<Label>{t("program.provision.copyFrom")}</Label>
 						<Select value={sourceScopeId} onValueChange={setSourceScopeId} disabled={submitting || Boolean(success)}>
 							<SelectTrigger className="w-full">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="none">Do not copy prompts</SelectItem>
+								<SelectItem value="none">{t("program.provision.noCopy")}</SelectItem>
 								{sources.map((scope) => (
 									<SelectItem key={scope.id} value={scope.id}>
-										{scope.name} - {scope.enabledPromptCount} enabled
+										{t("program.provision.sourceOption", {
+											name: scope.name,
+											count: formatNumber(scope.enabledPromptCount),
+										})}
 									</SelectItem>
 								))}
 							</SelectContent>
 						</Select>
-						<p className="text-xs text-muted-foreground">
-							Prompt copies are independent records in the new scope; the source is not changed.
-						</p>
+						<p className="text-xs text-muted-foreground">{t("program.provision.copyHint")}</p>
 					</div>
 				</div>
 
@@ -279,11 +281,11 @@ export function MeasurementScopeProvisionDialog({
 
 				<DialogFooter>
 					{success ? (
-						<Button onClick={() => setOpen(false)}>Done</Button>
+						<Button onClick={() => setOpen(false)}>{t("program.provision.done")}</Button>
 					) : (
 						<>
 							<Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-								Cancel
+								{t("program.provision.cancel")}
 							</Button>
 							<Button onClick={handleSubmit} disabled={submitting}>
 								{submitting && <Loader2 className="animate-spin" />}

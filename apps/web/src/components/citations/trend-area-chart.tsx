@@ -1,8 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import { IconInfoCircle } from "@tabler/icons-react";
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@workspace/ui/components/chart";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { useI18n } from "@/i18n/provider";
 
 export function TrendAreaChart({
 	title,
@@ -17,6 +18,7 @@ export function TrendAreaChart({
 	keys: string[];
 	meta: Record<string, { label: string; color: string }>;
 }) {
+	const { formatDate, formatNumber } = useI18n();
 	// Callers pass exactly the keys that appear (same lists the tab filters use).
 	const present = keys;
 	// Display order: largest band first, "other" always last.
@@ -55,8 +57,8 @@ export function TrendAreaChart({
 							tick={{ fontSize: 11 }}
 							tickFormatter={(value) => {
 								const [year, month, day] = String(value).split("-").map(Number);
-								const date = new Date(year, month - 1, day);
-								return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+								const date = new Date(Date.UTC(year, month - 1, day));
+								return formatDate(date, { month: "short", day: "numeric" });
 							}}
 						/>
 						<YAxis
@@ -66,7 +68,7 @@ export function TrendAreaChart({
 							domain={[0, 100]}
 							ticks={[0, 25, 50, 75, 100]}
 							tick={{ fontSize: 11 }}
-							tickFormatter={(value) => `${value}%`}
+							tickFormatter={(value) => `${formatNumber(value)}%`}
 						/>
 						<ChartTooltip
 							isAnimationActive={false}
@@ -75,8 +77,8 @@ export function TrendAreaChart({
 								if (!active || !payload?.length) return null;
 								const dp = payload[0]?.payload as Record<string, number | string> | undefined;
 								const [year, month, day] = String(label).split("-").map(Number);
-								const date = new Date(year, month - 1, day);
-								const formattedDate = date.toLocaleDateString("en-US", {
+								const date = new Date(Date.UTC(year, month - 1, day));
+								const formattedDate = formatDate(date, {
 									month: "long",
 									day: "numeric",
 									year: "numeric",
@@ -95,7 +97,7 @@ export function TrendAreaChart({
 														style={{ backgroundColor: meta[r.k]?.color ?? "var(--yonaris-stone, #9ca3af)" }}
 													/>
 													<span className="text-muted-foreground">{meta[r.k]?.label ?? r.k}</span>
-													<span className="ml-auto font-mono tabular-nums">{r.value}%</span>
+													<span className="ml-auto font-mono tabular-nums">{formatNumber(r.value)}%</span>
 												</div>
 											))}
 										</div>

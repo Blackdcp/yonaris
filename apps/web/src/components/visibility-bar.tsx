@@ -2,6 +2,7 @@ import { IconInfoCircle } from "@tabler/icons-react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { Area, AreaChart, ResponsiveContainer, YAxis } from "recharts";
+import { useI18n } from "@/i18n/provider";
 
 interface VisibilityTimeSeriesPoint {
 	date: string;
@@ -36,6 +37,7 @@ export function VisibilityBar({
 	lookback,
 	isLoading = false,
 }: VisibilityBarProps) {
+	const { t, formatNumber } = useI18n();
 	if (isLoading) {
 		return <VisibilityBarSkeleton />;
 	}
@@ -62,10 +64,10 @@ export function VisibilityBar({
 			<div className="flex items-center gap-2 min-w-0 shrink-0">
 				<span className={`inline-flex items-baseline gap-1.5 whitespace-nowrap ${colors.text}`}>
 					<span data-yonaris-slot="metric-value" className="text-lg sm:text-xl">
-						{currentVisibility}
+						{formatNumber(currentVisibility)}
 						<span data-yonaris-slot="metric-unit">%</span>
 					</span>
-					<span className="text-sm font-medium">Visibility</span>
+					<span className="text-sm font-medium">{t("visibility.title")}</span>
 				</span>
 
 				{showChart && (
@@ -94,9 +96,11 @@ export function VisibilityBar({
 						<IconInfoCircle className={`h-3.5 w-3.5 shrink-0 ${colors.muted} cursor-help`} />
 					</TooltipTrigger>
 					<TooltipContent side="bottom" className="max-w-xs text-sm">
-						AI answer presence for the {totalPrompts.toLocaleString()} prompt{totalPrompts !== 1 ? "s" : ""} shown below,
-						calculated as the percentage of AI responses that mention your brand over the time period for the selected
-						filters.
+						{t("visibility.summaryTooltip", {
+							prompts: t(totalPrompts === 1 ? "visibility.prompt.one" : "visibility.prompt.many", {
+								count: formatNumber(totalPrompts),
+							}),
+						})}
 					</TooltipContent>
 				</Tooltip>
 			</div>
@@ -104,13 +108,19 @@ export function VisibilityBar({
 			{/* Right side: stats */}
 			<div className={`flex items-center gap-x-3 text-xs sm:text-sm ${colors.muted}`}>
 				<span>
-					<span className="font-medium">{totalPrompts.toLocaleString()}</span> prompts
+					{t(totalPrompts === 1 ? "visibility.prompt.one" : "visibility.prompt.many", {
+						count: formatNumber(totalPrompts),
+					})}
 				</span>
 				<span>
-					<span className="font-medium">{totalRuns.toLocaleString()}</span> runs
+					{t(totalRuns === 1 ? "visibility.run.one" : "visibility.run.many", {
+						count: formatNumber(totalRuns),
+					})}
 				</span>
 				<span>
-					<span className="font-medium">{totalCitations.toLocaleString()}</span> citations
+					{t(totalCitations === 1 ? "visibility.citation.one" : "visibility.citation.many", {
+						count: formatNumber(totalCitations),
+					})}
 				</span>
 			</div>
 		</div>
@@ -134,9 +144,10 @@ export function VisibilityBarSkeleton() {
 }
 
 export function VisibilityBarEmpty() {
+	const { t } = useI18n();
 	return (
 		<div className="flex items-center min-h-10 px-3 py-2 rounded-lg border border-border/60 bg-muted/20">
-			<span className="text-sm text-muted-foreground">No visibility data for the selected time range and filters.</span>
+			<span className="text-sm text-muted-foreground">{t("visibility.none")}</span>
 		</div>
 	);
 }

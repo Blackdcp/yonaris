@@ -2,10 +2,12 @@
  * Donut of share of voice: the brand plus its top competitors, with the long
  * tail bucketed into "Others". Sits beside the headline share number.
  */
-import { Cell, Pie, PieChart, Tooltip } from "recharts";
+
 import { ChartContainer } from "@workspace/ui/components/chart";
+import { Cell, Pie, PieChart, Tooltip } from "recharts";
+import { useI18n } from "@/i18n/provider";
+import { BRAND_COLOR, OTHERS_COLOR, COMPETITOR_PALETTE as PALETTE } from "@/lib/share-of-voice-palette";
 import type { ShareOfVoiceEntry } from "@/server/analysis";
-import { BRAND_COLOR, COMPETITOR_PALETTE as PALETTE, OTHERS_COLOR } from "@/lib/share-of-voice-palette";
 
 interface Slice {
 	name: string;
@@ -14,6 +16,7 @@ interface Slice {
 }
 
 export function ShareOfVoiceDonut({ entries, topN = 6 }: { entries: ShareOfVoiceEntry[]; topN?: number }) {
+	const { t, formatNumber } = useI18n();
 	const slices: Slice[] = [];
 	let paletteIdx = 0;
 	let shownCompetitors = 0;
@@ -30,7 +33,7 @@ export function ShareOfVoiceDonut({ entries, topN = 6 }: { entries: ShareOfVoice
 			othersValue += e.mentions;
 		}
 	}
-	if (othersValue > 0) slices.push({ name: "Others", value: othersValue, color: OTHERS_COLOR });
+	if (othersValue > 0) slices.push({ name: t("voice.others"), value: othersValue, color: OTHERS_COLOR });
 
 	const total = slices.reduce((s, x) => s + x.value, 0);
 	if (total === 0) return null;
@@ -57,7 +60,7 @@ export function ShareOfVoiceDonut({ entries, topN = 6 }: { entries: ShareOfVoice
 						const s = payload[0].payload as Slice;
 						return (
 							<div className="rounded-md border bg-background px-2 py-1 text-xs shadow-md">
-								{s.name}: {Math.round((s.value / total) * 100)}%
+								{s.name}: {formatNumber(Math.round((s.value / total) * 100))}%
 							</div>
 						);
 					}}

@@ -1,12 +1,13 @@
-import { useMemo, useState } from "react";
+import { IconChevronDown, IconExternalLink, IconInfoCircle } from "@tabler/icons-react";
+import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
-import { Badge } from "@workspace/ui/components/badge";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
-import { IconExternalLink, IconInfoCircle, IconChevronDown } from "@tabler/icons-react";
-import { ListPagination, usePagedList } from "@/components/list-pagination";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { useMemo, useState } from "react";
 import { extractSubreddit, formatUrlForDisplay } from "@/components/citations/shared";
 import type { CitationData } from "@/components/citations/types";
+import { ListPagination, usePagedList } from "@/components/list-pagination";
+import { useI18n } from "@/i18n/provider";
 
 const SUBREDDITS_PAGE_SIZE = 8;
 
@@ -71,6 +72,7 @@ export function useSubredditData(
 }
 
 export function RedditCard({ subreddits }: { subreddits: ReturnType<typeof useSubredditData> }) {
+	const { t, formatNumber } = useI18n();
 	const [expandedSubreddit, setExpandedSubreddit] = useState<string | null>(null);
 	const { page, setPage, pageItems, totalItems } = usePagedList(subreddits, SUBREDDITS_PAGE_SIZE);
 
@@ -78,20 +80,15 @@ export function RedditCard({ subreddits }: { subreddits: ReturnType<typeof useSu
 		<Card>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5">
-					Reddit
+					{t("citation.topSubreddits")}
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 						</TooltipTrigger>
-						<TooltipContent className="max-w-xs text-sm font-normal">
-							Reddit communities most frequently cited by AI models. Extracted from all reddit.com URLs in your citation
-							data.
-						</TooltipContent>
+						<TooltipContent className="max-w-xs text-sm font-normal">{t("citation.redditTooltip")}</TooltipContent>
 					</Tooltip>
 				</CardTitle>
-				<CardDescription>
-					Top cited subreddits — which Reddit communities AI models reference when answering your prompts
-				</CardDescription>
+				<CardDescription>{t("citation.redditDescription")}</CardDescription>
 			</CardHeader>
 			<Separator />
 			<CardContent>
@@ -114,16 +111,20 @@ export function RedditCard({ subreddits }: { subreddits: ReturnType<typeof useSu
 										</span>
 										{sub.allNew && (
 											<Badge className="text-[10px] px-1.5 py-0 h-[18px] border-0 shadow-none bg-green-100 text-green-700">
-												NEW
+												{t("citation.new")}
 											</Badge>
 										)}
 										{!sub.allNew && sub.newPages > 0 && (
-											<span className="text-[10px] text-green-600 whitespace-nowrap">+{sub.newPages} new</span>
+											<span className="text-[10px] text-green-600 whitespace-nowrap">
+												{t("citation.newCount", { count: formatNumber(sub.newPages) })}
+											</span>
 										)}
-										{sub.hasDropped && <span className="text-[10px] text-red-500 whitespace-nowrap">some dropped</span>}
+										{sub.hasDropped && (
+											<span className="text-[10px] text-red-500 whitespace-nowrap">{t("citation.someDropped")}</span>
+										)}
 									</button>
 									<div className="flex items-center gap-2 shrink-0 ml-3">
-										<span className="text-sm font-semibold tabular-nums">{sub.count.toLocaleString()}</span>
+										<span className="text-sm font-semibold tabular-nums">{formatNumber(sub.count)}</span>
 										<a
 											href={`https://reddit.com/${sub.name}`}
 											target="_blank"
@@ -149,12 +150,12 @@ export function RedditCard({ subreddits }: { subreddits: ReturnType<typeof useSu
 													{u.title || formatUrlForDisplay(u.url)}
 													{u.isNew && (
 														<Badge className="text-[9px] px-1 py-0 h-[14px] border-0 shadow-none bg-green-100 text-green-700 shrink-0">
-															NEW
+															{t("citation.new")}
 														</Badge>
 													)}
 												</span>
 												<span className="tabular-nums text-muted-foreground shrink-0 ml-3">
-													{u.count.toLocaleString()}
+													{formatNumber(u.count)}
 												</span>
 											</a>
 										))}

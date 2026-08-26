@@ -19,6 +19,7 @@ import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useScopeModels } from "@/hooks/use-scope-models";
+import { useI18n } from "@/i18n/provider";
 import type { LookbackPeriod } from "@/lib/chart-utils";
 import { coercePromptOrder, orderPrompts } from "@/lib/prompt-order";
 
@@ -28,6 +29,8 @@ interface PromptsDisplayProps {
 	pageInfoContent?: React.ReactNode;
 	editLink?: string;
 }
+
+const CONTENT_SKELETON_KEYS = ["first", "second", "third"] as const;
 
 /** Host component: renders the page shell (title, sticky bar, content)
  *  and composes independent sub-sections. It doesn't subscribe to any
@@ -49,6 +52,7 @@ export function PromptsDisplay({ pageTitle, pageDescription, pageInfoContent, ed
  *  they need, so a click on "Lookback" only invalidates the data users
  *  and not `FilterBar` itself. */
 function PromptsContent({ brandId, editLink }: { brandId: string | undefined; editLink?: string }) {
+	const { t } = useI18n();
 	const filters = useListFilters();
 	const { scopeId, model, lookback, tags, search } = filters;
 	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, scopeId);
@@ -110,25 +114,24 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 			errorState={
 				<Card className="p-6">
 					<div className="text-center text-muted-foreground">
-						<p className="mb-2">Failed to load prompts data</p>
-						<p className="text-sm">Try refreshing the page</p>
+						<p className="mb-2">{t("visibility.error")}</p>
 					</div>
 				</Card>
 			}
 			totalCount={promptsSummary?.prompts?.length}
 			filteredCount={sortedPrompts.length}
-			noMatchesTitle="No prompts match your filters."
-			noMatchesDescription="Try adjusting your search or tag filters."
+			noMatchesTitle={t("visibility.noMatches")}
+			noMatchesDescription={t("customer.filters.tryAdjust")}
 			emptyState={
 				<div className="border-2 border-dashed border-muted rounded-lg min-h-48 flex items-center justify-center">
 					<div className="text-center py-8 text-muted-foreground">
 						<Inbox className="h-12 w-12 mx-auto mb-4 opacity-50" />
-						<p className="mb-4">No prompts yet.</p>
+						<p className="mb-4">{t("visibility.empty")}</p>
 						{editLink && (
 							<Button asChild size="sm" className="h-7 flex cursor-pointer">
 								<Link to={editLink}>
 									<IconEditCircle />
-									<span>Edit</span>
+									<span>{t("visibility.editPrompts")}</span>
 								</Link>
 							</Button>
 						)}
@@ -247,8 +250,8 @@ function ChartSection({
 function ContentLoadingSkeleton() {
 	return (
 		<div className="space-y-6">
-			{[...Array(3)].map((_, i) => (
-				<Card key={i} className="py-3 gap-3">
+			{CONTENT_SKELETON_KEYS.map((key) => (
+				<Card key={key} className="py-3 gap-3">
 					<CardHeader className="flex justify-between items-center px-3">
 						<Skeleton className="h-4 w-48" />
 						<Skeleton className="h-5 w-24 rounded-full" />

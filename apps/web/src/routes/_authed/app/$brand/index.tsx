@@ -25,11 +25,13 @@ import { useEffect } from "react";
 import { YONARIS_CHART_FOCUS, YONARIS_CHART_PRIMARY } from "@/brand/chart-theme";
 import PromptWizard from "@/components/prompt-wizard";
 import { TrendChart } from "@/components/trend-chart";
-import { useBrand } from "@/hooks/use-brands";
 import { useBrandAccess } from "@/hooks/use-brand-access";
+import { useBrand } from "@/hooks/use-brands";
 import { useDashboardSummary } from "@/hooks/use-dashboard-summary";
-import { useShareOfVoice } from "@/hooks/use-share-of-voice";
 import { useListFilters } from "@/hooks/use-list-filters";
+import { useShareOfVoice } from "@/hooks/use-share-of-voice";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { setPersonProperties } from "@/lib/posthog";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 
@@ -42,8 +44,10 @@ function lastValue<T>(series: T[], key: keyof T): number | null {
 	return null;
 }
 
-function formatRelativeTime(dateString: string | null): string {
-	if (!dateString) return "Never";
+type I18nValue = ReturnType<typeof useI18n>;
+
+function formatRelativeTime(dateString: string | null, t: I18nValue["t"], formatDate: I18nValue["formatDate"]): string {
+	if (!dateString) return t("customer.overview.never");
 
 	const date = new Date(dateString);
 	const now = new Date();
@@ -52,35 +56,36 @@ function formatRelativeTime(dateString: string | null): string {
 	const diffHours = Math.floor(diffMs / 3600000);
 	const diffDays = Math.floor(diffMs / 86400000);
 
-	if (diffMins < 1) return "Just now";
-	if (diffMins < 60) return `${diffMins}m ago`;
-	if (diffHours < 24) return `${diffHours}h ago`;
-	if (diffDays < 7) return `${diffDays}d ago`;
+	if (diffMins < 1) return t("customer.overview.justNow");
+	if (diffMins < 60) return t("customer.overview.minutesAgo", { count: diffMins });
+	if (diffHours < 24) return t("customer.overview.hoursAgo", { count: diffHours });
+	if (diffDays < 7) return t("customer.overview.daysAgo", { count: diffDays });
 
-	return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+	return formatDate(date, { month: "short", day: "numeric" });
 }
 
-function formatRunFrequency(hours: number): string {
+function formatRunFrequency(hours: number, t: I18nValue["t"]): string {
 	const weeks = Math.floor(hours / (7 * 24));
 	const days = Math.floor((hours % (7 * 24)) / 24);
 	const remainingHours = hours % 24;
 
 	const parts: string[] = [];
-	if (weeks > 0) parts.push(`${weeks}w`);
-	if (days > 0) parts.push(`${days}d`);
-	if (remainingHours > 0) parts.push(`${remainingHours}h`);
+	if (weeks > 0) parts.push(t("customer.overview.weeksShort", { count: weeks }));
+	if (days > 0) parts.push(t("customer.overview.daysShort", { count: days }));
+	if (remainingHours > 0) parts.push(t("customer.overview.hoursShort", { count: remainingHours }));
 
-	return parts.length > 0 ? `~${parts.join(" ")}` : "~1h";
+	return `~${parts.length > 0 ? parts.join(" ") : t("customer.overview.hoursShort", { count: 1 })}`;
 }
 
 export const Route = createFileRoute("/_authed/app/$brand/")({
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: buildTitle("Overview", { appName, brandName }) },
-				{ name: "description", content: "Dashboard overview of AI answer presence and citations." },
+				{ title: buildTitle(translate(uiLanguage, "navigation.overview"), { appName, brandName }) },
+				{ name: "description", content: translate(uiLanguage, "customer.overview.meta.description") },
 			],
 		};
 	},
@@ -141,6 +146,7 @@ function CardTitleWithTooltip({
 
 /** The latest point in a trend, presented as a primary metric rather than a status grade. */
 function HeroStat({ value, loading, label }: { value: number | null; loading: boolean; label: string }) {
+	const { t, formatNumber } = useI18n();
 	return (
 		<CardContent className="flex flex-1 flex-col items-start justify-between gap-5 px-5 py-1">
 			<div data-yonaris-slot="metric-label">{label}</div>
@@ -151,23 +157,32 @@ function HeroStat({ value, loading, label }: { value: number | null; loading: bo
 					"—"
 				) : (
 					<>
-						{value}
+						{formatNumber(value)}
 						<span data-yonaris-slot="metric-unit">%</span>
 					</>
 				)}
 			</div>
-			<div data-yonaris-slot="metric-context">Latest recorded value · 30-day view</div>
+			<div data-yonaris-slot="metric-context">{t("customer.overview.latestContext")}</div>
 		</CardContent>
 	);
 }
 
 function DashboardPage() {
+	const { t, formatDate, formatNumber } = useI18n();
 	const { brand: brandId } = Route.useParams();
 	const { scopeId } = useListFilters();
 	const { canManageBrand } = useBrandAccess();
-	const { brand, isLoading: isLoadingBrand } = useBrand();
-	const { dashboardSummary, isLoading: isLoadingSummary } = useDashboardSummary(brand?.id, scopeId, "1m");
-	const { data: sovData, isLoading: isLoadingSov } = useShareOfVoice(brand?.id, {
+	const { brand, isLoading: isLoadingBrand, isError: brandError } = useBrand();
+	const {
+		dashboardSummary,
+		isLoading: isLoadingSummary,
+		isError: summaryError,
+	} = useDashboardSummary(brand?.id, scopeId, "1m");
+	const {
+		data: sovData,
+		isLoading: isLoadingSov,
+		isError: sovError,
+	} = useShareOfVoice(brand?.id, {
 		scopeId: scopeId ?? "",
 		lookback: "1m",
 	});
@@ -202,11 +217,11 @@ function DashboardPage() {
 						<div className="flex items-center justify-between">
 							<h2 className="text-lg font-semibold flex items-center gap-2">
 								<IconEye className="h-5 w-5 text-muted-foreground" />
-								AI answer presence
+								{t("customer.overview.answerPresence")}
 							</h2>
 							<Button asChild variant="ghost" size="sm" className="h-8">
 								<Link to="/app/$brand/visibility" params={{ brand: brandId }}>
-									View Visibility <IconArrowRight className="h-4 w-4 ml-1" />
+									{t("customer.overview.viewVisibility")} <IconArrowRight className="h-4 w-4 ml-1" />
 								</Link>
 							</Button>
 						</div>
@@ -216,12 +231,12 @@ function DashboardPage() {
 								data-metric-emphasis="brand"
 								className="shadow-none flex flex-col gap-3 py-4"
 							>
-								<HeroStat value={null} loading label="Current visibility" />
+								<HeroStat value={null} loading label={t("customer.overview.currentVisibility")} />
 							</Card>
 							<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 								<CardHeader className="border-b border-dotted pb-2!">
 									<CardTitle className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground">
-										Visibility Trends (30d)
+										{t("customer.overview.visibilityTrend")}
 										<IconInfoCircle className="h-3.5 w-3.5 opacity-70" />
 									</CardTitle>
 								</CardHeader>
@@ -237,11 +252,11 @@ function DashboardPage() {
 						<div className="flex items-center justify-between">
 							<h2 className="text-lg font-semibold flex items-center gap-2">
 								<IconSpeakerphone className="h-5 w-5 text-muted-foreground" />
-								Share of Voice
+								{t("customer.overview.shareOfVoice")}
 							</h2>
 							<Button asChild variant="ghost" size="sm" className="h-8">
 								<Link to="/app/$brand/share-of-voice" params={{ brand: brandId }}>
-									View Share of Voice <IconArrowRight className="h-4 w-4 ml-1" />
+									{t("customer.overview.viewShareOfVoice")} <IconArrowRight className="h-4 w-4 ml-1" />
 								</Link>
 							</Button>
 						</div>
@@ -251,12 +266,12 @@ function DashboardPage() {
 								data-metric-emphasis="brand"
 								className="shadow-none flex flex-col gap-3 py-4"
 							>
-								<HeroStat value={null} loading label="Current share" />
+								<HeroStat value={null} loading label={t("customer.overview.currentShare")} />
 							</Card>
 							<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 								<CardHeader className="border-b border-dotted pb-2!">
 									<CardTitle className="text-sm font-medium flex items-center gap-1.5 text-muted-foreground">
-										Share of Voice Trends (30d)
+										{t("customer.overview.shareTrend")}
 										<IconInfoCircle className="h-3.5 w-3.5 opacity-70" />
 									</CardTitle>
 								</CardHeader>
@@ -291,6 +306,10 @@ function DashboardPage() {
 				</div>
 			</div>
 		);
+	}
+
+	if (brandError || summaryError || sovError) {
+		return <div className="m-auto p-8 text-center text-muted-foreground">{t("customer.overview.error")}</div>;
 	}
 
 	const hasPrompts = brand?.prompts && brand.prompts.length > 0;
@@ -330,12 +349,12 @@ function DashboardPage() {
 	if (hasNoEvaluations) {
 		const getMessage = () => {
 			if (hasEnabledPrompts) {
-				return "You are ready to track your AI answer presence. We're currently running the first evaluation against AI models. This usually takes a few minutes.";
+				return t("customer.overview.awaitingEnabled");
 			}
 			if (hasPrompts) {
-				return "You have prompts configured but none are currently enabled. Add or enable some prompts to start tracking your AI answer presence.";
+				return t("customer.overview.awaitingDisabled");
 			}
-			return "Set up prompts to start tracking your AI answer presence. Once configured, we'll evaluate them against AI models automatically.";
+			return t("customer.overview.awaitingNoPrompts");
 		};
 
 		return (
@@ -344,7 +363,7 @@ function DashboardPage() {
 					<IconClock className="h-10 w-10 text-muted-foreground" />
 				</div>
 				<h2 className="text-2xl font-bold mb-3">
-					{hasEnabledPrompts ? "Waiting for First Evaluation" : "No Data Yet"}
+					{hasEnabledPrompts ? t("customer.overview.awaitingTitle") : t("customer.overview.noDataTitle")}
 				</h2>
 				<p className="text-muted-foreground mb-6 text-balance">{getMessage()}</p>
 				<div className="flex flex-col gap-3 w-full">
@@ -352,24 +371,26 @@ function DashboardPage() {
 						<div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
 							<div className="flex items-center gap-2">
 								<IconList className="h-5 w-5 text-muted-foreground" />
-								<span className="text-sm">Prompts configured and enabled</span>
+								<span className="text-sm">{t("customer.overview.configured")}</span>
 							</div>
-							<span className="font-semibold">{totalPrompts.toLocaleString()}</span>
+							<span className="font-semibold">{formatNumber(totalPrompts)}</span>
 						</div>
 					)}
 					{canManageBrand && (
 						<Button asChild variant="outline" className="w-full">
 							<Link to="/app/$brand/settings/prompts" params={{ brand: brandId }}>
-								{hasEnabledPrompts ? "View Your Prompts" : hasPrompts ? "Edit Prompts" : "Set Up Prompts"}{" "}
+								{hasEnabledPrompts
+									? t("customer.overview.viewPrompts")
+									: hasPrompts
+										? t("customer.overview.editPrompts")
+										: t("customer.overview.setUpPrompts")}{" "}
 								<IconArrowRight className="h-4 w-4 ml-1" />
 							</Link>
 						</Button>
 					)}
 				</div>
 				{hasEnabledPrompts && (
-					<p className="text-xs text-muted-foreground mt-6">
-						Refresh this page in a few minutes to see your AI answer presence data.
-					</p>
+					<p className="text-xs text-muted-foreground mt-6">{t("customer.overview.refreshHint")}</p>
 				)}
 			</div>
 		);
@@ -383,11 +404,11 @@ function DashboardPage() {
 					<div className="flex items-center justify-between">
 						<h2 className="text-lg font-semibold flex items-center gap-2">
 							<IconEye className="h-5 w-5 text-muted-foreground" />
-							AI answer presence
+							{t("customer.overview.answerPresence")}
 						</h2>
 						<Button asChild variant="ghost" size="sm" className="h-8">
 							<Link to="/app/$brand/visibility" params={{ brand: brandId }}>
-								View Visibility <IconArrowRight className="h-4 w-4 ml-1" />
+								{t("customer.overview.viewVisibility")} <IconArrowRight className="h-4 w-4 ml-1" />
 							</Link>
 						</Button>
 					</div>
@@ -399,15 +420,21 @@ function DashboardPage() {
 							data-metric-emphasis="brand"
 							className="shadow-none flex flex-col gap-3 py-4"
 						>
-							<HeroStat value={currentVisibility} loading={isLoading} label="Current visibility" />
+							<HeroStat
+								value={currentVisibility}
+								loading={isLoading}
+								label={t("customer.overview.currentVisibility")}
+							/>
 						</Card>
 
 						{/* Visibility Chart */}
 						<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 							<CardHeader className="border-b border-dotted pb-2!">
 								<CardTitleWithTooltip
-									title="Visibility Trends (30d)"
-									tooltip={`The percentage of AI answers to your prompts that mention your brand — the big number is the latest point on this line. For prompts that don't name your brand, it's ${nonBrandedVisibility}%. Visibility shifts as AI models, the prompts you track, or the sites AI scans change; the line is smoothed for staggered prompt schedules.`}
+									title={t("customer.overview.visibilityTrend")}
+									tooltip={t("customer.overview.visibilityTooltipWithNonBrand", {
+										value: formatNumber(nonBrandedVisibility),
+									})}
 								/>
 							</CardHeader>
 							<CardContent className="flex-1 min-h-[100px]">
@@ -416,7 +443,7 @@ function DashboardPage() {
 								) : (
 									<TrendChart
 										data={visibilityTimeSeries.map((p) => ({ date: p.date, value: p.overall }))}
-										label="AI answer presence (7d avg)"
+										label={t("customer.overview.answerTrendLabel")}
 										color={primaryChartColor}
 									/>
 								)}
@@ -430,11 +457,11 @@ function DashboardPage() {
 					<div className="flex items-center justify-between">
 						<h2 className="text-lg font-semibold flex items-center gap-2">
 							<IconSpeakerphone className="h-5 w-5 text-muted-foreground" />
-							Share of Voice
+							{t("customer.overview.shareOfVoice")}
 						</h2>
 						<Button asChild variant="ghost" size="sm" className="h-8">
 							<Link to="/app/$brand/share-of-voice" params={{ brand: brandId }}>
-								View Share of Voice <IconArrowRight className="h-4 w-4 ml-1" />
+								{t("customer.overview.viewShareOfVoice")} <IconArrowRight className="h-4 w-4 ml-1" />
 							</Link>
 						</Button>
 					</div>
@@ -445,14 +472,14 @@ function DashboardPage() {
 							data-metric-emphasis="brand"
 							className="shadow-none flex flex-col gap-3 py-4"
 						>
-							<HeroStat value={sovShare} loading={isLoadingSov} label="Current share" />
+							<HeroStat value={sovShare} loading={isLoadingSov} label={t("customer.overview.currentShare")} />
 						</Card>
 
 						<Card className="shadow-none lg:col-span-3 flex flex-col gap-3 py-4">
 							<CardHeader className="border-b border-dotted pb-2!">
 								<CardTitleWithTooltip
-									title="Share of Voice Trends (30d)"
-									tooltip="Your brand's share of all brand and competitor mentions across the AI answers to your prompts — the big number is the latest point on this line. It shifts as AI models change, as you and competitors publish, or as the sites AI scans move; the line is smoothed for staggered prompt schedules."
+									title={t("customer.overview.shareTrend")}
+									tooltip={t("customer.overview.shareTooltip")}
 								/>
 							</CardHeader>
 							<CardContent className="flex-1 min-h-[100px]">
@@ -461,7 +488,7 @@ function DashboardPage() {
 								) : (
 									<TrendChart
 										data={(sovData?.shareTimeSeries ?? []).map((p) => ({ date: p.date, value: p.share }))}
-										label="Share of Voice"
+										label={t("customer.overview.shareOfVoice")}
 										color={primaryChartColor}
 									/>
 								)}
@@ -496,30 +523,40 @@ function DashboardPage() {
 							<>
 								<StatWithTooltip
 									icon={IconList}
-									label="prompts tracked"
-									value={totalPrompts.toLocaleString()}
-									tooltip="Total number of unique prompts being monitored for AI answer presence across ChatGPT, Claude, and Gemini."
+									label={t("customer.overview.promptsTracked")}
+									value={formatNumber(totalPrompts)}
+									tooltip={t("customer.overview.promptsTooltip")}
 								/>
 								<StatWithTooltip
 									icon={IconActivity}
-									label="evaluations (30d)"
-									value={totalRuns.toLocaleString()}
-									tooltip="Total number of times we have evaluated prompts against LLMs in the last 30 days. Each prompt is evaluated multiple times across different AI models."
+									label={t("customer.overview.evaluations")}
+									value={formatNumber(totalRuns)}
+									tooltip={t("customer.overview.evaluationsTooltip")}
 								/>
 								<StatWithTooltip
 									icon={IconClock}
-									label="run frequency"
-									value={formatRunFrequency(brand?.delayOverrideHours ?? clientConfig?.defaultDelayHours ?? 24)}
-									tooltip={`Prompts are automatically evaluated every ${formatRunFrequency(brand?.delayOverrideHours ?? clientConfig?.defaultDelayHours ?? 24).replace("~", "")} on average to track changes in AI model responses over time.`}
+									label={t("customer.overview.runFrequency")}
+									value={formatRunFrequency(brand?.delayOverrideHours ?? clientConfig?.defaultDelayHours ?? 24, t)}
+									tooltip={t("customer.overview.frequencyTooltip", {
+										frequency: formatRunFrequency(
+											brand?.delayOverrideHours ?? clientConfig?.defaultDelayHours ?? 24,
+											t,
+										).replace("~", ""),
+									})}
 								/>
 								<StatWithTooltip
 									icon={IconRefresh}
-									label="last updated"
-									value={formatRelativeTime(lastUpdatedAt)}
+									label={t("customer.overview.lastUpdated")}
+									value={formatRelativeTime(lastUpdatedAt, t, formatDate)}
 									tooltip={
 										lastUpdatedAt
-											? `The last prompts we evaluated for your brand were run on ${new Date(lastUpdatedAt).toLocaleString()}`
-											: "No evaluations have been run yet."
+											? t("customer.overview.lastRunTooltip", {
+													date: formatDate(new Date(lastUpdatedAt), {
+														dateStyle: "medium",
+														timeStyle: "short",
+													}),
+												})
+											: t("customer.overview.noRunsTooltip")
 									}
 								/>
 							</>

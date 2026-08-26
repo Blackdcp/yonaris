@@ -11,8 +11,11 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { syncAuth0UserById } from "@workspace/whitelabel/auth-hooks";
 import FullPageCard from "@/components/full-page-card";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { isAdmin, isPlatformIdentity, listUserCustomerWorkspaces, requireAuthSession } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
+import { buildTitle, getAppName } from "@/lib/route-head";
 
 const getOrganizations = createServerFn({ method: "GET" }).handler(
 	async (): Promise<{
@@ -69,6 +72,16 @@ function OrgSwitcherSkeleton() {
 }
 
 export const Route = createFileRoute("/_authed/app/")({
+	head: ({ match }) => {
+		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
+		return {
+			meta: [
+				{ title: buildTitle(translate(uiLanguage, "customer.workspaces.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "customer.workspaces.subtitle") },
+			],
+		};
+	},
 	pendingComponent: OrgSwitcherSkeleton,
 	loader: async () => {
 		const result = await getOrganizations();
@@ -91,9 +104,10 @@ export const Route = createFileRoute("/_authed/app/")({
 
 function BrandSwitcherPage() {
 	const { organizations, canCreateBrands } = Route.useLoaderData();
+	const { t } = useI18n();
 
 	return (
-		<FullPageCard title="Customer workspaces" subtitle="Select an assigned customer workspace">
+		<FullPageCard title={t("customer.workspaces.title")} subtitle={t("customer.workspaces.subtitle")}>
 			<div className="flex min-w-[200px] flex-col space-y-3">
 				{organizations.length > 0 ? (
 					organizations.map((org: { id: string; name: string }) => (
@@ -104,11 +118,11 @@ function BrandSwitcherPage() {
 						</Button>
 					))
 				) : (
-					<p className="text-center text-muted-foreground">No brands available</p>
+					<p className="text-center text-muted-foreground">{t("customer.workspaces.empty")}</p>
 				)}
 				{canCreateBrands && (
 					<Button asChild variant="outline">
-						<Link to="/app/new">+ Create new brand</Link>
+						<Link to="/app/new">+ {t("customer.workspaces.create")}</Link>
 					</Button>
 				)}
 			</div>

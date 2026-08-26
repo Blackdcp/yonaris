@@ -5,18 +5,20 @@
  * auto-ranged y-axis, the tooltip, the softened fill) is fixed here so the
  * stacked trends stay visually identical without being tuned in two places.
  */
+
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@workspace/ui/components/chart";
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { ChartContainer, ChartTooltip, type ChartConfig } from "@workspace/ui/components/chart";
+import { useI18n } from "@/i18n/provider";
 
 export interface TrendPoint {
 	date: string;
 	value: number | null;
 }
 
-/** Build a local Date from a "YYYY-MM-DD" string (avoids the UTC off-by-one of `new Date(iso)`). */
-function localDate(value: string): Date {
+/** Build a UTC Date from a calendar-only value so locale formatting cannot shift the day. */
+function utcDate(value: string): Date {
 	const [year, month, day] = value.split("-").map(Number);
-	return new Date(year, month - 1, day);
+	return new Date(Date.UTC(year, month - 1, day));
 }
 
 export function TrendChart({
@@ -30,6 +32,7 @@ export function TrendChart({
 	color: string;
 	className?: string;
 }) {
+	const { formatDate, formatNumber } = useI18n();
 	const config = { value: { label, color } } satisfies ChartConfig;
 
 	return (
@@ -43,9 +46,7 @@ export function TrendChart({
 					tickMargin={8}
 					minTickGap={50}
 					tick={{ fontSize: 11 }}
-					tickFormatter={(value: string) =>
-						localDate(value).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-					}
+					tickFormatter={(value: string) => formatDate(utcDate(value), { month: "short", day: "numeric" })}
 				/>
 				<YAxis
 					domain={[0, "auto"]}
@@ -54,7 +55,7 @@ export function TrendChart({
 					tickMargin={8}
 					tickCount={4}
 					tick={{ fontSize: 11 }}
-					tickFormatter={(value: number) => `${value}%`}
+					tickFormatter={(value: number) => `${formatNumber(value)}%`}
 				/>
 				<ChartTooltip
 					isAnimationActive={false}
@@ -63,7 +64,7 @@ export function TrendChart({
 						if (!active || !payload?.length) return null;
 						const value = payload[0]?.value as number | null;
 						if (value == null) return null;
-						const formattedDate = localDate(dateLabel as string).toLocaleDateString("en-US", {
+						const formattedDate = formatDate(utcDate(dateLabel as string), {
 							month: "long",
 							day: "numeric",
 							year: "numeric",
@@ -74,7 +75,7 @@ export function TrendChart({
 								<div className="flex items-center gap-2">
 									<div className="shrink-0 rounded-[2px] h-2.5 w-2.5" style={{ background: color }} />
 									<span className="text-muted-foreground">{label}</span>
-									<span className="ml-auto font-mono tabular-nums">{value}%</span>
+									<span className="ml-auto font-mono tabular-nums">{formatNumber(value)}%</span>
 								</div>
 							</div>
 						);

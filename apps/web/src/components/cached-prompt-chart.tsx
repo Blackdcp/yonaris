@@ -1,15 +1,16 @@
-import { memo, useMemo, useCallback } from "react";
+import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
-import { Badge } from "@workspace/ui/components/badge";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { memo, useCallback, useMemo } from "react";
+import { useOptionalChartDataContext } from "@/contexts/chart-data-context";
+import { useChartExport } from "@/hooks/use-chart-export";
+import type { LookbackPeriod } from "@/hooks/use-prompt-chart-data";
+import { useI18n } from "@/i18n/provider";
+import { getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
 import { BaseChart } from "./base-chart";
 import { ChartActionsFooter } from "./chart-actions-footer";
 import { TextHighlighter } from "./text-highlighter";
-import { useChartExport } from "@/hooks/use-chart-export";
-import { useOptionalChartDataContext } from "@/contexts/chart-data-context";
-import type { LookbackPeriod } from "@/hooks/use-prompt-chart-data";
-import { getBadgeVariant, getBadgeClassName } from "@/lib/chart-utils";
 
 const PLACEHOLDER_BARS_NO_DATA = [20, 35, 15, 45, 25, 40, 30, 50, 20, 35, 45, 28].map((h, i) => ({
 	key: String(i),
@@ -57,6 +58,7 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 	searchHighlight = "",
 	hasEverBeenEvaluated = false,
 }: CachedPromptChartProps) {
+	const { t, formatNumber } = useI18n();
 	// Get data from context (pre-loaded)
 	const chartContext = useOptionalChartDataContext();
 
@@ -147,8 +149,8 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 										<div className="h-2 w-2 rounded-full bg-muted-foreground/30 animate-pulse [animation-delay:0.2s]" />
 										<div className="h-2 w-2 rounded-full bg-muted-foreground/30 animate-pulse [animation-delay:0.4s]" />
 									</div>
-									<p className="text-sm font-medium text-muted-foreground">Evaluating for the first time</p>
-									<p className="text-xs text-muted-foreground/70 mt-1">Results will appear here shortly.</p>
+									<p className="text-sm font-medium text-muted-foreground">{t("chart.evaluatingFirstTime")}</p>
+									<p className="text-xs text-muted-foreground/70 mt-1">{t("visibility.resultsSoon")}</p>
 								</>
 							) : (
 								<>
@@ -161,10 +163,8 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 											/>
 										))}
 									</div>
-									<p className="text-sm font-medium text-muted-foreground">No data in selected time range</p>
-									<p className="text-xs text-muted-foreground/70 mt-1">
-										Try selecting a longer time period to see historical data.
-									</p>
+									<p className="text-sm font-medium text-muted-foreground">{t("chart.noDataInRange")}</p>
+									<p className="text-xs text-muted-foreground/70 mt-1">{t("visibility.longerPeriod")}</p>
 								</>
 							)}
 						</div>
@@ -196,10 +196,8 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 										/>
 									))}
 								</div>
-								<p className="text-sm font-medium text-muted-foreground">No brands found in responses</p>
-								<p className="text-xs text-muted-foreground/70 mt-1">
-									Your brand and competitors weren't mentioned in the evaluated responses for this prompt.
-								</p>
+								<p className="text-sm font-medium text-muted-foreground">{t("chart.noBrandsFound")}</p>
+								<p className="text-xs text-muted-foreground/70 mt-1">{t("chart.noBrandsFoundDescription")}</p>
 							</div>
 						</div>
 					</CardContent>
@@ -229,7 +227,7 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 					<PromptTitle name={promptName} highlight={searchHighlight} />
 					{lastBrandVisibility !== null && (
 						<Badge variant={getBadgeVariant(lastBrandVisibility)} className={getBadgeClassName(lastBrandVisibility)}>
-							{lastBrandVisibility}% Visibility
+							{t("visibility.percent", { value: formatNumber(lastBrandVisibility) })}
 						</Badge>
 					)}
 				</CardHeader>

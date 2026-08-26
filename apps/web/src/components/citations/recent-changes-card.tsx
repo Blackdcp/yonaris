@@ -1,26 +1,28 @@
-import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
-import { Separator } from "@workspace/ui/components/separator";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@workspace/ui/components/tooltip";
 import {
+	IconArrowDownRight,
 	IconExternalLink,
 	IconInfoCircle,
 	IconPlus,
-	IconArrowDownRight,
 	IconSwitchHorizontal,
 } from "@tabler/icons-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Separator } from "@workspace/ui/components/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
+import { useMemo, useState } from "react";
+import { formatUrlForDisplay, UnderlineTabs } from "@/components/citations/shared";
 import type { CitationData } from "@/components/citations/types";
-import { formatPeriodLabel, formatUrlForDisplay, UnderlineTabs } from "@/components/citations/shared";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 
 type ChangeType = "new_pages" | "dropped_pages" | "title" | "new_domains" | "dropped_domains";
 
-const CHANGE_TYPE_TABS: { key: ChangeType; label: string }[] = [
-	{ key: "new_pages", label: "New Pages" },
-	{ key: "dropped_pages", label: "Dropped Pages" },
-	{ key: "title", label: "Title Changes" },
-	{ key: "new_domains", label: "New Domains" },
-	{ key: "dropped_domains", label: "Dropped Domains" },
-];
+const CHANGE_TYPE_MESSAGE_IDS: Record<ChangeType, MessageId> = {
+	new_pages: "citation.changes.newPages",
+	dropped_pages: "citation.changes.droppedPages",
+	title: "citation.changes.title",
+	new_domains: "citation.changes.newDomains",
+	dropped_domains: "citation.changes.droppedDomains",
+};
 
 export function RecentChangesCard({
 	whatsChanged,
@@ -29,7 +31,13 @@ export function RecentChangesCard({
 	whatsChanged: NonNullable<CitationData["whatsChanged"]>;
 	days: number;
 }) {
+	const { t, formatNumber } = useI18n();
 	const [changeTypeFilter, setChangeTypeFilter] = useState<ChangeType>("new_pages");
+	const period = t("citation.period", { count: formatNumber(days) });
+	const changeTypeTabs = Object.entries(CHANGE_TYPE_MESSAGE_IDS).map(([key, id]) => ({
+		key: key as ChangeType,
+		label: t(id),
+	}));
 
 	const allChanges = useMemo(() => {
 		return [
@@ -51,23 +59,22 @@ export function RecentChangesCard({
 		<Card className="h-full flex flex-col">
 			<CardHeader>
 				<CardTitle className="flex items-center gap-1.5">
-					Recent Changes
+					{t("citation.recentChanges")}
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 						</TooltipTrigger>
 						<TooltipContent className="max-w-xs text-sm font-normal">
-							Compares this {formatPeriodLabel(days)} with the {formatPeriodLabel(days)} before it. Shows new and
-							dropped pages, title changes, and new and dropped domains.
+							{t("citation.changesTooltip", { period })}
 						</TooltipContent>
 					</Tooltip>
 				</CardTitle>
-				<CardDescription>How AI citations have shifted over the past {formatPeriodLabel(days)}</CardDescription>
+				<CardDescription>{t("citation.changesDescription", { period })}</CardDescription>
 			</CardHeader>
 			<Separator />
 			<CardContent className="flex-1">
 				<UnderlineTabs
-					tabs={CHANGE_TYPE_TABS}
+					tabs={changeTypeTabs}
 					activeKey={changeTypeFilter}
 					onSelect={(key) => setChangeTypeFilter(key)}
 				/>
@@ -91,9 +98,19 @@ export function RecentChangesCard({
 
 						let description: React.ReactNode = null;
 						if (change.type === "new_pages" && "promptCount" in change) {
-							description = `0 → ${change.count} citations across ${change.promptCount} prompt${change.promptCount !== 1 ? "s" : ""}`;
+							description = t("citation.changes.newPageRow", {
+								citations: t(change.count === 1 ? "citation.citation.one" : "citation.citation.many", {
+									count: formatNumber(change.count),
+								}),
+								prompts: t(change.promptCount === 1 ? "visibility.prompt.one" : "visibility.prompt.many", {
+									count: formatNumber(change.promptCount),
+								}),
+							});
 						} else if (change.type === "dropped_pages" && "previousCount" in change) {
-							description = `${change.previousCount} → ${change.currentCount} citations`;
+							description = t("citation.changes.droppedPageRow", {
+								previous: formatNumber(change.previousCount),
+								current: formatNumber(change.currentCount),
+							});
 						} else if (change.type === "title" && "currentTitle" in change && "previousTitle" in change) {
 							description = (
 								<>
@@ -103,9 +120,17 @@ export function RecentChangesCard({
 								</>
 							);
 						} else if (change.type === "new_domains" && "count" in change) {
-							description = `${change.count} citation${change.count !== 1 ? "s" : ""} in the current period`;
+							description = t("citation.changes.newDomainRow", {
+								citations: t(change.count === 1 ? "citation.citation.one" : "citation.citation.many", {
+									count: formatNumber(change.count),
+								}),
+							});
 						} else if (change.type === "dropped_domains" && "previousCount" in change) {
-							description = `${change.previousCount} citation${change.previousCount !== 1 ? "s" : ""} last period, none now`;
+							description = t("citation.changes.droppedDomainRow", {
+								citations: t(change.previousCount === 1 ? "citation.citation.one" : "citation.citation.many", {
+									count: formatNumber(change.previousCount),
+								}),
+							});
 						}
 
 						const inner = (
@@ -140,10 +165,7 @@ export function RecentChangesCard({
 						);
 					})}
 					{visibleChanges.length === 0 && (
-						<p className="text-sm text-muted-foreground text-center py-4">
-							No {CHANGE_TYPE_TABS.find((t) => t.key === changeTypeFilter)?.label.toLowerCase() ?? changeTypeFilter}{" "}
-							changes in this period.
-						</p>
+						<p className="text-sm text-muted-foreground text-center py-4">{t("citation.changes.empty")}</p>
 					)}
 				</div>
 			</CardContent>

@@ -1,8 +1,10 @@
+import type { UiLanguage } from "@workspace/config/language";
+import { translate } from "@/i18n/catalog";
 import type { OpportunitiesReason } from "@/server/opportunities";
 
-export function opportunityEmptyMessage(reason: OpportunitiesReason) {
+export function opportunityEmptyMessage(reason: OpportunitiesReason, locale: UiLanguage = "en") {
 	if (reason === "not_generated") {
-		return "An administrator has not generated opportunities for this Program yet.";
+		return translate(locale, "opportunity.empty.admin");
 	}
-	return "We need a bit more tracking data before we can recommend opportunities — check back once your prompts have run for a few days.";
+	return translate(locale, "opportunity.insufficient");
 }

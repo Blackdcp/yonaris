@@ -1,12 +1,49 @@
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import {
 	CATEGORY_CONFIG,
 	CITATION_CATEGORIES,
 	CITATION_PAGE_TYPES,
 	type CitationCategory,
+	type CitationPageType,
 	PAGE_TYPE_CONFIG,
 } from "@/lib/domain-categories";
 
-export const getCategoryLabel = (category: string) => CATEGORY_CONFIG[category as CitationCategory]?.label ?? category;
+export const CATEGORY_MESSAGE_IDS: Record<CitationCategory, MessageId> = {
+	brand: "citation.category.brand",
+	competitor: "citation.category.competitor",
+	editorial: "citation.category.editorial",
+	reviews: "citation.category.reviews",
+	ecommerce: "citation.category.ecommerce",
+	social: "citation.category.social",
+	developer: "citation.category.developer",
+	pr: "citation.category.pr",
+	reference: "citation.category.reference",
+	institutional: "citation.category.institutional",
+	other: "citation.category.other",
+};
+
+export const PAGE_TYPE_MESSAGE_IDS: Record<CitationPageType, MessageId> = {
+	homepage: "citation.page.homepage",
+	article: "citation.page.article",
+	listicle: "citation.page.listicle",
+	howto: "citation.page.howto",
+	comparison: "citation.page.comparison",
+	review: "citation.page.review",
+	forum: "citation.page.forum",
+	video: "citation.page.video",
+	doc: "citation.page.doc",
+	product: "citation.page.product",
+	info: "citation.page.info",
+	search: "citation.page.search",
+	shopping: "citation.page.shopping",
+	other: "citation.page.other",
+};
+
+export const getCategoryLabel = (category: string, t?: (id: MessageId) => string) => {
+	const id = CATEGORY_MESSAGE_IDS[category as CitationCategory];
+	return id && t ? t(id) : (CATEGORY_CONFIG[category as CitationCategory]?.label ?? category);
+};
 
 export const getCategoryColorClass = (category: string) =>
 	CATEGORY_CONFIG[category as CitationCategory]?.badgeClass ?? "bg-gray-500/90 text-white";
@@ -22,16 +59,6 @@ export const formatUrlForDisplay = (url: string) => {
 	}
 	return displayUrl;
 };
-
-export function formatPeriodLabel(days: number): string {
-	if (days === 1) return "24 hours";
-	if (days === 7) return "week";
-	if (days === 14) return "2 weeks";
-	if (days === 30) return "month";
-	if (days === 60) return "2 months";
-	if (days === 90) return "3 months";
-	return `${days} days`;
-}
 
 export const extractSubreddit = (url: string): string | null => {
 	try {
@@ -53,12 +80,14 @@ export const extractFilenameFromUrl = (url: string) => {
 	}
 };
 
-export const CATEGORY_META: Record<string, { label: string; color: string }> = Object.fromEntries(
-	CITATION_CATEGORIES.map((c) => [c, { label: CATEGORY_CONFIG[c].label, color: CATEGORY_CONFIG[c].chartColor }]),
-);
-export const PAGE_TYPE_META: Record<string, { label: string; color: string }> = Object.fromEntries(
-	CITATION_PAGE_TYPES.map((p) => [p, { label: PAGE_TYPE_CONFIG[p].label, color: PAGE_TYPE_CONFIG[p].chartColor }]),
-);
+export const getCategoryMeta = (t: (id: MessageId) => string): Record<string, { label: string; color: string }> =>
+	Object.fromEntries(
+		CITATION_CATEGORIES.map((c) => [c, { label: t(CATEGORY_MESSAGE_IDS[c]), color: CATEGORY_CONFIG[c].chartColor }]),
+	);
+export const getPageTypeMeta = (t: (id: MessageId) => string): Record<string, { label: string; color: string }> =>
+	Object.fromEntries(
+		CITATION_PAGE_TYPES.map((p) => [p, { label: t(PAGE_TYPE_MESSAGE_IDS[p]), color: PAGE_TYPE_CONFIG[p].chartColor }]),
+	);
 
 export const attributionDotClass = (a: "brand" | "competitor" | "other") =>
 	a === "brand"
@@ -76,8 +105,9 @@ export function UnderlineTabs<T extends string>({
 	activeKey: T;
 	onSelect: (key: T) => void;
 }) {
+	const { t } = useI18n();
 	return (
-		<nav className="-mb-px flex gap-4 overflow-x-auto border-b border-border" aria-label="Tabs">
+		<nav className="-mb-px flex gap-4 overflow-x-auto border-b border-border" aria-label={t("citation.tabs")}>
 			{tabs.map(({ key, label }) => (
 				<button
 					key={key}
