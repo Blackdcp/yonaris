@@ -126,22 +126,22 @@ test("the new regional scenes expose real state-changing interactions", async ({
 	await visitHydrated(page, "/zh");
 	await page.locator('[data-situation-control="displaced"]').click();
 	await expect(page.locator('[data-situation-control="displaced"]')).toHaveAttribute("aria-selected", "true");
-	await expect(page.getByRole("tabpanel", { name: "竞品占了答案位" })).toContainText("竞品");
+	await expect(page.getByRole("tabpanel", { name: "竞品占了答案位" })).toContainText("对标品牌");
 
 	await visitHydrated(page, "/zh/product");
-	await page.getByRole("tab", { name: /再次检查/ }).click();
-	await expect(page.getByRole("tab", { name: /再次检查/ })).toHaveAttribute("aria-selected", "true");
-	await expect(page.getByRole("tabpanel", { name: /再次检查/ })).toContainText("后来怎么变");
+	await page.getByRole("tab", { name: /做复盘/ }).click();
+	await expect(page.getByRole("tab", { name: /做复盘/ })).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: /做复盘/ })).toContainText("后续可见答案");
 
 	await visitHydrated(page, "/zh/approach");
-	await page.getByRole("tab", { name: /出海后品牌定位失真/ }).click();
-	await expect(page.getByRole("tab", { name: /出海后品牌定位失真/ })).toHaveAttribute("aria-selected", "true");
-	await expect(page.getByRole("tabpanel", { name: /出海后品牌定位失真/ })).toContainText("比较目标市场");
+	await page.getByRole("tab", { name: /出海后定位漂移/ }).click();
+	await expect(page.getByRole("tab", { name: /出海后定位漂移/ })).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: /出海后定位漂移/ })).toContainText("定义目标国家");
 
 	await visitHydrated(page, "/zh/geo");
 	await page.locator('[data-market-control="target-market"]').click();
 	await expect(page.locator('[data-market-control="target-market"]')).toHaveAttribute("aria-selected", "true");
-	await expect(page.getByRole("tabpanel", { name: "目标市场对照" })).toContainText("当地客户如何描述");
+	await expect(page.getByRole("tabpanel", { name: "目标市场对照" })).toContainText("当地买家会看到什么");
 });
 
 test("regional lead forms expose exactly the approved three fields", async ({ page }) => {
