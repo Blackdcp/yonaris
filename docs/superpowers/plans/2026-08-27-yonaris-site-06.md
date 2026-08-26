@@ -129,6 +129,8 @@ git commit -m "build the shared Site 06 experience"
 - Modify: `apps/www/src/components/experience/global/global-shell.tsx`
 - Replace: `apps/www/src/components/experience/global/global-scenes.tsx`
 - Modify: `apps/www/src/components/experience/global/global-experience.test.tsx`
+- Modify: `apps/www/src/components/experience/site-generation.test.tsx`
+- Modify: `apps/www/src/styles.test.ts`
 - Add: `apps/www/public/brand/site-06/conference-room.jpg`
 - Add: `apps/www/public/brand/site-06/business-walk.jpg`
 - Add: `apps/www/public/brand/site-06/glass-venue.jpg`
@@ -207,6 +209,8 @@ git commit -m "rebuild the English marketing experience"
 - Modify: `apps/www/src/components/experience/china/china-shell.tsx`
 - Replace: `apps/www/src/components/experience/china/china-scenes.tsx`
 - Modify: `apps/www/src/components/experience/china/china-experience.test.tsx`
+- Modify: `apps/www/src/components/experience/site-generation.test.tsx`
+- Modify: `apps/www/src/styles.test.ts`
 - Delete after CSS import removal: `apps/www/src/styles/experience/china.css`
 
 **Interfaces:**
@@ -454,4 +458,3 @@ git commit -m "verify the Site 06 production release"
 - [ ] **Step 7: Push and observe the established deployment**
 
 Push `codex/site-production-06` to `origin`, use the repository’s established marketing deployment workflow, and observe its checks to completion. Verify production GET and HEAD responses for `/`, `/product`, `/company`, `/zh`, `/zh/product`, `/agent/company.md`, `/agent/catalog.json`, `/robots.txt`, and `/sitemap.xml`. Do not report publication complete until the live site returns the new copy and assets.
-
