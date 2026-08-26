@@ -106,42 +106,42 @@ test("the new regional scenes expose real state-changing interactions", async ({
 	await visitHydrated(page, "/product");
 	await page.locator('[data-product-step="compare"]').click();
 	await expect(page.locator('[data-product-step="compare"]')).toHaveAttribute("aria-selected", "true");
-	await expect(page.locator("#product-panel-compare")).toBeVisible();
+	await expect(page.getByRole("tabpanel", { name: "Recheck" })).toBeVisible();
 
 	await visitHydrated(page, "/approach");
 	await page.locator('[data-change-stage="return"] button').click();
-	await expect(page.locator('[data-change-stage="return"] button')).toHaveAttribute("aria-pressed", "true");
-	await expect(page.locator(".sf-change-path__detail")).toContainText("Repeat the same question");
+	await expect(page.locator('[data-change-stage="return"] button')).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: "Return to the question" })).toContainText("Repeat the controlled scope");
 
 	await visitHydrated(page, "/geo");
 	await page.locator('[data-market-choice="alternatives"]').click();
-	await expect(page.locator('[data-market-choice="alternatives"]')).toHaveAttribute("aria-pressed", "true");
-	await expect(page.locator(".sf-market-atlas__question")).toContainText("Which named alternatives");
+	await expect(page.locator('[data-market-choice="alternatives"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: "Comparison set" })).toContainText("Which supplied named alternatives");
 
 	await visitHydrated(page, "/company");
-	await page.locator('[data-constellation-node="decisions"]').click();
-	await expect(page.locator('[data-constellation-node="decisions"]')).toHaveAttribute("aria-pressed", "true");
-	await expect(page.locator(".sf-constellation__detail")).toContainText("deserves attention");
+	await page.locator('[data-constellation-node="repeat"]').click();
+	await expect(page.locator('[data-constellation-node="repeat"]')).toHaveAttribute("aria-selected", "true");
+	await expect(page.getByRole("tabpanel", { name: "Repeatable checks" })).toContainText("same written scope");
 
 	await visitHydrated(page, "/zh");
 	await page.locator('[data-situation-control="displaced"]').click();
 	await expect(page.locator('[data-situation-control="displaced"]')).toHaveAttribute("aria-selected", "true");
-	await expect(page.locator("#china-answer-panel")).toContainText("竞品");
+	await expect(page.getByRole("tabpanel", { name: "竞品占了答案位" })).toContainText("竞品");
 
 	await visitHydrated(page, "/zh/product");
 	await page.getByRole("tab", { name: /再次检查/ }).click();
 	await expect(page.getByRole("tab", { name: /再次检查/ })).toHaveAttribute("aria-selected", "true");
-	await expect(page.locator("#china-product-panel")).toContainText("后来怎么变");
+	await expect(page.getByRole("tabpanel", { name: /再次检查/ })).toContainText("后来怎么变");
 
 	await visitHydrated(page, "/zh/approach");
 	await page.getByRole("tab", { name: /出海后品牌定位失真/ }).click();
 	await expect(page.getByRole("tab", { name: /出海后品牌定位失真/ })).toHaveAttribute("aria-selected", "true");
-	await expect(page.locator("#china-service-panel")).toContainText("比较目标市场");
+	await expect(page.getByRole("tabpanel", { name: /出海后品牌定位失真/ })).toContainText("比较目标市场");
 
 	await visitHydrated(page, "/zh/geo");
 	await page.locator('[data-market-control="target-market"]').click();
 	await expect(page.locator('[data-market-control="target-market"]')).toHaveAttribute("aria-selected", "true");
-	await expect(page.locator("#china-market-panel")).toContainText("当地客户如何描述");
+	await expect(page.getByRole("tabpanel", { name: "目标市场对照" })).toContainText("当地客户如何描述");
 });
 
 test("regional lead forms expose exactly the approved three fields", async ({ page }) => {
