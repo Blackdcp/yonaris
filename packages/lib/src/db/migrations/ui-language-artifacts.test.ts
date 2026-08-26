@@ -1,8 +1,22 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { getTableConfig, PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
+import { user } from "../schema-auth";
 
 describe("user UI language migration artifacts", () => {
+	it("exposes the UI language default and named constraint through Drizzle metadata", () => {
+		const table = getTableConfig(user);
+		const languageColumn = table.columns.find((column) => column.name === "ui_language");
+		const languageCheck = table.checks.find((check) => check.name === "user_ui_language_supported");
+
+		expect(languageColumn).toMatchObject({ notNull: true, default: "en" });
+		expect(languageCheck).toBeDefined();
+		if (!languageCheck) throw new Error("Expected the named UI language check");
+		const checkSql = new PgDialect().sqlToQuery(languageCheck.value).sql;
+		expect(checkSql).toContain("\"user\".\"ui_language\" IN ('en', 'zh-CN')");
+	});
+
 	it("keeps the schema, migration, snapshot, and journal aligned", () => {
 		const repositoryRoot = resolve(process.cwd(), "../..");
 		const migration = readFileSync(
@@ -23,9 +37,9 @@ describe("user UI language migration artifacts", () => {
 			readFileSync(resolve(repositoryRoot, "packages/lib/src/db/migrations/meta/_journal.json"), "utf8"),
 		) as { entries: Array<{ idx: number; tag: string }> };
 
-		expect(migration).toContain('ADD COLUMN "ui_language" text DEFAULT \'en\' NOT NULL');
+		expect(migration).toContain("ADD COLUMN \"ui_language\" text DEFAULT 'en' NOT NULL");
 		expect(migration).toContain(
-			'ADD CONSTRAINT "user_ui_language_supported" CHECK ("ui_language" IN (\'en\', \'zh-CN\'))',
+			"ADD CONSTRAINT \"user_ui_language_supported\" CHECK (\"ui_language\" IN ('en', 'zh-CN'))",
 		);
 		expect(snapshot.tables["public.user"].columns.ui_language).toMatchObject({
 			default: "'en'",

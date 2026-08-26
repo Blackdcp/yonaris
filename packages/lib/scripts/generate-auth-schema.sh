@@ -9,31 +9,44 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PKG_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-AUTH_CONFIG="$PKG_DIR/src/auth/_cli-helper.ts"
-OUTPUT="$PKG_DIR/src/db/schema-auth.ts"
-TMP_OUTPUT="/tmp/better-auth-schema-gen.ts"
+OUTPUT="${AUTH_SCHEMA_OUTPUT:-$PKG_DIR/src/db/schema-auth.ts}"
+TMP_ROOT="${AUTH_SCHEMA_TMP_ROOT:-$PKG_DIR}"
+PNPM_BIN="${PNPM_BIN:-pnpm}"
 
-# The CLI needs a file that default-exports or exports `auth`.
-# Our real config exports a factory function, so we use a thin wrapper.
-mkdir -p "$(dirname "$AUTH_CONFIG")"
-cat > "$AUTH_CONFIG" <<'EOF'
-import { createAuth } from "./server";
-export const auth = createAuth();
-export default auth;
-EOF
+mkdir -p "$TMP_ROOT"
+TMP_DIR="$(mktemp -d "$TMP_ROOT/.yonaris-auth-schema.XXXXXX")"
+AUTH_CONFIG="$TMP_DIR/auth-config.ts"
+CLI_OUTPUT="$TMP_DIR/schema-auth.cli.ts"
+PROCESSED_OUTPUT="$TMP_DIR/schema-auth.processed.ts"
 
-cleanup() { rm -f "$AUTH_CONFIG" "$TMP_OUTPUT"; }
+cleanup() { rm -rf "$TMP_DIR"; }
 trap cleanup EXIT
 
+# The CLI needs a file that exports `auth`. Compute a portable relative
+# import so tests can isolate the temporary root without changing the source.
+AUTH_SERVER_IMPORT="$(node -e '
+const path = require("node:path");
+const [helper, server] = process.argv.slice(1);
+let relative = path.relative(path.dirname(helper), server).replaceAll("\\", "/").replace(/\.ts$/, "");
+if (!relative.startsWith(".")) relative = `./${relative}`;
+process.stdout.write(relative);
+' "$AUTH_CONFIG" "$PKG_DIR/src/auth/server.ts")"
+printf '%s\n' "import { createAuth } from \"$AUTH_SERVER_IMPORT\";
+export const auth = createAuth();
+export default auth;" > "$AUTH_CONFIG"
+
 echo "[generate-auth-schema] Running better-auth CLI..."
-echo "y" | npx @better-auth/cli@latest generate \
+"$PNPM_BIN" exec better-auth generate \
+	--yes \
   --config "$AUTH_CONFIG" \
-  --output "$TMP_OUTPUT" \
+  --output "$CLI_OUTPUT" \
   2>&1
 
-if [ ! -s "$TMP_OUTPUT" ]; then
+if [ ! -s "$CLI_OUTPUT" ]; then
   echo "[generate-auth-schema] ERROR: CLI produced empty output" >&2
   exit 1
 fi
 
-node "$SCRIPT_DIR/postprocess-auth-schema.mjs" "$TMP_OUTPUT" "$OUTPUT"
+node "$SCRIPT_DIR/postprocess-auth-schema.mjs" "$CLI_OUTPUT" "$PROCESSED_OUTPUT"
+mkdir -p "$(dirname "$OUTPUT")"
+mv -f "$PROCESSED_OUTPUT" "$OUTPUT"

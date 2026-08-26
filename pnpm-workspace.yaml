@@ -56,6 +56,8 @@ allowBuilds:
   protobufjs: false
   tree-sitter: false
   tree-sitter-json: false
+  "@prisma/client": false
+  better-sqlite3: false
 
 blockExoticSubdeps: true
 minimumReleaseAge: 5760
