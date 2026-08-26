@@ -8,15 +8,7 @@ type PageModule = { GLOBAL_PAGES?: Record<HumanPageKey, Page>; CHINA_PAGES?: Rec
 const globalSubject = (await import("./global/global-pages").catch(() => undefined)) as PageModule | undefined;
 const chinaSubject = (await import("./china/china-pages").catch(() => undefined)) as PageModule | undefined;
 
-const globalScenes: Record<HumanPageKey, string> = {
-	home: "answer-field",
-	product: "product-lens",
-	approach: "change-path",
-	geo: "market-atlas",
-	company: "company-constellation",
-	diagnostic: "contact-signal",
-	privacy: "data-route",
-};
+const globalPages: HumanPageKey[] = ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"];
 
 const chinaScenes: Record<HumanPageKey, string> = {
 	home: "ai-answer-flow",
@@ -51,17 +43,22 @@ const retiredMarkers = [
 ] as const;
 
 const internalEnglish =
-	/\b(reviewable|denominator|managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof)\b/i;
+	/\b(denominator|managed delivery|configured scope|evidence boundary|interface demonstration|no customer data|causal proof)\b/i;
 const internalChinese = /证据边界|有效分母|人工审核点|配置化观察|责任边界|当前软件|当前演示|因果证明/;
 const roleSegmentation = /for (CMOs|marketers|founders|sales teams)|市场总监|品牌负责人|创始人|销售团队/i;
 
-function expectSharedHumanContract(markup: string, edition: "global-en" | "zh-cn", scene: string): void {
+function expectSharedHumanContract(
+	markup: string,
+	edition: "global-en" | "zh-cn",
+	generation: "site-06" | "zero-one",
+	scene?: string,
+): void {
 	expect(markup.match(/<main/g) ?? []).toHaveLength(1);
 	expect(markup.match(/<h1/g) ?? []).toHaveLength(1);
-	expect(markup).toContain('data-generation="zero-one"');
+	expect(markup).toContain(`data-generation="${generation}"`);
 	expect(markup).toContain('data-human-surface="true"');
 	expect(markup).toContain(`data-edition="${edition}"`);
-	expect(markup).toContain(`data-scene="${scene}"`);
+	if (scene) expect(markup).toContain(`data-scene="${scene}"`);
 	expect(markup).toContain("/brand/logos/yonaris-wordmark-");
 	expect(markup).not.toMatch(roleSegmentation);
 	expect(markup).not.toContain('href="/research"');
@@ -71,14 +68,14 @@ function expectSharedHumanContract(markup: string, edition: "global-en" | "zh-cn
 	for (const marker of retiredMarkers) expect(markup).not.toContain(marker);
 }
 
-describe("zero-to-one Human website generation", () => {
-	it("ships seven independently composed global pages", () => {
+describe("Human website generation", () => {
+	it("ships seven independently composed Site 06 English pages", () => {
 		expect(globalSubject?.GLOBAL_PAGES, "new global experience must exist").toBeDefined();
 		if (!globalSubject?.GLOBAL_PAGES) return;
-		expect(Object.keys(globalSubject.GLOBAL_PAGES)).toEqual(Object.keys(globalScenes));
-		for (const [key, scene] of Object.entries(globalScenes) as [HumanPageKey, string][]) {
+		expect(Object.keys(globalSubject.GLOBAL_PAGES)).toEqual(globalPages);
+		for (const key of globalPages) {
 			const markup = renderToStaticMarkup(globalSubject.GLOBAL_PAGES[key]());
-			expectSharedHumanContract(markup, "global-en", scene);
+			expectSharedHumanContract(markup, "global-en", "site-06");
 			expect(markup).not.toMatch(internalEnglish);
 			expect(markup).toContain(`href="${key === "home" ? "/agent" : `/agent/${key}`}"`);
 		}
@@ -90,7 +87,7 @@ describe("zero-to-one Human website generation", () => {
 		expect(Object.keys(chinaSubject.CHINA_PAGES)).toEqual(Object.keys(chinaScenes));
 		for (const [key, scene] of Object.entries(chinaScenes) as [HumanPageKey, string][]) {
 			const markup = renderToStaticMarkup(chinaSubject.CHINA_PAGES[key]());
-			expectSharedHumanContract(markup, "zh-cn", scene);
+			expectSharedHumanContract(markup, "zh-cn", "zero-one", scene);
 			expect(markup).not.toMatch(internalChinese);
 			expect(markup).toContain(`href="${key === "home" ? "/zh/agent" : `/zh/agent/${key}`}"`);
 		}

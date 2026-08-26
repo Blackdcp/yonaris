@@ -1,11 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
-	AnswerFieldScene,
-	ChangePathScene,
-	CompanyConstellationScene,
-	MarketAtlasScene,
-	ProductLensScene,
+	CompanyReadingScene,
+	EvidenceReviewScene,
+	HomeReadingScene,
+	PlatformInspectorScene,
 } from "../global/global-scenes";
 import { resolveRovingTabIndex } from "./use-roving-tabs";
 
@@ -13,7 +12,7 @@ function attribute(markup: string, name: string): string | undefined {
 	return markup.match(new RegExp(`${name}="([^"]+)"`))?.[1];
 }
 
-function expectLinkedTabSet(markup: string, expectedCount: number) {
+function expectLinkedTabSet(markup: string, expectedCount: number, expectedTabsets = 1) {
 	const tabs = [...markup.matchAll(/<button[^>]*role="tab"[^>]*>/g)].map(([tab]) => tab);
 	const panels = [...markup.matchAll(/<(?:article|section)[^>]*role="tabpanel"[^>]*>/g)].map(([panel]) => panel);
 
@@ -23,8 +22,8 @@ function expectLinkedTabSet(markup: string, expectedCount: number) {
 	const tabIds = tabs.map((tab) => attribute(tab, "id"));
 	expect(tabIds.every(Boolean)).toBe(true);
 	expect(new Set(tabIds).size).toBe(expectedCount);
-	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "0")).toHaveLength(1);
-	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "-1")).toHaveLength(expectedCount - 1);
+	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "0")).toHaveLength(expectedTabsets);
+	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "-1")).toHaveLength(expectedCount - expectedTabsets);
 
 	for (const panel of panels) {
 		const panelId = attribute(panel, "id");
@@ -49,32 +48,31 @@ describe("resolveRovingTabIndex", () => {
 	});
 });
 
-describe("Global roving tab scenes", () => {
+describe("Site 06 English roving tab scenes", () => {
 	it.each([
-		["answer field", AnswerFieldScene, 5],
-		["product journey", ProductLensScene, 4],
-		["approach path", ChangePathScene, 4],
-		["market lenses", MarketAtlasScene, 3],
-		["company boundaries", CompanyConstellationScene, 4],
-	] as const)("links every %s tab to one labelled panel", (_name, Scene, count) => {
-		expectLinkedTabSet(renderToStaticMarkup(<Scene />), count);
+		["home dual reading", HomeReadingScene, 3, 2],
+		["platform evidence", PlatformInspectorScene, 3, 1],
+		["evidence review", EvidenceReviewScene, 2, 1],
+		["company facts", CompanyReadingScene, 9, 4],
+	] as const)("links every %s tab to one labelled panel", (_name, Scene, count, tabsets) => {
+		expectLinkedTabSet(renderToStaticMarkup(<Scene />), count, tabsets);
 	});
 
 	it("keeps tab and panel IDs unique across multiple instances", () => {
 		const markup = renderToStaticMarkup(
 			<>
-				<ProductLensScene />
-				<ProductLensScene />
+				<PlatformInspectorScene />
+				<PlatformInspectorScene />
 			</>,
 		);
 		const tabIds = [...markup.matchAll(/<button[^>]*role="tab"[^>]*>/g)].map(([tab]) => attribute(tab, "id"));
-		const panelIds = [...markup.matchAll(/<section[^>]*role="tabpanel"[^>]*>/g)].map(([panel]) =>
+		const panelIds = [...markup.matchAll(/<(?:article|section)[^>]*role="tabpanel"[^>]*>/g)].map(([panel]) =>
 			attribute(panel, "id"),
 		);
 
-		expect(tabIds).toHaveLength(8);
-		expect(panelIds).toHaveLength(8);
-		expect(new Set(tabIds).size).toBe(8);
-		expect(new Set(panelIds).size).toBe(8);
+		expect(tabIds).toHaveLength(6);
+		expect(panelIds).toHaveLength(6);
+		expect(new Set(tabIds).size).toBe(6);
+		expect(new Set(panelIds).size).toBe(6);
 	});
 });

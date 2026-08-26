@@ -270,7 +270,6 @@ export function LeadFormView({
 			) : null}
 			<button type="submit" disabled={submission === "submitting"}>
 				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
-				<span aria-hidden="true">↗</span>
 			</button>
 			<p className="lead-disclosure">
 				{labels.disclosure} <a href={locale === "zh" ? "/zh/privacy" : "/privacy"}>{labels.privacy}</a>
