@@ -61,44 +61,27 @@ export async function submitBrandOnboardingForm(
 	}
 }
 
-export default function BrandOnboarding({ brandId, brandName }: BrandOnboardingProps) {
+export function BrandOnboardingView({
+	brandId,
+	brandName,
+	isLoading,
+	fieldErrors,
+	formError,
+	onSubmit,
+}: BrandOnboardingProps & {
+	isLoading: boolean;
+	fieldErrors: { website?: MessageId };
+	formError: MessageId | null;
+	onSubmit: (formData: FormData) => Promise<void>;
+}) {
 	const { t } = useI18n();
-	const [isLoading, setIsLoading] = useState(false);
-	const [fieldErrors, setFieldErrors] = useState<{ website?: MessageId }>({});
-	const [formError, setFormError] = useState<MessageId | null>(null);
-	const navigate = useNavigate();
-	const router = useRouter();
-
-	const handleSubmit = async (formData: FormData) => {
-		setIsLoading(true);
-		setFieldErrors({});
-		setFormError(null);
-
-		try {
-			const result = await submitBrandOnboardingForm(formData, { brandId, brandName }, createBrandFn);
-			if (!result.ok) {
-				setFieldErrors(result.fieldErrors);
-				setFormError(result.formError ?? null);
-				return;
-			}
-
-			trackEvent("brand_created", { has_website: Boolean(result.submitted.website) });
-			await router.invalidate();
-			await navigate({ to: "/app/$brand", params: { brand: brandId } });
-		} catch {
-			setFormError("common.error.unexpected");
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
 	return (
 		<FullPageCard
 			title={t("customer.onboarding.title", { brand: brandName })}
 			subtitle={t("customer.onboarding.subtitle")}
 			showBackButton
 		>
-			<form action={handleSubmit} className="space-y-4" noValidate>
+			<form action={onSubmit} className="space-y-4" noValidate>
 				<input type="hidden" name="brandId" value={brandId} />
 				<input type="hidden" name="brandName" value={brandName} />
 
@@ -135,5 +118,47 @@ export default function BrandOnboarding({ brandId, brandName }: BrandOnboardingP
 				</Button>
 			</form>
 		</FullPageCard>
+	);
+}
+
+export default function BrandOnboarding({ brandId, brandName }: BrandOnboardingProps) {
+	const [isLoading, setIsLoading] = useState(false);
+	const [fieldErrors, setFieldErrors] = useState<{ website?: MessageId }>({});
+	const [formError, setFormError] = useState<MessageId | null>(null);
+	const navigate = useNavigate();
+	const router = useRouter();
+
+	const handleSubmit = async (formData: FormData) => {
+		setIsLoading(true);
+		setFieldErrors({});
+		setFormError(null);
+
+		try {
+			const result = await submitBrandOnboardingForm(formData, { brandId, brandName }, createBrandFn);
+			if (!result.ok) {
+				setFieldErrors(result.fieldErrors);
+				setFormError(result.formError ?? null);
+				return;
+			}
+
+			trackEvent("brand_created", { has_website: Boolean(result.submitted.website) });
+			await router.invalidate();
+			await navigate({ to: "/app/$brand", params: { brand: brandId } });
+		} catch {
+			setFormError("common.error.unexpected");
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	return (
+		<BrandOnboardingView
+			brandId={brandId}
+			brandName={brandName}
+			isLoading={isLoading}
+			fieldErrors={fieldErrors}
+			formError={formError}
+			onSubmit={handleSubmit}
+		/>
 	);
 }

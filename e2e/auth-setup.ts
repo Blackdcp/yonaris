@@ -10,6 +10,7 @@ import path from "node:path";
 import pg from "pg";
 import { provisionCustomerTestIdentity } from "./customer-auth-setup";
 import { DATABASE_URL, TEST_USER, TEST_BRAND_ID, TEST_BRAND_NAME } from "./fixtures";
+import { provisionLanguageSmokeIdentity } from "./language-auth-setup";
 
 export const ADMIN_AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "admin.json");
 
@@ -104,6 +105,9 @@ export default async function globalSetup(config: FullConfig) {
 
 		await provisionCustomerTestIdentity({ adminPage: page, browser, baseURL });
 		console.log("[auth-setup] Provisioned and authenticated the StepFun customer analyst");
+
+		await provisionLanguageSmokeIdentity({ browser, baseURL });
+		console.log("[auth-setup] Provisioned the dedicated portal-language identity");
 	} finally {
 		await browser.close();
 	}

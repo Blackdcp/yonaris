@@ -40,6 +40,51 @@ export const CUSTOMER_TEST_USER = {
   role: "analyst",
 } as const;
 
+/** Dedicated serial identity/data for the bilingual portal smoke. */
+export const LANGUAGE_SMOKE_USER = {
+  email: "portal-language@e2e.test",
+  password: "portal-language-password-123",
+  name: "Portal Language E2E",
+} as const;
+export const LANGUAGE_SMOKE_ORG_ID = "portal-language-e2e-org";
+export const LANGUAGE_SMOKE_BRAND_ID = "portal-language-e2e";
+export const LANGUAGE_SMOKE_BRAND_NAME = "Language Smoke 原始品牌";
+export const LANGUAGE_SMOKE_BRAND_WEBSITE = "https://language-smoke.example.cn/raw?market=CN";
+export const LANGUAGE_SMOKE_SCOPES = {
+  cn: {
+    id: "00000000-0000-4000-8000-710000000001",
+    key: "cn-zh-language-smoke",
+    name: "中国市场 / zh-CN 原始项目",
+    market: "CN",
+    locale: "zh-CN",
+    timezone: "Asia/Shanghai",
+  },
+  en: {
+    id: "00000000-0000-4000-8000-710000000002",
+    key: "us-en-language-smoke",
+    name: "US Market / en-US Raw Program",
+    market: "US",
+    locale: "en-US",
+    timezone: "America/New_York",
+  },
+} as const;
+export const LANGUAGE_SMOKE_PROMPTS = {
+  cn: {
+    id: "00000000-0000-4000-8000-710000000011",
+    value: "适合家庭出游的新能源 SUV",
+    derivedQuery: "2026 北京 30万 SUV 推荐",
+  },
+  en: {
+    id: "00000000-0000-4000-8000-710000000012",
+    value: "Best family EV SUV for road trips?",
+    derivedQuery: "family electric SUV range comparison",
+  },
+} as const;
+export const LANGUAGE_SMOKE_RUNS = {
+  cn: "00000000-0000-4000-8000-710000000021",
+  en: "00000000-0000-4000-8000-710000000022",
+} as const;
+
 export const STEPFUN_ORG_ID = "stepfun-e2e-org";
 export const STEPFUN_BRAND_ID = "stepfun-e2e";
 export const STEPFUN_BRAND_NAME = "StepFun";

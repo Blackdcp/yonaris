@@ -1,5 +1,4 @@
 import { IconExternalLink, IconInfoCircle, IconSearch } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Input } from "@workspace/ui/components/input";
@@ -14,6 +13,7 @@ import {
 	UnderlineTabs,
 } from "@/components/citations/shared";
 import type { CitationData } from "@/components/citations/types";
+import { CompetitorGuidance } from "@/components/competitor-guidance";
 import { ListPagination, usePagedList } from "@/components/list-pagination";
 import { useI18n } from "@/i18n/provider";
 
@@ -77,15 +77,7 @@ export function TopUrlsCard({
 								<TooltipContent className="max-w-xs text-sm font-normal">
 									<p className="mb-2">{t("citation.urlsTooltip")}</p>
 									<p>
-										{t("citation.competitorInfo")}{" "}
-										{brandId && canManageBrand ? (
-											<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-												{t("citation.trackedCompetitors")}
-											</Link>
-										) : (
-											t("citation.trackedCompetitors")
-										)}
-										.
+										<CompetitorGuidance brandId={brandId ?? ""} canManageBrand={Boolean(brandId && canManageBrand)} />
 									</p>
 								</TooltipContent>
 							</Tooltip>

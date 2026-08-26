@@ -33,7 +33,7 @@ export function RecentChangesCard({
 }) {
 	const { t, formatNumber } = useI18n();
 	const [changeTypeFilter, setChangeTypeFilter] = useState<ChangeType>("new_pages");
-	const period = t("citation.period", { count: formatNumber(days) });
+	const formattedDays = formatNumber(days);
 	const changeTypeTabs = Object.entries(CHANGE_TYPE_MESSAGE_IDS).map(([key, id]) => ({
 		key: key as ChangeType,
 		label: t(id),
@@ -65,11 +65,11 @@ export function RecentChangesCard({
 							<IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
 						</TooltipTrigger>
 						<TooltipContent className="max-w-xs text-sm font-normal">
-							{t("citation.changesTooltip", { period })}
+							{t("citation.changesTooltip", { days: formattedDays })}
 						</TooltipContent>
 					</Tooltip>
 				</CardTitle>
-				<CardDescription>{t("citation.changesDescription", { period })}</CardDescription>
+				<CardDescription>{t("citation.changesDescription", { days: formattedDays })}</CardDescription>
 			</CardHeader>
 			<Separator />
 			<CardContent className="flex-1">

@@ -11,7 +11,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { customerSettingsErrorMessageId } from "@/components/customer-settings-errors";
 import { LocalizedTagsInput as TagsInput } from "@/components/localized-tags-input";
 import { useBrand } from "@/hooks/use-brands";
@@ -124,16 +124,6 @@ function BrandSettingsPage() {
 		}
 	}, [brand]);
 
-	const validateDomain = useCallback(
-		(val: string): true | string => {
-			const cleaned = cleanAndValidateDomain(val);
-			if (!cleaned) return t("settings.brand.validation.domainInvalid");
-			return true;
-		},
-		[t],
-	);
-	const handleAliasesChange = useCallback((values: string[]) => setAliases(values), []);
-
 	if (isLoading) {
 		return (
 			<div className="space-y-6">
@@ -186,13 +176,56 @@ function BrandSettingsPage() {
 	};
 
 	return (
+		<BrandSettingsView
+			brand={brand}
+			isSubmitting={isSubmitting}
+			fieldErrors={fieldErrors}
+			formError={formError}
+			success={success}
+			additionalDomains={additionalDomains}
+			aliases={aliases}
+			onAdditionalDomainsChange={setAdditionalDomains}
+			onAliasesChange={setAliases}
+			onSubmit={handleSubmit}
+		/>
+	);
+}
+
+export function BrandSettingsView({
+	brand,
+	isSubmitting,
+	fieldErrors,
+	formError,
+	success,
+	additionalDomains,
+	aliases,
+	onAdditionalDomainsChange,
+	onAliasesChange,
+	onSubmit,
+}: {
+	brand: { id: string; name: string; website: string };
+	isSubmitting: boolean;
+	fieldErrors: BrandSettingsFieldErrors;
+	formError: MessageId | null;
+	success: boolean;
+	additionalDomains: string[];
+	aliases: string[];
+	onAdditionalDomainsChange: (values: string[]) => void;
+	onAliasesChange: (values: string[]) => void;
+	onSubmit: (formData: FormData) => Promise<void>;
+}) {
+	const { t } = useI18n();
+	const validateDomain = (value: string): true | string =>
+		cleanAndValidateDomain(value) ? true : t("settings.brand.validation.domainInvalid");
+
+	return (
 		<div className="space-y-6 max-w-2xl">
 			<div>
 				<h1 className="text-3xl font-bold">{t("settings.brand.title")}</h1>
 				<p className="text-muted-foreground">{t("settings.brand.description")}</p>
 			</div>
 
-			<form action={handleSubmit} className="space-y-6" noValidate>
+			<form action={onSubmit} className="space-y-6" noValidate>
 				<div className="space-y-4">
 					<div className="space-y-2">
 						<Label htmlFor="name">{t("settings.brand.name")}</Label>
@@ -258,7 +291,7 @@ function BrandSettingsPage() {
 						</Label>
 						<TagsInput
 							value={additionalDomains}
-							onValueChange={setAdditionalDomains}
+							onValueChange={onAdditionalDomainsChange}
 							placeholder={t("settings.brand.additionalDomainsPlaceholder")}
 							searchPlaceholder={t("settings.brand.additionalDomainsPlaceholder")}
 							ariaLabel={t("settings.brand.additionalDomains")}
@@ -290,7 +323,7 @@ function BrandSettingsPage() {
 						</Label>
 						<TagsInput
 							value={aliases}
-							onValueChange={handleAliasesChange}
+							onValueChange={onAliasesChange}
 							placeholder={t("settings.brand.aliasesPlaceholder")}
 							searchPlaceholder={t("settings.brand.aliasesPlaceholder")}
 							ariaLabel={t("settings.brand.aliases")}

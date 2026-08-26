@@ -5,10 +5,11 @@
  */
 
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { CitationsDisplay } from "@/components/citations-display";
+import { CompetitorGuidance } from "@/components/competitor-guidance";
 import { ALL_MODELS_VALUE, getAvailableModels } from "@/components/filter-bar";
 import { FilteredListShell } from "@/components/filtered-list-shell";
 import { PageHeader } from "@/components/page-header";
@@ -73,12 +74,7 @@ function CitationsPage() {
 		<>
 			<p className="mb-2">{t("citation.info")}</p>
 			<p>
-				{t("citation.competitorInfo")}{" "}
-				{canManageBrand ? (
-					<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-						{t("citation.trackedCompetitors")}
-					</Link>
-				) : null}
+				<CompetitorGuidance brandId={brandId} canManageBrand={canManageBrand} />
 			</p>
 		</>
 	);

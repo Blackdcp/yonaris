@@ -48,6 +48,38 @@ interface PromptsListEditorProps {
 	showSystemTags?: boolean;
 }
 
+export function PromptSelectionStatus({
+	selectedCount,
+	onEnable,
+	onDisable,
+	onClear,
+}: {
+	selectedCount: number;
+	onEnable: () => void;
+	onDisable: () => void;
+	onClear: () => void;
+}) {
+	const { t, formatNumber } = useI18n();
+	return (
+		<div className="hidden md:flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+			<span className="text-muted-foreground">
+				{t("settings.prompts.selected", { count: formatNumber(selectedCount) })}
+			</span>
+			<div className="flex items-center gap-2">
+				<Button type="button" size="sm" variant="outline" onClick={onEnable} className="cursor-pointer">
+					{t("settings.prompts.enable")}
+				</Button>
+				<Button type="button" size="sm" variant="outline" onClick={onDisable} className="cursor-pointer">
+					{t("settings.prompts.disable")}
+				</Button>
+				<Button type="button" size="sm" variant="ghost" onClick={onClear} className="cursor-pointer">
+					{t("settings.prompts.clear")}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
 export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: PromptsListEditorProps) {
 	const { t } = useI18n();
 	const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
@@ -100,32 +132,12 @@ export function PromptsListEditor({ prompts, onChange, showSystemTags = true }: 
 	return (
 		<div className="space-y-4">
 			{liveSelectedCount > 0 && (
-				<div className="hidden md:flex flex-wrap items-center justify-between gap-x-2 gap-y-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
-					<span className="text-muted-foreground">{t("settings.prompts.selected", { count: liveSelectedCount })}</span>
-					<div className="flex items-center gap-2">
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={() => applyEnabledToSelection(true)}
-							className="cursor-pointer"
-						>
-							{t("settings.prompts.enable")}
-						</Button>
-						<Button
-							type="button"
-							size="sm"
-							variant="outline"
-							onClick={() => applyEnabledToSelection(false)}
-							className="cursor-pointer"
-						>
-							{t("settings.prompts.disable")}
-						</Button>
-						<Button type="button" size="sm" variant="ghost" onClick={clearSelection} className="cursor-pointer">
-							{t("settings.prompts.clear")}
-						</Button>
-					</div>
-				</div>
+				<PromptSelectionStatus
+					selectedCount={liveSelectedCount}
+					onEnable={() => applyEnabledToSelection(true)}
+					onDisable={() => applyEnabledToSelection(false)}
+					onClear={clearSelection}
+				/>
 			)}
 
 			<div className={`hidden md:grid ${gridCols} gap-2 text-sm font-medium text-muted-foreground border-b pb-2`}>

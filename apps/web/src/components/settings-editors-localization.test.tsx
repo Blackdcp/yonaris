@@ -41,6 +41,15 @@ import { PromptsListEditor } from "./prompts-list-editor";
 
 type Mutation<T> = (input: { data: T }) => Promise<unknown>;
 
+type BrandOnboardingViewProps = {
+	brandId: string;
+	brandName: string;
+	isLoading: boolean;
+	fieldErrors: { website?: MessageId };
+	formError: MessageId | null;
+	onSubmit: (formData: FormData) => Promise<void>;
+};
+
 type SubmitBrandOnboardingForm = (
 	formData: FormData,
 	identity: { brandId: string; brandName: string },
@@ -91,6 +100,14 @@ function getSubmitBrandOnboardingForm(): SubmitBrandOnboardingForm {
 	return submit as SubmitBrandOnboardingForm;
 }
 
+function getBrandOnboardingView() {
+	const View = (
+		BrandOnboardingModule as unknown as { BrandOnboardingView?: React.ComponentType<BrandOnboardingViewProps> }
+	).BrandOnboardingView;
+	expect(View).toBeTypeOf("function");
+	return View as React.ComponentType<BrandOnboardingViewProps>;
+}
+
 function getSubmitPromptsForm(): SubmitPromptsForm {
 	const submit = (PromptsEditorModule as unknown as { submitPromptsForm?: SubmitPromptsForm }).submitPromptsForm;
 	expect(submit).toBeTypeOf("function");
@@ -127,6 +144,26 @@ describe("settings and onboarding editor localization", () => {
 		expect(markup).toContain('value="brand-raw-id"');
 		expect(markup).toContain('value="StepFun 原名"');
 		expect(markup).not.toContain("Complete Setup");
+	});
+
+	it("renders the real Chinese onboarding pending state without changing hidden identity values", () => {
+		const BrandOnboardingView = getBrandOnboardingView();
+		const markup = renderWithLocale(
+			"zh-CN",
+			<BrandOnboardingView
+				brandId="brand-raw-id"
+				brandName="StepFun 原名"
+				isLoading
+				fieldErrors={{}}
+				formError={null}
+				onSubmit={async () => undefined}
+			/>,
+		);
+
+		expect(markup).toContain("正在设置…");
+		expect(markup).toContain('value="brand-raw-id"');
+		expect(markup).toContain('value="StepFun 原名"');
+		expect(markup).not.toContain("Setting up");
 	});
 
 	it.each(["en", "zh-CN"] as const)(

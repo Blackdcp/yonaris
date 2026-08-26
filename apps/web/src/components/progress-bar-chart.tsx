@@ -2,6 +2,7 @@ import { getModelMeta, KNOWN_MODELS } from "@workspace/lib/providers/models";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/components/tooltip";
 import { cn } from "@workspace/ui/lib/utils";
 import React from "react";
+import { useI18n } from "@/i18n/provider";
 
 export type ProgressBarItem = {
 	/** The label to display */
@@ -23,7 +24,7 @@ export type ProgressBarItem = {
 	/** Optional action element rendered next to the label */
 	action?: React.ReactNode;
 	/** Optional additional metadata */
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 };
 
 export type ColorMapping = {
@@ -72,8 +73,10 @@ export function ProgressBarChart({
 	className,
 	truncateLabels = true,
 	fillHeight = false,
-	formatValue = (value) => value.toLocaleString(),
+	formatValue,
 }: ProgressBarChartProps) {
+	const { formatNumber } = useI18n();
+	const displayValue = formatValue ?? formatNumber;
 	// Calculate the total for percentage calculations
 	const total = React.useMemo(() => {
 		if (customTotal !== undefined) {
@@ -148,7 +151,7 @@ export function ProgressBarChart({
 								{item.action}
 							</div>
 							<div className="flex items-center gap-2 ml-2 shrink-0">
-								<span className="text-sm">{formatValue(item.count)}</span>
+								<span className="text-sm">{displayValue(item.count)}</span>
 								{item.suffix}
 							</div>
 						</div>

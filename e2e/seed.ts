@@ -19,6 +19,14 @@ import {
   COMPETITOR_IDS,
   CUSTOMER_TEST_USER,
   DATABASE_URL,
+  LANGUAGE_SMOKE_BRAND_ID,
+  LANGUAGE_SMOKE_BRAND_NAME,
+  LANGUAGE_SMOKE_BRAND_WEBSITE,
+  LANGUAGE_SMOKE_ORG_ID,
+  LANGUAGE_SMOKE_PROMPTS,
+  LANGUAGE_SMOKE_RUNS,
+  LANGUAGE_SMOKE_SCOPES,
+  LANGUAGE_SMOKE_USER,
   MEMTENSOR_BRAND_ID,
   MEMTENSOR_BRAND_NAME,
   MEMTENSOR_ORG_ID,
@@ -98,6 +106,80 @@ async function seed() {
     await client.query(`DELETE FROM "user" WHERE lower(email) = lower($1)`, [
       CUSTOMER_TEST_USER.email,
     ]);
+    await client.query(`DELETE FROM "user" WHERE lower(email) = lower($1)`, [
+      LANGUAGE_SMOKE_USER.email,
+    ]);
+
+    // -----------------------------------------------------------------------
+    // Dedicated bilingual smoke workspace. Its two Programs deliberately mix
+    // Chinese and English domain values so UI-language changes can prove they
+    // never mutate market/locale/timezone, Prompt, query, model, or provider.
+    // -----------------------------------------------------------------------
+    await client.query(
+      `INSERT INTO organization (id, name, slug, created_at)
+       VALUES ($1, $2, $1, NOW())
+       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name`,
+      [LANGUAGE_SMOKE_ORG_ID, LANGUAGE_SMOKE_BRAND_NAME],
+    );
+    await client.query(
+      `INSERT INTO brands
+         (id, organization_id, name, website, enabled, onboarded, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, true, true, NOW(), NOW())`,
+      [
+        LANGUAGE_SMOKE_BRAND_ID,
+        LANGUAGE_SMOKE_ORG_ID,
+        LANGUAGE_SMOKE_BRAND_NAME,
+        LANGUAGE_SMOKE_BRAND_WEBSITE,
+      ],
+    );
+    for (const [index, scope] of Object.values(LANGUAGE_SMOKE_SCOPES).entries()) {
+      await client.query(
+        `INSERT INTO measurement_scopes
+           (id, brand_id, key, name, market, locale, timezone, automatic_target_keys,
+            sampling_evaluation_role, enabled, is_default, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, '{}', 'scored', true, $8, NOW(), NOW())`,
+        [
+          scope.id,
+          LANGUAGE_SMOKE_BRAND_ID,
+          scope.key,
+          scope.name,
+          scope.market,
+          scope.locale,
+          scope.timezone,
+          index === 0,
+        ],
+      );
+    }
+    for (const [language, prompt] of Object.entries(LANGUAGE_SMOKE_PROMPTS) as Array<
+      [keyof typeof LANGUAGE_SMOKE_PROMPTS, (typeof LANGUAGE_SMOKE_PROMPTS)[keyof typeof LANGUAGE_SMOKE_PROMPTS]]
+    >) {
+      const scope = LANGUAGE_SMOKE_SCOPES[language];
+      const runId = LANGUAGE_SMOKE_RUNS[language];
+      await client.query(
+        `INSERT INTO prompts
+           (id, brand_id, scope_id, value, enabled, tags, system_tags, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, true, ARRAY['language-smoke'], ARRAY['unbranded'], NOW(), NOW())`,
+        [prompt.id, LANGUAGE_SMOKE_BRAND_ID, scope.id, prompt.value],
+      );
+      await client.query(
+        `INSERT INTO prompt_runs
+           (id, prompt_id, brand_id, scope_id, model, provider, version,
+            web_search_enabled, raw_output, answer_text, web_queries,
+            brand_mentioned, competitors_mentioned, observed_at, created_at)
+         VALUES ($1, $2, $3, $4, 'chatgpt', 'brightdata', 'gpt-5.6', true,
+                 $5, $6, $7, true, '{}', NOW(), NOW())`,
+        [
+          runId,
+          prompt.id,
+          LANGUAGE_SMOKE_BRAND_ID,
+          scope.id,
+          JSON.stringify({ prompt: prompt.value, query: prompt.derivedQuery, market: scope.market }),
+          `${LANGUAGE_SMOKE_BRAND_NAME}: ${prompt.value}`,
+          [prompt.derivedQuery],
+        ],
+      );
+    }
+    console.log("  Created dedicated bilingual smoke workspace (2 Programs, 2 Prompts, 2 runs)");
 
     // -----------------------------------------------------------------------
     // Dedicated customer workspaces used by the real-identity boundary E2E.

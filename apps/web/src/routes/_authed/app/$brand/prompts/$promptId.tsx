@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@workspace/ui/component
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { type CitationData, CitationsDisplay } from "@/components/citations-display";
+import { CompetitorGuidance } from "@/components/competitor-guidance";
 import {
 	InfoTip,
 	QueryWordsSection,
@@ -444,12 +445,11 @@ function MentionsTab({
 						</TooltipTrigger>
 						<TooltipContent className="max-w-xs text-sm font-normal">
 							<p>
-								{t("prompt.mentionsTooltip")}{" "}
-								{canManageBrand ? (
-									<Link to="/app/$brand/settings/competitors" params={{ brand: brandId }} className="underline">
-										{t("citation.trackedCompetitors")}
-									</Link>
-								) : null}
+								<CompetitorGuidance
+									brandId={brandId}
+									canManageBrand={canManageBrand}
+									messageId="prompt.mentionsTooltip"
+								/>
 							</p>
 						</TooltipContent>
 					</Tooltip>

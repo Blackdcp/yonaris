@@ -1,6 +1,4 @@
-import type { ComponentPropsWithoutRef } from "react";
 import { useRouteContext } from "@tanstack/react-router";
-import { cn } from "@workspace/ui/lib/utils";
 import {
 	DEFAULT_APP_ICON,
 	DEFAULT_APP_NAME,
@@ -8,6 +6,8 @@ import {
 	DEFAULT_APP_WORDMARK_ON_DARK,
 } from "@workspace/config/constants";
 import type { ClientConfig } from "@workspace/config/types";
+import { cn } from "@workspace/ui/lib/utils";
+import type { ComponentPropsWithoutRef } from "react";
 
 interface LogoProps extends ComponentPropsWithoutRef<"div"> {
 	iconClassName?: string;
@@ -30,8 +30,7 @@ export function Logo({
 	const icon = branding?.icon || DEFAULT_APP_ICON;
 	const usesDefaultBrand = name === DEFAULT_APP_NAME && icon === DEFAULT_APP_ICON;
 	const wordmark = branding?.wordmark || (usesDefaultBrand ? DEFAULT_APP_WORDMARK : undefined);
-	const wordmarkOnDark =
-		branding?.wordmarkOnDark || (usesDefaultBrand ? DEFAULT_APP_WORDMARK_ON_DARK : undefined);
+	const wordmarkOnDark = branding?.wordmarkOnDark || (usesDefaultBrand ? DEFAULT_APP_WORDMARK_ON_DARK : undefined);
 	const wordmarkClasses = cn("h-7 w-auto max-w-40 object-contain", wordmarkClassName);
 
 	if (wordmark) {
@@ -39,13 +38,7 @@ export function Logo({
 			const src = surface === "dark" ? wordmarkOnDark || wordmark : wordmark;
 			return (
 				<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
-					<img
-						src={src}
-						alt={`${name} logo`}
-						className={wordmarkClasses}
-						fetchPriority="low"
-						decoding="async"
-					/>
+					<img src={src} alt={name} className={wordmarkClasses} fetchPriority="low" decoding="async" />
 				</div>
 			);
 		}
@@ -54,7 +47,7 @@ export function Logo({
 			<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
 				<img
 					src={wordmark}
-					alt={`${name} logo`}
+					alt={name}
 					className={cn(wordmarkClasses, wordmarkOnDark && "dark:hidden")}
 					fetchPriority="low"
 					decoding="async"
@@ -75,14 +68,7 @@ export function Logo({
 
 	return (
 		<div data-slot="brand-logo" {...props} className={cn("flex items-center gap-2", className)}>
-			{icon && (
-				<img
-					src={icon}
-					alt={`${name} logo`}
-					className={cn("size-5", iconClassName)}
-					fetchPriority="low"
-				/>
-			)}
+			{icon && <img src={icon} alt="" aria-hidden="true" className={cn("size-5", iconClassName)} fetchPriority="low" />}
 			<span className={cn("text-base font-semibold", textClassName)}>{name}</span>
 		</div>
 	);

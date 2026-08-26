@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { ADMIN_AUTH_STATE_PATH } from "./auth-setup";
 import { CUSTOMER_AUTH_STATE_PATH } from "./customer-auth-setup";
+import { LANGUAGE_SMOKE_AUTH_STATE_PATH } from "./language-auth-setup";
 
 // Base URL can be overridden via environment variable.
 // Default: http://localhost:1515 (Docker Compose maps web:3000 → host:1515)
@@ -40,8 +41,15 @@ export default defineConfig({
   projects: [
     {
       name: "fixtures",
-      testIgnore: /(worker|sampling)\.spec\.ts/,
+      testIgnore: /(worker|sampling|portal-language)\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "language-smoke",
+      testMatch: /portal-language\.spec\.ts/,
+      outputDir: "test-results-language-smoke",
+      workers: 1,
+      use: { ...devices["Desktop Chrome"], storageState: LANGUAGE_SMOKE_AUTH_STATE_PATH },
     },
     // Sampling mutates its own frozen delivery manifest and is intentionally
     // serialized after the read-only fixture suite. It never opens a real AI

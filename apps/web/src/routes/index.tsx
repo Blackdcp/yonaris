@@ -13,6 +13,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
 import FullPageCard from "@/components/full-page-card";
+import { useI18n } from "@/i18n/provider";
 import { getSession } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/")({
@@ -46,6 +47,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+	const { t } = useI18n();
 	const { redirect: redirectParam } = Route.useSearch();
 
 	const loginUrl = "/auth/login";
@@ -54,7 +56,7 @@ function HomePage() {
 	return (
 		<FullPageCard className="">
 			<Button asChild>
-				<a href={signInUrl}>Sign In</a>
+				<a href={signInUrl}>{t("auth.login.title")}</a>
 			</Button>
 		</FullPageCard>
 	);

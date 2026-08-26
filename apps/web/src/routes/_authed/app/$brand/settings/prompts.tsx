@@ -6,7 +6,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { db } from "@workspace/lib/db/db";
-import { ensureLegacyMeasurementScope } from "@workspace/lib/db/measurement-scopes";
+import { ensureLegacyMeasurementScope, LEGACY_SCOPE } from "@workspace/lib/db/measurement-scopes";
 import { measurementScopes, prompts } from "@workspace/lib/db/schema";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { and, desc, eq } from "drizzle-orm";
@@ -45,7 +45,12 @@ const getPromptsForEditing = createServerFn({ method: "GET" })
 			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scopeId)))
 			.orderBy(prompts.value, desc(prompts.enabled), prompts.id);
 
-		return { prompts: brandPrompts, scopeId, scopeName: scope?.name ?? "Legacy / Unspecified" };
+		return {
+			prompts: brandPrompts,
+			scopeId,
+			scopeKey: scope?.key ?? LEGACY_SCOPE.key,
+			scopeName: scope?.name ?? LEGACY_SCOPE.name,
+		};
 	});
 
 function PromptsSettingsSkeleton() {
@@ -92,9 +97,9 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 
 function PromptsSettingsPage() {
 	const { t } = useI18n();
-	const { prompts: brandPrompts, scopeId, scopeName } = Route.useLoaderData();
+	const { prompts: brandPrompts, scopeId, scopeKey, scopeName } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
-	const displayScopeName = scopeName === "Legacy / Unspecified" ? t("settings.prompts.legacyScope") : scopeName;
+	const displayScopeName = scopeKey === LEGACY_SCOPE.key ? t("settings.prompts.legacyScope") : scopeName;
 
 	return (
 		<PromptsEditor

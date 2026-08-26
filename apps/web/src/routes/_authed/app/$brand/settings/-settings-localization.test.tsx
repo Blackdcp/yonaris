@@ -63,7 +63,10 @@ vi.mock("@workspace/lib/db/db", () => ({
 		select: vi.fn(),
 	},
 }));
-vi.mock("@workspace/lib/db/measurement-scopes", () => ({ ensureLegacyMeasurementScope: vi.fn() }));
+vi.mock("@workspace/lib/db/measurement-scopes", () => ({
+	LEGACY_SCOPE: { key: "legacy-unspecified", name: "Legacy / Unspecified" },
+	ensureLegacyMeasurementScope: vi.fn(),
+}));
 vi.mock("@/components/app-sidebar", () => ({ AppSidebar: () => null }));
 vi.mock("@/components/brand-onboarding", () => ({ default: () => null }));
 vi.mock("@/components/site-header", () => ({ SiteHeader: () => null }));
@@ -108,6 +111,19 @@ import * as MembersSettingsModule from "./members";
 import { Route as PromptsSettingsRoute } from "./prompts";
 
 type Mutation<T> = (input: { data: T }) => Promise<unknown>;
+
+type BrandSettingsViewProps = {
+	brand: typeof mocks.brand;
+	isSubmitting: boolean;
+	fieldErrors: Partial<Record<"name" | "website" | "additionalDomains", MessageId>>;
+	formError: MessageId | null;
+	success: boolean;
+	additionalDomains: string[];
+	aliases: string[];
+	onAdditionalDomainsChange: (values: string[]) => void;
+	onAliasesChange: (values: string[]) => void;
+	onSubmit: (formData: FormData) => Promise<void>;
+};
 
 type SubmitBrandSettingsForm = (
 	formData: FormData,
@@ -199,6 +215,13 @@ function getSubmitBrandSettingsForm(): SubmitBrandSettingsForm {
 	return submit as SubmitBrandSettingsForm;
 }
 
+function getBrandSettingsView() {
+	const View = (BrandSettingsModule as unknown as { BrandSettingsView?: React.ComponentType<BrandSettingsViewProps> })
+		.BrandSettingsView;
+	expect(View).toBeTypeOf("function");
+	return View as React.ComponentType<BrandSettingsViewProps>;
+}
+
 function getSubmitCompetitorsSettingsForm(): SubmitCompetitorsSettingsForm {
 	const submit = (
 		CompetitorsSettingsModule as unknown as { submitCompetitorsSettingsForm?: SubmitCompetitorsSettingsForm }
@@ -264,6 +287,37 @@ describe("brand settings route localization", () => {
 		expect(markup).not.toContain("Save Changes");
 		expect(metadata).toContain("品牌设置 | StepFun 原名 · Evidence Portal");
 		expect(metadata).toContain("管理品牌名称和网站");
+	});
+
+	it("renders real controlled pending and success states while keeping domain values literal", () => {
+		const BrandSettingsView = getBrandSettingsView();
+		const baseProps = {
+			brand: mocks.brand,
+			fieldErrors: {},
+			formError: null,
+			additionalDomains: ["docs.example.cn"],
+			aliases: ["Step 原始别名"],
+			onAdditionalDomainsChange: vi.fn(),
+			onAliasesChange: vi.fn(),
+			onSubmit: async () => undefined,
+		};
+		const pending = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<BrandSettingsView {...baseProps} isSubmitting success={false} />
+			</I18nProvider>,
+		);
+		const success = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<BrandSettingsView {...baseProps} isSubmitting={false} success />
+			</I18nProvider>,
+		);
+
+		expect(pending).toContain("正在保存…");
+		expect(pending).toContain('value="https://evidence.example.cn/path?q=CN"');
+		expect(success).toContain('role="status"');
+		expect(success).toContain("品牌详情已更新。");
+		expect(success).toContain("docs.example.cn");
+		expect(success).toContain("Step 原始别名");
 	});
 
 	it("localizes the parent brand metadata used while onboarding without changing the brand name", () => {
@@ -433,6 +487,20 @@ describe("brand settings route localization", () => {
 		expect(markup).not.toContain("Save Prompts");
 		expect(metadata).toContain("提示词 | StepFun 原名 · Evidence Portal");
 		expect(metadata).toContain("添加、编辑或移除追踪的提示词");
+	});
+
+	it("identifies the legacy Program by its canonical key rather than its mutable display name", () => {
+		mocks.loaderData = {
+			prompts: [],
+			scopeId: "scope-legacy-raw-id",
+			scopeKey: "legacy-unspecified",
+			scopeName: "Renamed legacy scope from storage",
+		};
+
+		const markup = renderRoute(PromptsSettingsRoute, "zh-CN");
+
+		expect(markup).toContain("提示词 - 旧版 / 未指定");
+		expect(markup).not.toContain("Renamed legacy scope from storage");
 	});
 
 	it("renders Chinese team labels, localized role display, pending state, dates, actions, and metadata", () => {

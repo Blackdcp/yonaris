@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { translate } from "@/i18n/catalog";
 import { I18nProvider } from "@/i18n/provider";
 import type { CitationData } from "./citations-display";
 
@@ -30,6 +31,7 @@ vi.mock("@/server/brands", () => ({
 }));
 
 import { CitationsDisplay } from "./citations-display";
+import { CompetitorGuidance } from "./competitor-guidance";
 
 const rawPrompt = "Which CRM works in 中国?";
 const rawUrl = "https://reddit.com/r/RawCommunity/comments/abc?market=CN";
@@ -133,5 +135,37 @@ describe("CitationsDisplay localization", () => {
 		expect(markup).toContain('href="/app/brand-raw-id/prompts/prompt-raw-id"');
 		expect(markup).not.toContain("Content Gaps");
 		expect(markup).not.toContain("Recent Changes");
+	});
+
+	it("renders complete competitor guidance and action copy without joining sentence fragments", () => {
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<CompetitorGuidance brandId="brand-raw-id" canManageBrand />
+			</I18nProvider>,
+		);
+
+		expect(markup).toContain("竞争对手域名仅来自你追踪的竞争对手列表。");
+		expect(markup).toContain('href="/app/brand-raw-id/settings/competitors"');
+		expect(markup).toContain(">管理追踪的竞争对手。<");
+		expect(markup).not.toContain("。 追踪的竞争对手列表");
+	});
+
+	it("describes the recent-change comparison once with a formatted day count", () => {
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<CitationsDisplay
+					citationData={citationData}
+					brandId="brand-raw-id"
+					brandName="StepFun 原名"
+					showStats
+					days={30}
+				/>
+			</I18nProvider>,
+		);
+
+		expect(translate("zh-CN", "citation.changesTooltip", { days: "30" })).toBe("比较最近 30 天与之前 30 天的数据。");
+		expect(markup).toContain("过去 30 天内 AI 引用的变化。");
+		expect(markup).not.toContain("当前最近 30 天");
+		expect(markup).not.toContain("过去最近 30 天");
 	});
 });
