@@ -557,12 +557,12 @@ export const customerCatalog = defineCatalog(
 		"fanout.stats.searchRuns": "Search Prompt Runs",
 		"fanout.stats.searchRunsHelp":
 			"How many times your prompts were run against engines configured with web search. An engine may still choose not to execute a search on a given run.",
-		"fanout.stats.unknownRuns": "Prompt Runs w/ Unknown Derived Queries",
+		"fanout.stats.unknownRuns": "Prompt Runs w/ Unexposed Search Inputs",
 		"fanout.stats.unknownRunsDetail":
-			"Search-enabled runs where the platform did not expose a usable derived query or prompt echo. This is not evidence that no web search occurred.",
-		"fanout.stats.exposedRuns": "Prompt Runs w/ Exposed Derived Queries",
+			"Search-enabled prompt runs where the platform did not expose a usable search input. This is not evidence that no web search occurred.",
+		"fanout.stats.exposedRuns": "Prompt Runs w/ Exposed Search Inputs",
 		"fanout.stats.exposedRunsDetail":
-			"Prompt runs where the platform exposed at least one usable derived query or prompt echo.",
+			"Prompt runs where the platform exposed at least one usable search input. This can include exact prompt echoes, which are not Derived Queries.",
 		"fanout.stats.average": "Average Search Paths",
 		"fanout.stats.averageHelp":
 			"Average derived queries per run that exposed at least one genuine derived query. Exact prompt echoes are excluded.",
@@ -642,8 +642,8 @@ export const customerCatalog = defineCatalog(
 		"prompt.fanout.preservedHelp": "Words from your prompt that engines keep in their derived queries.",
 		"prompt.fanout.droppedHelp": "Words from your prompt that engines omit from their derived queries.",
 		"prompt.fanout.accessibility.searchRuns": "About search prompt runs",
-		"prompt.fanout.accessibility.unknownRuns": "About prompt runs with unknown derived queries",
-		"prompt.fanout.accessibility.exposedRuns": "About prompt runs with exposed derived queries",
+		"prompt.fanout.accessibility.unknownRuns": "About prompt runs with unexposed search inputs",
+		"prompt.fanout.accessibility.exposedRuns": "About prompt runs with exposed search inputs",
 		"prompt.fanout.accessibility.average": "About average search paths",
 		"prompt.fanout.accessibility.prompts": "About prompt search paths",
 		"prompt.fanout.accessibility.topQueries": "About top derived queries",
@@ -1239,11 +1239,12 @@ export const customerCatalog = defineCatalog(
 		"fanout.loading": "正在加载 AI 检索脉络…",
 		"fanout.stats.searchRuns": "联网搜索提示词运行次数",
 		"fanout.stats.searchRunsHelp": "提示词由已配置联网搜索的引擎运行的次数。引擎在某次运行中仍可能选择不执行搜索。",
-		"fanout.stats.unknownRuns": "未公开衍生检索词的提示词运行次数",
+		"fanout.stats.unknownRuns": "未公开搜索输入的提示词运行次数",
 		"fanout.stats.unknownRunsDetail":
-			"已启用联网搜索，但平台未公开可用衍生检索词的运行次数。这并不表示没有发生联网搜索。",
-		"fanout.stats.exposedRuns": "已公开衍生检索词的提示词运行次数",
-		"fanout.stats.exposedRunsDetail": "平台至少公开了一个可用衍生检索词（包括原提示词）的提示词运行。",
+			"已启用联网搜索，但平台未公开可用搜索输入的提示词运行。这并不表示没有发生联网搜索。",
+		"fanout.stats.exposedRuns": "已公开搜索输入的提示词运行次数",
+		"fanout.stats.exposedRunsDetail":
+			"平台至少公开了一个可用搜索输入的提示词运行。这可能包括与原提示词完全相同的输入，而这类输入不属于衍生检索词。",
 		"fanout.stats.average": "平均检索路径数",
 		"fanout.stats.averageHelp":
 			"每次至少公开一个实际改写的衍生检索词的运行所产生的平均衍生检索词数，不包括原提示词的完全重复。",
@@ -1322,8 +1323,8 @@ export const customerCatalog = defineCatalog(
 		"prompt.fanout.preservedHelp": "引擎搜索时保留的原提示词用词。",
 		"prompt.fanout.droppedHelp": "引擎搜索时省略的原提示词用词。",
 		"prompt.fanout.accessibility.searchRuns": "AI 检索脉络：搜索运行次数说明",
-		"prompt.fanout.accessibility.unknownRuns": "AI 检索脉络：未公开衍生检索词的运行次数说明",
-		"prompt.fanout.accessibility.exposedRuns": "AI 检索脉络：已公开衍生检索词的运行次数说明",
+		"prompt.fanout.accessibility.unknownRuns": "AI 检索脉络：未公开搜索输入的运行次数说明",
+		"prompt.fanout.accessibility.exposedRuns": "AI 检索脉络：已公开搜索输入的运行次数说明",
 		"prompt.fanout.accessibility.average": "AI 检索脉络：平均检索路径数量说明",
 		"prompt.fanout.accessibility.prompts": "AI 检索脉络：提示词检索路径说明",
 		"prompt.fanout.accessibility.topQueries": "AI 检索脉络：热门衍生检索词说明",

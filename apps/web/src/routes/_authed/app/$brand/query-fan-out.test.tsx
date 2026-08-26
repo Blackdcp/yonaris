@@ -2,6 +2,7 @@ import type { UiLanguage } from "@workspace/config/language";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { translate } from "@/i18n/catalog";
 import { I18nProvider } from "@/i18n/provider";
 
 const rawPrompt = "家 SUV 选择：Tesla Model Y 还是蔚来 ES6?";
@@ -209,6 +210,8 @@ describe("Query Fan-Out route localization", () => {
 		expect(text).toContain("AI 检索脉络");
 		expect(text).toContain("检索路径");
 		expect(text).toContain("衍生检索词");
+		expect(text).toContain("未公开搜索输入的提示词运行次数");
+		expect(text).toContain("已公开搜索输入的提示词运行次数");
 		expect(text).toContain("查看 AI 为回答当前问题而展开的实际联网搜索词。");
 		expect(text).toContain(rawPrompt);
 		expect(text).toContain(rawQuery);
@@ -224,8 +227,8 @@ describe("Query Fan-Out route localization", () => {
 		expect(english).toContain("Query Fan-Out");
 		expect(english).toContain("Search Paths");
 		expect(english).toContain("Derived Queries");
-		expect(english).toContain("Prompt Runs w/ Unknown Derived Queries");
-		expect(english).toContain("Prompt Runs w/ Exposed Derived Queries");
+		expect(english).toContain("Prompt Runs w/ Unexposed Search Inputs");
+		expect(english).toContain("Prompt Runs w/ Exposed Search Inputs");
 		expect(english).toContain("Average Search Paths");
 		expect(english).toContain("The web searches AI engines run when answering your prompts.");
 	});
@@ -273,12 +276,22 @@ describe("Query Fan-Out route localization", () => {
 			isLoading: false,
 			isError: false,
 		};
-		const singularChinese = textFromMarkup(renderRoute());
-		const singularEnglish = textFromMarkup(renderRoute("en"));
+		const singularChineseMarkup = renderRoute();
+		const singularEnglishMarkup = renderRoute("en");
+		const singularChinese = textFromMarkup(singularChineseMarkup);
+		const singularEnglish = textFromMarkup(singularEnglishMarkup);
+		expect(singularChinese).toContain("未公开搜索输入的提示词运行次数1");
+		expect(singularChinese).toContain("已公开搜索输入的提示词运行次数1");
+		expect(singularChineseMarkup).toContain('aria-label="AI 检索脉络：未公开搜索输入的运行次数说明"');
+		expect(singularChineseMarkup).toContain('aria-label="AI 检索脉络：已公开搜索输入的运行次数说明"');
 		expect(singularChinese).toContain(
 			"1 次提示词运行仅公开了原提示词的完全重复；未在其检索路径中观察到真正的衍生检索词。",
 		);
 		expect(singularChinese).toContain("另有 1 次运行未公开衍生检索词或原提示词重复。");
+		expect(singularEnglish).toContain("Prompt Runs w/ Unexposed Search Inputs1");
+		expect(singularEnglish).toContain("Prompt Runs w/ Exposed Search Inputs1");
+		expect(singularEnglishMarkup).toContain('aria-label="About prompt runs with unexposed search inputs"');
+		expect(singularEnglishMarkup).toContain('aria-label="About prompt runs with exposed search inputs"');
 		expect(singularEnglish).toContain(
 			"1 prompt run exposed only an exact prompt echo; no genuine derived query was observed in its search path.",
 		);
@@ -299,6 +312,21 @@ describe("Query Fan-Out route localization", () => {
 			"2 prompt runs exposed only exact prompt echoes; no genuine derived queries were observed in their search paths.",
 		);
 		expect(pluralEnglish).toContain("2 other runs did not expose derived queries or prompt echoes.");
+	});
+
+	it("defines exposed and unexposed Search Inputs without classifying Prompt echoes as Derived Queries", () => {
+		expect(translate("en", "fanout.stats.unknownRunsDetail")).toBe(
+			"Search-enabled prompt runs where the platform did not expose a usable search input. This is not evidence that no web search occurred.",
+		);
+		expect(translate("en", "fanout.stats.exposedRunsDetail")).toBe(
+			"Prompt runs where the platform exposed at least one usable search input. This can include exact prompt echoes, which are not Derived Queries.",
+		);
+		expect(translate("zh-CN", "fanout.stats.unknownRunsDetail")).toBe(
+			"已启用联网搜索，但平台未公开可用搜索输入的提示词运行。这并不表示没有发生联网搜索。",
+		);
+		expect(translate("zh-CN", "fanout.stats.exposedRunsDetail")).toBe(
+			"平台至少公开了一个可用搜索输入的提示词运行。这可能包括与原提示词完全相同的输入，而这类输入不属于衍生检索词。",
+		);
 	});
 
 	it("localizes top-query labels, accessibility copy, counts, and word-cloud states", () => {

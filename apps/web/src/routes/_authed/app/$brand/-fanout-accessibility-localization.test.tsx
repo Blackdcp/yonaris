@@ -163,8 +163,8 @@ const expectedNames = {
 	en: {
 		stats: [
 			"About search prompt runs",
-			"About prompt runs with unknown derived queries",
-			"About prompt runs with exposed derived queries",
+			"About prompt runs with unexposed search inputs",
+			"About prompt runs with exposed search inputs",
 			"About average search paths",
 		],
 		fanout: "About prompt search paths",
@@ -174,8 +174,8 @@ const expectedNames = {
 	"zh-CN": {
 		stats: [
 			"AI 检索脉络：搜索运行次数说明",
-			"AI 检索脉络：未公开衍生检索词的运行次数说明",
-			"AI 检索脉络：已公开衍生检索词的运行次数说明",
+			"AI 检索脉络：未公开搜索输入的运行次数说明",
+			"AI 检索脉络：已公开搜索输入的运行次数说明",
 			"AI 检索脉络：平均检索路径数量说明",
 		],
 		fanout: "AI 检索脉络：提示词检索路径说明",
