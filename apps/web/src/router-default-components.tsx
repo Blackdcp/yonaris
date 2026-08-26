@@ -3,7 +3,8 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import FullPageCard from "./components/full-page-card";
-import { useI18n } from "./i18n/provider";
+import { translate } from "./i18n/catalog";
+import { useI18n, useOptionalI18n } from "./i18n/provider";
 
 export function NotFound() {
 	const { t } = useI18n();
@@ -29,12 +30,27 @@ export function DefaultPendingComponent() {
 }
 
 export function DefaultErrorComponent({ error }: ErrorComponentProps) {
-	const { t } = useI18n();
+	const i18n = useOptionalI18n();
 	useEffect(() => {
 		Sentry.captureException(error);
 	}, [error]);
 
+	if (!i18n) {
+		return (
+			<main className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+				<div className="w-full max-w-md rounded-xl border bg-card p-6 shadow-sm">
+					<h1 className="text-xl font-semibold">{translate("en", "error.unexpected.title")}</h1>
+					<p className="mt-1 text-sm text-muted-foreground">{translate("en", "error.unexpected.subtitle")}</p>
+				</div>
+			</main>
+		);
+	}
+
 	return (
-		<FullPageCard title={t("error.unexpected.title")} subtitle={t("error.unexpected.subtitle")} showBackButton={true} />
+		<FullPageCard
+			title={i18n.t("error.unexpected.title")}
+			subtitle={i18n.t("error.unexpected.subtitle")}
+			showBackButton={true}
+		/>
 	);
 }

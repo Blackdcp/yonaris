@@ -32,6 +32,7 @@ export const commonCatalog = defineCatalog(
 		"error.missingEnv.mode": "Deployment mode: {mode}",
 		"error.missingEnv.localHint": "Set these via the CLI.",
 		"error.missingEnv.deploymentHint": "Set these in the deployment environment, then redeploy or restart.",
+		"error.missingEnv.itemDescription": "Environment variable {label} is not configured.",
 		"navigation.overview": "Overview",
 	},
 	{
@@ -65,6 +66,7 @@ export const commonCatalog = defineCatalog(
 		"error.missingEnv.mode": "部署模式：{mode}",
 		"error.missingEnv.localHint": "请通过命令行工具设置以下配置。",
 		"error.missingEnv.deploymentHint": "请在部署环境中设置以下配置，然后重新部署或重启。",
+		"error.missingEnv.itemDescription": "环境变量 {label} 尚未配置。",
 		"navigation.overview": "概览",
 	},
 );

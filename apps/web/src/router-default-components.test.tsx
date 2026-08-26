@@ -15,6 +15,15 @@ vi.mock("./components/full-page-card", () => ({
 import { DefaultErrorComponent, NotFound } from "./router-default-components";
 
 describe("router default components", () => {
+	it("renders the global error fallback without an i18n provider", () => {
+		const error = renderToStaticMarkup(
+			<DefaultErrorComponent error={new Error("root loader failed")} reset={vi.fn()} info={{ componentStack: "" }} />,
+		);
+
+		expect(error).toContain("Something went wrong");
+		expect(error).not.toContain("root loader failed");
+	});
+
 	it.each([
 		["en", "404 Not Found", "Something went wrong"],
 		["zh-CN", "404 页面未找到", "出现了问题"],

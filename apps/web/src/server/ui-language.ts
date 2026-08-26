@@ -48,8 +48,14 @@ export function validateUiLanguageUpdate(value: unknown): UiLanguage {
 
 export const getUiLanguageFn = createServerFn({ method: "GET" }).handler(async (): Promise<UiLanguage> => {
 	const headers = getRequestHeaders();
-	const session = await resolveAuthSession(headers);
-	const saved = parseOptionalUiLanguage((session?.user as { uiLanguage?: unknown } | undefined)?.uiLanguage);
+	let saved: UiLanguage | undefined;
+	try {
+		const session = await resolveAuthSession(headers);
+		saved = parseOptionalUiLanguage((session?.user as { uiLanguage?: unknown } | undefined)?.uiLanguage);
+	} catch {
+		// Recovery pages must still resolve a presentation language when invalid
+		// boot configuration makes authentication storage unavailable.
+	}
 
 	return resolveUiLanguage({
 		saved,

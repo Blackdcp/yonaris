@@ -9,7 +9,7 @@ interface MissingEnvPageProps {
 }
 
 export default function MissingEnvPage({ mode, missing }: MissingEnvPageProps) {
-	const { t } = useI18n();
+	const { locale, t } = useI18n();
 	const sortedMissing = [...missing].sort((a, b) => a.label.localeCompare(b.label));
 
 	const localHint = mode === "local" ? t("error.missingEnv.localHint") : t("error.missingEnv.deploymentHint");
@@ -26,7 +26,11 @@ export default function MissingEnvPage({ mode, missing }: MissingEnvPageProps) {
 					{sortedMissing.map((item) => (
 						<li key={item.id} className="flex flex-col gap-1">
 							<span className="font-mono text-xs text-foreground">{item.label}</span>
-							{item.description ? <span className="text-muted-foreground">{item.description}</span> : null}
+							{item.description ? (
+								<span className="text-muted-foreground">
+									{locale === "zh-CN" ? t("error.missingEnv.itemDescription", { label: item.label }) : item.description}
+								</span>
+							) : null}
 						</li>
 					))}
 				</ul>

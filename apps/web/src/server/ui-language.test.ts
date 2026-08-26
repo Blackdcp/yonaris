@@ -42,7 +42,7 @@ vi.mock("@/lib/auth/resolve-session", () => ({
 	resolveAuthSession: mocks.resolveAuthSession,
 }));
 
-import { resolveUiLanguage, setUiLanguageFn, validateUiLanguageUpdate } from "./ui-language";
+import { getUiLanguageFn, resolveUiLanguage, setUiLanguageFn, validateUiLanguageUpdate } from "./ui-language";
 
 describe("UI language resolution", () => {
 	it("prefers the saved user language", () => {
@@ -60,6 +60,21 @@ describe("UI language resolution", () => {
 	it("uses English for unsupported browser preferences", () => {
 		expect(resolveUiLanguage({ saved: undefined, cookie: undefined, acceptLanguage: "fr-FR" })).toBe("en");
 	});
+
+	it.each([
+		["zh-CN", "en-US", "zh-CN"],
+		[undefined, "zh-SG,zh;q=0.9", "zh-CN"],
+	] as const)(
+		"uses cookie/browser recovery when session storage is unavailable",
+		async (cookie, acceptLanguage, expected) => {
+			vi.clearAllMocks();
+			mocks.getRequestHeaders.mockReturnValue(new Headers({ "accept-language": acceptLanguage }));
+			mocks.getCookie.mockReturnValue(cookie);
+			mocks.resolveAuthSession.mockRejectedValue(new Error("session storage unavailable"));
+
+			await expect(getUiLanguageFn()).resolves.toBe(expected);
+		},
+	);
 
 	it("rejects unsupported user language updates", () => {
 		expect(() => validateUiLanguageUpdate("CN")).toThrow("Unsupported language");

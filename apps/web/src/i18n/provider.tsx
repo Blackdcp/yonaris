@@ -1,14 +1,7 @@
 import type { PropsWithChildren } from "react";
 import { createContext, useContext, useMemo } from "react";
 import type { UiLanguage } from "@workspace/config/language";
-import {
-	formatDate,
-	formatList,
-	formatNumber,
-	translate,
-	type MessageId,
-	type MessageValues,
-} from "./catalog";
+import { formatDate, formatList, formatNumber, translate, type MessageId, type MessageValues } from "./catalog";
 
 type I18nContextValue = {
 	locale: UiLanguage;
@@ -39,4 +32,8 @@ export function useI18n(): I18nContextValue {
 	const context = useContext(I18nContext);
 	if (context === undefined) throw new Error("useI18n must be used within an I18nProvider");
 	return context;
+}
+
+export function useOptionalI18n(): I18nContextValue | undefined {
+	return useContext(I18nContext);
 }
