@@ -174,7 +174,7 @@ describe("Prompt history localization", () => {
 		mocks.activeTab = "web-queries";
 		mocks.fanoutData = {
 			totalQueries: 2,
-			uniqueQueries: 1,
+			uniqueQueries: 2,
 			topQueries: [{ query: rawQuery, count: 2 }],
 			byModel: [
 				{
@@ -195,9 +195,11 @@ describe("Prompt history localization", () => {
 		expect(markup).toContain("检索路径");
 		expect(markup).toContain("衍生检索词");
 		expect(markup).toContain("查看 AI 为回答当前问题而展开的实际联网搜索词。");
+		expect(textFromMarkup(markup)).toContain("2 个不同的衍生检索词。");
+		expect(textFromMarkup(englishMarkup)).toContain("2 distinct derived queries.");
 		expect(infoTipAccessibleNames(markup)).toEqual(["查看 AI 为回答当前问题而展开的实际联网搜索词。"]);
 		expect(infoTipAccessibleNames(englishMarkup)).toEqual([
-			"Every distinct search run while answering this prompt, with prompt keywords emphasized.",
+			"Every distinct derived query used while answering this prompt, with prompt keywords emphasized.",
 		]);
 		expect(textFromMarkup(markup)).toContain(rawQuery);
 		expect(markup).not.toContain("联网检索词");

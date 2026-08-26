@@ -11,8 +11,23 @@ const mocks = vi.hoisted(() => ({
 	tab: "fanout",
 	query: { data: null as unknown, isLoading: false, isError: false },
 	isScopeResolving: false,
+	expandTopQuery: false,
 	navigate: vi.fn(),
 }));
+
+vi.mock("react", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("react")>();
+	return {
+		...actual,
+		useState: <T,>(initial: T | (() => T)) => {
+			const state = actual.useState(initial);
+			if (mocks.expandTopQuery && initial instanceof Set) {
+				return [new Set([rawQuery]), state[1]] as typeof state;
+			}
+			return state;
+		},
+	};
+});
 
 function hrefFor(to: string, params?: Record<string, string>, search?: Record<string, string>) {
 	let href = to;
@@ -183,6 +198,7 @@ describe("Query Fan-Out route localization", () => {
 		mocks.tab = "fanout";
 		mocks.query = { data: populatedFanoutData(), isLoading: false, isError: false };
 		mocks.isScopeResolving = false;
+		mocks.expandTopQuery = false;
 		mocks.navigate.mockClear();
 	});
 
@@ -232,9 +248,15 @@ describe("Query Fan-Out route localization", () => {
 
 		mocks.query = { data: null, isLoading: false, isError: true };
 		expect(textFromMarkup(renderRoute())).toContain("目前无法加载 AI 检索脉络，请重新加载页面后重试。");
+		expect(textFromMarkup(renderRoute("en"))).toContain(
+			"Query Fan-Out cannot be loaded right now. Reload the page to try again.",
+		);
 
 		mocks.query = { data: emptyAnalysis(), isLoading: false, isError: false };
 		expect(textFromMarkup(renderRoute())).toContain("所选筛选条件下没有启用联网搜索的运行记录");
+		expect(textFromMarkup(renderRoute("en"))).toContain(
+			"No runs with web search enabled for the selected filters. Search Paths appear once your prompts have been run by an engine with web search.",
+		);
 
 		mocks.query = {
 			data: emptyAnalysis({ totalRuns: 3, rawQueryRuns: 3 }),
@@ -242,25 +264,55 @@ describe("Query Fan-Out route localization", () => {
 			isError: false,
 		};
 		expect(textFromMarkup(renderRoute())).toContain("平台未公开可验证的衍生检索词");
+		expect(textFromMarkup(renderRoute("en"))).toContain(
+			"The platform did not expose verifiable derived queries for these prompt runs.",
+		);
+
+		mocks.query = {
+			data: emptyAnalysis({ totalRuns: 2, rawQueryRuns: 1, exposedQueryRuns: 1 }),
+			isLoading: false,
+			isError: false,
+		};
+		const singularChinese = textFromMarkup(renderRoute());
+		const singularEnglish = textFromMarkup(renderRoute("en"));
+		expect(singularChinese).toContain(
+			"1 次提示词运行仅公开了原提示词的完全重复；未在其检索路径中观察到真正的衍生检索词。",
+		);
+		expect(singularChinese).toContain("另有 1 次运行未公开衍生检索词或原提示词重复。");
+		expect(singularEnglish).toContain(
+			"1 prompt run exposed only an exact prompt echo; no genuine derived query was observed in its search path.",
+		);
+		expect(singularEnglish).toContain("1 other run did not expose a derived query or prompt echo.");
 
 		mocks.query = {
 			data: emptyAnalysis({ totalRuns: 4, rawQueryRuns: 2, exposedQueryRuns: 2 }),
 			isLoading: false,
 			isError: false,
 		};
-		const echoOnly = textFromMarkup(renderRoute());
-		expect(echoOnly).toContain("2 次提示词运行公开了衍生检索词，但仅重复了原提示词");
-		expect(echoOnly).toContain("另有 2 次运行未公开衍生检索词");
+		const pluralChinese = textFromMarkup(renderRoute());
+		const pluralEnglish = textFromMarkup(renderRoute("en"));
+		expect(pluralChinese).toContain(
+			"2 次提示词运行仅公开了原提示词的完全重复；未在其检索路径中观察到真正的衍生检索词。",
+		);
+		expect(pluralChinese).toContain("另有 2 次运行未公开衍生检索词或原提示词重复。");
+		expect(pluralEnglish).toContain(
+			"2 prompt runs exposed only exact prompt echoes; no genuine derived queries were observed in their search paths.",
+		);
+		expect(pluralEnglish).toContain("2 other runs did not expose derived queries or prompt echoes.");
 	});
 
 	it("localizes top-query labels, accessibility copy, counts, and word-cloud states", () => {
+		mocks.expandTopQuery = true;
 		const topQueries = renderRoute("zh-CN", "top-queries");
+		const englishTopQueries = renderRoute("en", "top-queries");
 		const words = renderRoute("zh-CN", "words");
 
 		expect(topQueries).toContain('aria-label="AI 检索脉络：热门衍生检索词说明"');
 		expect(topQueries).toContain("热门衍生检索词");
 		expect(topQueries).toContain("提示词运行次数");
 		expect(topQueries).toContain("12,345");
+		expect(topQueries).toContain('title="发出此衍生检索词的提示词运行次数"');
+		expect(englishTopQueries).toContain('title="Runs of this prompt that issued this derived query"');
 		expect(words).toContain('title="新能源 · 12,345"');
 
 		mocks.query = {
