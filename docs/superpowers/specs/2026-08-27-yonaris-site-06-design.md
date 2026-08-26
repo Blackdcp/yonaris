@@ -202,4 +202,3 @@ Use existing wordmark and icon assets. Do not redraw or replace the Yonaris logo
 - Source and rendered output contain no retired framework attribution, public code-sharing claims, or retired content-section naming.
 - All public pages use the Yonaris logo and the approved colour system.
 - Build, focused unit tests, production smoke, and visual browser review pass before push.
-
