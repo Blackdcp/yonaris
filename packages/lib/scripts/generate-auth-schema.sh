@@ -35,9 +35,10 @@ printf '%s\n' "import { createAuth } from \"$AUTH_SERVER_IMPORT\";
 export const auth = createAuth();
 export default auth;" > "$AUTH_CONFIG"
 
+cd "$PKG_DIR"
 echo "[generate-auth-schema] Running better-auth CLI..."
 "$PNPM_BIN" exec better-auth generate \
-	--yes \
+  --yes \
   --config "$AUTH_CONFIG" \
   --output "$CLI_OUTPUT" \
   2>&1

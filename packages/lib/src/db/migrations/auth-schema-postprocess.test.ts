@@ -98,6 +98,7 @@ describe("auth schema postprocessing", () => {
 		const generator = readFileSync(resolve(process.cwd(), "scripts/generate-auth-schema.sh"), "utf8");
 
 		expect(packageJson.devDependencies?.["@better-auth/cli"]).toBe("1.4.21");
+		expect(generator).toContain('cd "$PKG_DIR"');
 		expect(generator).toContain('"$PNPM_BIN" exec better-auth generate');
 		expect(generator).toContain("--yes");
 		expect(generator).not.toContain("npx");
