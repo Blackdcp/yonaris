@@ -11,7 +11,7 @@ const localeCases = [
 		contact: { label: "Work email", value: "ava@acme.example" },
 		company: { label: "Company", value: "Acme Confidential" },
 		submit: "Talk to Yonaris",
-		failure: "We couldn’t send this yet",
+		failure: "Delivery is not confirmed.",
 	},
 	{
 		locale: "zh" as const,
@@ -20,7 +20,7 @@ const localeCases = [
 		contact: { label: "电话", value: "+86 138 0013 8000" },
 		company: { label: "公司", value: "示例机密公司" },
 		submit: "提交并预约沟通",
-		failure: "暂时没有发送成功",
+		failure: "投递尚未确认",
 	},
 ] as const;
 const sensitiveValues = [
