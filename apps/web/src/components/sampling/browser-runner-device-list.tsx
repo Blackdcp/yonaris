@@ -1,3 +1,4 @@
+import type { UiLanguage } from "@workspace/config/language";
 import type {
 	BrowserExtensionReadinessStatus,
 	BrowserExtensionSurface,
@@ -14,6 +15,8 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Copy, KeyRound, Laptop, Loader2, ShieldX } from "lucide-react";
 import { useState } from "react";
+import { type MessageId, translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { browserRunnerDeviceIsOnline } from "./sampling-run-now-dialog";
 import type { BrowserRunnerDeviceView, BrowserRunnerPairingView, SamplingBrandOption } from "./types";
 
@@ -25,8 +28,9 @@ export async function confirmBrowserRunnerDeviceRevocation(
 	device: BrowserRunnerDeviceView,
 	revoke: (deviceId: string) => Promise<void> | void,
 	confirm: (message: string) => boolean = (message) => globalThis.confirm(message),
+	locale: UiLanguage = "en",
 ): Promise<void> {
-	if (!confirm(`Revoke ${device.displayName}? It will stop receiving new tasks immediately.`)) return;
+	if (!confirm(translate(locale, "sampling.device.confirmRevoke", { deviceName: device.displayName }))) return;
 	await revoke(device.id);
 }
 
@@ -48,11 +52,12 @@ export function BrowserRunnerDeviceList({
 	now?: Date;
 	initialPairing?: BrowserRunnerPairingView;
 }) {
+	const { locale, t, formatDate, formatNumber } = useI18n();
 	const [brandId, setBrandId] = useState(brands[0]?.id ?? "");
 	const [displayName, setDisplayName] = useState("");
 	const [pairing, setPairing] = useState<BrowserRunnerPairingView | undefined>(initialPairing);
 	const [busy, setBusy] = useState<string | null>(null);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
 
 	const createPairing = async () => {
 		if (!brandId || !displayName.trim()) return;
@@ -63,24 +68,35 @@ export function BrowserRunnerDeviceList({
 			setPairing({ code: created.code, expiresAt: new Date(created.expiresAt).toISOString() });
 			setDisplayName("");
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not create a pairing code.");
+			setError({
+				summary: t("sampling.device.error.pair"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setBusy(null);
 		}
 	};
 
 	const revoke = async (device: BrowserRunnerDeviceView) => {
-		await confirmBrowserRunnerDeviceRevocation(device, async (deviceId) => {
-			setBusy(deviceId);
-			setError(null);
-			try {
-				await onRevoke(deviceId);
-			} catch (caught) {
-				setError(caught instanceof Error ? caught.message : "Could not revoke this device.");
-			} finally {
-				setBusy(null);
-			}
-		});
+		await confirmBrowserRunnerDeviceRevocation(
+			device,
+			async (deviceId) => {
+				setBusy(deviceId);
+				setError(null);
+				try {
+					await onRevoke(deviceId);
+				} catch (caught) {
+					setError({
+						summary: t("sampling.device.error.revoke"),
+						detail: caught instanceof Error ? caught.message : undefined,
+					});
+				} finally {
+					setBusy(null);
+				}
+			},
+			undefined,
+			locale,
+		);
 	};
 
 	return (
@@ -89,26 +105,24 @@ export function BrowserRunnerDeviceList({
 				<CardHeader>
 					<CardTitle className="flex items-center gap-2">
 						<KeyRound className="size-5" />
-						Pair a local Chrome
+						{t("sampling.device.pair.title")}
 					</CardTitle>
-					<CardDescription>
-						Create a 15-minute one-time code, then enter it in the Yonaris Browser Runner extension on Windows or macOS.
-					</CardDescription>
+					<CardDescription>{t("sampling.device.pair.description")}</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
 						<div className="grid gap-2">
-							<Label htmlFor="pair-device-name">Device name</Label>
+							<Label htmlFor="pair-device-name">{t("sampling.device.name")}</Label>
 							<Input
 								id="pair-device-name"
-								placeholder="e.g. Marketing MacBook"
+								placeholder={t("sampling.device.namePlaceholder")}
 								maxLength={100}
 								value={displayName}
 								onChange={(event) => setDisplayName(event.target.value)}
 							/>
 						</div>
 						<div className="grid gap-2">
-							<Label htmlFor="pair-device-brand">Customer</Label>
+							<Label htmlFor="pair-device-brand">{t("sampling.device.customer")}</Label>
 							<select
 								id="pair-device-brand"
 								className="h-9 rounded-md border bg-background px-3 text-sm"
@@ -124,14 +138,14 @@ export function BrowserRunnerDeviceList({
 						</div>
 						<Button disabled={busy !== null || !brandId || !displayName.trim()} onClick={createPairing}>
 							{busy === "pairing" && <Loader2 className="animate-spin" />}
-							Create pairing code
+							{t("sampling.device.createCode")}
 						</Button>
 					</div>
 
 					{pairing && (
 						<Alert>
 							<KeyRound />
-							<AlertTitle>Pairing code — shown only once</AlertTitle>
+							<AlertTitle>{t("sampling.device.codeOnce")}</AlertTitle>
 							<AlertDescription className="space-y-3">
 								<code className="block select-all break-all rounded bg-muted p-3 text-base text-foreground">
 									{pairing.code}
@@ -143,23 +157,42 @@ export function BrowserRunnerDeviceList({
 										size="sm"
 										onClick={() => navigator.clipboard.writeText(pairing.code)}
 									>
-										<Copy /> Copy pairing code
+										<Copy /> {t("sampling.device.copyCode")}
 									</Button>
-									<span>Expires {formatBeijingTime(pairing.expiresAt)}</span>
+									<span>
+										{t("sampling.device.expires", {
+											time: formatDate(new Date(pairing.expiresAt), {
+												timeZone: "Asia/Shanghai",
+												month: "2-digit",
+												day: "2-digit",
+												hour: "2-digit",
+												minute: "2-digit",
+												hourCycle: "h23",
+											}),
+										})}
+									</span>
 								</div>
 							</AlertDescription>
 						</Alert>
 					)}
-					{error && <p className="text-sm text-destructive">{error}</p>}
+					{error && (
+						<Alert variant="destructive">
+							<AlertTitle>{error.summary}</AlertTitle>
+							{error.detail && (
+								<AlertDescription>
+									<p>{t("sampling.raw.errorDetails")}</p>
+									<pre className="whitespace-pre-wrap">{error.detail}</pre>
+								</AlertDescription>
+							)}
+						</Alert>
+					)}
 				</CardContent>
 			</Card>
 
 			<div className="grid gap-4">
 				{devices.length === 0 ? (
 					<Card>
-						<CardContent className="py-8 text-center text-muted-foreground">
-							No local Chrome device has been paired yet.
-						</CardContent>
+						<CardContent className="py-8 text-center text-muted-foreground">{t("sampling.device.empty")}</CardContent>
 					</Card>
 				) : (
 					devices.map((device) => {
@@ -178,7 +211,13 @@ export function BrowserRunnerDeviceList({
 										</CardDescription>
 									</div>
 									<Badge variant={revoked ? "destructive" : online ? "default" : "outline"}>
-										{revoked ? "Revoked" : online ? "Online" : "Offline"}
+										{t(
+											revoked
+												? "sampling.device.revoked"
+												: online
+													? "sampling.device.online"
+													: "sampling.device.offline",
+										)}
 									</Badge>
 								</CardHeader>
 								<CardContent className="space-y-4">
@@ -190,18 +229,31 @@ export function BrowserRunnerDeviceList({
 													<p className="font-medium">{SURFACE_LABELS[surface]}</p>
 													<p className="text-sm text-muted-foreground">
 														{readiness
-															? `${formatReadiness(readiness.status)} · ${readiness.activeConcurrency} active`
-															: "No readiness report"}
+															? `${t(READINESS_LABELS[readiness.status])} · ${t("sampling.device.active", { count: formatNumber(readiness.activeConcurrency) })}`
+															: t("sampling.device.noReadiness")}
 													</p>
 												</div>
 											);
 										})}
 									</div>
 									<div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
-										<span>Last heartbeat: {device.lastSeenAt ? formatBeijingTime(device.lastSeenAt) : "Never"}</span>
+										<span>
+											{t("sampling.device.lastHeartbeat", {
+												time: device.lastSeenAt
+													? formatDate(new Date(device.lastSeenAt), {
+															timeZone: "Asia/Shanghai",
+															month: "2-digit",
+															day: "2-digit",
+															hour: "2-digit",
+															minute: "2-digit",
+															hourCycle: "h23",
+														})
+													: t("sampling.device.never"),
+											})}
+										</span>
 										{!revoked && (
 											<Button variant="destructive" size="sm" disabled={busy !== null} onClick={() => revoke(device)}>
-												<ShieldX /> Revoke
+												<ShieldX /> {t("sampling.device.revoke")}
 											</Button>
 										)}
 									</div>
@@ -215,28 +267,10 @@ export function BrowserRunnerDeviceList({
 	);
 }
 
-function formatReadiness(status: BrowserExtensionReadinessStatus): string {
-	switch (status) {
-		case "ready":
-			return "Ready";
-		case "signed_out":
-			return "Signed out";
-		case "paused_by_risk_control":
-			return "Paused by risk control";
-		case "adapter_incompatible":
-			return "Page changed";
-		case "unavailable":
-			return "Unavailable";
-	}
-}
-
-function formatBeijingTime(value: string): string {
-	return new Intl.DateTimeFormat("en-GB", {
-		timeZone: "Asia/Shanghai",
-		month: "2-digit",
-		day: "2-digit",
-		hour: "2-digit",
-		minute: "2-digit",
-		hourCycle: "h23",
-	}).format(new Date(value));
-}
+const READINESS_LABELS: Record<BrowserExtensionReadinessStatus, MessageId> = {
+	ready: "sampling.readiness.ready",
+	signed_out: "sampling.readiness.signedOut",
+	paused_by_risk_control: "sampling.readiness.riskPaused",
+	adapter_incompatible: "sampling.readiness.pageChanged",
+	unavailable: "sampling.readiness.unavailable",
+};

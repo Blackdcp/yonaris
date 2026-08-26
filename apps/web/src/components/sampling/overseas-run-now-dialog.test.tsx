@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/provider";
 import {
 	calculateOverseasRunNowCallCount,
 	createOverseasRunNowSubmissionController,
@@ -159,13 +160,15 @@ describe("OverseasRunNowDialog", () => {
 
 	it("defaults all six Bright Data channels to one sample and offers the paid five-sample option", () => {
 		const markup = renderToStaticMarkup(
-			<OverseasRunNowDialog
-				brandId="ppio"
-				programs={[{ id: "scope-1", name: "Global Market", promptCount: 10, timezone: "America/Los_Angeles" }]}
-				cohorts={[]}
-				googleAiOverviewReady
-				onRun={vi.fn()}
-			/>,
+			<I18nProvider locale="en">
+				<OverseasRunNowDialog
+					brandId="ppio"
+					programs={[{ id: "scope-1", name: "Global Market", promptCount: 10, timezone: "America/Los_Angeles" }]}
+					cohorts={[]}
+					googleAiOverviewReady
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
 		);
 
 		for (const label of ["ChatGPT", "Perplexity", "Gemini", "Copilot", "Google AI Mode", "Google AI Overview"]) {
@@ -179,13 +182,15 @@ describe("OverseasRunNowDialog", () => {
 
 	it("keeps the other five channels runnable but disables AI Overview when no SERP zone is configured", () => {
 		const markup = renderToStaticMarkup(
-			<OverseasRunNowDialog
-				brandId="ppio"
-				programs={[{ id: "scope-1", name: "Global Market", promptCount: 10, timezone: "America/Los_Angeles" }]}
-				cohorts={[]}
-				googleAiOverviewReady={false}
-				onRun={vi.fn()}
-			/>,
+			<I18nProvider locale="en">
+				<OverseasRunNowDialog
+					brandId="ppio"
+					programs={[{ id: "scope-1", name: "Global Market", promptCount: 10, timezone: "America/Los_Angeles" }]}
+					cohorts={[]}
+					googleAiOverviewReady={false}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
 		);
 
 		expect(markup).toContain("Google AI Overview");
@@ -194,6 +199,50 @@ describe("OverseasRunNowDialog", () => {
 		expect(markup).toContain("10 × 5 × 1 = 50 calls");
 		expect(markup).toContain("Run 50 overseas calls now");
 		expect(markup).not.toContain("10 × 6 × 1 = 60 calls");
+	});
+
+	it("renders Chinese controls and explicit cohort statuses without changing Program, channel, or cohort keys", () => {
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<OverseasRunNowDialog
+					brandId="brand-raw-ppio"
+					programs={[
+						{
+							id: "scope-raw-us-01",
+							name: "Global Market 原始",
+							promptCount: 10,
+							timezone: "America/Los_Angeles",
+						},
+					]}
+					cohorts={[
+						{
+							id: "cohort-raw-01",
+							status: "dispatch_pending",
+							plannedCallCount: 60,
+							createdAt: "2026-08-26T00:00:00.000Z",
+							progress: { planned: 60, queued: 60, running: 0, succeeded: 0, failed: 0 },
+						},
+					]}
+					googleAiOverviewReady
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
+		);
+
+		expect(markup).toContain("海外 Bright Data 运行");
+		expect(markup).toContain("每条提示词的样本数");
+		expect(markup).toContain("5 个样本（付费附加项）");
+		expect(markup).toContain("10 × 6 × 1 = 60 次调用");
+		expect(markup).toContain("立即运行 60 次海外调用");
+		expect(markup).toContain("最近的海外运行");
+		expect(markup).toContain("等待分派");
+		expect(markup).toContain("Global Market 原始");
+		expect(markup).toContain("America/Los_Angeles");
+		expect(markup).toContain('value="scope-raw-us-01"');
+		for (const key of ["chatgpt", "perplexity", "gemini", "copilot", "google-ai-mode", "google-ai-overview"]) {
+			expect(markup).toContain(`id="overseas-${key}"`);
+		}
+		expect(markup).not.toContain("dispatch pending");
 	});
 
 	it("calculates one sample by default and five only for the paid option", () => {

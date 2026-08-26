@@ -17,6 +17,10 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { useState } from "react";
+import type { MessageId } from "@/i18n/catalog";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import { createBrandWithOrgFn } from "@/server/brands";
 import {
 	type CustomerWorkspaceRole,
@@ -33,44 +37,71 @@ type OneTimeCredential = {
 	workspaceRole?: CustomerWorkspaceRole;
 };
 
+const ROLE_LABELS: Record<CustomerWorkspaceRole, MessageId> = {
+	owner: "admin.access.role.owner",
+	admin: "admin.access.role.admin",
+	analyst: "admin.access.role.analyst",
+	viewer: "admin.access.role.viewer",
+};
+
+const PUBLIC_ROLE_LABELS: Record<CustomerWorkspaceRole | "legacy-member" | "unknown", MessageId> = {
+	...ROLE_LABELS,
+	"legacy-member": "admin.access.role.legacyMember",
+	unknown: "admin.access.role.unknown",
+};
+
+function rawErrorDetail(error: unknown): string | null {
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : null;
+}
+
 export const Route = createFileRoute("/_authed/admin/access")({
+	head: ({ match }) => {
+		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
+		return {
+			meta: [
+				{ title: buildTitle(translate(uiLanguage, "admin.access.head.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "admin.access.head.description") },
+			],
+		};
+	},
 	component: CustomerAccessPage,
 });
 
 function OneTimeCredentialDialog({ value, onClose }: { value: OneTimeCredential | null; onClose: () => void }) {
+	const { t } = useI18n();
 	return (
 		<Dialog open={value !== null} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>One-time customer credentials</DialogTitle>
-					<DialogDescription>
-						Copy these credentials now. The password is not stored in recoverable form and will not be shown again.
-					</DialogDescription>
+					<DialogTitle>{t("admin.access.credentials.title")}</DialogTitle>
+					<DialogDescription>{t("admin.access.credentials.description")}</DialogDescription>
 				</DialogHeader>
 				{value && (
 					<div className="space-y-4 rounded-lg border bg-muted/30 p-4 text-sm">
 						<div>
-							<div className="text-muted-foreground">Customer workspace</div>
+							<div className="text-muted-foreground">{t("admin.access.credentials.workspace")}</div>
 							<div className="font-medium">{value.brandName}</div>
 						</div>
 						<div>
-							<div className="text-muted-foreground">Email</div>
+							<div className="text-muted-foreground">{t("admin.access.credentials.email")}</div>
 							<code className="select-all break-all">{value.email}</code>
 						</div>
 						<div>
-							<div className="text-muted-foreground">Temporary password</div>
+							<div className="text-muted-foreground">{t("admin.access.credentials.password")}</div>
 							<code className="select-all break-all">{value.temporaryPassword}</code>
 						</div>
 						{value.workspaceRole && (
 							<div>
-								<div className="text-muted-foreground">Role</div>
-								<div>{value.workspaceRole}</div>
+								<div className="text-muted-foreground">{t("admin.access.credentials.role")}</div>
+								<div>{t(ROLE_LABELS[value.workspaceRole])}</div>
 							</div>
 						)}
 					</div>
 				)}
 				<DialogFooter>
-					<Button onClick={onClose}>I have saved it</Button>
+					<Button onClick={onClose}>{t("admin.access.credentials.saved")}</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
@@ -78,6 +109,7 @@ function OneTimeCredentialDialog({ value, onClose }: { value: OneTimeCredential 
 }
 
 function CustomerAccessPage() {
+	const { t } = useI18n();
 	const queryClient = useQueryClient();
 	const [brandId, setBrandId] = useState<string>("");
 	const [workspaceOpen, setWorkspaceOpen] = useState(false);
@@ -134,27 +166,24 @@ function CustomerAccessPage() {
 		<div className="space-y-6">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Customer access</h1>
-					<p className="text-muted-foreground">
-						Create ordinary customer identities for delivery and QA. These accounts never receive platform automation,
-						report, provider, or cross-customer permissions.
-					</p>
+					<h1 className="text-3xl font-bold tracking-tight">{t("admin.access.title")}</h1>
+					<p className="text-muted-foreground">{t("admin.access.description")}</p>
 				</div>
 				<div className="flex flex-wrap gap-2">
 					<Dialog open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
 						<DialogTrigger asChild>
-							<Button variant="outline">Create customer workspace</Button>
+							<Button variant="outline">
+								{createWorkspace.isPending ? t("admin.access.workspace.creating") : t("admin.access.workspace.create")}
+							</Button>
 						</DialogTrigger>
 						<DialogContent>
 							<DialogHeader>
-								<DialogTitle>Create customer workspace</DialogTitle>
-								<DialogDescription>
-									Creates one organization and one brand. Your platform identity is not added as a customer member.
-								</DialogDescription>
+								<DialogTitle>{t("admin.access.workspace.create")}</DialogTitle>
+								<DialogDescription>{t("admin.access.workspace.description")}</DialogDescription>
 							</DialogHeader>
 							<div className="space-y-4">
 								<div className="space-y-2">
-									<Label htmlFor="workspace-name">Customer or brand name</Label>
+									<Label htmlFor="workspace-name">{t("admin.access.workspace.name")}</Label>
 									<Input
 										id="workspace-name"
 										value={workspaceName}
@@ -162,7 +191,7 @@ function CustomerAccessPage() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="workspace-website">Website</Label>
+									<Label htmlFor="workspace-website">{t("admin.access.workspace.website")}</Label>
 									<Input
 										id="workspace-website"
 										placeholder="https://example.com"
@@ -170,39 +199,45 @@ function CustomerAccessPage() {
 										onChange={(event) => setWorkspaceWebsite(event.target.value)}
 									/>
 								</div>
-								{createWorkspace.error && <p className="text-sm text-destructive">{String(createWorkspace.error)}</p>}
+								{createWorkspace.error && (
+									<div className="text-sm text-destructive">
+										<p>{t("admin.access.error.createWorkspace")}</p>
+										<p>{t("admin.raw.errorDetails")}</p>
+										<pre className="whitespace-pre-wrap">{rawErrorDetail(createWorkspace.error)}</pre>
+									</div>
+								)}
 							</div>
 							<DialogFooter>
 								<Button variant="outline" onClick={() => setWorkspaceOpen(false)}>
-									Cancel
+									{t("admin.access.workspace.cancel")}
 								</Button>
 								<Button
 									onClick={() => createWorkspace.mutate()}
 									disabled={!workspaceName.trim() || !workspaceWebsite.trim() || createWorkspace.isPending}
 								>
-									{createWorkspace.isPending ? "Creating..." : "Create workspace"}
+									{t(createWorkspace.isPending ? "admin.access.workspace.creating" : "admin.access.workspace.submit")}
 								</Button>
 							</DialogFooter>
 						</DialogContent>
 					</Dialog>
 					<Dialog open={createOpen} onOpenChange={setCreateOpen}>
 						<DialogTrigger asChild>
-							<Button disabled={!effectiveBrandId}>Create customer account</Button>
+							<Button disabled={!effectiveBrandId}>
+								{createAccount.isPending ? t("admin.access.account.creating") : t("admin.access.account.create")}
+							</Button>
 						</DialogTrigger>
 						<DialogContent>
 							<DialogHeader>
-								<DialogTitle>Create customer account</DialogTitle>
-								<DialogDescription>
-									The account is restricted to the selected customer workspace. A temporary password is shown once.
-								</DialogDescription>
+								<DialogTitle>{t("admin.access.account.create")}</DialogTitle>
+								<DialogDescription>{t("admin.access.account.description")}</DialogDescription>
 							</DialogHeader>
 							<div className="space-y-4">
 								<div className="space-y-2">
-									<Label htmlFor="customer-name">Name</Label>
+									<Label htmlFor="customer-name">{t("admin.access.account.name")}</Label>
 									<Input id="customer-name" value={name} onChange={(event) => setName(event.target.value)} />
 								</div>
 								<div className="space-y-2">
-									<Label htmlFor="customer-email">Email</Label>
+									<Label htmlFor="customer-email">{t("admin.access.account.email")}</Label>
 									<Input
 										id="customer-email"
 										type="email"
@@ -211,7 +246,7 @@ function CustomerAccessPage() {
 									/>
 								</div>
 								<div className="space-y-2">
-									<Label>Customer role</Label>
+									<Label>{t("admin.access.account.role")}</Label>
 									<Select
 										value={workspaceRole}
 										onValueChange={(value) => setWorkspaceRole(value as CustomerWorkspaceRole)}
@@ -220,24 +255,30 @@ function CustomerAccessPage() {
 											<SelectValue />
 										</SelectTrigger>
 										<SelectContent>
-											<SelectItem value="owner">Owner</SelectItem>
-											<SelectItem value="admin">Admin</SelectItem>
-											<SelectItem value="analyst">Analyst</SelectItem>
-											<SelectItem value="viewer">Viewer</SelectItem>
+											<SelectItem value="owner">{t("admin.access.role.owner")}</SelectItem>
+											<SelectItem value="admin">{t("admin.access.role.admin")}</SelectItem>
+											<SelectItem value="analyst">{t("admin.access.role.analyst")}</SelectItem>
+											<SelectItem value="viewer">{t("admin.access.role.viewer")}</SelectItem>
 										</SelectContent>
 									</Select>
 								</div>
-								{createAccount.error && <p className="text-sm text-destructive">{String(createAccount.error)}</p>}
+								{createAccount.error && (
+									<div className="text-sm text-destructive">
+										<p>{t("admin.access.error.createAccount")}</p>
+										<p>{t("admin.raw.errorDetails")}</p>
+										<pre className="whitespace-pre-wrap">{rawErrorDetail(createAccount.error)}</pre>
+									</div>
+								)}
 							</div>
 							<DialogFooter>
 								<Button variant="outline" onClick={() => setCreateOpen(false)}>
-									Cancel
+									{t("admin.access.account.cancel")}
 								</Button>
 								<Button
 									onClick={() => createAccount.mutate()}
 									disabled={!name.trim() || !email.trim() || createAccount.isPending}
 								>
-									{createAccount.isPending ? "Creating..." : "Create account"}
+									{t(createAccount.isPending ? "admin.access.account.creating" : "admin.access.account.submit")}
 								</Button>
 							</DialogFooter>
 						</DialogContent>
@@ -247,15 +288,19 @@ function CustomerAccessPage() {
 
 			<Card>
 				<CardHeader>
-					<CardTitle>Workspace access</CardTitle>
-					<CardDescription>
-						Platform administrators are deliberately separated from these customer identities.
-					</CardDescription>
+					<CardTitle>{t("admin.access.list.title")}</CardTitle>
+					<CardDescription>{t("admin.access.list.description")}</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
+					{workspaces.isLoading && (
+						<p className="text-sm text-muted-foreground">{t("admin.access.workspace.loading")}</p>
+					)}
+					{!workspaces.isLoading && !workspaces.error && workspaces.data?.length === 0 && (
+						<p className="text-sm text-muted-foreground">{t("admin.access.workspace.empty")}</p>
+					)}
 					<Select value={effectiveBrandId} onValueChange={setBrandId}>
 						<SelectTrigger className="max-w-md">
-							<SelectValue placeholder="Select customer workspace" />
+							<SelectValue placeholder={t("admin.access.list.selectWorkspace")} />
 						</SelectTrigger>
 						<SelectContent>
 							{workspaces.data?.map((workspace) => (
@@ -270,10 +315,10 @@ function CustomerAccessPage() {
 						<Table>
 							<TableHeader>
 								<TableRow>
-									<TableHead>Account</TableHead>
-									<TableHead>Role</TableHead>
-									<TableHead>Boundary</TableHead>
-									<TableHead className="text-right">Action</TableHead>
+									<TableHead>{t("admin.access.list.column.account")}</TableHead>
+									<TableHead>{t("admin.access.list.column.role")}</TableHead>
+									<TableHead>{t("admin.access.list.column.boundary")}</TableHead>
+									<TableHead className="text-right">{t("admin.access.list.column.action")}</TableHead>
 								</TableRow>
 							</TableHeader>
 							<TableBody>
@@ -283,12 +328,12 @@ function CustomerAccessPage() {
 											<div className="font-medium">{entry.name}</div>
 											<div className="text-xs text-muted-foreground">{entry.email}</div>
 										</TableCell>
-										<TableCell className="capitalize">{entry.workspaceRole}</TableCell>
+										<TableCell>{t(PUBLIC_ROLE_LABELS[entry.workspaceRole])}</TableCell>
 										<TableCell>
 											{entry.isCustomerAccount ? (
-												<Badge variant="secondary">Customer only</Badge>
+												<Badge variant="secondary">{t("admin.access.boundary.customer")}</Badge>
 											) : (
-												<Badge variant="destructive">Platform identity</Badge>
+												<Badge variant="destructive">{t("admin.access.boundary.platform")}</Badge>
 											)}
 										</TableCell>
 										<TableCell className="text-right">
@@ -298,7 +343,7 @@ function CustomerAccessPage() {
 												disabled={!entry.isCustomerAccount || resetPassword.isPending}
 												onClick={() => resetPassword.mutate(entry.userId)}
 											>
-												Reset password
+												{t(resetPassword.isPending ? "admin.access.resetting" : "admin.access.reset")}
 											</Button>
 										</TableCell>
 									</TableRow>
@@ -306,14 +351,35 @@ function CustomerAccessPage() {
 								{!access.isLoading && access.data?.accounts.length === 0 && (
 									<TableRow>
 										<TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-											No customer accounts yet.
+											{t("admin.access.empty")}
 										</TableCell>
 									</TableRow>
 								)}
 							</TableBody>
 						</Table>
 					</div>
-					{access.error && <p className="text-sm text-destructive">{String(access.error)}</p>}
+					{access.isLoading && <p className="text-sm text-muted-foreground">{t("admin.access.list.loading")}</p>}
+					{workspaces.error && (
+						<div className="text-sm text-destructive">
+							<p>{t("admin.access.error.workspaces")}</p>
+							<p>{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{rawErrorDetail(workspaces.error)}</pre>
+						</div>
+					)}
+					{access.error && (
+						<div className="text-sm text-destructive">
+							<p>{t("admin.access.error.accounts")}</p>
+							<p>{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{rawErrorDetail(access.error)}</pre>
+						</div>
+					)}
+					{resetPassword.error && (
+						<div className="text-sm text-destructive">
+							<p>{t("admin.access.error.reset")}</p>
+							<p>{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{rawErrorDetail(resetPassword.error)}</pre>
+						</div>
+					)}
 				</CardContent>
 			</Card>
 

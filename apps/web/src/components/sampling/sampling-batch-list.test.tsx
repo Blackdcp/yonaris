@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/provider";
 import { SamplingBatchList } from "./sampling-batch-list";
 import type { SamplingBatchView, SamplingCoverageCounts } from "./types";
 
@@ -48,16 +49,18 @@ function batch(overrides: Partial<SamplingBatchView> = {}): SamplingBatchView {
 	};
 }
 
-function render(batches: SamplingBatchView[]): string {
+function render(batches: SamplingBatchView[], locale: "en" | "zh-CN" = "en"): string {
 	return renderToStaticMarkup(
-		<SamplingBatchList
-			batches={batches}
-			actingBatchId={null}
-			onClaim={vi.fn()}
-			onStartAutomation={vi.fn()}
-			onFinalizeNeedsHuman={vi.fn()}
-			onCancel={vi.fn()}
-		/>,
+		<I18nProvider locale={locale}>
+			<SamplingBatchList
+				batches={batches}
+				actingBatchId={null}
+				onClaim={vi.fn()}
+				onStartAutomation={vi.fn()}
+				onFinalizeNeedsHuman={vi.fn()}
+				onCancel={vi.fn()}
+			/>
+		</I18nProvider>,
 	);
 }
 
@@ -231,5 +234,61 @@ describe("SamplingBatchList automation controls", () => {
 
 		expect(markup).toContain(">Final<");
 		expect(markup).not.toContain("Incomplete");
+	});
+
+	it("renders Chinese status, table, automation, coverage, and actions while preserving raw batch and Program data", () => {
+		const successful = counts({
+			succeeded: 2,
+			attempted: 2,
+			resolved: 2,
+			successCoverage: 2 / 3,
+			completionCoverage: 2 / 3,
+		});
+		const markup = render(
+			[
+				batch({
+					id: "batch-raw-00000001",
+					name: "StepFun domestic sampling 原始",
+					scopeName: "China · Simplified Chinese · Scored 原始",
+					scopeMarket: "CN",
+					scopeLocale: "zh-CN",
+					scopeTimezone: "Asia/Shanghai",
+					manifestHash: "sha256:manifest-byte-identical",
+					status: "in_progress",
+					executionMode: "browser_runner",
+					browserRunnerEnabled: true,
+					automationStatus: "needs_human",
+					automationProgress: { total: 3, completed: 2, running: 0, needsHuman: 1 },
+					needsHumanCount: 1,
+					needsHumanPreSubmitCount: 1,
+					resultStatus: "provisional",
+					coverage: {
+						overall: successful,
+						byEvaluationRole: { scored: successful, observation: counts({ total: 0 }) },
+					},
+				}),
+			],
+			"zh-CN",
+		);
+
+		expect(markup).toContain("批次");
+		expect(markup).toContain("项目");
+		expect(markup).toContain("进行中");
+		expect(markup).toContain("需要人工");
+		expect(markup).toContain("成功覆盖率");
+		expect(markup).toContain("暂定");
+		expect(markup).toContain("继续提交前任务");
+		expect(markup).toContain("StepFun domestic sampling 原始");
+		expect(markup).toContain("China · Simplified Chinese · Scored 原始");
+		expect(markup).toContain("CN/zh-CN · Asia/Shanghai");
+		expect(markup).toContain("batch-ra");
+		expect(markup).not.toContain("Continue human task");
+	});
+
+	it("renders the Chinese empty state", () => {
+		const markup = render([], "zh-CN");
+
+		expect(markup).toContain("没有符合当前筛选条件的抽样批次。");
+		expect(markup).not.toContain("No sampling batches match these filters.");
 	});
 });

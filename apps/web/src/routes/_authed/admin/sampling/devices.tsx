@@ -6,7 +6,9 @@ import { ArrowLeft, TriangleAlert } from "lucide-react";
 import { BrowserRunnerDeviceList } from "@/components/sampling/browser-runner-device-list";
 import { BrowserRunnerExtensionInstall } from "@/components/sampling/browser-runner-extension-install";
 import type { BrowserRunnerDeviceView, SamplingContextView } from "@/components/sampling/types";
-import { getAppName } from "@/lib/route-head";
+import { translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import {
 	createBrowserRunnerPairingFn,
 	listBrowserRunnerDevicesFn,
@@ -14,13 +16,19 @@ import {
 } from "@/server/browser-runner-devices";
 import { getSamplingContextFn } from "@/server/sampling";
 
+function rawErrorDetail(error: unknown): string | null {
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : null;
+}
+
 export const Route = createFileRoute("/_authed/admin/sampling/devices")({
 	head: ({ match }) => {
 		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: `Local Browser devices · ${appName}` },
-				{ name: "description", content: "Pair and manage local Chrome Browser Runner devices." },
+				{ title: buildTitle(translate(uiLanguage, "sampling.devices.head.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "sampling.devices.head.description") },
 			],
 		};
 	},
@@ -28,6 +36,7 @@ export const Route = createFileRoute("/_authed/admin/sampling/devices")({
 });
 
 function BrowserRunnerDevicesPage() {
+	const { t } = useI18n();
 	const contextQuery = useQuery({
 		queryKey: ["admin", "sampling", "context", "device-management"],
 		queryFn: () => getSamplingContextFn({ data: {} }),
@@ -55,24 +64,27 @@ function BrowserRunnerDevicesPage() {
 		<div className="space-y-6">
 			<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Local Browser devices</h1>
-					<p className="mt-1 text-muted-foreground">
-						Pair administrator-operated Chrome devices that collect Doubao and DeepSeek tasks.
-					</p>
+					<h1 className="text-3xl font-bold tracking-tight">{t("sampling.devices.title")}</h1>
+					<p className="mt-1 text-muted-foreground">{t("sampling.devices.description")}</p>
 				</div>
 				<Button asChild variant="outline">
 					<Link to="/admin/sampling">
-						<ArrowLeft /> Sampling operations
+						<ArrowLeft /> {t("sampling.devices.back")}
 					</Link>
 				</Button>
 			</div>
 			<BrowserRunnerExtensionInstall />
 
-			{contextQuery.isError || devicesQuery.isError ? (
+			{contextQuery.isLoading || devicesQuery.isLoading ? (
+				<p className="text-sm text-muted-foreground">{t("sampling.devices.loading")}</p>
+			) : contextQuery.isError || devicesQuery.isError ? (
 				<Alert variant="destructive">
 					<TriangleAlert />
-					<AlertTitle>Could not load local devices</AlertTitle>
-					<AlertDescription>{String(contextQuery.error ?? devicesQuery.error)}</AlertDescription>
+					<AlertTitle>{t("sampling.devices.error")}</AlertTitle>
+					<AlertDescription>
+						<p>{t("sampling.raw.errorDetails")}</p>
+						<pre className="whitespace-pre-wrap">{rawErrorDetail(contextQuery.error ?? devicesQuery.error)}</pre>
+					</AlertDescription>
 				</Alert>
 			) : (
 				<BrowserRunnerDeviceList

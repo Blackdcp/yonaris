@@ -5,6 +5,8 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import {
 	OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
 	OVERSEAS_RUN_NOW_PAID_SAMPLES,
@@ -19,6 +21,12 @@ const CHANNELS = [
 	{ key: "google-ai-mode", label: "Google AI Mode" },
 	{ key: "google-ai-overview", label: "Google AI Overview" },
 ] as const;
+
+const COHORT_STATUS_LABELS: Record<OverseasRunCohortView["status"], MessageId> = {
+	dispatch_pending: "sampling.overseas.status.dispatchPending",
+	running: "sampling.overseas.status.running",
+	completed: "sampling.overseas.status.completed",
+};
 
 export type OverseasRunNowChannelKey = (typeof CHANNELS)[number]["key"];
 
@@ -141,6 +149,7 @@ export function OverseasRunNowDialog({
 	googleAiOverviewReady: boolean;
 	onRun(input: OverseasRunNowInput): Promise<void>;
 }) {
+	const { t, formatNumber } = useI18n();
 	const [scopeId, setScopeId] = useState(programs[0]?.id ?? "");
 	const [channelKeys, setChannelKeys] = useState<OverseasRunNowChannelKey[]>(() =>
 		CHANNELS.filter(({ key }) => key !== "google-ai-overview" || googleAiOverviewReady).map(({ key }) => key),
@@ -149,7 +158,7 @@ export function OverseasRunNowDialog({
 		OVERSEAS_RUN_NOW_DEFAULT_SAMPLES,
 	);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
 	const submittingRef = useRef(false);
 	const submissionControllerRef = useRef<OverseasRunNowSubmissionController | null>(null);
 	submissionControllerRef.current ??= createOverseasRunNowSubmissionController();
@@ -192,7 +201,7 @@ export function OverseasRunNowDialog({
 				onRun,
 			);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not start the overseas run.");
+			setError({ summary: t("sampling.overseas.error"), detail: caught instanceof Error ? caught.message : undefined });
 		} finally {
 			submittingRef.current = false;
 			setSubmitting(false);
@@ -204,24 +213,22 @@ export function OverseasRunNowDialog({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<CirclePlay className="size-5" />
-					Overseas Bright Data run
+					{t("sampling.overseas.title")}
 				</CardTitle>
-				<CardDescription>
-					Run every enabled Prompt once on each selected channel. One sample is standard; five samples is a paid add-on.
-				</CardDescription>
+				<CardDescription>{t("sampling.overseas.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">
 				{programs.length === 0 ? (
 					<Alert>
 						<AlertTriangle />
-						<AlertTitle>No eligible overseas Program</AlertTitle>
-						<AlertDescription>Create an enabled, scored, manual-only US/en Program first.</AlertDescription>
+						<AlertTitle>{t("sampling.overseas.noProgram")}</AlertTitle>
+						<AlertDescription>{t("sampling.overseas.noProgramDescription")}</AlertDescription>
 					</Alert>
 				) : (
 					<>
 						<div className="grid gap-4 sm:grid-cols-2">
 							<div className="grid gap-2">
-								<Label htmlFor="overseas-run-program">Program</Label>
+								<Label htmlFor="overseas-run-program">{t("sampling.overseas.program")}</Label>
 								<select
 									id="overseas-run-program"
 									className="h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -240,11 +247,14 @@ export function OverseasRunNowDialog({
 									))}
 								</select>
 								<p className="text-sm text-muted-foreground">
-									All {selectedProgram?.promptCount ?? 0} enabled Prompts · {selectedProgram?.timezone}
+									{t("sampling.overseas.allPrompts", {
+										count: formatNumber(selectedProgram?.promptCount ?? 0),
+										timezone: selectedProgram?.timezone ?? "",
+									})}
 								</p>
 							</div>
 							<div className="grid content-start gap-2">
-								<Label htmlFor="overseas-run-samples">Samples per Prompt</Label>
+								<Label htmlFor="overseas-run-samples">{t("sampling.overseas.samples")}</Label>
 								<select
 									id="overseas-run-samples"
 									className="h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -260,8 +270,8 @@ export function OverseasRunNowDialog({
 										);
 									}}
 								>
-									<option value={OVERSEAS_RUN_NOW_DEFAULT_SAMPLES}>1 sample (standard)</option>
-									<option value={OVERSEAS_RUN_NOW_PAID_SAMPLES}>5 samples (paid add-on)</option>
+									<option value={OVERSEAS_RUN_NOW_DEFAULT_SAMPLES}>{t("sampling.overseas.sampleStandard")}</option>
+									<option value={OVERSEAS_RUN_NOW_PAID_SAMPLES}>{t("sampling.overseas.samplePaid")}</option>
 								</select>
 							</div>
 						</div>
@@ -284,7 +294,7 @@ export function OverseasRunNowDialog({
 											{label}
 											{unavailable && (
 												<span className="block text-xs font-normal text-muted-foreground">
-													Configure BRIGHTDATA_SERP_ZONE to enable Google AI Overview.
+													{t("sampling.overseas.aiOverviewUnavailable")}
 												</span>
 											)}
 										</span>
@@ -294,29 +304,47 @@ export function OverseasRunNowDialog({
 						</div>
 						<div className="flex flex-col gap-3 rounded-md bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<p className="font-medium tabular-nums">
-								{selectedProgram?.promptCount ?? 0} × {selectedChannelKeys.length} × {samplesPerChannel} = {callCount}{" "}
-								calls
+								{t("sampling.overseas.callCount", {
+									prompts: selectedProgram?.promptCount ?? 0,
+									channels: selectedChannelKeys.length,
+									samples: samplesPerChannel,
+									calls: callCount,
+								})}
 							</p>
 							<Button disabled={submitting || callCount === 0 || selectedChannelKeys.length === 0} onClick={submit}>
 								{submitting && <Loader2 className="animate-spin" />}
-								Run {callCount.toLocaleString("en-US")} overseas calls now
+								{t("sampling.overseas.submit", { count: formatNumber(callCount) })}
 							</Button>
 						</div>
 					</>
 				)}
-				{error && <p className="text-sm text-destructive">{error}</p>}
+				{error && (
+					<Alert variant="destructive">
+						<AlertTitle>{error.summary}</AlertTitle>
+						{error.detail && (
+							<AlertDescription>
+								<p>{t("sampling.raw.errorDetails")}</p>
+								<pre className="whitespace-pre-wrap">{error.detail}</pre>
+							</AlertDescription>
+						)}
+					</Alert>
+				)}
 				{cohorts.length > 0 && (
 					<div className="space-y-2">
-						<p className="text-sm font-medium">Recent overseas runs</p>
+						<p className="text-sm font-medium">{t("sampling.overseas.recent")}</p>
 						{cohorts.map((cohort) => (
 							<div
 								key={cohort.id}
 								className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm"
 							>
-								<span className="capitalize">{cohort.status.replaceAll("_", " ")}</span>
+								<span>{t(COHORT_STATUS_LABELS[cohort.status])}</span>
 								<span className="tabular-nums">
-									{cohort.progress.succeeded}/{cohort.progress.planned} succeeded · {cohort.progress.running} running ·{" "}
-									{cohort.progress.failed} failed
+									{t("sampling.overseas.progress", {
+										succeeded: cohort.progress.succeeded,
+										planned: cohort.progress.planned,
+										running: cohort.progress.running,
+										failed: cohort.progress.failed,
+									})}
 								</span>
 							</div>
 						))}

@@ -3,6 +3,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import type { UiLanguage } from "@workspace/config/language";
 import { Badge } from "@workspace/ui/components/badge";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
@@ -30,8 +31,10 @@ import {
 	Server,
 	XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getAppName } from "@/lib/route-head";
+import { useCallback, useEffect, useState } from "react";
+import { type MessageId, translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import { getJobLogsFn, getWorkflowDataFn, retryJobFn } from "@/server/admin";
 
 // ============================================================================
@@ -113,11 +116,30 @@ interface WorkflowsData {
 	brands: BrandScheduleSummary[];
 }
 
+type ActivePromptJobStatus = Exclude<PromptScheduleStatus["jobStatus"], "none">;
+
+const RECENT_JOB_STATUS_LABELS: Record<RecentJob["status"], MessageId> = {
+	completed: "workflow.status.completed",
+	failed: "workflow.status.failed",
+};
+
+const PROMPT_JOB_STATUS_LABELS: Record<ActivePromptJobStatus, MessageId> = {
+	active: "workflow.status.active",
+	created: "workflow.status.queued",
+	retry: "workflow.status.retry",
+};
+
+const PROMPT_JOB_ACTIVITY_LABELS: Record<ActivePromptJobStatus, MessageId> = {
+	active: "workflow.status.processing",
+	created: "workflow.status.inQueue",
+	retry: "workflow.status.retryingSoon",
+};
+
 // ============================================================================
 // Utility functions
 // ============================================================================
 
-function formatDuration(ms: number): string {
+function formatDuration(ms: number, locale: UiLanguage = "en"): string {
 	const seconds = Math.floor(ms / 1000);
 	const minutes = Math.floor(seconds / 60);
 	const hours = Math.floor(minutes / 60);
@@ -126,34 +148,40 @@ function formatDuration(ms: number): string {
 
 	if (weeks > 0) {
 		const remainingDays = days % 7;
-		return remainingDays > 0 ? `${weeks}w ${remainingDays}d` : `${weeks}w`;
+		return remainingDays > 0
+			? `${translate(locale, "admin.duration.weeksShort", { count: weeks })} ${translate(locale, "admin.duration.daysShort", { count: remainingDays })}`
+			: translate(locale, "admin.duration.weeksShort", { count: weeks });
 	}
 	if (days > 0) {
 		const remainingHours = hours % 24;
-		return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+		return remainingHours > 0
+			? `${translate(locale, "admin.duration.daysShort", { count: days })} ${translate(locale, "admin.duration.hoursShort", { count: remainingHours })}`
+			: translate(locale, "admin.duration.daysShort", { count: days });
 	}
 	if (hours > 0) {
 		const remainingMinutes = minutes % 60;
-		return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+		return remainingMinutes > 0
+			? `${translate(locale, "admin.duration.hoursShort", { count: hours })} ${translate(locale, "admin.duration.minutesShort", { count: remainingMinutes })}`
+			: translate(locale, "admin.duration.hoursShort", { count: hours });
 	}
-	if (minutes > 0) return `${minutes}m`;
-	return `${seconds}s`;
+	if (minutes > 0) return translate(locale, "admin.duration.minutesShort", { count: minutes });
+	return translate(locale, "admin.duration.secondsShort", { count: seconds });
 }
 
-function formatRelativeTime(dateStr: string | null): string {
-	if (!dateStr) return "Never";
+function formatRelativeTime(dateStr: string | null, locale: UiLanguage = "en"): string {
+	if (!dateStr) return translate(locale, "workflow.time.never");
 	const date = new Date(dateStr);
 	const now = new Date();
 	const diffMs = now.getTime() - date.getTime();
-	return `${formatDuration(diffMs)} ago`;
+	return translate(locale, "workflow.time.ago", { duration: formatDuration(diffMs, locale) });
 }
 
-function formatFutureTime(timestamp: number | null): string {
-	if (!timestamp) return "Unknown";
+function formatFutureTime(timestamp: number | null, locale: UiLanguage = "en"): string {
+	if (!timestamp) return translate(locale, "workflow.time.unknown");
 	const now = Date.now();
 	const diffMs = timestamp - now;
-	if (diffMs < 0) return "Overdue";
-	return `in ${formatDuration(diffMs)}`;
+	if (diffMs < 0) return translate(locale, "workflow.time.overdue");
+	return translate(locale, "workflow.time.future", { duration: formatDuration(diffMs, locale) });
 }
 
 // ============================================================================
@@ -161,6 +189,7 @@ function formatFutureTime(timestamp: number | null): string {
 // ============================================================================
 
 function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) {
+	const { t, formatNumber } = useI18n();
 	const hasIssues = stats.failed > 0;
 
 	return (
@@ -170,33 +199,35 @@ function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) 
 					<Server className="h-4 w-4" />
 					{title}
 				</CardTitle>
-				<CardDescription>pg-boss Job Queue Status</CardDescription>
+				<CardDescription>{t("workflow.queue.description")}</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div className="grid grid-cols-3 gap-4 text-sm">
-					<div title="Jobs waiting to be picked up by a worker">
-						<p className="text-muted-foreground">Created</p>
-						<p className="text-xl font-semibold text-foreground">{stats.created}</p>
+					<div title={t("workflow.queue.createdTooltip")}>
+						<p className="text-muted-foreground">{t("workflow.queue.created")}</p>
+						<p className="text-xl font-semibold text-foreground">{formatNumber(stats.created)}</p>
 					</div>
-					<div title="Jobs currently being processed">
-						<p className="text-muted-foreground">Active</p>
-						<p className="text-xl font-semibold text-foreground">{stats.active}</p>
+					<div title={t("workflow.queue.activeTooltip")}>
+						<p className="text-muted-foreground">{t("workflow.queue.active")}</p>
+						<p className="text-xl font-semibold text-foreground">{formatNumber(stats.active)}</p>
 					</div>
-					<div title="Jobs waiting to be retried after failure">
-						<p className="text-muted-foreground">Retry</p>
-						<p className="text-xl font-semibold text-amber-600 yonaris-warning-text">{stats.retry}</p>
-					</div>
-					<div>
-						<p className="text-muted-foreground">Completed</p>
-						<p className="text-xl font-semibold">{stats.completed.toLocaleString()}</p>
+					<div title={t("workflow.queue.retryTooltip")}>
+						<p className="text-muted-foreground">{t("workflow.queue.retry")}</p>
+						<p className="text-xl font-semibold text-amber-600 yonaris-warning-text">{formatNumber(stats.retry)}</p>
 					</div>
 					<div>
-						<p className="text-muted-foreground">Failed</p>
-						<p className={`text-xl font-semibold ${stats.failed > 0 ? "text-red-600" : ""}`}>{stats.failed}</p>
+						<p className="text-muted-foreground">{t("workflow.queue.completed")}</p>
+						<p className="text-xl font-semibold">{formatNumber(stats.completed)}</p>
 					</div>
 					<div>
-						<p className="text-muted-foreground">Total Pending</p>
-						<p className="text-xl font-semibold text-foreground">{stats.totalPending}</p>
+						<p className="text-muted-foreground">{t("workflow.queue.failed")}</p>
+						<p className={`text-xl font-semibold ${stats.failed > 0 ? "text-red-600" : ""}`}>
+							{formatNumber(stats.failed)}
+						</p>
+					</div>
+					<div>
+						<p className="text-muted-foreground">{t("workflow.queue.totalPending")}</p>
+						<p className="text-xl font-semibold text-foreground">{formatNumber(stats.totalPending)}</p>
 					</div>
 				</div>
 			</CardContent>
@@ -205,22 +236,24 @@ function QueueStatsCard({ stats, title }: { stats: QueueStats; title: string }) 
 }
 
 function SchedulerCell({ info }: { info: SchedulerInfo }) {
+	const { locale, t } = useI18n();
 	if (!info.exists) {
 		return <span className="text-muted-foreground text-xs">&mdash;</span>;
 	}
-	const nextText = info.nextRunAt ? formatFutureTime(info.nextRunAt) : "Unknown";
+	const nextText = info.nextRunAt ? formatFutureTime(info.nextRunAt, locale) : t("workflow.time.unknown");
 	return (
 		<div className="flex flex-col gap-0.5">
-			<span className="text-xs font-medium">Next: {nextText}</span>
+			<span className="text-xs font-medium">{t("workflow.scheduler.next", { time: nextText })}</span>
 		</div>
 	);
 }
 
 function ModelStatus({ status }: { status?: LastRunByModel }) {
+	const { locale, t } = useI18n();
 	if (!status) {
 		return <span className="text-muted-foreground">-</span>;
 	}
-	const lastRunText = status.lastRunAt ? formatRelativeTime(status.lastRunAt) : "Never";
+	const lastRunText = status.lastRunAt ? formatRelativeTime(status.lastRunAt, locale) : t("workflow.time.never");
 
 	if (status.isOverdue) {
 		return (
@@ -229,7 +262,9 @@ function ModelStatus({ status }: { status?: LastRunByModel }) {
 					<AlertTriangle className="h-3 w-3 text-amber-500" />
 					<span className="text-amber-600 text-xs">{lastRunText}</span>
 				</div>
-				{status.overdueByMs && <span className="text-red-500 text-xs">(+{formatDuration(status.overdueByMs)})</span>}
+				{status.overdueByMs && (
+					<span className="text-red-500 text-xs">(+{formatDuration(status.overdueByMs, locale)})</span>
+				)}
 			</div>
 		);
 	}
@@ -243,6 +278,7 @@ function ModelStatus({ status }: { status?: LastRunByModel }) {
 }
 
 function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: string; onSuccess: () => void }) {
+	const { t } = useI18n();
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<"queued" | "recreated" | false>(false);
@@ -257,7 +293,7 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 			setSuccess("queued");
 			setTimeout(() => onSuccess(), 1000);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to retry");
+			setError(err instanceof Error ? err.message : null);
 		} finally {
 			setIsLoading(false);
 		}
@@ -267,7 +303,7 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 		return (
 			<Button size="sm" variant="outline" disabled className="cursor-default">
 				<CheckCircle2 className="h-3 w-3 mr-1 text-emerald-500" />
-				{success === "recreated" ? "Scheduler Reset" : "Queued"}
+				{t(success === "recreated" ? "workflow.retry.schedulerReset" : "workflow.retry.queued")}
 			</Button>
 		);
 	}
@@ -276,14 +312,21 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 		<div className="flex flex-col gap-1">
 			<Button size="sm" variant="outline" onClick={handleRetry} disabled={isLoading} className="cursor-pointer text-xs">
 				{isLoading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Play className="h-3 w-3 mr-1" />}
-				Retry
+				{t("workflow.retry.action")}
 			</Button>
-			{error && <span className="text-xs text-red-500">{error}</span>}
+			{error && (
+				<div className="text-xs text-red-500">
+					<p>{t("workflow.retry.error")}</p>
+					<p>{t("admin.raw.errorDetails")}</p>
+					<pre className="whitespace-pre-wrap">{error}</pre>
+				</div>
+			)}
 		</div>
 	);
 }
 
 function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySuccess?: () => void }) {
+	const { t, formatDate } = useI18n();
 	const isFailed = job.status === "failed";
 	const [isOpen, setIsOpen] = useState(false);
 	const [logs, setLogs] = useState<string[]>([]);
@@ -331,7 +374,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 					size="sm"
 					className={`cursor-pointer ${isFailed ? "text-red-600 hover:text-red-700" : "text-muted-foreground hover:text-foreground"}`}
 				>
-					View Logs
+					{t("workflow.job.viewLogs")}
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-w-[90vw] sm:max-w-[90vw] w-full max-h-[80vh] overflow-y-auto">
@@ -342,49 +385,60 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 						) : (
 							<CheckCircle2 className="h-5 w-5 text-emerald-500" />
 						)}
-						{isFailed ? "Failed Job Details" : "Completed Job Details"}
+						{t(isFailed ? "workflow.job.failedTitle" : "workflow.job.completedTitle")}
 					</DialogTitle>
-					<DialogDescription>Job ID: {job.id}</DialogDescription>
+					<DialogDescription>{t("workflow.job.id", { id: job.id })}</DialogDescription>
 				</DialogHeader>
 				<div className="space-y-4">
 					<div className="grid grid-cols-2 gap-4 text-sm">
 						<div>
-							<p className="text-muted-foreground">Status</p>
-							<Badge className={isFailed ? "bg-red-500" : "bg-emerald-600"}>{job.status}</Badge>
+							<p className="text-muted-foreground">{t("workflow.job.status")}</p>
+							<Badge className={isFailed ? "bg-red-500" : "bg-emerald-600"}>
+								{t(RECENT_JOB_STATUS_LABELS[job.status])}
+							</Badge>
 						</div>
 						<div>
-							<p className="text-muted-foreground">Prompt ID</p>
-							<p className="font-mono text-xs">{job.data?.promptId || "N/A"}</p>
+							<p className="text-muted-foreground">{t("workflow.job.promptId")}</p>
+							<p className="font-mono text-xs">{job.data?.promptId || t("workflow.job.notApplicable")}</p>
 						</div>
 						<div>
-							<p className="text-muted-foreground">Finished At</p>
-							<p>{job.finishedOn ? new Date(job.finishedOn).toLocaleString() : "Unknown"}</p>
+							<p className="text-muted-foreground">{t("workflow.job.finishedAt")}</p>
+							<p>
+								{job.finishedOn
+									? formatDate(new Date(job.finishedOn), { dateStyle: "medium", timeStyle: "medium" })
+									: t("workflow.time.unknown")}
+							</p>
 						</div>
 					</div>
 					{isFailed && job.failedReason && (
 						<div>
-							<p className="text-muted-foreground mb-1">Error Message</p>
-							<div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">{job.failedReason}</div>
+							<p className="text-muted-foreground mb-1">{t("workflow.job.errorMessage")}</p>
+							<p className="text-sm font-medium text-red-800">{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+								{job.failedReason}
+							</pre>
 						</div>
 					)}
 					{/* Job Logs Section */}
 					<div>
-						<p className="text-muted-foreground mb-1">Execution Logs</p>
+						<p className="text-muted-foreground mb-1">{t("workflow.job.executionLogs")}</p>
 						{logsLoading ? (
 							<div className="flex items-center gap-2 text-sm text-muted-foreground">
 								<Loader2 className="h-4 w-4 animate-spin" />
-								Loading logs...
+								{t("workflow.job.loadingLogs")}
 							</div>
 						) : logsError ? (
-							<div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-800">
-								Error loading logs: {logsError}
+							<div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+								<p>{t("workflow.job.errorLogs")}</p>
+								<p>{t("admin.raw.errorDetails")}</p>
+								<pre className="whitespace-pre-wrap">{logsError}</pre>
 							</div>
 						) : logs.length > 0 ? (
 							<pre className="bg-muted rounded p-3 text-xs overflow-x-auto max-h-80 whitespace-pre-wrap">
 								{logs.join("\n")}
 							</pre>
 						) : (
-							<p className="text-sm text-muted-foreground italic">No logs available</p>
+							<p className="text-sm text-muted-foreground italic">{t("workflow.job.noLogs")}</p>
 						)}
 					</div>
 					{/* Retry Button for Failed Jobs */}
@@ -393,7 +447,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 							{retrySuccess ? (
 								<div className="flex items-center gap-2 text-emerald-600">
 									<CheckCircle2 className="h-4 w-4" />
-									<span>Job queued for retry</span>
+									<span>{t("workflow.job.queuedForRetry")}</span>
 								</div>
 							) : (
 								<>
@@ -403,9 +457,15 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 										) : (
 											<Play className="h-4 w-4 mr-2" />
 										)}
-										Retry This Job
+										{t("workflow.job.retry")}
 									</Button>
-									{retryError && <span className="text-sm text-red-600">{retryError}</span>}
+									{retryError && (
+										<div className="text-sm text-red-600">
+											<p>{t("workflow.retry.error")}</p>
+											<p>{t("admin.raw.errorDetails")}</p>
+											<pre className="whitespace-pre-wrap">{retryError}</pre>
+										</div>
+									)}
 								</>
 							)}
 						</div>
@@ -429,6 +489,7 @@ function BrandRow({
 	recentJobs: RecentJob[];
 	onRefresh: () => void;
 }) {
+	const { locale, t } = useI18n();
 	const hasOverdue = brand.overduePrompts > 0;
 	const scheduleHealth =
 		brand.enabledPrompts > 0 ? Math.round((brand.onSchedulePrompts / brand.enabledPrompts) * 100) : 100;
@@ -456,7 +517,7 @@ function BrandRow({
 					</div>
 				</TableCell>
 				<TableCell className="text-center">
-					<span className="text-sm">{formatDuration(brand.runFrequencyMs)}</span>
+					<span className="text-sm">{formatDuration(brand.runFrequencyMs, locale)}</span>
 				</TableCell>
 				<TableCell className="text-center">
 					<div className="flex items-center justify-center gap-2">
@@ -469,11 +530,11 @@ function BrandRow({
 				<TableCell className="text-center">
 					{brand.overduePrompts > 0 ? (
 						<Badge variant="destructive" className="bg-amber-500">
-							{brand.overduePrompts} overdue
+							{t("workflow.brand.overdue", { count: brand.overduePrompts })}
 						</Badge>
 					) : (
 						<Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-							All on schedule
+							{t("workflow.brand.allOnSchedule")}
 						</Badge>
 					)}
 				</TableCell>
@@ -485,16 +546,16 @@ function BrandRow({
 							<Table>
 								<TableHeader>
 									<TableRow>
-										<TableHead className="w-[250px]">Prompt</TableHead>
-										<TableHead className="text-center">Status</TableHead>
+										<TableHead className="w-[250px]">{t("workflow.table.prompt")}</TableHead>
+										<TableHead className="text-center">{t("workflow.table.status")}</TableHead>
 										{Object.keys(brand.prompts[0]?.lastRunsByModel || {}).map((model) => (
-											<TableHead key={model} className="text-center capitalize">
+											<TableHead key={model} className="text-center">
 												{model}
 											</TableHead>
 										))}
-										<TableHead className="text-center">Prod Scheduler</TableHead>
-										<TableHead className="text-center">Last Job</TableHead>
-										<TableHead className="text-center">Actions</TableHead>
+										<TableHead className="text-center">{t("workflow.table.prodScheduler")}</TableHead>
+										<TableHead className="text-center">{t("workflow.table.lastJob")}</TableHead>
+										<TableHead className="text-center">{t("workflow.table.actions")}</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
@@ -515,6 +576,7 @@ function BrandRow({
 												.sort((a, b) => b.timestamp - a.timestamp);
 											const latestJob = promptJobs[0];
 											const hasActiveJob = prompt.jobStatus !== "none";
+											const activeJobStatus = prompt.jobStatus === "none" ? null : prompt.jobStatus;
 											const showRetry = prompt.enabled && isStuck && prompt.schedulerInfo.exists && !hasActiveJob;
 											const shouldDim = !prompt.enabled;
 
@@ -527,21 +589,24 @@ function BrandRow({
 													</TableCell>
 													<TableCell className="text-center">
 														{!prompt.enabled ? (
-															<Badge variant="outline">Disabled</Badge>
+															<Badge variant="outline">{t("workflow.status.disabled")}</Badge>
 														) : (
 															<div className="flex flex-col items-center gap-1">
 																<Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-																	Enabled
+																	{t("workflow.status.enabled")}
 																</Badge>
-																{prompt.jobStatus === "active" && (
-																	<Badge variant="secondary" className="bg-emerald-100 text-emerald-700">
-																		Active
-																	</Badge>
-																)}
-																{prompt.jobStatus === "created" && <Badge variant="secondary">Queued</Badge>}
-																{prompt.jobStatus === "retry" && (
-																	<Badge variant="secondary" className="bg-amber-100 text-amber-700">
-																		Retry
+																{activeJobStatus && (
+																	<Badge
+																		variant="secondary"
+																		className={
+																			activeJobStatus === "active"
+																				? "bg-emerald-100 text-emerald-700"
+																				: activeJobStatus === "retry"
+																					? "bg-amber-100 text-amber-700"
+																					: undefined
+																		}
+																	>
+																		{t(PROMPT_JOB_STATUS_LABELS[activeJobStatus])}
 																	</Badge>
 																)}
 															</div>
@@ -560,14 +625,10 @@ function BrandRow({
 													</TableCell>
 													<TableCell className="text-center">
 														{showRetry && <RetryButton promptId={prompt.promptId} onSuccess={onRefresh} />}
-														{prompt.jobStatus === "active" && (
-															<span className="text-xs text-muted-foreground">Processing...</span>
-														)}
-														{prompt.jobStatus === "created" && (
-															<span className="text-xs text-muted-foreground">In queue</span>
-														)}
-														{prompt.jobStatus === "retry" && (
-															<span className="text-xs text-muted-foreground">Retrying soon</span>
+														{activeJobStatus && (
+															<span className="text-xs text-muted-foreground">
+																{t(PROMPT_JOB_ACTIVITY_LABELS[activeJobStatus])}
+															</span>
 														)}
 													</TableCell>
 												</TableRow>
@@ -590,10 +651,11 @@ function BrandRow({
 export const Route = createFileRoute("/_authed/admin/workflows")({
 	head: ({ match }) => {
 		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: `Workflows · ${appName}` },
-				{ name: "description", content: "Monitor prompt scheduling and job execution." },
+				{ title: buildTitle(translate(uiLanguage, "workflow.head.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "workflow.head.description") },
 			],
 		};
 	},
@@ -601,31 +663,32 @@ export const Route = createFileRoute("/_authed/admin/workflows")({
 });
 
 function WorkflowsPage() {
+	const { t, formatNumber } = useI18n();
 	const [data, setData] = useState<WorkflowsData | null>(null);
 	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<string | true | null>(null);
 	const [expandedBrands, setExpandedBrands] = useState<Set<string>>(new Set());
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
-	const fetchData = async (showRefreshing = false) => {
+	const fetchData = useCallback(async (showRefreshing = false) => {
 		if (showRefreshing) setIsRefreshing(true);
 
 		try {
 			const result = await getWorkflowDataFn();
-			setData(result as any);
+			setData(result as WorkflowsData);
 		} catch (err) {
-			setError(err instanceof Error ? err.message : "An error occurred");
+			setError(err instanceof Error ? err.message : true);
 		} finally {
 			setLoading(false);
 			setIsRefreshing(false);
 		}
-	};
+	}, []);
 
 	useEffect(() => {
 		fetchData();
 		const interval = setInterval(() => fetchData(), 30000);
 		return () => clearInterval(interval);
-	}, []);
+	}, [fetchData]);
 
 	const toggleBrand = (brandId: string) => {
 		setExpandedBrands((prev) => {
@@ -642,6 +705,7 @@ function WorkflowsPage() {
 	if (loading) {
 		return (
 			<div className="space-y-8">
+				<p className="sr-only">{t("workflow.loading")}</p>
 				<div className="space-y-2">
 					<Skeleton className="h-8 w-64" />
 					<Skeleton className="h-4 w-96" />
@@ -671,10 +735,15 @@ function WorkflowsPage() {
 		return (
 			<Card>
 				<CardHeader>
-					<CardTitle className="text-destructive">Error</CardTitle>
+					<CardTitle className="text-destructive">{t("workflow.error.title")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					<p>{error}</p>
+					{typeof error === "string" && (
+						<>
+							<p>{t("admin.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{error}</pre>
+						</>
+					)}
 				</CardContent>
 			</Card>
 		);
@@ -704,13 +773,13 @@ function WorkflowsPage() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div className="space-y-2">
-					<h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
-					<p className="text-muted-foreground">Monitor prompt scheduling, job execution, and worker health</p>
+					<h1 className="text-3xl font-bold tracking-tight">{t("workflow.title")}</h1>
+					<p className="text-muted-foreground">{t("workflow.description")}</p>
 				</div>
 				<div className="flex items-center gap-2">
 					<Button variant="outline" onClick={() => fetchData(true)} disabled={isRefreshing} className="cursor-pointer">
 						<RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-						Refresh
+						{t("workflow.refresh")}
 					</Button>
 				</div>
 			</div>
@@ -721,7 +790,7 @@ function WorkflowsPage() {
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium flex items-center gap-2">
 							<Activity className="h-4 w-4" />
-							Schedule Health
+							{t("workflow.summary.health")}
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
@@ -731,7 +800,7 @@ function WorkflowsPage() {
 							>
 								{data.summary.percentOnSchedule}%
 							</span>
-							<span className="text-muted-foreground text-sm">on schedule</span>
+							<span className="text-muted-foreground text-sm">{t("workflow.summary.onScheduleSuffix")}</span>
 						</div>
 						<Progress value={data.summary.percentOnSchedule} className="mt-2" />
 					</CardContent>
@@ -741,15 +810,17 @@ function WorkflowsPage() {
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium flex items-center gap-2">
 							<CheckCircle2 className="h-4 w-4 text-emerald-500" />
-							On Schedule
+							{t("workflow.summary.onSchedule")}
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="flex items-baseline gap-2">
-							<span className="text-3xl font-bold text-emerald-600">{data.summary.totalOnSchedule}</span>
-							<span className="text-muted-foreground text-sm">prompts</span>
+							<span className="text-3xl font-bold text-emerald-600">{formatNumber(data.summary.totalOnSchedule)}</span>
+							<span className="text-muted-foreground text-sm">{t("workflow.summary.prompts")}</span>
 						</div>
-						<p className="text-xs text-muted-foreground mt-1">of {data.summary.totalEnabled} enabled</p>
+						<p className="text-xs text-muted-foreground mt-1">
+							{t("workflow.summary.ofEnabled", { count: formatNumber(data.summary.totalEnabled) })}
+						</p>
 					</CardContent>
 				</Card>
 
@@ -761,7 +832,7 @@ function WorkflowsPage() {
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium flex items-center gap-2">
 							<AlertTriangle className={`h-4 w-4 ${overdueBreakdown.severe > 0 ? "text-red-500" : "text-amber-500"}`} />
-							Overdue &gt;30min
+							{t("workflow.summary.overdue30")}
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
@@ -771,10 +842,12 @@ function WorkflowsPage() {
 							>
 								{overdueBreakdown.severe}
 							</span>
-							<span className="text-muted-foreground text-sm">prompts</span>
+							<span className="text-muted-foreground text-sm">{t("workflow.summary.prompts")}</span>
 						</div>
 						<p className="text-xs text-muted-foreground mt-1">
-							{overdueBreakdown.total - overdueBreakdown.severe} additional recently expired
+							{t("workflow.summary.additionalExpired", {
+								count: formatNumber(overdueBreakdown.total - overdueBreakdown.severe),
+							})}
 						</p>
 					</CardContent>
 				</Card>
@@ -783,40 +856,49 @@ function WorkflowsPage() {
 					<CardHeader className="pb-2">
 						<CardTitle className="text-sm font-medium flex items-center gap-2">
 							<Clock className="h-4 w-4" />
-							Total Brands
+							{t("workflow.summary.totalBrands")}
 						</CardTitle>
 					</CardHeader>
 					<CardContent>
 						<div className="flex items-baseline gap-2">
-							<span className="text-3xl font-bold">{data.summary.totalBrands}</span>
-							<span className="text-muted-foreground text-sm">brands</span>
+							<span className="text-3xl font-bold">{formatNumber(data.summary.totalBrands)}</span>
+							<span className="text-muted-foreground text-sm">{t("workflow.summary.brands")}</span>
 						</div>
-						<p className="text-xs text-muted-foreground mt-1">{data.summary.totalPrompts} total prompts</p>
+						<p className="text-xs text-muted-foreground mt-1">
+							{t("workflow.summary.totalPrompts", { count: formatNumber(data.summary.totalPrompts) })}
+						</p>
 					</CardContent>
 				</Card>
 			</div>
 
 			{/* Queue Stats */}
-			<QueueStatsCard stats={data.queue} title="Prompt Queue" />
+			<QueueStatsCard stats={data.queue} title={t("workflow.queue.prompt")} />
 
 			{/* Brands Table */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Brand Workflow Status</CardTitle>
-					<CardDescription>Click on a brand to expand and see individual prompt status</CardDescription>
+					<CardTitle>{t("workflow.table.title")}</CardTitle>
+					<CardDescription>{t("workflow.table.description")}</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<Table>
 						<TableHeader>
 							<TableRow>
-								<TableHead>Brand</TableHead>
-								<TableHead className="text-center">Prompts</TableHead>
-								<TableHead className="text-center">Run Frequency</TableHead>
-								<TableHead className="text-center">Health</TableHead>
-								<TableHead className="text-center">Status</TableHead>
+								<TableHead>{t("workflow.table.brand")}</TableHead>
+								<TableHead className="text-center">{t("workflow.table.prompts")}</TableHead>
+								<TableHead className="text-center">{t("workflow.table.runFrequency")}</TableHead>
+								<TableHead className="text-center">{t("workflow.table.health")}</TableHead>
+								<TableHead className="text-center">{t("workflow.table.status")}</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
+							{data.brands.length === 0 && (
+								<TableRow>
+									<TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+										{t("workflow.empty")}
+									</TableCell>
+								</TableRow>
+							)}
 							{[...data.brands]
 								.sort((a, b) => b.overduePrompts - a.overduePrompts)
 								.map((brand) => (

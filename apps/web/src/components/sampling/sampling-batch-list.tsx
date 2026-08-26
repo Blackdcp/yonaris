@@ -4,28 +4,22 @@ import { Card, CardContent } from "@workspace/ui/components/card";
 import { Progress } from "@workspace/ui/components/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { Bot, Inbox, Loader2, Play, UserRoundCheck, XCircle } from "lucide-react";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { SamplingBatchCard } from "./sampling-batch-card";
 import { SamplingResultBadge, SamplingStatusBadge } from "./sampling-status-badge";
-import type { SamplingBatchView, SamplingHumanQueue } from "./types";
+import type { SamplingAutomationStatus, SamplingBatchView, SamplingHumanQueue } from "./types";
 
 function percentage(value: number | null): number {
 	return value === null ? 0 : Math.round(value * 100);
 }
 
-function formatDate(value: string | Date): string {
-	return new Date(value).toLocaleString(undefined, {
-		month: "short",
-		day: "numeric",
-		hour: "2-digit",
-		minute: "2-digit",
-	});
-}
-
-function formatAutomationStatus(batch: SamplingBatchView): string {
-	if ((batch.executionMode ?? "manual") === "manual") return "Not automated";
-	if (!batch.automationStatus) return "Not started";
-	return batch.automationStatus.replaceAll("_", " ");
-}
+const AUTOMATION_LABELS: Record<SamplingAutomationStatus, MessageId> = {
+	not_started: "sampling.automation.notStarted",
+	running: "sampling.automation.running",
+	needs_human: "sampling.automation.needsHuman",
+	settled: "sampling.automation.settled",
+};
 
 export function SamplingBatchList({
 	batches,
@@ -42,12 +36,13 @@ export function SamplingBatchList({
 	onFinalizeNeedsHuman: (batch: SamplingBatchView) => void;
 	onCancel: (batch: SamplingBatchView) => void;
 }) {
+	const { t, formatDate } = useI18n();
 	if (batches.length === 0) {
 		return (
 			<Card>
 				<CardContent className="flex min-h-48 flex-col items-center justify-center text-center text-muted-foreground">
 					<Inbox className="mb-3 size-10 opacity-50" />
-					<p>No sampling batches match these filters.</p>
+					<p>{t("sampling.batch.empty")}</p>
 				</CardContent>
 			</Card>
 		);
@@ -74,15 +69,15 @@ export function SamplingBatchList({
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>Batch</TableHead>
-							<TableHead>Program</TableHead>
-							<TableHead>Status</TableHead>
-							<TableHead className="min-w-44">Automation</TableHead>
-							<TableHead className="min-w-44">Success coverage</TableHead>
-							<TableHead className="text-center">Needs human</TableHead>
-							<TableHead>Result</TableHead>
-							<TableHead>Created</TableHead>
-							<TableHead className="text-right">Actions</TableHead>
+							<TableHead>{t("sampling.batch.column.batch")}</TableHead>
+							<TableHead>{t("sampling.batch.column.program")}</TableHead>
+							<TableHead>{t("sampling.batch.column.status")}</TableHead>
+							<TableHead className="min-w-44">{t("sampling.batch.column.automation")}</TableHead>
+							<TableHead className="min-w-44">{t("sampling.batch.column.successCoverage")}</TableHead>
+							<TableHead className="text-center">{t("sampling.batch.column.needsHuman")}</TableHead>
+							<TableHead>{t("sampling.batch.column.result")}</TableHead>
+							<TableHead>{t("sampling.batch.column.created")}</TableHead>
+							<TableHead className="text-right">{t("sampling.batch.column.actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
@@ -136,7 +131,15 @@ export function SamplingBatchList({
 									<TableCell>
 										<div className="space-y-1.5">
 											<div className="flex justify-between gap-2 text-xs">
-												<span className="capitalize text-muted-foreground">{formatAutomationStatus(batch)}</span>
+												<span className="text-muted-foreground">
+													{t(
+														(batch.executionMode ?? "manual") === "manual"
+															? "sampling.automation.notAutomated"
+															: batch.automationStatus
+																? AUTOMATION_LABELS[batch.automationStatus]
+																: "sampling.automation.notStarted",
+													)}
+												</span>
 												{automationProgress && (
 													<span className="tabular-nums">
 														{automationProgress.completed}/{automationProgress.total}
@@ -171,20 +174,29 @@ export function SamplingBatchList({
 												{needsHumanCount}
 											</Badge>
 											{postSubmitNeedsHumanCount > 0 && (
-												<p className="text-[10px] text-amber-700">{postSubmitNeedsHumanCount} same-session</p>
+												<p className="text-[10px] text-amber-700">
+													{t("sampling.batch.sameSession", { count: postSubmitNeedsHumanCount })}
+												</p>
 											)}
 										</div>
 									</TableCell>
 									<TableCell>
 										<SamplingResultBadge executionMode={executionMode} resultStatus={batch.resultStatus} />
 									</TableCell>
-									<TableCell className="text-sm text-muted-foreground">{formatDate(batch.createdAt)}</TableCell>
+									<TableCell className="text-sm text-muted-foreground">
+										{formatDate(new Date(batch.createdAt), {
+											month: "short",
+											day: "numeric",
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+									</TableCell>
 									<TableCell>
 										<div className="flex justify-end gap-2">
 											{canStartAutomation && (
 												<Button size="sm" onClick={() => onStartAutomation(batch)} disabled={actingBatchId !== null}>
 													{isActing ? <Loader2 className="animate-spin" /> : <Bot />}
-													Start automated run
+													{t("sampling.batch.action.start")}
 												</Button>
 											)}
 											{canClaimHuman && (
@@ -194,7 +206,7 @@ export function SamplingBatchList({
 													disabled={actingBatchId !== null}
 												>
 													{isActing ? <Loader2 className="animate-spin" /> : <UserRoundCheck />}
-													Continue human task
+													{t("sampling.batch.action.continueHuman")}
 												</Button>
 											)}
 											{canFinalizeNeedsHuman && (
@@ -205,13 +217,13 @@ export function SamplingBatchList({
 													disabled={actingBatchId !== null}
 												>
 													{isActing ? <Loader2 className="animate-spin" /> : <XCircle />}
-													Finalize incomplete ({finalizableNeedsHumanCount})
+													{t("sampling.batch.action.finalize", { count: finalizableNeedsHumanCount })}
 												</Button>
 											)}
 											{canClaimManual && (
 												<Button size="sm" onClick={() => onClaim(batch)} disabled={actingBatchId !== null}>
 													{isActing ? <Loader2 className="animate-spin" /> : <Play />}
-													Claim next
+													{t("sampling.batch.action.claim")}
 												</Button>
 											)}
 											{canCancel && (
@@ -220,7 +232,7 @@ export function SamplingBatchList({
 													size="sm"
 													onClick={() => onCancel(batch)}
 													disabled={actingBatchId !== null}
-													aria-label="Cancel batch"
+													aria-label={t("sampling.batch.action.cancel")}
 												>
 													<XCircle />
 												</Button>

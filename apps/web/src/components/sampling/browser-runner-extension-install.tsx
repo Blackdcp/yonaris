@@ -3,6 +3,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Download, PackageCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useI18n } from "@/i18n/provider";
 
 const EXTENSION_FILE_NAME = "yonaris-browser-extension.zip";
 const EXTENSION_DOWNLOAD_URL = `/downloads/${EXTENSION_FILE_NAME}`;
@@ -19,8 +20,9 @@ export function BrowserRunnerExtensionInstall({
 }: {
 	metadata?: BrowserExtensionPackageMetadata;
 }) {
+	const { t } = useI18n();
 	const [metadata, setMetadata] = useState(providedMetadata);
-	const [metadataError, setMetadataError] = useState(false);
+	const [metadataError, setMetadataError] = useState<{ detail?: string } | null>(null);
 
 	useEffect(() => {
 		if (providedMetadata) return;
@@ -32,7 +34,7 @@ export function BrowserRunnerExtensionInstall({
 			})
 			.catch((error: unknown) => {
 				if (error instanceof DOMException && error.name === "AbortError") return;
-				setMetadataError(true);
+				setMetadataError({ detail: error instanceof Error ? error.message : undefined });
 			});
 		return () => controller.abort();
 	}, [providedMetadata]);
@@ -42,24 +44,28 @@ export function BrowserRunnerExtensionInstall({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<PackageCheck className="size-5" />
-					Install the reviewed Chrome extension
+					{t("sampling.extension.title")}
 				</CardTitle>
-				<CardDescription>Use the same package on any administrator-operated Windows or macOS computer.</CardDescription>
+				<CardDescription>{t("sampling.extension.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="flex flex-wrap items-center gap-3">
 					{metadata ? (
 						<Button asChild>
 							<a href={`${EXTENSION_DOWNLOAD_URL}?sha256=${metadata.sha256}`} download={EXTENSION_FILE_NAME}>
-								<Download /> Download extension ZIP
+								<Download /> {t("sampling.extension.download")}
 							</a>
 						</Button>
 					) : (
 						<Button disabled>
-							<Download /> Download extension ZIP
+							<Download /> {t("sampling.extension.download")}
 						</Button>
 					)}
-					{metadata && <span className="text-sm text-muted-foreground">Version {metadata.version}</span>}
+					{metadata && (
+						<span className="text-sm text-muted-foreground">
+							{t("sampling.extension.version", { version: metadata.version })}
+						</span>
+					)}
 				</div>
 
 				{metadata ? (
@@ -70,23 +76,30 @@ export function BrowserRunnerExtensionInstall({
 				) : metadataError ? (
 					<Alert variant="destructive">
 						<TriangleAlert />
-						<AlertTitle>Package digest unavailable</AlertTitle>
+						<AlertTitle>{t("sampling.extension.digestUnavailable")}</AlertTitle>
 						<AlertDescription>
-							Do not install this package until Portal can display its SHA-256 digest.
+							<p>{t("sampling.extension.digestWarning")}</p>
+							{metadataError.detail && (
+								<>
+									<p>{t("sampling.raw.errorDetails")}</p>
+									<pre className="whitespace-pre-wrap">{metadataError.detail}</pre>
+								</>
+							)}
 						</AlertDescription>
 					</Alert>
 				) : (
-					<p className="text-sm text-muted-foreground">Loading package digest…</p>
+					<p className="text-sm text-muted-foreground">{t("sampling.extension.loadingDigest")}</p>
 				)}
 
 				<ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
-					<li>Extract the ZIP to a stable local folder.</li>
+					<li>{t("sampling.extension.step.extract")}</li>
 					<li>
-						Open <code className="text-foreground">chrome://extensions</code>, enable Developer mode, choose{" "}
-						<strong className="text-foreground">Load unpacked</strong>, and select the extracted folder.
+						{t("sampling.extension.step.chrome.before")} <code className="text-foreground">chrome://extensions</code>
+						{t("sampling.extension.step.chrome.middle")} <strong className="text-foreground">Load unpacked</strong>
+						{t("sampling.extension.step.chrome.after")}
 					</li>
-					<li>Use that Chrome profile to sign in to Doubao and DeepSeek normally.</li>
-					<li>Create pairing code below, then enter the one-time code in the extension popup.</li>
+					<li>{t("sampling.extension.step.signIn")}</li>
+					<li>{t("sampling.extension.step.pair")}</li>
 				</ol>
 			</CardContent>
 		</Card>

@@ -1,4 +1,5 @@
 import type { UiLanguage } from "@workspace/config/language";
+import { adminCatalog } from "./catalogs/admin";
 import { authCatalog } from "./catalogs/auth";
 import { chartsCatalog } from "./catalogs/charts";
 import { commonCatalog } from "./catalogs/common";
@@ -6,6 +7,7 @@ import { customerCatalog } from "./catalogs/customer";
 
 const englishCatalog = {
 	...commonCatalog.english,
+	...adminCatalog.english,
 	...authCatalog.english,
 	...chartsCatalog.english,
 	...customerCatalog.english,
@@ -13,6 +15,7 @@ const englishCatalog = {
 
 const chineseCatalog = {
 	...commonCatalog.chinese,
+	...adminCatalog.chinese,
 	...authCatalog.chinese,
 	...chartsCatalog.chinese,
 	...customerCatalog.chinese,

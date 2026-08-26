@@ -14,6 +14,8 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import type { BrowserRunnerDeviceView, SamplingRunNowInput, SamplingRunNowProgram } from "./types";
 
 const FIXED_SAMPLES_PER_CHANNEL = 1;
@@ -45,31 +47,31 @@ function channelAvailability(
 	brandId: string,
 	surface: BrowserExtensionSurface,
 	now: Date,
-): { ready: boolean; label: string; status?: BrowserExtensionReadinessStatus } {
+): { ready: boolean; label: MessageId; status?: BrowserExtensionReadinessStatus } {
 	const eligible = devices.filter(
 		(device) => device.allowedBrandIds.includes(brandId) && device.supportedSurfaces.includes(surface),
 	);
 	const online = eligible.filter((device) => browserRunnerDeviceIsOnline(device, now));
 	if (online.some((device) => device.readiness[surface]?.status === "ready")) {
-		return { ready: true, label: "Ready" };
+		return { ready: true, label: "sampling.readiness.ready" };
 	}
 	const status = online.map((device) => device.readiness[surface]?.status).find((value) => value !== undefined);
-	if (!status) return { ready: false, label: "Offline · will wait in queue" };
+	if (!status) return { ready: false, label: "sampling.readiness.offlineQueue" };
 	return { ready: false, label: readinessLabel(status), status };
 }
 
-function readinessLabel(status: BrowserExtensionReadinessStatus): string {
+function readinessLabel(status: BrowserExtensionReadinessStatus): MessageId {
 	switch (status) {
 		case "signed_out":
-			return "Signed out · will wait in queue";
+			return "sampling.readiness.signedOutQueue";
 		case "paused_by_risk_control":
-			return "Paused by risk control · will wait in queue";
+			return "sampling.readiness.riskPausedQueue";
 		case "adapter_incompatible":
-			return "Page changed · will wait in queue";
+			return "sampling.readiness.pageChangedQueue";
 		case "unavailable":
-			return "Unavailable · will wait in queue";
+			return "sampling.readiness.unavailableQueue";
 		case "ready":
-			return "Ready";
+			return "sampling.readiness.ready";
 	}
 }
 
@@ -86,10 +88,11 @@ export function SamplingRunNowDialog({
 	onRun: (input: SamplingRunNowInput) => Promise<void>;
 	now?: Date;
 }) {
+	const { t, formatList, formatNumber } = useI18n();
 	const [scopeId, setScopeId] = useState(programs[0]?.id ?? "");
 	const [surfaceSelectionOverride, setSurfaceSelectionOverride] = useState<BrowserExtensionSurface[] | null>(null);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
 	const selectedProgram = programs.find((program) => program.id === scopeId) ?? programs[0];
 	const availability = useMemo(
 		() => new Map(CHANNELS.map(({ surface }) => [surface, channelAvailability(devices, brandId, surface, now)])),
@@ -115,9 +118,7 @@ export function SamplingRunNowDialog({
 		).map(({ label }) => label);
 		if (
 			unavailableLabels.length > 0 &&
-			!window.confirm(
-				`${unavailableLabels.join(", ")} is not ready. Its tasks will wait in the queue for an administrator. Create this batch anyway?`,
-			)
+			!window.confirm(t("sampling.run.confirmUnavailable", { channels: formatList(unavailableLabels) }))
 		) {
 			return;
 		}
@@ -132,7 +133,7 @@ export function SamplingRunNowDialog({
 				idempotencyKey: `run-now-${crypto.randomUUID()}`,
 			});
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Could not start this domestic run.");
+			setError({ summary: t("sampling.run.error"), detail: caught instanceof Error ? caught.message : undefined });
 		} finally {
 			setSubmitting(false);
 		}
@@ -143,25 +144,21 @@ export function SamplingRunNowDialog({
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
 					<CirclePlay className="size-5" />
-					Run now
+					{t("sampling.run.title")}
 				</CardTitle>
-				<CardDescription>
-					Run every enabled Prompt in a scored China Program. One run per Prompt and channel; no schedule is created.
-				</CardDescription>
+				<CardDescription>{t("sampling.run.description")}</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-5">
 				{programs.length === 0 ? (
 					<Alert>
 						<AlertTriangle />
-						<AlertTitle>No eligible Program</AlertTitle>
-						<AlertDescription>
-							Create an enabled CN / zh-CN / Asia/Shanghai scored Program before starting a domestic run.
-						</AlertDescription>
+						<AlertTitle>{t("sampling.run.noProgram")}</AlertTitle>
+						<AlertDescription>{t("sampling.run.noProgramDescription")}</AlertDescription>
 					</Alert>
 				) : (
 					<>
 						<div className="grid gap-2">
-							<Label htmlFor="run-now-program">Program</Label>
+							<Label htmlFor="run-now-program">{t("sampling.run.program")}</Label>
 							<select
 								id="run-now-program"
 								className="h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -175,12 +172,15 @@ export function SamplingRunNowDialog({
 								))}
 							</select>
 							<p className="text-sm text-muted-foreground">
-								All {selectedProgram?.promptCount ?? 0} enabled Prompts · {selectedProgram?.timezone}
+								{t("sampling.run.allPrompts", {
+									count: formatNumber(selectedProgram?.promptCount ?? 0),
+									timezone: selectedProgram?.timezone ?? "",
+								})}
 							</p>
 						</div>
 
 						<div className="space-y-3">
-							<Label>Channels</Label>
+							<Label>{t("sampling.run.channels")}</Label>
 							<div className="grid gap-3 sm:grid-cols-2">
 								{CHANNELS.map(({ surface, label }) => {
 									const channel = availability.get(surface);
@@ -199,9 +199,11 @@ export function SamplingRunNowDialog({
 											<span className="space-y-1">
 												<span className="flex items-center gap-2 font-medium">
 													{label}
-													<Badge variant={channel?.ready ? "default" : "outline"}>{channel?.label}</Badge>
+													<Badge variant={channel?.ready ? "default" : "outline"}>
+														{channel ? t(channel.label) : null}
+													</Badge>
 												</span>
-												<span className="block text-xs text-muted-foreground">New conversation for every task</span>
+												<span className="block text-xs text-muted-foreground">{t("sampling.run.newConversation")}</span>
 											</span>
 										</Label>
 									);
@@ -212,21 +214,33 @@ export function SamplingRunNowDialog({
 						<div className="flex flex-col gap-3 rounded-md bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
 							<div>
 								<p className="font-medium tabular-nums">
-									{selectedProgram?.promptCount ?? 0} × {surfaces.length} × {FIXED_SAMPLES_PER_CHANNEL} = {taskCount}{" "}
-									tasks
+									{t("sampling.run.taskCount", {
+										prompts: selectedProgram?.promptCount ?? 0,
+										channels: surfaces.length,
+										samples: FIXED_SAMPLES_PER_CHANNEL,
+										tasks: taskCount,
+									})}
 								</p>
-								<p className="text-xs text-muted-foreground">
-									An offline or signed-out device waits for an administrator; it does not count as a failed observation.
-								</p>
+								<p className="text-xs text-muted-foreground">{t("sampling.run.offlineNote")}</p>
 							</div>
 							<Button disabled={submitting || surfaces.length === 0 || taskCount === 0} onClick={submit}>
 								{submitting && <Loader2 className="animate-spin" />}
-								Run {taskCount.toLocaleString("en-US")} tasks now
+								{t("sampling.run.submit", { count: formatNumber(taskCount) })}
 							</Button>
 						</div>
 					</>
 				)}
-				{error && <p className="text-sm text-destructive">{error}</p>}
+				{error && (
+					<Alert variant="destructive">
+						<AlertTitle>{error.summary}</AlertTitle>
+						{error.detail && (
+							<AlertDescription>
+								<p>{t("sampling.raw.errorDetails")}</p>
+								<pre className="whitespace-pre-wrap">{error.detail}</pre>
+							</AlertDescription>
+						)}
+					</Alert>
+				)}
 			</CardContent>
 		</Card>
 	);

@@ -2,18 +2,21 @@ import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Progress } from "@workspace/ui/components/progress";
 import { Bot, Loader2, Play, UserRoundCheck, XCircle } from "lucide-react";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import { SamplingResultBadge, SamplingStatusBadge } from "./sampling-status-badge";
-import type { SamplingBatchView, SamplingHumanQueue } from "./types";
+import type { SamplingAutomationStatus, SamplingBatchView, SamplingHumanQueue } from "./types";
 
 function percentage(value: number | null): number {
 	return value === null ? 0 : Math.round(value * 100);
 }
 
-function formatAutomationStatus(batch: SamplingBatchView): string {
-	if ((batch.executionMode ?? "manual") === "manual") return "Not automated";
-	if (!batch.automationStatus) return "Not started";
-	return batch.automationStatus.replaceAll("_", " ");
-}
+const AUTOMATION_LABELS: Record<SamplingAutomationStatus, MessageId> = {
+	not_started: "sampling.automation.notStarted",
+	running: "sampling.automation.running",
+	needs_human: "sampling.automation.needsHuman",
+	settled: "sampling.automation.settled",
+};
 
 export function SamplingBatchCard({
 	batch,
@@ -32,6 +35,7 @@ export function SamplingBatchCard({
 	onFinalizeNeedsHuman: (batch: SamplingBatchView) => void;
 	onCancel: (batch: SamplingBatchView) => void;
 }) {
+	const { t } = useI18n();
 	const coverage = batch.coverage.overall;
 	const executionMode = batch.executionMode ?? "manual";
 	const isBrowserRunner = executionMode === "browser_runner";
@@ -71,48 +75,56 @@ export function SamplingBatchCard({
 			<CardContent className="space-y-4">
 				<div className="grid grid-cols-2 gap-3 text-sm">
 					<div>
-						<p className="text-xs text-muted-foreground">Automated progress</p>
+						<p className="text-xs text-muted-foreground">{t("sampling.batch.automatedProgress")}</p>
 						<p className="font-semibold tabular-nums">
 							{automationProgress
 								? `${automationProgress.completed}/${automationProgress.total}`
-								: formatAutomationStatus(batch)}
+								: t(
+										(batch.executionMode ?? "manual") === "manual"
+											? "sampling.automation.notAutomated"
+											: batch.automationStatus
+												? AUTOMATION_LABELS[batch.automationStatus]
+												: "sampling.automation.notStarted",
+									)}
 						</p>
 					</div>
 					<div>
-						<p className="text-xs text-muted-foreground">Needs human</p>
+						<p className="text-xs text-muted-foreground">{t("sampling.batch.needsHuman")}</p>
 						<p className="font-semibold tabular-nums">{needsHumanCount}</p>
 					</div>
 				</div>
 				{postSubmitNeedsHumanCount > 0 && (
 					<p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950">
-						{postSubmitNeedsHumanCount} submitted task(s) require the Runner's preserved browser session. Do not resend
-						them from this page.
+						{t("sampling.batch.postSubmitWarning", { count: postSubmitNeedsHumanCount })}
 					</p>
 				)}
 				<div className="space-y-1.5">
 					<div className="flex justify-between text-xs text-muted-foreground">
 						<span>
-							Success coverage · {coverage.succeeded}/{coverage.total}
+							{t("sampling.batch.successCoverage", {
+								succeeded: coverage.succeeded,
+								total: coverage.total,
+							})}
 						</span>
 						<span>{percentage(coverage.successCoverage)}%</span>
 					</div>
 					<Progress value={percentage(coverage.successCoverage)} />
 				</div>
 				<div className="flex items-center justify-between rounded-md bg-muted/40 p-3 text-xs">
-					<span className="text-muted-foreground">Result state</span>
+					<span className="text-muted-foreground">{t("sampling.batch.resultState")}</span>
 					<SamplingResultBadge executionMode={executionMode} resultStatus={batch.resultStatus} />
 				</div>
 				<div className="flex flex-wrap gap-2">
 					{canStartAutomation && (
 						<Button className="flex-1" onClick={() => onStartAutomation(batch)} disabled={actionsDisabled}>
 							{isActing ? <Loader2 className="animate-spin" /> : <Bot />}
-							Start automated run
+							{t("sampling.batch.action.start")}
 						</Button>
 					)}
 					{canClaimHuman && (
 						<Button className="flex-1" onClick={() => onClaim(batch, "needs_human")} disabled={actionsDisabled}>
 							{isActing ? <Loader2 className="animate-spin" /> : <UserRoundCheck />}
-							Continue pre-submit task ({preSubmitNeedsHumanCount})
+							{t("sampling.batch.action.continuePreSubmit", { count: preSubmitNeedsHumanCount })}
 						</Button>
 					)}
 					{canFinalizeNeedsHuman && (
@@ -123,13 +135,13 @@ export function SamplingBatchCard({
 							disabled={actionsDisabled}
 						>
 							{isActing ? <Loader2 className="animate-spin" /> : <XCircle />}
-							Finalize incomplete ({finalizableNeedsHumanCount})
+							{t("sampling.batch.action.finalize", { count: finalizableNeedsHumanCount })}
 						</Button>
 					)}
 					{canClaimManual && (
 						<Button className="flex-1" onClick={() => onClaim(batch)} disabled={actionsDisabled}>
 							{isActing ? <Loader2 className="animate-spin" /> : <Play />}
-							Claim next
+							{t("sampling.batch.action.claim")}
 						</Button>
 					)}
 					{canCancel && (
@@ -137,7 +149,7 @@ export function SamplingBatchCard({
 							variant="outline"
 							onClick={() => onCancel(batch)}
 							disabled={actionsDisabled}
-							aria-label="Cancel batch"
+							aria-label={t("sampling.batch.action.cancel")}
 						>
 							<XCircle />
 						</Button>

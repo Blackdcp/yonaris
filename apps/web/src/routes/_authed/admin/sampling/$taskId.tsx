@@ -17,7 +17,9 @@ import type {
 	SamplingObservationInput,
 	SamplingTaskView,
 } from "@/components/sampling/types";
-import { getAppName } from "@/lib/route-head";
+import { type MessageId, translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import {
 	failSamplingTaskFn,
 	getSamplingTaskFn,
@@ -29,6 +31,19 @@ import {
 
 type TaskSearch = { brand?: string };
 const NO_EVIDENCE_ARTIFACTS: SamplingEvidenceArtifactView[] = [];
+const TASK_STATUS_LABELS: Record<SamplingTaskView["status"], MessageId> = {
+	planned: "sampling.status.planned",
+	available: "sampling.status.available",
+	claimed: "sampling.status.claimed",
+	succeeded: "sampling.status.succeeded",
+	failed: "sampling.status.failed",
+	cancelled: "sampling.status.cancelled",
+};
+
+function rawErrorDetail(error: unknown): string | null {
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : null;
+}
 
 export const Route = createFileRoute("/_authed/admin/sampling/$taskId")({
 	validateSearch: (search: Record<string, unknown>): TaskSearch => ({
@@ -36,10 +51,11 @@ export const Route = createFileRoute("/_authed/admin/sampling/$taskId")({
 	}),
 	head: ({ match }) => {
 		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: `Sampling Workbench · ${appName}` },
-				{ name: "description", content: "Execute one claimed consumer-surface sampling task." },
+				{ title: buildTitle(translate(uiLanguage, "sampling.task.head.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "sampling.task.head.description") },
 			],
 		};
 	},
@@ -47,6 +63,7 @@ export const Route = createFileRoute("/_authed/admin/sampling/$taskId")({
 });
 
 function SamplingTaskPage() {
+	const { t } = useI18n();
 	const { taskId } = Route.useParams();
 	const { brand: brandId } = Route.useSearch();
 	const navigate = useNavigate();
@@ -114,7 +131,7 @@ function SamplingTaskPage() {
 				storeSamplingLease(refreshed);
 				setHeartbeatError(null);
 			} catch (caught) {
-				if (active) setHeartbeatError(caught instanceof Error ? caught.message : "Claim heartbeat failed.");
+				if (active) setHeartbeatError(caught instanceof Error ? caught.message : null);
 			}
 		};
 		void heartbeat();
@@ -126,12 +143,18 @@ function SamplingTaskPage() {
 	}, [brandId, leaseBrandId, leaseGeneration, leaseTaskId, leaseToken, taskId]);
 
 	if (!brandId) {
-		return <MissingClaim title="Brand context missing" description="Return to the queue and claim the task again." />;
+		return (
+			<MissingClaim
+				title={t("sampling.task.missing.brandTitle")}
+				description={t("sampling.task.missing.brandDescription")}
+			/>
+		);
 	}
 
 	if (taskQuery.isLoading || !leaseLoaded) {
 		return (
 			<div className="space-y-4">
+				<p className="sr-only">{t("sampling.task.loading")}</p>
 				<Skeleton className="h-10 w-72" />
 				<Skeleton className="h-64 w-full" />
 				<Skeleton className="h-96 w-full" />
@@ -140,11 +163,20 @@ function SamplingTaskPage() {
 	}
 
 	if (taskQuery.isError || !taskQuery.data) {
+		const detail = rawErrorDetail(taskQuery.error);
 		return (
 			<Alert variant="destructive">
 				<AlertTriangle />
-				<AlertTitle>Could not load sampling task</AlertTitle>
-				<AlertDescription>{String(taskQuery.error ?? "Task not found")}</AlertDescription>
+				<AlertTitle>{t("sampling.task.loadError")}</AlertTitle>
+				<AlertDescription>
+					<p>{t("sampling.task.notFound")}</p>
+					{detail && (
+						<>
+							<p>{t("sampling.raw.errorDetails")}</p>
+							<pre className="whitespace-pre-wrap">{detail}</pre>
+						</>
+					)}
+				</AlertDescription>
 			</Alert>
 		);
 	}
@@ -152,8 +184,8 @@ function SamplingTaskPage() {
 	if (!lease || lease.brandId !== brandId || lease.taskId !== taskId) {
 		return (
 			<MissingClaim
-				title="Claim token unavailable"
-				description="Claim tokens stay only in this tab's session storage and are never placed in URLs. Return to the queue; if this task still appears claimed, wait for its lease to expire."
+				title={t("sampling.task.missing.tokenTitle")}
+				description={t("sampling.task.missing.tokenDescription")}
 			/>
 		);
 	}
@@ -162,8 +194,8 @@ function SamplingTaskPage() {
 		clearSamplingLease(taskId);
 		return (
 			<MissingClaim
-				title="Claim was replaced"
-				description="This lease was reclaimed by another work session. Return to the queue to avoid duplicating the operator's work."
+				title={t("sampling.task.missing.replacedTitle")}
+				description={t("sampling.task.missing.replacedDescription")}
 			/>
 		);
 	}
@@ -172,8 +204,8 @@ function SamplingTaskPage() {
 		clearSamplingLease(taskId);
 		return (
 			<MissingClaim
-				title="Claim lease expired"
-				description="This claim can no longer be renewed or submitted. Return to the queue and claim available work again."
+				title={t("sampling.task.missing.expiredTitle")}
+				description={t("sampling.task.missing.expiredDescription")}
 			/>
 		);
 	}
@@ -182,8 +214,8 @@ function SamplingTaskPage() {
 		clearSamplingLease(taskId);
 		return (
 			<MissingClaim
-				title={`Task is ${taskQuery.data.status}`}
-				description="This task is no longer held by the current claim. Return to the queue for available work."
+				title={t("sampling.task.missing.statusTitle", { status: t(TASK_STATUS_LABELS[taskQuery.data.status]) })}
+				description={t("sampling.task.missing.statusDescription")}
 			/>
 		);
 	}
@@ -191,8 +223,8 @@ function SamplingTaskPage() {
 	if (taskQuery.data.sessionRequirement === "none") {
 		return (
 			<MissingClaim
-				title="Unsupported session requirement"
-				description="This operator workbench only executes anonymous-clean or new-account-clean consumer samples."
+				title={t("sampling.task.missing.sessionTitle")}
+				description={t("sampling.task.missing.sessionDescription")}
 			/>
 		);
 	}
@@ -267,7 +299,7 @@ function SamplingTaskPage() {
 		try {
 			await release();
 		} catch (caught) {
-			setHeartbeatError(caught instanceof Error ? caught.message : "Could not release this claim.");
+			setHeartbeatError(caught instanceof Error ? caught.message : null);
 			setReturning(false);
 		}
 	};
@@ -292,11 +324,11 @@ function SamplingTaskPage() {
 				<div>
 					<Button variant="ghost" size="sm" className="-ml-3 mb-2" onClick={releaseAndReturn} disabled={returning}>
 						{returning ? <Loader2 className="animate-spin" /> : <ArrowLeft />}
-						Release and return
+						{t("sampling.task.releaseReturn")}
 					</Button>
-					<h1 className="text-3xl font-bold tracking-tight">Sampling Workbench</h1>
+					<h1 className="text-3xl font-bold tracking-tight">{t("sampling.task.title")}</h1>
 					<p className="mt-1 text-muted-foreground">
-						Task {task.id.slice(0, 8)} · {task.batchName}
+						{t("sampling.task.subtitle", { taskId: task.id.slice(0, 8), batchName: task.batchName })}
 					</p>
 				</div>
 			</div>
@@ -323,6 +355,7 @@ function SamplingTaskPage() {
 }
 
 function MissingClaim({ title, description }: { title: string; description: string }) {
+	const { t } = useI18n();
 	return (
 		<div className="mx-auto max-w-xl py-12">
 			<Alert>
@@ -331,7 +364,7 @@ function MissingClaim({ title, description }: { title: string; description: stri
 				<AlertDescription>
 					<p>{description}</p>
 					<Button asChild variant="outline" className="mt-3">
-						<Link to="/admin/sampling">Return to sampling queue</Link>
+						<Link to="/admin/sampling">{t("sampling.task.returnQueue")}</Link>
 					</Button>
 				</AlertDescription>
 			</Alert>

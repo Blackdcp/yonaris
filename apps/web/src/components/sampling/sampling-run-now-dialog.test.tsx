@@ -4,6 +4,7 @@ import {
 } from "@workspace/lib/browser-extension-surfaces";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/provider";
 import {
 	calculateSamplingRunNowTaskCount,
 	SamplingRunNowDialog,
@@ -44,13 +45,15 @@ function readyDevice(): BrowserRunnerDeviceView {
 describe("SamplingRunNowDialog", () => {
 	it("defaults the one-click monitoring action to one pass across all seven channels", () => {
 		const markup = renderToStaticMarkup(
-			<SamplingRunNowDialog
-				brandId="stepfun"
-				programs={programs}
-				devices={[readyDevice()]}
-				now={new Date("2026-08-16T10:00:30.000Z")}
-				onRun={vi.fn()}
-			/>,
+			<I18nProvider locale="en">
+				<SamplingRunNowDialog
+					brandId="stepfun"
+					programs={programs}
+					devices={[readyDevice()]}
+					now={new Date("2026-08-16T10:00:30.000Z")}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
 		);
 
 		expect(markup).toContain("Run now");
@@ -66,13 +69,15 @@ describe("SamplingRunNowDialog", () => {
 		const offline = readyDevice();
 		offline.lastSeenAt = "2026-08-16T09:00:00.000Z";
 		const markup = renderToStaticMarkup(
-			<SamplingRunNowDialog
-				brandId="stepfun"
-				programs={programs}
-				devices={[offline]}
-				now={new Date("2026-08-16T10:00:30.000Z")}
-				onRun={vi.fn()}
-			/>,
+			<I18nProvider locale="en">
+				<SamplingRunNowDialog
+					brandId="stepfun"
+					programs={programs}
+					devices={[offline]}
+					now={new Date("2026-08-16T10:00:30.000Z")}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
 		);
 
 		expect(markup).toContain("Offline · will wait in queue");
@@ -88,18 +93,55 @@ describe("SamplingRunNowDialog", () => {
 			activeConcurrency: 0,
 		};
 		const markup = renderToStaticMarkup(
-			<SamplingRunNowDialog
-				brandId="stepfun"
-				programs={programs}
-				devices={[device]}
-				now={new Date("2026-08-16T10:00:30.000Z")}
-				onRun={vi.fn()}
-			/>,
+			<I18nProvider locale="en">
+				<SamplingRunNowDialog
+					brandId="stepfun"
+					programs={programs}
+					devices={[device]}
+					now={new Date("2026-08-16T10:00:30.000Z")}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
 		);
 
 		expect(markup).toContain("Unavailable · will wait in queue");
 		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
 		expect(markup).toContain("Run 420 tasks now");
+	});
+
+	it("renders the Chinese one-click operation while preserving Program, timezone, device, and surface identities", () => {
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="zh-CN">
+				<SamplingRunNowDialog
+					brandId="brand-raw-stepfun"
+					programs={[
+						{
+							id: "scope-raw-cn-01",
+							name: "China · Simplified Chinese · Scored 原始",
+							promptCount: 60,
+							timezone: "Asia/Shanghai",
+						},
+					]}
+					devices={[{ ...readyDevice(), id: "device-raw-01", allowedBrandIds: ["brand-raw-stepfun"] }]}
+					now={new Date("2026-08-16T10:00:30.000Z")}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
+		);
+
+		expect(markup).toContain("立即运行");
+		expect(markup).toContain("全部 60 条已启用提示词");
+		expect(markup).toContain("每条提示词和每个渠道运行一次");
+		expect(markup).toContain("60 × 7 × 1 = 420 个任务");
+		expect(markup).toContain("立即运行 420 个任务");
+		expect(markup).toContain("China · Simplified Chinese · Scored 原始");
+		expect(markup).toContain("Asia/Shanghai");
+		expect(markup).toContain('value="scope-raw-cn-01"');
+		for (const { label, key } of BROWSER_EXTENSION_SURFACE_DEFINITIONS) {
+			expect(markup).toContain(label);
+			expect(markup).toContain(`id="run-now-${key.replaceAll(".", "-")}"`);
+		}
+		expect(markup).not.toContain("Run every enabled Prompt");
 	});
 });
 

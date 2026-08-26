@@ -14,6 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useI18n } from "@/i18n/provider";
 import {
 	captureRouteForExecution,
 	minimumEvidenceArtifactsForExecutionMode,
@@ -71,9 +72,15 @@ export function SamplingBatchCreateDialog({
 	context: SamplingContextView;
 	onCreate: (input: CreateSamplingBatchInput) => Promise<void>;
 }) {
+	const { t, formatDate, formatNumber } = useI18n();
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState("");
-	const [scopeId, setScopeId] = useState("");
+	const [scopeId, setScopeId] = useState(
+		() =>
+			context.selectedBrand?.scopes.find(
+				(scope) => scope.enabled && scope.manualOnly && scope.samplingEvaluationRole !== null,
+			)?.id ?? "",
+	);
 	const [executionMode, setExecutionMode] = useState<SamplingExecutionMode>("manual");
 	const [promptIds, setPromptIds] = useState<Set<string>>(new Set());
 	const [targetDrafts, setTargetDrafts] = useState<Record<string, TargetDraft>>({});
@@ -81,7 +88,7 @@ export function SamplingBatchCreateDialog({
 	const [windowStartsAt, setWindowStartsAt] = useState(() => defaultMeasurementWindow("UTC").startsAt);
 	const [windowEndsAt, setWindowEndsAt] = useState(() => defaultMeasurementWindow("UTC").endsAt);
 	const [submitting, setSubmitting] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
 
 	const brand = context.selectedBrand;
 	const brandId = brand?.id;
@@ -110,11 +117,18 @@ export function SamplingBatchCreateDialog({
 		setTargetDrafts({});
 		setIdempotencyKey(newIdempotencyKey());
 		setError(null);
-		setName(brandId ? `${brandName} sampling ${new Date().toLocaleDateString()}` : "");
+		setName(
+			brandId
+				? t("sampling.batch.create.defaultName", {
+						brandName,
+						date: formatDate(new Date(), { year: "numeric", month: "numeric", day: "numeric" }),
+					})
+				: "",
+		);
 		const defaults = defaultMeasurementWindow(firstScopeTimezone);
 		setWindowStartsAt(defaults.startsAt);
 		setWindowEndsAt(defaults.endsAt);
-	}, [brandId, brandName, firstScopeId, firstScopeTimezone]);
+	}, [brandId, brandName, firstScopeId, firstScopeTimezone, formatDate, t]);
 
 	const togglePrompt = (promptId: string) => {
 		setPromptIds((previous) => {
@@ -153,29 +167,31 @@ export function SamplingBatchCreateDialog({
 		const evaluationRole = selectedScope?.samplingEvaluationRole;
 		const programTimezone = selectedScope?.timezone;
 		if (!evaluationRole || !programTimezone) {
-			setError("Select a provisioned sampling scope with a fixed evaluation pool.");
+			setError({ summary: t("sampling.batch.validation.scope") });
 			return;
 		}
 		if (!name.trim()) {
-			setError("Batch name is required.");
+			setError({ summary: t("sampling.batch.validation.name") });
 			return;
 		}
 		if (promptIds.size === 0) {
-			setError("Select at least one prompt.");
+			setError({ summary: t("sampling.batch.validation.prompt") });
 			return;
 		}
 		if (executionMode === "browser_runner" && context.browserRunnerEnabled !== true) {
-			setError("Browser Runner is not enabled for this deployment.");
+			setError({ summary: t("sampling.batch.validation.runner") });
 			return;
 		}
 		const selectedTargets = availableTargets.filter((target) => targetDrafts[target.surfaceTargetKey]);
 		if (selectedTargets.length === 0) {
-			setError("Select at least one consumer surface.");
+			setError({ summary: t("sampling.batch.validation.surface") });
 			return;
 		}
 		const resolvedTargets = selectedTargets.map((target) => {
 			const draft = targetDrafts[target.surfaceTargetKey];
-			if (!draft) throw new Error(`Target ${target.surfaceTargetKey} is no longer selected.`);
+			if (!draft) {
+				throw new Error(t("sampling.batch.validation.targetGone", { targetKey: target.surfaceTargetKey }));
+			}
 			return { target, draft, captureRouteKey: captureRouteForExecution(executionMode, target) };
 		});
 		let startsAt: Date;
@@ -184,11 +200,14 @@ export function SamplingBatchCreateDialog({
 			startsAt = parseZonedDateTimeInput(windowStartsAt, programTimezone);
 			endsAt = parseZonedDateTimeInput(windowEndsAt, programTimezone);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Enter a valid measurement window.");
+			setError({
+				summary: t("sampling.batch.validation.window"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 			return;
 		}
 		if (endsAt <= startsAt) {
-			setError("Measurement window end must be after its start.");
+			setError({ summary: t("sampling.batch.validation.windowOrder") });
 			return;
 		}
 
@@ -226,7 +245,10 @@ export function SamplingBatchCreateDialog({
 			setOpen(false);
 			setIdempotencyKey(newIdempotencyKey());
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Failed to create sampling batch.");
+			setError({
+				summary: t("sampling.batch.error.create"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setSubmitting(false);
 		}
@@ -237,21 +259,19 @@ export function SamplingBatchCreateDialog({
 			<DialogTrigger asChild>
 				<Button disabled={!brand || scopes.length === 0}>
 					<Plus />
-					Create batch
+					{t("sampling.batch.create.action")}
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
 				<DialogHeader>
-					<DialogTitle>Create sampling batch</DialogTitle>
-					<DialogDescription>
-						Freeze a set of prompts and consumer surfaces into an auditable delivery denominator.
-					</DialogDescription>
+					<DialogTitle>{t("sampling.batch.create.title")}</DialogTitle>
+					<DialogDescription>{t("sampling.batch.create.description")}</DialogDescription>
 				</DialogHeader>
 
 				<div className="space-y-6">
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
-							<Label htmlFor="sampling-batch-name">Batch name</Label>
+							<Label htmlFor="sampling-batch-name">{t("sampling.batch.create.name")}</Label>
 							<Input
 								id="sampling-batch-name"
 								value={name}
@@ -260,7 +280,7 @@ export function SamplingBatchCreateDialog({
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label>Measurement scope</Label>
+							<Label>{t("sampling.batch.create.scope")}</Label>
 							<Select
 								value={scopeId}
 								onValueChange={(nextScopeId) => {
@@ -276,7 +296,7 @@ export function SamplingBatchCreateDialog({
 								disabled={submitting}
 							>
 								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select a manual-only scope" />
+									<SelectValue placeholder={t("sampling.batch.create.selectScope")} />
 								</SelectTrigger>
 								<SelectContent>
 									{scopes.map((scope) => (
@@ -288,23 +308,20 @@ export function SamplingBatchCreateDialog({
 							</Select>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Evaluation pool</Label>
+							<Label>{t("sampling.batch.create.evaluationPool")}</Label>
 							<Input
 								value={
 									selectedScope?.samplingEvaluationRole === "scored"
-										? "Scored · counts toward assessment"
-										: "Observation · monitoring only"
+										? t("sampling.evaluation.scored")
+										: t("sampling.evaluation.observation")
 								}
 								readOnly
 								className="w-full sm:w-72"
 							/>
-							<p className="text-xs text-muted-foreground">
-								This pool is fixed by the selected scope. Provision a separate scope for the other pool; prompts can be
-								copied between them.
-							</p>
+							<p className="text-xs text-muted-foreground">{t("sampling.batch.create.poolDescription")}</p>
 						</div>
 						<div className="space-y-2 sm:col-span-2">
-							<Label>Execution</Label>
+							<Label>{t("sampling.batch.create.execution")}</Label>
 							<Select
 								value={executionMode}
 								onValueChange={(value: SamplingExecutionMode) => {
@@ -317,23 +334,22 @@ export function SamplingBatchCreateDialog({
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="manual">Manual workbench</SelectItem>
+									<SelectItem value="manual">{t("sampling.execution.manual")}</SelectItem>
 									<SelectItem value="browser_runner" disabled={context.browserRunnerEnabled !== true}>
-										Browser Runner
+										{t("sampling.execution.browserRunner")}
 									</SelectItem>
 								</SelectContent>
 							</Select>
-							<p className="text-xs text-muted-foreground">
-								Creating the batch only freezes its denominator. Browser Runner starts only when an administrator
-								explicitly starts it from the queue; no scheduled run is created.
-							</p>
+							<p className="text-xs text-muted-foreground">{t("sampling.batch.create.executionDescription")}</p>
 						</div>
 					</div>
 
 					<div className="grid gap-4 sm:grid-cols-2">
 						<div className="space-y-2">
 							<Label htmlFor="sampling-window-start">
-								Measurement window starts ({selectedScope?.timezone ?? "Program timezone"})
+								{t("sampling.batch.create.windowStart", {
+									timezone: selectedScope?.timezone ?? t("sampling.batch.create.programTimezone"),
+								})}
 							</Label>
 							<Input
 								id="sampling-window-start"
@@ -345,7 +361,9 @@ export function SamplingBatchCreateDialog({
 						</div>
 						<div className="space-y-2">
 							<Label htmlFor="sampling-window-end">
-								Measurement window ends ({selectedScope?.timezone ?? "Program timezone"})
+								{t("sampling.batch.create.windowEnd", {
+									timezone: selectedScope?.timezone ?? t("sampling.batch.create.programTimezone"),
+								})}
 							</Label>
 							<Input
 								id="sampling-window-end"
@@ -356,14 +374,13 @@ export function SamplingBatchCreateDialog({
 							/>
 						</div>
 						<p className="text-xs text-muted-foreground sm:col-span-2">
-							The frozen denominator and all scored observations are constrained to this delivery window. Dates are
-							interpreted in the Program timezone, not the administrator's browser timezone.
+							{t("sampling.batch.create.windowDescription")}
 						</p>
 					</div>
 
 					<div className="space-y-2">
 						<div className="flex items-center justify-between gap-3">
-							<Label>Prompts ({promptIds.size} selected)</Label>
+							<Label>{t("sampling.batch.create.promptsSelected", { count: formatNumber(promptIds.size) })}</Label>
 							<Button
 								type="button"
 								variant="ghost"
@@ -371,12 +388,16 @@ export function SamplingBatchCreateDialog({
 								onClick={toggleAllPrompts}
 								disabled={prompts.length === 0}
 							>
-								{promptIds.size === prompts.length && prompts.length > 0 ? "Clear all" : "Select all"}
+								{t(
+									promptIds.size === prompts.length && prompts.length > 0
+										? "sampling.batch.create.clearAll"
+										: "sampling.batch.create.selectAll",
+								)}
 							</Button>
 						</div>
 						<div className="max-h-52 space-y-1 overflow-y-auto rounded-md border p-2">
 							{prompts.length === 0 ? (
-								<p className="p-3 text-sm text-muted-foreground">No enabled prompts exist in this scope.</p>
+								<p className="p-3 text-sm text-muted-foreground">{t("sampling.batch.create.noPrompts")}</p>
 							) : (
 								prompts.map((prompt) => {
 									const checkboxId = `sampling-prompt-${prompt.id}`;
@@ -398,7 +419,11 @@ export function SamplingBatchCreateDialog({
 					</div>
 
 					<div className="space-y-3">
-						<Label>Consumer surfaces ({Object.keys(targetDrafts).length} selected)</Label>
+						<Label>
+							{t("sampling.batch.create.surfacesSelected", {
+								count: formatNumber(Object.keys(targetDrafts).length),
+							})}
+						</Label>
 						<div className="grid gap-2 sm:grid-cols-2">
 							{availableTargets.map((target) => {
 								const checkboxId = `sampling-target-${target.surfaceTargetKey}`;
@@ -435,7 +460,7 @@ export function SamplingBatchCreateDialog({
 											<p className="text-sm font-medium">{target.label}</p>
 										</div>
 										<div className="space-y-1.5">
-											<Label className="text-xs">Samples / prompt</Label>
+											<Label className="text-xs">{t("sampling.batch.create.samplesPerPrompt")}</Label>
 											<Input
 												type="number"
 												min={1}
@@ -449,7 +474,7 @@ export function SamplingBatchCreateDialog({
 											/>
 										</div>
 										<div className="space-y-1.5">
-											<Label className="text-xs">Session</Label>
+											<Label className="text-xs">{t("sampling.batch.create.session")}</Label>
 											<Select
 												value={draft.sessionRequirement}
 												onValueChange={(value: SamplingSessionRequirement) =>
@@ -462,18 +487,20 @@ export function SamplingBatchCreateDialog({
 												</SelectTrigger>
 												<SelectContent>
 													{executionMode === "browser_runner" ? (
-														<SelectItem value="dedicated_sampling_profile">Dedicated sampling profile</SelectItem>
+														<SelectItem value="dedicated_sampling_profile">
+															{t("sampling.session.dedicatedProfile")}
+														</SelectItem>
 													) : (
 														<>
-															<SelectItem value="anonymous_clean">Anonymous clean</SelectItem>
-															<SelectItem value="new_account_clean">New account</SelectItem>
+															<SelectItem value="anonymous_clean">{t("sampling.session.anonymousClean")}</SelectItem>
+															<SelectItem value="new_account_clean">{t("sampling.session.newAccountClean")}</SelectItem>
 														</>
 													)}
 												</SelectContent>
 											</Select>
 										</div>
 										<div className="space-y-1.5">
-											<Label className="text-xs">Search</Label>
+											<Label className="text-xs">{t("sampling.batch.create.search")}</Label>
 											<Select
 												value={draft.searchRequirement}
 												onValueChange={(value: SamplingSearchRequirement) =>
@@ -486,13 +513,15 @@ export function SamplingBatchCreateDialog({
 												</SelectTrigger>
 												<SelectContent>
 													{executionMode === "browser_runner" && (
-														<SelectItem value="platform_default">Platform default (native auto)</SelectItem>
+														<SelectItem value="platform_default">{t("sampling.search.platformDefault")}</SelectItem>
 													)}
-													{executionMode !== "browser_runner" && <SelectItem value="required">Required</SelectItem>}
+													{executionMode !== "browser_runner" && (
+														<SelectItem value="required">{t("sampling.search.required")}</SelectItem>
+													)}
 													{executionMode !== "browser_runner" && target.surfaceKind !== "search_surface" && (
 														<>
-															<SelectItem value="forbidden">Forbidden</SelectItem>
-															<SelectItem value="not_applicable">Not applicable</SelectItem>
+															<SelectItem value="forbidden">{t("sampling.search.forbidden")}</SelectItem>
+															<SelectItem value="not_applicable">{t("sampling.search.notApplicable")}</SelectItem>
 														</>
 													)}
 												</SelectContent>
@@ -503,16 +532,26 @@ export function SamplingBatchCreateDialog({
 							})}
 					</div>
 
-					{error && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+					{error && (
+						<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+							<p>{error.summary}</p>
+							{error.detail && (
+								<>
+									<p className="mt-2 font-medium">{t("sampling.raw.errorDetails")}</p>
+									<pre className="whitespace-pre-wrap">{error.detail}</pre>
+								</>
+							)}
+						</div>
+					)}
 				</div>
 
 				<DialogFooter>
 					<Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-						Cancel
+						{t("sampling.batch.create.cancel")}
 					</Button>
 					<Button onClick={handleSubmit} disabled={submitting || !brand}>
 						{submitting && <Loader2 className="animate-spin" />}
-						Create and freeze batch
+						{submitting ? t("sampling.batch.create.submitting") : t("sampling.batch.create.submit")}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

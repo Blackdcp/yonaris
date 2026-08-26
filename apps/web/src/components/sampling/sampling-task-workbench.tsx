@@ -33,6 +33,8 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { MessageId, MessageValues } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import {
 	deleteSamplingEvidence,
 	formatEvidenceBytes,
@@ -47,10 +49,13 @@ import {
 import { SamplingStatusBadge } from "./sampling-status-badge";
 import { formatZonedDateTimeInput, parseZonedDateTimeInput } from "./sampling-timezone";
 import type {
+	SamplingEvaluationRole,
 	SamplingEvidenceArtifactView,
 	SamplingEvidenceKind,
 	SamplingLease,
 	SamplingObservationInput,
+	SamplingSearchRequirement,
+	SamplingSessionRequirement,
 	SamplingTaskView,
 } from "./types";
 
@@ -78,9 +83,60 @@ function lines(value: string): string[] {
 	];
 }
 
-function formatRequirement(value: string): string {
-	if (value === "platform_default") return "platform default (native auto)";
-	return value.replaceAll("_", " ");
+type TranslateMessage = (id: MessageId, values?: MessageValues) => string;
+
+const SESSION_LABELS: Record<SamplingSessionRequirement, MessageId> = {
+	anonymous_clean: "sampling.session.anonymousClean",
+	new_account_clean: "sampling.session.newAccountClean",
+	dedicated_sampling_profile: "sampling.session.dedicatedProfile",
+};
+
+const SEARCH_LABELS: Record<SamplingSearchRequirement, MessageId> = {
+	platform_default: "sampling.search.platformDefault",
+	required: "sampling.search.required",
+	forbidden: "sampling.search.forbidden",
+	not_applicable: "sampling.search.notApplicable",
+};
+
+const EVALUATION_LABELS: Record<SamplingEvaluationRole, MessageId> = {
+	scored: "sampling.evaluation.scored",
+	observation: "sampling.evaluation.observation",
+};
+
+function localizeEvidenceValidation(message: string, t: TranslateMessage): string {
+	switch (message) {
+		case "Only PNG, JPEG, WebP, and PDF evidence files are supported.":
+			return t("sampling.workbench.evidence.validation.type");
+		case "Evidence filenames must be between 1 and 255 characters.":
+			return t("sampling.workbench.evidence.validation.name");
+		case "Evidence files must not be empty.":
+			return t("sampling.workbench.evidence.validation.empty");
+		case "Each evidence file must be 8 MiB or smaller.":
+			return t("sampling.workbench.evidence.validation.fileSize");
+		case `A task can contain at most ${MAX_SAMPLING_EVIDENCE_ARTIFACTS} evidence files.`:
+			return t("sampling.workbench.evidence.validation.count", { count: MAX_SAMPLING_EVIDENCE_ARTIFACTS });
+		case "Evidence files for one task must total 40 MiB or less.":
+			return t("sampling.workbench.evidence.validation.totalSize");
+		default:
+			return message;
+	}
+}
+
+function localizeEvidenceBlocker(message: string, minimum: number, t: TranslateMessage): string {
+	switch (message) {
+		case "Wait for staged evidence to finish loading.":
+			return t("sampling.workbench.evidence.blocker.recovering");
+		case "Staged evidence could not be loaded. Refresh before submitting.":
+			return t("sampling.workbench.evidence.blocker.recoveryError");
+		case "Wait for all evidence operations to finish before submitting.":
+			return t("sampling.workbench.evidence.blocker.pending");
+		case "Retry or remove every failed evidence upload before submitting.":
+			return t("sampling.workbench.evidence.blocker.failed");
+		case `This task requires at least ${minimum} uploaded evidence artifact(s).`:
+			return t("sampling.workbench.evidence.blocker.minimum", { count: minimum });
+		default:
+			return message;
+	}
 }
 
 export function SamplingTaskWorkbench({
@@ -104,6 +160,7 @@ export function SamplingTaskWorkbench({
 	onSubmit: (observation: SamplingObservationInput) => Promise<void>;
 	onFail: (input: { errorCode?: string; errorMessage: string }) => Promise<void>;
 }) {
+	const { t, formatDate, formatNumber } = useI18n();
 	const evidenceMinimum = Math.max(0, task.minimumEvidenceArtifacts);
 	const [answerText, setAnswerText] = useState("");
 	const [pageUrl, setPageUrl] = useState("");
@@ -117,7 +174,7 @@ export function SamplingTaskWorkbench({
 	const [copied, setCopied] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [releasing, setReleasing] = useState(false);
-	const [error, setError] = useState<string | null>(null);
+	const [error, setError] = useState<{ summary: string; detail?: string } | null>(null);
 	const [failureOpen, setFailureOpen] = useState(false);
 	const [failureMessage, setFailureMessage] = useState("");
 	const [failureCode, setFailureCode] = useState("");
@@ -135,20 +192,22 @@ export function SamplingTaskWorkbench({
 	const requiresSameSessionRecovery = Boolean(isHumanTakeover && task.automation?.submitIntentAt);
 	const submitMayHaveOccurred = Boolean(task.automation?.submitIntentAt && !task.automation.submitConfirmedAt);
 	const leaseExpiry = useMemo(
-		() => (lease.leaseExpiresAt ? new Date(lease.leaseExpiresAt).toLocaleTimeString() : "refreshing"),
-		[lease.leaseExpiresAt],
+		() =>
+			lease.leaseExpiresAt
+				? formatDate(new Date(lease.leaseExpiresAt), { timeStyle: "medium" })
+				: t("sampling.workbench.recoveringLease"),
+		[formatDate, lease.leaseExpiresAt, t],
 	);
 	const evidenceTotalBytes = useMemo(() => evidence.reduce((total, item) => total + item.sizeBytes, 0), [evidence]);
-	const evidenceBlocker = useMemo(
-		() =>
-			samplingEvidenceSubmitBlocker({
-				states: evidence,
-				minimumArtifacts: evidenceMinimum,
-				recovering: evidenceArtifactsLoading,
-				recoveryError: evidenceArtifactsError,
-			}),
-		[evidence, evidenceArtifactsError, evidenceArtifactsLoading, evidenceMinimum],
-	);
+	const evidenceBlocker = useMemo(() => {
+		const blocker = samplingEvidenceSubmitBlocker({
+			states: evidence,
+			minimumArtifacts: evidenceMinimum,
+			recovering: evidenceArtifactsLoading,
+			recoveryError: evidenceArtifactsError,
+		});
+		return blocker ? localizeEvidenceBlocker(blocker, evidenceMinimum, t) : null;
+	}, [evidence, evidenceArtifactsError, evidenceArtifactsLoading, evidenceMinimum, t]);
 	const evidenceOperationPending = evidence.some(({ state }) => state === "uploading" || state === "deleting");
 
 	useEffect(() => {
@@ -165,11 +224,11 @@ export function SamplingTaskWorkbench({
 					sizeBytes: artifact.sizeBytes,
 					progress: 100,
 					artifact,
-					error: artifact.status === "staged" ? undefined : "Attached evidence cannot be reused for this claim.",
+					error: artifact.status === "staged" ? undefined : t("sampling.workbench.evidence.unusable"),
 				}));
 			return recovered.length ? [...previous, ...recovered] : previous;
 		});
-	}, [initialEvidenceArtifacts]);
+	}, [initialEvidenceArtifacts, t]);
 
 	useEffect(
 		() => () => {
@@ -185,7 +244,7 @@ export function SamplingTaskWorkbench({
 			setCopied(true);
 			setTimeout(() => setCopied(false), 1_500);
 		} catch {
-			setError("Clipboard access was denied. Select the prompt text and copy it manually.");
+			setError({ summary: t("sampling.workbench.error.clipboard") });
 		}
 	};
 
@@ -234,7 +293,7 @@ export function SamplingTaskWorkbench({
 				patchEvidence(draft.clientId, {
 					state: "failed",
 					progress: 0,
-					error: caught instanceof Error ? caught.message : "Evidence upload failed.",
+					error: caught instanceof Error ? caught.message : undefined,
 				});
 			})
 			.finally(() => uploadAborters.current.delete(draft.clientId));
@@ -249,7 +308,7 @@ export function SamplingTaskWorkbench({
 		for (const file of Array.from(files)) {
 			const result = validateSamplingEvidenceFile(file, { artifactCount, totalBytes });
 			if (!result.ok) {
-				rejected.push(`${file.name}: ${result.message}`);
+				rejected.push(`${file.name}: ${localizeEvidenceValidation(result.message, t)}`);
 				continue;
 			}
 			const draft: EvidenceDraft = {
@@ -270,7 +329,7 @@ export function SamplingTaskWorkbench({
 			setEvidence((previous) => [...previous, ...accepted]);
 			for (const draft of accepted) startEvidenceUpload(draft);
 		}
-		if (rejected.length) setError(rejected.join("\n"));
+		if (rejected.length) setError({ summary: rejected.join("\n") });
 	};
 
 	const removeEvidence = async (item: EvidenceDraft) => {
@@ -296,45 +355,48 @@ export function SamplingTaskWorkbench({
 			});
 			setEvidence((previous) => previous.filter(({ clientId }) => clientId !== item.clientId));
 		} catch (caught) {
-			const message = caught instanceof Error ? caught.message : "Could not delete staged evidence.";
+			const message = caught instanceof Error ? caught.message : undefined;
 			patchEvidence(item.clientId, { state: "ready", error: message });
-			setError(message);
+			setError({ summary: t("sampling.workbench.error.delete"), detail: message });
 		}
 	};
 
 	const handleSubmit = async () => {
 		setError(null);
 		if (requiresSameSessionRecovery) {
-			setError("This observation can only be recovered from the retained Browser Runner session.");
+			setError({ summary: t("sampling.workbench.validation.sameSession") });
 			return;
 		}
 		if (!answerText.trim()) {
-			setError("Paste the complete platform answer before submitting.");
+			setError({ summary: t("sampling.workbench.validation.answer") });
 			return;
 		}
 		if (!operatorAttested) {
-			setError("Complete the operator attestation before submitting this observation.");
+			setError({ summary: t("sampling.workbench.validation.attestation") });
 			return;
 		}
 		let observedDate: Date;
 		try {
 			observedDate = parseZonedDateTimeInput(observedAt, task.timezone);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Observed at must be a valid date and time.");
+			setError({
+				summary: t("sampling.workbench.validation.observedAt"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 			return;
 		}
 		const windowStartsAt = new Date(task.measurementWindowStartsAt);
 		const windowEndsAt = new Date(task.measurementWindowEndsAt);
 		if (observedDate < windowStartsAt || observedDate > windowEndsAt) {
-			setError("Observed at must fall inside the frozen measurement window.");
+			setError({ summary: t("sampling.workbench.validation.window") });
 			return;
 		}
 		if (task.requirePageUrl && !pageUrl.trim()) {
-			setError("The frozen evidence protocol requires the result page URL.");
+			setError({ summary: t("sampling.workbench.validation.pageUrl") });
 			return;
 		}
 		if (evidenceBlocker) {
-			setError(evidenceBlocker);
+			setError({ summary: evidenceBlocker });
 			return;
 		}
 		const evidenceArtifactIds = evidence.flatMap(({ artifact, state }) =>
@@ -364,7 +426,10 @@ export function SamplingTaskWorkbench({
 				webQueries: lines(webQueries),
 			});
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Failed to submit this sample.");
+			setError({
+				summary: t("sampling.workbench.error.submit"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setSubmitting(false);
 		}
@@ -372,7 +437,7 @@ export function SamplingTaskWorkbench({
 
 	const handleRelease = async () => {
 		if (requiresSameSessionRecovery) {
-			setError("A post-submit Browser Runner task cannot be released or replayed from this workbench.");
+			setError({ summary: t("sampling.workbench.validation.postSubmitRelease") });
 			return;
 		}
 		setReleasing(true);
@@ -380,7 +445,10 @@ export function SamplingTaskWorkbench({
 		try {
 			await onRelease();
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Failed to release this task.");
+			setError({
+				summary: t("sampling.workbench.error.release"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setReleasing(false);
 		}
@@ -396,7 +464,10 @@ export function SamplingTaskWorkbench({
 			});
 			setFailureOpen(false);
 		} catch (caught) {
-			setError(caught instanceof Error ? caught.message : "Failed to report the task failure.");
+			setError({
+				summary: t("sampling.workbench.error.failure"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setReportingFailure(false);
 		}
@@ -408,19 +479,20 @@ export function SamplingTaskWorkbench({
 				{isHumanTakeover && (
 					<Alert>
 						<AlertTriangle />
-						<AlertTitle>Browser Runner needs human takeover</AlertTitle>
+						<AlertTitle>{t("sampling.workbench.takeover.title")}</AlertTitle>
 						<AlertDescription className="space-y-2">
-							<p>
-								Continue this same frozen task. A complete recovered observation is analyzed by the existing metric
-								pipeline; this screen does not let an operator edit visibility or share-of-voice values directly.
-							</p>
-							{task.automation?.needsHumanReason && <p>Reason: {task.automation.needsHumanReason}</p>}
-							{submitMayHaveOccurred && (
-								<p>
-									The platform submission may already have occurred. Automatic retry is permanently stopped to avoid a
-									duplicate consumer answer.
-								</p>
+							<p>{t("sampling.workbench.takeover.description")}</p>
+							{task.automation?.needsHumanReason && (
+								<div>
+									<p>{t("sampling.workbench.takeover.reason")}</p>
+									<p className="font-medium">{t("sampling.raw.executionDetails")}</p>
+									{task.automation.needsHumanCode && (
+										<code className="block break-all">{task.automation.needsHumanCode}</code>
+									)}
+									<pre className="whitespace-pre-wrap">{task.automation.needsHumanReason}</pre>
+								</div>
 							)}
+							{submitMayHaveOccurred && <p>{t("sampling.workbench.takeover.submitMayHaveOccurred")}</p>}
 						</AlertDescription>
 					</Alert>
 				)}
@@ -430,51 +502,57 @@ export function SamplingTaskWorkbench({
 							<div>
 								<CardTitle>{task.targetLabel}</CardTitle>
 								<CardDescription>
-									{task.brandName} · {task.scopeName} · sample {task.sampleIndex}
+									{t("sampling.workbench.sample", {
+										brandName: task.brandName,
+										scopeName: task.scopeName,
+										index: formatNumber(task.sampleIndex),
+									})}
 								</CardDescription>
 							</div>
 							<div className="flex flex-wrap gap-2">
 								<SamplingStatusBadge status={task.status} />
-								{isHumanTakeover && <Badge className="bg-amber-100 text-amber-800">Needs human</Badge>}
+								{isHumanTakeover && (
+									<Badge className="bg-amber-100 text-amber-800">{t("sampling.workbench.needsHuman")}</Badge>
+								)}
 							</div>
 						</div>
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
 							<div>
-								<p className="text-xs text-muted-foreground">Required session</p>
-								<Badge variant="outline" className="mt-1 capitalize">
-									{formatRequirement(task.sessionRequirement)}
+								<p className="text-xs text-muted-foreground">{t("sampling.workbench.requiredSession")}</p>
+								<Badge variant="outline" className="mt-1">
+									{t(SESSION_LABELS[task.sessionRequirement])}
 								</Badge>
 							</div>
 							<div className="sm:col-span-2">
-								<p className="text-xs text-muted-foreground">Frozen measurement window</p>
+								<p className="text-xs text-muted-foreground">{t("sampling.workbench.frozenWindow")}</p>
 								<p className="mt-1 text-sm">
-									{new Date(task.measurementWindowStartsAt).toLocaleString(undefined, {
+									{formatDate(new Date(task.measurementWindowStartsAt), {
 										timeZone: task.timezone,
 										timeZoneName: "short",
 									})}{" "}
 									–{" "}
-									{new Date(task.measurementWindowEndsAt).toLocaleString(undefined, {
+									{formatDate(new Date(task.measurementWindowEndsAt), {
 										timeZone: task.timezone,
 										timeZoneName: "short",
 									})}
 								</p>
 							</div>
 							<div>
-								<p className="text-xs text-muted-foreground">Required search mode</p>
-								<Badge variant="outline" className="mt-1 capitalize">
-									{formatRequirement(task.searchRequirement)}
+								<p className="text-xs text-muted-foreground">{t("sampling.workbench.requiredSearch")}</p>
+								<Badge variant="outline" className="mt-1">
+									{t(SEARCH_LABELS[task.searchRequirement])}
 								</Badge>
 							</div>
 						</div>
 						<div className="rounded-md border bg-muted/30 p-4">
 							<div className="mb-3 flex items-center justify-between gap-3">
-								<Label>Frozen prompt</Label>
+								<Label>{t("sampling.workbench.frozenPrompt")}</Label>
 								{!requiresSameSessionRecovery && (
 									<Button variant="outline" size="sm" onClick={copyPrompt}>
 										{copied ? <Check /> : <Clipboard />}
-										{copied ? "Copied" : "Copy"}
+										{t(copied ? "sampling.workbench.copied" : "sampling.workbench.copy")}
 									</Button>
 								)}
 							</div>
@@ -483,27 +561,23 @@ export function SamplingTaskWorkbench({
 						{requiresSameSessionRecovery ? (
 							<Alert variant="destructive">
 								<AlertTriangle />
-								<AlertTitle>Do not open a new conversation or resend this prompt</AlertTitle>
-								<AlertDescription>
-									The submit intent is already durable. Resume the retained Browser Runner profile on the CN runner host
-									and recover only the original answer. If that profile cannot be recovered, confirm a terminal
-									technical failure; it lowers delivery coverage but does not count as a negative brand mention.
-								</AlertDescription>
+								<AlertTitle>{t("sampling.workbench.noReplay.title")}</AlertTitle>
+								<AlertDescription>{t("sampling.workbench.noReplay.description")}</AlertDescription>
 							</Alert>
 						) : (
 							<Button asChild className="w-full sm:w-auto">
 								<a href={task.launchUrl} target="_blank" rel="noopener noreferrer">
 									<ExternalLink />
-									Open {task.targetLabel}
+									{t("sampling.workbench.openTarget", { targetLabel: task.targetLabel })}
 								</a>
 							</Button>
 						)}
 						{!requiresSameSessionRecovery && (
 							<Alert>
 								<AlertTriangle />
-								<AlertTitle>Operator attestation required</AlertTitle>
+								<AlertTitle>{t("sampling.workbench.attestation.title")}</AlertTitle>
 								<AlertDescription className="space-y-3">
-									<p>The platform link cannot enforce cookies, account state, location, or search mode.</p>
+									<p>{t("sampling.workbench.attestation.description")}</p>
 									<div className="flex items-start gap-2">
 										<Checkbox
 											id="sampling-operator-attestation"
@@ -514,9 +588,11 @@ export function SamplingTaskWorkbench({
 											htmlFor="sampling-operator-attestation"
 											className="cursor-pointer leading-relaxed font-normal"
 										>
-											I confirm this run was executed on {task.targetLabel} using the required clean session and search
-											condition, in the {task.market}/{task.locale} market and language context, and that the recorded
-											answer and evidence belong to this run.
+											{t("sampling.workbench.attestation.confirm", {
+												targetLabel: task.targetLabel,
+												market: task.market,
+												locale: task.locale,
+											})}
 										</Label>
 									</div>
 								</AlertDescription>
@@ -529,13 +605,13 @@ export function SamplingTaskWorkbench({
 					<>
 						<Card>
 							<CardHeader>
-								<CardTitle>Observation</CardTitle>
-								<CardDescription>Record exactly what the clean-session consumer surface returned.</CardDescription>
+								<CardTitle>{t("sampling.workbench.observation.title")}</CardTitle>
+								<CardDescription>{t("sampling.workbench.observation.description")}</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-5">
 								<div className="grid gap-4 sm:grid-cols-2">
 									<div className="space-y-2 sm:col-span-2">
-										<Label htmlFor="sampling-page-url">Result page URL</Label>
+										<Label htmlFor="sampling-page-url">{t("sampling.workbench.pageUrl")}</Label>
 										<Input
 											id="sampling-page-url"
 											type="url"
@@ -545,7 +621,9 @@ export function SamplingTaskWorkbench({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="sampling-observed-at">Observed at ({task.timezone})</Label>
+										<Label htmlFor="sampling-observed-at">
+											{t("sampling.workbench.observedAt", { timezone: task.timezone })}
+										</Label>
 										<Input
 											id="sampling-observed-at"
 											type="datetime-local"
@@ -556,17 +634,17 @@ export function SamplingTaskWorkbench({
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="sampling-model-version">Displayed model/version</Label>
+										<Label htmlFor="sampling-model-version">{t("sampling.workbench.modelVersion")}</Label>
 										<Input
 											id="sampling-model-version"
 											value={modelVersion}
 											onChange={(event) => setModelVersion(event.target.value)}
-											placeholder="Optional"
+											placeholder={t("sampling.workbench.optional")}
 										/>
 									</div>
 									{task.searchRequirement === "platform_default" && (
 										<div className="space-y-2">
-											<Label>Observed web search</Label>
+											<Label>{t("sampling.workbench.webSearch")}</Label>
 											<Select
 												value={webSearchObserved}
 												onValueChange={(value: "unknown" | "yes" | "no") => setWebSearchObserved(value)}
@@ -575,9 +653,9 @@ export function SamplingTaskWorkbench({
 													<SelectValue />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value="unknown">Unknown / no verified marker</SelectItem>
-													<SelectItem value="yes">Yes, verified</SelectItem>
-													<SelectItem value="no">No, explicitly verified</SelectItem>
+													<SelectItem value="unknown">{t("sampling.workbench.webSearch.unknown")}</SelectItem>
+													<SelectItem value="yes">{t("sampling.workbench.webSearch.yes")}</SelectItem>
+													<SelectItem value="no">{t("sampling.workbench.webSearch.no")}</SelectItem>
 												</SelectContent>
 											</Select>
 										</div>
@@ -586,38 +664,38 @@ export function SamplingTaskWorkbench({
 
 								<div className="space-y-2">
 									<div className="flex items-center justify-between gap-2">
-										<Label htmlFor="sampling-answer">Complete answer</Label>
+										<Label htmlFor="sampling-answer">{t("sampling.workbench.answer")}</Label>
 										<span className="text-xs tabular-nums text-muted-foreground">
-											{answerText.length.toLocaleString()} characters
+											{t("sampling.workbench.characters", { count: formatNumber(answerText.length) })}
 										</span>
 									</div>
 									<Textarea
 										id="sampling-answer"
 										value={answerText}
 										onChange={(event) => setAnswerText(event.target.value)}
-										placeholder="Paste the full response without summarizing or editing it."
+										placeholder={t("sampling.workbench.answerPlaceholder")}
 										className="min-h-72 font-mono text-sm"
 									/>
 								</div>
 
 								<div className="grid gap-4 lg:grid-cols-2">
 									<div className="space-y-2">
-										<Label htmlFor="sampling-citations">Citation URLs</Label>
+										<Label htmlFor="sampling-citations">{t("sampling.workbench.citations")}</Label>
 										<Textarea
 											id="sampling-citations"
 											value={citationUrls}
 											onChange={(event) => setCitationUrls(event.target.value)}
-											placeholder="One URL per line"
+											placeholder={t("sampling.workbench.citationsPlaceholder")}
 											className="min-h-28"
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="sampling-web-queries">Visible web queries</Label>
+										<Label htmlFor="sampling-web-queries">{t("sampling.workbench.webQueries")}</Label>
 										<Textarea
 											id="sampling-web-queries"
 											value={webQueries}
 											onChange={(event) => setWebQueries(event.target.value)}
-											placeholder="One query per line, if shown"
+											placeholder={t("sampling.workbench.webQueriesPlaceholder")}
 											className="min-h-28"
 										/>
 									</div>
@@ -627,27 +705,27 @@ export function SamplingTaskWorkbench({
 
 						<Card>
 							<CardHeader>
-								<CardTitle>Evidence uploads</CardTitle>
+								<CardTitle>{t("sampling.workbench.evidence.title")}</CardTitle>
 								<CardDescription>
-									Upload at least {evidenceMinimum} artifact(s). Yonaris stores the file and computes its SHA-256
-									digest.
+									{t("sampling.workbench.evidence.description", { count: formatNumber(evidenceMinimum) })}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
 								<Alert>
 									<FileUp />
-									<AlertTitle>V1 file policy</AlertTitle>
-									<AlertDescription>
-										PNG, JPEG, WebP, or PDF only; 8 MiB per file and 40 MiB per task. Video is not supported in V1.
-									</AlertDescription>
+									<AlertTitle>{t("sampling.workbench.evidence.policyTitle")}</AlertTitle>
+									<AlertDescription>{t("sampling.workbench.evidence.policyDescription")}</AlertDescription>
 								</Alert>
 								<div className="flex flex-col gap-3 rounded-md border border-dashed p-4 sm:flex-row sm:items-end sm:justify-between">
 									<div className="space-y-1.5">
-										<Label htmlFor="sampling-evidence-files">Upload evidence</Label>
+										<Label htmlFor="sampling-evidence-files">{t("sampling.workbench.evidence.upload")}</Label>
 										<p className="text-xs text-muted-foreground">
-											{evidence.length}/{MAX_SAMPLING_EVIDENCE_ARTIFACTS} files ·{" "}
-											{formatEvidenceBytes(evidenceTotalBytes)} /{" "}
-											{formatEvidenceBytes(MAX_SAMPLING_EVIDENCE_TASK_BYTES)}
+											{t("sampling.workbench.evidence.files", {
+												count: formatNumber(evidence.length),
+												maximum: formatNumber(MAX_SAMPLING_EVIDENCE_ARTIFACTS),
+												used: formatEvidenceBytes(evidenceTotalBytes),
+												maximumSize: formatEvidenceBytes(MAX_SAMPLING_EVIDENCE_TASK_BYTES),
+											})}
 										</p>
 									</div>
 									<Input
@@ -656,7 +734,7 @@ export function SamplingTaskWorkbench({
 										type="file"
 										multiple
 										accept={SAMPLING_EVIDENCE_ACCEPT}
-										aria-label="Upload evidence"
+										aria-label={t("sampling.workbench.evidence.upload")}
 										onChange={(event) => {
 											chooseEvidence(event.currentTarget.files);
 											event.currentTarget.value = "";
@@ -675,18 +753,23 @@ export function SamplingTaskWorkbench({
 										className="flex items-center gap-2 text-sm text-muted-foreground"
 										data-testid="sampling-evidence-recovering"
 									>
-										<Loader2 className="size-4 animate-spin" /> Recovering staged evidence…
+										<Loader2 className="size-4 animate-spin" /> {t("sampling.workbench.evidence.recovering")}
 									</div>
 								)}
 								{evidenceArtifactsError && (
 									<Alert variant="destructive">
 										<AlertTriangle />
-										<AlertTitle>Could not recover staged evidence</AlertTitle>
-										<AlertDescription>{evidenceArtifactsError}</AlertDescription>
+										<AlertTitle>{t("sampling.workbench.evidence.recoveryError")}</AlertTitle>
+										<AlertDescription>
+											<p>{t("sampling.raw.errorDetails")}</p>
+											<pre className="whitespace-pre-wrap">{evidenceArtifactsError}</pre>
+										</AlertDescription>
 									</Alert>
 								)}
 								{!evidenceArtifactsLoading && !evidence.length && (
-									<p className="rounded-md bg-muted/30 p-4 text-sm text-muted-foreground">No evidence uploaded yet.</p>
+									<p className="rounded-md bg-muted/30 p-4 text-sm text-muted-foreground">
+										{t("sampling.workbench.evidence.empty")}
+									</p>
 								)}
 								{evidence.map((item) => {
 									const artifact = item.state === "ready" ? item.artifact : undefined;
@@ -703,14 +786,21 @@ export function SamplingTaskWorkbench({
 												<div className="min-w-0">
 													<p className="truncate text-sm font-medium">{item.fileName}</p>
 													<p className="text-xs text-muted-foreground">
-														{item.kind === "screenshot" ? "Screenshot" : "Page snapshot"} ·{" "}
-														{formatEvidenceBytes(item.sizeBytes)}
+														{t(
+															item.kind === "screenshot"
+																? "sampling.workbench.evidence.screenshot"
+																: "sampling.workbench.evidence.pageSnapshot",
+														)}{" "}
+														· {formatEvidenceBytes(item.sizeBytes)}
 													</p>
 												</div>
 												<div className="flex shrink-0 gap-1">
 													{artifact && (
 														<Button variant="ghost" size="icon" asChild>
-															<a href={artifact.downloadUrl} aria-label={`Download ${item.fileName}`}>
+															<a
+																href={artifact.downloadUrl}
+																aria-label={t("sampling.workbench.evidence.download", { fileName: item.fileName })}
+															>
 																<Download />
 															</a>
 														</Button>
@@ -720,7 +810,7 @@ export function SamplingTaskWorkbench({
 															variant="ghost"
 															size="icon"
 															onClick={() => startEvidenceUpload(item)}
-															aria-label={`Retry ${item.fileName}`}
+															aria-label={t("sampling.workbench.evidence.retry", { fileName: item.fileName })}
 														>
 															<RefreshCw />
 														</Button>
@@ -731,7 +821,9 @@ export function SamplingTaskWorkbench({
 														onClick={() => void removeEvidence(item)}
 														disabled={item.state === "deleting" || !canDeleteArtifact}
 														aria-label={
-															item.state === "uploading" ? `Cancel ${item.fileName}` : `Remove ${item.fileName}`
+															item.state === "uploading"
+																? t("sampling.workbench.evidence.cancel", { fileName: item.fileName })
+																: t("sampling.workbench.evidence.remove", { fileName: item.fileName })
 														}
 													>
 														{item.state === "deleting" ? (
@@ -747,24 +839,46 @@ export function SamplingTaskWorkbench({
 											{item.state === "uploading" && (
 												<div className="space-y-1" data-testid="sampling-evidence-upload-progress">
 													<div className="flex justify-between text-xs text-muted-foreground">
-														<span>{item.progress >= 100 ? "Server verifying" : "Uploading"}</span>
+														<span>
+															{t(
+																item.progress >= 100
+																	? "sampling.workbench.evidence.serverVerifying"
+																	: "sampling.workbench.evidence.uploading",
+															)}
+														</span>
 														<span>{item.progress}%</span>
 													</div>
-													<Progress value={item.progress} aria-label={`Upload progress for ${item.fileName}`} />
+													<Progress
+														value={item.progress}
+														aria-label={t("sampling.workbench.evidence.progress", { fileName: item.fileName })}
+													/>
 												</div>
 											)}
 											{item.state === "failed" && (
-												<p className="text-sm text-destructive" role="alert">
-													{item.error ?? "Evidence upload failed."}
-												</p>
+												<div className="text-sm text-destructive" role="alert">
+													<p>{t("sampling.workbench.evidence.uploadFailed")}</p>
+													{item.error && (
+														<>
+															<p>{t("sampling.raw.errorDetails")}</p>
+															<pre className="whitespace-pre-wrap">{item.error}</pre>
+														</>
+													)}
+												</div>
 											)}
 											{artifact && (
 												<div className="rounded bg-muted/40 p-2 text-xs">
-													<p className="font-medium text-emerald-700 dark:text-emerald-400">Upload verified</p>
+													<p className="font-medium text-emerald-700 dark:text-emerald-400">
+														{t("sampling.workbench.evidence.verified")}
+													</p>
 													<p className="mt-1 break-all font-mono text-muted-foreground">SHA-256 {artifact.sha256}</p>
 												</div>
 											)}
-											{item.error && item.state === "ready" && <p className="text-sm text-destructive">{item.error}</p>}
+											{item.error && item.state === "ready" && (
+												<div className="text-sm text-destructive">
+													<p>{t("sampling.raw.errorDetails")}</p>
+													<pre className="whitespace-pre-wrap">{item.error}</pre>
+												</div>
+											)}
 										</div>
 									);
 								})}
@@ -776,8 +890,16 @@ export function SamplingTaskWorkbench({
 				{error && (
 					<Alert variant="destructive">
 						<AlertTriangle />
-						<AlertTitle>Action failed</AlertTitle>
-						<AlertDescription>{error}</AlertDescription>
+						<AlertTitle>{t("sampling.workbench.actionFailed")}</AlertTitle>
+						<AlertDescription>
+							<p>{error.summary}</p>
+							{error.detail && (
+								<>
+									<p>{t("sampling.raw.errorDetails")}</p>
+									<pre className="whitespace-pre-wrap">{error.detail}</pre>
+								</>
+							)}
+						</AlertDescription>
 					</Alert>
 				)}
 
@@ -790,39 +912,41 @@ export function SamplingTaskWorkbench({
 								disabled={releasing || submitting || evidenceOperationPending}
 							>
 								{releasing ? <Loader2 className="animate-spin" /> : <RotateCcw />}
-								Release to queue
+								{t("sampling.workbench.release")}
 							</Button>
 						)}
 						<Dialog open={failureOpen} onOpenChange={setFailureOpen}>
 							<DialogTrigger asChild>
 								<Button variant="destructive" disabled={submitting || evidenceOperationPending}>
-									{isHumanTakeover ? "Confirm terminal failure" : "Report failure"}
+									{t(isHumanTakeover ? "sampling.workbench.failure.terminal" : "sampling.workbench.failure.report")}
 								</Button>
 							</DialogTrigger>
 							<DialogContent>
 								<DialogHeader>
-									<DialogTitle>{isHumanTakeover ? "Confirm terminal failure" : "Report task failure"}</DialogTitle>
+									<DialogTitle>
+										{t(
+											isHumanTakeover ? "sampling.workbench.failure.terminal" : "sampling.workbench.failure.taskTitle",
+										)}
+									</DialogTitle>
 									<DialogDescription>
-										Record a terminal failure that remains in the frozen delivery denominator and lowers success
-										coverage. It is excluded from the Yonaris visibility denominator and is never counted as a brand
-										non-mention.{" "}
+										{t("sampling.workbench.failure.description")}{" "}
 										{requiresSameSessionRecovery
-											? "Only use this when the retained Runner session cannot recover the original answer."
-											: "For temporary blockers, release the task instead."}
+											? t("sampling.workbench.failure.retainedOnly")
+											: t("sampling.workbench.failure.temporary")}
 									</DialogDescription>
 								</DialogHeader>
 								<div className="space-y-4">
 									<div className="space-y-2">
-										<Label htmlFor="sampling-failure-code">Error code</Label>
+										<Label htmlFor="sampling-failure-code">{t("sampling.workbench.failure.errorCode")}</Label>
 										<Input
 											id="sampling-failure-code"
 											value={failureCode}
 											onChange={(event) => setFailureCode(event.target.value)}
-											placeholder="Optional"
+											placeholder={t("sampling.workbench.optional")}
 										/>
 									</div>
 									<div className="space-y-2">
-										<Label htmlFor="sampling-failure-message">What happened?</Label>
+										<Label htmlFor="sampling-failure-message">{t("sampling.workbench.failure.whatHappened")}</Label>
 										<Textarea
 											id="sampling-failure-message"
 											value={failureMessage}
@@ -833,7 +957,7 @@ export function SamplingTaskWorkbench({
 								</div>
 								<DialogFooter>
 									<Button variant="outline" onClick={() => setFailureOpen(false)} disabled={reportingFailure}>
-										Cancel
+										{t("sampling.workbench.failure.cancel")}
 									</Button>
 									<Button
 										variant="destructive"
@@ -841,7 +965,7 @@ export function SamplingTaskWorkbench({
 										disabled={reportingFailure || !failureMessage.trim()}
 									>
 										{reportingFailure && <Loader2 className="animate-spin" />}{" "}
-										{isHumanTakeover ? "Confirm failure" : "Report failure"}
+										{t(isHumanTakeover ? "sampling.workbench.failure.confirm" : "sampling.workbench.failure.submit")}
 									</Button>
 								</DialogFooter>
 							</DialogContent>
@@ -854,7 +978,7 @@ export function SamplingTaskWorkbench({
 							data-testid="sampling-submit-observation"
 						>
 							{submitting ? <Loader2 className="animate-spin" /> : <Send />}
-							{isHumanTakeover ? "Submit recovered observation" : "Submit observation"}
+							{t(isHumanTakeover ? "sampling.workbench.submitRecovered" : "sampling.workbench.submit")}
 						</Button>
 					)}
 				</div>
@@ -863,56 +987,88 @@ export function SamplingTaskWorkbench({
 			<aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Frozen protocol</CardTitle>
+						<CardTitle className="text-base">{t("sampling.workbench.protocol.title")}</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-3 text-sm">
 						<div>
-							<p className="text-xs text-muted-foreground">Market / locale</p>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.marketLocale")}</p>
 							<p>
 								{task.market} / {task.locale}
 							</p>
 						</div>
 						<div>
-							<p className="text-xs text-muted-foreground">Timezone</p>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.timezone")}</p>
 							<p>{task.timezone}</p>
 						</div>
 						<div>
-							<p className="text-xs text-muted-foreground">Measurement window</p>
-							<p>{new Date(task.measurementWindowStartsAt).toLocaleString()}</p>
-							<p>{new Date(task.measurementWindowEndsAt).toLocaleString()}</p>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.window")}</p>
+							<p>
+								{formatDate(new Date(task.measurementWindowStartsAt), {
+									timeZone: task.timezone,
+									dateStyle: "medium",
+									timeStyle: "medium",
+								})}
+							</p>
+							<p>
+								{formatDate(new Date(task.measurementWindowEndsAt), {
+									timeZone: task.timezone,
+									dateStyle: "medium",
+									timeStyle: "medium",
+								})}
+							</p>
 						</div>
 						<Separator />
 						<div>
-							<p className="text-xs text-muted-foreground">Session</p>
-							<Badge variant="outline" className="capitalize">
-								{formatRequirement(task.sessionRequirement)}
-							</Badge>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.session")}</p>
+							<Badge variant="outline">{t(SESSION_LABELS[task.sessionRequirement])}</Badge>
 						</div>
 						<div>
-							<p className="text-xs text-muted-foreground">Search</p>
-							<Badge variant="outline" className="capitalize">
-								{formatRequirement(task.searchRequirement)}
-							</Badge>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.search")}</p>
+							<Badge variant="outline">{t(SEARCH_LABELS[task.searchRequirement])}</Badge>
 						</div>
 						<div>
-							<p className="text-xs text-muted-foreground">Evaluation role</p>
-							<Badge variant="outline" className="capitalize">
-								{task.evaluationRole}
-							</Badge>
+							<p className="text-xs text-muted-foreground">{t("sampling.workbench.protocol.evaluation")}</p>
+							<Badge variant="outline">{t(EVALUATION_LABELS[task.evaluationRole])}</Badge>
+						</div>
+						<Separator />
+						<div className="space-y-2">
+							<p className="text-xs font-medium text-muted-foreground">{t("sampling.raw.identifiers")}</p>
+							<RawIdentifier label={t("sampling.workbench.protocol.taskId")} value={task.id} />
+							<RawIdentifier label={t("sampling.workbench.protocol.batchId")} value={task.batchId} />
+							<RawIdentifier label={t("sampling.workbench.protocol.promptId")} value={task.promptId} />
+							<RawIdentifier label={t("sampling.workbench.protocol.scopeId")} value={task.scopeId} />
+							<RawIdentifier label={t("sampling.workbench.protocol.surfaceKey")} value={task.surfaceTargetKey} />
+							<RawIdentifier label={t("sampling.workbench.protocol.captureKey")} value={task.captureRouteKey} />
+							<RawIdentifier label={t("sampling.workbench.protocol.modelKey")} value={task.model} />
 						</div>
 					</CardContent>
 				</Card>
 				<Card>
 					<CardHeader>
-						<CardTitle className="text-base">Claim lease</CardTitle>
+						<CardTitle className="text-base">{t("sampling.workbench.lease.title")}</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-2 text-sm">
-						<p>Generation {lease.leaseGeneration}</p>
-						<p className="text-muted-foreground">Heartbeat every 60 seconds · expires {leaseExpiry}</p>
-						{heartbeatError && <p className="text-destructive">{heartbeatError}</p>}
+						<p>{t("sampling.workbench.lease.generation", { generation: lease.leaseGeneration })}</p>
+						<p className="text-muted-foreground">{t("sampling.workbench.lease.heartbeat", { time: leaseExpiry })}</p>
+						{heartbeatError && (
+							<div className="text-destructive">
+								<p>{t("sampling.task.heartbeatError")}</p>
+								<p>{t("sampling.raw.errorDetails")}</p>
+								<pre className="whitespace-pre-wrap">{heartbeatError}</pre>
+							</div>
+						)}
 					</CardContent>
 				</Card>
 			</aside>
+		</div>
+	);
+}
+
+function RawIdentifier({ label, value }: { label: string; value: string }) {
+	return (
+		<div>
+			<p className="text-xs text-muted-foreground">{label}</p>
+			<code className="block break-all text-xs">{value}</code>
 		</div>
 	);
 }

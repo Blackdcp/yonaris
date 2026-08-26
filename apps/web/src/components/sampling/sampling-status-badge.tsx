@@ -1,20 +1,23 @@
 import { Badge } from "@workspace/ui/components/badge";
+import type { MessageId } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
 import type { SamplingBatchStatus, SamplingExecutionMode, SamplingResultStatus, SamplingTaskStatus } from "./types";
 
-const STATUS_LABELS: Record<SamplingBatchStatus | SamplingTaskStatus, string> = {
-	draft: "Draft",
-	frozen: "Ready",
-	in_progress: "In progress",
-	completed: "Completed",
-	planned: "Planned",
-	available: "Available",
-	claimed: "Claimed",
-	succeeded: "Succeeded",
-	failed: "Failed",
-	cancelled: "Cancelled",
+const STATUS_LABELS: Record<SamplingBatchStatus | SamplingTaskStatus, MessageId> = {
+	draft: "sampling.status.draft",
+	frozen: "sampling.status.frozen",
+	in_progress: "sampling.status.inProgress",
+	completed: "sampling.status.completed",
+	planned: "sampling.status.planned",
+	available: "sampling.status.available",
+	claimed: "sampling.status.claimed",
+	succeeded: "sampling.status.succeeded",
+	failed: "sampling.status.failed",
+	cancelled: "sampling.status.cancelled",
 };
 
 export function SamplingStatusBadge({ status }: { status: SamplingBatchStatus | SamplingTaskStatus }) {
+	const { t } = useI18n();
 	const variant =
 		status === "failed" || status === "cancelled"
 			? "destructive"
@@ -26,7 +29,7 @@ export function SamplingStatusBadge({ status }: { status: SamplingBatchStatus | 
 			variant={variant}
 			className={status === "claimed" || status === "in_progress" ? "bg-amber-100 text-amber-800" : undefined}
 		>
-			{STATUS_LABELS[status]}
+			{t(STATUS_LABELS[status])}
 		</Badge>
 	);
 }
@@ -38,12 +41,23 @@ export function SamplingResultBadge({
 	executionMode: SamplingExecutionMode;
 	resultStatus?: SamplingResultStatus;
 }) {
-	if (executionMode === "manual") return <span className="font-medium text-muted-foreground">Manual</span>;
-	if (!resultStatus) return <span className="font-medium text-muted-foreground">Not finalized</span>;
+	const { t } = useI18n();
+	if (executionMode === "manual") {
+		return <span className="font-medium text-muted-foreground">{t("sampling.result.manual")}</span>;
+	}
+	if (!resultStatus) {
+		return <span className="font-medium text-muted-foreground">{t("sampling.result.notFinalized")}</span>;
+	}
 
 	return (
 		<Badge variant={resultStatus === "final" ? "default" : resultStatus === "incomplete" ? "destructive" : "secondary"}>
-			{resultStatus === "final" ? "Final" : resultStatus === "incomplete" ? "Incomplete" : "Provisional"}
+			{t(
+				resultStatus === "final"
+					? "sampling.result.final"
+					: resultStatus === "incomplete"
+						? "sampling.result.incomplete"
+						: "sampling.result.provisional",
+			)}
 		</Badge>
 	);
 }

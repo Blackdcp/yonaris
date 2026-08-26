@@ -28,7 +28,9 @@ import type {
 	SamplingHumanQueue,
 	SamplingRunNowInput,
 } from "@/components/sampling/types";
-import { getAppName } from "@/lib/route-head";
+import { type MessageId, translate } from "@/i18n/catalog";
+import { useI18n } from "@/i18n/provider";
+import { buildTitle, getAppName } from "@/lib/route-head";
 import { listBrowserRunnerDevicesFn } from "@/server/browser-runner-devices";
 import { listOverseasRunCohortsFn, runOverseasNowFn } from "@/server/overseas-run-now";
 import {
@@ -45,6 +47,13 @@ import {
 
 const PAGE_SIZE = 20;
 const BATCH_STATUSES: SamplingBatchStatus[] = ["draft", "frozen", "in_progress", "completed", "cancelled"];
+const BATCH_STATUS_LABELS: Record<SamplingBatchStatus, MessageId> = {
+	draft: "sampling.status.draft",
+	frozen: "sampling.status.frozen",
+	in_progress: "sampling.status.inProgress",
+	completed: "sampling.status.completed",
+	cancelled: "sampling.status.cancelled",
+};
 
 type SamplingSearch = {
 	brand?: string;
@@ -52,6 +61,11 @@ type SamplingSearch = {
 	status?: SamplingBatchStatus;
 	page?: number;
 };
+
+function rawErrorDetail(error: unknown): string | null {
+	if (error instanceof Error) return error.message;
+	return typeof error === "string" ? error : null;
+}
 
 function validateSearch(search: Record<string, unknown>): SamplingSearch {
 	const pageValue = typeof search.page === "number" ? search.page : Number(search.page);
@@ -69,10 +83,11 @@ export const Route = createFileRoute("/_authed/admin/sampling/")({
 	validateSearch,
 	head: ({ match }) => {
 		const appName = getAppName(match);
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
-				{ title: `Sampling Tasks · ${appName}` },
-				{ name: "description", content: "Create and execute auditable consumer-surface sampling batches." },
+				{ title: buildTitle(translate(uiLanguage, "sampling.queue.head.title"), { appName }) },
+				{ name: "description", content: translate(uiLanguage, "sampling.queue.head.description") },
 			],
 		};
 	},
@@ -80,12 +95,13 @@ export const Route = createFileRoute("/_authed/admin/sampling/")({
 });
 
 function SamplingQueuePage() {
+	const { t } = useI18n();
 	const search = Route.useSearch();
 	const navigate = useNavigate();
 	const page = search.page ?? 1;
 	const selectedBrandId = search.brand;
 	const [actingBatchId, setActingBatchId] = useState<string | null>(null);
-	const [actionError, setActionError] = useState<string | null>(null);
+	const [actionError, setActionError] = useState<{ summary: string; detail?: string } | null>(null);
 
 	const contextQuery = useQuery({
 		queryKey: ["admin", "sampling", "context", search.brand ?? "all"],
@@ -242,15 +258,17 @@ function SamplingQueuePage() {
 	};
 
 	const cancelBatch = async (batch: SamplingBatchView) => {
-		if (!window.confirm(`Cancel sampling batch “${batch.name}”? Claimed and unfinished tasks will be cancelled.`))
-			return;
+		if (!window.confirm(t("sampling.queue.cancelConfirm", { batchName: batch.name }))) return;
 		setActionError(null);
 		setActingBatchId(batch.id);
 		try {
 			await cancelSamplingBatchFn({ data: { brandId: batch.brandId, batchId: batch.id } });
 			await listQuery.refetch();
 		} catch (caught) {
-			setActionError(caught instanceof Error ? caught.message : "Failed to cancel this sampling batch.");
+			setActionError({
+				summary: t("sampling.queue.cancelError"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setActingBatchId(null);
 		}
@@ -264,7 +282,7 @@ function SamplingQueuePage() {
 				data: { brandId: batch.brandId, batchId: batch.id, ...(queue ? { queue } : {}) },
 			});
 			if (!claimed) {
-				setActionError("No available task remains in this batch. The queue may have changed since the last refresh.");
+				setActionError({ summary: t("sampling.queue.noTask") });
 				await listQuery.refetch();
 				return;
 			}
@@ -281,7 +299,10 @@ function SamplingQueuePage() {
 				search: { brand: batch.brandId },
 			});
 		} catch (caught) {
-			setActionError(caught instanceof Error ? caught.message : "Failed to claim a sampling task.");
+			setActionError({
+				summary: t("sampling.queue.claimError"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setActingBatchId(null);
 		}
@@ -294,16 +315,17 @@ function SamplingQueuePage() {
 			await startSamplingBatchAutomationFn({ data: { brandId: batch.brandId, batchId: batch.id } });
 			await listQuery.refetch();
 		} catch (caught) {
-			setActionError(caught instanceof Error ? caught.message : "Failed to start Browser Runner for this batch.");
+			setActionError({
+				summary: t("sampling.queue.startError"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setActingBatchId(null);
 		}
 	};
 
 	const finalizeNeedsHuman = async (batch: SamplingBatchView) => {
-		const reason = window.prompt(
-			"Explain why these unresolved Browser Runner tasks cannot be recovered. They will become technical failures: delivery coverage will decrease, but Yonaris Visibility will not count them as brand-not-mentioned.",
-		);
+		const reason = window.prompt(t("sampling.queue.finalizePrompt"));
 		if (!reason?.trim()) return;
 		setActionError(null);
 		setActingBatchId(batch.id);
@@ -313,7 +335,10 @@ function SamplingQueuePage() {
 			});
 			await listQuery.refetch();
 		} catch (caught) {
-			setActionError(caught instanceof Error ? caught.message : "Failed to finalize unresolved Browser Runner tasks.");
+			setActionError({
+				summary: t("sampling.queue.finalizeError"),
+				detail: caught instanceof Error ? caught.message : undefined,
+			});
 		} finally {
 			setActingBatchId(null);
 		}
@@ -356,16 +381,14 @@ function SamplingQueuePage() {
 		<div className="space-y-6">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Sampling Tasks</h1>
-					<p className="mt-1 text-muted-foreground">
-						Run clean-session consumer-surface samples against frozen delivery manifests.
-					</p>
+					<h1 className="text-3xl font-bold tracking-tight">{t("sampling.queue.title")}</h1>
+					<p className="mt-1 text-muted-foreground">{t("sampling.queue.description")}</p>
 				</div>
 				{context && (
 					<div className="flex flex-wrap gap-2">
 						<Button asChild variant="outline">
 							<Link to="/admin/sampling/devices">
-								<Laptop /> Local devices
+								<Laptop /> {t("sampling.queue.localDevices")}
 							</Link>
 						</Button>
 						<SamplingScopeProvisionDialog context={context} onProvision={provisionScope} />
@@ -397,34 +420,36 @@ function SamplingQueuePage() {
 			{context?.selectedBrand && samplingScopes.length === 0 && (
 				<Alert>
 					<AlertTriangle />
-					<AlertTitle>No delivery-safe sampling scope</AlertTitle>
-					<AlertDescription>
-						Provision a manual-only scope with an explicit market, locale, timezone, and fixed scored or observation
-						pool before creating a batch. Existing legacy ZZ/und scopes are intentionally not eligible.
-					</AlertDescription>
+					<AlertTitle>{t("sampling.queue.noSafeScope")}</AlertTitle>
+					<AlertDescription>{t("sampling.queue.noSafeScopeDescription")}</AlertDescription>
 				</Alert>
 			)}
 
 			{context?.browserRunnerEnabled && (
 				<Alert>
 					<Bot />
-					<AlertTitle>Local Browser Runner is administrator-started</AlertTitle>
-					<AlertDescription>
-						Run now creates and starts one batch. Paired Windows or macOS Chrome devices pick it up when online; no
-						recurring or scheduled execution is created.
-					</AlertDescription>
+					<AlertTitle>{t("sampling.queue.runnerTitle")}</AlertTitle>
+					<AlertDescription>{t("sampling.queue.runnerDescription")}</AlertDescription>
 				</Alert>
 			)}
 
 			<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-				<SummaryCard title="Automated completed (page)" value={visibleTotals.automatedCompleted} icon={<Bot />} />
-				<SummaryCard title="Needs human (page)" value={visibleTotals.needsHuman} icon={<UserRoundCheck />} />
 				<SummaryCard
-					title="Successful / frozen (page)"
+					title={t("sampling.queue.summary.automated")}
+					value={visibleTotals.automatedCompleted}
+					icon={<Bot />}
+				/>
+				<SummaryCard
+					title={t("sampling.queue.summary.needsHuman")}
+					value={visibleTotals.needsHuman}
+					icon={<UserRoundCheck />}
+				/>
+				<SummaryCard
+					title={t("sampling.queue.summary.successful")}
 					value={`${visibleTotals.succeeded}/${visibleTotals.total}`}
 					icon={<CheckCircle2 />}
 				/>
-				<SummaryCard title="Terminal failures (page)" value={visibleTotals.failed} icon={<XCircle />} />
+				<SummaryCard title={t("sampling.queue.summary.failures")} value={visibleTotals.failed} icon={<XCircle />} />
 			</div>
 
 			<Card>
@@ -434,7 +459,7 @@ function SamplingQueuePage() {
 						onValueChange={(brand) => setSearch({ brand, scope: undefined, page: undefined })}
 					>
 						<SelectTrigger className="w-full sm:w-56">
-							<SelectValue placeholder="Select brand" />
+							<SelectValue placeholder={t("sampling.queue.filter.brand")} />
 						</SelectTrigger>
 						<SelectContent>
 							{context?.brands.map((brand) => (
@@ -450,10 +475,10 @@ function SamplingQueuePage() {
 						disabled={!search.brand}
 					>
 						<SelectTrigger className="w-full sm:w-64">
-							<SelectValue placeholder="All manual scopes" />
+							<SelectValue placeholder={t("sampling.queue.filter.scopes")} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All manual scopes</SelectItem>
+							<SelectItem value="all">{t("sampling.queue.filter.scopes")}</SelectItem>
 							{manualScopes.map((scope) => (
 								<SelectItem key={scope.id} value={scope.id}>
 									{scope.name} · {scope.market}/{scope.locale}
@@ -468,13 +493,13 @@ function SamplingQueuePage() {
 						}
 					>
 						<SelectTrigger className="w-full sm:w-44">
-							<SelectValue placeholder="All statuses" />
+							<SelectValue placeholder={t("sampling.queue.filter.statuses")} />
 						</SelectTrigger>
 						<SelectContent>
-							<SelectItem value="all">All statuses</SelectItem>
+							<SelectItem value="all">{t("sampling.queue.filter.statuses")}</SelectItem>
 							{BATCH_STATUSES.map((status) => (
-								<SelectItem key={status} value={status} className="capitalize">
-									{status.replaceAll("_", " ")}
+								<SelectItem key={status} value={status}>
+									{t(BATCH_STATUS_LABELS[status])}
 								</SelectItem>
 							))}
 						</SelectContent>
@@ -485,13 +510,36 @@ function SamplingQueuePage() {
 			{actionError && (
 				<Alert variant="destructive">
 					<AlertTriangle />
-					<AlertTitle>Queue action failed</AlertTitle>
-					<AlertDescription>{actionError}</AlertDescription>
+					<AlertTitle>{t("sampling.queue.actionError")}</AlertTitle>
+					<AlertDescription>
+						<p>{actionError.summary}</p>
+						{actionError.detail && (
+							<>
+								<p>{t("sampling.raw.errorDetails")}</p>
+								<pre className="whitespace-pre-wrap">{actionError.detail}</pre>
+							</>
+						)}
+					</AlertDescription>
+				</Alert>
+			)}
+
+			{(devicesQuery.isLoading || overseasQuery.isLoading) && (
+				<p className="text-sm text-muted-foreground">{t("sampling.queue.supportLoading")}</p>
+			)}
+			{(devicesQuery.isError || overseasQuery.isError) && (
+				<Alert variant="destructive">
+					<AlertTriangle />
+					<AlertTitle>{t("sampling.queue.supportError")}</AlertTitle>
+					<AlertDescription>
+						<p>{t("sampling.raw.errorDetails")}</p>
+						<pre className="whitespace-pre-wrap">{rawErrorDetail(devicesQuery.error ?? overseasQuery.error)}</pre>
+					</AlertDescription>
 				</Alert>
 			)}
 
 			{contextQuery.isLoading || listQuery.isLoading ? (
 				<div className="space-y-3">
+					<p className="sr-only">{t("sampling.queue.loading")}</p>
 					{[0, 1, 2].map((item) => (
 						<Skeleton key={item} className="h-20 w-full" />
 					))}
@@ -499,8 +547,11 @@ function SamplingQueuePage() {
 			) : contextQuery.isError || listQuery.isError ? (
 				<Alert variant="destructive">
 					<AlertTriangle />
-					<AlertTitle>Could not load sampling work</AlertTitle>
-					<AlertDescription>{String(contextQuery.error ?? listQuery.error)}</AlertDescription>
+					<AlertTitle>{t("sampling.queue.loadError")}</AlertTitle>
+					<AlertDescription>
+						<p>{t("sampling.raw.errorDetails")}</p>
+						<pre className="whitespace-pre-wrap">{rawErrorDetail(contextQuery.error ?? listQuery.error)}</pre>
+					</AlertDescription>
 				</Alert>
 			) : (
 				<SamplingBatchList
@@ -524,6 +575,7 @@ function SamplingQueuePage() {
 }
 
 function SummaryCard({ title, value, icon }: { title: string; value: number | string; icon: React.ReactNode }) {
+	const { formatNumber } = useI18n();
 	return (
 		<Card className="gap-2">
 			<CardHeader className="flex flex-row items-center justify-between pb-0">
@@ -531,9 +583,7 @@ function SummaryCard({ title, value, icon }: { title: string; value: number | st
 				<span className="text-muted-foreground [&>svg]:size-4">{icon}</span>
 			</CardHeader>
 			<CardContent>
-				<p className="text-2xl font-semibold tabular-nums">
-					{typeof value === "number" ? value.toLocaleString() : value}
-				</p>
+				<p className="text-2xl font-semibold tabular-nums">{typeof value === "number" ? formatNumber(value) : value}</p>
 			</CardContent>
 		</Card>
 	);

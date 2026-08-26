@@ -116,4 +116,23 @@ describe("AppSidebar workspace separation", () => {
 		expect(markup).toContain('href="/admin"');
 		expect(markup).not.toContain("Customer access");
 	});
+
+	it("keeps every Chinese administration tool admin-only while report-only access gains nothing", () => {
+		const adminMarkup = renderSidebar(
+			{ isAdmin: true, hasReportAccess: true, adminOnly: true, brand: onboardedBrand },
+			"zh-CN",
+		);
+		const reportOnlyMarkup = renderSidebar(
+			{ isAdmin: false, hasReportAccess: true, adminOnly: true, brand: onboardedBrand },
+			"zh-CN",
+		);
+
+		for (const label of ["客户", "客户访问", "自动化", "抽样运营", "供应商工具"]) {
+			expect(adminMarkup).toContain(label);
+			expect(reportOnlyMarkup).not.toContain(label);
+		}
+		expect(reportOnlyMarkup).toContain("报表");
+		expect(reportOnlyMarkup).not.toContain('href="/admin/sampling"');
+		expect(reportOnlyMarkup).not.toContain('href="/admin/tools"');
+	});
 });
