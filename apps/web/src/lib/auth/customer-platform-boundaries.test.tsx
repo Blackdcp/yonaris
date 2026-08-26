@@ -63,6 +63,7 @@ vi.mock("@/lib/auth/helpers", () => ({
 vi.mock("@/lib/auth/resolve-session", () => ({ resolveAuthSession: mocks.resolveAuthSession }));
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { I18nProvider } from "@/i18n/provider";
 import { type CustomerProgramAccessStore, resolveCustomerProgramAccess } from "@/lib/auth/program-access";
 import { evaluateCustomerProgramProvisionAccess } from "@/lib/auth/program-policies";
 import { Route as AdminRoute } from "@/routes/_authed/admin";
@@ -73,7 +74,11 @@ const onboardedBrand = { id: "stepfun", name: "StepFun", onboarded: true };
 
 describe("fixed customer and platform workspaces", () => {
 	it("keeps a platform administrator in the fixed customer shell when viewing a customer workspace", () => {
-		const markup = renderToStaticMarkup(<AppSidebar isAdmin hasReportAccess canManageBrand brand={onboardedBrand} />);
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="en">
+				<AppSidebar isAdmin hasReportAccess canManageBrand brand={onboardedBrand} />
+			</I18nProvider>,
+		);
 
 		expect(markup).toContain("Dashboard");
 		expect(markup).toContain("Programs");
@@ -87,7 +92,11 @@ describe("fixed customer and platform workspaces", () => {
 	});
 
 	it("keeps customer navigation out of the fixed platform shell", () => {
-		const markup = renderToStaticMarkup(<AppSidebar isAdmin hasReportAccess adminOnly brand={onboardedBrand} />);
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="en">
+				<AppSidebar isAdmin hasReportAccess adminOnly brand={onboardedBrand} />
+			</I18nProvider>,
+		);
 
 		expect(markup).toContain("Platform administration");
 		expect(markup).toContain("Sampling operations");
