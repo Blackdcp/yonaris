@@ -97,7 +97,7 @@ curl_origin() {
 
 check_apex_and_portal() {
 	local state_dir="$1"
-	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET 'data-generation="zero-one"' &&
+	curl_origin yonaris.com / 200 "$state_dir/apex.html" GET 'data-edition="global-en"' &&
 		curl_origin portal.yonaris.com / 200 "$state_dir/portal.html"
 }
 
@@ -105,7 +105,7 @@ full_health() {
 	local state_dir="$1"
 	local response="$state_dir/health-response"
 
-	curl_origin yonaris.com / 200 "$response" GET 'data-generation="zero-one"' || return 1
+	curl_origin yonaris.com / 200 "$response" GET 'data-generation="site-06"' || return 1
 	grep -Fq 'data-edition="global-en"' "$response" || return 1
 
 	local path

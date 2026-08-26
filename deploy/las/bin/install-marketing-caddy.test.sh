@@ -101,7 +101,7 @@ if [[ -n "${CADDY_TEST_FAIL_HEALTH_PATH:-}" && "$url" == *"$CADDY_TEST_FAIL_HEAL
 	exit 0
 fi
 status=200
-body='Yonaris data-generation="zero-one" data-edition="global-en"'
+body="Yonaris data-generation=\"${CADDY_TEST_GENERATION:-site-06}\" data-edition=\"global-en\""
 case "$url" in
 	*/platform\?*) status=308; body='' ;;
 	*/resources | */research | */zh/research | */agent/research | */zh/agent/research | */status | */brand | */og/status.png | */recordranks-logo.svg | */llms.mdx/site/* | */api/repo-activity/refresh | */api) status=404; body='' ;;
@@ -176,6 +176,7 @@ run_install() {
 		CADDY_TEST_FAIL_RELOAD_ONCE="${CADDY_TEST_FAIL_RELOAD_ONCE:-0}" \
 		CADDY_TEST_FAIL_RELOAD_ALWAYS="${CADDY_TEST_FAIL_RELOAD_ALWAYS:-0}" \
 		CADDY_TEST_FAIL_HEALTH_PATH="${CADDY_TEST_FAIL_HEALTH_PATH:-}" \
+		CADDY_TEST_GENERATION="${CADDY_TEST_GENERATION:-site-06}" \
 		MARKETING_HEALTH_RELOAD_ATTEMPTS=1 \
 		bash "$INSTALLER" --inside-host install "$REDIRECT" "$V1" "$V2" "$FINAL" "$TARGET" "$BACKUP_OUT" "$META_OUT" - "$(id -u)" "$(id -g)"
 }
@@ -190,6 +191,7 @@ run_restore() {
 		CADDY_TEST_CURL_LOG="$CURL_LOG" \
 		CADDY_TEST_RELOAD_COUNT="$RELOAD_COUNT" \
 		CADDY_TEST_FAIL_RELOAD_ALWAYS="${CADDY_TEST_FAIL_RELOAD_ALWAYS:-0}" \
+		CADDY_TEST_GENERATION="${CADDY_TEST_GENERATION:-site-06}" \
 		MARKETING_HEALTH_RELOAD_ATTEMPTS=1 \
 		bash "$INSTALLER" --inside-host restore "$backup" "$TARGET" "$expected_sha_file" "$expected_backup_file" "$REDIRECT" "$V1" "$V2" "$FINAL"
 }
@@ -342,7 +344,9 @@ new_case explicit_restore
 write_full_config "$FINAL" "$TARGET"
 write_full_config "$V2" "$CASE_ROOT/Caddyfile.previous"
 printf '%s\n' "$(sha256sum "$TARGET" | cut -d' ' -f1)" >"$CASE_ROOT/expected-current-sha"
+CADDY_TEST_GENERATION=zero-one
 assert_status 0 "explicit restore accepts marker-bound current candidate" run_restore "$CASE_ROOT/Caddyfile.previous" "$CASE_ROOT/expected-current-sha"
+unset CADDY_TEST_GENERATION
 if cmp -s "$TARGET" "$CASE_ROOT/Caddyfile.previous" && grep -Fq 'https://yonaris.com/' "$CURL_LOG" && grep -Fq 'https://portal.yonaris.com/' "$CURL_LOG"; then pass "explicit restore installs full predecessor and verifies apex plus Portal"; else fail "explicit restore installs full predecessor and verifies apex plus Portal"; fi
 
 new_case restore_mismatch

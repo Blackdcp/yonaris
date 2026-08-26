@@ -70,6 +70,15 @@ test("release fixtures bind both deployed regional predecessors byte-for-byte", 
 	);
 });
 
+test("production health requires Site 06 while rollback health stays generation-neutral", () => {
+	assert.match(
+		caddyInstaller,
+		/check_apex_and_portal\(\)[\s\S]*?data-edition="global-en"[\s\S]*?full_health\(\)/u,
+	);
+	assert.match(caddyInstaller, /full_health\(\)[\s\S]*?data-generation="site-06"/u);
+	assert.doesNotMatch(caddyInstaller, /data-generation="zero-one"/u);
+});
+
 test("the exact image is tested directly and through pinned Caddy before its only push", () => {
 	ordered(
 		"Verify release fixtures",
