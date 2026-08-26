@@ -50,6 +50,10 @@ describe("auth schema postprocessing", () => {
 				'uiLanguageSupported: check("user_ui_language_supported", sql`${table.uiLanguage} IN (\'en\', \'zh-CN\')`),',
 			);
 			expect(first.output).toContain("Source of truth: Better Auth CLI output plus repository post-processing.");
+			expect(first.output).toContain(
+				'} from "drizzle-orm/pg-core";\n\nexport const user = pgTable(\n  "user",\n  {',
+			);
+			expect(first.output).not.toContain("drizzle-oexport");
 			expect(generator).toContain('node "$SCRIPT_DIR/postprocess-auth-schema.mjs" "$TMP_OUTPUT" "$OUTPUT"');
 	} finally {
 			first.cleanup();

@@ -30,9 +30,6 @@ if (userStart === -1) fail("expected user table anchor");
 const userEnd = schema.indexOf(userTableEnd, userStart);
 if (userEnd === -1) fail("expected user table terminator anchor");
 
-schema = schema.replace(drizzleImport, 'import { relations, sql } from "drizzle-orm";');
-schema = schema.replace(pgCoreImport, 'import {\n  check,\n  pgTable,');
-
 const userBody = schema.slice(userStart + userTableStart.length, userEnd).replaceAll("\n  ", "\n    ");
 const userTable = `export const user = pgTable(
   "user",
@@ -45,6 +42,8 @@ const userTable = `export const user = pgTable(
 
 `;
 schema = `${schema.slice(0, userStart)}${userTable}${schema.slice(userEnd + "\n});\n\n".length)}`;
+schema = schema.replace(drizzleImport, 'import { relations, sql } from "drizzle-orm";');
+schema = schema.replace(pgCoreImport, 'import {\n  check,\n  pgTable,');
 
 const header = `/**
  * Better-auth Drizzle schema — tables and relations.
