@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { Separator } from "@workspace/ui/components/separator";
 import type { ReactNode } from "react";
 import { BrandPaths } from "@/brand/brand-paths";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Logo } from "@/components/logo";
+import { useI18n } from "@/i18n/provider";
 
 interface FullPageCardProps {
 	title?: string;
@@ -23,24 +25,33 @@ export default function FullPageCard({
 	children = undefined,
 	showBackButton = false,
 	backButtonHref = "/app",
-	backButtonText = "Go Back",
+	backButtonText,
 	customBackButton,
 	className = "w-md",
 }: FullPageCardProps) {
-	const capabilities = ["Product Evidence", "Decision Context", "Answer Signals", "Market Learning"];
+	const { t } = useI18n();
+	const capabilities = [
+		t("fullPage.brand.productEvidence"),
+		t("fullPage.brand.decisionContext"),
+		t("fullPage.brand.answerSignals"),
+		t("fullPage.brand.marketLearning"),
+	];
 
 	return (
 		<div
 			data-slot="full-page-shell"
 			className="relative flex min-h-screen items-center justify-center overflow-hidden bg-muted/30 p-4"
 		>
+			<div className="absolute right-4 top-4 z-10">
+				<LanguageSwitcher />
+			</div>
 			<aside data-slot="full-page-brand" className="relative hidden overflow-hidden">
 				<BrandPaths />
 				<div data-slot="full-page-brand-header">
 					<Logo surface="dark" />
 				</div>
 				<div data-slot="full-page-brand-copy">
-					<h2 data-slot="full-page-brand-title">See yourself as the market does</h2>
+					<h2 data-slot="full-page-brand-title">{t("fullPage.brand.title")}</h2>
 					<div data-slot="full-page-brand-capabilities">
 						{capabilities.map((capability) => (
 							<span key={capability}>{capability}</span>
@@ -77,7 +88,7 @@ export default function FullPageCard({
 					) : showBackButton ? (
 						<div data-slot="full-page-back" className="flex justify-start">
 							<Button variant="ghost" size="sm" asChild>
-								<Link to={backButtonHref}>{backButtonText}</Link>
+								<Link to={backButtonHref}>{backButtonText ?? t("common.goBack")}</Link>
 							</Button>
 						</div>
 					) : null}

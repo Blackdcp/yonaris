@@ -3,10 +3,12 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import FullPageCard from "./components/full-page-card";
+import { useI18n } from "./i18n/provider";
 
 export function NotFound() {
+	const { t } = useI18n();
 	return (
-		<FullPageCard title="404 Not Found" subtitle="The page you're looking for doesn't exist." showBackButton={true} />
+		<FullPageCard title={t("error.notFound.title")} subtitle={t("error.notFound.subtitle")} showBackButton={true} />
 	);
 }
 
@@ -27,15 +29,12 @@ export function DefaultPendingComponent() {
 }
 
 export function DefaultErrorComponent({ error }: ErrorComponentProps) {
+	const { t } = useI18n();
 	useEffect(() => {
 		Sentry.captureException(error);
 	}, [error]);
 
 	return (
-		<FullPageCard
-			title="Something went wrong"
-			subtitle="An unexpected error occurred while loading this page."
-			showBackButton={true}
-		/>
+		<FullPageCard title={t("error.unexpected.title")} subtitle={t("error.unexpected.subtitle")} showBackButton={true} />
 	);
 }

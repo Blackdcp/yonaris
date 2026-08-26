@@ -54,9 +54,7 @@ describe("UI language resolution", () => {
 	});
 
 	it("maps Chinese browser preferences to simplified Chinese", () => {
-		expect(resolveUiLanguage({ saved: undefined, cookie: undefined, acceptLanguage: "zh-SG,zh;q=0.9" })).toBe(
-			"zh-CN",
-		);
+		expect(resolveUiLanguage({ saved: undefined, cookie: undefined, acceptLanguage: "zh-SG,zh;q=0.9" })).toBe("zh-CN");
 	});
 
 	it("uses English for unsupported browser preferences", () => {
@@ -84,5 +82,18 @@ describe("UI language write execution boundary", () => {
 		expect(mocks.eq).toHaveBeenCalledWith("user.id", "session-user");
 		expect(mocks.set).toHaveBeenCalledWith({ uiLanguage: "zh-CN" });
 		expect(mocks.validator?.shape).not.toHaveProperty("userId");
+	});
+
+	it("persists the cookie without a database write for an anonymous auth page", async () => {
+		mocks.resolveAuthSession.mockResolvedValue(null);
+
+		await setUiLanguageFn({ data: { uiLanguage: "zh-CN" } });
+
+		expect(mocks.update).not.toHaveBeenCalled();
+		expect(mocks.setCookie).toHaveBeenCalledWith(
+			"yonaris_ui_language",
+			"zh-CN",
+			expect.objectContaining({ path: "/", sameSite: "lax" }),
+		);
 	});
 });

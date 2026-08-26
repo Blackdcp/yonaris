@@ -13,12 +13,14 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { useState } from "react";
 import FullPageCard from "@/components/full-page-card";
+import { useI18n } from "@/i18n/provider";
 
 export const Route = createFileRoute("/auth/forgot-password")({
 	component: ForgotPasswordPage,
 });
 
 function ForgotPasswordPage() {
+	const { t } = useI18n();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const [email, setEmail] = useState("");
 	const [loading, setLoading] = useState(false);
@@ -43,13 +45,10 @@ function ForgotPasswordPage() {
 
 	if (submitted) {
 		return (
-			<FullPageCard
-				title="Check your email"
-				subtitle={`If an account exists for ${email}, a reset link is on its way.`}
-			>
+			<FullPageCard title={t("auth.forgot.checkEmail")} subtitle={t("auth.forgot.confirmation", { email })}>
 				<p className="text-center text-sm text-muted-foreground w-full">
 					<Link to="/auth/login" className="text-primary hover:underline font-medium">
-						Back to sign in
+						{t("auth.forgot.back")}
 					</Link>
 				</p>
 			</FullPageCard>
@@ -57,14 +56,14 @@ function ForgotPasswordPage() {
 	}
 
 	return (
-		<FullPageCard title="Reset your password" subtitle="Enter your email and we'll send you a reset link">
+		<FullPageCard title={t("auth.forgot.title")} subtitle={t("auth.forgot.subtitle")}>
 			<form onSubmit={handleSubmit} className="space-y-4 w-full">
 				<div className="space-y-2">
-					<Label htmlFor="email">Email</Label>
+					<Label htmlFor="email">{t("auth.field.email")}</Label>
 					<Input
 						id="email"
 						type="email"
-						placeholder="you@example.com"
+						placeholder={t("auth.field.emailPlaceholder")}
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 						required
@@ -73,12 +72,12 @@ function ForgotPasswordPage() {
 					/>
 				</div>
 				<Button type="submit" className="w-full" disabled={loading}>
-					{loading ? "Sending..." : "Send reset link"}
+					{loading ? t("auth.forgot.sending") : t("auth.forgot.send")}
 				</Button>
 			</form>
 			<p className="text-center text-sm text-muted-foreground pt-4">
 				<Link to="/auth/login" className="text-primary hover:underline font-medium">
-					Back to sign in
+					{t("auth.forgot.back")}
 				</Link>
 			</p>
 		</FullPageCard>

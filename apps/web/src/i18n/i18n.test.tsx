@@ -8,6 +8,21 @@ function WelcomeMessage() {
 	return <p>{t("common.welcomeName", { name: "Acme" })}</p>;
 }
 
+function LocalizedDocument({ locale }: { locale: "en" | "zh-CN" }) {
+	return (
+		<I18nProvider locale={locale}>
+			<html lang={locale}>
+				<head>
+					<title>{translate(locale, "root.meta.title", { appName: "Yonaris" })}</title>
+				</head>
+				<body>
+					<h1>{translate(locale, "auth.login.title")}</h1>
+				</body>
+			</html>
+		</I18nProvider>
+	);
+}
+
 describe("i18n catalog runtime", () => {
 	it("returns localized catalog messages", () => {
 		expect(translate("zh-CN", "common.loading")).toBe("加载中…");
@@ -37,5 +52,16 @@ describe("i18n catalog runtime", () => {
 		);
 
 		expect(markup).toContain("欢迎，Acme");
+	});
+
+	it.each([
+		["en", "Yonaris - AI answer evidence", "Sign in"],
+		["zh-CN", "Yonaris - AI 回答证据", "登录"],
+	] as const)("keeps the %s document language and localized shell copy in agreement", (locale, title, loginTitle) => {
+		const markup = renderToStaticMarkup(<LocalizedDocument locale={locale} />);
+
+		expect(markup).toContain(`<html lang="${locale}">`);
+		expect(markup).toContain(`<title>${title}</title>`);
+		expect(markup).toContain(`<h1>${loginTitle}</h1>`);
 	});
 });

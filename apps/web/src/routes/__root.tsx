@@ -5,12 +5,16 @@ import { NotFound } from "@/router-default-components";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import type { QueryClient } from "@tanstack/react-query";
 import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_THEME_COLOR } from "@workspace/config/constants";
+import type { UiLanguage } from "@workspace/config/language";
 import type { DeploymentMode } from "@workspace/config/types";
 import type { MissingEnvVar } from "@workspace/config/env";
 import { getClientConfig, getEnvValidationStateFn, type PublicClientConfig } from "@/server/config";
 import MissingEnvPage from "@/components/missing-env-page";
+import { translate } from "@/i18n/catalog";
+import { I18nProvider } from "@/i18n/provider";
 import queryDevtools from "@/integrations/tanstack-query/devtools";
 import { initPostHog } from "@/lib/posthog";
+import { getUiLanguageFn } from "@/server/ui-language";
 import appCss from "../styles.css?url";
 
 interface RouterContext {
@@ -21,22 +25,36 @@ interface RouterContext {
 		missing: MissingEnvVar[];
 		isValid: boolean;
 	};
+	uiLanguage: UiLanguage;
 }
 
-// Client-side cache for config data — avoids HTTP round-trips on every SPA navigation.
-// Server-side (SSR) always fetches fresh (cachedRootData is reset per request).
+// Client-only cache avoids HTTP round-trips on SPA navigation; SSR always resolves per request.
 let cachedRootData: {
 	clientConfig: PublicClientConfig;
 	envValidation: { mode: DeploymentMode; missing: MissingEnvVar[]; isValid: boolean };
-} | null = typeof window === "undefined" ? null : null;
+	uiLanguage: UiLanguage;
+} | null = null;
+
+export function rootHeadContent({ appName, uiLanguage }: { appName: string; uiLanguage: UiLanguage }) {
+	return {
+		title: translate(uiLanguage, "root.meta.title", { appName }),
+		description: translate(uiLanguage, "root.meta.description"),
+		ogLocale: uiLanguage === "zh-CN" ? "zh_CN" : "en_US",
+	};
+}
 
 export const Route = createRootRouteWithContext<RouterContext>()({
 	notFoundComponent: NotFound,
 	beforeLoad: async () => {
-		if (cachedRootData) return cachedRootData;
-		const [clientConfig, envValidation] = await Promise.all([getClientConfig(), getEnvValidationStateFn()]);
-		cachedRootData = { clientConfig, envValidation };
-		return cachedRootData;
+		if (typeof window !== "undefined" && cachedRootData) return cachedRootData;
+		const [clientConfig, envValidation, uiLanguage] = await Promise.all([
+			getClientConfig(),
+			getEnvValidationStateFn(),
+			getUiLanguageFn(),
+		]);
+		const rootData = { clientConfig, envValidation, uiLanguage };
+		if (typeof window !== "undefined") cachedRootData = rootData;
+		return rootData;
 	},
 	head: ({ match }) => {
 		const branding = match.context?.clientConfig?.branding;
@@ -59,11 +77,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 
 		const hasCustomIcon = Boolean(branding?.icon && branding.icon !== DEFAULT_APP_ICON);
 		const appName = branding?.name || DEFAULT_APP_NAME;
+		const uiLanguage = match.context?.uiLanguage ?? "en";
 		const themeColor = hasCustomIcon ? "#000000" : DEFAULT_THEME_COLOR;
 		const appUrl = branding?.url ? branding.url.replace(/\/$/, "") : undefined;
 
-		const title = `${appName} - AI answer evidence`;
-		const description = "Track and optimize your brand's visibility across AI models.";
+		const { title, description, ogLocale } = rootHeadContent({ appName, uiLanguage });
 		// Don't pass `title` to /api/og — the renderer already shows the brand
 		// (default logo or whitelabel icon + name), so a "Brand - AI answer evidence"
 		// title would render redundantly. Pages that override og:image can supply
@@ -88,7 +106,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 				{ name: "theme-color", content: themeColor },
 				{ name: "apple-mobile-web-app-title", content: appName },
 				{ property: "og:site_name", content: appName },
-				{ property: "og:locale", content: "en_US" },
+				{ property: "og:locale", content: ogLocale },
 				{ property: "og:title", content: title },
 				{ property: "og:description", content: description },
 				{ property: "og:image", content: ogImage },
@@ -128,8 +146,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 	component: RootComponent,
 });
 
-function RootComponent() {
-	const { envValidation, clientConfig } = Route.useRouteContext();
+export function RootComponent() {
+	const { envValidation, clientConfig, uiLanguage } = Route.useRouteContext();
 	const clarityProjectId = clientConfig?.analytics?.clarityProjectId;
 	const brandProfile = clientConfig?.mode === "whitelabel" ? "custom" : "yonaris";
 
@@ -142,12 +160,14 @@ function RootComponent() {
 
 	if (!envValidation.isValid) {
 		return (
-			<html lang="en">
+			<html lang={uiLanguage}>
 				<head>
 					<HeadContent />
 				</head>
 				<body data-brand={brandProfile} className="font-sans antialiased">
-					<MissingEnvPage mode={envValidation.mode} missing={envValidation.missing} />
+					<I18nProvider locale={uiLanguage}>
+						<MissingEnvPage mode={envValidation.mode} missing={envValidation.missing} />
+					</I18nProvider>
 					<Scripts />
 				</body>
 			</html>
@@ -155,14 +175,16 @@ function RootComponent() {
 	}
 
 	return (
-		<html lang="en">
+		<html lang={uiLanguage}>
 			<head>
 				{clarityProjectId && <ScriptOnce>{clarityQueueScript}</ScriptOnce>}
 				<HeadContent />
 			</head>
 			<body data-brand={brandProfile} className="font-sans antialiased">
-				<Outlet />
-				<TanStackDevtools plugins={[queryDevtools]} />
+				<I18nProvider locale={uiLanguage}>
+					<Outlet />
+					<TanStackDevtools plugins={[queryDevtools]} />
+				</I18nProvider>
 				<Scripts />
 			</body>
 		</html>

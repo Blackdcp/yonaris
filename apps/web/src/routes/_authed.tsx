@@ -5,7 +5,9 @@
  */
 import { useEffect, useRef } from "react";
 import { createFileRoute, Outlet, redirect, useRouteContext } from "@tanstack/react-router";
+import { isContentLanguage, type UiLanguage } from "@workspace/config/language";
 import { getSession } from "@/lib/auth/session";
+import { useI18n } from "@/i18n/provider";
 import { identifyUser, setPersonProperties } from "@/lib/posthog";
 import type { ClientConfig } from "@workspace/config/types";
 
@@ -25,12 +27,23 @@ export const Route = createFileRoute("/_authed")({
 	component: AuthedLayout,
 });
 
+export function savedLanguageRequiresReload(savedLanguage: unknown, currentLanguage: UiLanguage): boolean {
+	return isContentLanguage(savedLanguage) && savedLanguage !== currentLanguage;
+}
+
 function AuthedLayout() {
 	const context = useRouteContext({ strict: false }) as {
-		session?: { user: { id: string; name?: string; email?: string } } | null;
+		session?: { user: { id: string; name?: string; email?: string; uiLanguage?: unknown } } | null;
 		clientConfig?: ClientConfig;
 	};
+	const { locale } = useI18n();
 	const identifiedRef = useRef<string | null>(null);
+
+	useEffect(() => {
+		if (savedLanguageRequiresReload(context.session?.user.uiLanguage, locale)) {
+			window.location.reload();
+		}
+	}, [context.session?.user.uiLanguage, locale]);
 
 	useEffect(() => {
 		const user = context.session?.user;

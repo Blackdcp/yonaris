@@ -16,6 +16,8 @@ export const getRouter = () => {
 			clientConfig: undefined!,
 			// envValidation is provided by __root.tsx's beforeLoad
 			envValidation: undefined!,
+			// uiLanguage is provided by __root.tsx's beforeLoad before SSR.
+			uiLanguage: undefined!,
 		},
 		defaultPreload: "intent",
 		defaultNotFoundComponent: NotFound,

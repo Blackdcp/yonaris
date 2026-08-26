@@ -30,7 +30,12 @@ export function resolveUiLanguage({ saved, cookie, acceptLanguage }: UiLanguageR
 	const cookieLanguage = parseOptionalUiLanguage(cookie);
 	if (cookieLanguage) return cookieLanguage;
 
-	if (acceptLanguage?.toLowerCase().split(",").some((language) => language.trim().startsWith("zh"))) {
+	if (
+		acceptLanguage
+			?.toLowerCase()
+			.split(",")
+			.some((language) => language.trim().startsWith("zh"))
+	) {
 		return "zh-CN";
 	}
 
@@ -58,9 +63,9 @@ export const setUiLanguageFn = createServerFn({ method: "POST" })
 	.handler(async ({ data }): Promise<UiLanguage> => {
 		const uiLanguage = validateUiLanguageUpdate(data.uiLanguage);
 		const session = await resolveAuthSession(getRequestHeaders());
-		if (!session) throw new Error("Unauthorized: Authentication required");
-
-		await db.update(user).set({ uiLanguage }).where(eq(user.id, session.user.id));
+		if (session) {
+			await db.update(user).set({ uiLanguage }).where(eq(user.id, session.user.id));
+		}
 		setCookie(UI_LANGUAGE_COOKIE, uiLanguage, {
 			path: "/",
 			sameSite: "lax",

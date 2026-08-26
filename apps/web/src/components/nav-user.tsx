@@ -15,10 +15,13 @@ import {
 } from "@workspace/ui/components/dropdown-menu";
 import { useSidebar } from "@workspace/ui/components/sidebar";
 import { useAuth } from "@/hooks/use-auth";
+import { useI18n } from "@/i18n/provider";
 import { resetPostHog } from "@/lib/posthog";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export function NavUser() {
 	const { user } = useAuth();
+	const { t } = useI18n();
 	const { setOpenMobile } = useSidebar();
 	const { pathname } = useLocation();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
@@ -30,7 +33,7 @@ export function NavUser() {
 	if (!user) return null;
 
 	const isNameEmailSame = user.name?.trim().toLowerCase() === user.email?.trim().toLowerCase();
-	const displayName = user.name || user.email || "Account";
+	const displayName = user.name || user.email || t("nav.account.fallback");
 
 	return (
 		<div data-slot="header-user-menu">
@@ -38,6 +41,7 @@ export function NavUser() {
 				<DropdownMenuTrigger asChild>
 					<Button
 						variant="ghost"
+						aria-label={t("nav.account.menuLabel", { name: displayName })}
 						className="h-10 max-w-56 cursor-pointer gap-2 rounded-md px-2 data-[state=open]:bg-accent"
 					>
 						<Avatar className="size-7 rounded-md">
@@ -49,7 +53,7 @@ export function NavUser() {
 						<div className="hidden min-w-0 text-left leading-tight sm:grid">
 							<span className="truncate text-xs font-semibold">{displayName}</span>
 							<span className="truncate text-[10px] font-normal text-muted-foreground">
-								{isPlatformPage ? "Platform account" : "Customer workspace"}
+								{isPlatformPage ? t("nav.account.platform") : t("nav.account.customer")}
 							</span>
 						</div>
 						<IconSelector className="hidden size-3.5 text-muted-foreground sm:block" />
@@ -66,7 +70,7 @@ export function NavUser() {
 							</Avatar>
 							<div className="grid flex-1 text-left text-sm leading-tight">
 								<span className="truncate font-medium">{displayName}</span>
-								<span className="truncate text-xs">{isNameEmailSame ? "Your Account" : user.email}</span>
+								<span className="truncate text-xs">{isNameEmailSame ? t("nav.account.yours") : user.email}</span>
 							</div>
 						</div>
 					</DropdownMenuLabel>
@@ -76,7 +80,7 @@ export function NavUser() {
 							<DropdownMenuItem asChild className="cursor-pointer">
 								<Link to="/app" onClick={() => setOpenMobile(false)}>
 									<IconStatusChange />
-									Switch customer workspace
+									{t("nav.account.switchWorkspace")}
 								</Link>
 							</DropdownMenuItem>
 						)}
@@ -84,11 +88,15 @@ export function NavUser() {
 							<DropdownMenuItem asChild className="cursor-pointer">
 								<a href={clientConfig.branding.parentUrl} target="_blank" rel="noreferrer">
 									<IconExternalLink />
-									{clientConfig.branding.parentName} Dashboard
+									{t("nav.account.parentDashboard", { parentName: clientConfig.branding.parentName })}
 								</a>
 							</DropdownMenuItem>
 						)}
 					</DropdownMenuGroup>
+					<DropdownMenuSeparator />
+					<div className="px-1 py-1.5">
+						<LanguageSwitcher className="w-full justify-center" />
+					</div>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						className="cursor-pointer"
@@ -104,7 +112,7 @@ export function NavUser() {
 						}}
 					>
 						<IconLogout />
-						Log out
+						{t("nav.account.logOut")}
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

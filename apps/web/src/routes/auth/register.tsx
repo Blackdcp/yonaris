@@ -8,6 +8,7 @@
 
 import { IconBrandGoogle } from "@tabler/icons-react";
 import { createFileRoute, Link, useNavigate, useRouteContext } from "@tanstack/react-router";
+import type { UiLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
 import { authClient } from "@workspace/lib/auth/client";
 import { Alert, AlertDescription } from "@workspace/ui/components/alert";
@@ -18,7 +19,33 @@ import { Separator } from "@workspace/ui/components/separator";
 import { useState } from "react";
 import { z } from "zod";
 import FullPageCard from "@/components/full-page-card";
+import { useI18n } from "@/i18n/provider";
 import { safeReturnTo } from "@/lib/return-to";
+
+type EmailSignUpInput = {
+	email: string;
+	password: string;
+	name: string;
+	uiLanguage: UiLanguage;
+	callbackURL?: string;
+};
+
+export function buildEmailSignUpInput({
+	email,
+	password,
+	name,
+	uiLanguage,
+	isCloud,
+	returnTo,
+}: Omit<EmailSignUpInput, "callbackURL"> & { isCloud: boolean; returnTo?: string }): EmailSignUpInput {
+	return {
+		email,
+		password,
+		name,
+		uiLanguage,
+		...(isCloud && { callbackURL: safeReturnTo(returnTo) }),
+	};
+}
 
 export const Route = createFileRoute("/auth/register")({
 	validateSearch: z.object({
@@ -28,6 +55,7 @@ export const Route = createFileRoute("/auth/register")({
 });
 
 function RegisterPage() {
+	const { locale, t } = useI18n();
 	const { returnTo } = Route.useSearch();
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	const canRegister = context.clientConfig?.canRegister ?? false;
@@ -53,15 +81,19 @@ function RegisterPage() {
 		setLoading(true);
 
 		try {
-			const result = await authClient.signUp.email({
-				email,
-				password,
-				name,
-				...(isCloud && { callbackURL: safeReturnTo(returnTo) }),
-			});
+			const result = await authClient.signUp.email(
+				buildEmailSignUpInput({
+					email,
+					password,
+					name,
+					uiLanguage: locale,
+					isCloud,
+					returnTo,
+				}),
+			);
 
 			if (result.error) {
-				setError(result.error.message ?? "Registration failed");
+				setError(t("auth.register.failed"));
 				setLoading(false);
 				return;
 			}
@@ -74,7 +106,7 @@ function RegisterPage() {
 
 			navigate({ to: returnTo ?? "/app" });
 		} catch {
-			setError("Something went wrong. Please try again.");
+			setError(t("common.error.unexpected"));
 			setLoading(false);
 		}
 	}
@@ -90,13 +122,11 @@ function RegisterPage() {
 
 	if (pendingVerification) {
 		return (
-			<FullPageCard title="Check your email" subtitle={`We sent a verification link to ${email}`}>
+			<FullPageCard title={t("auth.register.checkEmail")} subtitle={t("auth.register.verificationSent", { email })}>
 				<div className="space-y-4 w-full">
-					<p className="text-sm text-muted-foreground text-center">
-						Click the link in the email to verify your address and get started. The link expires, so verify soon.
-					</p>
+					<p className="text-sm text-muted-foreground text-center">{t("auth.register.verificationGuidance")}</p>
 					<Button type="button" variant="outline" className="w-full" onClick={handleResend} disabled={resending}>
-						{resending ? "Sending..." : "Resend verification email"}
+						{resending ? t("auth.register.sending") : t("auth.register.resend")}
 					</Button>
 				</div>
 			</FullPageCard>
@@ -104,7 +134,7 @@ function RegisterPage() {
 	}
 
 	return (
-		<FullPageCard title="Create account" subtitle="Sign up to get started">
+		<FullPageCard title={t("auth.register.title")} subtitle={t("auth.register.subtitle")}>
 			{isCloud && (
 				<div className="space-y-4 w-full pb-4">
 					<Button
@@ -114,11 +144,11 @@ function RegisterPage() {
 						onClick={() => authClient.signIn.social({ provider: "google", callbackURL: safeReturnTo(returnTo) })}
 					>
 						<IconBrandGoogle className="size-4" />
-						Continue with Google
+						{t("auth.login.continueGoogle")}
 					</Button>
 					<div className="flex items-center gap-3">
 						<Separator className="flex-1" />
-						<span className="text-xs text-muted-foreground">or</span>
+						<span className="text-xs text-muted-foreground">{t("auth.login.or")}</span>
 						<Separator className="flex-1" />
 					</div>
 				</div>
@@ -130,11 +160,11 @@ function RegisterPage() {
 					</Alert>
 				)}
 				<div className="space-y-2">
-					<Label htmlFor="name">Name</Label>
+					<Label htmlFor="name">{t("auth.field.name")}</Label>
 					<Input
 						id="name"
 						type="text"
-						placeholder="Your name"
+						placeholder={t("auth.field.namePlaceholder")}
 						value={name}
 						onChange={(e) => setName(e.target.value)}
 						required
@@ -143,11 +173,11 @@ function RegisterPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="email">Email</Label>
+					<Label htmlFor="email">{t("auth.field.email")}</Label>
 					<Input
 						id="email"
 						type="email"
-						placeholder="you@example.com"
+						placeholder={t("auth.field.emailPlaceholder")}
 						value={email}
 						onChange={(e) => setEmail(e.target.value)}
 						required
@@ -155,11 +185,11 @@ function RegisterPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="password">Password</Label>
+					<Label htmlFor="password">{t("auth.field.password")}</Label>
 					<Input
 						id="password"
 						type="password"
-						placeholder="Create a password"
+						placeholder={t("auth.register.passwordPlaceholder")}
 						value={password}
 						onChange={(e) => setPassword(e.target.value)}
 						required
@@ -168,18 +198,18 @@ function RegisterPage() {
 					/>
 				</div>
 				<Button type="submit" className="w-full" disabled={loading}>
-					{loading ? "Creating account..." : "Create account"}
+					{loading ? t("auth.register.creating") : t("auth.register.title")}
 				</Button>
 			</form>
 			{hasUsers && (
 				<p className="text-center text-sm text-muted-foreground pt-4">
-					Already have an account?{" "}
+					{t("auth.register.hasAccount")}{" "}
 					<Link
 						to="/auth/login"
 						search={returnTo ? { returnTo } : {}}
 						className="text-primary hover:underline font-medium"
 					>
-						Sign in
+						{t("auth.login.title")}
 					</Link>
 				</p>
 			)}

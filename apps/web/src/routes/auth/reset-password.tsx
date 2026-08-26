@@ -14,6 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { useState } from "react";
 import { z } from "zod";
 import FullPageCard from "@/components/full-page-card";
+import { useI18n } from "@/i18n/provider";
 
 export const Route = createFileRoute("/auth/reset-password")({
 	validateSearch: z.object({
@@ -24,6 +25,7 @@ export const Route = createFileRoute("/auth/reset-password")({
 });
 
 function ResetPasswordPage() {
+	const { t } = useI18n();
 	const { token, error: searchError } = Route.useSearch();
 	const navigate = useNavigate();
 	const [newPassword, setNewPassword] = useState("");
@@ -33,10 +35,10 @@ function ResetPasswordPage() {
 
 	if (searchError || !token) {
 		return (
-			<FullPageCard title="Reset link invalid or expired">
+			<FullPageCard title={t("auth.reset.invalid")}>
 				<p className="text-center text-sm text-muted-foreground w-full">
 					<Link to="/auth/forgot-password" className="text-primary hover:underline font-medium">
-						Request a new reset link
+						{t("auth.reset.requestNew")}
 					</Link>
 				</p>
 			</FullPageCard>
@@ -47,7 +49,7 @@ function ResetPasswordPage() {
 		e.preventDefault();
 		setError(null);
 		if (newPassword !== confirmPassword) {
-			setError("Passwords do not match");
+			setError(t("auth.reset.noMatch"));
 			return;
 		}
 		setLoading(true);
@@ -55,19 +57,19 @@ function ResetPasswordPage() {
 		try {
 			const result = await authClient.resetPassword({ newPassword, token: token as string });
 			if (result.error) {
-				setError(result.error.message ?? "Failed to reset password");
+				setError(t("auth.reset.failed"));
 				setLoading(false);
 				return;
 			}
 			navigate({ to: "/auth/login" });
 		} catch {
-			setError("Something went wrong. Please try again.");
+			setError(t("common.error.unexpected"));
 			setLoading(false);
 		}
 	}
 
 	return (
-		<FullPageCard title="Choose a new password">
+		<FullPageCard title={t("auth.reset.title")}>
 			<form onSubmit={handleSubmit} className="space-y-4 w-full">
 				{error && (
 					<Alert variant="destructive">
@@ -75,11 +77,11 @@ function ResetPasswordPage() {
 					</Alert>
 				)}
 				<div className="space-y-2">
-					<Label htmlFor="new-password">New password</Label>
+					<Label htmlFor="new-password">{t("auth.reset.newPassword")}</Label>
 					<Input
 						id="new-password"
 						type="password"
-						placeholder="New password"
+						placeholder={t("auth.reset.newPassword")}
 						value={newPassword}
 						onChange={(e) => setNewPassword(e.target.value)}
 						required
@@ -89,11 +91,11 @@ function ResetPasswordPage() {
 					/>
 				</div>
 				<div className="space-y-2">
-					<Label htmlFor="confirm-password">Confirm password</Label>
+					<Label htmlFor="confirm-password">{t("auth.reset.confirmPassword")}</Label>
 					<Input
 						id="confirm-password"
 						type="password"
-						placeholder="Confirm password"
+						placeholder={t("auth.reset.confirmPassword")}
 						value={confirmPassword}
 						onChange={(e) => setConfirmPassword(e.target.value)}
 						required
@@ -102,7 +104,7 @@ function ResetPasswordPage() {
 					/>
 				</div>
 				<Button type="submit" className="w-full" disabled={loading}>
-					{loading ? "Resetting..." : "Reset password"}
+					{loading ? t("auth.reset.resetting") : t("auth.reset.reset")}
 				</Button>
 			</form>
 		</FullPageCard>
