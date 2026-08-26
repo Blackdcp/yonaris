@@ -33,6 +33,8 @@
 - Modify (generated): `packages/lib/src/db/migrations/meta/0032_snapshot.json`
 - Modify (generated): `packages/lib/src/db/migrations/meta/_journal.json`
 - Create: `packages/lib/src/db/migrations/artifact-output-languages.test.ts`
+- Modify: `packages/lib/src/db/migrations/mode-compat-rewind.test.ts`
+- Modify: `.github/workflows/mode-compat.yaml`
 
 **Interfaces:**
 - Produces: `reports.outputLanguage` and `brandOpportunities.outputLanguage`, both inferred as text and validated by DB checks.
@@ -69,7 +71,8 @@ Replace `brand_opportunities_brand_scope_created_at_idx` with `brand_opportuniti
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add packages/lib/src/db/schema.ts packages/lib/src/db/migrations
+git add packages/lib/src/db/schema.ts packages/lib/src/db/migrations .github/workflows/mode-compat.yaml
+git diff --cached --name-only
 git commit -m "Persist report and opportunity languages"
 ```
 
@@ -91,6 +94,7 @@ git commit -m "Persist report and opportunity languages"
 - Modify: `apps/web/src/i18n/catalogs/customer.ts`
 - Add: shared tab-scoped artifact-language selection helper/tests.
 - Modify: shared server configuration, LAS deploy/runbook/tests, and deployment environment examples for staged Chinese-output activation.
+- Modify: `e2e/fixtures.ts`, `e2e/seed.ts`, and the scheduled language-smoke spec/support files.
 
 **Interfaces:**
 - `getOpportunitiesFn({ brandId, scopeId, outputLanguage })`.
@@ -142,10 +146,13 @@ Gate every Chinese Opportunity write/generation boundary behind `ARTIFACT_ZH_CN_
 
 - [ ] **Step 6: Run Opportunity tests and access-boundary tests**
 
+Extend the scheduled non-provider language-smoke project with deterministic English and Chinese Opportunity rows. Assert both UI/artifact cross-combinations, exact nested `lang`, distinguishable static/model copy, and byte-identical raw Prompt/URL evidence without invoking generation.
+
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add apps/web/src/server/opportunities.ts apps/web/src/hooks apps/web/src/components/opportunities* apps/web/src/routes/_authed apps/web/src/i18n
+git add apps/web/src/server/opportunities.ts apps/web/src/hooks apps/web/src/components/opportunities* apps/web/src/routes/_authed apps/web/src/i18n packages/config/src deploy/las e2e/fixtures.ts e2e/seed.ts e2e/tests e2e/package.json
+git diff --cached --name-only
 git commit -m "Generate opportunities in the selected language"
 ```
 
@@ -164,7 +171,10 @@ git commit -m "Generate opportunities in the selected language"
 - Modify: `apps/worker/src/report-worker.ts`
 - Modify: `apps/worker/src/database-report-request.ts`
 - Modify: `apps/worker/src/database-report-request.test.ts`
+- Modify: `apps/worker/package.json`
+- Modify: `pnpm-lock.yaml` when dependency metadata changes.
 - Modify: `packages/api-spec/src/openapi.json`
+- Modify: `e2e/bruno/reports`, `e2e/fixtures.ts`, `e2e/seed.ts`, and scheduled language-smoke tests/support.
 - Add or modify API contract tests adjacent to the report routes.
 
 **Interfaces:**
@@ -188,12 +198,15 @@ Place it in the report creation form with English/简体中文 choices. Persist 
 
 - [ ] **Step 5: Run web/worker/API tests**
 
+If any worker test file is added, register it in the worker package's normal `test` script (or replace the explicit list with proven cross-platform discovery) and prove `pnpm --filter @workspace/worker test` executes it; root Turbo/CI must not rely on a bespoke manual command.
+
 Use Vitest for web/API and `tsx --test` for Node test suites in `apps/worker`.
 
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add apps/web apps/worker packages/api-spec
+git add apps/web apps/worker packages/api-spec e2e/bruno/reports e2e/fixtures.ts e2e/seed.ts e2e/tests e2e/package.json pnpm-lock.yaml
+git diff --cached --name-only
 git commit -m "Carry report language through generation"
 ```
 
@@ -211,6 +224,8 @@ git commit -m "Carry report language through generation"
 - Modify: `apps/web/src/components/chart-download-footer.tsx`
 - Modify: `apps/web/src/components/chart-export-preview.tsx`
 - Modify: `apps/web/src/hooks/use-chart-export.tsx`
+- Modify: dashboard chain `VisibilityPage → PromptsDisplay/ChartSection → VirtualizedPromptList → CachedPromptChart` and its tests/stories/mocks.
+- Modify: `e2e/fixtures.ts`, `e2e/seed.ts`, and scheduled language-smoke tests/support.
 
 **Interfaces:**
 - Produces: `getReportCopy(outputLanguage)`, `parseReportRenderLanguage(value, persisted)`, and explicit chart/print `outputLanguage` props.
@@ -235,10 +250,13 @@ For dashboard export, reuse the tab-scoped selection helper with a surface/brand
 
 - [ ] **Step 5: Run report-copy/render/chart tests**
 
+Seed deterministic completed English and Chinese report artifacts for the scheduled non-provider browser project. Exercise the real printable render route and validated override in both languages; assert exact artifact title/copy, nested `lang`, and byte-identical raw Prompt/query evidence without queueing or provider work.
+
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add apps/web/src/i18n/report-copy* apps/web/src/routes/_authed/reports apps/web/src/components apps/web/src/hooks/use-chart-export.tsx
+git add apps/web/src/i18n/report-copy* apps/web/src/routes/_authed/reports apps/web/src/routes/_authed/app apps/web/src/components apps/web/src/hooks/use-chart-export.tsx e2e/fixtures.ts e2e/seed.ts e2e/tests e2e/package.json
+git diff --cached --name-only
 git commit -m "Render reports and exports bilingually"
 ```
 
@@ -260,5 +278,7 @@ git commit -m "Render reports and exports bilingually"
 Search changed files for any assignment or default from `measurementScopes.locale` to `uiLanguage` or `outputLanguage`. Verify raw evidence fields are never passed through translation functions.
 
 Verify real remount/reload tests for Opportunity, report-form, and dashboard-export selections; assert artifact subtree `lang` values in both cross-language combinations. Verify the default-off gate prevents every Chinese write before side effects, activation requires a compatible rollback target, and the irreversible activation marker prevents later rollback to a pre-language runtime.
+
+Verify the scheduled browser suite renders seeded Opportunities and printable reports in both languages without provider calls, and verify every new worker test is reached by the package's normal `test` command used by Turbo/CI.
 
 - [ ] **Step 5: Commit verified corrections without amending earlier commits**
