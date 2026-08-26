@@ -37,4 +37,14 @@ describe("Site 06 shared foundation", () => {
 		expect(lens).toContain("Stable ID");
 		expect(orbit.match(/data-orbit-ring=/g) ?? []).toHaveLength(3);
 	});
+
+	it("keeps optional orbit tilt a non-semantic visual enhancement", () => {
+		const orbit = renderToStaticMarkup(
+			<OrbitField label="Shared public fact" interactive>
+				<p>Fact</p>
+			</OrbitField>,
+		);
+		expect(orbit).not.toContain("data-orbit-interactive");
+		expect(orbit).not.toContain('tabindex="0"');
+	});
 });

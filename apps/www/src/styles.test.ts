@@ -432,10 +432,12 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("locks the Site 06 visual limits and motion fallback", () => {
 		const css = read("styles/experience/site-06.css");
+		const reducedMotion = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
 		expect(css).toContain("--site-navy: #071724");
 		expect(css).toContain("--site-orange: #ef5a1a");
 		expect(css).toContain("font-size: clamp(38px, 4vw, 48px)");
 		expect(css).toContain("@media (prefers-reduced-motion: reduce)");
+		expect(reducedMotion).toMatch(/\.site-06-hero__media:hover img\s*\{[^}]*transform:\s*none;/s);
 		expect(css).not.toMatch(/animation(?:-iteration-count)?\s*:[^;{}]*\binfinite\b/i);
 	});
 });

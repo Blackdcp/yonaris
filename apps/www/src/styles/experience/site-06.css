@@ -713,7 +713,8 @@
 	.site-06-orbit,
 	.site-06-orbit__rings,
 	.site-06-orbit__rings [data-orbit-ring],
-	.site-06-hero__media img {
+	.site-06-hero__media img,
+	.site-06-hero__media:hover img {
 		transform: none;
 	}
 }

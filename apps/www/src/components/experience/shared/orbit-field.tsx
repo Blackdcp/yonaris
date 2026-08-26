@@ -26,7 +26,6 @@ export function OrbitField({
 		<figure
 			className="site-06-orbit"
 			aria-label={label}
-			data-orbit-interactive={interactive ? "true" : undefined}
 			onPointerMove={interactive ? respondToPointer : undefined}
 			onPointerLeave={interactive ? resetPointer : undefined}
 		>
