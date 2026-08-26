@@ -178,6 +178,18 @@ test("candidate permits exactly the thirteen canonical Human trailing-slash vari
 	assert.ok(!paths.has("/zh/*"), "the exact Human policy must not widen to /zh/*");
 });
 
+test("candidate exposes only the scoped Site 06 brand assets", { skip: !helperExists }, async () => {
+	const { prepareCaddyCandidate } = await import(helperUrl.href);
+	const source = await import("node:fs/promises").then(({ readFile }) =>
+		readFile(new URL("../../../deploy/las/caddy/yonaris-marketing.caddy", import.meta.url), "utf8"),
+	);
+	const candidate = prepareCaddyCandidate(source, "www:3000");
+	const publicMatcher = candidate.match(/@publicGetHead\s*\{[\s\S]*?\bpath\s+([^\n]+)\n/u)?.[1] ?? "";
+	const paths = new Set(publicMatcher.trim().split(/\s+/u));
+	assert.ok(paths.has("/brand/site-06/*"), "Caddy must proxy the Site 06 photography assets");
+	assert.ok(!paths.has("/brand/*"), "the Site 06 exception must not expose every brand asset");
+});
+
 test("Caddy smoke rejects an exit-zero route probe that did not run the strict release matrix", {
 	skip: !helperExists,
 }, async () => {
