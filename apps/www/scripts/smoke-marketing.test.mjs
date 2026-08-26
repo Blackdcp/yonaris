@@ -54,6 +54,12 @@ const HUMAN_HEADINGS = new Map([
 	["/zh/privacy", "姓名、电话、公司，只用于回复这次咨询。"],
 ]);
 
+const PUBLIC_ORIGIN = "https://yonaris.com";
+
+function publicHref(path) {
+	return new URL(path, `${PUBLIC_ORIGIN}/`).href;
+}
+
 const ACCEPT_CASES = [
 	{ accept: undefined, expectedStatus: 200, expectedType: "text/html" },
 	{ accept: "*/*", expectedStatus: 200, expectedType: "text/html" },
@@ -270,6 +276,13 @@ async function startFixture({
 	humanLang = true,
 	humanH1 = true,
 	humanJsonLd = true,
+	malformedHumanJsonLd = false,
+	wrongCanonicalHost = false,
+	canonicalQuery = false,
+	canonicalFragment = false,
+	wrongHreflangDestination = false,
+	wrongMachineAlternate = false,
+	wrongStableMachineAlternate = false,
 	rejectedTemplateGlyph = "",
 } = {}) {
 	const requests = [];
@@ -380,6 +393,11 @@ async function startFixture({
 		if (AGENT_MARKDOWN_PATHS.includes(url.pathname)) {
 			const locale = url.pathname.startsWith("/zh/") ? "zh-CN" : "en";
 			const peerPath = locale === "en" ? `/zh${url.pathname}` : url.pathname.replace(/^\/zh/u, "");
+			const catalogPath = locale === "en" ? "/agent/catalog.json" : "/zh/agent/catalog.json";
+			const wrongCatalogLink =
+				wrongStableMachineAlternate && url.pathname === "/agent/index.md"
+					? ', </agent/company.json>; rel="alternate"; type="application/ld+json"'
+					: "";
 			const humanPath = url.pathname
 				.replace(/^\/zh\/agent\/index\.md$/u, "/zh")
 				.replace(/^\/agent\/index\.md$/u, "/")
@@ -392,7 +410,7 @@ async function startFixture({
 					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 					Vary: "Accept",
 					"X-Robots-Tag": "noindex, follow",
-					Link: `<${url.pathname}>; rel="canonical"; type="text/markdown", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+					Link: `<${url.pathname}>; rel="canonical"; type="text/markdown", <${humanPath}>; rel="alternate"; type="text/html", <${catalogPath}>; rel="alternate"; type="application/ld+json"${wrongCatalogLink}, <${peerPath}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
 				})
 				.end(`# Facts\n\nStable ID: fixture.claim\n\n${ALL_COPY}`);
 			return;
@@ -455,18 +473,32 @@ async function startFixture({
 		const isAgent = AGENT_HTML_PATHS.includes(url.pathname);
 		const robots = isAgent ? '<meta name="robots" content="noindex,follow">' : "";
 		const agentDiscovery = AGENT_HTML_PATHS.includes(url.pathname)
-			? `<link rel="canonical" href="${url.pathname.replace(/\/agent(?=\/|$)/u, "") || "/"}"><link rel="alternate" type="text/markdown" href="${url.pathname.replace(/\/$/u, "")}${url.pathname.endsWith("/agent") ? "/index.md" : ".md"}"><link rel="alternate" type="application/ld+json" href="${url.pathname.startsWith("/zh/") ? "/zh" : ""}/agent/catalog.json"><link rel="describedby" type="text/plain" href="/llms.txt">`
+			? `<link rel="canonical" href="${publicHref(url.pathname.replace(/\/agent(?=\/|$)/u, "") || "/")}"><link rel="alternate" type="text/markdown" href="${publicHref(`${url.pathname.replace(/\/$/u, "")}${url.pathname.endsWith("/agent") ? "/index.md" : ".md"}`)}"><link rel="alternate" type="application/ld+json" href="${publicHref(`${url.pathname.startsWith("/zh/") ? "/zh" : ""}/agent/catalog.json`)}"><link rel="describedby" type="text/plain" href="${publicHref("/llms.txt")}">`
 			: "";
 		const human = HUMAN_HTML_PATHS.includes(url.pathname) ? humanPaths(url.pathname) : undefined;
+		const mutateRootMetadata = url.pathname === "/";
+		const canonicalHref = human
+			? mutateRootMetadata && wrongCanonicalHost
+				? "https://wrong.example/"
+				: `${publicHref(human.canonicalPath)}${mutateRootMetadata && canonicalQuery ? "?preview=1" : ""}${mutateRootMetadata && canonicalFragment ? "#draft" : ""}`
+			: "";
+		const wrongPeerAlternate =
+			human && mutateRootMetadata && wrongHreflangDestination
+				? `<link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${publicHref("/zh/company")}">`
+				: "";
+		const wrongMarkdownAlternate =
+			human && mutateRootMetadata && wrongMachineAlternate
+				? `<link rel="alternate" type="text/markdown" href="${publicHref("/agent/company.md")}">`
+				: "";
 		const humanDiscovery =
 			human && humanMetadata
-				? `<link rel="canonical" href="${human.canonicalPath}"><link rel="alternate" hreflang="${human.locale}" href="${human.canonicalPath}"><link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${human.peerPath}"><link rel="alternate" hreflang="x-default" href="${human.locale === "en" ? human.canonicalPath : human.peerPath}"><link rel="alternate" type="text/markdown" href="${human.markdownPath}"><link rel="alternate" type="application/ld+json" href="${human.catalogPath}"><link rel="describedby" type="text/plain" href="/llms.txt">`
+				? `<link rel="canonical" href="${canonicalHref}"><link rel="alternate" hreflang="${human.locale}" href="${publicHref(human.canonicalPath)}"><link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${publicHref(human.peerPath)}">${wrongPeerAlternate}<link rel="alternate" hreflang="x-default" href="${publicHref(human.locale === "en" ? human.canonicalPath : human.peerPath)}"><link rel="alternate" type="text/markdown" href="${publicHref(human.markdownPath)}">${wrongMarkdownAlternate}<link rel="alternate" type="application/ld+json" href="${publicHref(human.catalogPath)}"><link rel="describedby" type="text/plain" href="${publicHref("/llms.txt")}">`
 				: "";
 		const humanLanguage = human?.locale ?? "en";
 		const humanHeading = human ? HUMAN_HEADINGS.get(url.pathname) : undefined;
 		const humanStructuredData =
 			human && humanJsonLd
-				? `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", url: `https://yonaris.com${url.pathname}` })}</script>`
+				? `<script type="application/ld+json">${malformedHumanJsonLd ? "{" : JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", url: `https://yonaris.com${url.pathname}` })}</script>`
 				: "";
 		const humanHeadingMarkup = human && humanH1 ? `<h1>${humanHeading}</h1>` : "";
 		const agentBody =
@@ -628,6 +660,60 @@ test("release smoke rejects a Human page without self-canonical, hreflang, and m
 	}
 });
 
+test("release smoke rejects a Human canonical on the wrong production host", async () => {
+	const fixture = await startFixture({ wrongCanonicalHost: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human canonical with an unexpected query", async () => {
+	const fixture = await startFixture({ canonicalQuery: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human canonical with an unexpected fragment", async () => {
+	const fixture = await startFixture({ canonicalFragment: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects an hreflang alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongHreflangDestination: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN HREFLANG \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a machine alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongMachineAlternate: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN DISCOVERY \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a stable machine catalog alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongStableMachineAlternate: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /LINK \/agent\/index\.md: invalid catalog alternate/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
 test("release smoke rejects a Human page with the wrong document language", async () => {
 	const fixture = await startFixture({ humanLang: false });
 	try {
@@ -646,7 +732,7 @@ test("release smoke rejects a Human page without its exact single H1", async () 
 	}
 });
 
-test("release smoke rejects a Human page without parseable JSON-LD", async () => {
+test("release smoke rejects a Human page without JSON-LD", async () => {
 	const fixture = await startFixture({ humanJsonLd: false });
 	try {
 		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN JSON-LD \/:/u);
@@ -655,8 +741,26 @@ test("release smoke rejects a Human page without parseable JSON-LD", async () =>
 	}
 });
 
+test("release smoke rejects malformed Human JSON-LD", async () => {
+	const fixture = await startFixture({ malformedHumanJsonLd: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN JSON-LD \/: malformed/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
 test("release smoke rejects decorative arrow and numbered-template glyphs", async () => {
 	const fixture = await startFixture({ rejectedTemplateGlyph: "→ 01" });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN TEMPLATE \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a numbered-template glyph without an arrow", async () => {
+	const fixture = await startFixture({ rejectedTemplateGlyph: "<span>01</span>" });
 	try {
 		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN TEMPLATE \/:/u);
 	} finally {

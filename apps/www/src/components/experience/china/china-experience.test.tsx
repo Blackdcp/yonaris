@@ -39,6 +39,7 @@ describe("Site 06 中国站", () => {
 		for (const node of ["市场问题", "品牌事实", "内容与渠道", "AI 与市场观测", "客户行为", "行动与复核"])
 			expect(system).toContain(node);
 		expectAccessibleTabs(system.match(/data-system-map[\s\S]*?<\/section>/)?.[0] ?? "", 6);
+		expect(system).toContain('class="site-06-tabs site-06-system__tabs"');
 		const breakdown = render("approach");
 		expect(breakdown).toContain("公开方法演示 · 示例场景，不代表客户结果。");
 		for (const state of ["基线", "断点", "行动", "复核", "已变化", "未变化", "无法归因"])

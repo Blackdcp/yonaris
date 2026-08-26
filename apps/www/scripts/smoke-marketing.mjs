@@ -295,22 +295,35 @@ function parsedHtmlLinks(html) {
 	return parsedHtmlTags(html, "link");
 }
 
-function linkPath(href) {
+function normalizeExpectedOrigin(input) {
+	let url;
 	try {
-		return new URL(href, "https://yonaris.invalid").pathname;
+		url = new URL(input);
 	} catch {
-		return "";
+		throw new Error(`Invalid expected production origin: ${JSON.stringify(input)}`);
 	}
+	if (
+		(url.protocol !== "https:" && url.protocol !== "http:") ||
+		url.username ||
+		url.password ||
+		url.pathname !== "/" ||
+		url.search ||
+		url.hash
+	) {
+		throw new Error(
+			`Expected production origin must contain only scheme, host, and optional port: ${JSON.stringify(input)}`,
+		);
+	}
+	return url.origin;
 }
 
-function hasHtmlLink(links, { rel, path, type, hrefLang }) {
-	return links.some(
-		(link) =>
-			link.rel === rel &&
-			linkPath(link.href) === path &&
-			(type === undefined || link.type === type) &&
-			(hrefLang === undefined || link.hreflang === hrefLang),
-	);
+function matchingLinks(links, { rel, type, hrefLang }) {
+	return links.filter((link) => link.rel === rel && link.type === type && link.hreflang === hrefLang);
+}
+
+function hasExactHtmlLink(links, { rel, path, type, hrefLang }, expectedOrigin) {
+	const candidates = matchingLinks(links, { rel, type, hrefLang });
+	return candidates.length === 1 && candidates[0].href === new URL(path, `${expectedOrigin}/`).href;
 }
 
 function parsedHttpLinks(header) {
@@ -322,14 +335,9 @@ function parsedHttpLinks(header) {
 	});
 }
 
-function hasHttpLink(links, { rel, path, type, hrefLang }) {
-	return links.some(
-		(link) =>
-			link.rel === rel &&
-			linkPath(link.href) === path &&
-			(type === undefined || link.type === type) &&
-			(hrefLang === undefined || link.hreflang === hrefLang),
-	);
+function hasExactHttpLink(links, { rel, path, type, hrefLang }) {
+	const candidates = matchingLinks(links, { rel, type, hrefLang });
+	return candidates.length === 1 && candidates[0].href === path;
 }
 
 const decodedPublicTerm = (...codePoints) => String.fromCodePoint(...codePoints);
@@ -356,7 +364,7 @@ function checkPublicOutput(path, body, failures) {
 	}
 }
 
-function checkHumanDocument(route, body, failures) {
+function checkHumanDocument(route, body, failures, expectedOrigin) {
 	const discovery = humanMachinePaths(route.path);
 	const links = parsedHtmlLinks(body);
 	const html = parsedHtmlTags(body, "html")[0];
@@ -392,31 +400,49 @@ function checkHumanDocument(route, body, failures) {
 		failures.push(`HUMAN TEMPLATE ${route.path}: rejected arrow or numbered-template glyph`);
 	const robots = parsedHtmlTags(body, "meta").find((meta) => meta.name?.toLowerCase() === "robots")?.content ?? "";
 	if (/noindex/iu.test(robots)) failures.push(`HUMAN ROBOTS ${route.path}: must remain indexable`);
-	if (!hasHtmlLink(links, { rel: "canonical", path: discovery.canonicalPath }))
+	if (!hasExactHtmlLink(links, { rel: "canonical", path: discovery.canonicalPath }, expectedOrigin))
 		failures.push(`HUMAN CANONICAL ${route.path}: expected ${discovery.canonicalPath}`);
 	if (
-		!hasHtmlLink(links, {
-			rel: "alternate",
-			path: discovery.canonicalPath,
-			hrefLang: discovery.locale,
-		})
+		!hasExactHtmlLink(
+			links,
+			{
+				rel: "alternate",
+				path: discovery.canonicalPath,
+				hrefLang: discovery.locale,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.locale} self alternate`);
 	if (
-		!hasHtmlLink(links, {
-			rel: "alternate",
-			path: discovery.peerHumanPath,
-			hrefLang: discovery.peerLanguage,
-		})
+		!hasExactHtmlLink(
+			links,
+			{
+				rel: "alternate",
+				path: discovery.peerHumanPath,
+				hrefLang: discovery.peerLanguage,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.peerLanguage} peer`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.defaultPath, hrefLang: "x-default" }))
+	if (
+		!hasExactHtmlLink(links, { rel: "alternate", path: discovery.defaultPath, hrefLang: "x-default" }, expectedOrigin)
+	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing x-default`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+	if (
+		!hasExactHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }, expectedOrigin)
+	)
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing Markdown alternate`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+	if (
+		!hasExactHtmlLink(
+			links,
+			{ rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" },
+			expectedOrigin,
+		)
+	)
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing JSON-LD alternate`);
-	if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+	if (!hasExactHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing llms.txt relation`);
 }
 
@@ -538,7 +564,7 @@ function checkCatalogueGraph(route, graph, failures) {
 	}
 }
 
-async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
+async function checkReadableRoute(route, baseUrl, failures, assetUrls, expectedOrigin) {
 	const routeUrl = new URL(route.path, baseUrl);
 	try {
 		const response = await fetchWithTimeout(routeUrl, {}, route.path === "/" ? 30 : 1);
@@ -557,17 +583,29 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 		if (route.noindex) {
 			const discovery = agentMachinePaths(route.path);
 			const links = parsedHtmlLinks(body);
-			if (!hasHtmlLink(links, { rel: "canonical", path: discovery.humanPath }))
+			if (!hasExactHtmlLink(links, { rel: "canonical", path: discovery.humanPath }, expectedOrigin))
 				failures.push(`CANONICAL ${route.path}: expected ${discovery.humanPath}`);
-			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+			if (
+				!hasExactHtmlLink(
+					links,
+					{ rel: "alternate", path: discovery.markdownPath, type: "text/markdown" },
+					expectedOrigin,
+				)
+			)
 				failures.push(`DISCOVERY ${route.path}: missing Markdown alternate`);
-			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+			if (
+				!hasExactHtmlLink(
+					links,
+					{ rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" },
+					expectedOrigin,
+				)
+			)
 				failures.push(`DISCOVERY ${route.path}: missing JSON-LD alternate`);
-			if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+			if (!hasExactHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 				failures.push(`DISCOVERY ${route.path}: missing llms.txt relation`);
 			checkAgentDocument(route, body, failures);
 		} else {
-			checkHumanDocument(route, body, failures);
+			checkHumanDocument(route, body, failures, expectedOrigin);
 		}
 		if (route.path === "/diagnostic" || route.path === "/zh/diagnostic") checkLeadForm(route.path, body, failures);
 		collectHtmlAssets(body, routeUrl, baseUrl, assetUrls);
@@ -593,12 +631,21 @@ function checkMachineHeaders(route, response, failures, contentType) {
 		failures.push(`ROBOTS ${route.path}: expected noindex, follow`);
 
 	const links = parsedHttpLinks(response.headers.get("link") ?? "");
-	if (!hasHttpLink(links, { rel: "canonical", path: route.path, type: contentType }))
+	if (!hasExactHttpLink(links, { rel: "canonical", path: route.path, type: contentType }))
 		failures.push(`LINK ${route.path}: missing canonical`);
-	if (route.humanPath && !hasHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }))
+	if (route.humanPath && !hasExactHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }))
 		failures.push(`LINK ${route.path}: missing Human alternate`);
 	if (
-		!hasHttpLink(links, {
+		route.catalogPath &&
+		!hasExactHttpLink(links, {
+			rel: "alternate",
+			path: route.catalogPath,
+			type: "application/ld+json",
+		})
+	)
+		failures.push(`LINK ${route.path}: invalid catalog alternate`);
+	if (
+		!hasExactHttpLink(links, {
 			rel: "alternate",
 			path: route.peerPath,
 			type: contentType,
@@ -606,7 +653,7 @@ function checkMachineHeaders(route, response, failures, contentType) {
 		})
 	)
 		failures.push(`LINK ${route.path}: missing locale peer`);
-	if (!hasHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+	if (!hasExactHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
 		failures.push(`LINK ${route.path}: missing llms.txt relation`);
 }
 
@@ -820,11 +867,14 @@ async function checkNegotiationMatrix(baseUrl, failures) {
 
 export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", options = {}) {
 	const baseUrl = new URL(inputUrl);
+	const expectedOrigin = normalizeExpectedOrigin(
+		options.expectedOrigin ?? process.env.VITE_SITE_URL ?? "https://yonaris.com",
+	);
 	const failures = [];
 	const assetUrls = new Map();
 
 	for (const route of [...HUMAN_HTML_ROUTES, ...AGENT_HTML_ROUTES])
-		await checkReadableRoute(route, baseUrl, failures, assetUrls);
+		await checkReadableRoute(route, baseUrl, failures, assetUrls, expectedOrigin);
 	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures);
 	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);

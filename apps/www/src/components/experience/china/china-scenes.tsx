@@ -50,7 +50,7 @@ export function SystemRelationshipMap() {
 				<strong>同一道业务问题</strong>
 			</OrbitField>
 			<div className="site-06-system__records">
-				<div className="site-06-tabs" role="tablist" aria-label="选择系统节点">
+				<div className="site-06-tabs site-06-system__tabs" role="tablist" aria-label="选择系统节点">
 					{CHINA_SYSTEM_NODES.map((item, index) => (
 						<button key={item.id} type="button" {...tabs.getTabProps(item.id, index)}>
 							{item.label}
