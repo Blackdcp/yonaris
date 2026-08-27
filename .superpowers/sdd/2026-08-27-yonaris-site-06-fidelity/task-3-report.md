@@ -117,7 +117,7 @@ Fresh captures were made against the production route code at desktop and mobile
 
 `C:\Users\user\.codex\visualizations\2026\08\10\019fec31-4f56-72d3-8476-ba90669ad5d9\task3-review`
 
-Reviewed captures include Home, Product, Approach, Company, GEO, and Diagnostic. Home and Diagnostic received additional true 390 px Chrome DevTools Protocol captures after a Windows headless `--window-size` minimum-window artifact was identified. CDP measurements confirmed `innerWidth`, document client width, and document scroll width were all 390 px, with no horizontal page overflow.
+Reviewed captures include Home, Product, Approach, Company, GEO, Diagnostic, and Privacy. Home and Diagnostic received additional true 390 px Chrome DevTools Protocol captures after a Windows headless `--window-size` minimum-window artifact was identified. CDP measurements confirmed `innerWidth`, document client width, and document scroll width were all 390 px, with no horizontal page overflow.
 
 Visual review confirmed:
 
@@ -128,11 +128,69 @@ Visual review confirmed:
 - form fields stack as three editorial rows and the submit control is transparent, square, and orange-edged;
 - Company and GEO now continue through their required record/evidence/close sequences.
 
+## Focused review-fix pass
+
+The Important review findings were reopened on clean HEAD `a6906472` and handled with a second strict RED/GREEN cycle.
+
+### Review RED
+
+Four new regression tests failed for the reviewed reasons:
+
+- Home, Anxiety, and System each rendered an OrbitField center-content node underneath a separately positioned record;
+- `/zh` emitted `yonaris.purpose.decision-system` twice;
+- Anxiety, System, and Replay panels had no perceptible state-entry response or reduced-motion contract;
+- exact Chinese category casing, the approved Approach credit, and the Home disclosure affordance were absent.
+
+### Review GREEN
+
+- OrbitField now permits ring-only geometry. The three affected scenes keep their meaningful figure labels, pointer-responsive rings, and overlaid records without a competing center label.
+- The Home hero remains a semantic `<article data-stable-id>` while the later canonical disclosure remains the sole `id="yonaris.purpose.decision-system"` fragment target. A route-wide duplicate-ID assertion protects all Home IDs.
+- All 15 Anxiety, System, and Replay panels use `site-06-panel-enter` for a 180 ms opacity/3 px entry response. Reduced motion sets `animation: none` and `transform: none`.
+- The Chinese category keeps its exact visual casing, the Approach image is credited to Scott Graham / Unsplash, and native disclosure rows show understated `查看事实` / `收起事实` text without arrows, pills, or filled controls.
+
+### Review verification
+
+```text
+pnpm --filter @workspace/www exec vitest run src/components/experience/china/china-experience.test.tsx src/components/experience/shared/site-06-foundation.test.tsx src/components/experience/shared/lead-form.test.tsx
+Test Files  3 passed (3)
+Tests       35 passed (35)
+
+pnpm --filter @workspace/www exec vitest run
+Test Files  32 passed (32)
+Tests       200 passed (200)
+
+pnpm --filter @workspace/www check-types
+$ tsc --noEmit
+
+pnpm --filter @workspace/www build
+client, SSR, and Nitro production builds completed successfully
+```
+
+### Review capture matrix
+
+The external `task3-review` directory contains 26 freshly generated `fixed-*` PNGs:
+
+- full-page 1440 and true-emulated 390 captures for `/zh`, `/zh/product`, `/zh/approach`, `/zh/company`, `/zh/geo`, `/zh/diagnostic`, and `/zh/privacy`;
+- first-view 1280 and true-emulated 360 captures for Home, Product, Approach, and Contact;
+- reduced-motion 1280 spot captures for Home, Product, Approach, and Contact.
+
+`fixed-capture-audit.json` records the exact endpoint, document dimensions, duplicate IDs, orbit center-content count, dark-close count, footer count, and reduced-motion state for every capture. It confirmed:
+
+- 390 and 360 document widths equal their viewport widths on every route;
+- duplicate-ID lists are empty;
+- affected orbit center-content counts are zero;
+- Product, Approach, Contact, and Privacy have zero dark-close stacks;
+- Home, Company, and GEO each have one source-required close;
+- every route has one restrained production footer from `Site06Shell`.
+
+`fixed-motion-audit.json` records actual second-tab selection in Chrome. Anxiety, System, and Replay each report `site-06-panel-enter` with `0.18s` duration under normal motion and `animation-name: none` under reduced motion.
+
 ## Files changed
 
 - `apps/www/src/components/experience/china/china-experience.test.tsx`
 - `apps/www/src/components/experience/china/china-pages.tsx`
 - `apps/www/src/components/experience/china/china-scenes.tsx`
+- `apps/www/src/components/experience/shared/orbit-field.tsx`
 - `apps/www/src/content/experience/china-copy.ts`
 - `apps/www/src/styles/experience/site-06.css`
 - `.superpowers/sdd/2026-08-27-yonaris-site-06-fidelity/task-3-report.md`

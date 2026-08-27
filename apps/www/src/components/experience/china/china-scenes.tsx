@@ -29,10 +29,8 @@ export function HomeReadingScene() {
 
 	return (
 		<div className="site-06-zh-home-orbit" data-scene-object="fixed-claim-reader">
-			<OrbitField label="同一条公开事实的人类与 Agent 双阅读" interactive>
-				<strong>同一条公开事实</strong>
-			</OrbitField>
-			<article className="site-06-zh-home-claim" id={record.stableId} data-stable-id={record.stableId} tabIndex={-1}>
+			<OrbitField label="同一条公开事实的人类与 Agent 双阅读" interactive />
+			<article className="site-06-zh-home-claim" data-stable-id={record.stableId}>
 				<div className="site-06-zh-home-claim__modes" role="tablist" aria-label="选择阅读方式">
 					{HOME_READING_MODES.map((item, index) => (
 						<button key={item} type="button" {...tabs.getTabProps(item, index)}>
@@ -73,9 +71,9 @@ export function AnxietySelector() {
 				</div>
 			</div>
 			<div className="site-06-zh-anxiety__readout" aria-live="polite">
-				<OrbitField label="当前问题怎样影响客户选择" interactive><strong>答案里发生了什么</strong></OrbitField>
+				<OrbitField label="当前问题怎样影响客户选择" interactive />
 				{CHINA_ANXIETIES.map((item) => (
-					<article key={item.id} {...tabs.getPanelProps(item.id)}>
+					<article key={item.id} className="site-06-motion-swap" {...tabs.getPanelProps(item.id)}>
 						<h3>{item.diagnosis}</h3>
 						<p>{item.answer}</p>
 						<strong>{item.impact}</strong>
@@ -111,7 +109,7 @@ export function SystemField() {
 
 	return (
 		<section className="site-06-zh-system-field" data-scene-object="system-field" aria-label="六个相互连接的系统节点">
-			<OrbitField label="围绕同一道业务问题连接的六个节点" interactive><strong>同一道业务问题</strong></OrbitField>
+			<OrbitField label="围绕同一道业务问题连接的六个节点" interactive />
 			<div className="site-06-zh-system-field__nodes" role="tablist" aria-label="选择系统节点">
 				{CHINA_SYSTEM_NODES.map((item, index) => (
 					<button key={item.id} type="button" data-system-node={item.id} {...tabs.getTabProps(item.id, index)}>{item.label}</button>
@@ -119,7 +117,7 @@ export function SystemField() {
 			</div>
 			<div className="site-06-zh-system-field__records" aria-live="polite">
 				{CHINA_SYSTEM_NODES.map((item) => (
-					<article key={item.id} {...tabs.getPanelProps(item.id)}>
+					<article key={item.id} className="site-06-motion-swap" {...tabs.getPanelProps(item.id)}>
 						<p>正在查看 · {item.label}</p>
 						<h3>{item.question}</h3>
 						<p>{item.connected}</p>
@@ -163,7 +161,7 @@ export function ReplayStage() {
 			</aside>
 			<div className="site-06-zh-replay__document" aria-live="polite">
 				{CHINA_BREAKDOWN_STATES.map((item) => (
-					<article key={item.id} {...tabs.getPanelProps(item.id)}>
+					<article key={item.id} className="site-06-motion-swap" {...tabs.getPanelProps(item.id)}>
 						<p className="site-06-kicker">{item.label} · 同一道去标识示例</p>
 						<h2>{item.answer}</h2>
 						<p className="site-06-zh-replay__verdict">{item.judgment}</p>

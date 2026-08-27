@@ -32,6 +32,22 @@ function render(page: PageKey): string {
 	return subject?.CHINA_PAGES ? renderToStaticMarkup(subject.CHINA_PAGES[page]()) : "";
 }
 
+function scene(markup: string, object: string): string {
+	return markup.match(new RegExp(`data-scene-object="${object}"[\\s\\S]*?<\\/section>`))?.[0] ?? "";
+}
+
+function orbit(markup: string, label: string): string {
+	return markup.match(new RegExp(`<figure[^>]*aria-label="${label}"[\\s\\S]*?<\\/figure>`))?.[0] ?? "";
+}
+
+function duplicateIds(markup: string): string[] {
+	const counts = new Map<string, number>();
+	for (const [, id] of markup.matchAll(/\sid="([^"]+)"/g)) {
+		if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+	}
+	return [...counts].filter(([, count]) => count > 1).map(([id]) => id);
+}
+
 function expectAccessibleTabs(markup: string, count: number): void {
 	const tabs = [...markup.matchAll(/<button[^>]*role="tab"[^>]*>/g)].map(([tab]) => tab);
 	expect(tabs).toHaveLength(count);
@@ -77,6 +93,24 @@ describe("Site 06 中国站", () => {
 		for (const label of ["事实", "证据", "边界", "稳定 ID"]) expect(home).toContain(label);
 	});
 
+	it("keeps orbit geometry without a second center label behind each overlaid record", () => {
+		const home = render("home");
+		const product = render("product");
+		for (const [markup, label] of [
+			[home, "同一条公开事实的人类与 Agent 双阅读"],
+			[home, "当前问题怎样影响客户选择"],
+			[product, "围绕同一道业务问题连接的六个节点"],
+		] as const) {
+			const field = orbit(markup, label);
+			expect(field).toContain('class="site-06-orbit__rings"');
+			expect(field).not.toContain("site-06-orbit__content");
+		}
+	});
+
+	it("exposes every Home DOM id exactly once", () => {
+		expect(duplicateIds(render("home"))).toEqual([]);
+	});
+
 	it("keeps the relationship preview before the six-node system field", () => {
 		const system = render("product");
 		expect(system).toContain('data-page-composition="system-field"');
@@ -102,6 +136,24 @@ describe("Site 06 中国站", () => {
 		expectAccessibleTabs(breakdown.match(/data-scene-object="replay-stage"[\s\S]*?<\/section>/)?.[0] ?? "", 4);
 	});
 
+	it("adds one short entry response to each Anxiety, System, and Replay panel", () => {
+		for (const [markup, object, count] of [
+			[render("home"), "anxiety-selector", 5],
+			[render("product"), "system-field", 6],
+			[render("approach"), "replay-stage", 4],
+		] as const) {
+			expect(scene(markup, object).match(/<article[^>]*site-06-motion-swap/g) ?? []).toHaveLength(count);
+		}
+
+		const normal = cssRule(siteCss, ".site-06-motion-swap");
+		expect(normal).toContain("animation: site-06-panel-enter 180ms ease both");
+		expect(siteCss).toMatch(/@keyframes site-06-panel-enter\s*\{[\s\S]*?opacity:\s*0\.72;[\s\S]*?translateY\(3px\)/);
+
+		const reduced = siteCss.slice(siteCss.indexOf("@media (prefers-reduced-motion: reduce)"));
+		expect(cssRule(reduced, ".site-06-motion-swap")).toContain("animation: none");
+		expect(cssRule(reduced, ".site-06-motion-swap")).toContain("transform: none");
+	});
+
 	it("gives the Chinese anxiety, system, and replay distinct responsive geometry", () => {
 		expect(cssRule(siteCss, ".site-06-zh-anxiety")).toContain("display: grid");
 		expect(cssRule(siteCss, ".site-06-zh-route-lead")).toContain("min-width: 0");
@@ -113,6 +165,18 @@ describe("Site 06 中国站", () => {
 		expect(cssRule(siteCss, ".site-06-zh-replay")).toContain("display: grid");
 		const mobile = siteCss.slice(siteCss.indexOf("@media (max-width: 720px)"));
 		expect(cssRule(mobile, ".site-06-zh-system-field__nodes button")).toContain("position: static");
+	});
+
+	it("preserves exact Chinese category casing, source credit, and disclosure affordance", () => {
+		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
+		expect(render("approach")).toContain("Photo: Scott Graham / Unsplash");
+
+		const closed = cssRule(siteCss, ".site-06-zh-public-truth__records summary::after");
+		expect(closed).toContain('content: "查看事实"');
+		expect(closed).not.toMatch(/border-radius|background/);
+		expect(cssRule(siteCss, ".site-06-zh-public-truth__records details[open] summary::after")).toContain(
+			'content: "收起事实"',
+		);
 	});
 
 	it("retains the system labels and public breakdown boundaries", () => {

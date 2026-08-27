@@ -6,7 +6,7 @@ export function OrbitField({
 	interactive = false,
 }: {
 	label: string;
-	children: ReactNode;
+	children?: ReactNode;
 	interactive?: boolean;
 }) {
 	function respondToPointer(event: PointerEvent<HTMLDivElement>) {
@@ -34,7 +34,7 @@ export function OrbitField({
 				<span data-orbit-ring="middle" />
 				<span data-orbit-ring="inner" />
 			</div>
-			<div className="site-06-orbit__content">{children}</div>
+			{children != null ? <div className="site-06-orbit__content">{children}</div> : null}
 		</figure>
 	);
 }

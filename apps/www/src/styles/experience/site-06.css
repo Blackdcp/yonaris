@@ -1892,6 +1892,10 @@
 	overflow-wrap: anywhere;
 }
 
+.site-06-zh-home__lead > .site-06-kicker {
+	text-transform: none;
+}
+
 .site-06-zh-home__lead > p:not(.site-06-kicker),
 .site-06-zh-route-lead > p:not(.site-06-kicker) {
 	max-width: 650px;
@@ -2095,6 +2099,10 @@
 	line-height: 1.55;
 }
 
+.site-06-motion-swap {
+	animation: site-06-panel-enter 180ms ease both;
+}
+
 .site-06-zh-source-trace dl {
 	margin: 0;
 }
@@ -2177,7 +2185,7 @@
 
 .site-06-zh-public-truth__records summary {
 	display: grid;
-	grid-template-columns: 100px minmax(0, 1fr);
+	grid-template-columns: 100px minmax(0, 1fr) auto;
 	padding: 27px 0;
 	cursor: pointer;
 	font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
@@ -2189,6 +2197,20 @@
 
 .site-06-zh-public-truth__records summary::-webkit-details-marker {
 	display: none;
+}
+
+.site-06-zh-public-truth__records summary::after {
+	align-self: end;
+	padding-bottom: 3px;
+	border-bottom: 1px solid currentcolor;
+	color: var(--site-ink-soft);
+	content: "查看事实";
+	font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+	font-size: 0.72rem;
+}
+
+.site-06-zh-public-truth__records details[open] summary::after {
+	content: "收起事实";
 }
 
 .site-06-zh-public-truth__records summary span {
@@ -2515,6 +2537,18 @@
 
 	to {
 		transform: scale(1.045) translate3d(0.8%, -0.4%, 0);
+	}
+}
+
+@keyframes site-06-panel-enter {
+	from {
+		opacity: 0.72;
+		transform: translateY(3px);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }
 
@@ -3126,6 +3160,7 @@
 	.site-06-orbit,
 	.site-06-orbit__rings,
 	.site-06-orbit__rings [data-orbit-ring],
+	.site-06-motion-swap,
 	.site-06-cinematic__media,
 	.site-06-hero__media img,
 	.site-06-hero__media:hover img {

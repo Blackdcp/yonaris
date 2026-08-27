@@ -138,7 +138,7 @@ export function ChinaApproachPage() {
 	return (
 		<ChinaShell pageKey="approach">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-approach" data-page-composition="breakdown-replay">
-				<CinematicField image={{ src: "/brand/site-06/evidence-room.jpg", alt: "正在核对书面材料", focalPosition: "center center" }} credit="Photo: Unsplash" className="site-06-zh-approach__cinematic">
+				<CinematicField image={{ src: "/brand/site-06/evidence-room.jpg", alt: "正在核对书面材料", focalPosition: "center center" }} credit="Photo: Scott Graham / Unsplash" className="site-06-zh-approach__cinematic">
 					<header className="site-06-zh-route-lead"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p></header>
 					<ApproachPreview />
 				</CinematicField>
