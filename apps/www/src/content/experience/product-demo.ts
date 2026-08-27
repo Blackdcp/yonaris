@@ -9,6 +9,10 @@ export interface ProductDemoLabels {
 	readonly sampleWorkspace: string;
 	readonly sampleData: string;
 	readonly coverageBoundary: string;
+	readonly illustrativeSignal: string;
+	readonly reviewAction: string;
+	readonly originalPrompt: string;
+	readonly rewrittenQuery: string;
 	readonly metricLabels: Readonly<Record<ProductDemoMetric, string>>;
 }
 
@@ -19,6 +23,8 @@ export interface ProductDemoOverview {
 	readonly evaluations: number;
 	readonly evaluationWindow: string;
 	readonly frequencyNote: string;
+	readonly trends: Readonly<Pick<Record<ProductDemoMetric, string>, "visibility" | "share">>;
+	readonly lastUpdated: string;
 }
 
 export interface ProductDemoShareOfVoiceRow {
@@ -32,6 +38,7 @@ export interface ProductDemoShareOfVoice {
 }
 
 export interface ProductDemoOpportunityRow {
+	readonly category: string;
 	readonly title: string;
 	readonly signal: string;
 	readonly action: string;
@@ -44,9 +51,9 @@ export interface ProductDemoOpportunities {
 }
 
 export interface ProductDemoQueryFanOutLine {
-	readonly surface: string;
-	readonly status: string;
-	readonly answer: string;
+	readonly query: string;
+	readonly relationship: string;
+	readonly explanation: string;
 }
 
 export interface ProductDemoQueryFanOut {
@@ -76,8 +83,18 @@ const EN: ProductDemoContent = {
 		},
 		sampleWorkspace: "Sample workspace",
 		sampleData: "Sample data for product demonstration only.",
-		coverageBoundary: "Coverage is limited to the selected market, language, prompts, models and evaluation window.",
-		metricLabels: { visibility: "AI Visibility", share: "Share of Voice", prompts: "Prompts", evaluations: "Evaluations" },
+		coverageBoundary:
+			"Coverage is limited to the selected market, language, engine, tracked prompt, observation target, and 30-day window.",
+		illustrativeSignal: "Illustrative signal",
+		reviewAction: "Review action",
+		originalPrompt: "Tracked prompt",
+		rewrittenQuery: "Rewritten web query",
+		metricLabels: {
+			visibility: "AI Visibility",
+			share: "Share of Voice",
+			prompts: "Prompts",
+			evaluations: "Evaluations",
+		},
 	},
 	overview: {
 		visibility: 79,
@@ -85,35 +102,66 @@ const EN: ProductDemoContent = {
 		prompts: 42,
 		evaluations: 3120,
 		evaluationWindow: "30-day evaluation window",
-		frequencyNote: "Approximately 100 evaluations per day.",
+		frequencyNote: "Runs approximately once per day.",
+		trends: { visibility: "30-day AI Visibility trend", share: "30-day Share of Voice trend" },
+		lastUpdated: "Last updated within the displayed window.",
 	},
 	shareOfVoice: {
-		title: "Share of Voice Leaderboard",
-		summary: "A de-identified comparison of observed answers in the selected evaluation window.",
-		rows: [
-			{ brand: "Your brand" },
-			{ brand: "Competitor A" },
-			{ brand: "Competitor B" },
-			{ brand: "Competitor C" },
-		],
+		title: "Share of Voice tracked comparison set",
+		summary: "An ordered, de-identified comparison set for the selected observation boundary.",
+		rows: [{ brand: "Your brand" }, { brand: "Competitor A" }, { brand: "Competitor B" }, { brand: "Competitor C" }],
 	},
 	opportunities: {
 		title: "Opportunities",
-		summary: "Signals to review next, grounded in the observed prompt set.",
+		summary: "Illustrative signals and review actions grounded in the observed prompt set.",
 		rows: [
-			{ title: "Clarify category language", signal: "The answer groups alternatives before your brand.", action: "Inspect the source and retest the wording." },
-			{ title: "Strengthen proof coverage", signal: "High-intent prompts lack a directly matched public source.", action: "Add evidence for the next review window." },
-			{ title: "Compare market phrasing", signal: "Equivalent prompts produce different shortlist language.", action: "Review market and language conditions." },
+			{
+				category: "Creation",
+				title: "Create a comparison brief",
+				signal: "The tracked question lacks a directly matched public comparison source.",
+				action: "Review a source-backed comparison brief before publication.",
+			},
+			{
+				category: "Existing content",
+				title: "Review an existing evidence page",
+				signal: "A relevant public page needs an evidence and freshness review.",
+				action: "Inspect the page against the selected observation boundary.",
+			},
+			{
+				category: "Outreach",
+				title: "Review independent comparison surfaces",
+				signal: "Independent comparison surfaces appear in the observed evidence set.",
+				action: "Confirm an eligible third-party surface before outreach.",
+			},
+			{
+				category: "Evidence expansion",
+				title: "Expand the public evidence basis",
+				signal: "The public basis does not yet cover the selected observation target.",
+				action: "Review one source-backed addition for the comparable retest.",
+			},
 		],
 	},
 	queryFanOut: {
 		title: "Query Fan-Out",
 		prompt: "What should a buyer compare before choosing an analytics partner?",
-		summary: "One buying question is reviewed across a small set of answer surfaces.",
+		summary:
+			"One tracked prompt followed by de-identified web-query rewrites observed for the selected engine and target.",
 		lines: [
-			{ surface: "Answer surface A", status: "Observed", answer: "Category and alternatives identified." },
-			{ surface: "Answer surface B", status: "Observed", answer: "Proof requirement appears in the shortlist." },
-			{ surface: "Answer surface C", status: "Needs review", answer: "Source boundary is not yet clear." },
+			{
+				query: "analytics partner evaluation criteria",
+				relationship: "Added",
+				explanation: "Adds evaluation criteria to the buying intent.",
+			},
+			{
+				query: "compare analytics partners for buyer decisions",
+				relationship: "Preserved",
+				explanation: "Preserves the analytics-partner comparison intent.",
+			},
+			{
+				query: "analytics partner evidence by selected market and language",
+				relationship: "Boundary",
+				explanation: "Applies the selected observation boundary to the rewrite.",
+			},
 		],
 	},
 };
@@ -124,7 +172,11 @@ const ZH: ProductDemoContent = {
 		tabs: { overview: "总览", shareOfVoice: "声量份额", opportunities: "机会", queryFanOut: "问题分发" },
 		sampleWorkspace: "示例工作区",
 		sampleData: "仅用于产品演示的示例数据。",
-		coverageBoundary: "覆盖范围限于选定市场、语言、问题、模型和评估时间窗。",
+		coverageBoundary: "覆盖范围限于选定市场、语言、引擎、跟踪问题、观测目标和 30 天时间窗。",
+		illustrativeSignal: "示意信号",
+		reviewAction: "复核行动",
+		originalPrompt: "跟踪问题",
+		rewrittenQuery: "改写后的网页查询",
 		metricLabels: { visibility: "AI 可见度", share: "声量份额", prompts: "问题数", evaluations: "评估次数" },
 	},
 	overview: {
@@ -133,35 +185,57 @@ const ZH: ProductDemoContent = {
 		prompts: 42,
 		evaluations: 3120,
 		evaluationWindow: "30 天评估时间窗",
-		frequencyNote: "约每天 100 次评估。",
+		frequencyNote: "约每天运行一次。",
+		trends: { visibility: "30 天 AI 可见度趋势", share: "30 天声量份额趋势" },
+		lastUpdated: "最近一次更新在当前显示时间窗内。",
 	},
 	shareOfVoice: {
-		title: "声量份额排行",
-		summary: "在选定评估时间窗内，对去标识答案进行比较。",
-		rows: [
-			{ brand: "你的品牌" },
-			{ brand: "竞品 A" },
-			{ brand: "竞品 B" },
-			{ brand: "竞品 C" },
-		],
+		title: "声量份额跟踪对比组",
+		summary: "按顺序展示选定观测边界内的去标识对比组。",
+		rows: [{ brand: "你的品牌" }, { brand: "竞品甲" }, { brand: "竞品乙" }, { brand: "竞品丙" }],
 	},
 	opportunities: {
 		title: "机会",
-		summary: "根据已观测的问题集，列出下一步值得复核的信号。",
+		summary: "根据已观测的问题集，展示示意信号和待复核行动。",
 		rows: [
-			{ title: "说清品类语言", signal: "答案先把替代选项放在你的品牌之前。", action: "查看来源并重新核对表述。" },
-			{ title: "补足证据覆盖", signal: "高意向问题缺少直接匹配的公开来源。", action: "为下一轮复核补充证据。" },
-			{ title: "比较市场说法", signal: "相同问题在不同语境下产生不同的入选表述。", action: "查看市场和语言条件。" },
+			{
+				category: "新建内容",
+				title: "准备对比说明",
+				signal: "跟踪问题缺少直接匹配的公开对比来源。",
+				action: "发布前复核一份有来源依据的对比说明。",
+			},
+			{
+				category: "现有内容",
+				title: "复核现有证据页面",
+				signal: "相关公开页面需要复核证据和时效性。",
+				action: "按照选定观测边界检查该页面。",
+			},
+			{
+				category: "外部拓展",
+				title: "复核独立对比渠道",
+				signal: "已观测证据中出现了独立对比渠道。",
+				action: "开展外部沟通前，先确认适合的第三方渠道。",
+			},
+			{
+				category: "证据扩展",
+				title: "扩展公开证据基础",
+				signal: "公开依据尚未覆盖选定观测目标。",
+				action: "为可比复测复核一项有来源依据的补充。",
+			},
 		],
 	},
 	queryFanOut: {
 		title: "问题分发",
 		prompt: "买方在选择分析合作伙伴前应该比较哪些方面？",
-		summary: "一道采购问题会在几种答案界面上分别复核。",
+		summary: "一个跟踪问题，后接在选定引擎和目标下观测到的去标识网页查询改写。",
 		lines: [
-			{ surface: "答案界面 A", status: "已观测", answer: "识别出品类和替代选项。" },
-			{ surface: "答案界面 B", status: "已观测", answer: "入选答案中出现了证据要求。" },
-			{ surface: "答案界面 C", status: "待复核", answer: "来源边界还不清楚。" },
+			{ query: "分析合作伙伴 评估标准", relationship: "新增", explanation: "在采购意图上新增评估标准。" },
+			{ query: "比较分析合作伙伴 采购决策", relationship: "保留", explanation: "保留分析合作伙伴的比较意图。" },
+			{
+				query: "分析合作伙伴 选定市场 语言 公开证据",
+				relationship: "边界",
+				explanation: "把选定观测边界应用到查询改写。",
+			},
 		],
 	},
 };

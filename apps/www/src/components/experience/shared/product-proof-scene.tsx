@@ -1,11 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { productDemoFor, type ProductDemoView } from "@/content/experience/product-demo";
+import { type ProductDemoView, productDemoFor } from "@/content/experience/product-demo";
 import type { ExperienceLocale } from "@/content/experience/types";
 import { useRovingTabs } from "./use-roving-tabs";
 
 const VIEWS: readonly ProductDemoView[] = ["overview", "shareOfVoice", "opportunities", "queryFanOut"];
+
+function TrendTrace({ label, path }: { label: string; path: string }) {
+	return (
+		<figure>
+			<svg viewBox="0 0 120 32" aria-hidden="true" focusable="false">
+				<path d={path} fill="none" stroke="currentColor" vectorEffect="non-scaling-stroke" />
+			</svg>
+			<figcaption>{label}</figcaption>
+		</figure>
+	);
+}
 
 export function ProductProofScene({ locale, compact = false }: { locale: ExperienceLocale; compact?: boolean }) {
 	const demo = productDemoFor(locale);
@@ -45,11 +56,11 @@ export function ProductProofScene({ locale, compact = false }: { locale: Experie
 					<dl>
 						<div>
 							<dt>{demo.labels.metricLabels.visibility}</dt>
-							<dd>{demo.overview.visibility}</dd>
+							<dd>{demo.overview.visibility}%</dd>
 						</div>
 						<div>
 							<dt>{demo.labels.metricLabels.share}</dt>
-							<dd>{demo.overview.share}</dd>
+							<dd>{demo.overview.share}%</dd>
 						</div>
 						<div>
 							<dt>{demo.labels.metricLabels.prompts}</dt>
@@ -60,13 +71,24 @@ export function ProductProofScene({ locale, compact = false }: { locale: Experie
 							<dd>{numberFormat.format(demo.overview.evaluations)}</dd>
 						</div>
 					</dl>
+					<div>
+						<TrendTrace
+							label={demo.overview.trends.visibility}
+							path="M2 25 L22 20 L42 22 L62 13 L82 16 L102 8 L118 10"
+						/>
+						<TrendTrace label={demo.overview.trends.share} path="M2 23 L22 24 L42 18 L62 20 L82 14 L102 15 L118 9" />
+					</div>
 					<p>{demo.overview.evaluationWindow}</p>
 					<p>{demo.overview.frequencyNote}</p>
+					<p>{demo.overview.lastUpdated}</p>
 				</section>
 
 				<section {...tabs.getPanelProps("shareOfVoice")}>
 					<h2>{demo.shareOfVoice.title}</h2>
 					<p>{demo.shareOfVoice.summary}</p>
+					<p>
+						{demo.labels.metricLabels.share}: {demo.overview.share}%
+					</p>
 					<ol>
 						{demo.shareOfVoice.rows.map((row) => (
 							<li key={row.brand}>{row.brand}</li>
@@ -79,10 +101,15 @@ export function ProductProofScene({ locale, compact = false }: { locale: Experie
 					<p>{demo.opportunities.summary}</p>
 					<ol>
 						{demo.opportunities.rows.map((row) => (
-							<li key={row.title}>
+							<li key={row.category}>
+								<p>{row.category}</p>
 								<h3>{row.title}</h3>
-								<p>{row.signal}</p>
-								<p>{row.action}</p>
+								<p>
+									<strong>{demo.labels.illustrativeSignal}</strong> {row.signal}
+								</p>
+								<p>
+									<strong>{demo.labels.reviewAction}</strong> {row.action}
+								</p>
 							</li>
 						))}
 					</ol>
@@ -91,17 +118,19 @@ export function ProductProofScene({ locale, compact = false }: { locale: Experie
 				<section {...tabs.getPanelProps("queryFanOut")}>
 					<h2>{demo.queryFanOut.title}</h2>
 					<p>{demo.queryFanOut.summary}</p>
+					<p>{demo.labels.originalPrompt}</p>
 					<blockquote>{demo.queryFanOut.prompt}</blockquote>
-					<dl>
+					<p>{demo.labels.rewrittenQuery}</p>
+					<ol>
 						{demo.queryFanOut.lines.map((line) => (
-							<div key={line.surface}>
-								<dt>{line.surface}</dt>
-								<dd>
-									<strong>{line.status}</strong> {line.answer}
-								</dd>
-							</div>
+							<li key={line.query}>
+								<code>{line.query}</code>
+								<p>
+									<strong>{line.relationship}</strong> {line.explanation}
+								</p>
+							</li>
 						))}
-					</dl>
+					</ol>
 				</section>
 			</div>
 		</section>
