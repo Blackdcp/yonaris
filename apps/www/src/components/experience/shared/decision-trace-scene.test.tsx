@@ -2,6 +2,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DecisionTraceScene, shouldAdvanceDecisionTrace } from "./decision-trace-scene";
 
+function panelMarkup(html: string, state: "compare") {
+	const panel = html.match(new RegExp(`<section[^>]+id="[^"]+-${state}"[^>]*>(.*?)</section>`))?.[1];
+	expect(panel).toBeDefined();
+	return panel ?? "";
+}
+
 describe("DecisionTraceScene", () => {
 	it("keeps one question while exposing all four causal review states in SSR", () => {
 		const html = renderToStaticMarkup(<DecisionTraceScene locale="en" />);
@@ -17,10 +23,15 @@ describe("DecisionTraceScene", () => {
 
 	it("moves causally from comparison through the evidence gap to one comparable next action", () => {
 		const html = renderToStaticMarkup(<DecisionTraceScene locale="en" />);
+		const compare = panelMarkup(html, "compare");
 		const comparisonOrder = ["Your brand", "Competitor A", "Competitor B", "Competitor C"].map((label) =>
-			html.indexOf(label),
+			compare.indexOf(label),
 		);
 
+		expect(compare).toContain("Share of Voice: 35%");
+		expect(compare).toMatch(
+			/<ol><li>Your brand<\/li><li>Competitor A<\/li><li>Competitor B<\/li><li>Competitor C<\/li><\/ol>/,
+		);
 		expect(comparisonOrder).toEqual([...comparisonOrder].sort((a, b) => a - b));
 		expect(html).toContain("Public evidence gap");
 		expect(html).toContain("Selected observation boundary");
@@ -40,8 +51,11 @@ describe("DecisionTraceScene", () => {
 
 	it("localizes the fixed question, evidence gap, boundary, action, and retest", () => {
 		const html = renderToStaticMarkup(<DecisionTraceScene locale="zh" />);
+		const compare = panelMarkup(html, "compare");
 
 		expect(html.match(/哪位合作伙伴能够支持这项决策/g)?.length).toBe(1);
+		expect(compare).toContain("声量份额：35%");
+		expect(compare).toMatch(/<ol><li>你的品牌<\/li><li>竞品甲<\/li><li>竞品乙<\/li><li>竞品丙<\/li><\/ol>/u);
 		for (const label of ["公开证据缺口", "选定观测边界", "下一步行动", "可比复测", "不构成推荐"])
 			expect(html).toContain(label);
 	});

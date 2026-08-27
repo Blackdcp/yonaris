@@ -175,11 +175,16 @@ export function DecisionTraceScene({ locale }: { locale: ExperienceLocale }) {
 				<section {...tabs.getPanelProps("compare")}>
 					<h2>{demo.shareOfVoice.title}</h2>
 					<p>{demo.shareOfVoice.summary}</p>
-					<ul>
+					<p>
+						{locale === "zh"
+							? `${demo.labels.metricLabels.share}：${demo.overview.share}%`
+							: `${demo.labels.metricLabels.share}: ${demo.overview.share}%`}
+					</p>
+					<ol>
 						{demo.shareOfVoice.rows.map((row) => (
 							<li key={row.brand}>{row.brand}</li>
 						))}
-					</ul>
+					</ol>
 				</section>
 
 				<section {...tabs.getPanelProps("inspect")}>

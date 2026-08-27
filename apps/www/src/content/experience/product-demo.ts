@@ -3,6 +3,7 @@ export type ProductDemoLocale = "en" | "zh";
 
 export type ProductDemoView = "overview" | "shareOfVoice" | "opportunities" | "queryFanOut";
 type ProductDemoMetric = "visibility" | "share" | "prompts" | "evaluations";
+export type ProductDemoOpportunityKind = "creation" | "existing-content" | "outreach" | "social";
 
 export interface ProductDemoLabels {
 	readonly tabs: Readonly<Record<ProductDemoView, string>>;
@@ -38,6 +39,7 @@ export interface ProductDemoShareOfVoice {
 }
 
 export interface ProductDemoOpportunityRow {
+	readonly kind: ProductDemoOpportunityKind;
 	readonly category: string;
 	readonly title: string;
 	readonly signal: string;
@@ -116,28 +118,32 @@ const EN: ProductDemoContent = {
 		summary: "Illustrative signals and review actions grounded in the observed prompt set.",
 		rows: [
 			{
+				kind: "creation",
 				category: "Creation",
 				title: "Create a comparison brief",
 				signal: "The tracked question lacks a directly matched public comparison source.",
 				action: "Review a source-backed comparison brief before publication.",
 			},
 			{
+				kind: "existing-content",
 				category: "Existing content",
 				title: "Review an existing evidence page",
 				signal: "A relevant public page needs an evidence and freshness review.",
 				action: "Inspect the page against the selected observation boundary.",
 			},
 			{
+				kind: "outreach",
 				category: "Outreach",
 				title: "Review independent comparison surfaces",
 				signal: "Independent comparison surfaces appear in the observed evidence set.",
 				action: "Confirm an eligible third-party surface before outreach.",
 			},
 			{
-				category: "Evidence expansion",
-				title: "Expand the public evidence basis",
-				signal: "The public basis does not yet cover the selected observation target.",
-				action: "Review one source-backed addition for the comparable retest.",
+				kind: "social",
+				category: "Social",
+				title: "Review community conversations",
+				signal: "Community conversations are part of the evidence surfaces selected for review.",
+				action: "Review an authentic, disclosed participation opportunity.",
 			},
 		],
 	},
@@ -199,28 +205,32 @@ const ZH: ProductDemoContent = {
 		summary: "根据已观测的问题集，展示示意信号和待复核行动。",
 		rows: [
 			{
+				kind: "creation",
 				category: "新建内容",
 				title: "准备对比说明",
 				signal: "跟踪问题缺少直接匹配的公开对比来源。",
 				action: "发布前复核一份有来源依据的对比说明。",
 			},
 			{
+				kind: "existing-content",
 				category: "现有内容",
 				title: "复核现有证据页面",
 				signal: "相关公开页面需要复核证据和时效性。",
 				action: "按照选定观测边界检查该页面。",
 			},
 			{
+				kind: "outreach",
 				category: "外部拓展",
 				title: "复核独立对比渠道",
 				signal: "已观测证据中出现了独立对比渠道。",
 				action: "开展外部沟通前，先确认适合的第三方渠道。",
 			},
 			{
-				category: "证据扩展",
-				title: "扩展公开证据基础",
-				signal: "公开依据尚未覆盖选定观测目标。",
-				action: "为可比复测复核一项有来源依据的补充。",
+				kind: "social",
+				category: "社交渠道",
+				title: "复核社群讨论",
+				signal: "社群讨论属于当前待复核的证据渠道。",
+				action: "复核一次真实、明确披露身份的参与机会。",
 			},
 		],
 	},

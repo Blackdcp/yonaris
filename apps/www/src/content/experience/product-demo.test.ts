@@ -46,18 +46,27 @@ describe("public product demo content", () => {
 	});
 
 	it("maps opportunities to the four implemented review categories", () => {
+		expect(productDemoFor("en").opportunities.rows.map((row) => row.kind)).toEqual([
+			"creation",
+			"existing-content",
+			"outreach",
+			"social",
+		]);
 		expect(productDemoFor("en").opportunities.rows.map((row) => row.category)).toEqual([
 			"Creation",
 			"Existing content",
 			"Outreach",
-			"Evidence expansion",
+			"Social",
 		]);
 		expect(productDemoFor("zh").opportunities.rows.map((row) => row.category)).toEqual([
 			"新建内容",
 			"现有内容",
 			"外部拓展",
-			"证据扩展",
+			"社交渠道",
 		]);
+		expect(JSON.stringify(productDemoFor("en").opportunities)).not.toMatch(
+			/Evidence expansion|mentions|citations|\d%/i,
+		);
 	});
 
 	it("models fan-out as prompt rewrites with Added, Preserved, and Boundary explanations", () => {

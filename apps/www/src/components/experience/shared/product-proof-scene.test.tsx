@@ -27,9 +27,10 @@ describe("ProductProofScene", () => {
 		);
 
 		expect(comparisonOrder).toEqual([...comparisonOrder].sort((a, b) => a - b));
-		for (const category of ["Creation", "Existing content", "Outreach", "Evidence expansion"]) {
+		for (const category of ["Creation", "Existing content", "Outreach", "Social"]) {
 			expect(html).toContain(category);
 		}
+		expect(html).not.toContain("Evidence expansion");
 		expect(html).not.toMatch(/mentions|citations|Competitor A\s*\d|Competitor B\s*\d|Competitor C\s*\d/i);
 	});
 
@@ -57,13 +58,14 @@ describe("ProductProofScene", () => {
 			"新建内容",
 			"现有内容",
 			"外部拓展",
-			"证据扩展",
+			"社交渠道",
 			"新增",
 			"保留",
 			"边界",
 		]) {
 			expect(html).toContain(label);
 		}
+		expect(html).not.toContain("证据扩展");
 		expect(html).not.toContain("What should");
 	});
 });
