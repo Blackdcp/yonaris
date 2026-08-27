@@ -225,54 +225,55 @@ export type CrossPlanResolution = {
 	runtimeTest: string;
 };
 
-function task4(file: string, kind: CrossPlanSignatureKind, value: string, occurrence = 1): CrossPlanOwnership {
+function taskResolution(
+	task: CrossPlanResolution["task"],
+	file: string,
+	kind: CrossPlanSignatureKind,
+	value: string,
+	evidence: string,
+	runtimeTest: string,
+	occurrence = 1,
+): CrossPlanResolution {
 	return {
 		file,
 		kind,
 		value,
 		occurrence,
 		owner: "portal-output-languages",
-		task: "Task 4",
-		reason: "Explicit outputLanguage propagation is owned by the printable report and export task.",
+		task,
+		resolution: "explicit-output-language",
+		evidence,
+		runtimeTest,
 	};
 }
 
-/** Exact AST signatures for the known output-language hand-off. */
-export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [
-	task4("apps/web/src/components/prompt-chart-print.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/prompt-chart-print.tsx", "output-component", "ChartDownloadFooter", 1),
-	task4("apps/web/src/components/prompt-chart-print.tsx", "output-component", "ChartDownloadFooter", 2),
-	task4("apps/web/src/components/prompt-chart-print.tsx", "output-component", "BaseChartPrint"),
-	task4("apps/web/src/components/prompt-chart-print.tsx", "output-component", "ChartDownloadFooter", 3),
-	task4("apps/web/src/components/base-chart-print.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/chart-download-footer.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/chart-export-preview.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/chart-export-preview.tsx", "output-component", "BaseChart"),
-	task4("apps/web/src/components/base-chart.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/cached-prompt-chart.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/cached-prompt-chart.tsx", "output-hook", "useChartExport"),
-	task4("apps/web/src/components/cached-prompt-chart.tsx", "output-component", "BaseChart"),
-	task4("apps/web/src/components/virtualized-prompt-list.tsx", "output-component", "CachedPromptChart"),
-	task4("apps/web/src/components/prompts-display.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/components/prompts-display.tsx", "output-component", "VirtualizedPromptList"),
-	task4("apps/web/src/routes/_authed/app/$brand/visibility.tsx", "ambient-ui-language", "useI18n"),
-	task4("apps/web/src/routes/_authed/app/$brand/visibility.tsx", "output-component", "PromptsDisplay"),
-	task4("apps/web/src/hooks/use-chart-export.tsx", "output-component", "ChartExportPreview"),
-];
+function task4Resolution(
+	file: string,
+	kind: CrossPlanSignatureKind,
+	value: string,
+	evidence: string,
+	runtimeTest: string,
+	occurrence = 1,
+): CrossPlanResolution {
+	return taskResolution("Task 4", file, kind, value, evidence, runtimeTest, occurrence);
+}
+
+function task2Resolution(
+	file: string,
+	kind: CrossPlanSignatureKind,
+	value: string,
+	evidence: string,
+	runtimeTest: string,
+	occurrence = 1,
+): CrossPlanResolution {
+	return taskResolution("Task 2", file, kind, value, evidence, runtimeTest, occurrence);
+}
+
+/** No output-language surface remains deferred after Task 4. */
+export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [];
 
 /** Task 2/3/4 replaces deferred entries with exact reviewed attestations. */
 export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
-	{
-		file: "apps/web/src/routes/_authed/reports/index.tsx",
-		kind: "output-component",
-		value: "ReportsPage",
-		occurrence: 1,
-		owner: "portal-output-languages",
-		task: "Task 3",
-		resolution: "explicit-output-language",
-		evidence: "The Reports route owns a session-scoped artifact-language selector independent from Portal UI language.",
-		runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
-	},
 	{
 		file: "apps/web/src/routes/_authed/reports/index.tsx",
 		kind: "ambient-ui-language",
@@ -366,26 +367,332 @@ export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
 	{
 		file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
 		kind: "output-component",
-		value: "ReportPromptChartPrint",
+		value: "PromptChartPrint",
 		occurrence: 1,
 		owner: "portal-output-languages",
 		task: "Task 4",
 		resolution: "explicit-output-language",
-		evidence:
-			"The route passes the exact selected token and raw run evidence at its chart boundary; child consumption remains independently deferred.",
-		runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+		evidence: "The route passes the exact selected token and raw run evidence to the real printable chart component.",
+		runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language-browser-runtime.browser.test.tsx",
 	},
-	{
-		file: "apps/web/src/routes/_authed/admin/tools.tsx",
-		kind: "output-component",
-		value: "OpportunitiesGenerationControl",
-		occurrence: 1,
-		owner: "portal-output-languages",
-		task: "Task 2",
-		resolution: "explicit-output-language",
-		evidence: "The admin tools route renders the explicit Opportunity generation control.",
-		runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
-	},
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Ambient UI language is only the backward-compatible fallback when no artifact language prop is supplied.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-component",
+		"ChartDownloadFooter",
+		"The first printable empty-state footer receives the resolved artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+		1,
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-component",
+		"ChartDownloadFooter",
+		"The no-mention footer receives the resolved artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+		2,
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-component",
+		"BaseChartPrint",
+		"Printable chart data and formatters receive the resolved artifact language without changing metrics.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-component",
+		"ChartDownloadFooter",
+		"The populated printable chart footer receives the resolved artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+		3,
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-language-binding",
+		"PromptChartPrint",
+		"The printable chart root binds lang, copy, and formatting to its explicit artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompt-chart-print.tsx",
+		"output-copy",
+		"getReportCopy",
+		"Report chart static copy comes from the explicit report catalog while raw entities remain unchanged.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart-print.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Ambient UI formatting is retained only for callers that omit the optional artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart-print.tsx",
+		"output-language-binding",
+		"BaseChartPrint",
+		"Print chart empty copy, percentages, and nested lang use the explicit artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart-print.tsx",
+		"output-copy",
+		"getReportCopy",
+		"Print chart formatters resolve from the report-specific language catalog.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-download-footer.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Ambient UI copy is only the compatibility fallback for non-artifact callers.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-download-footer.tsx",
+		"output-language-binding",
+		"ChartDownloadFooter",
+		"Printable download controls accept and bind the explicit artifact language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-download-footer.tsx",
+		"output-copy",
+		"getReportCopy",
+		"Printable download title and progress copy resolve from the explicit report catalog.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-export-preview.tsx",
+		"output-component",
+		"BaseChart",
+		"The PNG preview passes its required explicit language into every visible chart formatter.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-export-preview.tsx",
+		"output-language-binding",
+		"ChartExportPreview",
+		"The PNG preview root binds lang and static copy to the explicit export language.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-export-preview.tsx",
+		"output-copy",
+		"getReportCopy",
+		"PNG visibility and logo accessibility copy comes from the explicit artifact catalog.",
+		"apps/web/src/components/chart-surface-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Live dashboard charts still use ambient UI language when no artifact language is supplied.",
+		"apps/web/src/components/base-chart-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart.tsx",
+		"output-language-binding",
+		"BaseChart",
+		"PNG chart dates, values, labels, and nested lang prefer the explicit artifact language.",
+		"apps/web/src/components/base-chart-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/base-chart.tsx",
+		"output-copy",
+		"getReportCopy",
+		"Explicit PNG chart formatting resolves through the report-language formatter boundary.",
+		"apps/web/src/components/base-chart-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/cached-prompt-chart.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Dashboard card chrome and live chart summaries intentionally remain in Portal UI language.",
+		"apps/web/src/components/visibility-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/cached-prompt-chart.tsx",
+		"output-hook",
+		"useChartExport",
+		"The dashboard card passes only the resolved artifact selection into the PNG export hook.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/cached-prompt-chart.tsx",
+		"output-component",
+		"BaseChart",
+		"The on-screen BaseChart intentionally omits artifact language so dashboard chrome follows UI language.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/cached-prompt-chart.tsx",
+		"output-language-binding",
+		"CachedPromptChart",
+		"The card requires a resolved selection for export while preserving live UI language and raw entities.",
+		"apps/web/src/components/visibility-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-actions-footer.tsx",
+		"output-language-binding",
+		"ChartActionsFooter",
+		"The dashboard footer exposes the explicit selector and disables export until storage resolution.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-export-language-selector.tsx",
+		"output-language-binding",
+		"ChartExportLanguageSelector",
+		"The native selector accepts only exact language tokens and persists changes through its supplied setter.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-export-language-selector.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Only the selector label and option chrome follow Portal UI language; its selected value is independent.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/virtualized-prompt-list.tsx",
+		"output-component",
+		"CachedPromptChart",
+		"Every virtualized chart receives the same resolved scope selection and setter.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/virtualized-prompt-list.tsx",
+		"output-language-binding",
+		"VirtualizedPromptList",
+		"The virtual list makes artifact language an explicit required boundary independent from prompts and metrics.",
+		"apps/web/src/components/virtualized-prompt-list-output-language.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompts-display.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Visibility page chrome remains localized from the ambient UI language.",
+		"apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompts-display.tsx",
+		"output-component",
+		"VirtualizedPromptList",
+		"The resolved scope selection is propagated explicitly into the virtualized chart list.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompts-display.tsx",
+		"output-hook",
+		"useArtifactLanguageSelection",
+		"Dashboard export selection is session-scoped by exact surface, brand, and scope; UI is first-seed only.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/components/prompts-display.tsx",
+		"output-language-binding",
+		"ChartSection",
+		"ChartSection receives the resolved selection rather than deriving artifact language from UI or Program locale.",
+		"apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/routes/_authed/app/$brand/visibility.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"The Visibility route keeps all page chrome bound to Portal UI language.",
+		"apps/web/src/routes/_authed/app/$brand/-analytics-localization.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/routes/_authed/app/$brand/visibility.tsx",
+		"output-component",
+		"PromptsDisplay",
+		"The route declares the exact visibility-chart-export surface without supplying a locale-derived artifact token.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/hooks/use-chart-export.tsx",
+		"output-component",
+		"ChartExportPreview",
+		"The off-screen PNG preview receives the exact selection captured for the export request.",
+		"apps/web/src/hooks/use-chart-export-output-language.test.tsx",
+	),
+	task4Resolution(
+		"apps/web/src/hooks/use-chart-export.tsx",
+		"output-language-binding",
+		"useChartExport",
+		"The hook requires an explicit language and binds it to both preview data and the html2canvas capture root.",
+		"apps/web/src/hooks/use-chart-export-output-language.test.tsx",
+	),
+	...(
+		[
+			["ChartActionsFooter", 1],
+			["ChartActionsFooter", 2],
+		] satisfies Array<[string, number]>
+	).map(([value, occurrence]) =>
+		task4Resolution(
+			"apps/web/src/components/cached-prompt-chart.tsx",
+			"output-component",
+			value,
+			"The dashboard chart child stays in the live UI subtree while export language remains an explicit independent prop.",
+			"apps/web/src/components/visibility-localization.test.tsx",
+			occurrence,
+		),
+	),
+	task4Resolution(
+		"apps/web/src/components/chart-actions-footer.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Footer chrome follows Portal UI language while its artifact selector and download gate use explicit output language.",
+		"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+	),
+	...["ChartExportLanguageSelector"].map((value) =>
+		task4Resolution(
+			"apps/web/src/components/chart-actions-footer.tsx",
+			"output-component",
+			value,
+			"The production chart footer child is rendered under the resolved artifact selector and download gating boundary.",
+			"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+		),
+	),
+	...["PromptsContent", "ChartSection"].map((value) =>
+		task4Resolution(
+			"apps/web/src/components/prompts-display.tsx",
+			"output-component",
+			value,
+			"The dashboard visibility child participates in the explicit scope selection propagation without changing UI chrome.",
+			"apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+		),
+	),
+	task2Resolution(
+		"apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Customer Opportunity page chrome stays in Portal UI language beside its independent artifact selection.",
+		"apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+	),
+	task2Resolution(
+		"apps/web/src/components/opportunities-generation-control.tsx",
+		"ambient-ui-language",
+		"useI18n",
+		"Admin Opportunity controls keep visible chrome in UI language while generation uses the explicit artifact token.",
+		"apps/web/src/components/opportunities-generation-control.test.tsx",
+	),
+	...["OpportunityCard"].map((value) =>
+		task2Resolution(
+			"apps/web/src/components/opportunities-report.tsx",
+			"output-component",
+			value,
+			"The Opportunity artifact child renders inside the persisted report-language root without translating raw evidence.",
+			"apps/web/src/components/opportunities-report.test.tsx",
+		),
+	),
 	{
 		file: "apps/web/src/components/opportunities-generation-control.tsx",
 		kind: "output-hook",
@@ -395,7 +702,7 @@ export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
 		task: "Task 2",
 		resolution: "explicit-output-language",
 		evidence: "The generation control resolves and submits the tab-scoped artifact language.",
-		runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+		runtimeTest: "apps/web/src/components/chart-export-output-language.browser.test.tsx",
 	},
 	{
 		file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
@@ -406,7 +713,7 @@ export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
 		task: "Task 2",
 		resolution: "explicit-output-language",
 		evidence: "The customer route resolves its independent tab-scoped artifact language before reading.",
-		runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+		runtimeTest: "apps/web/src/components/chart-export-output-language.browser.test.tsx",
 	},
 	{
 		file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
@@ -552,9 +859,12 @@ function declarationName(node: Node): string | undefined {
 	}
 	if (
 		ts.isImportSpecifier(node) ||
+		ts.isImportClause(node) ||
 		ts.isNamespaceImport(node) ||
 		ts.isFunctionDeclaration(node) ||
-		ts.isEnumDeclaration(node)
+		ts.isEnumDeclaration(node) ||
+		ts.isInterfaceDeclaration(node) ||
+		ts.isTypeAliasDeclaration(node)
 	) {
 		return node.name?.text;
 	}
@@ -562,7 +872,7 @@ function declarationName(node: Node): string | undefined {
 }
 
 function declarationScope(node: Node): Node | undefined {
-	if (ts.isImportSpecifier(node)) return node.getSourceFile();
+	if (ts.isImportSpecifier(node) || ts.isImportClause(node) || ts.isNamespaceImport(node)) return node.getSourceFile();
 	if (ts.isParameterDeclaration(node) || (isBindingElement(node) && ts.isParameterDeclaration(node.parent))) {
 		for (let current = node.parent; current; current = current.parent) {
 			if (ts.isFunctionLikeDeclaration(current)) return current;
@@ -1847,7 +2157,12 @@ function chromeExtensionResidueErrors(repositoryRoot: string) {
 }
 
 type CollectedCrossPlanSignature = Pick<CrossPlanOwnership, "file" | "kind" | "value" | "occurrence">;
-type DiscoveredCrossPlanSignature = CollectedCrossPlanSignature & { discoverable: boolean };
+type DiscoveredCrossPlanSignature = CollectedCrossPlanSignature & {
+	discoverable: boolean;
+	dependencyImport?: ImportedSymbol & { importerFile: string };
+	dependencyOwnerKey?: string;
+	ownerKey?: string;
+};
 
 function unwrapExpression(expression: Expression): Expression {
 	if (ts.isParenthesizedExpression(expression)) return unwrapExpression(expression.expression);
@@ -1883,6 +2198,10 @@ function importedSymbol(
 ): ImportedSymbol | undefined {
 	const declaration = lexicalDeclaration(identifier, bindings);
 	if (!declaration || visiting.has(declaration)) return undefined;
+	if (ts.isImportClause(declaration)) {
+		const module = importModule(declaration);
+		return module ? { exportedName: "default", module } : undefined;
+	}
 	if (ts.isImportSpecifier(declaration)) {
 		const module = importModule(declaration);
 		return module ? { exportedName: declaration.propertyName?.text ?? declaration.name.text, module } : undefined;
@@ -1918,35 +2237,706 @@ function externalBindingName(node: Node): string | undefined {
 	return undefined;
 }
 
-const SEMANTIC_OUTPUT_COMPONENT_MODULES = new Set([
-	"BaseChart",
-	"BaseChartPrint",
-	"CachedPromptChart",
-	"ChartDownloadFooter",
-	"ChartExportPreview",
-	"PromptChartPrint",
-	"PromptsDisplay",
-	"VirtualizedPromptList",
-]);
+type ParsedCrossPlanSource = { file: string; sourceFile: SourceFile };
 
-const SEMANTIC_OPPORTUNITY_COMPONENTS = new Set(["OpportunitiesGenerationControl", "OpportunitiesReport"]);
+type ComponentOwner = {
+	declaration: Node;
+	file: string;
+	key: string;
+	name: string;
+	functions: FunctionLikeDeclaration[];
+};
 
-function semanticImportedOutputComponent(
-	node: JsxOpeningLikeElement,
-	bindings: LexicalBindings,
-): ImportedSymbol | undefined {
-	if (!ts.isIdentifier(node.tagName)) return undefined;
-	const symbol = importedSymbol(node.tagName, bindings);
-	return symbol && SEMANTIC_OUTPUT_COMPONENT_MODULES.has(symbol.exportedName) ? symbol : undefined;
+type LocalComponentEdge = {
+	from: string;
+	imported?: ImportedSymbol;
+	to?: string;
+	node: JsxOpeningLikeElement;
+	carriesOutputLanguage: boolean;
+};
+
+type OutputComponentGraph = {
+	componentDependencies: ReadonlyMap<JsxOpeningLikeElement, { imported?: ImportedSymbol; ownerKey?: string }>;
+	connectedFunctions: ReadonlySet<FunctionLikeDeclaration>;
+	outputComponentNodes: ReadonlySet<JsxOpeningLikeElement>;
+	missingOutputLanguageHandoffs: readonly string[];
+};
+
+function normalizedModulePath(value: string) {
+	return path.posix.normalize(value.replaceAll("\\", "/"));
 }
 
-function semanticImportedOpportunityComponent(
-	node: JsxOpeningLikeElement,
-	bindings: LexicalBindings,
-): ImportedSymbol | undefined {
-	if (!ts.isIdentifier(node.tagName)) return undefined;
-	const symbol = importedSymbol(node.tagName, bindings);
-	return symbol && SEMANTIC_OPPORTUNITY_COMPONENTS.has(symbol.exportedName) ? symbol : undefined;
+function isLocalWebModule(module: string) {
+	return module.startsWith("./") || module.startsWith("../") || module.startsWith("@/");
+}
+
+function resolveLocalModuleFile(importer: string, module: string, knownFiles: ReadonlySet<string>) {
+	if (!isLocalWebModule(module)) return undefined;
+	const base = module.startsWith("@/")
+		? `apps/web/src/${module.slice(2)}`
+		: path.posix.join(path.posix.dirname(importer), module);
+	const normalized = normalizedModulePath(base);
+	for (const candidate of [
+		normalized,
+		`${normalized}.tsx`,
+		`${normalized}.ts`,
+		`${normalized}/index.tsx`,
+		`${normalized}/index.ts`,
+	]) {
+		if (knownFiles.has(candidate)) return candidate;
+	}
+	return undefined;
+}
+
+function namedFunctionOwnerDeclaration(node: FunctionLikeDeclaration): Node | undefined {
+	if (ts.isFunctionDeclaration(node) && (node.name || /^\s*export\s+default\b/u.test(node.getText()))) return node;
+	let current: Node = node;
+	for (let parent = current.parent; parent; parent = parent.parent) {
+		if (ts.isVariableDeclaration(parent) && parent.name && ts.isIdentifier(parent.name)) return parent;
+		if (ts.isExportAssignment(parent)) return parent;
+		if (ts.isFunctionLikeDeclaration(parent) || ts.isBlock(parent) || ts.isSourceFile(parent)) break;
+		current = parent;
+	}
+	return ts.isFunctionExpression(node) && node.name ? node : undefined;
+}
+
+function ownerDeclarationName(node: Node): string | undefined {
+	if (ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)) {
+		return node.name?.text ?? (/^\s*export\s+default\b/u.test(node.getText()) ? "default" : undefined);
+	}
+	if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) return node.name.text;
+	if (ts.isExportAssignment(node)) return "default";
+	return undefined;
+}
+
+function jsxCarriesOutputLanguage(node: JsxOpeningLikeElement) {
+	return node.attributes.properties.some(
+		(attribute) =>
+			ts.isJsxAttribute(attribute) &&
+			["outputLanguage", "outputLanguageResolved", "onOutputLanguageChange"].includes(
+				propertyNameText(attribute.name) ?? "",
+			),
+	);
+}
+
+function jsxHasExplicitOutputLanguage(node: JsxOpeningLikeElement) {
+	return node.attributes.properties.some(
+		(attribute) => ts.isJsxAttribute(attribute) && propertyNameText(attribute.name) === "outputLanguage",
+	);
+}
+
+function functionDeclaresNamedParameter(node: FunctionLikeDeclaration, expectedName: string) {
+	let found = false;
+	const collect = (name: Node) => {
+		if (found) return;
+		if (ts.isIdentifier(name)) {
+			found = name.text === expectedName;
+			return;
+		}
+		if (!ts.isObjectBindingPattern(name) && !ts.isArrayBindingPattern(name)) return;
+		for (const element of name.elements) {
+			if (!isBindingElement(element)) continue;
+			if (externalBindingName(element) === expectedName) {
+				found = true;
+				return;
+			}
+			if (element.name) collect(element.name);
+		}
+	};
+	for (const parameter of node.parameters) collect(parameter.name);
+	return found;
+}
+
+type OutputTypeSource = {
+	bindings: LexicalBindings;
+	file: string;
+	sourceFile: SourceFile;
+};
+
+type OutputTypeContext = {
+	knownFiles: ReadonlySet<string>;
+	sourceByFile: ReadonlyMap<string, OutputTypeSource>;
+};
+
+type ResolvedOutputType = OutputTypeSource & { node: Node };
+
+function resolveExportedOutputType(
+	file: string | undefined,
+	exportedName: string,
+	context: OutputTypeContext,
+	visiting = new Set<string>(),
+): ResolvedOutputType | undefined {
+	if (!file) return undefined;
+	const key = `${file}\0${exportedName}`;
+	if (visiting.has(key)) return undefined;
+	const source = context.sourceByFile.get(file);
+	if (!source) return undefined;
+	visiting.add(key);
+	try {
+		for (const statement of source.sourceFile.statements) {
+			if (
+				(ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) &&
+				statement.name.text === exportedName &&
+				/^\s*export\b/u.test(statement.getText(source.sourceFile))
+			) {
+				return { ...source, node: statement };
+			}
+			if (!ts.isExportDeclaration(statement)) continue;
+			const module =
+				statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+					? statement.moduleSpecifier.text
+					: undefined;
+			const targetFile = module ? resolveLocalModuleFile(file, module, context.knownFiles) : undefined;
+			if (!statement.exportClause) {
+				const resolved = resolveExportedOutputType(targetFile, exportedName, context, visiting);
+				if (resolved) return resolved;
+				continue;
+			}
+			if (!ts.isNamedExports(statement.exportClause)) continue;
+			for (const specifier of statement.exportClause.elements) {
+				if (specifier.name.text !== exportedName) continue;
+				const sourceName = specifier.propertyName?.text ?? specifier.name.text;
+				if (targetFile) {
+					const resolved = resolveExportedOutputType(targetFile, sourceName, context, visiting);
+					if (resolved) return resolved;
+					continue;
+				}
+				const local = source.bindings.declarations
+					.get(sourceName)
+					?.find((node) => ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node));
+				if (local) return { ...source, node: local };
+			}
+		}
+		return undefined;
+	} finally {
+		visiting.delete(key);
+	}
+}
+
+function typeRequiresOutputLanguage(
+	typeNode: Node | undefined,
+	source: OutputTypeSource,
+	context: OutputTypeContext,
+	visiting = new Set<string>(),
+): boolean {
+	if (!typeNode) return false;
+	const visitKey = `${source.file}\0${typeNode.kind}\0${typeNode.pos}\0${typeNode.end}`;
+	if (visiting.has(visitKey)) return false;
+	visiting.add(visitKey);
+	if (ts.isTypeLiteralNode(typeNode) || ts.isInterfaceDeclaration(typeNode)) {
+		const requiredMember = typeNode.members.some(
+			(member) =>
+				ts.isPropertySignatureDeclaration(member) &&
+				propertyNameText(member.name) === "outputLanguage" &&
+				!member
+					.getText()
+					.slice(0, Math.max(0, member.getText().indexOf(":")))
+					.includes("?"),
+		);
+		const inherited = ts.isInterfaceDeclaration(typeNode)
+			? (typeNode.heritageClauses ?? []).some((clause) =>
+					clause.types.some((heritage) => typeRequiresOutputLanguage(heritage, source, context, visiting)),
+				)
+			: false;
+		visiting.delete(visitKey);
+		return requiredMember || inherited;
+	}
+	if (ts.isTypeAliasDeclaration(typeNode)) {
+		const required = typeRequiresOutputLanguage(typeNode.type, source, context, visiting);
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isImportClause(typeNode) || ts.isImportSpecifier(typeNode)) {
+		const module = importModule(typeNode);
+		const targetFile = module ? resolveLocalModuleFile(source.file, module, context.knownFiles) : undefined;
+		const exportedName = ts.isImportClause(typeNode) ? "default" : (typeNode.propertyName?.text ?? typeNode.name.text);
+		const resolved = resolveExportedOutputType(targetFile, exportedName, context);
+		const required = resolved ? typeRequiresOutputLanguage(resolved.node, resolved, context, visiting) : false;
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isIdentifier(typeNode)) {
+		const required = typeRequiresOutputLanguage(
+			lexicalDeclaration(typeNode, source.bindings),
+			source,
+			context,
+			visiting,
+		);
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isTypeReferenceNode(typeNode)) {
+		const declaration = ts.isIdentifier(typeNode.typeName)
+			? lexicalDeclaration(typeNode.typeName, source.bindings)
+			: undefined;
+		const required =
+			typeRequiresOutputLanguage(declaration, source, context, visiting) ||
+			(typeNode.typeArguments ?? []).some((argument) =>
+				typeRequiresOutputLanguage(argument, source, context, visiting),
+			);
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isExpressionWithTypeArguments(typeNode)) {
+		const required =
+			typeRequiresOutputLanguage(typeNode.expression, source, context, visiting) ||
+			(typeNode.typeArguments ?? []).some((argument) =>
+				typeRequiresOutputLanguage(argument, source, context, visiting),
+			);
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isIntersectionTypeNode(typeNode) || ts.isUnionTypeNode(typeNode)) {
+		const required = typeNode.types.some((part) => typeRequiresOutputLanguage(part, source, context, visiting));
+		visiting.delete(visitKey);
+		return required;
+	}
+	if (ts.isParenthesizedTypeNode(typeNode)) {
+		const required = typeRequiresOutputLanguage(typeNode.type, source, context, visiting);
+		visiting.delete(visitKey);
+		return required;
+	}
+	visiting.delete(visitKey);
+	return false;
+}
+
+function functionRequiresOutputLanguage(
+	node: FunctionLikeDeclaration,
+	owner: ComponentOwner,
+	source: OutputTypeSource,
+	context: OutputTypeContext,
+) {
+	if (
+		node.parameters.some((parameter) => {
+			if (
+				ts.isIdentifier(parameter.name) &&
+				parameter.name.text === "outputLanguage" &&
+				parameter.questionToken === undefined &&
+				parameter.initializer === undefined
+			) {
+				return true;
+			}
+			return typeRequiresOutputLanguage(parameter.type, source, context);
+		})
+	) {
+		return true;
+	}
+	if (
+		ts.isVariableDeclaration(owner.declaration) &&
+		typeRequiresOutputLanguage(owner.declaration.type, source, context)
+	) {
+		return true;
+	}
+	for (
+		let current: Node | undefined = node.parent;
+		current && current !== owner.declaration.parent;
+		current = current.parent
+	) {
+		if (
+			ts.isCallExpression(current) &&
+			(current.typeArguments ?? []).some((argument) => typeRequiresOutputLanguage(argument, source, context))
+		) {
+			return true;
+		}
+		if (current === owner.declaration) break;
+	}
+	return false;
+}
+
+function buildOutputComponentGraph(
+	discoverySources: ParsedCrossPlanSource[],
+	symbolSources: ParsedCrossPlanSource[] = discoverySources,
+): OutputComponentGraph {
+	const normalizedDiscoverySources = discoverySources.map(({ file, sourceFile }) => ({
+		file: normalizedModulePath(file),
+		sourceFile,
+		bindings: collectLexicalBindings(sourceFile),
+	}));
+	const normalizedSymbolSources = symbolSources.map(({ file, sourceFile }) => ({
+		file: normalizedModulePath(file),
+		sourceFile,
+		bindings: collectLexicalBindings(sourceFile),
+	}));
+	const knownFiles = new Set(normalizedSymbolSources.map(({ file }) => file));
+	const sourceByFile = new Map(normalizedSymbolSources.map((source) => [source.file, source]));
+	const owners = new Map<string, ComponentOwner>();
+	const ownerByFunction = new Map<FunctionLikeDeclaration, string>();
+	const ownerByDeclaration = new Map<Node, string>();
+	const ownerByFileAndName = new Map<string, Map<string, string>>();
+
+	for (const { file, sourceFile } of normalizedSymbolSources) {
+		const visit = (node: Node) => {
+			if (ts.isFunctionLikeDeclaration(node)) {
+				const declaration = namedFunctionOwnerDeclaration(node);
+				const name = declaration ? ownerDeclarationName(declaration) : undefined;
+				if (declaration && name) {
+					const key = `${file}\0${declaration.pos}\0${name}`;
+					const owner = owners.get(key) ?? { declaration, file, key, name, functions: [] };
+					if (!owner.functions.includes(node)) owner.functions.push(node);
+					owners.set(key, owner);
+					ownerByFunction.set(node, key);
+					ownerByDeclaration.set(declaration, key);
+					const names = ownerByFileAndName.get(file) ?? new Map<string, string>();
+					names.set(name, key);
+					ownerByFileAndName.set(file, names);
+				}
+			}
+			node.forEachChild(visit);
+		};
+		visit(sourceFile);
+	}
+	const outputTypeContext: OutputTypeContext = { knownFiles, sourceByFile };
+	const requiredOutputLanguageOwners = new Set<string>();
+	for (const owner of owners.values()) {
+		const source = sourceByFile.get(owner.file);
+		if (source && owner.functions.some((fn) => functionRequiresOutputLanguage(fn, owner, source, outputTypeContext))) {
+			requiredOutputLanguageOwners.add(owner.key);
+		}
+	}
+
+	const enclosingOwner = (node: Node): string | undefined => {
+		for (let current: Node | undefined = node.parent; current; current = current.parent) {
+			if (ts.isFunctionLikeDeclaration(current)) {
+				const owner = ownerByFunction.get(current);
+				if (owner) return owner;
+			}
+		}
+		return undefined;
+	};
+
+	const declarationTarget = (
+		declaration: Node | undefined,
+		file: string,
+		bindings: LexicalBindings,
+		visiting = new Set<Node>(),
+		visitingExports = new Set<string>(),
+	): string | undefined => {
+		if (!declaration || visiting.has(declaration)) return undefined;
+		const direct = ownerByDeclaration.get(declaration);
+		if (direct) return direct;
+		visiting.add(declaration);
+		if (ts.isImportClause(declaration) || ts.isImportSpecifier(declaration)) {
+			const module = importModule(declaration);
+			const targetFile = module ? resolveLocalModuleFile(file, module, knownFiles) : undefined;
+			const exportedName = ts.isImportClause(declaration)
+				? "default"
+				: (declaration.propertyName?.text ?? declaration.name.text);
+			const target = resolveExportedOwner(targetFile, exportedName, visitingExports);
+			visiting.delete(declaration);
+			return target;
+		}
+		const initializer = declarationInitializer(declaration);
+		if (initializer) {
+			const unwrapped = unwrapExpression(initializer);
+			const imported = importedExpressionSymbol(unwrapped, bindings);
+			if (imported && isLocalWebModule(imported.module)) {
+				const target = resolveExportedOwner(
+					resolveLocalModuleFile(file, imported.module, knownFiles),
+					imported.exportedName,
+					visitingExports,
+				);
+				visiting.delete(declaration);
+				return target;
+			}
+			if (ts.isIdentifier(unwrapped)) {
+				const target = declarationTarget(
+					lexicalDeclaration(unwrapped, bindings),
+					file,
+					bindings,
+					visiting,
+					visitingExports,
+				);
+				visiting.delete(declaration);
+				return target;
+			}
+			if (ts.isCallExpression(unwrapped)) {
+				for (const argument of unwrapped.arguments) {
+					const importedArgument = importedExpressionSymbol(argument, bindings);
+					if (importedArgument && isLocalWebModule(importedArgument.module)) {
+						const target = resolveExportedOwner(
+							resolveLocalModuleFile(file, importedArgument.module, knownFiles),
+							importedArgument.exportedName,
+							visitingExports,
+						);
+						if (target) {
+							visiting.delete(declaration);
+							return target;
+						}
+					}
+					if (!ts.isIdentifier(argument)) continue;
+					const target = declarationTarget(
+						lexicalDeclaration(argument, bindings),
+						file,
+						bindings,
+						visiting,
+						visitingExports,
+					);
+					if (target) {
+						visiting.delete(declaration);
+						return target;
+					}
+				}
+			}
+		}
+		visiting.delete(declaration);
+		return undefined;
+	};
+
+	const resolveExportedOwner = (
+		file: string | undefined,
+		exportedName: string,
+		visiting = new Set<string>(),
+	): string | undefined => {
+		if (!file) return undefined;
+		const exportKey = `${file}\0${exportedName}`;
+		if (visiting.has(exportKey)) return undefined;
+		const source = sourceByFile.get(file);
+		if (!source) return undefined;
+		visiting.add(exportKey);
+		try {
+			for (const statement of source.sourceFile.statements) {
+				const statementOwner = ownerByDeclaration.get(statement);
+				const statementText = statement.getText(source.sourceFile);
+				if (
+					statementOwner &&
+					(/^\s*export\s+default\b/u.test(statementText)
+						? exportedName === "default"
+						: /^\s*export\b/u.test(statementText) && ownerDeclarationName(statement) === exportedName)
+				) {
+					return statementOwner;
+				}
+				if (ts.isVariableStatement(statement) && /^\s*export\b/u.test(statementText)) {
+					for (const declaration of statement.declarationList.declarations) {
+						if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportedName) continue;
+						const target =
+							ownerByDeclaration.get(declaration) ??
+							declarationTarget(declaration, file, source.bindings, new Set(), visiting);
+						if (target) return target;
+					}
+				}
+				if (ts.isExportAssignment(statement) && exportedName === "default") {
+					const direct = ownerByDeclaration.get(statement);
+					if (direct) return direct;
+					const expression = unwrapExpression(statement.expression);
+					if (ts.isIdentifier(expression)) {
+						const target = declarationTarget(
+							lexicalDeclaration(expression, source.bindings),
+							file,
+							source.bindings,
+							new Set(),
+							visiting,
+						);
+						if (target) return target;
+					}
+					if (ts.isCallExpression(expression)) {
+						for (const argument of expression.arguments) {
+							if (!ts.isIdentifier(argument)) continue;
+							const target = declarationTarget(
+								lexicalDeclaration(argument, source.bindings),
+								file,
+								source.bindings,
+								new Set(),
+								visiting,
+							);
+							if (target) return target;
+						}
+					}
+				}
+				if (!ts.isExportDeclaration(statement)) continue;
+				const module =
+					statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+						? statement.moduleSpecifier.text
+						: undefined;
+				const targetFile = module ? resolveLocalModuleFile(file, module, knownFiles) : undefined;
+				if (!statement.exportClause) {
+					const target = resolveExportedOwner(targetFile, exportedName, visiting);
+					if (target) return target;
+					continue;
+				}
+				if (!ts.isNamedExports(statement.exportClause)) continue;
+				for (const specifier of statement.exportClause.elements) {
+					if (specifier.name.text !== exportedName) continue;
+					const sourceName = specifier.propertyName?.text ?? specifier.name.text;
+					if (targetFile) {
+						const target = resolveExportedOwner(targetFile, sourceName, visiting);
+						if (target) return target;
+						continue;
+					}
+					const direct = ownerByFileAndName.get(file)?.get(sourceName);
+					if (direct) return direct;
+					const declaration = source.bindings.declarations.get(sourceName)?.[0];
+					const target = declarationTarget(declaration, file, source.bindings, new Set(), visiting);
+					if (target) return target;
+				}
+			}
+			return undefined;
+		} finally {
+			visiting.delete(exportKey);
+		}
+	};
+
+	const localComponentTarget = (
+		node: JsxOpeningLikeElement,
+		file: string,
+		bindings: LexicalBindings,
+	): { imported?: ImportedSymbol; local: boolean; target?: string } => {
+		if (ts.isIdentifier(node.tagName) && !/^\p{Lu}/u.test(node.tagName.text)) return { local: false };
+		const symbol = importedExpressionSymbol(node.tagName as Expression, bindings);
+		if (symbol) {
+			if (!isLocalWebModule(symbol.module)) return { local: false };
+			const targetFile = resolveLocalModuleFile(file, symbol.module, knownFiles);
+			return {
+				imported: symbol,
+				local: true,
+				target: resolveExportedOwner(targetFile, symbol.exportedName),
+			};
+		}
+		if (ts.isIdentifier(node.tagName)) {
+			const declaration = lexicalDeclaration(node.tagName, bindings);
+			const module = declaration ? importModule(declaration) : undefined;
+			if (module && !isLocalWebModule(module)) return { local: false };
+			const target = declarationTarget(declaration, file, bindings);
+			if (target) return { local: true, target };
+			if (module && isLocalWebModule(module)) return { local: true };
+			return { local: declaration === undefined };
+		}
+		return { local: false };
+	};
+
+	const edges: LocalComponentEdge[] = [];
+	const fullRoots = new Set<string>();
+	const selectiveRoots = new Set<string>();
+	const selectionRoots = new Set<string>();
+	for (const { file, sourceFile, bindings } of normalizedDiscoverySources) {
+		for (const owner of owners.values()) {
+			if (owner.file !== file) continue;
+			for (const fn of owner.functions) {
+				if (functionDeclaresNamedParameter(fn, "exportLanguageSurface")) selectiveRoots.add(owner.key);
+				if (
+					semanticOutputLanguageParameterDeclarations(fn).length > 0 ||
+					semanticFunctionUsesOutputLanguageMember(fn, bindings)
+				) {
+					fullRoots.add(owner.key);
+				}
+			}
+		}
+		const visit = (node: Node) => {
+			const owner = enclosingOwner(node);
+			if (owner && ts.isCallExpression(node)) {
+				if (semanticIsImportedArtifactLanguageProducer(node, bindings)) selectionRoots.add(owner);
+				if (semanticIsImportedChartExport(node, bindings) || semanticIsImportedOutputProducer(node, bindings)) {
+					fullRoots.add(owner);
+				}
+			}
+			if (owner && (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))) {
+				if (jsxCarriesOutputLanguage(node)) selectiveRoots.add(owner);
+				if (
+					node.attributes.properties.some((attribute) => {
+						if (!ts.isJsxAttribute(attribute)) return false;
+						const name = propertyNameText(attribute.name);
+						if (name === "data-output-language") return true;
+						return name === "lang" && /outputLanguage/iu.test(attribute.initializer?.getText() ?? "");
+					})
+				) {
+					fullRoots.add(owner);
+				}
+				if (
+					node.attributes.properties.some(
+						(attribute) => ts.isJsxAttribute(attribute) && propertyNameText(attribute.name) === "exportLanguageSurface",
+					)
+				) {
+					selectiveRoots.add(owner);
+				}
+				const target = localComponentTarget(node, file, bindings);
+				if (target.local) {
+					edges.push({
+						from: owner,
+						imported: target.imported,
+						to: target.target,
+						node,
+						carriesOutputLanguage: jsxCarriesOutputLanguage(node),
+					});
+				}
+			}
+			node.forEachChild(visit);
+		};
+		visit(sourceFile);
+	}
+
+	const outgoing = new Map<string, LocalComponentEdge[]>();
+	const incoming = new Map<string, LocalComponentEdge[]>();
+	for (const edge of edges) {
+		outgoing.set(edge.from, [...(outgoing.get(edge.from) ?? []), edge]);
+		if (edge.to) incoming.set(edge.to, [...(incoming.get(edge.to) ?? []), edge]);
+	}
+	const outputComponentNodes = new Set<JsxOpeningLikeElement>();
+	const componentDependencies = new Map<JsxOpeningLikeElement, { imported?: ImportedSymbol; ownerKey?: string }>();
+	for (const edge of edges) {
+		componentDependencies.set(edge.node, { imported: edge.imported, ownerKey: edge.to });
+	}
+	const semanticOwnerKeys = new Set([
+		...fullRoots,
+		...selectiveRoots,
+		...selectionRoots,
+		...requiredOutputLanguageOwners,
+	]);
+	const reachableFromSemantic = new Set(semanticOwnerKeys);
+	const forwardQueue = [...semanticOwnerKeys];
+	for (let index = 0; index < forwardQueue.length; index += 1) {
+		const owner = forwardQueue[index];
+		if (!owner) continue;
+		for (const edge of outgoing.get(owner) ?? []) {
+			if (!edge.to || reachableFromSemantic.has(edge.to)) continue;
+			reachableFromSemantic.add(edge.to);
+			forwardQueue.push(edge.to);
+		}
+	}
+	const canReachSemantic = new Set(semanticOwnerKeys);
+	const reverseQueue = [...semanticOwnerKeys];
+	for (let index = 0; index < reverseQueue.length; index += 1) {
+		const owner = reverseQueue[index];
+		if (!owner) continue;
+		for (const edge of incoming.get(owner) ?? []) {
+			if (canReachSemantic.has(edge.from)) continue;
+			canReachSemantic.add(edge.from);
+			reverseQueue.push(edge.from);
+		}
+	}
+	const connectedOwnerKeys = new Set(semanticOwnerKeys);
+	for (const edge of edges) {
+		const targetsRequiredOwner = edge.to ? requiredOutputLanguageOwners.has(edge.to) : false;
+		const connectsSemanticOwners = edge.to
+			? reachableFromSemantic.has(edge.from) && canReachSemantic.has(edge.to)
+			: false;
+		const unresolvedSemanticChild = !edge.to && semanticOwnerKeys.has(edge.from);
+		if (!edge.carriesOutputLanguage && !targetsRequiredOwner && !connectsSemanticOwners && !unresolvedSemanticChild) {
+			continue;
+		}
+		outputComponentNodes.add(edge.node);
+		connectedOwnerKeys.add(edge.from);
+		if (edge.to) connectedOwnerKeys.add(edge.to);
+	}
+	const connectedFunctions = new Set<FunctionLikeDeclaration>();
+	for (const key of connectedOwnerKeys) {
+		const owner = owners.get(key);
+		if (!owner) continue;
+		for (const fn of owner.functions) connectedFunctions.add(fn);
+	}
+	const missingOutputLanguageHandoffs = edges.flatMap((edge) => {
+		if (
+			!edge.to ||
+			!requiredOutputLanguageOwners.has(edge.to) ||
+			selectionRoots.has(edge.to) ||
+			jsxHasExplicitOutputLanguage(edge.node)
+		) {
+			return [];
+		}
+		const parent = owners.get(edge.from);
+		return parent
+			? [`missing outputLanguage propagation: ${parent.file} ${parent.name} -> ${edge.node.tagName.getText()}`]
+			: [];
+	});
+	return { componentDependencies, connectedFunctions, outputComponentNodes, missingOutputLanguageHandoffs };
 }
 
 function semanticIsImportedChartExport(node: CallExpression, bindings: LexicalBindings) {
@@ -1956,6 +2946,11 @@ function semanticIsImportedChartExport(node: CallExpression, bindings: LexicalBi
 
 function semanticIsImportedArtifactLanguageSelection(node: CallExpression, bindings: LexicalBindings) {
 	return importedCallSymbol(node, bindings)?.exportedName === "useArtifactLanguageSelection";
+}
+
+function semanticIsImportedArtifactLanguageProducer(node: CallExpression, bindings: LexicalBindings) {
+	const exportedName = importedCallSymbol(node, bindings)?.exportedName;
+	return exportedName === "useArtifactLanguageSelection" || exportedName === "resolveArtifactLanguageSelection";
 }
 
 function semanticIsImportedOutputProducer(node: CallExpression, bindings: LexicalBindings) {
@@ -2011,33 +3006,47 @@ function functionDisplayName(node: FunctionLikeDeclaration, sourceFile: SourceFi
 	return node.getText(sourceFile).slice(0, 40);
 }
 
-function collectCrossPlanSignatures(file: string, sourceFile: SourceFile): DiscoveredCrossPlanSignature[] {
+function nodeUsesConnectedOutputFunction(node: Node, graph: OutputComponentGraph) {
+	for (let current: Node | undefined = node; current; current = current.parent) {
+		if (ts.isFunctionLikeDeclaration(current) && graph.connectedFunctions.has(current)) return true;
+	}
+	return false;
+}
+
+function collectCrossPlanSignatures(
+	file: string,
+	sourceFile: SourceFile,
+	graph: OutputComponentGraph,
+): DiscoveredCrossPlanSignature[] {
 	const bindings = collectLexicalBindings(sourceFile);
-	let connectedOutputFile = /(?:reports\/render|print|export|download)/i.test(file);
-	const discoverConnection = (node: Node) => {
-		if (ts.isFunctionDeclaration(node) && node.name?.text === "ReportsPage") connectedOutputFile = true;
-		if (
-			(ts.isFunctionDeclaration(node) || ts.isVariableDeclaration(node)) &&
-			node.name &&
-			ts.isIdentifier(node.name) &&
-			SEMANTIC_OUTPUT_COMPONENT_MODULES.has(node.name.text)
-		) {
-			connectedOutputFile = true;
-		}
-		if (ts.isCallExpression(node) && semanticIsImportedChartExport(node, bindings)) connectedOutputFile = true;
-		if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-			const imported = semanticImportedOutputComponent(node, bindings);
-			if (imported && imported.exportedName !== "BaseChart") connectedOutputFile = true;
-			if (/(?:Print|ExportPreview|DownloadFooter)$/u.test(node.tagName.getText(sourceFile))) {
-				connectedOutputFile = true;
-			}
-		}
-		node.forEachChild(discoverConnection);
-	};
-	discoverConnection(sourceFile);
 	const values: Array<Omit<DiscoveredCrossPlanSignature, "occurrence">> = [];
-	const add = (_node: Node, kind: CrossPlanSignatureKind, value: string, discoverable: boolean) => {
-		values.push({ file, kind, value, discoverable });
+	const add = (
+		node: Node,
+		kind: CrossPlanSignatureKind,
+		value: string,
+		discoverable: boolean,
+		dependencyOwnerKey?: string,
+		dependencyImport?: ImportedSymbol,
+	) => {
+		let ownerDeclaration: Node | undefined;
+		for (let current: Node | undefined = node; current; current = current.parent) {
+			if (!ts.isFunctionLikeDeclaration(current)) continue;
+			ownerDeclaration = namedFunctionOwnerDeclaration(current);
+			if (ownerDeclaration) break;
+		}
+		const ownerName = ownerDeclaration ? ownerDeclarationName(ownerDeclaration) : undefined;
+		values.push({
+			file,
+			kind,
+			value,
+			discoverable,
+			dependencyImport: dependencyImport ? { ...dependencyImport, importerFile: file } : undefined,
+			dependencyOwnerKey,
+			ownerKey:
+				ownerDeclaration && ownerName
+					? `${normalizedModulePath(file)}\0${ownerDeclaration.pos}\0${ownerName}`
+					: undefined,
+		});
 	};
 	const visit = (node: Node) => {
 		if (ts.isFunctionLikeDeclaration(node)) {
@@ -2051,35 +3060,27 @@ function collectCrossPlanSignatures(file: string, sourceFile: SourceFile): Disco
 			if (
 				ts.isIdentifier(node.expression) &&
 				importedBindingMatches(node.expression, bindings, "useI18n", /(?:^|\/)i18n\/provider$/u) &&
-				connectedOutputFile
+				nodeUsesConnectedOutputFunction(node, graph)
 			) {
-				add(node, "ambient-ui-language", "useI18n", true);
+				add(node, "ambient-ui-language", "useI18n", true, undefined, importedCallSymbol(node, bindings));
 			}
 			const chartExportCall = semanticIsImportedChartExport(node, bindings);
 			if (chartExportCall || name === "useChartExport") {
-				add(node, "output-hook", "useChartExport", true);
+				add(node, "output-hook", "useChartExport", true, undefined, importedCallSymbol(node, bindings));
 			}
 			if (semanticIsImportedArtifactLanguageSelection(node, bindings)) {
-				add(node, "output-hook", "useArtifactLanguageSelection", true);
+				add(node, "output-hook", "useArtifactLanguageSelection", true, undefined, importedCallSymbol(node, bindings));
 			}
 			if (semanticIsImportedOutputProducer(node, bindings)) {
-				add(node, "output-copy", importedCallSymbol(node, bindings)?.exportedName ?? name ?? "output-copy", true);
+				const imported = importedCallSymbol(node, bindings);
+				add(node, "output-copy", imported?.exportedName ?? name ?? "output-copy", true, undefined, imported);
 			}
-		}
-		if (ts.isFunctionDeclaration(node) && node.name?.text === "ReportsPage") {
-			add(node, "output-component", node.name.text, true);
 		}
 		if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
 			const name = node.tagName.getText(sourceFile);
-			const imported = semanticImportedOutputComponent(node, bindings);
-			const opportunityComponent = semanticImportedOpportunityComponent(node, bindings);
-			const discoverable =
-				/(?:Print|ExportPreview|DownloadFooter)$/u.test(name) || (imported !== undefined && connectedOutputFile);
-			if (discoverable) {
-				add(node, "output-component", name, discoverable);
-			}
-			if (opportunityComponent) {
-				add(node, "output-component", name, true);
+			if (graph.outputComponentNodes.has(node)) {
+				const dependency = graph.componentDependencies.get(node);
+				add(node, "output-component", name, true, dependency?.ownerKey, dependency?.imported);
 			}
 		}
 		node.forEachChild(visit);
@@ -2129,6 +3130,469 @@ export function collectExistingRuntimeTests(repositoryRoot: string, runtimeTests
 	return knownRuntimeTests;
 }
 
+type VitestProjectPatterns = { name: string; include: string[]; exclude: string[] };
+
+function objectPropertyInitializer(node: Node, name: string): Node | undefined {
+	if (!ts.isObjectLiteralExpression(node)) return undefined;
+	for (const property of node.properties) {
+		if (ts.isPropertyAssignment(property) && propertyNameText(property.name) === name) return property.initializer;
+	}
+	return undefined;
+}
+
+function stringArrayValues(node: Node | undefined) {
+	if (!node || !ts.isArrayLiteralExpression(node)) return [];
+	return node.elements.flatMap((element) => (ts.isStringLiteral(element) ? [element.text] : []));
+}
+
+function collectVitestProjectPatterns(sourceFile: SourceFile): VitestProjectPatterns[] {
+	const defaultExport = sourceFile.statements.find(ts.isExportAssignment);
+	if (!defaultExport || defaultExport.isExportEquals) return [];
+	const expression = unwrapExpression(defaultExport.expression);
+	if (!ts.isCallExpression(expression)) return [];
+	const configFactory = importedExpressionSymbol(expression.expression, collectLexicalBindings(sourceFile));
+	if (configFactory?.module !== "vitest/config" || configFactory.exportedName !== "defineConfig") return [];
+	const config = expression.arguments[0];
+	if (!config || !ts.isObjectLiteralExpression(config)) return [];
+	const test = objectPropertyInitializer(config, "test");
+	const projects = test ? objectPropertyInitializer(test, "projects") : undefined;
+	if (!projects || !ts.isArrayLiteralExpression(projects)) return [];
+	return projects.elements.flatMap((project) => {
+		if (!ts.isObjectLiteralExpression(project)) return [];
+		const projectTest = objectPropertyInitializer(project, "test");
+		if (!projectTest) return [];
+		const name = objectPropertyInitializer(projectTest, "name");
+		const include = stringArrayValues(objectPropertyInitializer(projectTest, "include"));
+		if (!name || !ts.isStringLiteral(name) || include.length === 0) return [];
+		return [
+			{
+				name: name.text,
+				include,
+				exclude: stringArrayValues(objectPropertyInitializer(projectTest, "exclude")),
+			},
+		];
+	});
+}
+
+function globPatternMatches(pattern: string, file: string) {
+	let expression = "^";
+	for (let index = 0; index < pattern.length; index += 1) {
+		const character = pattern[index];
+		if (character === "*" && pattern[index + 1] === "*" && pattern[index + 2] === "/") {
+			expression += "(?:.*/)?";
+			index += 2;
+			continue;
+		}
+		if (character === "*" && pattern[index + 1] === "*") {
+			expression += ".*";
+			index += 1;
+			continue;
+		}
+		if (character === "*") {
+			expression += "[^/]*";
+			continue;
+		}
+		if (character === "?") {
+			expression += "[^/]";
+			continue;
+		}
+		expression += /[\\^$.*+?()[\]{}|]/u.test(character ?? "") ? `\\${character}` : character;
+	}
+	return new RegExp(`${expression}$`, "u").test(file);
+}
+
+type RuntimeDeclaration = {
+	bindings: LexicalBindings;
+	file: string;
+	key: string;
+	name: string;
+	node: Node;
+};
+
+function runtimeDeclarationName(node: Node): string | undefined {
+	if (ts.isFunctionDeclaration(node)) return node.name?.text;
+	if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) return node.name.text;
+	return undefined;
+}
+
+function importDeclarationIsTypeOnly(node: Node) {
+	if (ts.isImportSpecifier(node) && node.isTypeOnly) return true;
+	for (let current: Node | undefined = node; current; current = current.parent) {
+		if (ts.isImportClause(current)) return /^\s*type\b/u.test(current.getText());
+	}
+	return false;
+}
+
+type RuntimeMockPolicy = {
+	hasActual: boolean;
+	module: string;
+	overriddenExports: ReadonlySet<string>;
+};
+
+function isVitestViExpression(expression: Expression, bindings: LexicalBindings): boolean {
+	const unwrapped = unwrapExpression(expression);
+	const symbol = importedExpressionSymbol(unwrapped, bindings);
+	return symbol?.module === "vitest" && symbol.exportedName === "vi";
+}
+
+function isVitestViMethodCall(node: CallExpression, method: "importActual" | "mock", bindings: LexicalBindings) {
+	const callee = unwrapExpression(node.expression);
+	return (
+		ts.isPropertyAccessExpression(callee) &&
+		callee.name.text === method &&
+		isVitestViExpression(callee.expression, bindings)
+	);
+}
+
+function runtimeMockPolicies(sourceFile: SourceFile): RuntimeMockPolicy[] {
+	const policies: RuntimeMockPolicy[] = [];
+	const bindings = collectLexicalBindings(sourceFile);
+	const visit = (node: Node) => {
+		if (
+			ts.isCallExpression(node) &&
+			isVitestViMethodCall(node, "mock", bindings) &&
+			node.arguments[0] &&
+			ts.isStringLiteral(node.arguments[0])
+		) {
+			const module = node.arguments[0].text;
+			const factory = node.arguments[1];
+			let hasActual = false;
+			const overriddenExports = new Set<string>();
+			const inspectFactory = (child: Node) => {
+				if (
+					ts.isCallExpression(child) &&
+					isVitestViMethodCall(child, "importActual", bindings) &&
+					child.arguments[0] &&
+					ts.isStringLiteral(child.arguments[0]) &&
+					child.arguments[0].text === module
+				) {
+					hasActual = true;
+				}
+				if (
+					ts.isPropertyAssignment(child) ||
+					ts.isMethodDeclaration(child) ||
+					ts.isShorthandPropertyAssignment(child)
+				) {
+					const name = propertyNameText(child.name);
+					if (name) overriddenExports.add(name);
+				}
+				child.forEachChild(inspectFactory);
+			};
+			if (factory) inspectFactory(factory);
+			policies.push({ hasActual, module, overriddenExports });
+		}
+		node.forEachChild(visit);
+	};
+	visit(sourceFile);
+	return policies;
+}
+
+function runtimeTestAttestationErrors(
+	sources: ParsedCrossPlanSource[],
+	resolutions: CrossPlanResolution[],
+	actualSignatures: ReadonlyMap<string, DiscoveredCrossPlanSignature>,
+): string[] {
+	const normalizedSources = sources.map(({ file, sourceFile }) => ({
+		file: normalizedModulePath(file),
+		sourceFile,
+		bindings: collectLexicalBindings(sourceFile),
+	}));
+	const sourceByFile = new Map(normalizedSources.map((source) => [source.file, source.sourceFile]));
+	const parsedByFile = new Map(normalizedSources.map((source) => [source.file, source]));
+	const knownFiles = new Set(sourceByFile.keys());
+	const vitestConfig = sourceByFile.get("apps/web/vitest.config.ts");
+	const projects = vitestConfig ? collectVitestProjectPatterns(vitestConfig) : [];
+	const declarations = new Map<string, RuntimeDeclaration>();
+	const declarationKeyByNode = new Map<Node, string>();
+	const declarationsByFileAndName = new Map<string, Map<string, string>>();
+	for (const source of normalizedSources) {
+		const visit = (node: Node) => {
+			const declarationNode = ts.isFunctionLikeDeclaration(node) ? (namedFunctionOwnerDeclaration(node) ?? node) : node;
+			const name = runtimeDeclarationName(declarationNode) ?? ownerDeclarationName(declarationNode);
+			if (name) {
+				const key = `${source.file}\0${declarationNode.pos}\0${name}`;
+				declarations.set(key, { bindings: source.bindings, file: source.file, key, name, node: declarationNode });
+				declarationKeyByNode.set(declarationNode, key);
+				declarationKeyByNode.set(node, key);
+				const named = declarationsByFileAndName.get(source.file) ?? new Map<string, string>();
+				named.set(name, key);
+				declarationsByFileAndName.set(source.file, named);
+			}
+			node.forEachChild(visit);
+		};
+		visit(source.sourceFile);
+	}
+
+	const declarationTarget = (
+		declaration: Node | undefined,
+		file: string,
+		bindings: LexicalBindings,
+		visiting = new Set<Node>(),
+		visitingExports = new Set<string>(),
+	): Set<string> => {
+		if (!declaration || visiting.has(declaration) || importDeclarationIsTypeOnly(declaration)) return new Set();
+		const direct = declarationKeyByNode.get(declaration);
+		if (direct) return new Set([direct]);
+		visiting.add(declaration);
+		try {
+			if (ts.isImportClause(declaration) || ts.isImportSpecifier(declaration)) {
+				const module = importModule(declaration);
+				const targetFile = module ? resolveLocalModuleFile(file, module, knownFiles) : undefined;
+				const exportedName = ts.isImportClause(declaration)
+					? "default"
+					: (declaration.propertyName?.text ?? declaration.name.text);
+				return resolveRuntimeExport(targetFile, exportedName, visitingExports);
+			}
+			const initializer = declarationInitializer(declaration);
+			if (!initializer) return new Set();
+			const imported = importedExpressionSymbol(initializer, bindings);
+			if (imported && isLocalWebModule(imported.module)) {
+				return resolveRuntimeExport(
+					resolveLocalModuleFile(file, imported.module, knownFiles),
+					imported.exportedName,
+					visitingExports,
+				);
+			}
+			if (ts.isIdentifier(unwrapExpression(initializer))) {
+				return declarationTarget(
+					lexicalDeclaration(unwrapExpression(initializer) as import("typescript/unstable/ast").Identifier, bindings),
+					file,
+					bindings,
+					visiting,
+					visitingExports,
+				);
+			}
+			return new Set();
+		} finally {
+			visiting.delete(declaration);
+		}
+	};
+
+	const resolveRuntimeExport = (
+		file: string | undefined,
+		exportedName: string,
+		visiting = new Set<string>(),
+	): Set<string> => {
+		if (!file) return new Set();
+		const exportKey = `${file}\0${exportedName}`;
+		if (visiting.has(exportKey)) return new Set();
+		const source = parsedByFile.get(file);
+		if (!source) return new Set();
+		visiting.add(exportKey);
+		try {
+			for (const statement of source.sourceFile.statements) {
+				const statementText = statement.getText(source.sourceFile);
+				if (ts.isFunctionDeclaration(statement) && /^\s*export\b/u.test(statementText)) {
+					const name = statement.name?.text;
+					const matches = /^\s*export\s+default\b/u.test(statementText)
+						? exportedName === "default"
+						: name === exportedName;
+					const key = declarationKeyByNode.get(statement);
+					if (matches && key) return new Set([key]);
+				}
+				if (ts.isVariableStatement(statement) && /^\s*export\b/u.test(statementText)) {
+					for (const declaration of statement.declarationList.declarations) {
+						if (!ts.isIdentifier(declaration.name) || declaration.name.text !== exportedName) continue;
+						const key = declarationKeyByNode.get(declaration);
+						if (key) return new Set([key]);
+					}
+				}
+				if (ts.isExportAssignment(statement) && exportedName === "default") {
+					const expression = unwrapExpression(statement.expression);
+					if (ts.isIdentifier(expression)) {
+						return declarationTarget(
+							lexicalDeclaration(expression, source.bindings),
+							file,
+							source.bindings,
+							new Set(),
+							visiting,
+						);
+					}
+				}
+				if (!ts.isExportDeclaration(statement) || statement.isTypeOnly) continue;
+				const module =
+					statement.moduleSpecifier && ts.isStringLiteral(statement.moduleSpecifier)
+						? statement.moduleSpecifier.text
+						: undefined;
+				const targetFile = module ? resolveLocalModuleFile(file, module, knownFiles) : undefined;
+				if (!statement.exportClause) {
+					const targets = resolveRuntimeExport(targetFile, exportedName, visiting);
+					if (targets.size > 0) return targets;
+					continue;
+				}
+				if (!ts.isNamedExports(statement.exportClause)) continue;
+				for (const specifier of statement.exportClause.elements) {
+					if (specifier.isTypeOnly || specifier.name.text !== exportedName) continue;
+					const sourceName = specifier.propertyName?.text ?? specifier.name.text;
+					if (targetFile) {
+						const targets = resolveRuntimeExport(targetFile, sourceName, visiting);
+						if (targets.size > 0) return targets;
+						continue;
+					}
+					const key = declarationsByFileAndName.get(file)?.get(sourceName);
+					if (key) return new Set([key]);
+				}
+			}
+			return new Set();
+		} finally {
+			visiting.delete(exportKey);
+		}
+	};
+
+	const referencedTargets = (
+		node: Node,
+		file: string,
+		bindings: LexicalBindings,
+		rootDeclarationKey?: string,
+	): Set<string> => {
+		const targets = new Set<string>();
+		const addTargets = (values: Iterable<string>) => {
+			for (const value of values) targets.add(value);
+		};
+		const visit = (child: Node) => {
+			if (child !== node) {
+				const nestedKey = declarationKeyByNode.get(child);
+				if (nestedKey && nestedKey !== rootDeclarationKey) {
+					targets.add(nestedKey);
+					return;
+				}
+			}
+			if (ts.isImportDeclaration(child) || ts.isExportDeclaration(child)) return;
+			if (ts.isPropertyAccessExpression(child)) {
+				const imported = importedExpressionSymbol(child, bindings);
+				if (imported && isLocalWebModule(imported.module)) {
+					addTargets(
+						resolveRuntimeExport(resolveLocalModuleFile(file, imported.module, knownFiles), imported.exportedName),
+					);
+					return;
+				}
+			}
+			if (ts.isIdentifier(child)) {
+				const declaration = lexicalDeclaration(child, bindings);
+				if (declaration && !importDeclarationIsTypeOnly(declaration)) {
+					const imported = importedSymbol(child, bindings);
+					if (imported && imported.exportedName !== "*" && isLocalWebModule(imported.module)) {
+						addTargets(
+							resolveRuntimeExport(resolveLocalModuleFile(file, imported.module, knownFiles), imported.exportedName),
+						);
+					} else {
+						const key = declarationKeyByNode.get(declaration);
+						if (key) targets.add(key);
+					}
+				}
+			}
+			child.forEachChild(visit);
+		};
+		visit(node);
+		return targets;
+	};
+
+	const dependencies = new Map<string, Set<string>>();
+	for (const declaration of declarations.values()) {
+		const targets = referencedTargets(declaration.node, declaration.file, declaration.bindings, declaration.key);
+		targets.delete(declaration.key);
+		dependencies.set(declaration.key, targets);
+	}
+
+	const errors: string[] = [];
+	for (const resolution of resolutions) {
+		const runtimeTest = normalizedModulePath(resolution.runtimeTest);
+		if (!sourceByFile.has(runtimeTest)) continue;
+		if (projects.length === 0) {
+			errors.push(
+				`cross-plan resolution Vitest project configuration is unavailable: ${resolution.file} ${resolution.runtimeTest}`,
+			);
+		} else if (runtimeTest.startsWith("apps/web/")) {
+			const relativeTest = runtimeTest.slice("apps/web/".length);
+			const expectedProject = /\.browser\.test\.tsx?$/u.test(relativeTest) ? "browser-runtime" : "unit";
+			const matchingProjects = projects
+				.filter((project) => project.include.some((pattern) => globPatternMatches(pattern, relativeTest)))
+				.filter((project) => !project.exclude.some((pattern) => globPatternMatches(pattern, relativeTest)))
+				.map((project) => project.name);
+			if (!matchingProjects.includes(expectedProject)) {
+				errors.push(
+					`cross-plan resolution runtime test is not included in corresponding Vitest project ${expectedProject}: ${resolution.file} ${resolution.runtimeTest}`,
+				);
+			}
+		}
+
+		const target = normalizedModulePath(resolution.file);
+		const runtimeSource = parsedByFile.get(runtimeTest);
+		const mockPolicies = (runtimeSource ? runtimeMockPolicies(runtimeSource.sourceFile) : []).flatMap((policy) => {
+			const targetFile = resolveLocalModuleFile(runtimeTest, policy.module, knownFiles);
+			return targetFile ? [{ ...policy, targetFile }] : [];
+		});
+		const mockCutsExport = (policy: (typeof mockPolicies)[number], exportedName: string) =>
+			!policy.hasActual || policy.overriddenExports.has(exportedName);
+		const signature = actualSignatures.get(crossPlanSignatureKey(resolution));
+		const dependencyImport = signature?.dependencyImport;
+		const dependencyImportFile = dependencyImport
+			? resolveLocalModuleFile(dependencyImport.importerFile, dependencyImport.module, knownFiles)
+			: undefined;
+		const relevantMockCut = mockPolicies.some(
+			(policy) =>
+				(policy.targetFile === target && mockCutsExport(policy, resolution.value)) ||
+				(policy.targetFile === dependencyImportFile &&
+					dependencyImport !== undefined &&
+					mockCutsExport(policy, dependencyImport.exportedName)),
+		);
+		if (relevantMockCut) {
+			errors.push(
+				`cross-plan resolution runtime mock cuts exact source/symbol: ${resolution.file} ${resolution.value} ${resolution.runtimeTest}`,
+			);
+		}
+		const targetOwner = signature?.ownerKey;
+		const requiredTargets = new Set<string>();
+		if (targetOwner) requiredTargets.add(targetOwner);
+		if (signature?.dependencyOwnerKey) requiredTargets.add(signature.dependencyOwnerKey);
+		if (dependencyImport && dependencyImportFile) {
+			for (const dependency of resolveRuntimeExport(dependencyImportFile, dependencyImport.exportedName)) {
+				requiredTargets.add(dependency);
+			}
+		}
+		const blockedTargets = new Set<string>();
+		for (const policy of mockPolicies) {
+			if (!policy.hasActual) {
+				for (const declaration of declarations.values()) {
+					if (declaration.file === policy.targetFile) blockedTargets.add(declaration.key);
+				}
+				continue;
+			}
+			for (const exportedName of policy.overriddenExports) {
+				for (const dependency of resolveRuntimeExport(policy.targetFile, exportedName)) {
+					blockedTargets.add(dependency);
+				}
+			}
+		}
+		const roots = runtimeSource
+			? referencedTargets(runtimeSource.sourceFile, runtimeTest, runtimeSource.bindings)
+			: new Set<string>();
+		for (const root of blockedTargets) roots.delete(root);
+		const visited = new Set(roots);
+		const queue = [...roots];
+		for (
+			let index = 0;
+			index < queue.length && [...requiredTargets].some((required) => !visited.has(required));
+			index += 1
+		) {
+			const current = queue[index];
+			if (!current) continue;
+			for (const dependency of dependencies.get(current) ?? []) {
+				const declaration = declarations.get(dependency);
+				if (!declaration || blockedTargets.has(dependency) || visited.has(dependency)) continue;
+				visited.add(dependency);
+				queue.push(dependency);
+			}
+		}
+		if (requiredTargets.size === 0 || [...requiredTargets].some((required) => !visited.has(required))) {
+			errors.push(
+				`cross-plan resolution runtime test does not reach exact source/symbol: ${resolution.file} ${resolution.value} ${resolution.runtimeTest}`,
+			);
+		}
+	}
+	return errors;
+}
+
 export function validateCrossPlanOwnership(
 	repositoryRoot: string,
 	entries: CrossPlanOwnership[] = CROSS_PLAN_OWNERSHIP,
@@ -2139,18 +3603,26 @@ export function validateCrossPlanOwnership(
 		path.join(repositoryRoot, "apps/web/src/components"),
 		path.join(repositoryRoot, "apps/web/src/hooks"),
 	];
-	const absoluteFiles = roots.flatMap(walkSourceFiles);
-	const inputs = absoluteFiles.map((file) => ({ file, source: fs.readFileSync(file, "utf8") }));
+	const discoveryFiles = roots.flatMap(walkSourceFiles);
+	const symbolFiles = walkSourceFiles(path.join(repositoryRoot, "apps/web/src"));
 	const knownRuntimeTests = collectExistingRuntimeTests(
 		repositoryRoot,
 		resolutions.map((resolution) => resolution.runtimeTest),
 	);
+	const runtimeTestFiles = [...knownRuntimeTests].map((file) => path.resolve(repositoryRoot, ...file.split("/")));
+	const vitestConfig = path.join(repositoryRoot, "apps/web/vitest.config.ts");
+	const evidenceFiles = [...new Set([...symbolFiles, ...runtimeTestFiles, vitestConfig])];
+	const inputs = evidenceFiles.map((file) => ({ file, source: fs.readFileSync(file, "utf8") }));
 	return withParsedSources(inputs, (parsed) => {
-		const sources = absoluteFiles.map((absolute) => ({
+		const sources = discoveryFiles.map((absolute) => ({
 			file: path.relative(repositoryRoot, absolute).replaceAll("\\", "/"),
 			sourceFile: requiredSourceFile(parsed, absolute),
 		}));
-		return validateCrossPlanOwnershipFromAsts(sources, entries, resolutions, knownRuntimeTests);
+		const attestationSources = evidenceFiles.map((absolute) => ({
+			file: path.relative(repositoryRoot, absolute).replaceAll("\\", "/"),
+			sourceFile: requiredSourceFile(parsed, absolute),
+		}));
+		return validateCrossPlanOwnershipFromAsts(sources, entries, resolutions, knownRuntimeTests, attestationSources);
 	});
 }
 
@@ -2160,14 +3632,20 @@ export function validateCrossPlanOwnershipFromSources(
 	resolutions: CrossPlanResolution[] = [],
 	knownRuntimeTests: ReadonlySet<string> = new Set(),
 ) {
-	return withParsedSources(sources, (parsed) =>
-		validateCrossPlanOwnershipFromAsts(
-			sources.map(({ file }) => ({ file, sourceFile: requiredSourceFile(parsed, file) })),
+	return withParsedSources(sources, (parsed) => {
+		const parsedSources = sources.map(({ file }) => ({ file, sourceFile: requiredSourceFile(parsed, file) }));
+		const productionSources = parsedSources.filter(
+			({ file }) =>
+				!ALLOWED_RUNTIME_TEST_SUFFIX.test(file) && normalizedModulePath(file) !== "apps/web/vitest.config.ts",
+		);
+		return validateCrossPlanOwnershipFromAsts(
+			productionSources,
 			entries,
 			resolutions,
 			knownRuntimeTests,
-		),
-	);
+			parsedSources,
+		);
+	});
 }
 
 function validateCrossPlanOwnershipFromAsts(
@@ -2175,6 +3653,7 @@ function validateCrossPlanOwnershipFromAsts(
 	entries: CrossPlanOwnership[],
 	resolutions: CrossPlanResolution[],
 	knownRuntimeTests: ReadonlySet<string>,
+	attestationSources: ParsedCrossPlanSource[] = sources,
 ) {
 	const errors: string[] = [];
 	const registry = new Map<string, CrossPlanOwnership | CrossPlanResolution>();
@@ -2214,8 +3693,13 @@ function validateCrossPlanOwnershipFromAsts(
 	}
 
 	const actual = new Map<string, DiscoveredCrossPlanSignature>();
+	const symbolSources = attestationSources.filter(
+		({ file }) => !ALLOWED_RUNTIME_TEST_SUFFIX.test(file) && normalizedModulePath(file) !== "apps/web/vitest.config.ts",
+	);
+	const outputComponentGraph = buildOutputComponentGraph(sources, symbolSources);
+	errors.push(...outputComponentGraph.missingOutputLanguageHandoffs);
 	for (const { file, sourceFile } of sources) {
-		for (const signature of collectCrossPlanSignatures(file, sourceFile)) {
+		for (const signature of collectCrossPlanSignatures(file, sourceFile, outputComponentGraph)) {
 			const key = crossPlanSignatureKey(signature);
 			actual.set(key, signature);
 			if (!registry.has(key)) {
@@ -2233,6 +3717,7 @@ function validateCrossPlanOwnershipFromAsts(
 			);
 		}
 	}
+	errors.push(...runtimeTestAttestationErrors(attestationSources, resolutions, actual));
 	return errors;
 }
 

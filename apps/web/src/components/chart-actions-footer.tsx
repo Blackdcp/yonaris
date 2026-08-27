@@ -1,4 +1,5 @@
 import { useRouteContext } from "@tanstack/react-router";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
 import { getOptimizeButtonForMode } from "@workspace/deployment/client";
 import { Button } from "@workspace/ui/components/button";
@@ -7,6 +8,7 @@ import { useCallback } from "react";
 import { coerceLookback } from "@/hooks/use-list-filters";
 import { useI18n } from "@/i18n/provider";
 import { getPromptWebQueryFn } from "@/server/prompts";
+import { ChartExportLanguageSelector } from "./chart-export-language-selector";
 import { ChartFooter } from "./chart-footer";
 import { HistoryButton } from "./history-button";
 
@@ -20,6 +22,9 @@ interface ChartActionsFooterProps {
 	// For export
 	onDownload?: () => void;
 	isDownloading?: boolean;
+	outputLanguage?: OutputLanguage;
+	outputLanguageResolved?: boolean;
+	onOutputLanguageChange?: (outputLanguage: OutputLanguage) => void;
 
 	// For optimization
 	/** Current model filter ("all" = no filter). */
@@ -35,6 +40,9 @@ export function ChartActionsFooter({
 	brandId,
 	onDownload,
 	isDownloading = false,
+	outputLanguage,
+	outputLanguageResolved = false,
+	onOutputLanguageChange,
 	selectedModel = "all",
 	availableModels = [],
 	lookback = "1m",
@@ -72,10 +80,18 @@ export function ChartActionsFooter({
 			<div className="flex flex-wrap items-center justify-between gap-2 w-full">
 				<div className="flex flex-wrap items-center gap-2">
 					<HistoryButton promptName={promptName} promptId={promptId} brandId={brandId} />
+					{outputLanguage && onOutputLanguageChange && (
+						<ChartExportLanguageSelector
+							id={`chart-export-output-language-${promptId}`}
+							outputLanguage={outputLanguage}
+							isResolved={outputLanguageResolved}
+							onOutputLanguageChange={onOutputLanguageChange}
+						/>
+					)}
 					{onDownload && (
 						<Button
 							onClick={onDownload}
-							disabled={isDownloading}
+							disabled={isDownloading || (outputLanguage !== undefined && !outputLanguageResolved)}
 							size="sm"
 							variant="secondary"
 							className="text-xs cursor-pointer h-6 flex items-center px-2"

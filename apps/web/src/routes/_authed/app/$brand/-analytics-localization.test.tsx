@@ -55,13 +55,15 @@ vi.mock("@/components/prompts-display", () => ({
 		pageDescription,
 		pageInfoContent,
 		editLink,
+		exportLanguageSurface,
 	}: {
 		pageTitle: string;
 		pageDescription: string;
 		pageInfoContent: ReactNode;
 		editLink?: string;
+		exportLanguageSurface: string;
 	}) => (
-		<section data-edit-link={editLink}>
+		<section data-edit-link={editLink} data-export-language-surface={exportLanguageSurface}>
 			<h1>{pageTitle}</h1>
 			<p>{pageDescription}</p>
 			<div>{pageInfoContent}</div>
@@ -368,6 +370,7 @@ describe("customer analytical page localization", () => {
 		expect(markup).toContain("竞争对手");
 		expect(markup).toContain('href="/app/brand-raw-id/settings/competitors"');
 		expect(markup).toContain('data-edit-link="/app/brand-raw-id/settings/prompts"');
+		expect(markup).toContain('data-export-language-surface="visibility-chart-export"');
 		expect(markup).not.toContain("See how LLMs are evaluating");
 	});
 

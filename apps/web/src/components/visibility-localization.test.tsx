@@ -14,6 +14,8 @@ const mocks = vi.hoisted(() => ({
 			branding: {},
 		},
 	},
+	exportLanguages: [] as string[],
+	liveChartLanguages: [] as Array<string | undefined>,
 }));
 
 function hrefFor(to: string, params?: Record<string, string>, search?: Record<string, string>) {
@@ -53,9 +55,31 @@ vi.mock("@/contexts/chart-data-context", () => ({
 	useOptionalChartDataContext: () => mocks.chartContext,
 }));
 vi.mock("@/hooks/use-chart-export", () => ({
-	useChartExport: () => ({ isExporting: false, handleExport: vi.fn(), portal: null }),
+	useChartExport: (_fileName: string, outputLanguage: string) => {
+		mocks.exportLanguages.push(outputLanguage);
+		return { isExporting: false, handleExport: vi.fn(), portal: null };
+	},
 }));
-vi.mock("./base-chart", () => ({ BaseChart: () => <div data-testid="base-chart" /> }));
+vi.mock("./base-chart", () => ({
+	BaseChart: ({
+		outputLanguage,
+		brand,
+		competitors,
+	}: {
+		outputLanguage?: string;
+		brand: { name: string };
+		competitors: Array<{ name: string }>;
+	}) => {
+		mocks.liveChartLanguages.push(outputLanguage);
+		return (
+			<div
+				data-testid="base-chart"
+				data-brand={brand.name}
+				data-competitors={competitors.map((item) => item.name).join("|")}
+			/>
+		);
+	},
+}));
 
 import { CachedPromptChart } from "./cached-prompt-chart";
 import { HistoryButton } from "./history-button";
@@ -73,6 +97,9 @@ const chartProps = {
 	lookback: "1m" as const,
 	selectedModel: "gpt-5.6",
 	availableModels: ["gpt-5.6"],
+	outputLanguage: "en" as const,
+	outputLanguageResolved: true,
+	onOutputLanguageChange: vi.fn(),
 };
 
 describe("visibility component localization", () => {
@@ -96,6 +123,8 @@ describe("visibility component localization", () => {
 				lastBrandVisibility: null,
 			}),
 		};
+		mocks.exportLanguages.length = 0;
+		mocks.liveChartLanguages.length = 0;
 	});
 
 	it("localizes the live whitelabel Optimize control reached by a populated visibility card", () => {
@@ -189,4 +218,36 @@ describe("visibility component localization", () => {
 		expect(markup).toContain('href="/app/brand-raw-id/prompts/prompt-raw-id?tab=web-queries"');
 		expect(markup).not.toContain("View Details");
 	});
+
+	it.each([
+		{ uiLanguage: "en", outputLanguage: "zh-CN", chrome: "42% Visibility", label: "Output language" },
+		{ uiLanguage: "zh-CN", outputLanguage: "en", chrome: "42% 可见度", label: "输出语言" },
+	] as const)(
+		"keeps dashboard chrome in $uiLanguage while handing $outputLanguage to PNG export",
+		({ uiLanguage, outputLanguage, chrome, label }) => {
+			mocks.chartContext = {
+				...(mocks.chartContext ?? {}),
+				getChartDataForPrompt: () => ({
+					chartData: [{ date: "2026-08-15", "brand-raw-id": 42, "competitor-raw-id": 9 }],
+					totalRuns: 1,
+					hasVisibilityData: true,
+					lastBrandVisibility: 42,
+				}),
+			};
+
+			const markup = renderWithLocale(
+				uiLanguage,
+				<CachedPromptChart {...chartProps} outputLanguage={outputLanguage} />,
+			);
+
+			expect(markup).toContain(chrome);
+			expect(markup).toContain(label);
+			expect(markup).toContain(`value="${outputLanguage}"`);
+			expect(markup).toContain("Which AI IDE works in 中国?");
+			expect(markup).toContain('data-brand="StepFun 原名"');
+			expect(markup).toContain('data-competitors="DeepSeek 原名"');
+			expect(mocks.exportLanguages.at(-1)).toBe(outputLanguage);
+			expect(mocks.liveChartLanguages.at(-1)).toBeUndefined();
+		},
+	);
 });

@@ -84,10 +84,15 @@ interface ReportMessages {
 		opportunity: string;
 		evaluatingFirstTime: string;
 		noDataInRange: string;
+		noDataAvailable: string;
 		noBrandsFound: string;
 		noBrandsFoundDescription: string;
 		download: string;
 		preparing: string;
+		downloadPng: string;
+		exportPng: string;
+		exporting: string;
+		logoAlt: (name: string) => string;
 	};
 }
 
@@ -185,10 +190,15 @@ const englishMessages = {
 		opportunity: "Opportunity",
 		evaluatingFirstTime: "Evaluating for the first time",
 		noDataInRange: "No data in the selected range",
+		noDataAvailable: "No data available",
 		noBrandsFound: "No brands found",
 		noBrandsFoundDescription: "No brand mentions were detected in this period.",
 		download: "Download chart",
 		preparing: "Preparing…",
+		downloadPng: "Download chart as PNG",
+		exportPng: "Export (PNG)",
+		exporting: "Exporting…",
+		logoAlt: (name) => `${name} logo`,
 	},
 } satisfies ReportMessages;
 
@@ -283,15 +293,20 @@ const chineseMessages = {
 		opportunity: "机会",
 		evaluatingFirstTime: "正在进行首次评测",
 		noDataInRange: "所选时间范围内暂无数据",
+		noDataAvailable: "暂无数据",
 		noBrandsFound: "未检测到品牌",
 		noBrandsFoundDescription: "当前周期内尚未检测到任何品牌提及。",
 		download: "下载图表",
 		preparing: "准备中…",
+		downloadPng: "下载 PNG 图表",
+		exportPng: "导出 (PNG)",
+		exporting: "正在导出…",
+		logoAlt: (name) => `${name} 标志`,
 	},
 } satisfies ReportMessages;
 
 export type ReportCopy = Omit<ReportMessages, "writeArticlesRecommendation"> & {
-	formatDate: (value: Date | number) => string;
+	formatDate: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
 	formatNumber: (value: number) => string;
 	formatPercent: (value: number) => string;
 	status: (value: string) => string;
@@ -326,15 +341,19 @@ export function getReportCopy(outputLanguage: OutputLanguage): ReportCopy {
 		style: "percent",
 		maximumFractionDigits: 0,
 	});
-	const dateFormatter = new Intl.DateTimeFormat(outputLanguage, {
+	const defaultDateOptions: Intl.DateTimeFormatOptions = {
 		year: "numeric",
 		month: "long",
 		day: "numeric",
-	});
+	};
 
 	return {
 		...messages,
-		formatDate: (value) => dateFormatter.format(value),
+		formatDate: (value, options) =>
+			new Intl.DateTimeFormat(outputLanguage, {
+				timeZone: "UTC",
+				...(options ?? defaultDateOptions),
+			}).format(value),
 		formatNumber: (value) => numberFormatter.format(value),
 		formatPercent: (value) => percentFormatter.format(value / 100),
 		status: (value) => messages.statuses[statusKey(value)],

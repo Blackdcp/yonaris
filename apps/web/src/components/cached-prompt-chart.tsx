@@ -1,3 +1,4 @@
+import type { OutputLanguage } from "@workspace/config/language";
 import { Badge } from "@workspace/ui/components/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
@@ -43,6 +44,9 @@ export interface CachedPromptChartProps {
 	// Whether this prompt has ever been evaluated (all-time)
 	// Used to distinguish "never evaluated" vs "no data in selected window"
 	hasEverBeenEvaluated?: boolean;
+	outputLanguage: OutputLanguage;
+	outputLanguageResolved: boolean;
+	onOutputLanguageChange: (outputLanguage: OutputLanguage) => void;
 }
 
 // Memoized: when a sibling filter / react-query state change re-renders
@@ -57,6 +61,9 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 	availableModels = [],
 	searchHighlight = "",
 	hasEverBeenEvaluated = false,
+	outputLanguage,
+	outputLanguageResolved,
+	onOutputLanguageChange,
 }: CachedPromptChartProps) {
 	const { t, formatNumber } = useI18n();
 	// Get data from context (pre-loaded)
@@ -72,7 +79,7 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 	const fileName = chartContext?.brand
 		? `${chartContext.brand.name}-${promptName.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)}`
 		: `chart-${promptName.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)}`;
-	const { isExporting, handleExport, portal: exportPortal } = useChartExport(fileName);
+	const { isExporting, handleExport, portal: exportPortal } = useChartExport(fileName, outputLanguage);
 
 	const brand = chartContext?.brand ?? null;
 	const competitors = chartContext?.competitors;
@@ -82,7 +89,7 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 	const lastBrandVisibility = chartData?.lastBrandVisibility ?? null;
 
 	const handleDownload = useCallback(() => {
-		if (!brand || !data || !competitors) return;
+		if (!outputLanguageResolved || !brand || !data || !competitors) return;
 		handleExport({
 			promptName,
 			visibility: lastBrandVisibility,
@@ -91,7 +98,7 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 			brand,
 			competitors,
 		});
-	}, [handleExport, promptName, lastBrandVisibility, data, lookback, brand, competitors]);
+	}, [handleExport, promptName, lastBrandVisibility, data, lookback, brand, competitors, outputLanguageResolved]);
 
 	// Loading state — structure matches the success state card exactly:
 	// CardHeader (title + badge), Separator, CardContent (pl-0 pr-6, h-[250px]), footer
@@ -208,6 +215,9 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 							promptName={promptName}
 							onDownload={handleDownload}
 							isDownloading={isExporting}
+							outputLanguage={outputLanguage}
+							outputLanguageResolved={outputLanguageResolved}
+							onOutputLanguageChange={onOutputLanguageChange}
 							selectedModel={selectedModel}
 							availableModels={availableModels}
 							lookback={lookback}
@@ -251,6 +261,9 @@ export const CachedPromptChart = memo(function CachedPromptChart({
 						promptName={promptName}
 						onDownload={handleDownload}
 						isDownloading={isExporting}
+						outputLanguage={outputLanguage}
+						outputLanguageResolved={outputLanguageResolved}
+						onOutputLanguageChange={onOutputLanguageChange}
 						selectedModel={selectedModel}
 						availableModels={availableModels}
 						lookback={lookback}

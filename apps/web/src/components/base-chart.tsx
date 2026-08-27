@@ -1,4 +1,5 @@
 import { useRouteContext } from "@tanstack/react-router";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Badge } from "@workspace/ui/components/badge";
@@ -13,6 +14,7 @@ import {
 import * as React from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { useI18n } from "@/i18n/provider";
+import { getReportCopy } from "@/i18n/report-copy";
 import {
 	type ChartDataPoint,
 	extendLinesToChartEdges,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/chart-utils";
 
 interface BaseChartProps {
+	outputLanguage?: OutputLanguage;
 	data: ChartDataPoint[];
 	lookback: LookbackPeriod;
 	title?: string;
@@ -40,6 +43,7 @@ interface BaseChartProps {
 }
 
 export function BaseChart({
+	outputLanguage,
 	data,
 	lookback,
 	title,
@@ -54,6 +58,10 @@ export function BaseChart({
 	chartHeight = "250px",
 }: BaseChartProps) {
 	const { t, formatDate, formatNumber } = useI18n();
+	const reportCopy = outputLanguage ? getReportCopy(outputLanguage) : null;
+	const formatChartDate = (value: Date | number, options?: Intl.DateTimeFormatOptions) =>
+		reportCopy ? reportCopy.formatDate(value, options) : formatDate(value, options);
+	const formatChartNumber = (value: number) => (reportCopy ? reportCopy.formatNumber(value) : formatNumber(value));
 	const completeData = filterAndCompleteChartData(data, lookback);
 	const context = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 
@@ -70,7 +78,7 @@ export function BaseChart({
 	const chartColors = chartColorsProp ?? context.clientConfig?.branding.chartColors ?? [];
 	const chartConfig: ChartConfig = {
 		visitors: {
-			label: t("chart.visibility"),
+			label: reportCopy?.chart.visibility ?? t("chart.visibility"),
 		},
 		[brand.id]: {
 			label: brand.name,
@@ -127,13 +135,13 @@ export function BaseChart({
 				});
 
 	return (
-		<div className="flex-1 space-y-2">
+		<div lang={outputLanguage} className="flex-1 space-y-2">
 			{showTitle && (
 				<div className="flex items-center justify-center gap-2">
 					{title && <h3 className="text-sm font-medium capitalize">{title}</h3>}
 					{showBadge && visibility !== null && (
 						<Badge variant={getBadgeVariant(visibility!)} className={`text-xs ${getBadgeClassName(visibility!)}`}>
-							{formatNumber(visibility!)}%
+							{formatChartNumber(visibility!)}%
 						</Badge>
 					)}
 				</div>
@@ -155,7 +163,7 @@ export function BaseChart({
 								// value is already a properly bucketed date string like "2025-07-21"
 								const [year, month, day] = value.split("-").map(Number);
 								const date = new Date(Date.UTC(year, month - 1, day));
-								return formatDate(date, {
+								return formatChartDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -169,7 +177,7 @@ export function BaseChart({
 							axisLine={false}
 							tickMargin={8}
 							tickCount={6}
-							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
+							tickFormatter={(value) => `${formatChartNumber(Number(value))}%`}
 						/>
 						<ChartTooltip
 							isAnimationActive={false}
@@ -179,7 +187,7 @@ export function BaseChart({
 									labelFormatter={(value) => {
 										const [year, month, day] = String(value).split("-").map(Number);
 										const date = new Date(Date.UTC(year, month - 1, day));
-										return formatDate(date, {
+										return formatChartDate(date, {
 											month: "short",
 											day: "numeric",
 										});
@@ -201,7 +209,7 @@ export function BaseChart({
 													</div>
 													{value !== null && value !== undefined && (
 														<span className="text-foreground font-mono font-xs tabular-nums">
-															{formatNumber(Number(value))}%
+															{formatChartNumber(Number(value))}%
 														</span>
 													)}
 												</div>
@@ -236,7 +244,7 @@ export function BaseChart({
 								// value is already a properly bucketed date string like "2025-07-21"
 								const [year, month, day] = value.split("-").map(Number);
 								const date = new Date(Date.UTC(year, month - 1, day));
-								return formatDate(date, {
+								return formatChartDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -250,7 +258,7 @@ export function BaseChart({
 							axisLine={false}
 							tickMargin={8}
 							tickCount={6}
-							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
+							tickFormatter={(value) => `${formatChartNumber(Number(value))}%`}
 						/>
 						<ChartTooltip
 							isAnimationActive={false}
@@ -278,7 +286,7 @@ export function BaseChart({
 								// Format the date label
 								const [year, month, day] = (label as string).split("-").map(Number);
 								const date = new Date(Date.UTC(year, month - 1, day));
-								const formattedDate = formatDate(date, {
+								const formattedDate = formatChartDate(date, {
 									month: "short",
 									day: "numeric",
 								});
@@ -300,7 +308,7 @@ export function BaseChart({
 																{chartConfig[item.dataKey as string]?.label || item.dataKey}
 															</span>
 															<span className="text-foreground font-mono font-xs tabular-nums">
-																{formatNumber(Number(item.value))}%
+																{formatChartNumber(Number(item.value))}%
 															</span>
 														</div>
 													</div>

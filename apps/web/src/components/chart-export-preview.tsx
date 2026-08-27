@@ -1,7 +1,8 @@
 import { DEFAULT_APP_ICON, DEFAULT_APP_NAME, DEFAULT_APP_WORDMARK, YONARIS_COLORS } from "@workspace/config/constants";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Badge } from "@workspace/ui/components/badge";
-import { useI18n } from "@/i18n/provider";
+import { getReportCopy } from "@/i18n/report-copy";
 import type { ChartDataPoint, LookbackPeriod } from "@/lib/chart-utils";
 import { getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
 import { BaseChart } from "./base-chart";
@@ -17,6 +18,7 @@ export interface ChartExportBranding {
 }
 
 export interface ChartExportPreviewProps {
+	outputLanguage: OutputLanguage;
 	promptName: string;
 	visibility: number | null;
 	data: ChartDataPoint[];
@@ -53,6 +55,7 @@ function formatBrandDomain(url?: string): string {
 }
 
 export function ChartExportPreview({
+	outputLanguage,
 	promptName,
 	visibility,
 	data,
@@ -61,7 +64,7 @@ export function ChartExportPreview({
 	competitors,
 	branding,
 }: ChartExportPreviewProps) {
-	const { t, formatNumber } = useI18n();
+	const copy = getReportCopy(outputLanguage);
 	const name = branding.name || DEFAULT_APP_NAME;
 	const domain = formatBrandDomain(branding.parentUrl || branding.url);
 	const usesDefaultBrand = name === DEFAULT_APP_NAME && (!branding.icon || branding.icon === DEFAULT_APP_ICON);
@@ -70,6 +73,7 @@ export function ChartExportPreview({
 
 	return (
 		<div
+			lang={outputLanguage}
 			style={{
 				width: EXPORT_W,
 				height: EXPORT_H,
@@ -97,7 +101,7 @@ export function ChartExportPreview({
 						className={`${getBadgeClassName(visibility)} shrink-0`}
 						style={{ fontSize: 16, padding: "4px 14px" }}
 					>
-						{formatNumber(visibility)}% {t("chart.visibility")}
+						{copy.formatPercent(visibility)} {copy.chart.visibility}
 					</Badge>
 				)}
 			</div>
@@ -114,6 +118,7 @@ export function ChartExportPreview({
 					}}
 				>
 					<BaseChart
+						outputLanguage={outputLanguage}
 						data={data}
 						lookback={lookback}
 						brand={brand}
@@ -132,7 +137,7 @@ export function ChartExportPreview({
 					{wordmark ? (
 						<img
 							src={wordmark}
-							alt={t("chart.logoAlt", { name })}
+							alt={copy.chart.logoAlt(name)}
 							style={{ width: 148, height: 36 }}
 							className="object-contain"
 							crossOrigin="anonymous"
@@ -142,7 +147,7 @@ export function ChartExportPreview({
 							{hasCustomIcon && (
 								<img
 									src={branding.icon}
-									alt={t("chart.logoAlt", { name })}
+									alt={copy.chart.logoAlt(name)}
 									style={{ width: 28, height: 28 }}
 									className="object-contain"
 									crossOrigin="anonymous"

@@ -1,5 +1,6 @@
 import { IconEditCircle } from "@tabler/icons-react";
 import { Link, useSearch } from "@tanstack/react-router";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@workspace/ui/components/card";
@@ -14,12 +15,14 @@ import { PromptOrderDropdown } from "@/components/prompt-order-dropdown";
 import { VirtualizedPromptList } from "@/components/virtualized-prompt-list";
 import { VisibilityBarSection } from "@/components/visibility-bar-section";
 import { ChartDataProvider } from "@/contexts/chart-data-context";
+import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection";
 import { useBatchChartData } from "@/hooks/use-batch-chart-data";
 import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { usePromptsSummary } from "@/hooks/use-prompts-summary";
 import { useScopeModels } from "@/hooks/use-scope-models";
 import { useI18n } from "@/i18n/provider";
+import type { ArtifactLanguageSurface } from "@/lib/artifact-language-selection";
 import type { LookbackPeriod } from "@/lib/chart-utils";
 import { coercePromptOrder, orderPrompts } from "@/lib/prompt-order";
 
@@ -28,6 +31,7 @@ interface PromptsDisplayProps {
 	pageDescription: string;
 	pageInfoContent?: React.ReactNode;
 	editLink?: string;
+	exportLanguageSurface: ArtifactLanguageSurface;
 }
 
 const CONTENT_SKELETON_KEYS = ["first", "second", "third"] as const;
@@ -36,11 +40,17 @@ const CONTENT_SKELETON_KEYS = ["first", "second", "third"] as const;
  *  and composes independent sub-sections. It doesn't subscribe to any
  *  filter state itself — each section reads the URL keys it cares about
  *  so a filter change only re-renders the sections that depend on it. */
-export function PromptsDisplay({ pageTitle, pageDescription, pageInfoContent, editLink }: PromptsDisplayProps) {
+export function PromptsDisplay({
+	pageTitle,
+	pageDescription,
+	pageInfoContent,
+	editLink,
+	exportLanguageSurface,
+}: PromptsDisplayProps) {
 	const { brand } = useBrand();
 	return (
 		<PageHeader title={pageTitle} subtitle={pageDescription} infoContent={pageInfoContent}>
-			<PromptsContent brandId={brand?.id} editLink={editLink} />
+			<PromptsContent brandId={brand?.id} editLink={editLink} exportLanguageSurface={exportLanguageSurface} />
 		</PageHeader>
 	);
 }
@@ -51,10 +61,19 @@ export function PromptsDisplay({ pageTitle, pageDescription, pageInfoContent, ed
  *  components still hold their own subscriptions to whichever URL keys
  *  they need, so a click on "Lookback" only invalidates the data users
  *  and not `FilterBar` itself. */
-function PromptsContent({ brandId, editLink }: { brandId: string | undefined; editLink?: string }) {
-	const { t } = useI18n();
+function PromptsContent({
+	brandId,
+	editLink,
+	exportLanguageSurface,
+}: {
+	brandId: string | undefined;
+	editLink?: string;
+	exportLanguageSurface: ArtifactLanguageSurface;
+}) {
+	const { locale, t } = useI18n();
 	const filters = useListFilters();
 	const { scopeId, model, lookback, tags, search } = filters;
+	const exportLanguage = useArtifactLanguageSelection(exportLanguageSurface, brandId, scopeId, locale);
 	const { models: scopeModels, isResolved: scopeModelsResolved } = useScopeModels(brandId, scopeId);
 	// `order` is this route's own search key (not a narrowing filter), so it
 	// rides outside `useListFilters` / `isFiltered`.
@@ -149,6 +168,9 @@ function PromptsContent({ brandId, editLink }: { brandId: string | undefined; ed
 				selectedTags={tags}
 				sortedPrompts={sortedPrompts}
 				availableIndividualModels={availableIndividualModels}
+				outputLanguage={exportLanguage.outputLanguage}
+				outputLanguageResolved={exportLanguage.isResolved}
+				onOutputLanguageChange={exportLanguage.setOutputLanguage}
 			/>
 		</FilteredListShell>
 	);
@@ -168,6 +190,9 @@ function ChartSection({
 	selectedTags,
 	sortedPrompts,
 	availableIndividualModels,
+	outputLanguage,
+	outputLanguageResolved,
+	onOutputLanguageChange,
 }: {
 	brandId: string | undefined;
 	scopeId: string;
@@ -178,6 +203,9 @@ function ChartSection({
 	selectedTags: string[];
 	sortedPrompts: { id: string; value: string; firstEvaluatedAt?: Date | string | null }[];
 	availableIndividualModels: string[];
+	outputLanguage: OutputLanguage;
+	outputLanguageResolved: boolean;
+	onOutputLanguageChange: (outputLanguage: OutputLanguage) => void;
 }) {
 	const { batchChartData, isLoading: isLoadingChartData } = useBatchChartData(brandId, {
 		scopeId,
@@ -242,6 +270,9 @@ function ChartSection({
 				selectedModel={selectedModel}
 				availableModels={availableIndividualModels}
 				searchHighlight={searchQuery}
+				outputLanguage={outputLanguage}
+				outputLanguageResolved={outputLanguageResolved}
+				onOutputLanguageChange={onOutputLanguageChange}
 			/>
 		</ChartDataProvider>
 	);

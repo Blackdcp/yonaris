@@ -1,13 +1,16 @@
 import { useRouteContext } from "@tanstack/react-router";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { Badge } from "@workspace/ui/components/badge";
 import * as React from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import { useI18n } from "@/i18n/provider";
+import { getReportCopy } from "@/i18n/report-copy";
 import { type ChartDataPoint, getBadgeClassName, getBadgeVariant } from "@/lib/chart-utils";
 
 interface BaseChartPrintProps {
+	outputLanguage?: OutputLanguage;
 	data: ChartDataPoint[];
 	title?: string;
 	visibility?: number | null;
@@ -46,6 +49,7 @@ function CustomXAxisTick(props: any) {
 }
 
 export function BaseChartPrint({
+	outputLanguage,
 	data,
 	title,
 	visibility,
@@ -54,7 +58,10 @@ export function BaseChartPrint({
 	brand,
 	competitors,
 }: BaseChartPrintProps) {
-	const { t, formatNumber } = useI18n();
+	const { locale, t, formatNumber } = useI18n();
+	const effectiveLanguage = outputLanguage ?? locale;
+	const reportCopy = outputLanguage ? getReportCopy(outputLanguage) : null;
+	const formatPercent = (value: number) => (reportCopy ? reportCopy.formatPercent(value) : `${formatNumber(value)}%`);
 	const routeContext = useRouteContext({ strict: false }) as { clientConfig?: ClientConfig };
 	// Get the most recent data point that has actual data
 	const latestDataPoint = data
@@ -67,14 +74,14 @@ export function BaseChartPrint({
 
 	if (!latestDataPoint) {
 		return (
-			<div className="flex-1 space-y-2 print:space-y-1">
+			<div lang={effectiveLanguage} className="flex-1 space-y-2 print:space-y-1">
 				{showTitle && (
 					<div className="flex items-center justify-center gap-2">
 						{title && <h3 className="text-sm font-medium capitalize print:text-xs">{title}</h3>}
 					</div>
 				)}
 				<div className="h-[200px] print:h-[150px] flex items-center justify-center text-muted-foreground text-sm print:text-xs">
-					{t("chart.noDataAvailable")}
+					{reportCopy?.chart.noDataAvailable ?? t("chart.noDataAvailable")}
 				</div>
 			</div>
 		);
@@ -113,7 +120,7 @@ export function BaseChartPrint({
 	const sortedEntities = allEntities.sort((a, b) => b.value - a.value).slice(0, 6);
 
 	return (
-		<div className="flex-1">
+		<div lang={effectiveLanguage} className="flex-1">
 			{showTitle && (
 				<div className="flex items-center justify-center gap-2">
 					{title && <h3 className="text-sm font-medium capitalize print:text-xs">{title}</h3>}
@@ -122,7 +129,7 @@ export function BaseChartPrint({
 							variant={getBadgeVariant(visibility!)}
 							className={`text-xs ${getBadgeClassName(visibility!)} print:text-xs`}
 						>
-							{formatNumber(visibility!)}%
+							{formatPercent(visibility!)}
 						</Badge>
 					)}
 				</div>
@@ -146,7 +153,7 @@ export function BaseChartPrint({
 								fontSize: 10,
 								fill: "var(--yonaris-stone, #6B7280)",
 							}}
-							tickFormatter={(value) => `${formatNumber(Number(value))}%`}
+							tickFormatter={(value) => formatPercent(Number(value))}
 							width={40}
 						/>
 						<Bar
@@ -158,7 +165,7 @@ export function BaseChartPrint({
 								fontSize: 11,
 								fontWeight: "bold",
 								fill: "var(--yonaris-slate, #374151)",
-								formatter: (value: unknown) => `${formatNumber(Number(value))}%`,
+								formatter: (value: unknown) => formatPercent(Number(value)),
 							}}
 						>
 							{sortedEntities.map((entry) => (

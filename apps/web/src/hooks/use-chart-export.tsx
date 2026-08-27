@@ -1,12 +1,13 @@
-import { useState, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
-import html2canvas from "html2canvas-pro";
 import { useRouteContext } from "@tanstack/react-router";
 import { YONARIS_COLORS } from "@workspace/config/constants";
+import type { OutputLanguage } from "@workspace/config/language";
 import type { ClientConfig } from "@workspace/config/types";
+import html2canvas from "html2canvas-pro";
+import { useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChartExportPreview, type ChartExportPreviewProps } from "@/components/chart-export-preview";
 
-export function useChartExport(fileName: string) {
+export function useChartExport(fileName: string, outputLanguage: OutputLanguage) {
 	const [isExporting, setIsExporting] = useState(false);
 	const [exportData, setExportData] = useState<ChartExportPreviewProps | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
@@ -17,13 +18,14 @@ export function useChartExport(fileName: string) {
 	const mode = context.clientConfig?.mode;
 
 	const handleExport = useCallback(
-		async (data: Omit<ChartExportPreviewProps, "branding">) => {
+		async (data: Omit<ChartExportPreviewProps, "branding" | "outputLanguage">) => {
 			if (exportingRef.current) return;
 			exportingRef.current = true;
 			setIsExporting(true);
 
 			const exportProps: ChartExportPreviewProps = {
 				...data,
+				outputLanguage,
 				branding: {
 					name: branding?.name,
 					icon: branding?.icon,
@@ -62,13 +64,14 @@ export function useChartExport(fileName: string) {
 				setIsExporting(false);
 			}
 		},
-		[branding, mode, fileName],
+		[branding, mode, fileName, outputLanguage],
 	);
 
 	const portal = exportData
 		? createPortal(
 				<div
 					ref={containerRef}
+					lang={exportData.outputLanguage}
 					style={{
 						position: "fixed",
 						left: "-9999px",
@@ -77,7 +80,7 @@ export function useChartExport(fileName: string) {
 						pointerEvents: "none",
 					}}
 				>
-					<ChartExportPreview {...exportData} />
+					<ChartExportPreview {...exportData} outputLanguage={exportData.outputLanguage} />
 				</div>,
 				document.body,
 			)

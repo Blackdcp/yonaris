@@ -590,23 +590,12 @@ describe("portal UI-language literal audit", () => {
 		);
 	});
 
-	it("keeps every deferred output-language surface assigned to an exact owner and task", () => {
+	it("keeps every completed output-language surface assigned to an exact runtime-backed resolution", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
 		expect(validateCrossPlanOwnership(repositoryRoot)).toEqual([]);
-		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(19);
-		expect(CROSS_PLAN_RESOLUTIONS).toEqual([
-			{
-				file: "apps/web/src/routes/_authed/reports/index.tsx",
-				kind: "output-component",
-				value: "ReportsPage",
-				occurrence: 1,
-				owner: "portal-output-languages",
-				task: "Task 3",
-				resolution: "explicit-output-language",
-				evidence:
-					"The Reports route owns a session-scoped artifact-language selector independent from Portal UI language.",
-				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
-			},
+		expect(CROSS_PLAN_OWNERSHIP).toEqual([]);
+		expect(CROSS_PLAN_RESOLUTIONS).toHaveLength(60);
+		const previouslyResolved = [
 			{
 				file: "apps/web/src/routes/_authed/reports/index.tsx",
 				kind: "ambient-ui-language",
@@ -700,25 +689,15 @@ describe("portal UI-language literal audit", () => {
 			{
 				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
 				kind: "output-component",
-				value: "ReportPromptChartPrint",
+				value: "PromptChartPrint",
 				occurrence: 1,
 				owner: "portal-output-languages",
 				task: "Task 4",
 				resolution: "explicit-output-language",
 				evidence:
-					"The route passes the exact selected token and raw run evidence at its chart boundary; child consumption remains independently deferred.",
-				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
-			},
-			{
-				file: "apps/web/src/routes/_authed/admin/tools.tsx",
-				kind: "output-component",
-				value: "OpportunitiesGenerationControl",
-				occurrence: 1,
-				owner: "portal-output-languages",
-				task: "Task 2",
-				resolution: "explicit-output-language",
-				evidence: "The admin tools route renders the explicit Opportunity generation control.",
-				runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+					"The route passes the exact selected token and raw run evidence to the real printable chart component.",
+				runtimeTest:
+					"apps/web/src/routes/_authed/reports/render/report-render-language-browser-runtime.browser.test.tsx",
 			},
 			{
 				file: "apps/web/src/components/opportunities-generation-control.tsx",
@@ -729,7 +708,7 @@ describe("portal UI-language literal audit", () => {
 				task: "Task 2",
 				resolution: "explicit-output-language",
 				evidence: "The generation control resolves and submits the tab-scoped artifact language.",
-				runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+				runtimeTest: "apps/web/src/components/chart-export-output-language.browser.test.tsx",
 			},
 			{
 				file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
@@ -740,7 +719,7 @@ describe("portal UI-language literal audit", () => {
 				task: "Task 2",
 				resolution: "explicit-output-language",
 				evidence: "The customer route resolves its independent tab-scoped artifact language before reading.",
-				runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+				runtimeTest: "apps/web/src/components/chart-export-output-language.browser.test.tsx",
 			},
 			{
 				file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
@@ -786,7 +765,8 @@ describe("portal UI-language literal audit", () => {
 				evidence: "The hook binds the explicit output language into both its cache key and customer read request.",
 				runtimeTest: "apps/web/src/hooks/use-opportunities.test.ts",
 			},
-		]);
+		];
+		expect(CROSS_PLAN_RESOLUTIONS).toEqual(expect.arrayContaining(previouslyResolved));
 		expect(
 			collectExistingRuntimeTests(
 				repositoryRoot,
@@ -797,20 +777,36 @@ describe("portal UI-language literal audit", () => {
 				"apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
 				"apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
 				"apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+				"apps/web/src/routes/_authed/reports/render/report-render-language-browser-runtime.browser.test.tsx",
+				"apps/web/src/components/chart-surface-localization.test.tsx",
+				"apps/web/src/components/base-chart-localization.test.tsx",
+				"apps/web/src/components/visibility-localization.test.tsx",
+				"apps/web/src/components/chart-export-output-language.browser.test.tsx",
+				"apps/web/src/components/virtualized-prompt-list-output-language.test.tsx",
+				"apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+				"apps/web/src/routes/_authed/app/$brand/-analytics-localization.test.tsx",
+				"apps/web/src/hooks/use-chart-export-output-language.test.tsx",
 				"apps/web/src/components/opportunities-generation-control.test.tsx",
 				"apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
 				"apps/web/src/components/opportunities-report.test.tsx",
 				"apps/web/src/hooks/use-opportunities.test.ts",
 			]),
 		);
-		const withoutRegistry = validateCrossPlanOwnership(repositoryRoot, []);
-		for (const entry of CROSS_PLAN_OWNERSHIP) {
-			expect(withoutRegistry).toContain(
+		const exactSignatures = CROSS_PLAN_RESOLUTIONS.map(
+			(entry) => `${entry.file} ${entry.kind} ${entry.value} occurrence ${entry.occurrence}`,
+		);
+		expect(new Set(exactSignatures).size).toBe(CROSS_PLAN_RESOLUTIONS.length);
+		const withoutAnyResolution = validateCrossPlanOwnership(repositoryRoot, [], []);
+		for (const entry of CROSS_PLAN_RESOLUTIONS) {
+			expect(withoutAnyResolution).toContain(
 				`unregistered output-language dependency: ${entry.file} ${entry.kind} ${entry.value} occurrence ${entry.occurrence}`,
 			);
+			expect(entry.owner).toBe("portal-output-languages");
+			expect(entry.resolution).toBe("explicit-output-language");
+			expect(entry.evidence.length).toBeGreaterThan(20);
 		}
 		const withoutAnyReportResolution = validateCrossPlanOwnership(repositoryRoot, [], []);
-		for (const value of ["ReportsPage", "useI18n", "buildReportCreateInput", "renderReport"]) {
+		for (const value of ["useI18n", "buildReportCreateInput", "renderReport"]) {
 			expect(withoutAnyReportResolution).toEqual(
 				expect.arrayContaining([
 					expect.stringContaining(
@@ -820,25 +816,7 @@ describe("portal UI-language literal audit", () => {
 			);
 			expect(withoutAnyReportResolution.some((error) => error.includes(` ${value} occurrence 1`))).toBe(true);
 		}
-		expect(CROSS_PLAN_OWNERSHIP).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({
-					file: "apps/web/src/components/prompt-chart-print.tsx",
-					owner: "portal-output-languages",
-					task: "Task 4",
-				}),
-				expect.objectContaining({
-					file: "apps/web/src/components/base-chart-print.tsx",
-					owner: "portal-output-languages",
-					task: "Task 4",
-				}),
-				expect.objectContaining({
-					file: "apps/web/src/components/chart-export-preview.tsx",
-					owner: "portal-output-languages",
-					task: "Task 4",
-				}),
-			]),
-		);
+		expect(CROSS_PLAN_RESOLUTIONS.filter((entry) => entry.task === "Task 4").length).toBeGreaterThan(30);
 
 		const incomplete = [
 			{
@@ -854,6 +832,25 @@ describe("portal UI-language literal audit", () => {
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing cross-plan ownership")]));
 	});
 
+	it("loads non-discovery src modules into the exact runtime dependency and mock universe", () => {
+		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
+		const mockedContextResolution: CrossPlanResolution = {
+			file: "apps/web/src/contexts/chart-data-context.tsx",
+			kind: "output-component",
+			value: "ChartDataProvider",
+			occurrence: 1,
+			owner: "portal-output-languages",
+			task: "Task 4",
+			resolution: "explicit-output-language",
+			evidence: "Mutation-only resolution proves contexts participate in exact runtime mock attestation.",
+			runtimeTest: "apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+		};
+
+		expect(validateCrossPlanOwnership(repositoryRoot, [], [mockedContextResolution])).toContain(
+			"cross-plan resolution runtime mock cuts exact source/symbol: apps/web/src/contexts/chart-data-context.tsx ChartDataProvider apps/web/src/components/dashboard-chart-export-language-propagation.test.tsx",
+		);
+	});
+
 	it("requires exact deferred or resolved registry entries for every discovered output dependency", () => {
 		const exact: CrossPlanOwnership = {
 			file: "apps/web/src/components/sample-print.tsx",
@@ -867,7 +864,8 @@ describe("portal UI-language literal audit", () => {
 		const unresolved = [
 			{
 				file: exact.file,
-				source: 'import { useI18n } from "@/i18n/provider"; export function SamplePrint() { useI18n(); return <p />; }',
+				source:
+					'import { useI18n } from "@/i18n/provider"; export function SamplePrint() { useI18n(); return <p data-output-language="fixture" />; }',
 			},
 		];
 
@@ -882,21 +880,23 @@ describe("portal UI-language literal audit", () => {
 				{
 					file: "apps/web/src/components/opportunities-generation-control.tsx",
 					source:
-						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; export function Control() { useI18n(); useArtifactLanguageSelection("opportunities-admin", "brand", "scope", "en"); return <p />; }',
+						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; export function OpportunitiesGenerationControl() { useI18n(); useArtifactLanguageSelection("opportunities-admin", "brand", "scope", "en"); return <p />; }',
 				},
 				{
 					file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
 					source:
-						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; import { OpportunitiesReport } from "@/components/opportunities-report"; export function Page() { useI18n(); useArtifactLanguageSelection("opportunities-customer", "brand", "scope", "en"); return <OpportunitiesReport />; }',
+						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; import { OpportunitiesReport } from "@/components/opportunities-report"; export function Page() { useI18n(); useArtifactLanguageSelection("opportunities-customer", "brand", "scope", "en"); return <OpportunitiesReport outputLanguage="en" />; }',
+				},
+				{
+					file: "apps/web/src/components/opportunities-report.tsx",
+					source:
+						'export function OpportunitiesReport({ outputLanguage }: { outputLanguage: "en" | "zh-CN" }) { return <section lang={outputLanguage} />; }',
 				},
 			],
 			[],
 		);
 		expect(opportunityErrors).toEqual(
 			expect.arrayContaining([
-				expect.stringContaining(
-					"apps/web/src/routes/_authed/admin/tools.tsx output-component OpportunitiesGenerationControl occurrence 1",
-				),
 				expect.stringContaining(
 					"apps/web/src/components/opportunities-generation-control.tsx output-hook useArtifactLanguageSelection occurrence 1",
 				),
@@ -908,7 +908,7 @@ describe("portal UI-language literal audit", () => {
 				),
 			]),
 		);
-		expect(opportunityErrors.some((error) => error.includes("ambient-ui-language useI18n"))).toBe(false);
+		expect(opportunityErrors.filter((error) => error.includes("ambient-ui-language useI18n"))).toHaveLength(2);
 		expect(
 			validateCrossPlanOwnershipFromSources([{ file: exact.file, source: "export const x = <p />;" }], [exact]),
 		).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing")]));
@@ -920,14 +920,19 @@ describe("portal UI-language literal audit", () => {
 		);
 		expect(
 			validateCrossPlanOwnershipFromSources(
-				[{ file: "apps/web/src/components/new-output.tsx", source: "export const x = <NovelPrint />;" }],
+				[
+					{
+						file: "apps/web/src/components/new-output.tsx",
+						source: "export function NewOutput({ outputLanguage }) { return <NovelPrint />; }",
+					},
+				],
 				[],
 			),
 		).toEqual(expect.arrayContaining([expect.stringContaining("unregistered output-language dependency")]));
 		for (const source of [
-			'import { PromptsDisplay } from "@/components/prompts-display"; export const x = <PromptsDisplay />;',
-			'import { useI18n } from "@/i18n/provider"; export function PromptsDisplay() { useI18n(); return <p />; }',
-			'import { BaseChart } from "./base-chart"; export function ChartExportPreview() { return <BaseChart />; }',
+			'import { PromptsDisplay } from "@/components/prompts-display"; export function ArbitraryRoot({ outputLanguage }) { return <PromptsDisplay outputLanguage={outputLanguage} />; }',
+			'import { useI18n } from "@/i18n/provider"; export function ArbitrarySurface() { useI18n(); return <p data-output-language="fixture" />; }',
+			'import { BaseChart } from "./base-chart"; export function ArbitraryPreview({ outputLanguage }) { return <BaseChart outputLanguage={outputLanguage} />; }',
 		]) {
 			expect(
 				validateCrossPlanOwnershipFromSources([{ file: "apps/web/src/components/connected-output.tsx", source }], []),
@@ -1297,6 +1302,431 @@ describe("portal UI-language literal audit", () => {
 				),
 			).toEqual(expect.arrayContaining([expect.stringContaining(expectedError)]));
 		}
+	});
+
+	it("follows arbitrary local artifact component names and aliases from an output-language root", () => {
+		for (const [rootSource, resolvedRootSource] of [
+			[
+				'import { ArtifactCanvas as Canvas } from "./artifact-canvas"; export function OutputRoot({ outputLanguage }) { return <Canvas />; }',
+				'import { ArtifactCanvas as Canvas } from "./artifact-canvas"; export function OutputRoot({ outputLanguage }) { return <Canvas outputLanguage={outputLanguage} />; }',
+			],
+			[
+				'import { ArtifactCanvas } from "./artifact-canvas"; const CanvasAlias = ArtifactCanvas; export function OutputRoot({ outputLanguage }) { return <CanvasAlias />; }',
+				'import { ArtifactCanvas } from "./artifact-canvas"; const CanvasAlias = ArtifactCanvas; export function OutputRoot({ outputLanguage }) { return <CanvasAlias outputLanguage={outputLanguage} />; }',
+			],
+		] as const) {
+			const child = {
+				file: "apps/web/src/components/artifact-canvas.tsx",
+				source:
+					'export function ArtifactCanvas({ outputLanguage }: { outputLanguage: "en" | "zh-CN" }) { return <div lang={outputLanguage} />; }',
+			};
+			const errors = validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/output-root.tsx",
+						source: rootSource,
+					},
+					child,
+				],
+				[],
+			);
+
+			expect(errors).toEqual(
+				expect.arrayContaining([expect.stringMatching(/output-component Canvas(?:Alias)? occurrence 1/u)]),
+			);
+			expect(errors).toContain(
+				`missing outputLanguage propagation: apps/web/src/components/output-root.tsx OutputRoot -> ${rootSource.includes("CanvasAlias") ? "CanvasAlias" : "Canvas"}`,
+			);
+			expect(
+				validateCrossPlanOwnershipFromSources(
+					[{ file: "apps/web/src/components/output-root.tsx", source: resolvedRootSource }, child],
+					[],
+				).some((error) => error.startsWith("missing outputLanguage propagation:")),
+			).toBe(false);
+		}
+	});
+
+	it("records only language-carrying, required, and connecting component edges", () => {
+		const errors = validateCrossPlanOwnershipFromSources(
+			[
+				{
+					file: "apps/web/src/components/semantic-output-root.tsx",
+					source:
+						'import { ArtifactCanvas } from "./semantic-artifact-canvas"; import { HistoryButton, TextHighlighter } from "./incidental-chrome"; export function SemanticOutputRoot({ outputLanguage }) { return <section lang={outputLanguage}><ArtifactCanvas outputLanguage={outputLanguage} /><TextHighlighter /><HistoryButton /></section>; }',
+				},
+				{
+					file: "apps/web/src/components/semantic-artifact-canvas.tsx",
+					source:
+						'export function ArtifactCanvas({ outputLanguage }: { outputLanguage: "en" | "zh-CN" }) { return <div lang={outputLanguage} />; }',
+				},
+				{
+					file: "apps/web/src/components/incidental-chrome.tsx",
+					source:
+						'export function TextHighlighter() { return <mark />; } export function HistoryButton() { return <button type="button" />; }',
+				},
+			],
+			[],
+		);
+		expect(errors).toEqual(
+			expect.arrayContaining([expect.stringContaining("output-component ArtifactCanvas occurrence 1")]),
+		);
+		expect(errors.some((error) => /output-component (?:TextHighlighter|HistoryButton)/u.test(error))).toBe(false);
+	});
+
+	it("resolves default, barrel, and namespace component aliases before checking language handoff", () => {
+		const child = {
+			file: "apps/web/src/components/artifact-surface.tsx",
+			source:
+				'export default function ArtifactSurface({ outputLanguage }: { outputLanguage: "en" | "zh-CN" }) { return <section lang={outputLanguage} />; } export { ArtifactSurface };',
+		};
+		const fixtures = [
+			{
+				root: 'import ArtifactCanvas from "./artifact-barrel"; export function CanvasHost({ outputLanguage }) { return <ArtifactCanvas />; }',
+				barrel: 'export { default } from "./artifact-surface";',
+				alias: "ArtifactCanvas",
+			},
+			{
+				root: 'import { CanvasAlias as ArtifactCanvas } from "./artifact-barrel"; export function CanvasHost({ outputLanguage }) { return <ArtifactCanvas />; }',
+				barrel: 'export { ArtifactSurface as CanvasAlias } from "./artifact-surface";',
+				alias: "ArtifactCanvas",
+			},
+			{
+				root: 'import * as surfaces from "./artifact-surface"; const ArtifactCanvas = surfaces.ArtifactSurface; export function CanvasHost({ outputLanguage }) { return <ArtifactCanvas />; }',
+				barrel: "export {};",
+				alias: "ArtifactCanvas",
+			},
+		] as const;
+
+		for (const fixture of fixtures) {
+			const errors = validateCrossPlanOwnershipFromSources(
+				[
+					{ file: "apps/web/src/components/canvas-host.tsx", source: fixture.root },
+					{ file: "apps/web/src/components/artifact-barrel.ts", source: fixture.barrel },
+					child,
+				],
+				[],
+			);
+			expect(errors).toContain(
+				`missing outputLanguage propagation: apps/web/src/components/canvas-host.tsx CanvasHost -> ${fixture.alias}`,
+			);
+			expect(errors).toEqual(
+				expect.arrayContaining([expect.stringContaining(`output-component ${fixture.alias} occurrence 1`)]),
+			);
+		}
+
+		const wrappedErrors = validateCrossPlanOwnershipFromSources(
+			[
+				{
+					file: "apps/web/src/components/wrapped-host.tsx",
+					source:
+						'import { ArtifactSurface as ArtifactCanvas } from "./wrapped-surface"; export function WrappedHost({ outputLanguage }) { return <ArtifactCanvas />; }',
+				},
+				{
+					file: "apps/web/src/components/wrapped-surface.tsx",
+					source:
+						'import { forwardRef, memo } from "react"; export const ArtifactSurface = memo(forwardRef(({ outputLanguage }: { outputLanguage: "en" | "zh-CN" }, ref) => <section ref={ref} lang={outputLanguage} />));',
+				},
+			],
+			[],
+		);
+		expect(wrappedErrors).toContain(
+			"missing outputLanguage propagation: apps/web/src/components/wrapped-host.tsx WrappedHost -> ArtifactCanvas",
+		);
+		expect(wrappedErrors).toEqual(
+			expect.arrayContaining([expect.stringContaining("output-component ArtifactCanvas occurrence 1")]),
+		);
+
+		const cyclicBarrelErrors = validateCrossPlanOwnershipFromSources(
+			[
+				{
+					file: "apps/web/src/components/cyclic-host.tsx",
+					source:
+						'import { ArtifactCanvas } from "./barrel-a"; export function CyclicHost({ outputLanguage }) { return <ArtifactCanvas />; }',
+				},
+				{ file: "apps/web/src/components/barrel-a.ts", source: 'export * from "./barrel-b";' },
+				{
+					file: "apps/web/src/components/barrel-b.ts",
+					source: 'export * from "./barrel-a"; export { ArtifactSurface as ArtifactCanvas } from "./artifact-surface";',
+				},
+				child,
+			],
+			[],
+		);
+		expect(cyclicBarrelErrors).toContain(
+			"missing outputLanguage propagation: apps/web/src/components/cyclic-host.tsx CyclicHost -> ArtifactCanvas",
+		);
+	});
+
+	it("resolves required outputLanguage through imported and wrapped component prop types", () => {
+		const host = (importSource: string) => ({
+			file: "apps/web/src/components/typed-host.tsx",
+			source: `${importSource} export function TypedHost({ outputLanguage }) { return <ArtifactCanvas />; }`,
+		});
+		const propsSources = [
+			{
+				file: "apps/web/src/components/base-artifact-props.ts",
+				source: 'export interface BaseArtifactProps { outputLanguage: "en" | "zh-CN" }',
+			},
+			{
+				file: "apps/web/src/components/artifact-props.ts",
+				source:
+					'import type { BaseArtifactProps } from "./base-artifact-props"; export interface ArtifactProps extends BaseArtifactProps {}',
+			},
+		];
+		const fixtures = [
+			{
+				importSource: 'import { ArtifactCanvas } from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export function ArtifactCanvas({ outputLanguage }: ArtifactProps) { return <section lang={outputLanguage} />; }',
+			},
+			{
+				importSource: 'import { ArtifactCanvas } from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export const ArtifactCanvas: React.FC<ArtifactProps> = (props) => <section lang={props.outputLanguage} />;',
+			},
+			{
+				importSource: 'import { ArtifactCanvas } from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export const ArtifactCanvas = memo<ArtifactProps>((props) => <section lang={props.outputLanguage} />);',
+			},
+			{
+				importSource: 'import { ArtifactCanvas } from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export const ArtifactCanvas = forwardRef<HTMLElement, ArtifactProps>((props, ref) => <section ref={ref} lang={props.outputLanguage} />);',
+			},
+			{
+				importSource: 'import ArtifactCanvas from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export default function ({ outputLanguage }: ArtifactProps) { return <section lang={outputLanguage} />; }',
+			},
+			{
+				importSource: 'import ArtifactCanvas from "./typed-artifact";',
+				artifact:
+					'import type { ArtifactProps } from "./artifact-props"; export default memo<ArtifactProps>((props) => <section lang={props.outputLanguage} />);',
+			},
+		] as const;
+
+		for (const fixture of fixtures) {
+			const errors = validateCrossPlanOwnershipFromSources(
+				[
+					host(fixture.importSource),
+					{ file: "apps/web/src/components/typed-artifact.tsx", source: fixture.artifact },
+					...propsSources,
+				],
+				[],
+			);
+			expect(errors, `${fixture.artifact}\n${errors.join("\n")}`).toContain(
+				"missing outputLanguage propagation: apps/web/src/components/typed-host.tsx TypedHost -> ArtifactCanvas",
+			);
+		}
+	});
+
+	it("requires each runtime attestation to reach its exact source and belong to its Vitest project", () => {
+		const productionFile = "apps/web/src/components/attested-output.tsx";
+		const runtimeTest = "apps/web/src/components/attested-output.test.tsx";
+		const productionSource =
+			"export const Route = configure({ component: AttestedOutput }); export function AttestedOutput({ outputLanguage }) { return <div lang={outputLanguage} />; } export function Unrelated() { return null; }";
+		const resolution: CrossPlanResolution = {
+			file: productionFile,
+			kind: "output-language-binding",
+			value: "AttestedOutput",
+			occurrence: 1,
+			owner: "portal-output-languages",
+			task: "Task 4",
+			resolution: "explicit-output-language",
+			evidence: "The real component binds the explicit output language at its artifact root.",
+			runtimeTest,
+		};
+		const vitestConfig = `import { defineConfig as configureVitest } from "vitest/config";
+			export default configureVitest({
+			test: { projects: [
+				{ test: { name: "unit", include: ["src/**/*.test.tsx"], exclude: ["src/**/*.browser.test.tsx"] } }
+			] }
+		});`;
+		const validate = (testSource: string, testFile = runtimeTest) =>
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{ file: testFile, source: testSource },
+					{ file: "apps/web/vitest.config.ts", source: vitestConfig },
+				],
+				[],
+				[{ ...resolution, runtimeTest: testFile }],
+				new Set([testFile]),
+			);
+
+		expect(validate('import { Unrelated } from "./attested-output"; void Unrelated;')).toEqual(
+			expect.arrayContaining([expect.stringContaining("does not reach exact source/symbol")]),
+		);
+		expect(validate('import { AttestedOutput as Output } from "./attested-output"; void Output;')).toEqual([]);
+		expect(validate('import { Route } from "./attested-output"; void Route;')).toEqual([]);
+		expect(validate('import * as output from "./attested-output"; void output.AttestedOutput;')).toEqual([]);
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{
+						file: "apps/web/src/components/attested-barrel.ts",
+						source: 'export { AttestedOutput as Output } from "./attested-output";',
+					},
+					{
+						file: runtimeTest,
+						source: 'import { Output } from "./attested-barrel"; void Output;',
+					},
+					{ file: "apps/web/vitest.config.ts", source: vitestConfig },
+				],
+				[],
+				[resolution],
+				new Set([runtimeTest]),
+			),
+		).toEqual([]);
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{
+						file: runtimeTest,
+						source: 'import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+					},
+				],
+				[],
+				[resolution],
+				new Set([runtimeTest]),
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("Vitest project configuration is unavailable")]));
+		expect(
+			validate(
+				'import { vi } from "vitest"; vi.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validate(
+				'import { vi as mocker } from "vitest"; mocker.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validate(
+				'import { vi as mocker } from "vitest"; mocker.mock("./attested-output", async () => ({ ...(await mocker.importActual("./attested-output")), Unrelated: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual([]);
+		expect(
+			validate(
+				'import * as vt from "vitest"; vt.vi.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validate(
+				'import { vi } from "vitest"; const mocker = vi; mocker.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validate(
+				'const vi = { mock() {} }; vi.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual([]);
+		expect(
+			validate(
+				'import { vi } from "vitest"; function decoy(vi) { vi.mock("./attested-output", () => ({ AttestedOutput: () => null })); } void decoy; import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual([]);
+		expect(
+			validate(
+				'import { vi } from "vitest"; vi.mock("./attested-output", async () => ({ ...(await vi.importActual("./attested-output")), Unrelated: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual([]);
+		expect(
+			validate(
+				'import { vi } from "vitest"; vi.mock("./attested-output", async () => ({ ...(await vi.importActual("./attested-output")), AttestedOutput: () => null })); import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		const decoyConfig = `const decoy = { name: "unit", include: ["src/**/*.test.tsx"] };
+			export default defineConfig({ test: { projects: [] } });`;
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{
+						file: runtimeTest,
+						source: 'import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+					},
+					{ file: "apps/web/vitest.config.ts", source: decoyConfig },
+				],
+				[],
+				[resolution],
+				new Set([runtimeTest]),
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("Vitest project configuration is unavailable")]));
+		const localDefineConfigDecoy = `function defineConfig(value) { return value; }
+			export default defineConfig({ test: { projects: [
+				{ test: { name: "unit", include: ["src/**/*.test.tsx"] } }
+			] } });`;
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{
+						file: runtimeTest,
+						source: 'import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+					},
+					{ file: "apps/web/vitest.config.ts", source: localDefineConfigDecoy },
+				],
+				[],
+				[resolution],
+				new Set([runtimeTest]),
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("Vitest project configuration is unavailable")]));
+
+		const parentFile = "apps/web/src/components/attested-parent.tsx";
+		const childResolution: CrossPlanResolution = {
+			...resolution,
+			file: parentFile,
+			kind: "output-component",
+			value: "AttestedOutput",
+		};
+		const validateMockedDependency = (
+			parentImport: string,
+			runtimeSource: string,
+			extraSources: Array<{ file: string; source: string }> = [],
+		) =>
+			validateCrossPlanOwnershipFromSources(
+				[
+					{ file: productionFile, source: productionSource },
+					{
+						file: parentFile,
+						source: `${parentImport} export function AttestedParent({ outputLanguage }) { return <AttestedOutput outputLanguage={outputLanguage} />; }`,
+					},
+					...extraSources,
+					{ file: runtimeTest, source: runtimeSource },
+					{ file: "apps/web/vitest.config.ts", source: vitestConfig },
+				],
+				[],
+				[childResolution],
+				new Set([runtimeTest]),
+			);
+		expect(
+			validateMockedDependency(
+				'import { AttestedOutput } from "./attested-output";',
+				'import { vi } from "vitest"; vi.mock("./attested-output", () => ({ AttestedOutput: () => null })); import { AttestedParent } from "./attested-parent"; void AttestedParent;',
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validateMockedDependency(
+				'import { AttestedOutput } from "./attested-barrel";',
+				'import { vi } from "vitest"; vi.mock("./attested-barrel", () => ({ AttestedOutput: () => null })); import { AttestedParent } from "./attested-parent"; void AttestedParent;',
+				[
+					{
+						file: "apps/web/src/components/attested-barrel.ts",
+						source: 'export { AttestedOutput } from "./attested-output";',
+					},
+				],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("mock cuts exact source/symbol")]));
+		expect(
+			validate(
+				'import { AttestedOutput } from "./attested-output"; void AttestedOutput;',
+				"apps/web/src/components/attested-output.browser.test.tsx",
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("is not included in corresponding Vitest project")]));
 	});
 
 	it("discovers output surfaces conservatively regardless of dead flow, mutation, slots, aliases, or apparent binding", () => {

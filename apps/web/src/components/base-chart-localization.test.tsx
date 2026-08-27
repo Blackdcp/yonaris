@@ -1,5 +1,5 @@
-import type { UiLanguage } from "@workspace/config/language";
-import type { Brand } from "@workspace/lib/db/schema";
+import type { OutputLanguage, UiLanguage } from "@workspace/config/language";
+import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -36,15 +36,17 @@ vi.mock("@workspace/ui/components/chart", () => ({
 import { BaseChart } from "./base-chart";
 
 const brand = { id: "brand-1", name: "Acme" } as Brand;
+const competitor = { id: "competitor-1", name: "原始竞品 / Raw Rival" } as Competitor;
 
-function renderChart(locale: UiLanguage): string {
+function renderChart(locale: UiLanguage, outputLanguage?: OutputLanguage): string {
 	return renderToStaticMarkup(
 		<I18nProvider locale={locale}>
 			<BaseChart
-				data={[{ date: "2025-07-21", "brand-1": 42 }]}
+				outputLanguage={outputLanguage}
+				data={[{ date: "2025-07-21", "brand-1": 42, "competitor-1": 9 }]}
 				lookback="all"
 				brand={brand}
-				competitors={[]}
+				competitors={[competitor]}
 				chartColors={["#111111"]}
 			/>
 		</I18nProvider>,
@@ -62,4 +64,18 @@ describe("BaseChart localization", () => {
 		expect(chinese).toContain('data-values="[42]"');
 		expect(english).not.toBe(chinese);
 	});
+
+	it.each([
+		{ uiLanguage: "en", outputLanguage: "zh-CN", expectedDate: "7月21日" },
+		{ uiLanguage: "zh-CN", outputLanguage: "en", expectedDate: "Jul 21" },
+	] as const)(
+		"formats PNG chart axes from explicit $outputLanguage under $uiLanguage UI without changing values",
+		({ uiLanguage, outputLanguage, expectedDate }) => {
+			const markup = renderChart(uiLanguage, outputLanguage);
+
+			expect(markup).toContain(expectedDate);
+			expect(markup).toContain('data-values="[42');
+			expect(markup).toContain('data-testid="value-axis">42%</span>');
+		},
+	);
 });

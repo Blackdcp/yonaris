@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import { playwright } from "@vitest/browser-playwright";
 import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
@@ -32,6 +33,7 @@ export default defineConfig({
 			},
 			{
 				extends: true,
+				plugins: [tailwindcss()],
 				resolve: {
 					alias: {
 						"@tanstack/react-start/server": path.resolve(dirname, "src/stories/_mocks/tanstack-start.ts"),
@@ -42,6 +44,11 @@ export default defineConfig({
 					name: "browser-runtime",
 					include: ["src/**/*.browser.test.tsx"],
 					browser: {
+						commands: {
+							emulateMedia: async (context, media: "screen" | "print") => {
+								await context.page.emulateMedia({ media });
+							},
+						},
 						enabled: true,
 						headless: true,
 						provider: playwright({}),

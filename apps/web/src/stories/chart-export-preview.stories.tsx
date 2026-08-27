@@ -1,8 +1,9 @@
 import type { Meta } from "@storybook/react";
 import { DEFAULT_CHART_COLORS } from "@workspace/config/constants";
+import type { OutputLanguage } from "@workspace/config/language";
 import { ChartExportPreview, type ChartExportPreviewProps } from "@/components/chart-export-preview";
-import { setMockRouteContext, MockRouteContextProvider } from "./_mocks/tanstack-router";
-import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
+import { type ClientConfig, setMockClientConfig } from "./_mocks/config-client";
+import { MockRouteContextProvider, setMockRouteContext } from "./_mocks/tanstack-router";
 
 const CHART_COLORS = DEFAULT_CHART_COLORS.slice(0, 8);
 
@@ -91,10 +92,14 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 	);
 }
 
-function ExportPreview(props: ChartExportPreviewProps) {
+type ExportPreviewStoryProps = Omit<ChartExportPreviewProps, "outputLanguage"> & {
+	outputLanguage?: OutputLanguage;
+};
+
+function ExportPreview({ outputLanguage = "en", ...props }: ExportPreviewStoryProps) {
 	return (
 		<MockRouteContextProvider value={{ clientConfig: defaultClientConfig }}>
-			<ChartExportPreview {...props} />
+			<ChartExportPreview outputLanguage={outputLanguage} {...props} />
 		</MockRouteContextProvider>
 	);
 }

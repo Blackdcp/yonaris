@@ -34,6 +34,9 @@ describe("artifactLanguageSelectionKey", () => {
 		expect(artifactLanguageSelectionKey("opportunities-customer", "brand", "scope")).toBe(
 			"yonaris:artifact-output-language:v1:opportunities-customer:brand:scope",
 		);
+		expect(artifactLanguageSelectionKey("visibility-chart-export", "brand/raw", "scope/CN")).toBe(
+			"yonaris:artifact-output-language:v1:visibility-chart-export:brand%2Fraw:scope%2FCN",
+		);
 	});
 
 	it("keeps admin, customer, brand, and Program selections independent", () => {

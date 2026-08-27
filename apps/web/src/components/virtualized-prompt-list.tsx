@@ -1,7 +1,8 @@
-import { memo, useRef, useMemo, useState, useCallback, useLayoutEffect, useEffect } from "react";
 import { useWindowVirtualizer } from "@tanstack/react-virtual";
-import { CachedPromptChart } from "./cached-prompt-chart";
+import type { OutputLanguage } from "@workspace/config/language";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { LookbackPeriod } from "@/hooks/use-prompt-chart-data";
+import { CachedPromptChart } from "./cached-prompt-chart";
 
 interface PromptItem {
 	id: string;
@@ -20,6 +21,9 @@ interface VirtualizedPromptListProps {
 	/** Concrete model ids this brand runs — no "all" sentinel. */
 	availableModels: string[];
 	searchHighlight?: string;
+	outputLanguage: OutputLanguage;
+	outputLanguageResolved: boolean;
+	onOutputLanguageChange: (outputLanguage: OutputLanguage) => void;
 }
 
 // All chart cards use a uniform height (empty states match chart height via h-[250px])
@@ -36,6 +40,9 @@ export const VirtualizedPromptList = memo(function VirtualizedPromptList({
 	selectedModel,
 	availableModels,
 	searchHighlight = "",
+	outputLanguage,
+	outputLanguageResolved,
+	onOutputLanguageChange,
 }: VirtualizedPromptListProps) {
 	const listRef = useRef<HTMLDivElement>(null);
 	const [scrollMargin, setScrollMargin] = useState(0);
@@ -65,6 +72,7 @@ export const VirtualizedPromptList = memo(function VirtualizedPromptList({
 	});
 
 	// Force virtualizer to recalculate when prompts list changes (e.g., after filtering)
+	// biome-ignore lint/correctness/useExhaustiveDependencies: prompt-list identity intentionally retriggers measurement.
 	useEffect(() => {
 		const timer = setTimeout(() => {
 			virtualizer.measure();
@@ -110,6 +118,9 @@ export const VirtualizedPromptList = memo(function VirtualizedPromptList({
 									availableModels={availableModels}
 									searchHighlight={searchHighlight}
 									hasEverBeenEvaluated={Boolean(prompt.firstEvaluatedAt)}
+									outputLanguage={outputLanguage}
+									outputLanguageResolved={outputLanguageResolved}
+									onOutputLanguageChange={onOutputLanguageChange}
 								/>
 							</div>
 						</div>

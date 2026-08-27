@@ -56,6 +56,7 @@ function VisibilityPage() {
 
 	return (
 		<PromptsDisplay
+			exportLanguageSurface="visibility-chart-export"
 			pageTitle={t("visibility.title")}
 			pageDescription={t("visibility.description")}
 			pageInfoContent={infoContent}

@@ -1,6 +1,6 @@
 import { isContentLanguage, type OutputLanguage } from "@workspace/config/language";
 
-export type ArtifactLanguageSurface = "opportunities-admin" | "opportunities-customer";
+export type ArtifactLanguageSurface = "opportunities-admin" | "opportunities-customer" | "visibility-chart-export";
 export type ArtifactLanguageStorage = Pick<Storage, "getItem" | "setItem">;
 
 const ARTIFACT_LANGUAGE_SELECTION_PREFIX = "yonaris:artifact-output-language:v1";

@@ -3,6 +3,7 @@ import { act, type ReactElement, type ReactNode, StrictMode } from "react";
 import { hydrateRoot, type Root } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { I18nProvider } from "@/i18n/provider";
 import { REPORT_CREATE_ARTIFACT_LANGUAGE_SELECTION_KEY } from "@/lib/artifact-language-selection";
 
 type ReportCreateInput = {
@@ -21,7 +22,6 @@ type RouteContext = {
 };
 
 const runtime = vi.hoisted(() => ({
-	uiLanguage: "en" as UiLanguage,
 	routeContext: { isAdmin: true, hasReportAccess: true } as RouteContext,
 	mutations: [] as ReportCreateInput[],
 	queryKeys: [] as unknown[],
@@ -74,17 +74,6 @@ vi.mock("@/components/localized-raw-detail", async () => {
 	};
 });
 
-vi.mock("@/i18n/provider", async () => {
-	const { translate } = await vi.importActual<typeof import("@/i18n/catalog")>("@/i18n/catalog");
-	return {
-		useI18n: () => ({
-			locale: runtime.uiLanguage,
-			t: (id: Parameters<typeof translate>[1], values?: Parameters<typeof translate>[2]) =>
-				translate(runtime.uiLanguage, id, values),
-		}),
-	};
-});
-
 vi.mock("@/server/reports", () => ({
 	createReportFn: vi.fn(),
 	getReportsFn: vi.fn(),
@@ -103,12 +92,14 @@ import { Route } from "./index";
 
 const mountedRoots: Root[] = [];
 
-function ReportsRoute(): ReactElement {
+function ReportsRoute({ uiLanguage }: { uiLanguage: UiLanguage }): ReactElement {
 	const Component = (Route as unknown as { component: () => ReactElement }).component;
 	return (
-		<StrictMode>
-			<Component />
-		</StrictMode>
+		<I18nProvider locale={uiLanguage}>
+			<StrictMode>
+				<Component />
+			</StrictMode>
+		</I18nProvider>
 	);
 }
 
@@ -131,9 +122,8 @@ function submitButtonIn(container: ParentNode): HTMLButtonElement {
 }
 
 function createServerContainer(uiLanguage: UiLanguage): HTMLDivElement {
-	runtime.uiLanguage = uiLanguage;
 	const container = document.createElement("div");
-	container.innerHTML = renderToString(<ReportsRoute />);
+	container.innerHTML = renderToString(<ReportsRoute uiLanguage={uiLanguage} />);
 	document.body.append(container);
 	return container;
 }
@@ -143,7 +133,6 @@ async function nextPaint(): Promise<void> {
 }
 
 async function hydrate(container: HTMLDivElement, uiLanguage: UiLanguage) {
-	runtime.uiLanguage = uiLanguage;
 	const recoverableErrors: unknown[] = [];
 	let root!: Root;
 	const mutationCount = runtime.mutations.length;
@@ -153,7 +142,7 @@ async function hydrate(container: HTMLDivElement, uiLanguage: UiLanguage) {
 	expect(runtime.mutations).toHaveLength(mutationCount);
 
 	await act(async () => {
-		root = hydrateRoot(container, <ReportsRoute />, {
+		root = hydrateRoot(container, <ReportsRoute uiLanguage={uiLanguage} />, {
 			onRecoverableError: (error) => recoverableErrors.push(error),
 		});
 		await nextPaint();
@@ -175,7 +164,6 @@ describe("Reports output-language browser runtime", () => {
 		(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 		document.body.innerHTML = "";
 		window.sessionStorage.clear();
-		runtime.uiLanguage = "en";
 		runtime.routeContext = { isAdmin: true, hasReportAccess: true };
 		runtime.mutations.length = 0;
 		runtime.queryKeys.length = 0;

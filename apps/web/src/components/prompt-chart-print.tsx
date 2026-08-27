@@ -1,3 +1,4 @@
+import type { OutputLanguage } from "@workspace/config/language";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import { getSoVBadgeClasses, type PromptCategory } from "@workspace/lib/report-metrics";
 import { Badge } from "@workspace/ui/components/badge";
@@ -5,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/componen
 import { Separator } from "@workspace/ui/components/separator";
 import { useChartDownload } from "@/hooks/use-chart-download";
 import { useI18n } from "@/i18n/provider";
+import { getReportCopy } from "@/i18n/report-copy";
 import {
 	type ChartDataPoint,
 	calculateVisibilityPercentages,
@@ -27,11 +29,13 @@ interface PromptRunData {
 	provider: string | null;
 	version: string;
 	webSearchEnabled: boolean;
+	textContent?: string;
 	rawOutput: any;
 	webQueries: string[];
 }
 
 interface PromptChartPrintProps {
+	outputLanguage?: OutputLanguage;
 	lookback: LookbackPeriod;
 	promptName: string;
 	promptId: string;
@@ -85,6 +89,7 @@ function computeSoVChartData(runs: PromptRunData[], brand: Brand, competitors: C
 }
 
 export function PromptChartPrint({
+	outputLanguage,
 	lookback = "1m",
 	promptName,
 	promptId,
@@ -94,7 +99,9 @@ export function PromptChartPrint({
 	hasEverBeenEvaluated = false,
 	category,
 }: PromptChartPrintProps) {
-	const { t, formatNumber } = useI18n();
+	const { locale, t, formatNumber } = useI18n();
+	const effectiveLanguage = outputLanguage ?? locale;
+	const reportCopy = outputLanguage ? getReportCopy(outputLanguage) : null;
 	const fileName = `${brand.name}-${promptName.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 50)}`;
 	const { chartRef, isDownloading, handleDownload } = useChartDownload(fileName);
 
@@ -138,13 +145,17 @@ export function PromptChartPrint({
 				return lastDataPoint && brand ? (lastDataPoint[brand.id] as number) : null;
 			})();
 
-	const badgeLabel = isReportContext ? t("chart.shareOfVoice") : t("chart.visibility");
+	const badgeLabel = isReportContext
+		? (reportCopy?.chart.shareOfVoice ?? t("chart.shareOfVoice"))
+		: (reportCopy?.chart.visibility ?? t("chart.visibility"));
 
 	if (hasNoRuns) {
-		const message = hasEverBeenEvaluated ? t("chart.noDataInRange") : t("chart.evaluatingFirstTime");
+		const message = hasEverBeenEvaluated
+			? (reportCopy?.chart.noDataInRange ?? t("chart.noDataInRange"))
+			: (reportCopy?.chart.evaluatingFirstTime ?? t("chart.evaluatingFirstTime"));
 
 		return (
-			<Card ref={chartRef} className="py-3 gap-3 print:shadow-none print:border">
+			<Card ref={chartRef} lang={effectiveLanguage} className="py-3 gap-3 print:shadow-none print:border">
 				<CardHeader className="flex justify-between items-center px-3">
 					<CardTitle className="text-sm print:text-xs">{promptName}</CardTitle>
 				</CardHeader>
@@ -156,7 +167,11 @@ export function PromptChartPrint({
 						</span>
 					</div>
 				</CardContent>
-				<ChartDownloadFooter onDownload={handleDownload} isDownloading={isDownloading} />
+				<ChartDownloadFooter
+					outputLanguage={effectiveLanguage}
+					onDownload={handleDownload}
+					isDownloading={isDownloading}
+				/>
 			</Card>
 		);
 	}
@@ -164,7 +179,7 @@ export function PromptChartPrint({
 	// Show "No brands found" message when there's no data
 	if (!hasVisibilityData) {
 		return (
-			<Card ref={chartRef} className="py-3 gap-3 print:shadow-none print:border">
+			<Card ref={chartRef} lang={effectiveLanguage} className="py-3 gap-3 print:shadow-none print:border">
 				<CardHeader className="flex justify-between items-center px-3">
 					<CardTitle className="text-sm print:text-xs">{promptName}</CardTitle>
 				</CardHeader>
@@ -172,14 +187,20 @@ export function PromptChartPrint({
 				<CardContent className="px-3">
 					<div className="h-[250px] flex items-center justify-center">
 						<div className="flex flex-col items-center text-center max-w-xs">
-							<p className="text-sm font-medium text-muted-foreground print:text-xs">{t("chart.noBrandsFound")}</p>
+							<p className="text-sm font-medium text-muted-foreground print:text-xs">
+								{reportCopy?.chart.noBrandsFound ?? t("chart.noBrandsFound")}
+							</p>
 							<p className="text-xs text-muted-foreground/70 mt-1 print:text-[10px]">
-								{t("chart.noBrandsFoundDescription")}
+								{reportCopy?.chart.noBrandsFoundDescription ?? t("chart.noBrandsFoundDescription")}
 							</p>
 						</div>
 					</div>
 				</CardContent>
-				<ChartDownloadFooter onDownload={handleDownload} isDownloading={isDownloading} />
+				<ChartDownloadFooter
+					outputLanguage={effectiveLanguage}
+					onDownload={handleDownload}
+					isDownloading={isDownloading}
+				/>
 			</Card>
 		);
 	}
@@ -195,22 +216,35 @@ export function PromptChartPrint({
 				: null;
 
 	return (
-		<Card ref={chartRef} className="py-3 gap-3 print:shadow-none print:border print:break-inside-avoid">
+		<Card
+			ref={chartRef}
+			lang={effectiveLanguage}
+			className="py-3 gap-3 print:shadow-none print:border print:break-inside-avoid"
+		>
 			<CardHeader className="flex justify-between items-center px-3">
 				<CardTitle className="text-sm print:text-xs">{promptName}</CardTitle>
 				<div className="flex items-center gap-2">
 					{badgeClasses && badgeValue !== null && (
 						<Badge variant={badgeClasses.variant} className={`${badgeClasses.className} print:text-xs`}>
-							{formatNumber(badgeValue)}% {badgeLabel}
+							{reportCopy ? reportCopy.formatPercent(badgeValue) : `${formatNumber(badgeValue)}%`} {badgeLabel}
 						</Badge>
 					)}
 				</div>
 			</CardHeader>
 			<Separator className="py-0 my-0" />
 			<CardContent className="p-0">
-				<BaseChartPrint data={chartData} brand={brand} competitors={selectedCompetitors} />
+				<BaseChartPrint
+					outputLanguage={effectiveLanguage}
+					data={chartData}
+					brand={brand}
+					competitors={selectedCompetitors}
+				/>
 			</CardContent>
-			<ChartDownloadFooter onDownload={handleDownload} isDownloading={isDownloading} />
+			<ChartDownloadFooter
+				outputLanguage={effectiveLanguage}
+				onDownload={handleDownload}
+				isDownloading={isDownloading}
+			/>
 		</Card>
 	);
 }

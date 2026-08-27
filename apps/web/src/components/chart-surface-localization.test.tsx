@@ -1,4 +1,4 @@
-import type { UiLanguage } from "@workspace/config/language";
+import type { OutputLanguage, UiLanguage } from "@workspace/config/language";
 import type { Brand, Competitor } from "@workspace/lib/db/schema";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -15,19 +15,48 @@ vi.mock("@tanstack/react-router", () => ({
 	}),
 }));
 vi.mock("recharts", () => ({
-	Bar: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-	BarChart: ({ children, data }: { children: ReactNode; data: { value: number }[] }) => (
-		<div data-values={JSON.stringify(data.map((point) => point.value))}>{children}</div>
+	Bar: ({ children, label }: { children: ReactNode; label?: { formatter?: (value: unknown) => string } }) => (
+		<div data-bar-label={label?.formatter?.(50)}>{children}</div>
+	),
+	BarChart: ({ children, data }: { children: ReactNode; data: { name: string; value: number }[] }) => (
+		<div
+			data-values={JSON.stringify(data.map((point) => point.value))}
+			data-names={JSON.stringify(data.map((point) => point.name))}
+		>
+			{children}
+		</div>
 	),
 	Cell: () => null,
 	ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	XAxis: () => null,
-	YAxis: () => null,
+	YAxis: ({ tickFormatter }: { tickFormatter: (value: number) => string }) => (
+		<span data-y-axis={tickFormatter(1_234)}>axis</span>
+	),
 }));
 vi.mock("@/hooks/use-chart-download", () => ({
 	useChartDownload: () => ({ chartRef: { current: null }, isDownloading: false, handleDownload: vi.fn() }),
 }));
-vi.mock("./base-chart", () => ({ BaseChart: () => <div data-testid="chart" /> }));
+vi.mock("./base-chart", () => ({
+	BaseChart: ({
+		outputLanguage,
+		data,
+		brand,
+		competitors,
+	}: {
+		outputLanguage?: OutputLanguage;
+		data: Array<Record<string, unknown>>;
+		brand: Brand;
+		competitors: Competitor[];
+	}) => (
+		<div
+			data-testid="chart"
+			data-output-language={outputLanguage}
+			data-values={JSON.stringify(data)}
+			data-brand={brand.name}
+			data-competitors={competitors.map((item) => item.name).join("|")}
+		/>
+	),
+}));
 vi.mock("./history-button", () => ({ HistoryButton: () => null }));
 
 import { BaseChartPrint } from "./base-chart-print";
@@ -82,6 +111,7 @@ describe("chart surface localization", () => {
 		const markup = renderWithLocale(
 			"zh-CN",
 			<PromptChartPrint
+				outputLanguage="zh-CN"
 				lookback="1m"
 				promptName="Best CRM"
 				promptId="prompt-1"
@@ -126,10 +156,96 @@ describe("chart surface localization", () => {
 		expect(markup).toContain('data-values="[50,50]"');
 	});
 
+	it.each([
+		{ uiLanguage: "en", outputLanguage: "zh-CN", expected: "50% 声量份额", stale: "Share of Voice" },
+		{ uiLanguage: "zh-CN", outputLanguage: "en", expected: "50% Share of Voice", stale: "声量份额" },
+	] as const)(
+		"renders report charts in $outputLanguage under $uiLanguage UI without translating evidence or metrics",
+		({ uiLanguage, outputLanguage, expected, stale }) => {
+			const rawPrompt = "RAW Prompt 原样 #42";
+			const rawBrand = { ...brand, name: "Brand 原名 / RAW" } as Brand;
+			const rawCompetitor = { ...competitor, name: "原始竞品 / Raw Rival" } as Competitor;
+			const markup = renderWithLocale(
+				uiLanguage,
+				<PromptChartPrint
+					outputLanguage={outputLanguage}
+					lookback="1m"
+					promptName={rawPrompt}
+					promptId="prompt-1"
+					brand={rawBrand}
+					competitors={[rawCompetitor]}
+					category="strength"
+					promptRuns={[
+						{
+							id: "run-1",
+							promptId: "prompt-1",
+							brandId: rawBrand.id,
+							brandMentioned: true,
+							competitorsMentioned: [],
+							createdAt: new Date("2026-08-20T00:00:00.000Z"),
+							model: "model/raw",
+							provider: "provider/raw",
+							version: "raw-v1",
+							webSearchEnabled: true,
+							textContent: "RAW Answer 原样，保持字节不变",
+							rawOutput: { citations: [{ title: "RAW Citation 原样", url: "https://raw.example/CN?q=A%2FB" }] },
+							webQueries: ["RAW Query 原样 +ID"],
+						},
+						{
+							id: "run-2",
+							promptId: "prompt-1",
+							brandId: rawBrand.id,
+							brandMentioned: false,
+							competitorsMentioned: [rawCompetitor.name],
+							createdAt: new Date("2026-08-20T00:01:00.000Z"),
+							model: "model/raw",
+							provider: "provider/raw",
+							version: "raw-v1",
+							webSearchEnabled: true,
+							textContent: "RAW Answer 2 原样",
+							rawOutput: null,
+							webQueries: ["RAW Query 2 原样"],
+						},
+					]}
+				/>,
+			);
+
+			expect(markup).toContain(`lang="${outputLanguage}"`);
+			expect(markup).toContain(expected);
+			expect(markup).not.toContain(stale);
+			expect(markup).toContain(rawPrompt);
+			expect(markup).toContain(rawBrand.name);
+			expect(markup).toContain(rawCompetitor.name);
+			expect(markup).toContain('data-values="[50,50]"');
+			expect(markup).toContain('data-names="[&quot;Brand 原名 / RAW&quot;,&quot;原始竞品 / Raw Rival&quot;]"');
+		},
+	);
+
+	it("uses explicit report language for empty copy, download copy, and chart number formatting", () => {
+		const markup = renderWithLocale(
+			"zh-CN",
+			<>
+				<BaseChartPrint outputLanguage="en" data={[]} brand={brand} competitors={[]} />
+				<BaseChartPrint outputLanguage="en" data={[{ date: "sov", "brand-1": 1_234 }]} brand={brand} competitors={[]} />
+				<ChartDownloadFooter outputLanguage="en" onDownload={vi.fn()} isDownloading={false} />
+				<ChartDownloadFooter outputLanguage="en" onDownload={vi.fn()} isDownloading />
+			</>,
+		);
+
+		expect(markup).toContain("No data available");
+		expect(markup).not.toContain("暂无数据");
+		expect(markup).toContain('title="Download chart as PNG"');
+		expect(markup).toContain("Export (PNG)");
+		expect(markup).toContain("Exporting…");
+		expect(markup).toContain('data-y-axis="1,234%"');
+		expect(markup).toContain('data-bar-label="50%"');
+	});
+
 	it("localizes exported visibility and logo accessibility without changing chart data", () => {
 		const markup = renderWithLocale(
 			"zh-CN",
 			<ChartExportPreview
+				outputLanguage="zh-CN"
 				promptName="Best CRM"
 				visibility={42}
 				data={[{ date: "2025-07-21", "brand-1": 42 }]}
@@ -151,4 +267,43 @@ describe("chart surface localization", () => {
 		expect(markup).toContain('data-testid="chart"');
 		expect(markup).toContain("portal.example.com");
 	});
+
+	it.each([
+		{ uiLanguage: "en", outputLanguage: "zh-CN", expected: "42% 可见度", stale: "42% Visibility" },
+		{ uiLanguage: "zh-CN", outputLanguage: "en", expected: "42% Visibility", stale: "42% 可见度" },
+	] as const)(
+		"binds the PNG capture root to $outputLanguage under $uiLanguage UI",
+		({ uiLanguage, outputLanguage, expected, stale }) => {
+			const rawBrand = { ...brand, name: "RAW Brand 原名" } as Brand;
+			const rawCompetitor = { ...competitor, name: "原始竞品 / Raw Rival" } as Competitor;
+			const markup = renderWithLocale(
+				uiLanguage,
+				<ChartExportPreview
+					outputLanguage={outputLanguage}
+					promptName="RAW Prompt 原样 #42"
+					visibility={42}
+					data={[{ date: "2025-07-21", "brand-1": 42, "competitor-1": 9 }]}
+					lookback="all"
+					brand={rawBrand}
+					competitors={[rawCompetitor]}
+					branding={{
+						name: "Raw Portal 原名",
+						icon: "/raw-icon.svg",
+						url: "https://raw.example/CN",
+						isWhitelabel: true,
+						chartColors: ["#111111", "#222222"],
+					}}
+				/>,
+			);
+
+			expect(markup).toContain(`lang="${outputLanguage}"`);
+			expect(markup).toContain(expected);
+			expect(markup).not.toContain(stale);
+			expect(markup).toContain("RAW Prompt 原样 #42");
+			expect(markup).toContain(`data-output-language="${outputLanguage}"`);
+			expect(markup).toContain('data-brand="RAW Brand 原名"');
+			expect(markup).toContain('data-competitors="原始竞品 / Raw Rival"');
+			expect(markup).toContain("raw.example/CN");
+		},
+	);
 });

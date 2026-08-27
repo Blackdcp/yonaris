@@ -7,9 +7,9 @@
 import type { Meta } from "@storybook/react";
 import { DEFAULT_CHART_COLORS } from "@workspace/config/constants";
 import { CachedPromptChart, type CachedPromptChartProps } from "@/components/cached-prompt-chart";
-import { setMockChartDataContext, type ProcessedChartData } from "./_mocks/chart-data-context";
-import { setMockClientConfig, type ClientConfig } from "./_mocks/config-client";
-import { setMockRouteContext, MockRouteContextProvider } from "./_mocks/tanstack-router";
+import { type ProcessedChartData, setMockChartDataContext } from "./_mocks/chart-data-context";
+import { type ClientConfig, setMockClientConfig } from "./_mocks/config-client";
+import { MockRouteContextProvider, setMockRouteContext } from "./_mocks/tanstack-router";
 import { setMockBrand } from "./_mocks/use-brands";
 
 // ---------------------------------------------------------------------------
@@ -131,6 +131,9 @@ const baseProps = {
 	selectedModel: "all" as const,
 	availableModels: ["chatgpt", "claude", "google-ai-mode"] as ("chatgpt" | "claude" | "google-ai-mode")[],
 	hasEverBeenEvaluated: true,
+	outputLanguage: "en" as const,
+	outputLanguageResolved: true,
+	onOutputLanguageChange: () => undefined,
 };
 
 // ---------------------------------------------------------------------------

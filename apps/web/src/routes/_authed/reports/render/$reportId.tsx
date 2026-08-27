@@ -25,7 +25,7 @@ import {
 } from "@workspace/lib/report-metrics";
 import { parseGeneratedReportOutput } from "@workspace/lib/report-output";
 import { BarChart3, Rocket, Target } from "lucide-react";
-import type { ComponentProps, ComponentType } from "react";
+import type { ComponentProps } from "react";
 import { Logo } from "@/components/logo";
 import { PromptChartPrint } from "@/components/prompt-chart-print";
 import { useI18n } from "@/i18n/provider";
@@ -33,12 +33,6 @@ import { getReportCopy, parseReportRenderLanguage } from "@/i18n/report-copy";
 import { getReportByIdFn } from "@/server/reports";
 
 type PromptChartPrintProps = ComponentProps<typeof PromptChartPrint>;
-type ReportPromptChartRun = PromptChartPrintProps["promptRuns"][number] & { textContent: string };
-type ReportPromptChartPrintProps = Omit<PromptChartPrintProps, "promptRuns"> & {
-	outputLanguage: OutputLanguage;
-	promptRuns: ReportPromptChartRun[];
-};
-const ReportPromptChartPrint = PromptChartPrint as ComponentType<ReportPromptChartPrintProps>;
 
 // ---------- Types ----------
 
@@ -215,7 +209,7 @@ function ReportRenderPage() {
 	// Build run arrays
 	const simpleRuns: ReportPromptRun[] = [];
 	const fullRuns: FullPromptRun[] = [];
-	const chartRuns: ReportPromptChartRun[] = [];
+	const chartRuns: PromptChartPrintProps["promptRuns"] = [];
 
 	data.promptRuns.forEach((pr, pi) => {
 		pr.runs.forEach((run, ri) => {
@@ -557,7 +551,7 @@ function ReportRenderPage() {
 								if (!prompt) return null;
 								return (
 									<div key={selected.promptId} className="flex-1 flex flex-col">
-										<ReportPromptChartPrint
+										<PromptChartPrint
 											lookback="1m"
 											promptName={prompt.value}
 											promptId={prompt.id}
