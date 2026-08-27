@@ -3,7 +3,7 @@
 import { type FocusEvent, useEffect, useRef, useState } from "react";
 import { productDemoFor } from "@/content/experience/product-demo";
 import type { ExperienceLocale } from "@/content/experience/types";
-import { useRovingTabs } from "./use-roving-tabs";
+import { useResponsiveRovingTabOrientation, useRovingTabs } from "./use-roving-tabs";
 
 const TRACE_STATES = ["observe", "compare", "inspect", "decide"] as const;
 
@@ -80,6 +80,7 @@ export function DecisionTraceScene({ locale }: { locale: ExperienceLocale }) {
 	const [directlySelected, setDirectlySelected] = useState(false);
 	const [focusWithin, setFocusWithin] = useState(false);
 	const sceneRef = useRef<HTMLElement>(null);
+	const tabOrientation = useResponsiveRovingTabOrientation();
 	const tabs = useRovingTabs({
 		items: TRACE_STATES,
 		active: activeState,
@@ -88,6 +89,7 @@ export function DecisionTraceScene({ locale }: { locale: ExperienceLocale }) {
 			setActiveState(next);
 		},
 		idPrefix: "decision-trace",
+		orientation: tabOrientation,
 	});
 
 	useEffect(() => {
@@ -136,7 +138,12 @@ export function DecisionTraceScene({ locale }: { locale: ExperienceLocale }) {
 				<p>{copy.question}</p>
 			</header>
 
-			<div className="site-06-decision-trace__rings" role="tablist" aria-label={copy.tablistLabel}>
+			<div
+				className="site-06-decision-trace__rings"
+				role="tablist"
+				aria-label={copy.tablistLabel}
+				aria-orientation={tabOrientation}
+			>
 				{TRACE_STATES.map((state, index) => (
 					<div key={state} className="site-06-decision-trace__ring" data-trace-relationship={state}>
 						<span>{copy.relationships[state]}</span>

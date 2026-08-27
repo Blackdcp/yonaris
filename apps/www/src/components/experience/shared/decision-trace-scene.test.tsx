@@ -13,6 +13,7 @@ describe("DecisionTraceScene", () => {
 		const html = renderToStaticMarkup(<DecisionTraceScene locale="en" />);
 
 		expect(html.match(/Which partner can support this decision/g)?.length).toBe(1);
+		expect(html).toContain('role="tablist" aria-label="Review the decision trace" aria-orientation="horizontal"');
 		for (const label of ["Observe", "Compare", "Inspect", "Decide"]) expect(html).toContain(label);
 		expect(html.match(/role="tab"/g)).toHaveLength(4);
 		expect(html.match(/role="tabpanel"/g)).toHaveLength(4);

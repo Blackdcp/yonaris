@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { type ProductDemoView, productDemoFor } from "@/content/experience/product-demo";
 import type { ExperienceLocale } from "@/content/experience/types";
-import { useRovingTabs } from "./use-roving-tabs";
+import { useResponsiveRovingTabOrientation, useRovingTabs } from "./use-roving-tabs";
 
 const VIEWS: readonly ProductDemoView[] = ["overview", "shareOfVoice", "opportunities", "queryFanOut"];
 
@@ -21,11 +21,13 @@ function TrendTrace({ label, path }: { label: string; path: string }) {
 export function ProductProofScene({ locale, compact = false }: { locale: ExperienceLocale; compact?: boolean }) {
 	const demo = productDemoFor(locale);
 	const [activeView, setActiveView] = useState<ProductDemoView>("overview");
+	const tabOrientation = useResponsiveRovingTabOrientation();
 	const tabs = useRovingTabs({
 		items: VIEWS,
 		active: activeView,
 		onChange: setActiveView,
 		idPrefix: "product-proof",
+		orientation: tabOrientation,
 	});
 	const numberFormat = new Intl.NumberFormat(locale === "zh" ? "zh-CN" : "en-US");
 
@@ -42,7 +44,12 @@ export function ProductProofScene({ locale, compact = false }: { locale: Experie
 				<p>{demo.labels.coverageBoundary}</p>
 			</header>
 
-			<div className="site-06-product-proof-scene__tabs" role="tablist" aria-label={demo.labels.sampleWorkspace}>
+			<div
+				className="site-06-product-proof-scene__tabs"
+				role="tablist"
+				aria-label={demo.labels.sampleWorkspace}
+				aria-orientation={tabOrientation}
+			>
 				{VIEWS.map((view, index) => (
 					<button key={view} type="button" {...tabs.getTabProps(view, index)}>
 						{demo.labels.tabs[view]}

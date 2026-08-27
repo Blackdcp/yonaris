@@ -1,7 +1,23 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, KeyboardEvent } from "react";
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 
 export type RovingTabOrientation = "horizontal" | "vertical";
+
+const STACKED_TAB_QUERY = "(max-width: 720px)";
+
+export function useResponsiveRovingTabOrientation(): RovingTabOrientation {
+	const [orientation, setOrientation] = useState<RovingTabOrientation>("horizontal");
+
+	useEffect(() => {
+		const mediaQuery = window.matchMedia(STACKED_TAB_QUERY);
+		const updateOrientation = () => setOrientation(mediaQuery.matches ? "vertical" : "horizontal");
+		updateOrientation();
+		mediaQuery.addEventListener("change", updateOrientation);
+		return () => mediaQuery.removeEventListener("change", updateOrientation);
+	}, []);
+
+	return orientation;
+}
 
 export function resolveRovingTabIndex(
 	length: number,

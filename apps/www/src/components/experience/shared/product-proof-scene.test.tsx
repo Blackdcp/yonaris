@@ -9,6 +9,7 @@ describe("ProductProofScene", () => {
 		const html = renderToStaticMarkup(<ProductProofScene locale="en" />);
 
 		expect(html).toContain('role="tablist"');
+		expect(html).toContain('aria-orientation="horizontal"');
 		expect(html.match(/role="tab"/g)).toHaveLength(4);
 		expect(html.match(/role="tabpanel"/g)).toHaveLength(4);
 		expect(html).toContain("<dd>79%</dd>");
