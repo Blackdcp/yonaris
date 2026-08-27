@@ -61,7 +61,7 @@ Bordered records may be used when they represent a real document, source, or sta
 
 ### English
 
-- **Home `/`:** cinematic navy field with full-bleed conference-room photography and a foreground evidence sheet; subsequent sections alternate warm paper, dark workbench, comparison stage, and dual-reading stage. The first viewport must not be a 50/50 text-plus-image-card grid.
+- **Home `/`:** cinematic navy field with full-bleed conference-room photography and the concentric Human/Agent claim reader from the approved source; subsequent sections alternate warm paper dossier, dark workbench, photographic comparison stage, and warm dual-reading bridge. The first viewport must not be a 50/50 text-plus-image-card grid, and the orbit reader must remain semantic rather than decorative.
 - **Platform `/product`:** evidence-led photo head followed by the trace workbench. The inspectable answer, source, boundary, and buying effect are the primary visual object.
 - **Evidence `/approach`:** cinematic business-walk field and a comparison stage that holds one question constant across baseline and retest.
 - **Human + Agent `/company`:** dual-reading stage is above the fold and visually dominant. Category, purpose, and scope remain one canonical fact system.
@@ -71,7 +71,7 @@ Bordered records may be used when they represent a real document, source, or sta
 
 ### Chinese
 
-- **Home `/zh`:** warm-paper anxiety hero followed immediately by the dark anxiety selector. It must feel commercially urgent and locally written, not like the English hero translated into Chinese.
+- **Home `/zh`:** cinematic business-walk field with the localized concentric Human/Agent claim reader, followed immediately by the dark anxiety selector. It must feel commercially urgent and locally written, not like the English hero translated into Chinese.
 - **System `/zh/product`:** the six-node system field is the hero and primary interaction. It cannot be replaced by a tab row above a generic record.
 - **Breakdown `/zh/approach`:** the replay stage is the primary visual object and keeps the same de-identified example through 基线、断点、行动、复核.
 - **Human + Agent `/zh/company`:** a prominent dual-reading field explains the same public fact for people and agents. The mode control appears in the first viewport.
@@ -123,7 +123,7 @@ Keep the existing Yonaris wordmark. Do not redraw or replace the logo. Preserve 
 - Human pages remain canonical and indexable; Agent HTML, Markdown, and JSON-LD remain alternate representations of the same facts.
 - Every meaningful Human fact remains in initial SSR output with stable anchors, evidence/source language, and boundaries.
 - English form fields remain Name, Work email, Company. Chinese form fields remain 姓名、电话、公司. Accepted submissions continue through the existing provider-backed email endpoint.
-- Resources and retired public surfaces remain unavailable. No public upstream attribution, open-source claim, retired framework name, fake metric, fake logo, or fake customer result may appear.
+- Resources and retired public surfaces remain unavailable. No public upstream-origin claim, retired framework attribution, fake metric, fake logo, or fake customer result may appear.
 - Existing routes, redirects, robots, sitemap, content negotiation, canonical/hreflang, GET/HEAD behaviour, and deployment safety remain intact.
 
 ## Visual acceptance contract
@@ -136,4 +136,3 @@ Keep the existing Yonaris wordmark. Do not redraw or replace the logo. Preserve 
 6. An intentional mutation replacing a route-specific scene with the generic two-column hero must fail at least one automated test.
 7. The acceptance screenshots must be generated with normal motion preferences for visual review and repeated with reduced motion for accessibility checks.
 8. Release only after a reviewer compares the production captures to the binding source and reports no Critical or Important visual-fidelity drift.
-

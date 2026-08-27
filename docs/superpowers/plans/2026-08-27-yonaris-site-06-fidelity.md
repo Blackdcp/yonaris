@@ -17,7 +17,7 @@
 - Preserve existing routes, redirects, canonical/hreflang, robots, sitemap, content negotiation, Human/Agent fact identity, forms, email endpoint, privacy truthfulness, Caddy boundaries, and production release safety.
 - H1 remains `clamp(38px, 4vw, 48px)`; H2 remains `clamp(29px, 3.3vw, 40px)`; maximum content width remains `1220px`.
 - Orange is a focus colour. Only the high-intent form submit may be a filled orange control.
-- No generic two-column hero may determine every route. No equal-size card wall, bento grid, numbered rail, decorative arrow glyph, dashboard mockup, fake metric, fake outcome, fake logo, open-source claim, retired framework attribution, or Resources surface.
+- No generic two-column hero may determine every route. No equal-size card wall, bento grid, numbered rail, decorative arrow glyph, dashboard mockup, fake metric, fake outcome, fake logo, upstream-origin claim, retired framework attribution, or Resources surface.
 - Meaningful interaction must be keyboard operable and visibly responsive. Subtle continuous image/geometry motion is allowed only when `prefers-reduced-motion: reduce` produces a stable equivalent.
 - Desktop acceptance widths are `1440` and `1280`; mobile acceptance widths are `390` and `360`.
 - Every task follows RED → verify RED → GREEN → verify GREEN → refactor, and ends in an independently reviewable commit.
@@ -130,7 +130,7 @@ git commit -m "build the faithful Site 06 visual objects"
 
 **Interfaces:**
 - Consumes: Task 1 visual objects and existing `EvidenceInspector`, `ReviewSwitch`, `ReadingLens`, `LeadForm`, and canonical fact records.
-- Produces: seven English route scenes with unique `data-page-composition` values: `cinematic-dossier`, `evidence-workbench`, `comparison-field`, `dual-reading-field`, `market-editorial`, `contact-cinematic`, `privacy-editorial`.
+- Produces: seven English route scenes with unique `data-page-composition` values: `cinematic-orbit`, `evidence-workbench`, `comparison-field`, `dual-reading-field`, `market-editorial`, `contact-cinematic`, `privacy-editorial`.
 
 - [ ] **Step 1: Replace generic-layout assertions with failing route-composition tests**
 
@@ -138,7 +138,7 @@ Add literal expectations for all seven page renderers:
 
 ```tsx
 const compositions = {
-  home: "cinematic-dossier",
+  home: "cinematic-orbit",
   product: "evidence-workbench",
   approach: "comparison-field",
   company: "dual-reading-field",
@@ -287,7 +287,7 @@ it("renders a fact directory instead of the Human page stack", () => {
   expect(html).toContain('data-scene-object="question-index"');
   expect(html).toContain('data-scene-object="fact-inspector"');
   expect(html).toContain("Stable ID");
-  expect(html).not.toContain('data-page-composition="cinematic-dossier"');
+  expect(html).not.toContain('data-page-composition="cinematic-orbit"');
 });
 ```
 
