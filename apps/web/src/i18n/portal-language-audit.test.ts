@@ -596,6 +596,72 @@ describe("portal UI-language literal audit", () => {
 		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(22);
 		expect(CROSS_PLAN_RESOLUTIONS).toEqual([
 			{
+				file: "apps/web/src/routes/_authed/admin/tools.tsx",
+				kind: "output-component",
+				value: "OpportunitiesGenerationControl",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The admin tools route renders the explicit Opportunity generation control.",
+				runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+			},
+			{
+				file: "apps/web/src/components/opportunities-generation-control.tsx",
+				kind: "output-hook",
+				value: "useArtifactLanguageSelection",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The generation control resolves and submits the tab-scoped artifact language.",
+				runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+				kind: "output-hook",
+				value: "useArtifactLanguageSelection",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The customer route resolves its independent tab-scoped artifact language before reading.",
+				runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+				kind: "output-component",
+				value: "OpportunitiesReport",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The customer route passes the persisted response language into the report artifact boundary.",
+				runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/components/opportunities-report.tsx",
+				kind: "output-language-binding",
+				value: "OpportunitiesReport",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The report root binds static artifact copy and formatting to its explicit output language.",
+				runtimeTest: "apps/web/src/components/opportunities-report.test.tsx",
+			},
+			{
+				file: "apps/web/src/components/opportunities-report.tsx",
+				kind: "output-language-binding",
+				value: "OpportunityCard",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "Each Opportunity card binds its static drill-down copy and counts to the explicit output language.",
+				runtimeTest: "apps/web/src/components/opportunities-report.test.tsx",
+			},
+			{
 				file: "apps/web/src/hooks/use-opportunities.tsx",
 				kind: "output-language-binding",
 				value: "useOpportunities",
@@ -612,7 +678,14 @@ describe("portal UI-language literal audit", () => {
 				repositoryRoot,
 				CROSS_PLAN_RESOLUTIONS.map((resolution) => resolution.runtimeTest),
 			),
-		).toEqual(new Set(["apps/web/src/hooks/use-opportunities.test.ts"]));
+		).toEqual(
+			new Set([
+				"apps/web/src/components/opportunities-generation-control.test.tsx",
+				"apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+				"apps/web/src/components/opportunities-report.test.tsx",
+				"apps/web/src/hooks/use-opportunities.test.ts",
+			]),
+		);
 		const withoutRegistry = validateCrossPlanOwnership(repositoryRoot, []);
 		for (const entry of CROSS_PLAN_OWNERSHIP) {
 			expect(withoutRegistry).toContain(
@@ -666,6 +739,43 @@ describe("portal UI-language literal audit", () => {
 		];
 
 		expect(validateCrossPlanOwnershipFromSources(unresolved, [exact])).toEqual([]);
+		const opportunityErrors = validateCrossPlanOwnershipFromSources(
+			[
+				{
+					file: "apps/web/src/routes/_authed/admin/tools.tsx",
+					source:
+						'import { useI18n } from "@/i18n/provider"; import { OpportunitiesGenerationControl } from "@/components/opportunities-generation-control"; export function ToolsPage() { useI18n(); return <OpportunitiesGenerationControl />; }',
+				},
+				{
+					file: "apps/web/src/components/opportunities-generation-control.tsx",
+					source:
+						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; export function Control() { useI18n(); useArtifactLanguageSelection("opportunities-admin", "brand", "scope", "en"); return <p />; }',
+				},
+				{
+					file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+					source:
+						'import { useI18n } from "@/i18n/provider"; import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection"; import { OpportunitiesReport } from "@/components/opportunities-report"; export function Page() { useI18n(); useArtifactLanguageSelection("opportunities-customer", "brand", "scope", "en"); return <OpportunitiesReport />; }',
+				},
+			],
+			[],
+		);
+		expect(opportunityErrors).toEqual(
+			expect.arrayContaining([
+				expect.stringContaining(
+					"apps/web/src/routes/_authed/admin/tools.tsx output-component OpportunitiesGenerationControl occurrence 1",
+				),
+				expect.stringContaining(
+					"apps/web/src/components/opportunities-generation-control.tsx output-hook useArtifactLanguageSelection occurrence 1",
+				),
+				expect.stringContaining(
+					"apps/web/src/routes/_authed/app/$brand/opportunities.tsx output-hook useArtifactLanguageSelection occurrence 1",
+				),
+				expect.stringContaining(
+					"apps/web/src/routes/_authed/app/$brand/opportunities.tsx output-component OpportunitiesReport occurrence 1",
+				),
+			]),
+		);
+		expect(opportunityErrors.some((error) => error.includes("ambient-ui-language useI18n"))).toBe(false);
 		expect(
 			validateCrossPlanOwnershipFromSources([{ file: exact.file, source: "export const x = <p />;" }], [exact]),
 		).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing")]));

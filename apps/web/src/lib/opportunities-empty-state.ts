@@ -6,5 +6,8 @@ export function opportunityEmptyMessage(reason: OpportunitiesReason, locale: UiL
 	if (reason === "not_generated") {
 		return translate(locale, "opportunity.empty.admin");
 	}
+	if (reason === "temporarily-unavailable") {
+		return translate(locale, "opportunity.unavailable");
+	}
 	return translate(locale, "opportunity.insufficient");
 }

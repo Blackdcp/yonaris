@@ -11,6 +11,12 @@ const harness = vi.hoisted(() => ({
 	effectDependencies: [] as Array<readonly unknown[] | undefined>,
 	effectCursor: 0,
 	buttons: [] as Array<{ onClick?: () => void | Promise<void> }>,
+	artifactSelection: {
+		outputLanguage: "en" as "en" | "zh-CN",
+		isResolved: true,
+		setOutputLanguage: vi.fn(),
+	},
+	setQueryData: vi.fn(),
 }));
 
 vi.mock("react", async () => {
@@ -116,6 +122,14 @@ vi.mock("@workspace/ui/components/label", () => ({
 }));
 vi.mock("@workspace/ui/components/checkbox", () => ({ Checkbox: () => <input type="checkbox" /> }));
 
+vi.mock("@tanstack/react-query", () => ({
+	useQueryClient: () => ({ setQueryData: harness.setQueryData }),
+}));
+
+vi.mock("@/hooks/use-artifact-language-selection", () => ({
+	useArtifactLanguageSelection: () => harness.artifactSelection,
+}));
+
 import { OpportunitiesGenerationControl } from "./opportunities-generation-control";
 import { SamplingBatchCreateDialog } from "./sampling/sampling-batch-create-dialog";
 
@@ -188,6 +202,10 @@ function resetHarness(locale: UiLanguage = "en") {
 	harness.stateCursor = 0;
 	harness.effectCursor = 0;
 	harness.buttons.length = 0;
+	harness.artifactSelection.outputLanguage = "en";
+	harness.artifactSelection.isResolved = true;
+	harness.artifactSelection.setOutputLanguage.mockReset();
+	harness.setQueryData.mockReset();
 }
 
 function render(node: ReactNode): string {
@@ -262,6 +280,11 @@ describe("Task 4 live language state", () => {
 		const successGenerate = vi.fn(async () => result);
 		renderOpportunity(successGenerate);
 		await lastButtonClick()();
+		expect(successGenerate).toHaveBeenCalledWith({
+			brandId: "brand-provider-raw",
+			scopeId: "scope-provider-raw",
+			outputLanguage: "en",
+		});
 		harness.locale = "zh-CN";
 		const successMarkup = renderOpportunity(successGenerate);
 		expect(successMarkup).toContain("未生成报表：此项目需要更多追踪数据。");
@@ -281,6 +304,10 @@ describe("Task 4 live language state", () => {
 		expect(errorMarkup).toContain("无法生成优化机会报表。");
 		expect(errorMarkup).not.toContain("Could not generate the opportunities report.");
 		expect(errorMarkup).toContain(rawError.replaceAll('"', "&quot;"));
+		expect(errorMarkup).toContain('data-slot="localized-raw-detail"');
+		expect(errorMarkup).toContain('data-slot="localized-raw-detail-label"');
+		expect(errorMarkup).toContain('data-raw-detail="true"');
+		expect(errorMarkup).toContain("原始错误详情");
 	});
 
 	it("preserves the complete batch payload and idempotency across an English-to-Chinese switch", async () => {

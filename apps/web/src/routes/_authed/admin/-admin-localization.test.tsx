@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 	buttons: [] as Array<{ onClick?: () => void | Promise<void> }>,
 	queryResults: new Map<string, Record<string, unknown>>(),
 	mutationPending: false,
+	setQueryData: vi.fn(),
 }));
 
 vi.mock("react", async () => {
@@ -92,7 +93,18 @@ vi.mock("@tanstack/react-query", () => ({
 		isPending: mocks.mutationPending,
 		error: null,
 	}),
-	useQueryClient: () => ({ invalidateQueries: vi.fn(async () => undefined) }),
+	useQueryClient: () => ({
+		invalidateQueries: vi.fn(async () => undefined),
+		setQueryData: mocks.setQueryData,
+	}),
+}));
+
+vi.mock("@/hooks/use-artifact-language-selection", () => ({
+	useArtifactLanguageSelection: () => ({
+		outputLanguage: "zh-CN",
+		isResolved: true,
+		setOutputLanguage: vi.fn(),
+	}),
 }));
 
 vi.mock("@workspace/ui/components/dialog", () => ({
@@ -286,6 +298,7 @@ describe("platform administration localization", () => {
 		mocks.buttons.length = 0;
 		mocks.queryResults.clear();
 		mocks.mutationPending = false;
+		mocks.setQueryData.mockReset();
 	});
 
 	it("renders the customer operations list and delay controls in Chinese without rewriting customer data", () => {

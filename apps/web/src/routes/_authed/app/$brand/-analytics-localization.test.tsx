@@ -77,6 +77,13 @@ vi.mock("@/components/trend-chart", () => ({
 	TrendChart: ({ label }: { label: string }) => <div>{label}</div>,
 }));
 vi.mock("@/hooks/use-brand-access", () => ({ useBrandAccess: () => ({ canManageBrand: true }) }));
+vi.mock("@/hooks/use-artifact-language-selection", () => ({
+	useArtifactLanguageSelection: () => ({
+		outputLanguage: "zh-CN",
+		isResolved: true,
+		setOutputLanguage: vi.fn(),
+	}),
+}));
 vi.mock("@/hooks/use-brands", () => ({
 	brandKeys: { competitors: vi.fn(), detail: vi.fn() },
 	useBrand: () => ({ brand: { id: "brand-raw-id", name: "StepFun 原名" } }),
@@ -173,7 +180,9 @@ function populatedCitations() {
 function populatedOpportunityData() {
 	return {
 		reason: null,
+		generatedFor: { brandName: "StepFun 原名" },
 		lastEvaluatedAt: "2026-08-15T00:00:00.000Z",
+		outputLanguage: "zh-CN" as const,
 		report: {
 			summary: ["Generated summary must stay verbatim 原文"],
 			opportunities: [
@@ -322,6 +331,7 @@ describe("customer analytical page localization", () => {
 		expect(markup).toContain("内容创作");
 		expect(markup).toContain("相关提示词");
 		expect(markup).toContain("竞争对手引用");
+		expect(markup).toContain('lang="zh-CN"');
 		expect(markup).toContain("Generated summary must stay verbatim 原文");
 		expect(markup).toContain("Publish the raw comparison angle 原文");
 		expect(markup).toContain(rawPrompt);
@@ -331,7 +341,13 @@ describe("customer analytical page localization", () => {
 
 	it("renders Opportunity empty and error states in Chinese", () => {
 		mocks.opportunities = {
-			data: { reason: "not_generated", report: null, lastEvaluatedAt: null },
+			data: {
+				reason: "not_generated",
+				report: null,
+				generatedFor: null,
+				lastEvaluatedAt: null,
+				outputLanguage: "zh-CN",
+			},
 			isLoading: false,
 			isError: false,
 		};

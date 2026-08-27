@@ -10,9 +10,11 @@
 
 import { IconClock, IconLoader2 } from "@tabler/icons-react";
 import { createFileRoute } from "@tanstack/react-router";
+import { isContentLanguage } from "@workspace/config/language";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { OpportunitiesReport } from "@/components/opportunities-report";
 import { PageHeader } from "@/components/page-header";
+import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection";
 import { useBrand } from "@/hooks/use-brands";
 import { useListFilters } from "@/hooks/use-list-filters";
 import { useOpportunities } from "@/hooks/use-opportunities";
@@ -41,7 +43,9 @@ function OpportunitiesPage() {
 	const { brand: brandId } = Route.useParams();
 	const { brand } = useBrand(brandId);
 	const { scopeId, isScopeResolving } = useListFilters();
-	const { data, isLoading, isError } = useOpportunities(brandId, scopeId, "en");
+	const selection = useArtifactLanguageSelection("opportunities-customer", brandId, scopeId, locale);
+	const queryEnabled = selection.isResolved && brand !== undefined && !isScopeResolving;
+	const { data, isLoading, isError } = useOpportunities(brandId, scopeId, selection.outputLanguage, queryEnabled);
 
 	const infoContent = t("opportunity.info");
 
@@ -50,6 +54,8 @@ function OpportunitiesPage() {
 		content = <LoadingState />;
 	} else if (!scopeId) {
 		content = <EmptyCard>{t("opportunity.noScope")}</EmptyCard>;
+	} else if (!selection.isResolved) {
+		content = <LoadingState />;
 	} else if (isLoading) {
 		content = <LoadingState />;
 	} else if (isError) {
@@ -57,13 +63,36 @@ function OpportunitiesPage() {
 	} else if (!data || data.reason === "insufficient-data" || data.reason === "not_generated" || !data.report) {
 		content = <EmptyCard>{opportunityEmptyMessage(data?.reason ?? "insufficient-data", locale)}</EmptyCard>;
 	} else {
-		content = <OpportunitiesReport report={data.report} brandId={brandId} />;
+		content = <OpportunitiesReport report={data.report} brandId={brandId} outputLanguage={data.outputLanguage} />;
 	}
 
 	return (
 		<PageHeader title={t("opportunity.title")} subtitle={t("opportunity.description")} infoContent={infoContent}>
 			<div className="space-y-6">
-				{data?.report && data.lastEvaluatedAt && <LastEvaluatedAt date={data.lastEvaluatedAt} />}
+				<div className="grid max-w-xs gap-2">
+					<label className="text-sm font-medium" htmlFor="opportunities-output-language">
+						{t("opportunity.outputLanguage")}
+					</label>
+					<select
+						id="opportunities-output-language"
+						aria-describedby="opportunities-output-language-help"
+						className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+						value={selection.outputLanguage}
+						onChange={(event) => {
+							if (isContentLanguage(event.target.value)) selection.setOutputLanguage(event.target.value);
+						}}
+						disabled={!scopeId || !selection.isResolved}
+					>
+						<option value="en">{t("language.switcher.english")}</option>
+						<option value="zh-CN">{t("language.switcher.chinese")}</option>
+					</select>
+					<p id="opportunities-output-language-help" className="text-xs text-muted-foreground">
+						{t("opportunity.outputLanguageHelp")}
+					</p>
+				</div>
+				{selection.isResolved && data?.report && data.lastEvaluatedAt && (
+					<LastEvaluatedAt date={data.lastEvaluatedAt} />
+				)}
 				{content}
 			</div>
 		</PageHeader>

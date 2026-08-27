@@ -5,9 +5,9 @@
  * Your citations / Competitor citations — to explore the underlying data.
  */
 import { Link } from "@tanstack/react-router";
+import type { OutputLanguage } from "@workspace/config/language";
 import { useState } from "react";
-import type { MessageId } from "@/i18n/catalog";
-import { useI18n } from "@/i18n/provider";
+import { formatNumber, type MessageId, translate } from "@/i18n/catalog";
 import type { CitedPage, OpportunitiesReport as OpportunitiesReportData, ReportPrompt } from "@/server/opportunities";
 
 const CATEGORY_META = [
@@ -76,13 +76,32 @@ function Panel({ children }: { children: React.ReactNode }) {
 	return <div className="mt-2 rounded-md bg-muted/30 p-1">{children}</div>;
 }
 
-function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
-	const { t, formatNumber } = useI18n();
+function OpportunityCard({
+	o,
+	brandId,
+	outputLanguage,
+}: {
+	o: Opportunity;
+	brandId: string;
+	outputLanguage: OutputLanguage;
+}) {
 	const [open, setOpen] = useState<Tab | null>(null);
 	const tabs: { key: Tab; label: string; count: number }[] = [
-		{ key: "prompts", label: t("opportunity.relatedPrompts"), count: o.relatedPrompts.length },
-		{ key: "your", label: t("opportunity.yourCitations"), count: o.yourCitations.length },
-		{ key: "comp", label: t("opportunity.competitorCitations"), count: o.competitorCitations.length },
+		{
+			key: "prompts",
+			label: translate(outputLanguage, "opportunity.relatedPrompts"),
+			count: o.relatedPrompts.length,
+		},
+		{
+			key: "your",
+			label: translate(outputLanguage, "opportunity.yourCitations"),
+			count: o.yourCitations.length,
+		},
+		{
+			key: "comp",
+			label: translate(outputLanguage, "opportunity.competitorCitations"),
+			count: o.competitorCitations.length,
+		},
 	];
 	return (
 		<div className="rounded-xl border border-border p-4">
@@ -98,7 +117,8 @@ function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
 							onClick={() => setOpen(open === t.key ? null : t.key)}
 							className={`inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs ${open === t.key ? "bg-muted" : "hover:bg-muted/50"}`}
 						>
-							{t.label} <span className="tabular-nums text-muted-foreground">({formatNumber(t.count)})</span>
+							{t.label}{" "}
+							<span className="tabular-nums text-muted-foreground">({formatNumber(outputLanguage, t.count)})</span>
 							<span className={`text-[0.625rem] text-muted-foreground ${open === t.key ? "rotate-180" : ""}`}>▾</span>
 						</button>
 					))}
@@ -107,7 +127,9 @@ function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
 				<div hidden={open !== "prompts"}>
 					<Panel>
 						{o.relatedPrompts.length === 0 ? (
-							<p className="px-1.5 py-1 text-xs text-muted-foreground">{t("opportunity.emptyPrompts")}</p>
+							<p className="px-1.5 py-1 text-xs text-muted-foreground">
+								{translate(outputLanguage, "opportunity.emptyPrompts")}
+							</p>
 						) : (
 							o.relatedPrompts.map((p) => <PromptLink key={p.promptId ?? p.text} prompt={p} brandId={brandId} />)
 						)}
@@ -116,7 +138,9 @@ function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
 				<div hidden={open !== "your"}>
 					<Panel>
 						{o.yourCitations.length === 0 ? (
-							<p className="px-1.5 py-1 text-xs text-muted-foreground">{t("opportunity.emptyYours")}</p>
+							<p className="px-1.5 py-1 text-xs text-muted-foreground">
+								{translate(outputLanguage, "opportunity.emptyYours")}
+							</p>
 						) : (
 							o.yourCitations.map((c) => <CiteLink key={c.url} page={c} />)
 						)}
@@ -125,7 +149,9 @@ function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
 				<div hidden={open !== "comp"}>
 					<Panel>
 						{o.competitorCitations.length === 0 ? (
-							<p className="px-1.5 py-1 text-xs text-muted-foreground">{t("opportunity.emptyCompetitors")}</p>
+							<p className="px-1.5 py-1 text-xs text-muted-foreground">
+								{translate(outputLanguage, "opportunity.emptyCompetitors")}
+							</p>
 						) : (
 							o.competitorCitations.map((c) => <CiteLink key={c.url} page={c} />)
 						)}
@@ -136,13 +162,22 @@ function OpportunityCard({ o, brandId }: { o: Opportunity; brandId: string }) {
 	);
 }
 
-export function OpportunitiesReport({ report, brandId }: { report: OpportunitiesReportData; brandId: string }) {
-	const { t, formatNumber } = useI18n();
+export function OpportunitiesReport({
+	report,
+	brandId,
+	outputLanguage,
+}: {
+	report: OpportunitiesReportData;
+	brandId: string;
+	outputLanguage: OutputLanguage;
+}) {
 	return (
-		<div className="space-y-8">
+		<div data-slot="opportunities-report" className="space-y-8" lang={outputLanguage}>
 			{report.summary.length > 0 && (
 				<section className="rounded-xl border border-border bg-muted/30 p-5">
-					<h2 className="text-sm font-semibold text-muted-foreground">{t("opportunity.summary")}</h2>
+					<h2 className="text-sm font-semibold text-muted-foreground">
+						{translate(outputLanguage, "opportunity.summary")}
+					</h2>
 					<div className="mt-2.5">
 						<BulletList items={report.summary} />
 					</div>
@@ -156,13 +191,19 @@ export function OpportunitiesReport({ report, brandId }: { report: Opportunities
 					<section key={c.key} className="space-y-3">
 						<div className="space-y-0.5">
 							<h2 className="text-base font-semibold">
-								{t(c.label)} <span className="font-normal text-muted-foreground">({formatNumber(opps.length)})</span>
+								{translate(outputLanguage, c.label)}{" "}
+								<span className="font-normal text-muted-foreground">({formatNumber(outputLanguage, opps.length)})</span>
 							</h2>
-							<p className="text-pretty text-sm text-muted-foreground">{t(c.desc)}</p>
+							<p className="text-pretty text-sm text-muted-foreground">{translate(outputLanguage, c.desc)}</p>
 						</div>
 						<div className="space-y-3">
 							{opps.map((o) => (
-								<OpportunityCard key={`${o.category}-${o.title}`} o={o} brandId={brandId} />
+								<OpportunityCard
+									key={`${o.category}-${o.title}`}
+									o={o}
+									brandId={brandId}
+									outputLanguage={outputLanguage}
+								/>
 							))}
 						</div>
 					</section>
@@ -171,12 +212,12 @@ export function OpportunitiesReport({ report, brandId }: { report: Opportunities
 
 			{report.risks.length > 0 && (
 				<section className="space-y-3">
-					<h2 className="text-base font-semibold">{t("opportunity.realityCheck")}</h2>
+					<h2 className="text-base font-semibold">{translate(outputLanguage, "opportunity.realityCheck")}</h2>
 					<BulletList items={report.risks} />
 				</section>
 			)}
 
-			<p className="text-xs text-muted-foreground">{t("opportunity.disclaimer")}</p>
+			<p className="text-xs text-muted-foreground">{translate(outputLanguage, "opportunity.disclaimer")}</p>
 		</div>
 	);
 }

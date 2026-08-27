@@ -282,6 +282,72 @@ export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [
 /** Task 2/3/4 replaces deferred entries with exact reviewed attestations. */
 export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
 	{
+		file: "apps/web/src/routes/_authed/admin/tools.tsx",
+		kind: "output-component",
+		value: "OpportunitiesGenerationControl",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The admin tools route renders the explicit Opportunity generation control.",
+		runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+	},
+	{
+		file: "apps/web/src/components/opportunities-generation-control.tsx",
+		kind: "output-hook",
+		value: "useArtifactLanguageSelection",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The generation control resolves and submits the tab-scoped artifact language.",
+		runtimeTest: "apps/web/src/components/opportunities-generation-control.test.tsx",
+	},
+	{
+		file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+		kind: "output-hook",
+		value: "useArtifactLanguageSelection",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The customer route resolves its independent tab-scoped artifact language before reading.",
+		runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+	},
+	{
+		file: "apps/web/src/routes/_authed/app/$brand/opportunities.tsx",
+		kind: "output-component",
+		value: "OpportunitiesReport",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The customer route passes the persisted response language into the report artifact boundary.",
+		runtimeTest: "apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
+	},
+	{
+		file: "apps/web/src/components/opportunities-report.tsx",
+		kind: "output-language-binding",
+		value: "OpportunitiesReport",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The report root binds static artifact copy and formatting to its explicit output language.",
+		runtimeTest: "apps/web/src/components/opportunities-report.test.tsx",
+	},
+	{
+		file: "apps/web/src/components/opportunities-report.tsx",
+		kind: "output-language-binding",
+		value: "OpportunityCard",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "Each Opportunity card binds its static drill-down copy and counts to the explicit output language.",
+		runtimeTest: "apps/web/src/components/opportunities-report.test.tsx",
+	},
+	{
 		file: "apps/web/src/hooks/use-opportunities.tsx",
 		kind: "output-language-binding",
 		value: "useOpportunities",
@@ -1769,6 +1835,8 @@ const SEMANTIC_OUTPUT_COMPONENT_MODULES = new Set([
 	"VirtualizedPromptList",
 ]);
 
+const SEMANTIC_OPPORTUNITY_COMPONENTS = new Set(["OpportunitiesGenerationControl", "OpportunitiesReport"]);
+
 function semanticImportedOutputComponent(
 	node: JsxOpeningLikeElement,
 	bindings: LexicalBindings,
@@ -1778,9 +1846,22 @@ function semanticImportedOutputComponent(
 	return symbol && SEMANTIC_OUTPUT_COMPONENT_MODULES.has(symbol.exportedName) ? symbol : undefined;
 }
 
+function semanticImportedOpportunityComponent(
+	node: JsxOpeningLikeElement,
+	bindings: LexicalBindings,
+): ImportedSymbol | undefined {
+	if (!ts.isIdentifier(node.tagName)) return undefined;
+	const symbol = importedSymbol(node.tagName, bindings);
+	return symbol && SEMANTIC_OPPORTUNITY_COMPONENTS.has(symbol.exportedName) ? symbol : undefined;
+}
+
 function semanticIsImportedChartExport(node: CallExpression, bindings: LexicalBindings) {
 	const symbol = importedCallSymbol(node, bindings);
 	return symbol?.exportedName === "useChartExport";
+}
+
+function semanticIsImportedArtifactLanguageSelection(node: CallExpression, bindings: LexicalBindings) {
+	return importedCallSymbol(node, bindings)?.exportedName === "useArtifactLanguageSelection";
 }
 
 function semanticIsImportedOutputProducer(node: CallExpression, bindings: LexicalBindings) {
@@ -1884,6 +1965,9 @@ function collectCrossPlanSignatures(file: string, sourceFile: SourceFile): Disco
 			if (chartExportCall || name === "useChartExport") {
 				add(node, "output-hook", "useChartExport", true);
 			}
+			if (semanticIsImportedArtifactLanguageSelection(node, bindings)) {
+				add(node, "output-hook", "useArtifactLanguageSelection", true);
+			}
 			if (semanticIsImportedOutputProducer(node, bindings)) {
 				add(node, "output-copy", importedCallSymbol(node, bindings)?.exportedName ?? name ?? "output-copy", true);
 			}
@@ -1894,10 +1978,14 @@ function collectCrossPlanSignatures(file: string, sourceFile: SourceFile): Disco
 		if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
 			const name = node.tagName.getText(sourceFile);
 			const imported = semanticImportedOutputComponent(node, bindings);
+			const opportunityComponent = semanticImportedOpportunityComponent(node, bindings);
 			const discoverable =
 				/(?:Print|ExportPreview|DownloadFooter)$/u.test(name) || (imported !== undefined && connectedOutputFile);
 			if (discoverable) {
 				add(node, "output-component", name, discoverable);
+			}
+			if (opportunityComponent) {
+				add(node, "output-component", name, true);
 			}
 		}
 		node.forEachChild(visit);

@@ -1,10 +1,13 @@
-import type { UiLanguage } from "@workspace/config/language";
+import { useQueryClient } from "@tanstack/react-query";
+import { isContentLanguage, type OutputLanguage, type UiLanguage } from "@workspace/config/language";
 import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Label } from "@workspace/ui/components/label";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { LocalizedRawDetail } from "@/components/localized-raw-detail";
+import { useArtifactLanguageSelection } from "@/hooks/use-artifact-language-selection";
+import { opportunitiesKeys } from "@/hooks/use-opportunities";
 import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { OpportunitiesResponse } from "@/server/opportunities";
@@ -14,6 +17,9 @@ export function opportunityGenerationMessageId(result: OpportunitiesResponse): M
 	if (!result.report) {
 		if (result.reason === "insufficient-data") {
 			return "providerTool.opportunity.result.insufficient";
+		}
+		if (result.reason === "temporarily-unavailable") {
+			return "providerTool.opportunity.result.unavailable";
 		}
 		return "providerTool.opportunity.result.none";
 	}
@@ -28,24 +34,33 @@ export function OpportunitiesGenerationControl({
 	onGenerate,
 	brands = [],
 }: {
-	onGenerate(input: { brandId: string; scopeId: string }): Promise<OpportunitiesResponse>;
+	onGenerate(input: {
+		brandId: string;
+		scopeId: string;
+		outputLanguage: OutputLanguage;
+	}): Promise<OpportunitiesResponse>;
 	brands?: AdminOpportunityBrand[];
 }) {
-	const { t } = useI18n();
+	const { t, locale } = useI18n();
+	const queryClient = useQueryClient();
 	const [brandId, setBrandId] = useState("");
 	const [scopeId, setScopeId] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
 	const [message, setMessage] = useState<LocalizedMessage | null>(null);
+	const selection = useArtifactLanguageSelection("opportunities-admin", brandId, scopeId, locale);
 
 	const generate = async () => {
-		if (!brandId || !scopeId) {
+		if (!brandId || !scopeId || !selection.isResolved) {
 			setMessage({ id: "providerTool.opportunity.validation.selection" });
 			return;
 		}
 		setIsLoading(true);
 		setMessage(null);
 		try {
-			const result = await onGenerate({ brandId, scopeId });
+			const result = await onGenerate({ brandId, scopeId, outputLanguage: selection.outputLanguage });
+			if (result.reason !== "temporarily-unavailable" && result.outputLanguage === selection.outputLanguage) {
+				queryClient.setQueryData(opportunitiesKeys.detail(brandId, scopeId, selection.outputLanguage), result);
+			}
 			setMessage({ id: opportunityGenerationMessageId(result) });
 		} catch (caught) {
 			setMessage({
@@ -105,7 +120,30 @@ export function OpportunitiesGenerationControl({
 						))}
 					</select>
 				</div>
-				<Button className="w-full cursor-pointer" onClick={generate} disabled={isLoading || !brandId || !scopeId}>
+				<div className="grid gap-2">
+					<Label htmlFor="opportunities-output-language">{t("providerTool.opportunity.outputLanguage")}</Label>
+					<select
+						id="opportunities-output-language"
+						aria-describedby="opportunities-output-language-help"
+						className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+						value={selection.outputLanguage}
+						onChange={(event) => {
+							if (isContentLanguage(event.target.value)) selection.setOutputLanguage(event.target.value);
+						}}
+						disabled={!brandId || !scopeId || !selection.isResolved || isLoading}
+					>
+						<option value="en">{t("language.switcher.english")}</option>
+						<option value="zh-CN">{t("language.switcher.chinese")}</option>
+					</select>
+					<p id="opportunities-output-language-help" className="text-xs text-muted-foreground">
+						{t("providerTool.opportunity.outputLanguageHelp")}
+					</p>
+				</div>
+				<Button
+					className="w-full cursor-pointer"
+					onClick={generate}
+					disabled={isLoading || !brandId || !scopeId || !selection.isResolved}
+				>
 					{isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
 					{isLoading ? t("providerTool.opportunity.generating") : t("providerTool.opportunity.generate")}
 				</Button>
