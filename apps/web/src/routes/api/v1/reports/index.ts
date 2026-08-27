@@ -6,6 +6,8 @@
  * GET: List reports with pagination.
  */
 import { createFileRoute } from "@tanstack/react-router";
+import { isArtifactZhCnWriteEnabled } from "@workspace/config/artifact-output-language";
+import { isContentLanguage } from "@workspace/config/language";
 import { db } from "@workspace/lib/db/db";
 import { type NewReport, reports } from "@workspace/lib/db/schema";
 import { validatePublicHttpUrl } from "@workspace/lib/public-http-url";
@@ -15,6 +17,23 @@ import { ApiError, createApiHandler } from "@/lib/api/handler";
 import { getDeployment } from "@/lib/config/server";
 import { sendReportJob } from "@/lib/job-scheduler";
 import { normalizeManualPromptValues, REPORT_REQUEST_LIMITS } from "@/lib/report-request-policy";
+
+export const REPORT_OUTPUT_LANGUAGE_TEMPORARILY_UNAVAILABLE = "report-output-language-temporarily-unavailable";
+
+function reportOutputLanguageUnavailableResponse(): Response {
+	return Response.json(
+		{
+			error: "Service Unavailable",
+			message: "Simplified Chinese report generation is temporarily unavailable",
+			code: REPORT_OUTPUT_LANGUAGE_TEMPORARILY_UNAVAILABLE,
+		},
+		{ status: 503 },
+	);
+}
+
+async function markReportFailed(reportId: string): Promise<void> {
+	await db.update(reports).set({ status: "failed", updatedAt: new Date() }).where(eq(reports.id, reportId));
+}
 
 const createReportBody = z.object({
 	brandName: z
@@ -39,6 +58,7 @@ const createReportBody = z.object({
 		.array(z.string().max(REPORT_REQUEST_LIMITS.manualPromptCharacters))
 		.max(REPORT_REQUEST_LIMITS.manualPromptCount)
 		.optional(),
+	outputLanguage: z.enum(["en", "zh-CN"]).default("en"),
 });
 
 function requireReportGenerationEnabled(): void {
@@ -55,6 +75,9 @@ export const Route = createFileRoute("/api/v1/reports/")({
 				status: 201,
 				handle: async ({ body }) => {
 					requireReportGenerationEnabled();
+					if (body.outputLanguage === "zh-CN" && !isArtifactZhCnWriteEnabled()) {
+						return reportOutputLanguageUnavailableResponse();
+					}
 
 					let parsedManualPrompts: string[];
 					let brandWebsite: string;
@@ -73,6 +96,7 @@ export const Route = createFileRoute("/api/v1/reports/")({
 						brandName: body.brandName.trim(),
 						brandWebsite,
 						status: "pending",
+						outputLanguage: body.outputLanguage,
 					};
 
 					const result = await db.insert(reports).values(newReport).returning();
@@ -80,19 +104,26 @@ export const Route = createFileRoute("/api/v1/reports/")({
 					if (!createdReport) {
 						throw new ApiError(500, "Internal Server Error", "Failed to create report");
 					}
+					if (!isContentLanguage(createdReport.outputLanguage)) {
+						await markReportFailed(createdReport.id);
+						throw new ApiError(500, "Internal Server Error", "Invalid persisted report output language");
+					}
+					const outputLanguage = createdReport.outputLanguage;
+					if (outputLanguage === "zh-CN" && !isArtifactZhCnWriteEnabled()) {
+						await markReportFailed(createdReport.id);
+						return reportOutputLanguageUnavailableResponse();
+					}
 
-					const success = await sendReportJob(
-						createdReport.id,
-						createdReport.brandName,
-						createdReport.brandWebsite,
-						parsedManualPrompts.length > 0 ? parsedManualPrompts : undefined,
-					);
+					const success = await sendReportJob({
+						reportId: createdReport.id,
+						brandName: createdReport.brandName,
+						brandWebsite: createdReport.brandWebsite,
+						outputLanguage,
+						manualPrompts: parsedManualPrompts.length > 0 ? parsedManualPrompts : undefined,
+					});
 
 					if (!success) {
-						await db
-							.update(reports)
-							.set({ status: "failed", updatedAt: new Date() })
-							.where(eq(reports.id, createdReport.id));
+						await markReportFailed(createdReport.id);
 						throw new ApiError(500, "Internal Server Error", "Failed to queue report generation");
 					}
 
@@ -101,6 +132,7 @@ export const Route = createFileRoute("/api/v1/reports/")({
 						status: createdReport.status,
 						brandName: createdReport.brandName,
 						brandWebsite: createdReport.brandWebsite,
+						outputLanguage,
 						createdAt: createdReport.createdAt,
 					};
 				},
@@ -124,6 +156,7 @@ export const Route = createFileRoute("/api/v1/reports/")({
 							brandName: reports.brandName,
 							brandWebsite: reports.brandWebsite,
 							status: reports.status,
+							outputLanguage: reports.outputLanguage,
 							createdAt: reports.createdAt,
 							completedAt: reports.completedAt,
 						})

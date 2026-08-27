@@ -1,7 +1,8 @@
-import { db } from "@workspace/lib/db/db";
-import { prompts, brands } from "@workspace/lib/db/schema";
-import { eq } from "drizzle-orm";
+import type { OutputLanguage } from "@workspace/config/language";
 import { getDefaultDelayHours } from "@workspace/lib/constants";
+import { db } from "@workspace/lib/db/db";
+import { brands, prompts } from "@workspace/lib/db/schema";
+import { eq } from "drizzle-orm";
 import { getBoss } from "@/lib/boss-client";
 
 /**
@@ -238,30 +239,29 @@ export async function scheduleNextPromptRun(promptId: string, cadenceHours: numb
 /**
  * Sends a report generation job.
  */
-export async function sendReportJob(
-	reportId: string,
-	brandName: string,
-	brandWebsite: string,
-	manualPrompts?: string[],
-): Promise<boolean> {
+export interface ReportJobData {
+	reportId: string;
+	brandName: string;
+	brandWebsite: string;
+	outputLanguage: OutputLanguage;
+	manualPrompts?: string[];
+}
+
+export async function sendReportJob(data: ReportJobData): Promise<boolean> {
 	try {
 		const boss = await getBoss();
 
-		await boss.send(
-			"generate-report",
-			{ reportId, brandName, brandWebsite, manualPrompts },
-			{
-				retryLimit: 3,
-				retryDelay: 60,
-				retryBackoff: true,
-				expireInSeconds: 60 * 60, // 1 hour timeout for reports
-			},
-		);
+		await boss.send("generate-report", data, {
+			retryLimit: 3,
+			retryDelay: 60,
+			retryBackoff: true,
+			expireInSeconds: 60 * 60, // 1 hour timeout for reports
+		});
 
-		console.log(`Sent report job for report ${reportId}`);
+		console.log(`Sent report job for report ${data.reportId}`);
 		return true;
 	} catch (error) {
-		console.error(`Failed to send report job for report ${reportId}:`, error);
+		console.error(`Failed to send report job for report ${data.reportId}:`, error);
 		return false;
 	}
 }

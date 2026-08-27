@@ -28,6 +28,21 @@ import { trackEvent } from "@/lib/posthog";
 import { getAppName } from "@/lib/route-head";
 import { createReportFn, getReportsFn } from "@/server/reports";
 
+type ReportCreateFormData = {
+	brandName: string;
+	brandWebsite: string;
+	manualPrompts: string;
+};
+
+export function buildReportCreateInput(data: ReportCreateFormData) {
+	return {
+		brandName: data.brandName,
+		brandWebsite: data.brandWebsite,
+		manualPrompts: data.manualPrompts,
+		outputLanguage: "en" as const,
+	};
+}
+
 const checkReportAccess = createServerFn({ method: "GET" }).handler(
 	async (): Promise<{
 		hasAccess: boolean;
@@ -92,7 +107,7 @@ function ReportsPage() {
 	const [success, setSuccess] = useState("");
 
 	const createMutation = useMutation({
-		mutationFn: (data: typeof formData) => createReportFn({ data }),
+		mutationFn: (data: typeof formData) => createReportFn({ data: buildReportCreateInput(data) }),
 		onSuccess: (_data, variables) => {
 			trackEvent("report_created", { has_manual_prompts: Boolean(variables.manualPrompts) });
 			setSuccess("Report request submitted successfully!");

@@ -38,6 +38,7 @@ export const Route = createFileRoute("/api/v1/reports/$reportId")({
 							progress: report.progress,
 							brandName: report.brandName,
 							brandWebsite: report.brandWebsite,
+							outputLanguage: report.outputLanguage,
 							createdAt: report.createdAt,
 							completedAt: report.completedAt,
 						};
@@ -93,6 +94,7 @@ export const Route = createFileRoute("/api/v1/reports/$reportId")({
 						status: report.status,
 						brandName: report.brandName,
 						brandWebsite: report.brandWebsite,
+						outputLanguage: report.outputLanguage,
 						createdAt: report.createdAt,
 						completedAt: report.completedAt,
 						prompts: allPromptSnapshots,

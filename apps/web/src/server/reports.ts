@@ -3,6 +3,8 @@
  * Replaces apps/web/src/app/api/reports/route.ts
  */
 import { createServerFn } from "@tanstack/react-start";
+import { isArtifactZhCnWriteEnabled } from "@workspace/config/artifact-output-language";
+import { isContentLanguage } from "@workspace/config/language";
 import { db } from "@workspace/lib/db/db";
 import { type NewReport, reports } from "@workspace/lib/db/schema";
 import { validatePublicHttpUrl } from "@workspace/lib/public-http-url";
@@ -14,6 +16,12 @@ import { hasReportAccess, isAdmin, requireAuthSession } from "@/lib/auth/helpers
 import { getDeployment } from "@/lib/config/server";
 import { sendReportJob } from "@/lib/job-scheduler";
 import { normalizeManualPrompts, REPORT_REQUEST_LIMITS } from "@/lib/report-request-policy";
+
+export const REPORT_OUTPUT_LANGUAGE_TEMPORARILY_UNAVAILABLE = "report-output-language-temporarily-unavailable";
+
+async function markReportFailed(reportId: string): Promise<void> {
+	await db.update(reports).set({ status: "failed", updatedAt: new Date() }).where(eq(reports.id, reportId));
+}
 
 async function requireReportAccess() {
 	const session = await requireAuthSession();
@@ -40,6 +48,7 @@ export const getReportsFn = createServerFn({ method: "GET" }).handler(async () =
 			brandName: reports.brandName,
 			brandWebsite: reports.brandWebsite,
 			status: reports.status,
+			outputLanguage: reports.outputLanguage,
 			createdAt: reports.createdAt,
 			completedAt: reports.completedAt,
 			updatedAt: reports.updatedAt,
@@ -74,10 +83,14 @@ export const createReportFn = createServerFn({ method: "POST" })
 			brandName: z.string().trim().min(1).max(REPORT_REQUEST_LIMITS.brandNameCharacters),
 			brandWebsite: z.string().trim().url().max(REPORT_REQUEST_LIMITS.websiteCharacters),
 			manualPrompts: z.string().max(REPORT_REQUEST_LIMITS.manualPromptInputCharacters).optional(),
+			outputLanguage: z.enum(["en", "zh-CN"]),
 		}),
 	)
 	.handler(async ({ data }) => {
 		await requireReportAccess();
+		if (data.outputLanguage === "zh-CN" && !isArtifactZhCnWriteEnabled()) {
+			throw new Error(REPORT_OUTPUT_LANGUAGE_TEMPORARILY_UNAVAILABLE);
+		}
 		const brandWebsite = (await validatePublicHttpUrl(data.brandWebsite.trim())).href;
 
 		const parsedManualPrompts = normalizeManualPrompts(data.manualPrompts);
@@ -87,25 +100,36 @@ export const createReportFn = createServerFn({ method: "POST" })
 			brandName: data.brandName.trim(),
 			brandWebsite,
 			status: "pending",
+			outputLanguage: data.outputLanguage,
 		};
 
 		const result = await db.insert(reports).values(newReport).returning();
 		const createdReport = result[0];
 		if (!createdReport) throw new Error("Failed to create report");
+		if (!isContentLanguage(createdReport.outputLanguage)) {
+			await markReportFailed(createdReport.id);
+			throw new Error("Invalid persisted report output language");
+		}
+		const outputLanguage = createdReport.outputLanguage;
+		if (outputLanguage === "zh-CN" && !isArtifactZhCnWriteEnabled()) {
+			await markReportFailed(createdReport.id);
+			throw new Error(REPORT_OUTPUT_LANGUAGE_TEMPORARILY_UNAVAILABLE);
+		}
 
 		// Queue job
 		try {
-			const success = await sendReportJob(
-				createdReport.id,
-				createdReport.brandName,
-				createdReport.brandWebsite,
-				parsedManualPrompts.length > 0 ? parsedManualPrompts : undefined,
-			);
+			const success = await sendReportJob({
+				reportId: createdReport.id,
+				brandName: createdReport.brandName,
+				brandWebsite: createdReport.brandWebsite,
+				outputLanguage,
+				manualPrompts: parsedManualPrompts.length > 0 ? parsedManualPrompts : undefined,
+			});
 			if (!success) throw new Error("Failed to send report job");
 		} catch {
-			await db.update(reports).set({ status: "failed", updatedAt: new Date() }).where(eq(reports.id, createdReport.id));
+			await markReportFailed(createdReport.id);
 			throw new Error("Failed to queue report generation");
 		}
 
-		return { ...createdReport, rawOutput: null };
+		return { ...createdReport, outputLanguage, rawOutput: null };
 	});

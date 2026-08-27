@@ -171,6 +171,12 @@
 						"description": "The brand's website URL",
 						"minLength": 1
 					},
+					"outputLanguage": {
+						"type": "string",
+						"enum": ["en", "zh-CN"],
+						"default": "en",
+						"description": "Language used for generated report artifacts. Defaults to English when omitted."
+					},
 					"manualPrompts": {
 						"type": "array",
 						"items": {
@@ -197,6 +203,11 @@
 						"type": "string",
 						"description": "Brand website URL"
 					},
+					"outputLanguage": {
+						"type": "string",
+						"enum": ["en", "zh-CN"],
+						"description": "Language used for generated report artifacts"
+					},
 					"status": {
 						"type": "string",
 						"enum": ["pending", "processing", "completed", "failed"],
@@ -214,7 +225,7 @@
 						"description": "Timestamp when the report completed"
 					}
 				},
-				"required": ["id", "brandName", "brandWebsite", "status", "createdAt"]
+				"required": ["id", "brandName", "brandWebsite", "outputLanguage", "status", "createdAt"]
 			},
 			"ReportPromptSnapshot": {
 				"type": "object",
@@ -1739,12 +1750,16 @@
 										"brandWebsite": {
 											"type": "string"
 										},
+										"outputLanguage": {
+											"type": "string",
+											"enum": ["en", "zh-CN"]
+										},
 										"createdAt": {
 											"type": "string",
 											"format": "date-time"
 										}
 									},
-									"required": ["reportId", "status", "brandName", "brandWebsite", "createdAt"]
+									"required": ["reportId", "status", "brandName", "brandWebsite", "outputLanguage", "createdAt"]
 								}
 							}
 						}
@@ -1754,6 +1769,34 @@
 					},
 					"401": {
 						"$ref": "#/components/responses/UnauthorizedError"
+					},
+					"503": {
+						"description": "The requested report artifact language is temporarily unavailable",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"error": {
+											"type": "string"
+										},
+										"message": {
+											"type": "string"
+										},
+										"code": {
+											"type": "string",
+											"enum": ["report-output-language-temporarily-unavailable"]
+										}
+									},
+									"required": ["error", "message", "code"]
+								},
+								"example": {
+									"error": "Service Unavailable",
+									"message": "Simplified Chinese report generation is temporarily unavailable",
+									"code": "report-output-language-temporarily-unavailable"
+								}
+							}
+						}
 					},
 					"500": {
 						"$ref": "#/components/responses/InternalServerError"
@@ -1883,6 +1926,10 @@
 										"brandWebsite": {
 											"type": "string"
 										},
+										"outputLanguage": {
+											"type": "string",
+											"enum": ["en", "zh-CN"]
+										},
 										"createdAt": {
 											"type": "string",
 											"format": "date-time"
@@ -1969,13 +2016,14 @@
 											}
 										}
 									},
-									"required": ["reportId", "status", "brandName", "brandWebsite", "createdAt"]
+									"required": ["reportId", "status", "brandName", "brandWebsite", "outputLanguage", "createdAt"]
 								},
 								"example": {
 									"reportId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
 									"status": "completed",
 									"brandName": "Acme Corp",
 									"brandWebsite": "acme.com",
+									"outputLanguage": "en",
 									"createdAt": "2026-04-08T10:00:00Z",
 									"completedAt": "2026-04-08T10:05:00Z",
 									"prompts": [
