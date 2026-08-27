@@ -78,11 +78,11 @@ export function GlobalHomePage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/conference-room.jpg",
-						alt: "A conference room in warm daylight",
+						src: "/brand/site-06/decision-room-original.png",
+						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
 					}}
-					credit="Photo: Nastuh Abootalebi / Unsplash"
+					priority
 					className="site-06-home-cinematic"
 				>
 					<HomePageLead />
@@ -108,11 +108,10 @@ export function GlobalHomePage() {
 
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-venue.jpg",
-						alt: "People moving through a large glass business venue",
+						src: "/brand/site-06/glass-passage-original.png",
+						alt: "People moving through a glass business passage",
 						focalPosition: "center center",
 					}}
-					credit="Photo: Zerrin Velizade / Pexels"
 					className="site-06-home-comparison-photo"
 				>
 					<header className="site-06-page-lead">
@@ -162,11 +161,11 @@ export function GlobalProductPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/conference-room.jpg",
-						alt: "A meeting room in warm daylight",
+						src: "/brand/site-06/decision-room-original.png",
+						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
 					}}
-					credit="Photo: Nastuh Abootalebi / Unsplash"
+					priority
 					className="site-06-product-cinematic"
 				>
 					<RouteLead pageKey="product" />
@@ -211,11 +210,11 @@ export function GlobalApproachPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/business-walk.jpg",
-						alt: "Two business people walking outside a modern workplace",
+						src: "/brand/site-06/glass-passage-original.png",
+						alt: "People moving through a glass business passage",
 						focalPosition: "center 72%",
 					}}
-					credit="Photo: Pavel Danilyuk / Pexels"
+					priority
 					className="site-06-approach-cinematic"
 				>
 					<RouteLead pageKey="approach" />
@@ -291,8 +290,7 @@ export function GlobalGeoPage() {
 				<section className="site-06-market-editorial">
 					<RouteLead pageKey="geo" />
 					<figure className="site-06-editorial-photo">
-						<img src="/brand/site-06/glass-meeting.jpg" alt="A business conversation in a glass meeting room" />
-						<figcaption>Photo: Andrea Piacquadio / Pexels</figcaption>
+						<img src="/brand/site-06/glass-passage-original.png" alt="A business conversation in a glass meeting space" />
 					</figure>
 				</section>
 
@@ -355,11 +353,11 @@ export function GlobalDiagnosticPage({
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-venue.jpg",
-						alt: "People moving through a large glass business venue",
+						src: "/brand/site-06/glass-passage-original.png",
+						alt: "People moving through a glass business passage",
 						focalPosition: "center center",
 					}}
-					credit="Photo: Zerrin Velizade / Pexels"
+					priority
 					className="site-06-contact-cinematic"
 				>
 					<article id={pageFacts.diagnostic.id} className="site-06-contact-scene" tabIndex={-1}>

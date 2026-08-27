@@ -28,8 +28,8 @@ export function ChinaHomePage() {
 		<ChinaShell pageKey="home">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-home" data-page-composition="cinematic-anxiety">
 				<CinematicField
-					image={{ src: "/brand/site-06/business-walk.jpg", alt: "两位商务人士在现代办公园区交流", focalPosition: "center center" }}
-					credit="Photo: Pavel Danilyuk / Pexels"
+					image={{ src: "/brand/site-06/glass-passage-original.png", alt: "商务人士穿行于玻璃空间", focalPosition: "center center" }}
+					priority
 					className="site-06-zh-home__cinematic"
 				>
 					<header className="site-06-zh-home__lead">
@@ -64,8 +64,7 @@ export function ChinaHomePage() {
 				</section>
 
 				<CinematicField
-					image={{ src: "/brand/site-06/glass-venue.jpg", alt: "商务人士穿行于玻璃空间", focalPosition: "center center" }}
-					credit="Photo: Zerrin Velizade / Pexels"
+					image={{ src: "/brand/site-06/glass-passage-original.png", alt: "商务人士穿行于玻璃空间", focalPosition: "center center" }}
 					className="site-06-zh-practice-cinematic"
 				>
 					<header>
@@ -112,7 +111,7 @@ export function ChinaProductPage() {
 	return (
 		<ChinaShell pageKey="product">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-product" data-page-composition="system-field">
-				<CinematicField image={{ src: "/brand/site-06/conference-room.jpg", alt: "暖色会议空间", focalPosition: "center center" }} credit="Photo: Nastuh Abootalebi / Unsplash" className="site-06-zh-product__cinematic">
+				<CinematicField image={{ src: "/brand/site-06/decision-room-original.png", alt: "暖色决策会议空间", focalPosition: "center center" }} priority className="site-06-zh-product__cinematic">
 					<header className="site-06-zh-route-lead">
 						<p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p>
 					</header>
@@ -139,7 +138,7 @@ export function ChinaApproachPage() {
 	return (
 		<ChinaShell pageKey="approach">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-approach" data-page-composition="breakdown-replay">
-				<CinematicField image={{ src: "/brand/site-06/evidence-room.jpg", alt: "正在核对书面材料", focalPosition: "center center" }} credit="Photo: Scott Graham / Unsplash" className="site-06-zh-approach__cinematic">
+				<CinematicField image={{ src: "/brand/site-06/working-session-original.png", alt: "正在核对书面材料", focalPosition: "center center" }} priority className="site-06-zh-approach__cinematic">
 					<header className="site-06-zh-route-lead"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p></header>
 					<ApproachPreview />
 				</CinematicField>
@@ -189,7 +188,7 @@ export function ChinaGeoPage() {
 			<div className="site-06-page-composition site-06-zh-market" data-page-composition="market-editorial-zh">
 				<section className="site-06-market-editorial">
 					<header className="site-06-zh-paper-lead"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p></header>
-					<figure className="site-06-editorial-photo"><img src="/brand/site-06/glass-meeting.jpg" alt="玻璃会议空间里的商务对话" /><figcaption>Photo: Andrea Piacquadio / Pexels</figcaption></figure>
+					<figure className="site-06-editorial-photo"><img src="/brand/site-06/glass-passage-original.png" alt="玻璃会议空间里的商务对话" /></figure>
 				</section>
 				<section className="site-06-section">
 					<MarketConditionsRecord />
@@ -220,7 +219,7 @@ export function ChinaDiagnosticPage({
 	return (
 		<ChinaShell pageKey="diagnostic">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-contact" data-page-composition="contact-cinematic-zh">
-				<CinematicField image={{ src: "/brand/site-06/working-session.jpg", alt: "暖色真实办公空间", focalPosition: "center center" }} credit="Photo: Annie Spratt / Unsplash" className="site-06-contact-cinematic">
+				<CinematicField image={{ src: "/brand/site-06/working-session-original.png", alt: "暖色真实办公空间", focalPosition: "center center" }} priority className="site-06-contact-cinematic">
 					<article className="site-06-contact-scene" id={fact.id} tabIndex={-1}>
 						{isPrivacyRequest ? (
 							<header className="site-06-zh-route-lead">

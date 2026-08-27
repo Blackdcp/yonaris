@@ -256,20 +256,18 @@ describe("Site 06 English experience", () => {
 		expect(output).not.toMatch(/real customer result|client result/i);
 	});
 
-	it("uses the approved photography with visible credits", () => {
+	it("uses original imagery without stock-photo credits", () => {
 		const home = markupFor("home");
 		const product = markupFor("product");
 		const approach = markupFor("approach");
 		const diagnostic = markupFor("diagnostic");
 
 		for (const markup of [home, product]) {
-			expect(markup).toContain('src="/brand/site-06/conference-room.jpg"');
-			expect(markup).toContain("Photo: Nastuh Abootalebi / Unsplash");
+			expect(markup).toContain('src="/brand/site-06/decision-room-original.png"');
 		}
-		expect(approach).toContain('src="/brand/site-06/business-walk.jpg"');
-		expect(approach).toContain("Photo: Pavel Danilyuk / Pexels");
-		expect(diagnostic).toContain('src="/brand/site-06/glass-venue.jpg"');
-		expect(diagnostic).toContain("Photo: Zerrin Velizade / Pexels");
+		expect(approach).toContain('src="/brand/site-06/glass-passage-original.png"');
+		expect(diagnostic).toContain('src="/brand/site-06/glass-passage-original.png"');
+		expect([home, product, approach, diagnostic].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
 	});
 
 	it("discloses the localized contact-data processor, purpose, retention, and deletion route", () => {

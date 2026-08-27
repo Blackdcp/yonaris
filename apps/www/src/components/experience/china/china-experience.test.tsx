@@ -173,10 +173,11 @@ describe("Site 06 中国站", () => {
 		expect(cssRule(mobile, ".site-06-zh-system-field__nodes button")).toContain("position: static");
 	});
 
-	it("preserves exact Chinese category casing, source credit, and disclosure affordance", () => {
+	it("preserves exact Chinese category casing, original imagery, and disclosure affordance", () => {
 		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
-		expect(render("approach")).toContain("Photo: Scott Graham / Unsplash");
-		expect(render("home")).toContain("Photo: Pavel Danilyuk / Pexels");
+		expect(render("approach")).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(render("home")).toContain('src="/brand/site-06/glass-passage-original.png"');
+		expect([render("approach"), render("home")].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
 
 		const closed = cssRule(siteCss, ".site-06-zh-public-truth__records summary::after");
 		expect(closed).toContain('content: "查看事实"');
