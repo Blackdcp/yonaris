@@ -27,6 +27,7 @@ MOCK_BIN="$TEST_ROOT/mock-bin"
 EVENT_LOG="$TEST_ROOT/events.log"
 REAL_STAT="$(command -v stat)"
 REAL_MV="$(command -v mv)"
+REAL_RM="$(command -v rm)"
 RELEASE='sha-0123456789abcdef0123456789abcdef01234567'
 WEB='sha256:1111111111111111111111111111111111111111111111111111111111111111'
 WORKER='sha256:2222222222222222222222222222222222222222222222222222222222222222'
@@ -178,6 +179,14 @@ case "\${PRODUCER_TEST_RENAME_MODE:-success}:\$destination_path" in
 esac
 exec '$REAL_MV' -T -- "\$source_path" "\$destination_path"
 STUB
+cat >"$MOCK_BIN/rm" <<STUB
+#!/usr/bin/env bash
+set -Eeuo pipefail
+if [[ "\${PRODUCER_TEST_RM_MODE:-}" == probe && "\$*" == *.renameat2-probe-* ]]; then
+	exit 92
+fi
+exec '$REAL_RM' "\$@"
+STUB
 chmod 0755 "$STATE_MANAGER" "$RUNTIME_MANAGER" "$ADAPTER" "$MOCK_BIN"/*
 
 sed \
@@ -190,7 +199,8 @@ sed \
 	-e "s#/usr/bin/stat#$MOCK_BIN/stat#g" \
 	-e "s#/usr/bin/flock#$MOCK_BIN/flock#g" \
 	-e "s#/usr/bin/sync#$MOCK_BIN/sync#g" \
-	-e "s#/usr/bin/python3#$MOCK_BIN/python3#g" \
+	-e "s#/usr/bin/rm#$MOCK_BIN/rm#g" \
+	-e "s#/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' /usr/bin/python3#$MOCK_BIN/python3#g" \
 	"$PRODUCER_SOURCE" >"$PRODUCER"
 chmod 0755 "$PRODUCER"
 
@@ -198,6 +208,7 @@ run_producer() {
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		PRODUCER_TEST_UID="${PRODUCER_TEST_UID:-0}" SUDO_USER="${PRODUCER_TEST_SUDO_USER:-}" \
 		PRODUCER_TEST_RENAME_MODE="${PRODUCER_TEST_RENAME_MODE:-success}" \
+		PRODUCER_TEST_RM_MODE="${PRODUCER_TEST_RM_MODE:-}" \
 		/bin/bash --noprofile --norc -p "$PRODUCER" "$@"
 }
 
@@ -254,6 +265,21 @@ unset PRODUCER_TEST_RENAME_MODE
 [[ "$unsupported_rename_status" -ne 0 ]]
 assert_no_runtime_or_adapter
 assert_no_evidence
+
+# Cleanup of a direct-rename capability probe is part of the fail-closed
+# operation: no readiness success may be emitted after cleanup failure.
+: >"$EVENT_LOG"
+PRODUCER_TEST_RM_MODE=probe
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	>"$TEST_ROOT/probe-cleanup.out" 2>"$TEST_ROOT/probe-cleanup.err"
+probe_cleanup_status=$?
+set -e
+unset PRODUCER_TEST_RM_MODE
+[[ "$probe_cleanup_status" -ne 0 ]]
+assert_no_runtime_or_adapter
+assert_no_evidence
+! grep -Fxq 'las-migration-readiness-v1 ok' "$TEST_ROOT/probe-cleanup.out"
 
 : >"$EVENT_LOG"
 PRODUCER_TEST_SUDO_USER=operator

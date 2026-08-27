@@ -208,6 +208,8 @@ assert_contains "$PRODUCER" 'RENAME_NOREPLACE = 1' \
 	'producer uses the kernel no-replace primitive'
 assert_contains "$PRODUCER" 'ctypes.CDLL(None, use_errno=True).renameat2' \
 	'producer invokes renameat2 directly without a userspace fallback'
+assert_contains "$PRODUCER" "/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' /usr/bin/python3 -I -" \
+	'producer isolates the ctypes helper from hostile environment and imports'
 assert_not_contains "$PRODUCER" '/usr/bin/mv -nT' \
 	'producer never publishes evidence through racy mv no-clobber semantics'
 

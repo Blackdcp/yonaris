@@ -109,7 +109,7 @@ publish_no_replace() {
 }
 
 renameat2_no_replace() {
-	/usr/bin/python3 - "$1" "$2" <<'PY'
+	/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' /usr/bin/python3 -I - "$1" "$2" <<'PY'
 import ctypes
 import errno
 import os
@@ -141,16 +141,24 @@ sys.exit(1)
 PY
 }
 
+cleanup_renameat2_probe() {
+	local path
+	/usr/bin/rm -f -- "$@" || return 1
+	for path in "$@"; do
+		[[ ! -e "$path" && ! -L "$path" ]] || return 1
+	done
+}
+
 renameat2_no_replace_is_supported() {
 	local source destination status
 	source="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.renameat2-probe-source.XXXXXX")" || return 1
 	destination="$MIGRATION_EVIDENCE_ROOT/.renameat2-probe-destination.${source##*.}"
 	[[ ! -e "$destination" && ! -L "$destination" ]] || {
-		/usr/bin/rm -f -- "$source"
+		cleanup_renameat2_probe "$source"
 		return 1
 	}
 	/usr/bin/printf '%s\n' 'yonaris-las-renameat2-probe-v1' >"$source" || {
-		/usr/bin/rm -f -- "$source"
+		cleanup_renameat2_probe "$source"
 		return 1
 	}
 	set +e
@@ -158,7 +166,7 @@ renameat2_no_replace_is_supported() {
 	status=$?
 	set -e
 	[[ "$status" -eq 0 && ! -e "$source" && ! -L "$source" && -f "$destination" ]] || status=1
-	/usr/bin/rm -f -- "$source" "$destination"
+	cleanup_renameat2_probe "$source" "$destination" || status=1
 	return "$status"
 }
 
