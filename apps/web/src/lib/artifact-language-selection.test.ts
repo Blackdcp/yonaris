@@ -4,6 +4,7 @@ import {
 	type ArtifactLanguageStorage,
 	artifactLanguageSelectionKey,
 	persistArtifactLanguageSelection,
+	REPORT_CREATE_ARTIFACT_LANGUAGE_SELECTION_KEY,
 	resolveArtifactLanguageSelection,
 } from "./artifact-language-selection";
 
@@ -19,6 +20,13 @@ function memoryStorage(
 }
 
 describe("artifactLanguageSelectionKey", () => {
+	it("exposes the standalone report-create key without coupling it to Opportunity identity", () => {
+		expect(REPORT_CREATE_ARTIFACT_LANGUAGE_SELECTION_KEY).toBe("yonaris:artifact-output-language:v1:report-create");
+		expect(REPORT_CREATE_ARTIFACT_LANGUAGE_SELECTION_KEY).not.toBe(
+			artifactLanguageSelectionKey("opportunities-admin", "report-create", "report-create"),
+		);
+	});
+
 	it("uses exact surface-specific, brand-specific, and scope-specific tab keys", () => {
 		expect(artifactLanguageSelectionKey("opportunities-admin", "brand/CN &", "scope:scored/1")).toBe(
 			"yonaris:artifact-output-language:v1:opportunities-admin:brand%2FCN%20%26:scope%3Ascored%2F1",

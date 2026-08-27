@@ -39,4 +39,6 @@ export const getRequestHeaders = () => ({});
 
 export const getRequest = () => ({ headers: new Headers() });
 
+export const setCookie = (..._args: unknown[]) => undefined;
+
 export default {};

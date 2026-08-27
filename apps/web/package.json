@@ -11,7 +11,7 @@
 		"start": "node .output/server/index.mjs",
 		"preview": "vite preview",
 		"test": "vitest run --project=unit",
-		"test:storybook": "vitest run --project=storybook",
+		"test:storybook": "vitest run --project=storybook --project=browser-runtime",
 		"lint": "biome lint",
 		"check-types": "tsc --noEmit",
 		"check-brand-colors": "tsx scripts/check-brand-colors.ts",

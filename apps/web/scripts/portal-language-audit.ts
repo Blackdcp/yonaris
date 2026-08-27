@@ -239,24 +239,6 @@ function task4(file: string, kind: CrossPlanSignatureKind, value: string, occurr
 
 /** Exact AST signatures for the known output-language hand-off. */
 export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [
-	{
-		file: "apps/web/src/routes/_authed/reports/index.tsx",
-		kind: "output-component",
-		value: "ReportsPage",
-		occurrence: 1,
-		owner: "portal-output-languages",
-		task: "Task 3",
-		reason: "Report operations and their output-language controls are owned by Task 3.",
-	},
-	{
-		file: "apps/web/src/routes/_authed/reports/index.tsx",
-		kind: "ambient-ui-language",
-		value: "useI18n",
-		occurrence: 1,
-		owner: "portal-output-languages",
-		task: "Task 3",
-		reason: "Report-operation UI language and explicit output-language separation remain owned by Task 3.",
-	},
 	task4("apps/web/src/routes/_authed/reports/render/$reportId.tsx", "output-component", "PromptChartPrint"),
 	task4("apps/web/src/components/prompt-chart-print.tsx", "ambient-ui-language", "useI18n"),
 	task4("apps/web/src/components/prompt-chart-print.tsx", "output-component", "ChartDownloadFooter", 1),
@@ -281,6 +263,50 @@ export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [
 
 /** Task 2/3/4 replaces deferred entries with exact reviewed attestations. */
 export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
+	{
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
+		kind: "output-component",
+		value: "ReportsPage",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 3",
+		resolution: "explicit-output-language",
+		evidence: "The Reports route owns a session-scoped artifact-language selector independent from Portal UI language.",
+		runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+	},
+	{
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
+		kind: "ambient-ui-language",
+		value: "useI18n",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 3",
+		resolution: "explicit-output-language",
+		evidence: "Reports page chrome and operations copy remain bound to the ambient Portal UI language.",
+		runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+	},
+	{
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
+		kind: "output-language-binding",
+		value: "buildReportCreateInput",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 3",
+		resolution: "explicit-output-language",
+		evidence: "Report creation binds only the resolved explicit artifact-language selection into the server input.",
+		runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+	},
+	{
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
+		kind: "output-language-binding",
+		value: "renderReport",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 3",
+		resolution: "explicit-output-language",
+		evidence: "Each history item derives its artifact-language label from that report's persisted outputLanguage.",
+		runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
+	},
 	{
 		file: "apps/web/src/routes/_authed/admin/tools.tsx",
 		kind: "output-component",

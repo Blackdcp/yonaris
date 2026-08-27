@@ -593,8 +593,53 @@ describe("portal UI-language literal audit", () => {
 	it("keeps every deferred output-language surface assigned to an exact owner and task", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
 		expect(validateCrossPlanOwnership(repositoryRoot)).toEqual([]);
-		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(22);
+		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(20);
 		expect(CROSS_PLAN_RESOLUTIONS).toEqual([
+			{
+				file: "apps/web/src/routes/_authed/reports/index.tsx",
+				kind: "output-component",
+				value: "ReportsPage",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 3",
+				resolution: "explicit-output-language",
+				evidence:
+					"The Reports route owns a session-scoped artifact-language selector independent from Portal UI language.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/index.tsx",
+				kind: "ambient-ui-language",
+				value: "useI18n",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 3",
+				resolution: "explicit-output-language",
+				evidence: "Reports page chrome and operations copy remain bound to the ambient Portal UI language.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/index.tsx",
+				kind: "output-language-binding",
+				value: "buildReportCreateInput",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 3",
+				resolution: "explicit-output-language",
+				evidence: "Report creation binds only the resolved explicit artifact-language selection into the server input.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/index.tsx",
+				kind: "output-language-binding",
+				value: "renderReport",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 3",
+				resolution: "explicit-output-language",
+				evidence: "Each history item derives its artifact-language label from that report's persisted outputLanguage.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
+			},
 			{
 				file: "apps/web/src/routes/_authed/admin/tools.tsx",
 				kind: "output-component",
@@ -680,6 +725,8 @@ describe("portal UI-language literal audit", () => {
 			),
 		).toEqual(
 			new Set([
+				"apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
+				"apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
 				"apps/web/src/components/opportunities-generation-control.test.tsx",
 				"apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
 				"apps/web/src/components/opportunities-report.test.tsx",
@@ -691,6 +738,17 @@ describe("portal UI-language literal audit", () => {
 			expect(withoutRegistry).toContain(
 				`unregistered output-language dependency: ${entry.file} ${entry.kind} ${entry.value} occurrence ${entry.occurrence}`,
 			);
+		}
+		const withoutAnyReportResolution = validateCrossPlanOwnership(repositoryRoot, [], []);
+		for (const value of ["ReportsPage", "useI18n", "buildReportCreateInput", "renderReport"]) {
+			expect(withoutAnyReportResolution).toEqual(
+				expect.arrayContaining([
+					expect.stringContaining(
+						`unregistered output-language dependency: apps/web/src/routes/_authed/reports/index.tsx`,
+					),
+				]),
+			);
+			expect(withoutAnyReportResolution.some((error) => error.includes(` ${value} occurrence 1`))).toBe(true);
 		}
 		expect(CROSS_PLAN_OWNERSHIP).toEqual(
 			expect.arrayContaining([

@@ -2,7 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +27,26 @@ export default defineConfig({
 						APP_URL: "http://localhost:3000",
 					},
 					include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+					exclude: [...configDefaults.exclude, "src/**/*.browser.test.tsx"],
+				},
+			},
+			{
+				extends: true,
+				resolve: {
+					alias: {
+						"@tanstack/react-start/server": path.resolve(dirname, "src/stories/_mocks/tanstack-start.ts"),
+						"@tanstack/react-start": path.resolve(dirname, "src/stories/_mocks/tanstack-start.ts"),
+					},
+				},
+				test: {
+					name: "browser-runtime",
+					include: ["src/**/*.browser.test.tsx"],
+					browser: {
+						enabled: true,
+						headless: true,
+						provider: playwright({}),
+						instances: [{ browser: "chromium" }],
+					},
 				},
 			},
 			{

@@ -140,14 +140,6 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 		reason: "Exact internal wizard phase token controls state and is never translated as visible copy.",
 	})),
 	{
-		file: "apps/web/src/routes/_authed/reports/index.tsx",
-		kind: "jsx-text",
-		value: "Leave empty to auto-generate prompts based on website analysis, competitors, and keywords.",
-		occurrence: 1,
-		category: "cross-plan-owner",
-		reason: "Exact report-operation guidance belongs to portal-output-languages Task 3.",
-	},
-	{
 		file: "apps/web/src/routes/__root.tsx",
 		kind: "metadata-copy",
 		value: "title",
@@ -187,69 +179,34 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 		category: "domain-value",
 		reason: "Exact shared React child is caller-owned content; the fallback icon contains no display copy.",
 	},
-
 	...(
 		[
-			["apps/web/src/routes/_authed/reports/index.tsx", "metadata-copy", "`Reports · ${appName}`", 1],
-			[
-				"apps/web/src/routes/_authed/reports/index.tsx",
-				"metadata-copy",
-				"Generate and view one-time brand reports.",
-				1,
-			],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Reports", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Generate one-time brand reports.", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Create New Report", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Brand Name", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "text-prop", "Enter brand name", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Brand Website", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "text-prop", "https://example.com", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Manual Prompts", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "(Optional)", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "text-prop", "Enter one prompt per line, up to 50", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Note:", 1],
-			[
-				"apps/web/src/routes/_authed/reports/index.tsx",
-				"jsx-text",
-				"Prompts will NOT be auto-generated. Using your",
-				1,
-			],
-			[
-				"apps/web/src/routes/_authed/reports/index.tsx",
-				"rendered-identifier",
-				'formData.manualPrompts .trim() .split("\\n") .filter((line) => line.trim()).length',
-				1,
-			],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "manual prompt", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "s", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", ".", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Report request submitted successfully!", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Creating Report...", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Create Report", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Report History", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "Loading reports...", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "No reports found.", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "rendered-identifier", "report.brandName", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "(", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "rendered-identifier", "extractDomain(report.brandWebsite)", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", ")", 1],
-			["apps/web/src/routes/_authed/reports/index.tsx", "jsx-text", "View Report", 1],
-			[
-				"apps/web/src/routes/_authed/reports/index.tsx",
-				"status-capitalization",
-				"report.status.charAt(0).toUpperCase()",
-				1,
-			],
+			["rendered-identifier", "report.brandName", 1],
+			["rendered-identifier", "extractDomain(report.brandWebsite)", 1],
 		] as const
-	).map(([file, kind, value, occurrence]) => ({
-		file,
+	).map(([kind, value, occurrence]) => ({
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
 		kind,
 		value,
 		occurrence,
-		category: "cross-plan-owner" as const,
-		reason:
-			"Exact residual belongs to portal-output-languages Task 3; this UI plan does not translate report operations.",
+		category: "raw-evidence" as const,
+		reason: "Persisted report brand and derived website-domain values are displayed without translation.",
 	})),
+	...(
+		[
+			["jsx-text", "(", 1],
+			["jsx-text", ")", 1],
+			["rendered-identifier", "report.status", 1],
+		] as const
+	).map(([kind, value, occurrence]) => ({
+		file: "apps/web/src/routes/_authed/reports/index.tsx",
+		kind,
+		value,
+		occurrence,
+		category: "domain-value" as const,
+		reason: "Exact report-domain punctuation or unknown persisted status fallback is not Portal product copy.",
+	})),
+
 	...(
 		[
 			["apps/web/src/routes/_authed/reports/render/$reportId.tsx", "metadata-copy", "AI Share of Voice Report", 1],
@@ -566,7 +523,7 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 			["apps/web/src/routes/_authed/admin/workflows.tsx", "raw-error-interpolation", 'logs.join("\\n")', 1],
 			["apps/web/src/routes/_authed/admin/workflows.tsx", "raw-error-interpolation", "retryError", 1],
 			["apps/web/src/routes/_authed/admin/workflows.tsx", "raw-error-interpolation", "error", 2],
-			["apps/web/src/routes/_authed/reports/index.tsx", "raw-error-interpolation", "submitError", 1],
+			["apps/web/src/routes/_authed/reports/index.tsx", "raw-error-interpolation", "submitError.message", 1],
 			["apps/web/src/components/opportunities-generation-control.tsx", "raw-error-interpolation", "message.detail", 1],
 			["apps/web/src/components/localized-raw-detail.tsx", "raw-error-interpolation", "detail", 1],
 			["apps/web/src/components/sampling/browser-runner-device-list.tsx", "raw-error-interpolation", "error.detail", 1],

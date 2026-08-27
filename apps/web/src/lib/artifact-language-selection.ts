@@ -5,6 +5,8 @@ export type ArtifactLanguageStorage = Pick<Storage, "getItem" | "setItem">;
 
 const ARTIFACT_LANGUAGE_SELECTION_PREFIX = "yonaris:artifact-output-language:v1";
 
+export const REPORT_CREATE_ARTIFACT_LANGUAGE_SELECTION_KEY = `${ARTIFACT_LANGUAGE_SELECTION_PREFIX}:report-create`;
+
 export function artifactLanguageSelectionKey(
 	surface: ArtifactLanguageSurface,
 	brandId: string,
