@@ -245,6 +245,27 @@ TDD and production proof:
 - production build passed with only the existing >500 kB advisory;
 - source, artifact, and image-root audits returned `[]`; public-output policy remained 36/36 and release verification passed.
 
+## Initial privacy-query hydration follow-up
+
+Follow-up start HEAD: `5c255efb`. The machine-discovery fix in that commit was left unchanged.
+
+The browser regression now keeps separate failure collections for the initial `?intent=privacy` navigation and the following queryless reload. Before the repair, the initial English navigation failed with React error `#418`: server HTML used the validated privacy query, but the early bootstrap removed that query before the client router created its hydration snapshot, so the first client tree used consultation. The earlier regression reset its shared error array before reload and therefore masked this first error.
+
+For one hydration only, the bootstrap now stores a second allowlisted marker alongside the persistent privacy marker before stripping the complete query. React's client-side server snapshot reads this one-use marker, matching the privacy SSR tree. An effect removes the one-use marker after hydration while retaining the persistent marker. Consequently, the next queryless reload hydrates as consultation on both server and client, then the mounted external-store snapshot restores visible privacy state. Unknown, repeated, and direct diagnostic URLs remain consultation, and unknown query handling clears both markers.
+
+Both internal marker property names are blocked by analytics sanitization in addition to the existing `intent` and `requestType` blocks. No query or request intent is retained in the public URL.
+
+TDD and final evidence:
+
+- initial-navigation browser RED: `/diagnostic?intent=privacy` emitted one React `#418` page error;
+- bootstrap/sanitizer RED: 3 failed / 5 passed, covering the missing one-use marker in both locales and the two unfiltered internal state properties;
+- focused GREEN: 2 files, 10/10 passed;
+- production browser GREEN: both locales reported zero page errors and zero hydration console errors separately for initial privacy-query navigation and queryless reload; each retained localized privacy copy, exactly three visible fields, and hidden `requestType=privacy`;
+- intercepted browser proof retained privacy payload semantics without sending a real lead; unknown intent returned to consultation and analytics evidence remained intent-free;
+- full www suite: 34 files, 229/229 passed; www and read-only e2e typechecks passed;
+- production build passed with only the existing >500 kB advisory;
+- source, artifact, and image-root audits returned `[]`; public-output policy passed 36/36; release, site-manifest, legacy-marketing, and diff checks passed.
+
 ## Remaining risks
 
 - Fourteen read-only e2e assertions remain intentionally stale; changing production to satisfy them would reintroduce rejected localization, layout, selector, or glyph behavior.

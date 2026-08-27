@@ -41,6 +41,7 @@ describe("diagnostic analytics bootstrap", () => {
 				expect.objectContaining({
 					...result.history.state,
 					__yonarisDiagnosticIntent: "privacy",
+					__yonarisDiagnosticHydrationIntent: "privacy",
 					__TSR_index: 0,
 					key: expect.any(String),
 					__TSR_key: expect.any(String),
@@ -55,6 +56,7 @@ describe("diagnostic analytics bootstrap", () => {
 				runBootstrap(pathname, "?campaign=private", "", {
 					route: pathname,
 					__yonarisDiagnosticIntent: "privacy",
+					__yonarisDiagnosticHydrationIntent: "privacy",
 				}).calls,
 			).toEqual([[{ route: pathname }, "", pathname]]);
 		},
@@ -111,6 +113,8 @@ describe("analytics sanitization", () => {
 			payload: { lead: "secret" },
 			intent: "privacy",
 			requestType: "privacy",
+			__yonarisDiagnosticIntent: "privacy",
+			__yonarisDiagnosticHydrationIntent: "privacy",
 			$current_url: "https://yonaris.com/diagnostic?website=secret",
 			$referrer: "https://search.example/?q=secret",
 		});

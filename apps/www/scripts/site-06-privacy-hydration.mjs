@@ -32,11 +32,12 @@ const browser = await chromium.launch({ headless: true });
 try {
 	for (const testCase of cases) {
 		const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-		const failures = [];
-		page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
+		const failures = { initial: [], reload: [] };
+		let phase = "initial";
+		page.on("pageerror", (error) => failures[phase].push(`pageerror: ${error.message}`));
 		page.on("console", (message) => {
 			if (message.type() === "error" && hydrationPattern.test(message.text())) {
-				failures.push(`console: ${message.text()}`);
+				failures[phase].push(`console: ${message.text()}`);
 			}
 		});
 
@@ -52,14 +53,17 @@ try {
 		await page.getByRole("heading", { level: 1, name: testCase.privacyHeading, exact: true }).waitFor();
 		assert.equal(await page.locator("form [data-lead-field]").count(), 3);
 		assert.equal(await page.locator('form input[name="requestType"]').inputValue(), "privacy");
+		await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+		assert.deepEqual(failures.initial, [], `${testCase.path} emitted hydration failures on the initial privacy-query load`);
 
-		failures.length = 0;
+		phase = "reload";
 		await page.reload();
 		await page.waitForFunction(() => !window.$_TSR);
 		await page.getByRole("heading", { level: 1, name: testCase.privacyHeading, exact: true }).waitFor();
 		assert.equal(await page.locator("form [data-lead-field]").count(), 3);
 		assert.equal(await page.locator('form input[name="requestType"]').inputValue(), "privacy");
-		assert.deepEqual(failures, [], `${testCase.path} emitted hydration failures after a queryless privacy reload`);
+		await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+		assert.deepEqual(failures.reload, [], `${testCase.path} emitted hydration failures after a queryless privacy reload`);
 
 		await page.close();
 
