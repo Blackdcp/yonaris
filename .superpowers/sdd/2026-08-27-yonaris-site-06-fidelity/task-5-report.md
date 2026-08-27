@@ -225,6 +225,26 @@ Final follow-up gates:
 - public-output policy — 36/36 passed;
 - release verification, site-manifest classification, and legacy-marketing audit — passed.
 
+## Hydration-safe privacy reload follow-up
+
+Follow-up start HEAD: `020ae8b7`.
+
+The production browser regression `apps/www/scripts/site-06-privacy-hydration.mjs` was added before the repair. Its first run reproduced the review finding on `/diagnostic`: after the exact privacy query had been removed, a reload emitted React error `#418` as a `pageerror`. The queryless server response rendered consultation while the first client render read the retained privacy marker from `window.history.state`; React therefore regenerated the mismatched tree.
+
+The route now obtains its request type through React's hydration-aware external-store contract. The server snapshot and the client's hydration snapshot are both derived from validated route search, so their initial trees are identical. After hydration, the client snapshot reads the safe history marker and changes the queryless reload back to visible privacy copy. The form request type remains one route-owned value shared by the visible copy, hidden field, and payload.
+
+TDD and production proof:
+
+- browser RED: `/diagnostic` failed with one React hydration `pageerror`;
+- focused GREEN: 3 files, 20/20 passed;
+- browser GREEN: both `/diagnostic` and `/zh/diagnostic` completed privacy query stripping, queryless reload, visible localized privacy H1, exactly three visible fields, hidden `requestType=privacy`, and zero page errors or hydration console errors;
+- fresh direct EN/ZH diagnostic pages remained consultation;
+- the intercepted EN/ZH form flow still produced privacy payloads without sending a real lead, while unknown intent values returned to consultation and analytics evidence contained no intent property or query;
+- full www suite: 34 files, 228/228 passed;
+- www and read-only e2e typechecks passed;
+- production build passed with only the existing >500 kB advisory;
+- source, artifact, and image-root audits returned `[]`; public-output policy remained 36/36 and release verification passed.
+
 ## Remaining risks
 
 - Fourteen read-only e2e assertions remain intentionally stale; changing production to satisfy them would reintroduce rejected localization, layout, selector, or glyph behavior.
