@@ -185,6 +185,7 @@ assert_contains "$TRUST_INSTALLER" 'LAS_STABLE_BUNDLE_DIR' \
 	'standalone policy update refuses an active bundle invocation'
 for exact_contract in \
 	"STAGING_DIRECTORY='/usr/local/libexec/yonaris-las/.bundle-v1.new'" \
+	"ENTRYPOINT_SHA256='b820e6c2777075904377561e176f6781fc5b2f447f9d45bb0381cd18582532e7'" \
 	"ACTIVE_POINTER='/etc/yonaris/las-stable-bundle-active-v1'" \
 	"TRANSITION_JOURNAL='/etc/yonaris/las-stable-bundle-pending-v1'" \
 	'validate_fixed_launchers' \

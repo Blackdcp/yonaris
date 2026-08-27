@@ -30,7 +30,7 @@ readonly RECEIPT_TOKEN='artifact-output-language-receipt-v2'
 readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
 readonly PORTAL_RELEASE='/etc/yonaris/las-active-portal-release-v1'
 readonly MARKETING_RELEASE='/etc/yonaris/las-active-marketing-release-v1'
-readonly ENTRYPOINT_SHA256='6a68dd97779b2728d32afa81582dcbcc7d10f4bd018061d56dedef62383ed83a'
+readonly ENTRYPOINT_SHA256='b820e6c2777075904377561e176f6781fc5b2f447f9d45bb0381cd18582532e7'
 
 readonly -a PROGRAMS=(
 	'dispatch-las-command'

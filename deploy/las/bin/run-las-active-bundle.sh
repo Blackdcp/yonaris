@@ -35,7 +35,8 @@ metadata_matches() {
 case "${0##*/}" in
 	dispatch-las-command | guard-artifact-output-release | \
 	install-yonaris-las-trust-policy | manage-las-release-state | \
-	manage-las-runtime | manage-las-caddy | verify-yonaris-las-forced-command)
+	manage-las-runtime | manage-las-caddy | verify-yonaris-las-forced-command | \
+	produce-las-migration-readiness)
 		program="${0##*/}" ;;
 	*) fail 'The LAS active-bundle launcher name is not an approved stable entrypoint.' ;;
 esac

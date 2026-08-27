@@ -167,6 +167,12 @@ if [[ "\${1:-}" == --version ]]; then
 	printf '%s\n' "\${PRODUCER_TEST_MV_VERSION:-mv (GNU coreutils) 9.0}"
 	exit 0
 fi
+if [[ "\${PRODUCER_TEST_MV_MODE:-}" == overwrite-no-replace-probe && \
+	"\${@: -1}" == *.no-replace-destination.* ]]; then
+	cp -- "\${@: -2:1}" "\${@: -1}"
+	rm -f -- "\${@: -2:1}"
+	exit 0
+fi
 destination="\${@: -1}"
 printf 'mv %s\n' "\$*" >>'$EVENT_LOG'
 failure="\$(cat '$TEST_ROOT/mv-failure' 2>/dev/null || true)"
@@ -199,6 +205,7 @@ run_producer() {
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		PRODUCER_TEST_UID="${PRODUCER_TEST_UID:-0}" SUDO_USER="${PRODUCER_TEST_SUDO_USER:-}" \
 		PRODUCER_TEST_MV_VERSION="${PRODUCER_TEST_MV_VERSION:-}" \
+		PRODUCER_TEST_MV_MODE="${PRODUCER_TEST_MV_MODE:-}" \
 		/bin/bash --noprofile --norc -p "$PRODUCER" "$@"
 }
 
@@ -252,6 +259,19 @@ unsupported_mv_status=$?
 set -e
 unset PRODUCER_TEST_MV_VERSION
 [[ "$unsupported_mv_status" -ne 0 ]]
+assert_no_runtime_or_adapter
+assert_no_evidence
+
+# A modern version string is insufficient when the active filesystem cannot
+# preserve an existing destination and source in the no-replace probe.
+: >"$EVENT_LOG"
+PRODUCER_TEST_MV_MODE=overwrite-no-replace-probe
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+nonatomic_mv_status=$?
+set -e
+unset PRODUCER_TEST_MV_MODE
+[[ "$nonatomic_mv_status" -ne 0 ]]
 assert_no_runtime_or_adapter
 assert_no_evidence
 

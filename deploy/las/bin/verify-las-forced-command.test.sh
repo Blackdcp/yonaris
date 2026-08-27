@@ -22,6 +22,7 @@ STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 STABLE_STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
 STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
+STABLE_PRODUCER="$STABLE_DIRECTORY/produce-las-migration-readiness"
 RUNTIME_BOUNDARY_LOG="$TEST_ROOT/runtime-boundary.log"
 STABLE_INSTALLER="$TEST_ROOT/usr/local/sbin/install-yonaris-las-trust-policy"
 VERIFIER="$TEST_ROOT/usr/local/sbin/verify-yonaris-las-forced-command"
@@ -34,6 +35,7 @@ BUNDLE_RUNTIME_MANAGER="$BUNDLE_DIRECTORY/manage-las-runtime"
 BUNDLE_CADDY_MANAGER="$BUNDLE_DIRECTORY/manage-las-caddy"
 BUNDLE_INSTALLER="$BUNDLE_DIRECTORY/install-yonaris-las-trust-policy"
 BUNDLE_VERIFIER="$BUNDLE_DIRECTORY/verify-yonaris-las-forced-command"
+BUNDLE_PRODUCER="$BUNDLE_DIRECTORY/produce-las-migration-readiness"
 BUNDLE_POLICY="$BUNDLE_DIRECTORY/las-trust-v1"
 ROOTLESS_HOME="$TEST_ROOT/var/lib/yonaris-runtime"
 ROOTLESS_CONFIG="$ROOTLESS_HOME/.docker"
@@ -77,7 +79,7 @@ printf '%s\n' \
 chmod 0644 "$TMPFILES_CONFIG"
 chmod 0755 "$LEGACY_CADDY_ENTRY"
 touch "$BACKUP_SERVICE_MASK" "$BACKUP_TIMER_MASK"
-for program in "$STABLE_DISPATCHER" "$STABLE_GUARD" "$STABLE_STATE_MANAGER" "$STABLE_INSTALLER"; do
+for program in "$STABLE_DISPATCHER" "$STABLE_GUARD" "$STABLE_STATE_MANAGER" "$STABLE_INSTALLER" "$STABLE_PRODUCER"; do
 	printf '#!/bin/bash\nexit 0\n' >"$program"
 	chmod 0755 "$program"
 done
@@ -136,7 +138,8 @@ case "$path" in
 	*/usr/local/sbin/install-marketing-caddy) printf '0:0:755\n' ;;
 	*/dispatch-las-command | */guard-artifact-output-release | */manage-las-release-state | \
 	*/manage-las-runtime | */manage-las-caddy | \
-	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command)
+	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command | \
+	*/produce-las-migration-readiness)
 		printf '0:0:755\n' ;;
 	*/var/lib/yonaris-runtime) printf '0:2002:750\n' ;;
 	*/var/lib/yonaris-runtime/.docker | */run/user/2002) printf '2002:2002:700\n' ;;
@@ -381,8 +384,9 @@ write_policy() {
 		"installer-sha256 $(sha256sum "$STABLE_INSTALLER" | awk '{print $1}')" \
 		"state-manager-sha256 $(sha256sum "$STABLE_STATE_MANAGER" | awk '{print $1}')" \
 		"runtime-manager-sha256 $(sha256sum "$STABLE_RUNTIME_MANAGER" | awk '{print $1}')" \
-		"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
-		"verifier-sha256 $(sha256sum "$VERIFIER" | awk '{print $1}')" \
+	"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
+	"verifier-sha256 $(sha256sum "$VERIFIER" | awk '{print $1}')" \
+	"migration-readiness-producer-sha256 $(sha256sum "$STABLE_PRODUCER" | awk '{print $1}')" \
 		"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW" \
 		>"$TRUST_POLICY"
 }
@@ -396,8 +400,9 @@ cp -- "$STABLE_RUNTIME_MANAGER" "$BUNDLE_RUNTIME_MANAGER"
 cp -- "$STABLE_CADDY_MANAGER" "$BUNDLE_CADDY_MANAGER"
 cp -- "$STABLE_INSTALLER" "$BUNDLE_INSTALLER"
 cp -- "$VERIFIER" "$BUNDLE_VERIFIER"
+cp -- "$STABLE_PRODUCER" "$BUNDLE_PRODUCER"
 chmod 0755 "$BUNDLE_DISPATCHER" "$BUNDLE_GUARD" "$BUNDLE_STATE_MANAGER" \
-	"$BUNDLE_RUNTIME_MANAGER" "$BUNDLE_CADDY_MANAGER" "$BUNDLE_INSTALLER" "$BUNDLE_VERIFIER"
+	"$BUNDLE_RUNTIME_MANAGER" "$BUNDLE_CADDY_MANAGER" "$BUNDLE_INSTALLER" "$BUNDLE_VERIFIER" "$BUNDLE_PRODUCER"
 printf '%s\n' \
 	'yonaris-las-trust-v1' \
 	'actions-key-fingerprint SHA256:gM/QEgkfN99cP/Cf9awUOwSb7FMesQTgRCTI9kPh84A' \
@@ -408,6 +413,7 @@ printf '%s\n' \
 	"runtime-manager-sha256 $(sha256sum "$BUNDLE_RUNTIME_MANAGER" | awk '{print $1}')" \
 	"caddy-manager-sha256 $(sha256sum "$BUNDLE_CADDY_MANAGER" | awk '{print $1}')" \
 	"verifier-sha256 $(sha256sum "$BUNDLE_VERIFIER" | awk '{print $1}')" \
+	"migration-readiness-producer-sha256 $(sha256sum "$BUNDLE_PRODUCER" | awk '{print $1}')" \
 	"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW" \
 	>"$BUNDLE_POLICY"
 chmod 0644 "$BUNDLE_POLICY"

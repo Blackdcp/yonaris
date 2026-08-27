@@ -24,6 +24,7 @@ readonly STABLE_INSTALLER='/usr/local/sbin/install-yonaris-las-trust-policy'
 readonly STABLE_STATE_MANAGER='/usr/local/libexec/yonaris-las/manage-las-release-state'
 readonly STABLE_RUNTIME_MANAGER='/usr/local/libexec/yonaris-las/manage-las-runtime'
 readonly STABLE_CADDY_MANAGER='/usr/local/libexec/yonaris-las/manage-las-caddy'
+readonly STABLE_PRODUCER='/usr/local/libexec/yonaris-las/produce-las-migration-readiness'
 readonly ROOT_VERIFIER='/usr/local/sbin/verify-yonaris-las-forced-command'
 
 fail() {
@@ -146,11 +147,11 @@ validate_policy_file() {
 
 	metadata_matches "$path" file "0:0:$required_mode" || return 1
 	mapfile -t lines <"$path"
-	[[ "${#lines[@]}" -ge 10 ]] || return 1
+	[[ "${#lines[@]}" -ge 11 ]] || return 1
 	[[ "${lines[0]}" == "$POLICY_TOKEN" ]] || return 1
 	[[ "${lines[1]}" == "actions-key-fingerprint $ACTIONS_KEY_FINGERPRINT" ]] || return 1
 
-	for index in 2 3 4 5 6 7 8; do
+	for index in 2 3 4 5 6 7 8 9; do
 		case "$index" in
 			2) label='dispatcher'; expected_path="$STABLE_DISPATCHER" ;;
 			3) label='guard'; expected_path="$STABLE_GUARD" ;;
@@ -159,6 +160,7 @@ validate_policy_file() {
 			6) label='runtime-manager'; expected_path="$STABLE_RUNTIME_MANAGER" ;;
 			7) label='caddy-manager'; expected_path="$STABLE_CADDY_MANAGER" ;;
 			8) label='verifier'; expected_path="$ROOT_VERIFIER" ;;
+			9) label='migration-readiness-producer'; expected_path="$STABLE_PRODUCER" ;;
 		esac
 		line="${lines[$index]}"
 		[[ "$line" =~ ^$label-sha256\ ([0-9a-f]{64})$ ]] || return 1
@@ -168,7 +170,7 @@ validate_policy_file() {
 			"$expected_hash" ]] || return 1
 	done
 
-	for line in "${lines[@]:9}"; do
+	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation \
 			web_label web_digest worker_label worker_digest \
 			migrate_label migrate_digest postgres_label postgres_digest \

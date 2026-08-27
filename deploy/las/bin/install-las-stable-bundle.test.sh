@@ -417,6 +417,8 @@ wait_for_path() {
 stage_bundle v1
 run_installer
 [[ "$(active_generation)" == 'v1:dispatch-las-command' ]]
+[[ "$("$STABLE_ROOT/produce-las-migration-readiness")" == \
+	'v1:produce-las-migration-readiness' ]]
 [[ ! -e "$STAGING_DIRECTORY" && ! -e "$TRANSITION_JOURNAL" ]]
 grep -Fq "$BUNDLES_DIRECTORY" "$TEST_ROOT/sync.log"
 grep -Fq "$TRUST_DIRECTORY" "$TEST_ROOT/sync.log"

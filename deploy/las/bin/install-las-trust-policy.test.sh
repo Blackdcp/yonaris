@@ -19,6 +19,7 @@ STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 STABLE_STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
 STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
+STABLE_PRODUCER="$STABLE_DIRECTORY/produce-las-migration-readiness"
 STABLE_INSTALLER="$TEST_ROOT/usr/local/sbin/install-yonaris-las-trust-policy"
 ROOT_VERIFIER="$TEST_ROOT/usr/local/sbin/verify-yonaris-las-forced-command"
 MOCK_BIN="$TEST_ROOT/mock-bin"
@@ -50,7 +51,7 @@ CAPABILITY_BLOB_SHA="$(git -C "$GIT_ROOT" rev-parse "$RELEASE_SHA:deploy/las/art
 git -C "$GIT_ROOT" replace "$RELEASE_SHA" "$REPLACEMENT_SHA"
 
 for program in "$STABLE_DISPATCHER" "$STABLE_GUARD" "$STABLE_STATE_MANAGER" \
-	"$STABLE_RUNTIME_MANAGER" "$STABLE_CADDY_MANAGER"; do
+	"$STABLE_RUNTIME_MANAGER" "$STABLE_CADDY_MANAGER" "$STABLE_PRODUCER"; do
 	printf '#!/bin/bash\nexit 0\n' >"$program"
 	chmod 0755 "$program"
 done
@@ -82,7 +83,8 @@ case "$path" in
 	*/las-trust-v1) printf '0:0:644\n' ;;
 	*/dispatch-las-command | */guard-artifact-output-release | */manage-las-release-state | \
 	*/manage-las-runtime | */manage-las-caddy | \
-	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command)
+	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command | \
+	*/produce-las-migration-readiness)
 		printf '0:0:755\n' ;;
 	*) exec "$REAL_STAT" "$@" ;;
 esac
@@ -138,6 +140,7 @@ policy() {
 		"runtime-manager-sha256 $(sha256sum "$STABLE_RUNTIME_MANAGER" | awk '{print $1}')" \
 		"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
 		"verifier-sha256 $(sha256sum "$ROOT_VERIFIER" | awk '{print $1}')" \
+		"migration-readiness-producer-sha256 $(sha256sum "$STABLE_PRODUCER" | awk '{print $1}')" \
 		"allow sha-$RELEASE_SHA $operation web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW"
 }
 

@@ -108,6 +108,33 @@ mv_supports_atomic_no_replace() {
 	(( major > 8 || (major == 8 && minor >= 32) ))
 }
 
+filesystem_supports_atomic_no_replace() {
+	local source destination source_hash destination_hash destination_after status
+	source="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.no-replace-source.XXXXXX")" || return 1
+	destination="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.no-replace-destination.XXXXXX")" || {
+		/usr/bin/rm -f -- "$source"
+		return 1
+	}
+	/usr/bin/printf '%s\n' 'yonaris-las-no-replace-source-v1' >"$source" && \
+		/usr/bin/printf '%s\n' 'yonaris-las-no-replace-destination-v1' >"$destination" || {
+		/usr/bin/rm -f -- "$source" "$destination"
+		return 1
+	}
+	source_hash="$(/usr/bin/sha256sum -- "$source" | /usr/bin/awk '{print $1}')" || return 1
+	destination_hash="$(/usr/bin/sha256sum -- "$destination" | /usr/bin/awk '{print $1}')" || return 1
+	set +e
+	/usr/bin/mv -nT -- "$source" "$destination"
+	status=$?
+	set -e
+	destination_after="$(/usr/bin/sha256sum -- "$destination" | /usr/bin/awk '{print $1}')" || status=1
+	[[ "$status" -eq 0 && -f "$source" && \
+		"$(/usr/bin/sha256sum -- "$source" | /usr/bin/awk '{print $1}')" == "$source_hash" && \
+		"$destination_after" == "$destination_hash" ]]
+	status=$?
+	/usr/bin/rm -f -- "$source" "$destination"
+	return "$status"
+}
+
 durably_verify_readiness() {
 	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
 	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
@@ -151,6 +178,8 @@ prepare_private_directory "$MIGRATION_READINESS_ROOT" && \
 	prepare_private_directory "$MIGRATION_EVIDENCE_ROOT" && \
 	prepare_private_directory "$MIGRATION_WORK_ROOT" || \
 	fail 'The root-only migration-readiness directories are invalid.'
+filesystem_supports_atomic_no_replace || \
+	fail 'The migration-evidence filesystem lacks atomic no-replace publication support.' 2
 metadata_matches "$STATE_MANAGER" file '0:0:755' && \
 	metadata_matches "$RUNTIME_MANAGER" file '0:0:755' && \
 	metadata_matches "$BACKUP_ADAPTER" file '0:0:755' || \

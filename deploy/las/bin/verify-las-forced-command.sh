@@ -46,6 +46,7 @@ readonly STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 readonly STABLE_STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 readonly STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
 readonly STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
+readonly STABLE_PRODUCER="$STABLE_DIRECTORY/produce-las-migration-readiness"
 readonly SUDOERS_POLICY='/etc/sudoers.d/yonaris-las-dispatch'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
 readonly SOURCE_GIT_DIR='/var/lib/yonaris/las-objects.git'
@@ -113,9 +114,9 @@ validate_policy() {
 	local migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra
 	local index label expected_path expected_hash digests
 	mapfile -t lines <"$TRUST_POLICY"
-	[[ "${#lines[@]}" -ge 10 && "${lines[0]}" == "$POLICY_TOKEN" && \
+	[[ "${#lines[@]}" -ge 11 && "${lines[0]}" == "$POLICY_TOKEN" && \
 		"${lines[1]}" == "actions-key-fingerprint $ACTIONS_KEY_FINGERPRINT" ]] || return 1
-	for index in 2 3 4 5 6 7 8; do
+	for index in 2 3 4 5 6 7 8 9; do
 		case "$index" in
 			2) label='dispatcher'; expected_path="$STABLE_DISPATCHER" ;;
 			3) label='guard'; expected_path="$STABLE_GUARD" ;;
@@ -124,6 +125,7 @@ validate_policy() {
 			6) label='runtime-manager'; expected_path="$STABLE_RUNTIME_MANAGER" ;;
 			7) label='caddy-manager'; expected_path="$STABLE_CADDY_MANAGER" ;;
 			8) label='verifier'; expected_path="$VERIFIER" ;;
+			9) label='migration-readiness-producer'; expected_path="$STABLE_PRODUCER" ;;
 		esac
 		line="${lines[$index]}"
 		[[ "$line" =~ ^$label-sha256\ ([0-9a-f]{64})$ ]] || return 1
@@ -131,7 +133,7 @@ validate_policy() {
 		metadata_matches "$expected_path" file '0:0:755' || return 1
 		[[ "$(/usr/bin/sha256sum -- "$expected_path" | /usr/bin/awk '{print $1}')" == "$expected_hash" ]] || return 1
 	done
-	for line in "${lines[@]:9}"; do
+	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation web_label web_digest worker_label worker_digest \
 			migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra <<<"$line" || return 1
 		[[ "$verb" == allow && -z "${extra:-}" && "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]] || return 1

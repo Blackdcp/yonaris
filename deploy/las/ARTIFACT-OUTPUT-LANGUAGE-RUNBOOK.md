@@ -225,8 +225,10 @@ containers, or the SSH dispatcher.
 
 Run the producer only from an already authenticated root console (not through
 `sudo`) after the active stable bundle is installed. It fail-closes unless
-`/usr/bin/mv` is GNU coreutils 8.32 or newer with atomic no-replace support. Do
-not create, copy, edit, or hash evidence by hand:
+`/usr/bin/mv` is GNU coreutils 8.32 or newer and an actual same-filesystem
+sentinel probe in the evidence parent proves `mv -nT` leaves an existing
+destination unchanged while preserving its source. Do not create, copy, edit,
+or hash evidence by hand:
 
 ```text
 /usr/local/libexec/yonaris-las/produce-las-migration-readiness \

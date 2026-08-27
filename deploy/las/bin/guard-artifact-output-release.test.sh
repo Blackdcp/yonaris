@@ -24,6 +24,7 @@ STABLE_DISPATCHER="$STABLE_DIRECTORY/dispatch-las-command"
 STABLE_STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
 STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
+STABLE_PRODUCER="$STABLE_DIRECTORY/produce-las-migration-readiness"
 STABLE_INSTALLER="$TEST_ROOT/usr/local/sbin/install-yonaris-las-trust-policy"
 ROOT_VERIFIER="$TEST_ROOT/usr/local/sbin/verify-yonaris-las-forced-command"
 MOCK_BIN="$TEST_ROOT/mock-bin"
@@ -48,7 +49,7 @@ MALFORMED_SHA="$(git -C "$GIT_ROOT" rev-parse HEAD)"
 CAPABILITY_BLOB_SHA="$(git -C "$GIT_ROOT" rev-parse "$COMPATIBLE_SHA:deploy/las/artifact-output-language-compatible")"
 
 for stable_program in "$STABLE_DISPATCHER" "$STABLE_STATE_MANAGER" "$STABLE_RUNTIME_MANAGER" \
-	"$STABLE_CADDY_MANAGER" "$STABLE_INSTALLER" "$ROOT_VERIFIER"; do
+	"$STABLE_CADDY_MANAGER" "$STABLE_PRODUCER" "$STABLE_INSTALLER" "$ROOT_VERIFIER"; do
 	printf '#!/bin/bash\nexit 0\n' >"$stable_program"
 	chmod 0755 "$stable_program"
 done
@@ -69,7 +70,8 @@ case "$path" in
 	*/las-trust-v1 | */las-compatible-releases-v2/sha-*) printf '0:0:644\n' ;;
 	*/dispatch-las-command | */guard-artifact-output-release | */manage-las-release-state | \
 	*/manage-las-runtime | */manage-las-caddy | \
-	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command)
+	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command | \
+	*/produce-las-migration-readiness)
 		printf '0:0:755\n' ;;
 	*) exec "$REAL_STAT" "$@" ;;
 esac
@@ -119,6 +121,7 @@ write_policy() {
 			"runtime-manager-sha256 $(sha256sum "$STABLE_RUNTIME_MANAGER" | awk '{print $1}')" \
 			"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
 			"verifier-sha256 $(sha256sum "$ROOT_VERIFIER" | awk '{print $1}')"
+		printf '%s\n' "migration-readiness-producer-sha256 $(sha256sum "$STABLE_PRODUCER" | awk '{print $1}')"
 		policy_line "$COMPATIBLE_SHA" deploy
 		policy_line "$COMPATIBLE_SHA" rollback
 		policy_line "$MALFORMED_SHA" deploy
