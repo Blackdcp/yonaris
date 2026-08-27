@@ -5,14 +5,12 @@ instance. It does not modify the existing `api.cheng-zi-ai.com` route, the
 default `127.0.0.1:4173` route, the running One API container, or the stopped
 `new-api-prod` container.
 
-> **Production status: NOT READY.** The repository verifies an exact
-> root-owned backup/rehearsal migration attestation, but it does not contain a
-> trustworthy producer for that evidence. Do not hand-create or hash files to
-> satisfy the verifier, do not apply a migration, and do not enable or run a
-> production deployment. Keep `LAS_DEPLOY_ENABLED=false` and
-> `LAS_FORCED_COMMAND_ENABLED=false` until an independently reviewed stable
-> producer performs the backup, off-host durability check, rehearsal, and
-> attestation and the complete bootstrap is reverified.
+> **Production status: NOT READY.** The stable bundle contains the reviewed
+> root-only migration-readiness producer, but production remains blocked until
+> its mandatory root-owned off-host adapter is installed, a direct-root
+> rehearsal succeeds for the exact release tuple, and the complete bootstrap is
+> reverified. Do not hand-create or hash evidence. Keep
+> `LAS_DEPLOY_ENABLED=false` and `LAS_FORCED_COMMAND_ENABLED=false` until then.
 
 ## Production layout
 
@@ -334,21 +332,30 @@ candidate while that journal remains durable.
 Once the server is ready and the forced probe succeeds, set both
 `LAS_DEPLOY_ENABLED=true` and `LAS_FORCED_COMMAND_ENABLED=true`. There is no
 Phase 1 unrestricted compatibility deployment. Future merges to `main` deploy
-only through the stable dispatcher. At present the migration-attestation
-producer prerequisite above is unmet, so this instruction is intentionally
-blocked and both variables must remain `false`.
+only through the stable dispatcher. Both variables remain `false` until the
+producer's exact root-console sequence and full bootstrap verification in the
+runbook have succeeded.
 
 ## 8. Daily backups
 
 The checked-in legacy timer is a deprecated fail-closed compatibility stub, not
 an authorized production entrypoint. Do not install or enable it; any installed
-legacy service and timer must instead be inactive and masked. Until a
-fixed-argument backup operation is added
-to the stable runtime manager, automated database backup is intentionally
-blocked. The replacement must be bound to the active immutable tree, the
-five-digest receipt, the dedicated rootless daemon, a root-owned destination,
-and encrypted off-host replication before the portal contains irreplaceable
-customer data.
+legacy service and timer must instead be inactive and masked. The only migration
+evidence workflow is the root-only stable producer documented in the runbook.
+It requires GNU coreutils `mv` 8.32 or newer for atomic no-replace publication
+and the mandatory root-owned off-host adapter, which must upload and download
+the same backup bytes before the local rehearsal.
+
+From an already authenticated root console, use the exact producer and verifier
+sequence in the runbook; it is not an SSH operation:
+
+```text
+/usr/local/libexec/yonaris-las/produce-las-migration-readiness \
+  sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
+/usr/local/libexec/yonaris-las/manage-las-release-state \
+  migration-readiness \
+  sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
+```
 
 ## Marketing site
 

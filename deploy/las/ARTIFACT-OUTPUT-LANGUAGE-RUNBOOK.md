@@ -33,6 +33,8 @@ Root owns these paths:
 | `/usr/local/sbin/verify-yonaris-las-forced-command` | `root:root 0755` | fixed launcher for the active root verifier; only the state manager uses its exact preactivation argument |
 | `/usr/local/sbin/install-yonaris-las-trust-policy` | `root:root 0755` | compatibility launcher; refuses standalone updates after bundle activation |
 | `/usr/local/sbin/install-yonaris-las-stable-bundle` | `root:root 0755` | root-local atomic programs+policy installer |
+| `/usr/local/libexec/yonaris-las/produce-las-migration-readiness` | `root:root 0755` | fixed root-only backup, off-host round-trip, rehearsal, and attestation producer |
+| `/usr/local/libexec/yonaris-las/store-las-migration-backup` | `root:root 0755` | mandatory separately reviewed off-host adapter; never callable through SSH |
 | active bundle `las-trust-v1` | `root:root 0644` | hashes and SHA/operation/digest policy for that exact generation |
 | `/etc/sudoers.d/yonaris-las-dispatch` | `root:root 0440` | the one exact gate-to-root command |
 | `/etc/yonaris/las-runtime.env` | `root:yonaris-runtime 0440` | strict dotenv data readable only inside the runtime TCB |
@@ -194,7 +196,7 @@ preactivation verification may validate that brief transition state. Optional
 exact lowercase booleans; the latter remains `false` because its legacy
 activation operation is not part of the production protocol.
 
-### Migration-readiness evidence is currently unavailable
+### Produce migration-readiness evidence from the root console
 
 Every portal bootstrap or deploy mutation first calls the root state manager
 with this exact verifier interface:
@@ -213,14 +215,29 @@ the token, release, all five digests, and the SHA-256 values of matching
 `/etc/yonaris/las-migration-evidence-v1`, which must also be regular,
 single-link `root:root 0400` files.
 
-This repository contains a verifier for that evidence but no trustworthy
-producer that performs a stable root-owned backup, an off-host durability
-check, and a migration rehearsal and then emits the attestation. Therefore the
-format above is not an operator recipe: do not create, copy, edit, hash, or
-otherwise fabricate these files. Until an independently reviewed producer is
-installed and verified, migration readiness cannot pass, so do not run the
-bootstrap runtime operation, apply a database migration, enable either
-production workflow, or claim that LAS deployment is production-ready.
+Install the reviewed `store-las-migration-backup` adapter as a root-owned,
+single-link `0755` file before using the producer. The adapter accepts only
+`put-get <release> <backup-sha256> <source> <returned-copy>`; it must upload the
+source to the independently administered off-host store, download it again to
+`returned-copy`, and preserve byte equality: both local SHA-256 values must
+equal `backup-sha256`. It must not expose credentials to deploy users,
+containers, or the SSH dispatcher.
+
+Run the producer only from an already authenticated root console (not through
+`sudo`) after the active stable bundle is installed. It fail-closes unless
+`/usr/bin/mv` is GNU coreutils 8.32 or newer with atomic no-replace support. Do
+not create, copy, edit, or hash evidence by hand:
+
+```text
+/usr/local/libexec/yonaris-las/produce-las-migration-readiness \
+  sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
+/usr/local/libexec/yonaris-las/manage-las-release-state \
+  migration-readiness \
+  sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
+```
+
+The second command must print exactly `las-migration-readiness-v1 ok` before a
+portal bootstrap, database migration, or production workflow can proceed.
 
 The existing `/etc/caddy` directory must remain `root:root 0755` and the full
 `/etc/caddy/Caddyfile` a regular, single-link `root:root 0644` file. Preserve an
@@ -264,8 +281,8 @@ the repository's former rootful Caddy implementation or enable the legacy
 backup unit merely because their source files remain for compatibility tests.
 
 From a reviewed fixed commit, compare the SHA-256 values out of band and run
-`/bin/bash -n` on the launcher, installer, and all seven implementations. The
-fixed public entrypoints are seven byte-identical copies of
+`/bin/bash -n` on the launcher, installer, and all eight implementations. The
+fixed public entrypoints are eight byte-identical copies of
 `run-las-active-bundle.sh`; they never contain a mutable program generation.
 Install those launchers and the root-only bundle installer without consulting
 the deployment checkout:
@@ -286,6 +303,8 @@ sudo install -o root -g root -m 0755 run-las-active-bundle.sh \
 sudo install -o root -g root -m 0755 run-las-active-bundle.sh \
   /usr/local/libexec/yonaris-las/manage-las-caddy
 sudo install -o root -g root -m 0755 run-las-active-bundle.sh \
+  /usr/local/libexec/yonaris-las/produce-las-migration-readiness
+sudo install -o root -g root -m 0755 run-las-active-bundle.sh \
   /usr/local/sbin/verify-yonaris-las-forced-command
 sudo install -o root -g root -m 0755 run-las-active-bundle.sh \
   /usr/local/sbin/install-yonaris-las-trust-policy
@@ -296,9 +315,10 @@ Create exactly `/usr/local/libexec/yonaris-las/.bundle-v1.new` as
 names and mode `0755`: `dispatch-las-command`,
 `guard-artifact-output-release`, `install-yonaris-las-trust-policy`,
 `manage-las-release-state`, `manage-las-runtime`, `manage-las-caddy`, and
-`verify-yonaris-las-forced-command`. Create its `las-trust-v1` as a
-`root:root 0600` regular single-link file. Its seven header hashes must bind
-those seven staging files. Do not run the installer yet: the first policy,
+`verify-yonaris-las-forced-command`, and `produce-las-migration-readiness`.
+Create its `las-trust-v1` as a `root:root 0600` regular single-link file. Its
+eight header hashes must bind those eight staging files. Do not run the
+installer yet: the first policy,
 preloaded commit, rootless runtime, forced key, sudoers file, sshd boundary, and
 forced-boundary marker below must all exist because installation post-verifies
 the entire boundary through the candidate generation.
@@ -451,7 +471,7 @@ allowlist.
 
 ## Digest-bound release policy
 
-The policy has nine exact header lines followed by one or more allow entries:
+The policy has ten exact header lines followed by one or more allow entries:
 
 ```text
 yonaris-las-trust-v1
@@ -463,6 +483,7 @@ state-manager-sha256 <64-lowercase-hex>
 runtime-manager-sha256 <64-lowercase-hex>
 caddy-manager-sha256 <64-lowercase-hex>
 verifier-sha256 <64-lowercase-hex>
+migration-readiness-producer-sha256 <64-lowercase-hex>
 allow sha-<40-lowercase-git-sha> <operation> web-sha256 sha256:<64-hex> worker-sha256 sha256:<64-hex> migrate-sha256 sha256:<64-hex> postgres-sha256 sha256:<64-hex> www-sha256 sha256:<64-hex>
 ```
 
@@ -551,7 +572,7 @@ every use. Never extract an archive over a release tree or edit it in place.
 Put policy updates only in the root-owned
 `.bundle-v1.new/las-trust-v1` described above, then install the whole bundle.
 The bundle installer accepts no path or arguments. It validates headers,
-duplicates, operations, digests, same-SHA consistency, all seven stable hashes,
+duplicates, operations, digests, same-SHA consistency, all eight stable hashes,
 and the capability blob from every exact commit using
 `git --no-replace-objects`. `yonaris-deploy` must not have a sudo rule for
 either installer. The legacy single-policy installer is bootstrap
@@ -607,12 +628,9 @@ first bundle is active, use its fixed launchers from the same authenticated
 root console. The release must already have exact `deploy`,
 `marketing-deploy`, and `rollback` policy entries with one identical five-tuple.
 
-The commands below document the implemented grammar and ordering, but they are
-not currently executable as a production bootstrap: the required trustworthy
-migration-readiness producer does not exist in this repository. Do not
-fabricate its attestation to reach these commands. Once an independently
-reviewed producer is installed and its exact evidence passes, materialize the
-release and bootstrap the portal runtime:
+After the mandatory adapter is installed, run the producer and exact verifier
+sequence above. Do not fabricate its attestation. Once that exact evidence
+passes, materialize the release and bootstrap the portal runtime:
 
 ```text
 /usr/local/libexec/yonaris-las/manage-las-release-state \

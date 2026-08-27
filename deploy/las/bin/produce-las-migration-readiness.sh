@@ -100,6 +100,14 @@ publish_no_replace() {
 	metadata_matches "$destination" file '0:0:400'
 }
 
+mv_supports_atomic_no_replace() {
+	local version major minor extra
+	version="$(/usr/bin/mv --version 2>/dev/null | /usr/bin/sed -n '1{s/^mv (GNU coreutils) \([0-9][0-9]*\)\.\([0-9][0-9]*\).*$/\1 \2/p;}')" || return 1
+	read -r major minor extra <<<"$version"
+	[[ -z "${extra:-}" && "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || return 1
+	(( major > 8 || (major == 8 && minor >= 32) ))
+}
+
 durably_verify_readiness() {
 	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
 	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
@@ -118,6 +126,8 @@ durably_verify_readiness() {
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The migration-readiness producer must run as root.' 2
 [[ -z "${SUDO_USER:-}" ]] || fail 'The migration-readiness producer is direct-root only.' 2
+mv_supports_atomic_no_replace || \
+	fail 'GNU coreutils mv >= 8.32 with atomic no-replace support is required.' 2
 [[ $# -eq 6 ]] || fail 'Usage: produce-las-migration-readiness <release> <five digests>' 2
 release_tag="$1"; web="$2"; worker="$3"; migrate="$4"; postgres="$5"; www="$6"
 release_is_valid "$release_tag" && digest_is_valid "$web" && digest_is_valid "$worker" && \

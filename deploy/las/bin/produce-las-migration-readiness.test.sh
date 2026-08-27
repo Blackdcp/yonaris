@@ -163,6 +163,10 @@ STUB
 cat >"$MOCK_BIN/mv" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
+if [[ "\${1:-}" == --version ]]; then
+	printf '%s\n' "\${PRODUCER_TEST_MV_VERSION:-mv (GNU coreutils) 9.0}"
+	exit 0
+fi
 destination="\${@: -1}"
 printf 'mv %s\n' "\$*" >>'$EVENT_LOG'
 failure="\$(cat '$TEST_ROOT/mv-failure' 2>/dev/null || true)"
@@ -194,6 +198,7 @@ chmod 0755 "$PRODUCER"
 run_producer() {
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		PRODUCER_TEST_UID="${PRODUCER_TEST_UID:-0}" SUDO_USER="${PRODUCER_TEST_SUDO_USER:-}" \
+		PRODUCER_TEST_MV_VERSION="${PRODUCER_TEST_MV_VERSION:-}" \
 		/bin/bash --noprofile --norc -p "$PRODUCER" "$@"
 }
 
@@ -237,6 +242,18 @@ set -e
 unset PRODUCER_TEST_UID
 [[ "$nonroot_status" -ne 0 ]]
 assert_no_runtime_or_adapter
+
+# Publication must never fall back to a non-atomic no-clobber implementation.
+: >"$EVENT_LOG"
+PRODUCER_TEST_MV_VERSION='mv (GNU coreutils) 8.31'
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+unsupported_mv_status=$?
+set -e
+unset PRODUCER_TEST_MV_VERSION
+[[ "$unsupported_mv_status" -ne 0 ]]
+assert_no_runtime_or_adapter
+assert_no_evidence
 
 : >"$EVENT_LOG"
 PRODUCER_TEST_SUDO_USER=operator

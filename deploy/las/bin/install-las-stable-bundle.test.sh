@@ -41,8 +41,9 @@ PROGRAMS=(
 	manage-las-runtime
 	manage-las-caddy
 	verify-yonaris-las-forced-command
+	produce-las-migration-readiness
 )
-LABELS=(dispatcher guard installer state-manager runtime-manager caddy-manager verifier)
+LABELS=(dispatcher guard installer state-manager runtime-manager caddy-manager verifier migration-readiness-producer)
 STABLE_DISPATCHER="$STABLE_ROOT/dispatch-las-command"
 
 mkdir -p "$STABLE_ROOT" "$BUNDLES_DIRECTORY" "$TRUST_DIRECTORY" "$SOURCE_GIT_DIR" "$LOCK_DIRECTORY" "$RECEIPT_ROOT" \
@@ -89,7 +90,8 @@ case "$path" in
 	*/bundles/sha256-*) printf '0:0:555\n' ;;
 	*/dispatch-las-command | */guard-artifact-output-release | \
 	*/install-yonaris-las-trust-policy | */manage-las-release-state | \
-	*/manage-las-runtime | */manage-las-caddy | */verify-yonaris-las-forced-command)
+	*/manage-las-runtime | */manage-las-caddy | \
+	*/verify-yonaris-las-forced-command | */produce-las-migration-readiness)
 		printf '0:0:755\n' ;;
 	*/las-stable-bundle-active-v1 | */las-stable-bundle-pending-v1 | \
 	*/.las-stable-bundle-active-v1.active.new | */.las-stable-bundle-pending-v1.new)
@@ -513,18 +515,19 @@ if run_installer; then echo 'non-root bundle install was accepted' >&2; exit 1; 
 unset BUNDLE_TEST_UID
 assert_active_unchanged 'v1:dispatch-las-command'
 
-# Staging is exact root-owned regular data: no symlink or hardlink anywhere.
-BUNDLE_TEST_LINK_PATH="$STAGING_DIRECTORY/manage-las-runtime"
+# Staging is exact root-owned regular data: no symlink or hardlink anywhere,
+# including the producer that may publish migration-readiness evidence.
+BUNDLE_TEST_LINK_PATH="$STAGING_DIRECTORY/produce-las-migration-readiness"
 if run_installer; then echo 'staging symlink was accepted' >&2; exit 1; fi
 unset BUNDLE_TEST_LINK_PATH
 assert_active_unchanged 'v1:dispatch-las-command'
-ln "$STAGING_DIRECTORY/manage-las-runtime" "$TEST_ROOT/runtime-hardlink"
+ln "$STAGING_DIRECTORY/produce-las-migration-readiness" "$TEST_ROOT/producer-hardlink"
 if run_installer; then echo 'staging hardlink was accepted' >&2; exit 1; fi
-rm -f "$TEST_ROOT/runtime-hardlink"
+rm -f "$TEST_ROOT/producer-hardlink"
 assert_active_unchanged 'v1:dispatch-las-command'
 
 # Policy hashes bind every program before any active-state mutation.
-printf '\n# mutation\n' >>"$STAGING_DIRECTORY/manage-las-runtime"
+printf '\n# mutation\n' >>"$STAGING_DIRECTORY/produce-las-migration-readiness"
 if run_installer; then echo 'program/policy hash mismatch was accepted' >&2; exit 1; fi
 assert_active_unchanged 'v1:dispatch-las-command'
 

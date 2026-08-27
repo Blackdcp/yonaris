@@ -40,6 +40,7 @@ readonly -a PROGRAMS=(
 	'manage-las-runtime'
 	'manage-las-caddy'
 	'verify-yonaris-las-forced-command'
+	'produce-las-migration-readiness'
 )
 readonly -a LABELS=(
 	'dispatcher'
@@ -49,6 +50,7 @@ readonly -a LABELS=(
 	'runtime-manager'
 	'caddy-manager'
 	'verifier'
+	'migration-readiness-producer'
 )
 readonly -a ENTRYPOINT_PATHS=(
 	'/usr/local/libexec/yonaris-las/dispatch-las-command'
@@ -58,6 +60,7 @@ readonly -a ENTRYPOINT_PATHS=(
 	'/usr/local/libexec/yonaris-las/manage-las-runtime'
 	'/usr/local/libexec/yonaris-las/manage-las-caddy'
 	'/usr/local/sbin/verify-yonaris-las-forced-command'
+	'/usr/local/libexec/yonaris-las/produce-las-migration-readiness'
 )
 
 fail() {
@@ -195,7 +198,7 @@ validate_policy_and_programs() {
 
 	metadata_matches "$policy" file "0:0:$policy_mode" || return 1
 	mapfile -t lines <"$policy"
-	[[ "${#lines[@]}" -ge 10 ]] || return 1
+	[[ "${#lines[@]}" -ge 11 ]] || return 1
 	[[ "${lines[0]}" == "$POLICY_TOKEN" ]] || return 1
 	[[ "${lines[1]}" == "actions-key-fingerprint $ACTIONS_KEY_FINGERPRINT" ]] || return 1
 
@@ -210,7 +213,7 @@ validate_policy_and_programs() {
 		[[ "$actual_hash" == "$expected_hash" ]] || return 1
 	done
 
-	for line in "${lines[@]:9}"; do
+	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation \
 			web_label web_digest worker_label worker_digest \
 			migrate_label migrate_digest postgres_label postgres_digest \

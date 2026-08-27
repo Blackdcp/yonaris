@@ -11,6 +11,7 @@ TRUST_INSTALLER="$SCRIPT_DIR/install-las-trust-policy.sh"
 STATE_MANAGER="$SCRIPT_DIR/manage-las-release-state.sh"
 RUNTIME_MANAGER="$SCRIPT_DIR/manage-las-runtime.sh"
 CADDY_MANAGER="$SCRIPT_DIR/manage-las-caddy.sh"
+PRODUCER="$SCRIPT_DIR/produce-las-migration-readiness.sh"
 BUNDLE_INSTALLER="$SCRIPT_DIR/install-las-stable-bundle.sh"
 ACTIVE_BUNDLE_LAUNCHER="$SCRIPT_DIR/run-las-active-bundle.sh"
 DEPLOY="$SCRIPT_DIR/deploy.sh"
@@ -48,7 +49,7 @@ assert_not_contains() {
 }
 
 for required_program in "$TRUST_INSTALLER" "$STATE_MANAGER" "$RUNTIME_MANAGER" \
-	"$CADDY_MANAGER" "$BUNDLE_INSTALLER" "$ACTIVE_BUNDLE_LAUNCHER"; do
+	"$CADDY_MANAGER" "$PRODUCER" "$BUNDLE_INSTALLER" "$ACTIVE_BUNDLE_LAUNCHER"; do
 	[[ -f "$required_program" ]] || {
 		printf 'Missing root-owned stable program source: %s\n' "$required_program" >&2
 		exit 1
@@ -107,6 +108,8 @@ for stable_program in "$DISPATCHER" "$GUARD" "$TRUST_INSTALLER" "$STATE_MANAGER"
 		exit 1
 	}
 done
+assert_not_contains "$DISPATCHER" 'produce-las-migration-readiness' \
+	'forced SSH dispatcher never exposes the root-only producer'
 
 # Candidate trees are materialized from exact Git objects.  The dispatcher may
 # authorize and materialize them, but production runtime execution belongs only
@@ -189,6 +192,12 @@ for exact_contract in \
 	'reconcile_pending_bundle' \
 	'/usr/bin/mv -fT -- "$ACTIVE_POINTER_TEMP" "$ACTIVE_POINTER"'; do
 	assert_contains "$BUNDLE_INSTALLER" "$exact_contract" 'atomic stable programs and policy bundle'
+done
+for exact_contract in \
+	"'produce-las-migration-readiness'" \
+	"'migration-readiness-producer'"; do
+	assert_contains "$BUNDLE_INSTALLER" "$exact_contract" \
+		'migration-readiness producer is hash-bound in every stable bundle'
 done
 assert_contains "$ACTIVE_BUNDLE_LAUNCHER" 'LAS_STABLE_BUNDLE_DIR="$bundle_directory"' \
 	'fixed launcher pins the selected generation'
