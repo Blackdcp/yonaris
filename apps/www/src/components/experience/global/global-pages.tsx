@@ -73,7 +73,7 @@ export function GlobalHomePage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/decision-room-original.png",
+						src: "/brand/site-06/decision-room-original.jpg",
 						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
 						width: 1535,
@@ -118,7 +118,7 @@ export function GlobalHomePage() {
 
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-passage-original.png",
+						src: "/brand/site-06/glass-passage-original.jpg",
 						alt: "People moving through a glass business passage",
 						focalPosition: "center center",
 						width: 1717,
@@ -178,7 +178,7 @@ export function GlobalProductPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/decision-room-original.png",
+						src: "/brand/site-06/decision-room-original.jpg",
 						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
 						width: 1535,
@@ -235,7 +235,7 @@ export function GlobalApproachPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-passage-original.png",
+						src: "/brand/site-06/glass-passage-original.jpg",
 						alt: "People moving through a glass business passage",
 						focalPosition: "center 72%",
 						width: 1717,
@@ -342,7 +342,7 @@ export function GlobalGeoPage() {
 					<figure className="site-06-editorial-photo">
 						<Site06ResponsiveImage
 							image={{
-								src: "/brand/site-06/glass-passage-original.png",
+								src: "/brand/site-06/glass-passage-original.jpg",
 								alt: "A business conversation in a glass meeting space",
 								width: 1717,
 								height: 916,
@@ -407,7 +407,7 @@ export function GlobalDiagnosticPage({ requestType = "consultation" }: { request
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/working-session-original.png",
+						src: "/brand/site-06/working-session-original.jpg",
 						alt: "A working session reviewing evidence together",
 						focalPosition: "center center",
 						width: 1693,

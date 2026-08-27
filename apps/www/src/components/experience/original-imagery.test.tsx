@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
@@ -19,10 +19,12 @@ import { CinematicField } from "./shared/cinematic-field";
 
 const originalNames = ["decision-room", "glass-passage", "working-session"] as const;
 const responsiveWidths = [640, 1024, 1440] as const;
+const site06ImageRoot = new URL("../../../public/brand/site-06/", import.meta.url);
+const publicOutputNormalizationLimit = 1_048_576;
 
 describe("original Site 06 imagery", () => {
-	it("ships original assets and no public stock-photo credit", () => {
-		for (const file of ["decision-room-original.png", "glass-passage-original.png", "working-session-original.png"]) {
+	it("ships full-resolution JPEG masters and no public stock-photo credit", () => {
+		for (const file of ["decision-room-original.jpg", "glass-passage-original.jpg", "working-session-original.jpg"]) {
 			expect(existsSync(new URL(`../../../public/brand/site-06/${file}`, import.meta.url))).toBe(true);
 		}
 
@@ -30,27 +32,38 @@ describe("original Site 06 imagery", () => {
 			.map((page) => renderToStaticMarkup(page))
 			.join("\n");
 		expect(markup).not.toMatch(/Unsplash|Pexels|Photo:/i);
-		expect(markup).toContain("/brand/site-06/decision-room-original.png");
-		expect(markup).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(markup).toContain("/brand/site-06/decision-room-original.jpg");
+		expect(markup).toContain('src="/brand/site-06/working-session-original.jpg"');
 		for (const intrinsic of ['width="1535" height="1024"', 'width="1717" height="916"', 'width="1693" height="929"']) {
 			expect(markup).toContain(intrinsic);
 		}
 	});
 
-	it("ships high-quality responsive JPEG derivatives that are smaller than their PNG masters", () => {
+	it("keeps every Site 06 image within the public-output normalization limit and leaves no PNG masters", () => {
+		const files = readdirSync(site06ImageRoot, { withFileTypes: true }).filter((entry) => entry.isFile());
+		expect(files.filter(({ name }) => name.endsWith("-original.png"))).toEqual([]);
+		for (const { name } of files) {
+			expect(statSync(new URL(name, site06ImageRoot)).size, `${name} must not exceed 1 MiB`).toBeLessThanOrEqual(
+				publicOutputNormalizationLimit,
+			);
+		}
+	});
+
+	it("ships high-quality responsive JPEG derivatives that are smaller than their full-resolution masters", () => {
 		for (const name of originalNames) {
-			const original = new URL(`../../../public/brand/site-06/${name}-original.png`, import.meta.url);
+			const original = new URL(`../../../public/brand/site-06/${name}-original.jpg`, import.meta.url);
 			for (const width of responsiveWidths) {
 				const derivative = new URL(`../../../public/brand/site-06/${name}-${width}.jpg`, import.meta.url);
 				expect(existsSync(derivative), `${name}-${width}.jpg must exist`).toBe(true);
-				expect(statSync(derivative).size, `${name}-${width}.jpg must be smaller than its PNG master`).toBeLessThan(
-					statSync(original).size,
-				);
+				expect(
+					statSync(derivative).size,
+					`${name}-${width}.jpg must be smaller than its full-resolution master`,
+				).toBeLessThan(statSync(original).size);
 			}
 		}
 	});
 
-	it("serves every routed original through a responsive picture while retaining the PNG fallback", () => {
+	it("serves every routed original through a responsive picture while retaining the JPEG master fallback", () => {
 		const routedMarkup = [
 			<GlobalHomePage key="en-home" />,
 			<GlobalProductPage key="en-product" />,
@@ -66,9 +79,10 @@ describe("original Site 06 imagery", () => {
 			.map((page) => renderToStaticMarkup(page))
 			.join("\n");
 		const originalFallbacks =
-			routedMarkup.match(/src="\/brand\/site-06\/(?:decision-room|glass-passage|working-session)-original\.png"/g) ??
+			routedMarkup.match(/src="\/brand\/site-06\/(?:decision-room|glass-passage|working-session)-original\.jpg"/g) ??
 			[];
 		expect(originalFallbacks).toHaveLength(12);
+		expect(routedMarkup).not.toContain("-original.png");
 		expect(routedMarkup.match(/<picture data-responsive-site-06-image="true">/g) ?? []).toHaveLength(
 			originalFallbacks.length,
 		);
@@ -86,7 +100,7 @@ describe("original Site 06 imagery", () => {
 		const priorityMarkup = renderToStaticMarkup(
 			<CinematicField
 				image={{
-					src: "/brand/site-06/decision-room-original.png",
+					src: "/brand/site-06/decision-room-original.jpg",
 					alt: "Decision room",
 					width: 1535,
 					height: 1024,
@@ -97,7 +111,7 @@ describe("original Site 06 imagery", () => {
 			</CinematicField>,
 		);
 		const deferredMarkup = renderToStaticMarkup(
-			<CinematicField image={{ src: "/brand/site-06/glass-passage-original.png", alt: "Glass passage" }}>
+			<CinematicField image={{ src: "/brand/site-06/glass-passage-original.jpg", alt: "Glass passage" }}>
 				<p>Later viewport</p>
 			</CinematicField>,
 		);

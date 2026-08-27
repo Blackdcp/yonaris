@@ -184,9 +184,9 @@ describe("Site 06 中国站", () => {
 
 	it("preserves exact Chinese category casing and route-appropriate original imagery", () => {
 		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
-		expect(render("approach")).toContain('src="/brand/site-06/working-session-original.png"');
-		expect(render("home")).toContain('src="/brand/site-06/glass-passage-original.png"');
-		expect(render("home")).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(render("approach")).toContain('src="/brand/site-06/working-session-original.jpg"');
+		expect(render("home")).toContain('src="/brand/site-06/glass-passage-original.jpg"');
+		expect(render("home")).toContain('src="/brand/site-06/working-session-original.jpg"');
 		expect([render("approach"), render("home")].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
 	});
 

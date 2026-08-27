@@ -127,7 +127,7 @@ describe("Site 06 interaction integration", () => {
 		expect(home.slice(sourceStart, practiceStart)).toContain('data-scene-object="product-proof"');
 		expect(home.slice(truthStart)).toContain('data-scene-object="canonical-record-transform"');
 		expect(home).not.toContain('data-scene-object="fact-disclosure"');
-		expect(home.slice(practiceStart)).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(home.slice(practiceStart)).toContain('src="/brand/site-06/working-session-original.jpg"');
 
 		const preview = product.indexOf('data-scene-object="relationship-preview"');
 		const system = product.indexOf('data-scene-object="system-field"');
@@ -189,6 +189,6 @@ describe("Site 06 interaction integration", () => {
 			expect(source).not.toContain("frame one market question");
 			expect(source).not.toContain("最怕 AI 答错的客户问题");
 		}
-		expect(en).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(en).toContain('src="/brand/site-06/working-session-original.jpg"');
 	});
 });

@@ -27,9 +27,9 @@ export interface Site06ResponsiveImageProps {
 const DEFAULT_RESPONSIVE_SIZES = "(max-width: 720px) 100vw, (max-width: 1440px) 100vw, 1440px";
 
 const RESPONSIVE_IMAGE_BASES: Readonly<Record<string, string>> = {
-	"/brand/site-06/decision-room-original.png": "decision-room",
-	"/brand/site-06/glass-passage-original.png": "glass-passage",
-	"/brand/site-06/working-session-original.png": "working-session",
+	"/brand/site-06/decision-room-original.jpg": "decision-room",
+	"/brand/site-06/glass-passage-original.jpg": "glass-passage",
+	"/brand/site-06/working-session-original.jpg": "working-session",
 };
 
 type CinematicStyle = CSSProperties & {

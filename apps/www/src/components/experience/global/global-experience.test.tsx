@@ -254,10 +254,10 @@ describe("Site 06 English experience", () => {
 		const diagnostic = markupFor("diagnostic");
 
 		for (const markup of [home, product]) {
-			expect(markup).toContain('src="/brand/site-06/decision-room-original.png"');
+			expect(markup).toContain('src="/brand/site-06/decision-room-original.jpg"');
 		}
-		expect(approach).toContain('src="/brand/site-06/glass-passage-original.png"');
-		expect(diagnostic).toContain('src="/brand/site-06/working-session-original.png"');
+		expect(approach).toContain('src="/brand/site-06/glass-passage-original.jpg"');
+		expect(diagnostic).toContain('src="/brand/site-06/working-session-original.jpg"');
 		expect([home, product, approach, diagnostic].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
 	});
 

@@ -39,7 +39,7 @@ export function ChinaHomePage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-passage-original.png",
+						src: "/brand/site-06/glass-passage-original.jpg",
 						alt: "商务人士穿行于玻璃空间",
 						focalPosition: "center center",
 						width: 1717,
@@ -92,7 +92,7 @@ export function ChinaHomePage() {
 
 				<CinematicField
 					image={{
-						src: "/brand/site-06/working-session-original.png",
+						src: "/brand/site-06/working-session-original.jpg",
 						alt: "团队正在核对市场问题与书面证据",
 						focalPosition: "center center",
 						width: 1693,
@@ -154,7 +154,7 @@ export function ChinaProductPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/decision-room-original.png",
+						src: "/brand/site-06/decision-room-original.jpg",
 						alt: "暖色决策会议空间",
 						focalPosition: "center center",
 						width: 1535,
@@ -216,7 +216,7 @@ export function ChinaApproachPage() {
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/working-session-original.png",
+						src: "/brand/site-06/working-session-original.jpg",
 						alt: "正在核对书面材料",
 						focalPosition: "center center",
 						width: 1693,
@@ -311,7 +311,7 @@ export function ChinaGeoPage() {
 					<figure className="site-06-editorial-photo">
 						<Site06ResponsiveImage
 							image={{
-								src: "/brand/site-06/glass-passage-original.png",
+								src: "/brand/site-06/glass-passage-original.jpg",
 								alt: "玻璃会议空间里的商务对话",
 								width: 1717,
 								height: 916,
@@ -366,7 +366,7 @@ export function ChinaDiagnosticPage({ requestType = "consultation" }: { requestT
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/working-session-original.png",
+						src: "/brand/site-06/working-session-original.jpg",
 						alt: "暖色真实办公空间",
 						focalPosition: "center center",
 						width: 1693,
