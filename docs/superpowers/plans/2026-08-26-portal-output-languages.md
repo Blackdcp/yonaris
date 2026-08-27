@@ -22,6 +22,7 @@
 - Roll out Chinese artifact writes in two phases behind `ARTIFACT_ZH_CN_ENABLED`, default `false`: first deploy an output-language-aware Web/Worker release and record it as rollback-compatible, then enable Chinese writes only when the rollback target is also recorded compatible. Once Chinese has been activated, never roll back to a pre-language runtime even if the flag is later disabled.
 - Explicit artifact/export selections live in tab-scoped `sessionStorage` under surface-specific keys. Seed only when no valid stored value exists, persist immediately, and survive the UI-language switcher's full-page reload without adding locale routes or coupling to Program data.
 - Keep the Portal document `<html lang>` tied to `uiLanguage`, but place every single-language artifact/render/export subtree under an exact `lang={outputLanguage}` boundary.
+- Keep report/export surface discovery unconditional. Each exact discovered signature must be either deferred to this plan or, after implementation, moved to an exact resolved-surface attestation naming focused runtime/component evidence; source syntax never self-certifies resolution, and missing/stale/duplicate entries fail the Portal audit.
 
 ---
 
@@ -47,7 +48,9 @@ Assert the generated SQL contains literal defaults/checks for both tables, drops
 ("brand_id","scope_id","output_language","created_at")
 ```
 
-The test must also assert no occurrence of `measurement_scopes.locale` or `market` is used to populate either column.
+The test must also assert no occurrence of `measurement_scopes`, `locale`, or `market` is used to populate either column. Fail with an explicit missing-file assertion while `0032` is absent.
+
+Pin the corresponding Drizzle/schema metadata as well: both fields are non-null with default `en`; both named checks allow exactly `en` and `zh-CN`; the old index is absent; and the replacement index contains `brand_id`, `scope_id`, `output_language`, `created_at` in that exact order. Assert the generated snapshot and journal contain the same defaults, checks, index ordering, `idx: 32`, and tag `0032_artifact_output_languages`.
 
 - [ ] **Step 2: Run the migration test and verify `0032` is absent**
 
@@ -66,12 +69,30 @@ ALTER TABLE "brand_opportunities" ADD CONSTRAINT "brand_opportunities_output_lan
 
 Replace `brand_opportunities_brand_scope_created_at_idx` with `brand_opportunities_brand_scope_language_created_at_idx` over the four specified columns.
 
+Generate from `packages/lib` without applying the migration:
+
+```powershell
+& 'node_modules/.bin/drizzle-kit.CMD' generate --name artifact_output_languages
+```
+
+Do not run `drizzle-kit migrate`.
+
 - [ ] **Step 4: Run the migration test and schema type check**
+
+Extend `mode-compat-rewind.test.ts` and `.github/workflows/mode-compat.yaml` for the generated `0032` journal timestamp. Rewind must drop the new language-aware Opportunity index, both named checks, and both columns before continuing the existing scope rollback; it must not try to drop the already-replaced old index. The post-`0021` label list ends with `0032_artifact_output_languages`, the migration count is 33 before rewind and 22 after rewind, and the workflow recreates the `0021` Opportunity index.
+
+Run from `packages/lib`:
+
+```powershell
+& 'node_modules/.bin/vitest.CMD' run src/db/migrations/artifact-output-languages.test.ts src/db/migrations/mode-compat-rewind.test.ts
+& 'node_modules/.bin/tsc.CMD' --noEmit
+& 'node_modules/.bin/drizzle-kit.CMD' check
+```
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add packages/lib/src/db/schema.ts packages/lib/src/db/migrations .github/workflows/mode-compat.yaml
+git add packages/lib/src/db/schema.ts packages/lib/src/db/migrations/0032_artifact_output_languages.sql packages/lib/src/db/migrations/meta/0032_snapshot.json packages/lib/src/db/migrations/meta/_journal.json packages/lib/src/db/migrations/artifact-output-languages.test.ts packages/lib/src/db/migrations/mode-compat-rewind.test.ts .github/workflows/mode-compat.yaml
 git diff --cached --name-only
 git commit -m "Persist report and opportunity languages"
 ```
@@ -144,6 +165,8 @@ Admin generation submits the selected language. Customer Opportunities has an in
 
 Gate every Chinese Opportunity write/generation boundary behind `ARTIFACT_ZH_CN_ENABLED` (default false), with a localized temporary-unavailable result and no DB/LLM side effect while disabled. Add LAS deployment compatibility markers so an activation attempt requires a previously healthy output-language-aware release, and every automatic rollback after activation may target only a recorded compatible release. Add shell/config contract tests and a two-phase activation/roll-forward runbook; the irreversible activation marker must survive later flag disablement.
 
+Register every newly discovered Opportunity artifact-language binding/component as an exact resolved surface tied to its focused selector/cache/render test. Do not suppress discovery merely because an `outputLanguage` prop or hook option exists.
+
 - [ ] **Step 6: Run Opportunity tests and access-boundary tests**
 
 Extend the scheduled non-provider language-smoke project with deterministic English and Chinese Opportunity rows. Assert both UI/artifact cross-combinations, exact nested `lang`, distinguishable static/model copy, and byte-identical raw Prompt/URL evidence without invoking generation.
@@ -196,6 +219,8 @@ Add the field to validators, `NewReport`, selects/responses, `sendReportJob`, `R
 
 Place it in the report creation form with English/简体中文 choices. Persist the exact selection in the shared tab-scoped session helper so the UI language switcher's full reload does not reseed it; resetting the form keeps the explicit choice. Submit independently of current UI language. Translate the report-operations page title, field labels, helper copy, statuses, loading/empty/error states, and action labels through the admin UI catalog; this UI copy follows `uiLanguage`, while the selected report artifact follows `outputLanguage`. Extend the default-off Chinese-write gate to Portal/API report creation and queueing; legacy English remains available while disabled.
 
+After focused UI/runtime tests prove the route's explicit output-language behavior, move its exact audit signature from deferred ownership to the resolved-surface registry. Do not let adding an `outputLanguage` prop/call suppress independent discovery.
+
 - [ ] **Step 5: Run web/worker/API tests**
 
 If any worker test file is added, register it in the worker package's normal `test` script (or replace the explicit list with proven cross-platform discovery) and prove `pnpm --filter @workspace/worker test` executes it; root Turbo/CI must not rely on a bespoke manual command.
@@ -247,6 +272,8 @@ Pass selected output language to every print/export child. Use `Intl` with expli
 Set `lang={selectedOutputLanguage}` on the printable artifact root and every chart export preview/capture root. Keep surrounding Portal chrome and the document root on `uiLanguage`; set `Content-Language` only on an HTTP response that contains one single-language artifact, never on mixed-language list responses.
 
 For dashboard export, reuse the tab-scoped selection helper with a surface/brand/scope-specific key. Persist immediately so the explicit export token survives the UI language switcher's full reload; do not merely hold mount-time React state.
+
+For every completed print/export link in the production chain, replace the exact deferred-ownership signature with an exact resolved-surface attestation naming its focused propagation test. Unregistered or stale signatures remain fatal even when similarly named props/calls exist elsewhere in the file.
 
 - [ ] **Step 5: Run report-copy/render/chart tests**
 
