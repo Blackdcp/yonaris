@@ -116,6 +116,7 @@ describe("Site 06 中国站", () => {
 		expect(system).toContain('data-page-composition="system-field"');
 		expect(system).toContain('data-scene-object="relationship-preview"');
 		expect(system).toContain('data-scene-object="system-field"');
+		expect(system).toContain("data-system-map");
 		expect(system).toContain("市场问题");
 		expect(system).toContain("行动与复核");
 		expect(system.indexOf('data-scene-object="relationship-preview"')).toBeLessThan(
@@ -130,6 +131,7 @@ describe("Site 06 中国站", () => {
 		const breakdown = render("approach");
 		expect(breakdown).toContain('data-page-composition="breakdown-replay"');
 		expect(breakdown).toContain('data-scene-object="replay-stage"');
+		expect(breakdown).toContain('class="site-06-zh-replay site-06-review"');
 		for (const label of ["基线", "断点", "行动", "复核"]) expect(breakdown).toContain(label);
 		expect(breakdown).toContain("无法归因");
 		expect(breakdown.match(/data-replay-state=/g) ?? []).toHaveLength(4);

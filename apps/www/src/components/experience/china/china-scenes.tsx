@@ -108,7 +108,7 @@ export function SystemField() {
 	const tabs = useRovingTabs({ items: ids, active, onChange: setActive, idPrefix: "zh-system" });
 
 	return (
-		<section className="site-06-zh-system-field" data-scene-object="system-field" aria-label="六个相互连接的系统节点">
+		<section className="site-06-zh-system-field" data-system-map data-scene-object="system-field" aria-label="六个相互连接的系统节点">
 			<OrbitField label="围绕同一道业务问题连接的六个节点" interactive />
 			<div className="site-06-zh-system-field__nodes" role="tablist" aria-label="选择系统节点">
 				{CHINA_SYSTEM_NODES.map((item, index) => (
@@ -149,7 +149,7 @@ export function ReplayStage() {
 	const tabs = useRovingTabs({ items: ids, active, onChange: setActive, idPrefix: "zh-replay" });
 
 	return (
-		<section className="site-06-zh-replay" data-scene-object="replay-stage" aria-label="同一示例的基线、断点、行动与复核">
+		<section className="site-06-zh-replay site-06-review" data-scene-object="replay-stage" aria-label="同一示例的基线、断点、行动与复核">
 			<aside className="site-06-zh-replay__controls">
 				<p className="site-06-kicker">一次判断的完整记录</p>
 				<p>{CHINA_BREAKDOWN_QUESTION}</p>

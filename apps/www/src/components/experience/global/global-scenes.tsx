@@ -274,7 +274,7 @@ export function PlatformInspectorScene() {
 	const fact = PAGE_FACTS.en.product;
 
 	return (
-		<article className="site-06-trace-workbench" data-scene-object="trace-workbench" id={fact.id} tabIndex={-1}>
+		<article className="site-06-trace-workbench site-06-inspector" data-scene-object="trace-workbench" id={fact.id} tabIndex={-1}>
 			<aside className="site-06-trace-workbench__question">
 				<p className="site-06-kicker">One de-identified answer</p>
 				<div role="tablist" aria-label="Inspect an observed answer">

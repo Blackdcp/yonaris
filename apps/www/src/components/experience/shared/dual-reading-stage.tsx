@@ -42,7 +42,12 @@ function DualReadingRecord({ record, locale }: { record: ReadingRecord; locale: 
 				aria-label={locale === "en" ? "Choose a reading" : "选择阅读方式"}
 			>
 				{readingModes.map((item, index) => (
-					<button key={item} type="button" {...modeTabs.getTabProps(item, index)}>
+					<button
+						key={item}
+						type="button"
+						{...modeTabs.getTabProps(item, index)}
+						aria-label={locale === "en" ? (item === "human" ? "For people" : "For agents") : undefined}
+					>
 						{labels[item]}
 					</button>
 				))}
@@ -109,7 +114,7 @@ export function DualReadingStage({
 	const Heading = headingLevel;
 
 	return (
-		<section className="site-06-dual-stage" data-scene-object="dual-reading-stage">
+		<section className="site-06-dual-stage site-06-reading" data-scene-object="dual-reading-stage">
 			<header className="site-06-dual-stage__copy">
 				{eyebrow ? <p className="site-06-kicker">{eyebrow}</p> : null}
 				<Heading>{heading}</Heading>

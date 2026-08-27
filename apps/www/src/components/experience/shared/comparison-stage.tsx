@@ -38,7 +38,7 @@ export function ComparisonStage({
 	if (records.length === 0) return null;
 
 	return (
-		<section className="site-06-comparison-stage" data-scene-object="comparison-stage">
+		<section className="site-06-comparison-stage site-06-review" data-scene-object="comparison-stage">
 			<header className="site-06-comparison-stage__controls">
 				<h2>{heading}</h2>
 				{description ? <p>{description}</p> : null}

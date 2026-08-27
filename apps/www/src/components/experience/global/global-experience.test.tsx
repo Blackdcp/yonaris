@@ -192,6 +192,7 @@ describe("Site 06 English experience", () => {
 	it("changes Product source, boundary and buying effect with the selected phrase", () => {
 		const product = markupFor("product");
 		expect(product).toContain('data-scene-object="trace-workbench"');
+		expect(product).toContain('class="site-06-trace-workbench site-06-inspector"');
 		const traceWorkbench = product.slice(product.indexOf('data-scene-object="trace-workbench"'));
 		expect(traceWorkbench.match(/role="tab"/g) ?? []).toHaveLength(3);
 		const answerEnd = traceWorkbench.indexOf("</blockquote>");
@@ -208,6 +209,7 @@ describe("Site 06 English experience", () => {
 	it("holds one question constant across Approach baseline and retest", () => {
 		const approach = markupFor("approach");
 		expect(approach).toContain('data-scene-object="comparison-stage"');
+		expect(approach).toContain('class="site-06-comparison-stage site-06-review"');
 		expect(
 			approach.match(/Which company can support this decision without adding risk for the buying team\?/g) ?? [],
 		).toHaveLength(1);
@@ -221,6 +223,7 @@ describe("Site 06 English experience", () => {
 		const firstSectionBoundary = company.indexOf('class="site-06-section');
 		expect(dualReading).toBeGreaterThan(-1);
 		expect(dualReading).toBeLessThan(firstSectionBoundary);
+		expect(company).toContain('class="site-06-dual-stage site-06-reading"');
 		for (const label of ["Category", "Purpose", "Scope", "Human reading", "Agent reading"]) {
 			expect(company).toContain(label);
 		}

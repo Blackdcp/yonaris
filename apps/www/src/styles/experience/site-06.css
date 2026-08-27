@@ -411,9 +411,9 @@
 	transform: scaleX(1);
 }
 
-.site-06-reading,
-.site-06-inspector,
-.site-06-review {
+.site-06-reading:not(.site-06-dual-stage),
+.site-06-inspector:not(.site-06-trace-workbench),
+.site-06-review:not(.site-06-comparison-stage, .site-06-zh-replay) {
 	border: 1px solid var(--site-rule);
 	background: color-mix(in srgb, currentColor 4%, transparent);
 	box-shadow: var(--site-shadow);
@@ -463,7 +463,7 @@
 	color: var(--site-ink);
 }
 
-.site-06-reading dt,
+.site-06-reading:not(.site-06-dual-stage) dt,
 .site-06-evidence-document dt {
 	margin-bottom: 8px;
 	color: var(--site-ink-soft);
@@ -473,20 +473,20 @@
 	text-transform: uppercase;
 }
 
-.site-06-reading dd,
+.site-06-reading:not(.site-06-dual-stage) dd,
 .site-06-evidence-document dd {
 	margin: 0;
 	font-size: 0.94rem;
 	line-height: 1.55;
 }
 
-.site-06-reading code {
+.site-06-reading:not(.site-06-dual-stage) code {
 	overflow-wrap: anywhere;
 	color: var(--site-navy-secondary);
 	font-size: 0.82rem;
 }
 
-.site-06-inspector {
+.site-06-inspector:not(.site-06-trace-workbench) {
 	display: grid;
 	grid-template-columns: minmax(220px, 0.48fr) minmax(0, 1fr);
 }
@@ -878,7 +878,7 @@
 .site-06-evidence-sheet__label {
 	padding-bottom: 15px;
 	border-bottom: 1px solid rgb(16 26 37 / 18%);
-	color: #68727a;
+	color: var(--site-ink-soft);
 	font-size: 0.72rem;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -963,7 +963,7 @@
 
 .site-06-comparison-stage__question-label,
 .site-06-dual-stage__prompt {
-	color: rgb(255 255 255 / 45%);
+	color: rgb(255 255 255 / 56%);
 	font-size: 0.75rem;
 }
 
@@ -999,7 +999,7 @@
 
 .site-06-comparison-stage__record dt,
 .site-06-dual-stage__agent dt {
-	color: rgb(255 255 255 / 44%);
+	color: rgb(255 255 255 / 56%);
 	font-size: 0.75rem;
 }
 
@@ -1283,7 +1283,7 @@
 .site-06-buyer-dossier__note > span {
 	display: block;
 	margin-bottom: 14px;
-	color: #707980;
+	color: var(--site-ink-soft);
 	font-size: 0.68rem;
 	text-transform: uppercase;
 }
@@ -1468,6 +1468,11 @@
 	top: 110px;
 }
 
+.site-06-product-trace .site-06-kicker,
+.site-06-zh-replay .site-06-kicker {
+	color: color-mix(in srgb, var(--site-amber) 48%, var(--site-ink));
+}
+
 .site-06-trace-workbench__question blockquote {
 	margin: 24px 0 0;
 	font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
@@ -1502,6 +1507,10 @@
 .site-06-trace-workbench .site-06-evidence-document dl > div {
 	background: transparent;
 	box-shadow: none;
+}
+
+.site-06-trace-workbench .site-06-evidence-document dt {
+	color: var(--site-ink);
 }
 
 .site-06-trace-workbench .site-06-evidence-document {
@@ -2400,7 +2409,7 @@
 }
 
 .site-06-zh-system-field__records article > p:first-child {
-	color: rgb(255 255 255 / 46%);
+	color: rgb(255 255 255 / 56%);
 	font-size: 0.72rem;
 }
 
@@ -2504,7 +2513,7 @@
 
 .site-06-zh-replay__controls button {
 	border-bottom-color: var(--site-rule);
-	color: #68737b;
+	color: var(--site-ink-soft);
 }
 
 .site-06-zh-replay__controls button[aria-selected="true"] {

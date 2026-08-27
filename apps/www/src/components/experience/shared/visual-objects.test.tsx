@@ -97,6 +97,8 @@ describe("Site 06 visual objects", () => {
 		expect(html).toContain('id="yonaris.category.ai-native-martech"');
 		expect(html).toContain("Human reading");
 		expect(html).toContain("Agent reading");
+		expect(html).toContain('aria-label="For people"');
+		expect(html).toContain('aria-label="For agents"');
 		for (const label of ["Fact", "Evidence", "Boundary", "Stable ID"]) expect(html).toContain(label);
 	});
 

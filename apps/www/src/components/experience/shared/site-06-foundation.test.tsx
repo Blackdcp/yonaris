@@ -25,6 +25,37 @@ type BindReadingLensHash = (options: {
 	schedule?: (callback: () => void) => void;
 }) => () => void;
 
+function inspectJpeg(buffer: Buffer) {
+	const metadataMarkers: number[] = [];
+	let width = 0;
+	let height = 0;
+	let offset = 2;
+	while (offset < buffer.length) {
+		if (buffer[offset] !== 0xff) throw new Error(`Invalid JPEG marker at ${offset}`);
+		while (buffer[offset] === 0xff) offset += 1;
+		const marker = buffer[offset];
+		offset += 1;
+		if (marker === 0xda) {
+			return {
+				width,
+				height,
+				metadataMarkers,
+				scanSha256: createHash("sha256").update(buffer.subarray(offset - 2)).digest("hex"),
+			};
+		}
+		if (marker === 0xd9) break;
+		if ((marker >= 0xd0 && marker <= 0xd7) || marker === 0x01) continue;
+		const length = buffer.readUInt16BE(offset);
+		if ((marker >= 0xe0 && marker <= 0xef) || marker === 0xfe) metadataMarkers.push(marker);
+		if ([0xc0, 0xc1, 0xc2].includes(marker)) {
+			height = buffer.readUInt16BE(offset + 3);
+			width = buffer.readUInt16BE(offset + 5);
+		}
+		offset += length;
+	}
+	throw new Error("JPEG has no start-of-scan marker");
+}
+
 function fakeHashTarget(hash: string) {
 	const listeners = new Set<() => void>();
 	return {
@@ -46,7 +77,7 @@ describe("Site 06 shared foundation", () => {
 		const referenceRoot = join(repositoryRoot, "docs/design/site-06-reference");
 		const referenceHtml = readFileSync(join(referenceRoot, "site-system-multipage-agent-06.html"));
 		expect(createHash("sha256").update(referenceHtml).digest("hex")).toBe(
-			"e26b204b528481ddd3274d4a546f1a9acd02a0f7f5e94de80b1070a1d05b46da",
+			"a0b95bf8100874a3d33dff8406259073a3cd9819cb3aa7a2b58326a82f481a2b",
 		);
 		for (const asset of [
 			"photo-office-unsplash-1497366811353.jpg",
@@ -73,6 +104,21 @@ describe("Site 06 shared foundation", () => {
 				`${asset} must be available to the marketing app`,
 			).toBe(true);
 		}
+
+		const referenceWarmOffice = readFileSync(join(referenceRoot, "assets/photo-warm-office-pexels-31771712.jpg"));
+		const productionWarmOffice = readFileSync(
+			join(repositoryRoot, "apps/www/public/brand/site-06/warm-office.jpg"),
+		);
+		expect(productionWarmOffice.equals(referenceWarmOffice)).toBe(true);
+		expect(createHash("sha256").update(productionWarmOffice).digest("hex")).toBe(
+			"f2332ec8c09034426234a5a05f392b27d72a0ab1390e919623e80449509fc259",
+		);
+		expect(inspectJpeg(productionWarmOffice)).toEqual({
+			width: 1800,
+			height: 1200,
+			metadataMarkers: [],
+			scanSha256: "40bb77961d65de4f5699f45ad2ec529390d2be156fd30d3d459d97b1fcf7bbec",
+		});
 	});
 
 	it("renders one meaningful orbit and an accessible dual reading", () => {
