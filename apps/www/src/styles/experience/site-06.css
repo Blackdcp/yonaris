@@ -1031,9 +1031,14 @@
 }
 
 .site-06-dual-stage__copy,
+.site-06-dual-stage__panel,
 .site-06-dual-stage__record {
 	position: relative;
 	z-index: 1;
+}
+
+.site-06-dual-stage__panel {
+	min-width: 0;
 }
 
 .site-06-dual-stage__copy > p {

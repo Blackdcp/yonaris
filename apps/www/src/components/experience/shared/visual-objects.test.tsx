@@ -98,4 +98,43 @@ describe("Site 06 visual objects", () => {
 		expect(html).toContain("Agent reading");
 		for (const label of ["Fact", "Evidence", "Boundary", "Stable ID"]) expect(html).toContain(label);
 	});
+
+	it("connects every record selector to an existing record tabpanel", () => {
+		const html = renderToStaticMarkup(
+			<DualReadingStage
+				locale="en"
+				heading="One public fact. Two useful readings."
+				initialId="category"
+				records={[
+					{
+						id: "category",
+						prompt: "What kind of company is Yonaris?",
+						human: "AI-native MarTech infrastructure.",
+						meaning: "The category stays broader than one search tactic.",
+						fact: "Yonaris is AI-native MarTech infrastructure.",
+						evidence: "Yonaris public company description.",
+						boundary: "This does not claim every planned capability is available.",
+						stableId: "yonaris.category.ai-native-martech",
+					},
+					{
+						id: "scope",
+						prompt: "Is Yonaris limited to AI-search visibility?",
+						human: "No. AI answers are one observable entry point.",
+						meaning: "The scope remains a wider MarTech system.",
+						fact: "Yonaris connects questions, facts, evidence, and next action.",
+						evidence: "Yonaris public scope statement.",
+						boundary: "Capabilities are stated only when available.",
+						stableId: "yonaris.scope.martech-system",
+					},
+				]}
+			/>,
+		);
+		const selectorGroup = html.match(/<div class="site-06-dual-stage__records"[\s\S]*?<\/div>/)?.[0] ?? "";
+		const controlledIds = [...selectorGroup.matchAll(/aria-controls="([^"]+)"/g)].map((match) => match[1]);
+
+		expect(controlledIds).toHaveLength(2);
+		for (const id of controlledIds) {
+			expect(html).toContain(`id="${id}" role="tabpanel"`);
+		}
+	});
 });

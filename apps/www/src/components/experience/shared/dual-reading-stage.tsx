@@ -76,51 +76,61 @@ export function DualReadingStage({
 					))}
 				</div>
 			</header>
-			<article
-				className="site-06-dual-stage__record"
-				id={activeRecord.stableId}
-				data-stable-id={activeRecord.stableId}
-				tabIndex={-1}
-			>
-				<div
-					className="site-06-dual-stage__modes"
-					role="tablist"
-					aria-label={locale === "en" ? "Choose a reading" : "选择阅读方式"}
+			{records.map((record) => (
+				<section
+					key={record.id}
+					className="site-06-dual-stage__panel"
+					{...recordTabs.getPanelProps(record.id)}
 				>
-					{readingModes.map((item, index) => (
-						<button key={item} type="button" {...modeTabs.getTabProps(item, index)}>
-							{labels[item]}
-						</button>
-					))}
-				</div>
-				<section className="site-06-dual-stage__human" {...modeTabs.getPanelProps("human")}>
-					<p className="site-06-dual-stage__prompt">{activeRecord.prompt}</p>
-					<p className="site-06-dual-stage__answer">{activeRecord.human}</p>
-					<p className="site-06-dual-stage__meaning">{activeRecord.meaning}</p>
+					{record.id === activeRecord.id ? (
+						<article
+							className="site-06-dual-stage__record"
+							id={activeRecord.stableId}
+							data-stable-id={activeRecord.stableId}
+							tabIndex={-1}
+						>
+							<div
+								className="site-06-dual-stage__modes"
+								role="tablist"
+								aria-label={locale === "en" ? "Choose a reading" : "选择阅读方式"}
+							>
+								{readingModes.map((item, index) => (
+									<button key={item} type="button" {...modeTabs.getTabProps(item, index)}>
+										{labels[item]}
+									</button>
+								))}
+							</div>
+							<section className="site-06-dual-stage__human" {...modeTabs.getPanelProps("human")}>
+								<p className="site-06-dual-stage__prompt">{activeRecord.prompt}</p>
+								<p className="site-06-dual-stage__answer">{activeRecord.human}</p>
+								<p className="site-06-dual-stage__meaning">{activeRecord.meaning}</p>
+							</section>
+							<section className="site-06-dual-stage__agent" {...modeTabs.getPanelProps("agent")}>
+								<dl>
+									<div>
+										<dt>{labels.fact}</dt>
+										<dd>{activeRecord.fact}</dd>
+									</div>
+									<div>
+										<dt>{labels.evidence}</dt>
+										<dd>{activeRecord.evidence}</dd>
+									</div>
+									<div>
+										<dt>{labels.boundary}</dt>
+										<dd>{activeRecord.boundary}</dd>
+									</div>
+									<div>
+										<dt>{labels.stableId}</dt>
+										<dd>
+											<code>{activeRecord.stableId}</code>
+										</dd>
+									</div>
+								</dl>
+							</section>
+						</article>
+					) : null}
 				</section>
-				<section className="site-06-dual-stage__agent" {...modeTabs.getPanelProps("agent")}>
-					<dl>
-						<div>
-							<dt>{labels.fact}</dt>
-							<dd>{activeRecord.fact}</dd>
-						</div>
-						<div>
-							<dt>{labels.evidence}</dt>
-							<dd>{activeRecord.evidence}</dd>
-						</div>
-						<div>
-							<dt>{labels.boundary}</dt>
-							<dd>{activeRecord.boundary}</dd>
-						</div>
-						<div>
-							<dt>{labels.stableId}</dt>
-							<dd>
-								<code>{activeRecord.stableId}</code>
-							</dd>
-						</div>
-					</dl>
-				</section>
-			</article>
+			))}
 		</section>
 	);
 }
