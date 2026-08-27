@@ -191,7 +191,7 @@ export const CHINA_COPY = {
 		metaDescription: "留下姓名、电话和公司，从一道最不想让 AI 答错的问题开始。",
 		eyebrow: "先从业务问题开始",
 		title: "带一道你最不想让 AI 答错的问题来。",
-		lead: "用一次简短沟通说清楚客户在做什么选择、问题发生在哪个市场。我们先判断它是否值得继续查。",
+		lead: "用 20 分钟说清楚客户在做什么选择、问题发生在哪个市场。我们先判断它是否值得继续查。",
 		primaryAction: { label: "填写联系方式", href: "#contact-form" },
 		closingTitle: "姓名、电话、公司。",
 		closingBody: "只需要三项联系方式。我们会围绕你带来的问题继续沟通。",
