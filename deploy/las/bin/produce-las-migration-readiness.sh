@@ -91,6 +91,31 @@ prepare_publication_file() {
 	metadata_matches "$path" file '0:0:400'
 }
 
+publish_no_replace() {
+	local source="$1" destination="$2"
+	[[ ! -e "$destination" && ! -L "$destination" ]] || return 1
+	/usr/bin/mv -nT -- "$source" "$destination" || return 1
+	# GNU mv -n exits successfully when it declines a raced destination.
+	[[ ! -e "$source" && ! -L "$source" ]] || return 1
+	metadata_matches "$destination" file '0:0:400'
+}
+
+durably_verify_readiness() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
+	local backup_evidence="$MIGRATION_EVIDENCE_ROOT/$release_tag.backup"
+	local rehearsal_evidence="$MIGRATION_EVIDENCE_ROOT/$release_tag.rehearsal"
+	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok' || return 1
+	/usr/bin/sync -f "$backup_evidence" && \
+		/usr/bin/sync -f "$rehearsal_evidence" && \
+		/usr/bin/sync -f "$attestation" && \
+		/usr/bin/sync -f "$MIGRATION_EVIDENCE_ROOT" && \
+		/usr/bin/sync -f "$MIGRATION_READINESS_ROOT" || return 1
+	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok'
+}
+
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The migration-readiness producer must run as root.' 2
 [[ -z "${SUDO_USER:-}" ]] || fail 'The migration-readiness producer is direct-root only.' 2
 [[ $# -eq 6 ]] || fail 'Usage: produce-las-migration-readiness <release> <five digests>' 2
@@ -126,8 +151,7 @@ state_manager migration-readiness-runtime-authorization \
 	| /usr/bin/grep -Fxq 'las-migration-readiness-runtime-authorization-v1 ok' || \
 	fail 'The exact migration-readiness runtime tuple is not authorized.'
 
-if state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-	2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok'; then
+if durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"; then
 	/usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'
 	exit 0
 fi
@@ -224,16 +248,17 @@ for existing in "$attestation" "$backup_evidence" "$rehearsal_evidence"; do
 	[[ ! -e "$existing" && ! -L "$existing" ]] || \
 		fail 'Migration-readiness evidence appeared during publication.'
 done
-/usr/bin/mv -fT -- "$backup_temporary" "$backup_evidence" || fail 'Could not publish backup evidence.'
+publish_no_replace "$backup_temporary" "$backup_evidence" || fail 'Could not publish backup evidence without conflict.'
 backup_temporary=''
-/usr/bin/mv -fT -- "$rehearsal_temporary" "$rehearsal_evidence" || fail 'Could not publish rehearsal evidence.'
+publish_no_replace "$rehearsal_temporary" "$rehearsal_evidence" || \
+	fail 'Could not publish rehearsal evidence without conflict.'
 rehearsal_temporary=''
 /usr/bin/sync -f "$MIGRATION_EVIDENCE_ROOT" || fail 'Could not durably publish migration evidence.'
-/usr/bin/mv -fT -- "$attestation_temporary" "$attestation" || fail 'Could not publish migration readiness.'
+publish_no_replace "$attestation_temporary" "$attestation" || \
+	fail 'Could not publish migration readiness without conflict.'
 attestation_temporary=''
 /usr/bin/sync -f "$MIGRATION_READINESS_ROOT" || fail 'Could not durably publish migration readiness.'
 
-state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-	| /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok' || \
+durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || \
 	fail 'Published migration-readiness evidence failed exact verification.'
 /usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'

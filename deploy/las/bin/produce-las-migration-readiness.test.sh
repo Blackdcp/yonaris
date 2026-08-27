@@ -151,15 +151,28 @@ printf 'flock %s\n' "\$*" >>'$EVENT_LOG'
 STUB
 cat >"$MOCK_BIN/sync" <<STUB
 #!/usr/bin/env bash
+set -Eeuo pipefail
 printf 'sync %s\n' "\$*" >>'$EVENT_LOG'
-[[ ! -e '$TEST_ROOT/sync-fail' ]]
+failure="\$(cat '$TEST_ROOT/sync-failure' 2>/dev/null || true)"
+target="\${@: -1}"
+if [[ "\$failure" == post-attestation-directory && "\$target" == '$READINESS_ROOT' && \
+	-f '$READINESS_ROOT/$RELEASE' ]]; then
+	exit 92
+fi
 STUB
 cat >"$MOCK_BIN/mv" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
 destination="\${@: -1}"
 printf 'mv %s\n' "\$*" >>'$EVENT_LOG'
-if [[ -e '$TEST_ROOT/mv-fail' && "\$destination" == *.backup ]]; then exit 91; fi
+failure="\$(cat '$TEST_ROOT/mv-failure' 2>/dev/null || true)"
+case "\$failure:\$destination" in
+	backup:*.backup | rehearsal:*.rehearsal | attestation:'$READINESS_ROOT/$RELEASE') exit 91 ;;
+	race:*.backup)
+		printf '%s\n' 'concurrent root evidence' >"\$destination"
+		chmod 0400 "\$destination"
+		;;
+esac
 exec '$REAL_MV' "\$@"
 STUB
 chmod 0755 "$STATE_MANAGER" "$RUNTIME_MANAGER" "$ADAPTER" "$MOCK_BIN"/*
@@ -296,15 +309,81 @@ assert_no_evidence
 assert_work_clean
 
 : >"$EVENT_LOG"
-touch "$TEST_ROOT/mv-fail"
+printf '%s\n' backup >"$TEST_ROOT/mv-failure"
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
 atomic_status=$?
 set -e
-rm -f "$TEST_ROOT/mv-fail"
+rm -f "$TEST_ROOT/mv-failure"
 [[ "$atomic_status" -ne 0 ]]
 assert_no_evidence
 assert_work_clean
+
+# A failure after only backup evidence is published remains verifier-invalid,
+# preserves the partial bytes, and cannot be retried into an automatic overwrite.
+: >"$EVENT_LOG"
+printf '%s\n' rehearsal >"$TEST_ROOT/mv-failure"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+backup_only_status=$?
+set -e
+rm -f "$TEST_ROOT/mv-failure"
+[[ "$backup_only_status" -ne 0 && -f "$EVIDENCE_ROOT/$RELEASE.backup" && \
+	! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
+backup_only_hash="$(sha256sum -- "$EVIDENCE_ROOT/$RELEASE.backup" | awk '{print $1}')"
+set +e
+run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+backup_only_verifier_status=$?
+set -e
+[[ "$backup_only_verifier_status" -ne 0 ]]
+: >"$EVENT_LOG"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+backup_only_retry_status=$?
+set -e
+[[ "$backup_only_retry_status" -ne 0 && \
+	"$(sha256sum -- "$EVIDENCE_ROOT/$RELEASE.backup" | awk '{print $1}')" == "$backup_only_hash" ]]
+assert_no_runtime_or_adapter
+rm -f "$EVIDENCE_ROOT/$RELEASE.backup"
+
+# A failure after both evidence files but before the attestation likewise
+# remains verifier-invalid and fails closed without rerunning work.
+: >"$EVENT_LOG"
+printf '%s\n' attestation >"$TEST_ROOT/mv-failure"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+evidence_only_status=$?
+set -e
+rm -f "$TEST_ROOT/mv-failure"
+[[ "$evidence_only_status" -ne 0 && -f "$EVIDENCE_ROOT/$RELEASE.backup" && \
+	-f "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
+set +e
+run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+evidence_only_verifier_status=$?
+set -e
+[[ "$evidence_only_verifier_status" -ne 0 ]]
+: >"$EVENT_LOG"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+evidence_only_retry_status=$?
+set -e
+[[ "$evidence_only_retry_status" -ne 0 ]]
+assert_no_runtime_or_adapter
+rm -f "$EVIDENCE_ROOT/$RELEASE.backup" "$EVIDENCE_ROOT/$RELEASE.rehearsal"
+
+# A destination created after the producer's absence scan must not be
+# overwritten by publication. The raced bytes remain an explicit conflict.
+: >"$EVENT_LOG"
+printf '%s\n' race >"$TEST_ROOT/mv-failure"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+publication_race_status=$?
+set -e
+rm -f "$TEST_ROOT/mv-failure"
+[[ "$publication_race_status" -ne 0 ]]
+grep -Fqx 'concurrent root evidence' "$EVIDENCE_ROOT/$RELEASE.backup"
+[[ ! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
+rm -f "$EVIDENCE_ROOT/$RELEASE.backup"
 
 printf '%s\n' 'operator-owned conflicting evidence' >"$EVIDENCE_ROOT/$RELEASE.backup"
 chmod 0400 "$EVIDENCE_ROOT/$RELEASE.backup"
@@ -318,10 +397,30 @@ grep -Fqx 'operator-owned conflicting evidence' "$EVIDENCE_ROOT/$RELEASE.backup"
 assert_no_runtime_or_adapter
 rm -f "$EVIDENCE_ROOT/$RELEASE.backup"
 
+# All three files can be verifier-valid while the final parent-directory sync
+# still fails. A retry must re-sync the verified files and both parents before
+# returning success, without repeating backup, transfer, or rehearsal work.
 : >"$EVENT_LOG"
-run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
+printf '%s\n' post-attestation-directory >"$TEST_ROOT/sync-failure"
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+post_attestation_sync_status=$?
+set -e
+rm -f "$TEST_ROOT/sync-failure"
+[[ "$post_attestation_sync_status" -ne 0 ]]
 [[ "$(run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
 	'las-migration-readiness-v1 ok' ]]
+: >"$EVENT_LOG"
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
+assert_no_runtime_or_adapter
+grep -Fqx "sync -f $EVIDENCE_ROOT/$RELEASE.backup" "$EVENT_LOG" || {
+	cat "$EVENT_LOG" >&2
+	exit 1
+}
+grep -Fqx "sync -f $EVIDENCE_ROOT/$RELEASE.rehearsal" "$EVENT_LOG"
+grep -Fqx "sync -f $READINESS_ROOT/$RELEASE" "$EVENT_LOG"
+grep -Fqx "sync -f $EVIDENCE_ROOT" "$EVENT_LOG"
+grep -Fqx "sync -f $READINESS_ROOT" "$EVENT_LOG"
 [[ "$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$EVIDENCE_ROOT/$RELEASE.backup")" == 0:0:400 && \
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$EVIDENCE_ROOT/$RELEASE.rehearsal")" == 0:0:400 && \
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$READINESS_ROOT/$RELEASE")" == 0:0:400 ]]
@@ -334,10 +433,10 @@ fi
 grep -Fq "flock --exclusive --wait 1800 9" "$EVENT_LOG"
 assert_work_clean
 
-runtime_count="$(grep -c '^runtime ' "$EVENT_LOG")"
-adapter_count="$(grep -c '^adapter ' "$EVENT_LOG")"
+runtime_count="$(grep -c '^runtime ' "$EVENT_LOG" || true)"
+adapter_count="$(grep -c '^adapter ' "$EVENT_LOG" || true)"
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
-[[ "$(grep -c '^runtime ' "$EVENT_LOG")" -eq "$runtime_count" && \
-	"$(grep -c '^adapter ' "$EVENT_LOG")" -eq "$adapter_count" ]]
+[[ "$(grep -c '^runtime ' "$EVENT_LOG" || true)" -eq "$runtime_count" && \
+	"$(grep -c '^adapter ' "$EVENT_LOG" || true)" -eq "$adapter_count" ]]
 
 echo 'root-owned migration readiness producer tests passed'
