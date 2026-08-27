@@ -9,6 +9,7 @@ TEST_ROOT="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
 STATE="$TEST_ROOT/var/lib/yonaris"
+WORK_ROOT="$STATE/migration-readiness-work-v1"
 TREES="$STATE/las-release-trees"
 RUNTIME_HOME="$TEST_ROOT/var/lib/yonaris-runtime"
 RUNTIME_DIR="$TEST_ROOT/run/user/2002"
@@ -124,6 +125,7 @@ cat >"$MOCK_BIN/docker" <<'EOF'
 set -Eeuo pipefail
 printf '%s\n' "$*" >>'__DOCKER_LOG__'
 printf 'docker %s\n' "$*" >>'__EVENT_LOG__'
+rehearsal_failure="$(cat '__ROOT__/rehearsal-failure' 2>/dev/null || true)"
 if [[ "$1" == info ]]; then
   [[ ! -e '__ROOT__/request-rebind' ]] || touch '__ROOT__/rebound'
   printf '["name=rootless"]\n'
@@ -137,6 +139,10 @@ if [[ " $* " == *' compose '* && " $* " == *' ps -q postgres '* ]]; then printf 
 if [[ " $* " == *' compose '* && " $* " == *' ps -q web '* ]]; then printf 'web-id\n'; exit 0; fi
 if [[ " $* " == *' compose '* && " $* " == *' ps -q worker '* ]]; then printf 'worker-id\n'; exit 0; fi
 if [[ " $* " == *' compose '* && " $* " == *' ps -q www '* ]]; then printf 'www-id\n'; exit 0; fi
+if [[ " $* " == *' compose '* && " $* " == *' exec -T postgres pg_dump '* ]]; then
+	printf 'postgres-custom-dump\n'
+	exit 0
+fi
 if [[ "$1" == inspect && "$*" == *'{{.State.Status}} {{.RestartCount}} {{.Config.Image}}'* ]]; then
 	printf 'running 0 ghcr.io/blackdcp/yonaris-worker@__WORKER__\n'
 	exit 0
@@ -153,6 +159,30 @@ fi
 if [[ "$1" == inspect && "$*" == *'{{.State.Health.Status}}'* ]]; then printf 'healthy\n'; exit 0; fi
 if [[ "$1" == image && "$2" == inspect ]]; then printf '%s\n' "${@: -1}"; exit 0; fi
 if [[ " $* " == *' compose '* && ( " $* " == *' pull '* || " $* " == *' up '* || " $* " == *' run '* ) ]]; then exit 0; fi
+if [[ "$1" == pull || ( "$1" == network && "$2" == create ) || ( "$1" == volume && "$2" == create ) ]]; then
+	exit 0
+fi
+if [[ "$1" == run ]]; then
+	if [[ " $* " == *' ghcr.io/blackdcp/yonaris-db-migrate@'* ]]; then
+		[[ "$rehearsal_failure" != migration ]] || exit 95
+		exit 0
+	fi
+	printf 'rehearsal-postgres-id\n'
+	exit 0
+fi
+if [[ "$1" == exec ]]; then
+	if [[ " $* " == *' pg_restore '* ]]; then
+		[[ "$rehearsal_failure" != restore ]] || exit 94
+		exit 0
+	fi
+	if [[ " $* " == *' pg_isready '* ]]; then
+		printf 'accepting connections\n'
+		exit 0
+	fi
+fi
+if [[ "$1" == rm || ( "$1" == volume && "$2" == rm ) || ( "$1" == network && "$2" == rm ) ]]; then
+	exit 0
+fi
 exit 97
 EOF
 sed -i \
@@ -183,6 +213,10 @@ case "$1" in
 	migration-readiness)
 		[[ "$mode" != deny-readiness ]] || exit 1
 		printf '%s\n' 'las-migration-readiness-v1 ok'
+		;;
+	migration-readiness-runtime-authorization)
+		[[ "$mode" != deny-migration-runtime ]] || exit 1
+		printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
 		;;
 	pending-runtime-tuple)
 		[[ "$mode" != deny-pending ]] || exit 1
@@ -220,6 +254,8 @@ if [[ "$format" == '%d:%i' ]]; then
 fi
 case "$path" in
   */var/lib/yonaris) metadata='0:0:711' ;;
+  */migration-readiness-work-v1/sha-*/*) metadata='0:0:600' ;;
+  */migration-readiness-work-v1 | */migration-readiness-work-v1/sha-*) metadata='0:0:700' ;;
   */las-release-trees | */las-release-trees/sha-*) metadata='0:0:555' ;;
   */compose.yaml | */compose.marketing.yaml) metadata='0:0:444' ;;
   */manage-las-release-state) metadata='0:0:755' ;;
@@ -294,6 +330,69 @@ run_manager() {
 
 run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1
 run_manager verify-boundary
+
+# A production dump can only be written to the release-scoped root-only work
+# directory after the exact migration-readiness runtime authorization.
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/database.dump" migration-readiness-runtime-v1
+grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
+grep -Fq 'exec -T postgres pg_dump --username postgres --dbname yonaris --format custom --no-owner --no-acl' "$DOCKER_LOG"
+[[ -s "$WORK_ROOT/$RELEASE/database.dump" ]] || { echo 'Migration backup was empty.' >&2; exit 1; }
+if run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$TEST_ROOT/outside.dump" migration-readiness-runtime-v1; then
+	echo 'Unsafe migration backup output was accepted.' >&2
+	exit 1
+fi
+
+REHEARSAL_PREFIX="yonaris-migration-readiness-$RELEASE"
+REHEARSAL_NETWORK="$REHEARSAL_PREFIX-network"
+REHEARSAL_VOLUME="$REHEARSAL_PREFIX-volume"
+REHEARSAL_CONTAINER="$REHEARSAL_PREFIX-postgres"
+REHEARSAL_RESULT="$WORK_ROOT/$RELEASE/rehearsal.result"
+
+assert_rehearsal_cleanup() {
+	grep -Fq "rm -f $REHEARSAL_CONTAINER" "$DOCKER_LOG"
+	grep -Fq "volume rm $REHEARSAL_VOLUME" "$DOCKER_LOG"
+	grep -Fq "network rm $REHEARSAL_NETWORK" "$DOCKER_LOG"
+}
+
+# The isolated restore occurs before the exact migration image, has no published
+# port, verifies PostgreSQL health, and records only fixed secret-free success.
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$REHEARSAL_RESULT" migration-readiness-runtime-v1
+grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
+grep -Fq "pull postgres@$POSTGRES" "$DOCKER_LOG"
+grep -Fq "pull ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKER_LOG"
+grep -Fq "network create --internal $REHEARSAL_NETWORK" "$DOCKER_LOG"
+! grep -F -- '--publish' "$DOCKER_LOG"
+restore_line="$(grep -n 'pg_restore' "$DOCKER_LOG" | head -n 1 | cut -d: -f1)"
+migration_line="$(grep -n "ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKER_LOG" | tail -n 1 | cut -d: -f1)"
+[[ "$restore_line" =~ ^[1-9][0-9]*$ && "$migration_line" =~ ^[1-9][0-9]*$ && "$restore_line" -lt "$migration_line" ]] || {
+	echo 'Migration ran before restore.' >&2
+	exit 1
+}
+grep -Fq 'pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal' "$DOCKER_LOG"
+[[ "$(tr -d '\r' <"$REHEARSAL_RESULT")" == 'las-migration-rehearsal-runtime-v1 ok' ]]
+! grep -F 'test-secret' "$REHEARSAL_RESULT"
+assert_rehearsal_cleanup
+
+# Cleanup is an EXIT-trap obligation, including restore and migration failure.
+for rehearsal_failure in restore migration; do
+	: >"$DOCKER_LOG"
+	printf '%s\n' "$rehearsal_failure" >"$TEST_ROOT/rehearsal-failure"
+	set +e
+	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+		"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-$rehearsal_failure.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+	failure_status=$?
+	set -e
+	[[ "$failure_status" -ne 0 ]] || { echo "Injected $rehearsal_failure failure passed." >&2; exit 1; }
+	assert_rehearsal_cleanup
+	rm -f -- "$TEST_ROOT/rehearsal-failure"
+done
 
 assert_preactivation_rejected() {
 	local name="$1"

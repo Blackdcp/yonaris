@@ -11,6 +11,7 @@ readonly RUNTIME_USER='yonaris-runtime'
 readonly RUNTIME_HOME='/var/lib/yonaris-runtime'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
 readonly RELEASE_TREE_ROOT='/var/lib/yonaris/las-release-trees'
+readonly MIGRATION_WORK_ROOT="$STATE_DIRECTORY/migration-readiness-work-v1"
 readonly ENV_FILE='/etc/yonaris/las-runtime.env'
 readonly ACTIVATION_ATTESTATION='/etc/yonaris/artifact-output-language-active-v1'
 readonly ACTIVATION_TOKEN='artifact-output-language-active-v1'
@@ -717,6 +718,132 @@ verify_marketing() {
 		/usr/bin/curl --fail --silent --show-error --max-time 15 http://127.0.0.1:1516/ >/dev/null
 }
 
+migration_work_path() {
+	local release_tag="$1" path="$2" release_root normalized
+	release_root="$MIGRATION_WORK_ROOT/$release_tag"
+	[[ "$path" == /* ]] || return 1
+	normalized="$(/usr/bin/realpath -m -- "$path")" || return 1
+	[[ "$normalized" == "$path" && "$normalized" == "$release_root/"* ]] || return 1
+	/usr/bin/printf '%s' "$normalized"
+}
+
+prepare_migration_work_directory() {
+	local release_tag="$1" release_root="$MIGRATION_WORK_ROOT/$1"
+	/usr/bin/mkdir -p -- "$release_root" || return 1
+	/usr/bin/chmod 0700 -- "$release_root" || return 1
+	metadata_matches "$release_root" directory '0:0:700'
+}
+
+authorize_migration_readiness_runtime() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	state_attestation 'las-migration-readiness-runtime-authorization-v1 ok' \
+		migration-readiness-runtime-authorization "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+}
+
+postgres_runtime_values() {
+	/usr/bin/python3 - "$ENV_FILE" <<'PY'
+import pathlib
+import sys
+
+values = {}
+for line in pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
+    if not line or line.lstrip().startswith("#"):
+        continue
+    key, value = line.split("=", 1)
+    if len(value) >= 2 and value[:1] == value[-1:] and value[:1] in {"'", '"'}:
+        value = value[1:-1]
+    values[key] = value
+for key in ("POSTGRES_USER", "POSTGRES_DB"):
+    value = values.get(key)
+    if not value or "\n" in value:
+        raise SystemExit(1)
+    print(value)
+PY
+}
+
+migration_rehearsal_docker() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	shift 6
+	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || return 1
+	runtime_env /usr/bin/docker "$@"
+}
+
+migration_rehearsal_cleanup() {
+	local status="$?" release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local rehearsal_container="$7" rehearsal_volume="$8" rehearsal_network="$9"
+	trap - EXIT
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" rm -f "$rehearsal_container" >/dev/null 2>&1 || :
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" volume rm "$rehearsal_volume" >/dev/null 2>&1 || :
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" network rm "$rehearsal_network" >/dev/null 2>&1 || :
+	return "$status"
+}
+
+migration_backup() {
+	local tree="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6" www="$7" output="$8"
+	local -a postgres_values
+	local postgres_user postgres_database
+	prepare_migration_work_directory "$release_tag" || return 1
+	output="$(migration_work_path "$release_tag" "$output")" || return 1
+	[[ ! -e "$output" && ! -L "$output" ]] || return 1
+	mapfile -t postgres_values < <(postgres_runtime_values)
+	[[ "${#postgres_values[@]}" == 2 ]] || return 1
+	postgres_user="${postgres_values[0]%$'\r'}"
+	postgres_database="${postgres_values[1]%$'\r'}"
+	[[ -n "$postgres_user" && -n "$postgres_database" ]] || return 1
+	validate_compose_model portal "$tree" "$web" "$worker" "$migrate" "$postgres" '' || return 1
+	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || return 1
+	if ! compose_portal "$tree" "$web" "$worker" "$migrate" "$postgres" \
+		exec -T postgres pg_dump --username "$postgres_user" --dbname "$postgres_database" \
+		--format custom --no-owner --no-acl >"$output"; then
+		/usr/bin/rm -f -- "$output"
+		return 1
+	fi
+	metadata_matches "$output" file '0:0:600' && [[ -s "$output" ]] || {
+		/usr/bin/rm -f -- "$output"
+		return 1
+	}
+}
+
+migration_rehearse() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" backup="$7" result="$8"
+	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_user='yonaris_rehearsal'
+	local rehearsal_database='yonaris_rehearsal' rehearsal_password='yonaris_rehearsal'
+	local database_url
+	prepare_migration_work_directory "$release_tag" || return 1
+	backup="$(migration_work_path "$release_tag" "$backup")" || return 1
+	result="$(migration_work_path "$release_tag" "$result")" || return 1
+	[[ ! -e "$result" && ! -L "$result" ]] || return 1
+	metadata_matches "$backup" file '0:0:600' && [[ -s "$backup" ]] || return 1
+	rehearsal_prefix="yonaris-migration-readiness-$release_tag"
+	rehearsal_network="$rehearsal_prefix-network"
+	rehearsal_volume="$rehearsal_prefix-volume"
+	rehearsal_container="$rehearsal_prefix-postgres"
+	database_url="postgresql://$rehearsal_user:$rehearsal_password@$rehearsal_container:5432/$rehearsal_database"
+	trap "migration_rehearsal_cleanup '$release_tag' '$web' '$worker' '$migrate' '$postgres' '$www' '$rehearsal_container' '$rehearsal_volume' '$rehearsal_network'" EXIT
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$POSTGRES_IMAGE@$postgres" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" network create --internal "$rehearsal_network" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" volume create "$rehearsal_volume" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --detach \
+		--name "$rehearsal_container" --network "$rehearsal_network" \
+		--mount "type=volume,source=$rehearsal_volume,target=/var/lib/postgresql/data" \
+		--env "POSTGRES_USER=$rehearsal_user" --env "POSTGRES_PASSWORD=$rehearsal_password" \
+		--env "POSTGRES_DB=$rehearsal_database" "$POSTGRES_IMAGE@$postgres" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		exec "$rehearsal_container" pg_isready --username "$rehearsal_user" --dbname "$rehearsal_database" || return 1
+	# The root shell opens the root-only backup before the rootless runtime inherits stdin.
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		exec -i "$rehearsal_container" pg_restore --username "$rehearsal_user" --dbname "$rehearsal_database" --no-owner --no-acl <"$backup" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --rm \
+		--network "$rehearsal_network" --env "DATABASE_URL=$database_url" "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		exec "$rehearsal_container" pg_isready --username "$rehearsal_user" --dbname "$rehearsal_database" || return 1
+	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' >"$result" || return 1
+	metadata_matches "$result" file '0:0:600' || return 1
+	migration_rehearsal_cleanup "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		"$rehearsal_container" "$rehearsal_volume" "$rehearsal_network"
+}
+
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The LAS runtime manager must run as root.'
 if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" ]]; then
 	[[ "$LAS_STABLE_BUNDLE_DIR" =~ ^/usr/local/libexec/yonaris-las/bundles/sha256-[0-9a-f]{64}$ ]] || \
@@ -745,6 +872,22 @@ tree="$(release_tree "$release_tag")" || fail 'The immutable runtime release tre
 verify_runtime_boundary || fail 'The isolated LAS runtime boundary is invalid.'
 
 case "$operation" in
+	migration-backup)
+		[[ $# -eq 9 ]] || fail 'Migration backup requires five exact image digests and an output path.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; output="$8"; expected_marker="$9"
+		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == migration-readiness-runtime-v1 ]] || exit 2
+		migration_backup "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$output" || \
+			fail 'Migration backup failed.'
+		;;
+	migration-rehearse)
+		[[ $# -eq 10 ]] || fail 'Migration rehearsal requires five exact image digests, backup, and result paths.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; backup="$8"; result="$9"; expected_marker="${10}"
+		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == migration-readiness-runtime-v1 ]] || exit 2
+		migration_rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$backup" "$result" || \
+			fail 'Migration rehearsal failed.'
+		;;
 	portal-preflight | portal-deploy | portal-rollback | portal-verify)
 		[[ $# -eq 8 ]] || fail 'Portal runtime operations require five exact image digests.' 2
 		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; expected_marker="$8"
