@@ -20,7 +20,9 @@ import { Route as zhAgentPrivacyRoute } from "@/routes/zh/agent/privacy";
 import { Route as zhAgentProductRoute } from "@/routes/zh/agent/product";
 import { CHINA_PAGES } from "../china/china-pages";
 import { GLOBAL_PAGES } from "../global/global-pages";
-import { AgentPage } from "./agent-pages";
+import * as agentPages from "./agent-pages";
+
+const { AgentPage } = agentPages;
 
 const humanPath = (locale: "en" | "zh", pageKey: HumanPageKey): string => {
 	if (locale === "en") return pageKey === "home" ? "/" : `/${pageKey}`;
@@ -38,6 +40,37 @@ const internalNarration =
 const retiredVisuals = /global-cinematic|zh-decision|editorial-stage|decision-canvas|global-en__|zh-site__/i;
 const publicImplementationNarration =
 	/provider acceptance|provider accepts?|delivery service|服务商|投递服务|交付通道|接收机制|without reducing [^.]+ to (?:a )?[^.]+|single AI-search tactic|planned capabilit|规划中的能力|缩成一个 AI 搜索技巧/iu;
+
+const canonicalQuestions = {
+	en: {
+		home: "What is Yonaris?",
+		product: "What does the platform make inspectable?",
+		approach: "What remains in a reviewable record?",
+		geo: "What changes across markets?",
+		company: "How does one company remain clear to both readers?",
+		diagnostic: "What does the contact form request?",
+		privacy: "How is contact-request data used?",
+	},
+	zh: {
+		home: "Yonaris 是什么？",
+		product: "系统把哪些环节接在一起？",
+		approach: "一次可复核拆解保留什么？",
+		geo: "跨市场判断要保留哪些条件？",
+		company: "同一事实怎样同时给人和 Agent 阅读？",
+		diagnostic: "预约需要填写什么？",
+		privacy: "咨询信息如何使用？",
+	},
+} as const;
+
+const canonicalQuestionFacts = {
+	home: ["yonaris.category.ai-native-martech", "yonaris.purpose.decision-system", "yonaris.scope.martech-system"],
+	product: ["yonaris.platform.inspectable-evidence"],
+	approach: ["yonaris.evidence.reviewable-record"],
+	geo: ["yonaris.market.context-conditions"],
+	company: ["yonaris.category.ai-native-martech", "yonaris.purpose.decision-system", "yonaris.scope.martech-system"],
+	diagnostic: ["yonaris.contact.three-fields"],
+	privacy: ["yonaris.privacy.contact-request"],
+} as const;
 
 function textContent(markup: string): string {
 	return markup
@@ -140,9 +173,14 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain('data-agent-surface="true"');
 				expect(markup).toContain(`data-agent-locale="${locale}"`);
 				expect(markup).toContain(`data-page-key="${pageKey}"`);
+				expect(markup).toContain('data-page-composition="fact-directory"');
+				for (const scene of ["question-index", "answer-document", "fact-inspector", "fact-directory"])
+					expect(markup).toContain(`data-scene-object="${scene}"`);
 				expect(markup).toContain('src="/brand/logos/yonaris-wordmark-white.png"');
 				expect(markup).toContain(`href="${humanPath(locale, pageKey)}" data-human-canonical="true"`);
 				expect(markup).toContain(`href="${agentPath(locale, pageKey)}" aria-current="page"`);
+				expect(markup).toContain('class="mode-link agent-experience__mode-mobile"');
+				expect(markup).toContain('data-compact="true"');
 				expect(markup).toContain(`href="${agentPath(otherLocale, pageKey)}" data-locale-switch="${otherLocale}"`);
 				expect(markup).toContain(locale === "en" ? "Read this topic for people" : "以人类视角阅读本主题");
 				expect(markup).toContain("data-fact-group");
@@ -156,13 +194,34 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain(topic.lastReviewed);
 				expect(markup).toContain(topic.reviewedBy);
 				expect(markup).toContain(topic.scope);
+				const questions = (
+					topic as typeof topic & {
+						questions?: readonly { id: string; title: string; factIds: readonly string[] }[];
+					}
+				).questions;
+				expect(questions, `${locale}/${pageKey} needs canonical questions`).toBeDefined();
+				expect(questions?.[0]?.title).toBe(canonicalQuestions[locale][pageKey]);
+				expect(questions?.[0]?.factIds).toEqual(canonicalQuestionFacts[pageKey]);
+				expect(markup).toContain(canonicalQuestions[locale][pageKey]);
+				expect(markup).toContain('role="tablist"');
+				expect(markup).toContain('role="tab"');
+				expect(markup).toContain('aria-live="polite"');
+				const initialFactId = questions?.[0]?.factIds[0];
+				expect(initialFactId).toBeTruthy();
+				expect(markup).toMatch(
+					new RegExp(
+						`<a(?=[^>]*href="#${escapeRegex(initialFactId ?? "missing")}")(?=[^>]*aria-current="location")[^>]*>`,
+					),
+				);
 				for (const limitation of topic.limitations) expect(markup).toContain(limitation);
 				for (const group of topic.groups) {
 					expect(markup).toContain(`data-fact-group="${group.id}"`);
 					for (const fact of group.facts) {
 						const publicFact = fact as typeof fact & { source?: string; boundary?: string };
 						expect(markup).toContain(`id="${fact.id}"`);
+						expect(markup.match(new RegExp(`\\sid="${escapeRegex(fact.id)}"`, "g")) ?? []).toHaveLength(1);
 						expect(markup).toContain(`data-claim-id="${fact.id}"`);
+						expect(markup).toContain(`href="#${fact.id}"`);
 						expect(markup).toContain(fact.value);
 						expect(markup).toContain(`href="${fact.evidenceUrl}"`);
 						expect(publicFact.source?.trim()).toBeTruthy();
@@ -179,9 +238,83 @@ describe("zero-to-one Agent experience", () => {
 				expect(markup).toContain("GET");
 				expect(markup).toContain("HEAD");
 				expect(markup).toContain("text/markdown");
-				expect(markup).toContain("application/ld+json");
+				expect(markup).toContain(locale === "en" ? "Available representations" : "可用读取格式");
+				expect(markup).not.toContain(locale === "en" ? "Content negotiation" : "内容协商");
+				expect(markup).not.toContain("agent-experience__transport");
+				expect(markup).not.toContain('type="search"');
 			}
 		}
+	});
+
+	it("keeps the full Agent introduction on home and exposes inner directories in a compact masthead", () => {
+		for (const locale of ["en", "zh"] as const) {
+			const home = renderToStaticMarkup(<AgentPage locale={locale} pageKey="home" />);
+			const product = renderToStaticMarkup(<AgentPage locale={locale} pageKey="product" />);
+			const firstFact = getAgentTopic(locale, "home").groups[0]?.facts[0];
+			const dualRecord = home.match(/<article class="agent-experience__dual-record">[\s\S]*?<\/article>/u)?.[0] ?? "";
+			expect(home).toContain("agent-experience__home-intro");
+			expect(home).toContain("agent-experience__dual-record");
+			expect(firstFact).toBeDefined();
+			expect(dualRecord.match(new RegExp(escapeRegex(firstFact?.value ?? "missing"), "g")) ?? []).toHaveLength(2);
+			expect(product).not.toContain("agent-experience__home-intro");
+			expect(product).toContain("agent-experience__route-intro");
+			expect(product).toContain('id="agent-fact-inspector" tabindex="-1" aria-live="polite"');
+		}
+	});
+
+	it("renders every stable fact ID exactly once in the SSR DOM", () => {
+		for (const locale of ["en", "zh"] as const) {
+			for (const pageKey of HUMAN_PAGE_KEYS) {
+				const markup = renderToStaticMarkup(<AgentPage locale={locale} pageKey={pageKey} />);
+				const ids = [...markup.matchAll(/\sid="([^"]+)"/gu)].map((match) => match[1]);
+				expect(new Set(ids).size, `${locale}/${pageKey} contains duplicate DOM IDs`).toBe(ids.length);
+			}
+		}
+	});
+
+	it("moves question selection to its canonical fact and lets a real fact anchor update the inspector", () => {
+		const helpers = agentPages as typeof agentPages & {
+			resolveAgentDirectorySelection?: (
+				topic: ReturnType<typeof getAgentTopic>,
+				selection: { questionId?: string; factId?: string },
+			) => { questionId: string; factId: string };
+			commitAgentFactNavigation?: (
+				factId: string,
+				runtime: { replaceHash: (hash: string) => void; focusInspector: () => void },
+			) => void;
+		};
+		const resolveSelection = helpers.resolveAgentDirectorySelection;
+		expect(resolveSelection, "Agent directory selection must be an explicit tested state transition").toBeTypeOf(
+			"function",
+		);
+		if (!resolveSelection) return;
+		const topic = getAgentTopic("en", "home") as ReturnType<typeof getAgentTopic> & {
+			questions: readonly { id: string; title: string; factIds: readonly string[] }[];
+		};
+		const purposeQuestion = topic.questions[1];
+		expect(purposeQuestion).toBeDefined();
+		if (!purposeQuestion) return;
+		expect(resolveSelection(topic, { questionId: purposeQuestion.id })).toEqual({
+			questionId: purposeQuestion.id,
+			factId: "yonaris.purpose.decision-system",
+		});
+		expect(
+			resolveSelection(topic, {
+				questionId: topic.questions[0]?.id,
+				factId: "yonaris.scope.martech-system",
+			}),
+		).toEqual({
+			questionId: topic.questions[0]?.id,
+			factId: "yonaris.scope.martech-system",
+		});
+
+		const navigationEvents: string[] = [];
+		expect(helpers.commitAgentFactNavigation).toBeTypeOf("function");
+		helpers.commitAgentFactNavigation?.("yonaris.scope.martech-system", {
+			replaceHash: (hash) => navigationEvents.push(`hash:${hash}`),
+			focusInspector: () => navigationEvents.push("focus:agent-fact-inspector"),
+		});
+		expect(navigationEvents).toEqual(["hash:#yonaris.scope.martech-system", "focus:agent-fact-inspector"]);
 	});
 
 	it("keeps implementation and positioning narration out of every Human and Agent surface", () => {

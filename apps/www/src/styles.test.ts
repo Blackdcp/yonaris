@@ -119,6 +119,22 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(transportLink).toContain("min-height: var(--target-mobile)");
 	});
 
+	it("keeps Human and Agent mode controls editorial, 44px, and visible outside the mobile menu", () => {
+		const agent = read("styles/experience/agent.css");
+		const site = read("styles/experience/site-06.css");
+		const agentMode = ruleFor(agent, ".agent-experience .mode-link");
+		const agentModeLink = ruleFor(agent, ".agent-experience .mode-link a");
+		const humanMode = ruleFor(site, ".site-06-mode");
+		const humanModeLink = ruleFor(site, ".site-06-mode a");
+		expect(agentMode).not.toContain("border-radius: 999px");
+		expect(agentMode).toMatch(/border-radius:\s*(?:0|2px)/);
+		expect(agentModeLink).toContain("min-height: 44px");
+		expect(humanMode).not.toContain("border-radius: 999px");
+		expect(humanModeLink).toContain("min-height: 44px");
+		const mobile = site.slice(site.indexOf("@media (max-width: 1050px)"), site.indexOf("@media (max-width: 900px)"));
+		expect(ruleFor(mobile, ".site-06-header__mobile-mode")).toContain("display: block");
+	});
+
 	it("keeps Agent desktop micro-labels readable and Chinese headings stable at tablet width", () => {
 		const agent = read("styles/experience/agent.css");
 		for (const selector of [
@@ -193,6 +209,21 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(css).toContain("@keyframes site-06-photo-breathe");
 		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("animation: none");
 		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("transform: none");
+	});
+
+	it("drifts non-text Agent geometry and completely cancels motion when requested", () => {
+		const agent = read("styles/experience/agent.css");
+		const site = read("styles/experience/site-06.css");
+		const agentReduced = agent.slice(agent.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+		const siteReduced = site.slice(site.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+		expect(agent).toContain("@keyframes agent-orbit-drift");
+		expect(ruleFor(agent, '.agent-experience .site-06-orbit__rings [data-orbit-ring="outer"]')).toContain(
+			"animation: agent-orbit-drift",
+		);
+		expect(agentReduced).toContain("animation: none !important");
+		expect(agentReduced).toContain("transition: none !important");
+		expect(siteReduced).toContain("animation: none !important");
+		expect(siteReduced).toContain("transition: none !important");
 	});
 
 	it("styles Site 06 actions, photo credits, section leads, and the shared contact form", () => {

@@ -181,6 +181,10 @@
 	gap: 16px;
 }
 
+.site-06-header__mobile-mode {
+	display: none;
+}
+
 .site-06-mode {
 	padding: 3px;
 	border: 1px solid var(--site-rule);
@@ -192,8 +196,9 @@
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	min-height: 36px;
+	min-height: 44px;
 	padding-inline: 11px;
+	border-radius: 0;
 	font-size: 0.72rem;
 	font-weight: 620;
 	letter-spacing: 0.01em;
@@ -2290,11 +2295,26 @@
 	font-size: 0.92rem;
 }
 
-.site-06-zh-relationship-preview > div:nth-child(1) { top: 14%; left: 3%; }
-.site-06-zh-relationship-preview > div:nth-child(2) { top: 12%; right: 3%; }
-.site-06-zh-relationship-preview > div:nth-child(3) { top: 46%; left: 34%; }
-.site-06-zh-relationship-preview > div:nth-child(4) { bottom: 8%; left: 6%; }
-.site-06-zh-relationship-preview > div:nth-child(5) { right: 1%; bottom: 9%; }
+.site-06-zh-relationship-preview > div:nth-child(1) {
+	top: 14%;
+	left: 3%;
+}
+.site-06-zh-relationship-preview > div:nth-child(2) {
+	top: 12%;
+	right: 3%;
+}
+.site-06-zh-relationship-preview > div:nth-child(3) {
+	top: 46%;
+	left: 34%;
+}
+.site-06-zh-relationship-preview > div:nth-child(4) {
+	bottom: 8%;
+	left: 6%;
+}
+.site-06-zh-relationship-preview > div:nth-child(5) {
+	right: 1%;
+	bottom: 9%;
+}
 
 .site-06-zh-relationship-preview > div:nth-child(3)::before {
 	position: absolute;
@@ -2340,12 +2360,30 @@
 	color: var(--site-white);
 }
 
-.site-06-zh-system-field__nodes button[data-system-node="question"] { top: 12%; left: 7%; }
-.site-06-zh-system-field__nodes button[data-system-node="fact"] { top: 15%; right: 8%; }
-.site-06-zh-system-field__nodes button[data-system-node="content"] { top: 46%; right: 0; }
-.site-06-zh-system-field__nodes button[data-system-node="observation"] { right: 12%; bottom: 14%; }
-.site-06-zh-system-field__nodes button[data-system-node="behaviour"] { bottom: 12%; left: 12%; }
-.site-06-zh-system-field__nodes button[data-system-node="review"] { top: 48%; left: 0; }
+.site-06-zh-system-field__nodes button[data-system-node="question"] {
+	top: 12%;
+	left: 7%;
+}
+.site-06-zh-system-field__nodes button[data-system-node="fact"] {
+	top: 15%;
+	right: 8%;
+}
+.site-06-zh-system-field__nodes button[data-system-node="content"] {
+	top: 46%;
+	right: 0;
+}
+.site-06-zh-system-field__nodes button[data-system-node="observation"] {
+	right: 12%;
+	bottom: 14%;
+}
+.site-06-zh-system-field__nodes button[data-system-node="behaviour"] {
+	bottom: 12%;
+	left: 12%;
+}
+.site-06-zh-system-field__nodes button[data-system-node="review"] {
+	top: 48%;
+	left: 0;
+}
 
 .site-06-zh-system-field__records {
 	position: absolute;
@@ -2417,9 +2455,18 @@
 	line-height: 1.55;
 }
 
-.site-06-zh-break-preview dt { color: rgb(255 255 255 / 44%); }
-.site-06-zh-break-preview dd { margin: 0; color: rgb(255 255 255 / 74%); }
-.site-06-zh-break-preview dl > div:nth-child(2) dd { padding-left: 14px; border-left: 2px solid var(--site-orange); color: var(--site-white); }
+.site-06-zh-break-preview dt {
+	color: rgb(255 255 255 / 44%);
+}
+.site-06-zh-break-preview dd {
+	margin: 0;
+	color: rgb(255 255 255 / 74%);
+}
+.site-06-zh-break-preview dl > div:nth-child(2) dd {
+	padding-left: 14px;
+	border-left: 2px solid var(--site-orange);
+	color: var(--site-white);
+}
 
 .site-06-zh-replay-stage .site-06-route-record-note {
 	color: var(--site-ink-soft);
@@ -2510,8 +2557,15 @@
 	gap: 22px;
 }
 
-.site-06-zh-replay__document dt { color: var(--site-ink-soft); font-size: 0.75rem; }
-.site-06-zh-replay__document dd { margin: 0; font-size: 0.82rem; line-height: 1.58; }
+.site-06-zh-replay__document dt {
+	color: var(--site-ink-soft);
+	font-size: 0.75rem;
+}
+.site-06-zh-replay__document dd {
+	margin: 0;
+	font-size: 0.82rem;
+	line-height: 1.58;
+}
 
 .site-06-zh-market-ledger {
 	display: grid;
@@ -2521,14 +2575,40 @@
 	gap: clamp(48px, 8vw, 100px);
 }
 
-.site-06-zh-market-ledger dl { margin: 0; }
-.site-06-zh-market-ledger dl > div { display: grid; grid-template-columns: 150px minmax(0, 1fr); padding: 20px 0; border-top: 1px solid var(--site-rule); gap: 28px; }
-.site-06-zh-market-ledger dt { color: var(--site-ink-soft); font-size: 0.76rem; }
-.site-06-zh-market-ledger dd { margin: 0; line-height: 1.6; }
-.site-06-zh-market__fact { width: min(720px, 100%); margin: 38px 0 0 auto; padding: 22px 0 0; border-top: 1px solid var(--site-rule); color: var(--site-ink-soft); font-size: 0.78rem; line-height: 1.58; }
-.site-06-zh-market__fact p + p { margin-top: 8px; }
+.site-06-zh-market-ledger dl {
+	margin: 0;
+}
+.site-06-zh-market-ledger dl > div {
+	display: grid;
+	grid-template-columns: 150px minmax(0, 1fr);
+	padding: 20px 0;
+	border-top: 1px solid var(--site-rule);
+	gap: 28px;
+}
+.site-06-zh-market-ledger dt {
+	color: var(--site-ink-soft);
+	font-size: 0.76rem;
+}
+.site-06-zh-market-ledger dd {
+	margin: 0;
+	line-height: 1.6;
+}
+.site-06-zh-market__fact {
+	width: min(720px, 100%);
+	margin: 38px 0 0 auto;
+	padding: 22px 0 0;
+	border-top: 1px solid var(--site-rule);
+	color: var(--site-ink-soft);
+	font-size: 0.78rem;
+	line-height: 1.58;
+}
+.site-06-zh-market__fact p + p {
+	margin-top: 8px;
+}
 
-.site-06-zh-privacy .site-06-privacy-document > section:last-child > div p { margin-bottom: 20px; }
+.site-06-zh-privacy .site-06-privacy-document > section:last-child > div p {
+	margin-bottom: 20px;
+}
 
 @keyframes site-06-photo-breathe {
 	from {
@@ -2581,6 +2661,20 @@
 	font-size: 0.82rem;
 }
 
+.site-06-footer__links {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	max-width: 34rem;
+}
+
+.site-06-footer__links a {
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	text-underline-offset: 5px;
+}
+
 .site-06-footer .site-06-mode {
 	grid-column: 3;
 }
@@ -2592,7 +2686,7 @@
 
 @media (max-width: 1050px) {
 	.site-06-header__inner {
-		grid-template-columns: auto 1fr auto;
+		grid-template-columns: auto 1fr auto auto;
 	}
 
 	.site-06-primary-nav,
@@ -2600,10 +2694,15 @@
 		display: none;
 	}
 
+	.site-06-header__mobile-mode {
+		display: block;
+		grid-column: 3;
+	}
+
 	.site-06-menu {
 		position: relative;
 		display: block;
-		grid-column: 3;
+		grid-column: 4;
 	}
 
 	.site-06-menu summary {
@@ -3154,7 +3253,10 @@
 	.site-06 *::before,
 	.site-06 *::after {
 		scroll-behavior: auto;
-		transition-duration: 0.01ms;
+		/* biome-ignore lint/complexity/noImportantStyles: Reduced motion must cancel every component transition. */
+		transition: none !important;
+		/* biome-ignore lint/complexity/noImportantStyles: Reduced motion must cancel every component animation. */
+		animation: none !important;
 	}
 
 	.site-06-orbit,

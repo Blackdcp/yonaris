@@ -18,7 +18,7 @@ describe("site manifest", () => {
 		for (const key of HUMAN_PAGE_KEYS) {
 			expect(subject.getCorePath(key, "en")).toBe(paths[key].en);
 			expect(subject.getCorePath(key, "zh")).toBe(paths[key].zh);
-			expect(subject.getCoreLastVerified(key)).toBe("2026-08-25");
+			expect(subject.getCoreLastVerified(key)).toBe("2026-08-27");
 		}
 		expect(subject.findSiteRoute("/research")).toBeUndefined();
 		expect(subject.findSiteRoute("/zh/research")).toBeUndefined();

@@ -3,7 +3,7 @@ import type { CorePageKey, Locale, RedirectRule, SiteRouteDefinition, SiteRouteK
 
 export { SITE_ROUTE_KEYS } from "@/content/site/types";
 
-const CORE_LAST_VERIFIED = "2026-08-25" as const;
+const CORE_LAST_VERIFIED = "2026-08-27" as const;
 
 export const SITE_MANIFEST = [
 	{

@@ -56,6 +56,7 @@ describe("machine responses", () => {
 			{ accept: "text/markdown;q=0.4,text/html;q=0.8", status: 200 },
 			{ accept: "text/html;q=0.4,text/markdown;q=0.8", status: 200 },
 			{ accept: "application/json", status: 406 },
+			{ accept: "application/ld+json", status: 406 },
 			{ accept: "text/html;q=0,text/markdown;q=0", status: 406 },
 		] as const;
 		const fetchHandler = async (routedRequest: Request) =>

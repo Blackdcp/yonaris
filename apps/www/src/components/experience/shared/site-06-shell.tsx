@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { EN_CATEGORY, ZH_CATEGORY } from "@/content/experience/canonical-public-facts";
-import type { HumanPageKey } from "@/content/experience/types";
+import { HUMAN_PAGE_KEYS, type HumanPageKey } from "@/content/experience/types";
 import { getLocaleSwitchPath } from "@/lib/locale-paths";
+import { HumanAgentLink } from "./human-agent-link";
 
 const navigation = {
 	en: [
@@ -17,16 +18,6 @@ const navigation = {
 		{ key: "diagnostic", label: "预约沟通", href: "/zh/diagnostic" },
 	],
 } as const satisfies Record<"en" | "zh", readonly { key: HumanPageKey; label: string; href: string }[]>;
-
-function agentHref(locale: "en" | "zh", pageKey: HumanPageKey): string {
-	const prefix = locale === "zh" ? "/zh" : "";
-	return pageKey === "home" ? `${prefix}/agent` : `${prefix}/agent/${pageKey}`;
-}
-
-function humanHref(locale: "en" | "zh", pageKey: HumanPageKey): string {
-	const prefix = locale === "zh" ? "/zh" : "";
-	return pageKey === "home" ? prefix || "/" : `${prefix}/${pageKey}`;
-}
 
 function PrimaryNavigation({
 	locale,
@@ -53,15 +44,14 @@ function PrimaryNavigation({
 	);
 }
 
-function ReadingSwitch({ locale, pageKey }: { locale: "en" | "zh"; pageKey: HumanPageKey }) {
-	return (
-		<nav className="site-06-mode" aria-label={locale === "en" ? "Choose reading mode" : "选择阅读方式"}>
-			<a href={humanHref(locale, pageKey)} aria-current="page">
-				{locale === "en" ? "For people" : "人类阅读"}
-			</a>
-			<a href={agentHref(locale, pageKey)}>{locale === "en" ? "For agents" : "Agent 阅读"}</a>
-		</nav>
-	);
+const footerLabels = {
+	en: ["Home", "Platform", "Evidence", "Across markets", "Human + Agent", "Contact", "Privacy"],
+	zh: ["首页", "系统怎么运转", "看一次拆解", "跨市场", "人类与 Agent", "预约沟通", "隐私说明"],
+} as const satisfies Record<"en" | "zh", readonly string[]>;
+
+function humanHref(locale: "en" | "zh", pageKey: HumanPageKey): string {
+	const prefix = locale === "zh" ? "/zh" : "";
+	return pageKey === "home" ? prefix || "/" : `${prefix}/${pageKey}`;
 }
 
 export function Site06Shell({
@@ -76,8 +66,6 @@ export function Site06Shell({
 	tone?: "dark" | "paper";
 }) {
 	const home = locale === "en" ? "/" : "/zh";
-	const contact = locale === "en" ? "/diagnostic" : "/zh/diagnostic";
-	const privacy = locale === "en" ? "/privacy" : "/zh/privacy";
 	const localeTarget = locale === "en" ? "zh" : "en";
 	const localeLabel = locale === "en" ? "中文" : "English";
 
@@ -111,7 +99,7 @@ export function Site06Shell({
 					</a>
 					<PrimaryNavigation locale={locale} pageKey={pageKey} />
 					<div className="site-06-header__actions">
-						<ReadingSwitch locale={locale} pageKey={pageKey} />
+						<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" />
 						<a
 							className="site-06-locale"
 							href={getLocaleSwitchPath(locale, pageKey, "human")}
@@ -121,11 +109,14 @@ export function Site06Shell({
 							{localeLabel}
 						</a>
 					</div>
+					<div className="site-06-header__mobile-mode">
+						<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" compact />
+					</div>
 					<details className="site-06-menu">
 						<summary>{locale === "en" ? "Menu" : "菜单"}</summary>
 						<div className="site-06-menu__panel">
 							<PrimaryNavigation locale={locale} pageKey={pageKey} mobile />
-							<ReadingSwitch locale={locale} pageKey={pageKey} />
+							<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" />
 							<a
 								className="site-06-locale"
 								href={getLocaleSwitchPath(locale, pageKey, "human")}
@@ -153,11 +144,14 @@ export function Site06Shell({
 						<img src="/brand/logos/yonaris-wordmark-white.png" alt="Yonaris" width="340" height="94" />
 					</a>
 					<p>{locale === "en" ? EN_CATEGORY : ZH_CATEGORY}</p>
-					<nav aria-label={locale === "en" ? "Footer navigation" : "页脚导航"}>
-						<a href={contact}>{locale === "en" ? "Contact" : "预约沟通"}</a>
-						<a href={privacy}>{locale === "en" ? "Privacy" : "隐私说明"}</a>
+					<nav className="site-06-footer__links" aria-label={locale === "en" ? "Footer navigation" : "页脚导航"}>
+						{HUMAN_PAGE_KEYS.map((key, index) => (
+							<a key={key} href={humanHref(locale, key)}>
+								{footerLabels[locale][index]}
+							</a>
+						))}
 					</nav>
-					<ReadingSwitch locale={locale} pageKey={pageKey} />
+					<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" />
 					<small>© {new Date().getFullYear()} Yonaris</small>
 				</div>
 			</footer>

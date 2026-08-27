@@ -55,6 +55,31 @@ describe("Human site locale navigation", () => {
 		expect(chinese).toContain("Agent 阅读");
 	});
 
+	test("keeps a shared Human and Agent mode rail visible in the mobile header before the menu", () => {
+		for (const locale of ["en", "zh"] as const) {
+			const markup = renderedShell(locale);
+			const header = markup.match(/<header[^>]*>[\s\S]*?<\/header>/u)?.[0] ?? "";
+			const mobileMode = header.indexOf('class="site-06-header__mobile-mode"');
+			const menu = header.indexOf('class="site-06-menu"');
+			expect(mobileMode).toBeGreaterThan(-1);
+			expect(menu).toBeGreaterThan(mobileMode);
+			expect(header.slice(mobileMode, menu)).toContain('data-mode-switch="true"');
+			expect(header.slice(mobileMode, menu)).toContain(
+				locale === "en" ? 'href="/agent/product"' : 'href="/zh/agent/product"',
+			);
+		}
+	});
+
+	test("links all seven locale-matched Human canonicals from every Human footer", () => {
+		for (const locale of ["en", "zh"] as const) {
+			const markup = renderedShell(locale);
+			const footerNavigation = markup.match(/<nav class="site-06-footer__links"[^>]*>([\s\S]*?)<\/nav>/u)?.[1] ?? "";
+			const links = [...footerNavigation.matchAll(/<a[^>]*href="([^"]+)"[^>]*>/gu)].map((match) => match[1]);
+			expect(links).toEqual(localePairs.map((pair) => (locale === "en" ? pair.en : pair.zh)));
+			expect(links).toHaveLength(7);
+		}
+	});
+
 	test("keeps exact localized primary and mobile navigation labels, order, and paths", () => {
 		const expected = {
 			en: [

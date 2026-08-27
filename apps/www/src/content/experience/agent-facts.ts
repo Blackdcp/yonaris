@@ -7,7 +7,14 @@ import {
 } from "./canonical-public-facts";
 import { CHINA_COPY } from "./china-copy";
 import { GLOBAL_COPY } from "./global-copy";
-import { type AgentFact, type AgentTopic, type ExperienceLocale, HUMAN_PAGE_KEYS, type HumanPageKey } from "./types";
+import {
+	type AgentFact,
+	type AgentQuestion,
+	type AgentTopic,
+	type ExperienceLocale,
+	HUMAN_PAGE_KEYS,
+	type HumanPageKey,
+} from "./types";
 
 type RegionalAgentFacts = Readonly<Record<HumanPageKey, AgentTopic>>;
 
@@ -113,12 +120,60 @@ const topicScope = {
 	},
 } as const;
 
+const primaryQuestions = {
+	en: {
+		home: "What is Yonaris?",
+		product: "What does the platform make inspectable?",
+		approach: "What remains in a reviewable record?",
+		geo: "What changes across markets?",
+		company: "How does one company remain clear to both readers?",
+		diagnostic: "What does the contact form request?",
+		privacy: "How is contact-request data used?",
+	},
+	zh: {
+		home: "Yonaris 是什么？",
+		product: "系统把哪些环节接在一起？",
+		approach: "一次可复核拆解保留什么？",
+		geo: "跨市场判断要保留哪些条件？",
+		company: "同一事实怎样同时给人和 Agent 阅读？",
+		diagnostic: "预约需要填写什么？",
+		privacy: "咨询信息如何使用？",
+	},
+} as const;
+
+function questionsFor(
+	locale: ExperienceLocale,
+	key: HumanPageKey,
+	facts: readonly AgentFact[],
+): readonly AgentQuestion[] {
+	const primary: AgentQuestion = {
+		id: `${key}.overview`,
+		title: primaryQuestions[locale][key],
+		factIds: facts.map((fact) => fact.id),
+	};
+	if (key !== "home" && key !== "company") return [primary];
+	return [
+		primary,
+		{
+			id: `${key}.purpose`,
+			title: locale === "en" ? "What does Yonaris connect?" : "Yonaris 把哪些业务要素接在一起？",
+			factIds: ["yonaris.purpose.decision-system"],
+		},
+		{
+			id: `${key}.scope`,
+			title: locale === "en" ? "What conditions bound an observation?" : "一次观测受哪些条件约束？",
+			factIds: ["yonaris.scope.martech-system"],
+		},
+	];
+}
+
 function buildRegion(locale: ExperienceLocale): RegionalAgentFacts {
 	const copy = locale === "en" ? GLOBAL_COPY : CHINA_COPY;
 	const limitations = locale === "en" ? EN_LIMITATIONS : ZH_LIMITATIONS;
 	return Object.fromEntries(
 		HUMAN_PAGE_KEYS.map((key) => {
 			const path = humanPath(locale, key);
+			const facts = factsFor(locale, key);
 			return [
 				key,
 				{
@@ -134,11 +189,12 @@ function buildRegion(locale: ExperienceLocale): RegionalAgentFacts {
 					reviewedBy: "Yonaris",
 					scope: topicScope[locale][key],
 					limitations,
+					questions: questionsFor(locale, key, facts),
 					groups: [
 						{
 							id: `yonaris.${key}.facts`,
 							title: groupTitles[locale][key],
-							facts: factsFor(locale, key),
+							facts,
 						},
 					],
 				} satisfies AgentTopic,

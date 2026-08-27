@@ -49,6 +49,12 @@ describe("canonical category contract", () => {
 		expect(organization && "description" in organization ? organization.description : undefined).toBe(
 			categoryModule.EN_CATEGORY,
 		);
+		const zhOrganization = buildAgentEntityGraph("zh", ["home"], (path) => path).find(
+			(node) => node["@type"] === "Organization",
+		);
+		expect(zhOrganization && "description" in zhOrganization ? zhOrganization.description : undefined).toBe(
+			categoryModule.ZH_CATEGORY,
+		);
 	});
 
 	it("keeps each approved category literal in one production source module", () => {

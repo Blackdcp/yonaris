@@ -55,6 +55,7 @@ describe("representation negotiation", () => {
 			{ accept: "text/html;q=0.4, text/markdown;q=0.8", kind: "markdown" },
 			{ accept: "text/markdown;q=0.8, text/html;q=0.8", kind: "html" },
 			{ accept: "application/json", kind: "not-acceptable" },
+			{ accept: "application/ld+json", kind: "not-acceptable" },
 			{ accept: "text/html;q=0,text/markdown;q=0", kind: "not-acceptable" },
 		] as const;
 
@@ -117,9 +118,7 @@ describe("representation negotiation", () => {
 	test("canonicalizes stable Markdown and catalogue trailing slashes before Accept handling", () => {
 		const resolve = requireResolver();
 		const stablePaths = [
-			...HUMAN_PAGE_KEYS.flatMap((key) =>
-				(["en", "zh"] as const).map((locale) => stableMachinePath(key, locale)),
-			),
+			...HUMAN_PAGE_KEYS.flatMap((key) => (["en", "zh"] as const).map((locale) => stableMachinePath(key, locale))),
 			"/agent/catalog.json",
 			"/zh/agent/catalog.json",
 		];

@@ -80,14 +80,37 @@ describe("machine documents", () => {
 			for (const key of HUMAN_PAGE_KEYS) {
 				const topic = getAgentTopic(locale, key);
 				const document = renderCoreMarkdown(key, locale);
+				const separator = locale === "en" ? ": " : "：";
+				const labels =
+					locale === "en"
+						? {
+								scope: "Scope",
+								limitations: "Limitations",
+								related: "Related",
+								stableId: "Stable ID",
+								fact: "Fact",
+								evidence: "Evidence",
+								boundary: "Boundary",
+								humanAnchor: "Human anchor",
+							}
+						: {
+								scope: "范围",
+								limitations: "适用边界",
+								related: "相关入口",
+								stableId: "稳定 ID",
+								fact: "事实",
+								evidence: "证据",
+								boundary: "边界",
+								humanAnchor: "人类页面锚点",
+							};
 				expect(agentMarkdownPath(locale, key)).toBe(topic.markdownPath);
 				const sectionOffsets = [
 					document.indexOf(`# ${topic.title}`),
 					document.indexOf(`> ${topic.summary}`),
-					document.indexOf("## Scope"),
+					document.indexOf(`## ${labels.scope}`),
 					...topic.groups.map((group) => document.indexOf(`## ${group.title}`)),
-					document.indexOf("## Limitations"),
-					document.indexOf("## Related"),
+					document.indexOf(`## ${labels.limitations}`),
+					document.indexOf(`## ${labels.related}`),
 				];
 				expect(
 					sectionOffsets.every((offset, index) => offset >= 0 && (index === 0 || offset > sectionOffsets[index - 1])),
@@ -95,16 +118,59 @@ describe("machine documents", () => {
 				for (const group of topic.groups) {
 					for (const fact of group.facts) {
 						const publicFact = fact as typeof fact & { source?: string; boundary?: string };
-						expect(document).toContain(`Stable ID: ${fact.id}`);
-						expect(document).toContain(`Fact: ${fact.value}`);
-						expect(document).toContain(`Evidence: ${publicFact.source}`);
-						expect(document).toContain(`Boundary: ${publicFact.boundary}`);
-						expect(document).toContain(`Human anchor: ${siteHref(fact.evidenceUrl)}`);
-						expect(renderLlmsFull()).toContain(`Stable ID: ${fact.id}`);
+						expect(document).toContain(`${labels.stableId}${separator}${fact.id}`);
+						expect(document).toContain(`${labels.fact}${separator}${fact.value}`);
+						expect(document).toContain(`${labels.evidence}${separator}${publicFact.source}`);
+						expect(document).toContain(`${labels.boundary}${separator}${publicFact.boundary}`);
+						expect(document).toContain(`${labels.humanAnchor}${separator}${siteHref(fact.evidenceUrl)}`);
+						expect(renderLlmsFull()).toContain(`${labels.stableId}${separator}${fact.id}`);
 					}
 				}
 			}
 		}
+	});
+
+	test("fully localizes Chinese Markdown and JSON-LD without leaking English document labels", () => {
+		const forbidden = [
+			"## Scope",
+			"Stable ID:",
+			"Fact:",
+			"Evidence:",
+			"Boundary:",
+			"Human anchor:",
+			"## Limitations",
+			"## Related",
+			"public facts",
+			"Reviewed by:",
+		];
+		for (const key of HUMAN_PAGE_KEYS) {
+			const document = renderCoreMarkdown(key, "zh");
+			for (const label of [
+				"主题 ID：",
+				"语言：",
+				"人类阅读对应页：",
+				"最近核对：",
+				"核对方：",
+				"## 范围",
+				"稳定 ID：",
+				"事实：",
+				"证据：",
+				"边界：",
+				"人类页面锚点：",
+				"## 适用边界",
+				"## 相关入口",
+			])
+				expect(document, `${key} is missing ${label}`).toContain(label);
+			for (const label of forbidden) expect(document, `${key} leaked ${label}`).not.toContain(label);
+		}
+
+		const catalogue = renderAgentCatalog("zh");
+		const parsed = JSON.parse(catalogue) as { "@graph": Array<Record<string, unknown>> };
+		const organization = parsed["@graph"].find((node) => node["@type"] === "Organization");
+		expect(organization?.description).toBe("面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。");
+		expect(catalogue).toContain("公开事实");
+		expect(catalogue).not.toContain("public facts");
+		expect(catalogue).not.toContain("Boundary:");
 	});
 
 	test("anchors every JSON-LD fact to its canonical Human record", () => {
@@ -152,7 +218,9 @@ describe("machine documents", () => {
 				const publicPath = agentMarkdownPath(locale, key);
 				expect(publicDirectory).toContain(siteHref(publicPath));
 				expect(publicDirectory).not.toContain("/llms.mdx/");
-				expect(renderCoreMarkdown(key, locale)).toContain(`Markdown document: ${siteHref(publicPath)}`);
+				expect(renderCoreMarkdown(key, locale)).toContain(
+					locale === "en" ? `Markdown document: ${siteHref(publicPath)}` : `Markdown 文档：${siteHref(publicPath)}`,
+				);
 			}
 		}
 	});
@@ -196,7 +264,8 @@ describe("machine documents", () => {
 				expect(document).toContain(locale === "en" ? "Last verified: 2026-08-27" : "最近核对：2026-08-27");
 				for (const group of facts.groups) {
 					expect(document).toContain(`## ${group.title}`);
-					for (const fact of group.facts) expect(document).toContain(`Stable ID: ${fact.id}`);
+					for (const fact of group.facts)
+						expect(document).toContain(locale === "en" ? `Stable ID: ${fact.id}` : `稳定 ID：${fact.id}`);
 				}
 			}
 		}
