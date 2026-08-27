@@ -128,9 +128,10 @@ describe("Site 06 English experience", () => {
 		const approach = markupFor("approach");
 		const company = markupFor("company");
 
-		expect(home).toContain('aria-label="Read public facts"');
+		expect(home).toContain('data-scene-object="fixed-claim-reader"');
+		expect(home).toContain('aria-label="Choose a reading"');
 		expect(home).toContain("Illustrative buying question and answer evidence");
-		expect(home).toContain('aria-label="Inspect an observed answer"');
+		expect(home).toContain('data-scene-object="inline-evidence-note"');
 		expect(home).toContain("Illustrative method record · not a customer result");
 		expect(product).toContain('aria-label="Inspect an observed answer"');
 		expect(product.match(/data-evidence-state=/g) ?? []).toHaveLength(3);
@@ -143,11 +144,58 @@ describe("Site 06 English experience", () => {
 		expect(company).toContain("yonaris.scope.martech-system");
 	});
 
+	it("keeps Home to one fixed claim and one Human or Agent mode switch", () => {
+		const home = markupFor("home");
+		const start = home.indexOf('data-scene-object="fixed-claim-reader"');
+		const end = home.indexOf('class="site-06-section site-06-home-dossier"');
+		const orbitReader = home.slice(start, end);
+
+		expect(start).toBeGreaterThan(-1);
+		expect(orbitReader.match(/role="tab"/g) ?? []).toHaveLength(2);
+		expect(orbitReader.match(/role="tabpanel"/g) ?? []).toHaveLength(2);
+		expect(orbitReader).toContain("Human reading");
+		expect(orbitReader).toContain("Agent reading");
+		for (const label of ["Fact", "Evidence", "Boundary", "Stable ID"]) expect(orbitReader).toContain(label);
+		for (const label of ["Category", "Purpose", "Scope"]) expect(orbitReader).not.toContain(`>${label}<`);
+	});
+
+	it("puts Home evidence phrases inside the answer and updates one attached margin note", () => {
+		const home = markupFor("home");
+		const start = home.indexOf('data-scene-object="inline-evidence-note"');
+		const end = home.indexOf('class="site-06-home-workbench"');
+		const dossier = home.slice(start, end);
+		const answerStart = dossier.indexOf('class="site-06-buyer-dossier__answer"');
+		const answerEnd = dossier.indexOf("</div>", answerStart);
+		const answer = dossier.slice(answerStart, answerEnd);
+
+		expect(answer.match(/role="tab"/g) ?? []).toHaveLength(3);
+		expect(dossier.match(/role="tabpanel"/g) ?? []).toHaveLength(3);
+		expect(dossier.match(/class="site-06-buyer-dossier__note"/g) ?? []).toHaveLength(1);
+		expect(dossier).not.toMatch(/<dt>(?:Source|Boundary|Buying effect)<\/dt>/);
+	});
+
+	it("does not repeat one shared CTA and public-fact dashboard across exact route leads", () => {
+		for (const [key, endMarker] of [
+			["product", 'aria-label="Answer dossier · Illustrative structure"'],
+			["approach", 'class="site-06-same-question-preview"'],
+			["diagnostic", 'id="contact-form"'],
+			["geo", 'class="site-06-editorial-photo"'],
+		] as const) {
+			const markup = markupFor(key);
+			const lead = markup.slice(markup.indexOf("<main"), markup.indexOf(endMarker));
+			expect(lead).not.toContain('class="site-06-action"');
+			expect(lead).not.toContain('class="site-06-public-fact__meta"');
+		}
+		expect(markupFor("home")).toContain('class="site-06-action" href="/diagnostic"');
+	});
+
 	it("changes Product source, boundary and buying effect with the selected phrase", () => {
 		const product = markupFor("product");
 		expect(product).toContain('data-scene-object="trace-workbench"');
 		const traceWorkbench = product.slice(product.indexOf('data-scene-object="trace-workbench"'));
 		expect(traceWorkbench.match(/role="tab"/g) ?? []).toHaveLength(3);
+		const answerEnd = traceWorkbench.indexOf("</blockquote>");
+		expect(traceWorkbench.slice(0, answerEnd).match(/role="tab"/g) ?? []).toHaveLength(3);
 		expect(traceWorkbench.match(/data-evidence-state=/g) ?? []).toHaveLength(3);
 		expect(traceWorkbench.match(/<dt>Source<\/dt>/g) ?? []).toHaveLength(3);
 		expect(traceWorkbench.match(/<dt>Boundary<\/dt>/g) ?? []).toHaveLength(3);
@@ -176,6 +224,11 @@ describe("Site 06 English experience", () => {
 		for (const label of ["Category", "Purpose", "Scope", "Human reading", "Agent reading"]) {
 			expect(company).toContain(label);
 		}
+		expect(company.match(/<h1/g) ?? []).toHaveLength(1);
+		expect(company).not.toContain('class="site-06-company-intro"');
+		const stage = company.slice(company.indexOf('data-scene-object="dual-reading-stage"'), firstSectionBoundary);
+		expect(stage).toContain("One public record. Two legitimate readers.");
+		expect(stage).toContain("<h1");
 	});
 
 	it("integrates exactly three visible Diagnostic fields into one cinematic scene", () => {

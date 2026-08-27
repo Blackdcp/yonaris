@@ -32,39 +32,26 @@ const pageFacts = {
 	privacy: PAGE_FACTS.en.privacy,
 } as const;
 
-function PublicFactMeta({ pageKey, lead }: { pageKey: keyof typeof pageFacts; lead: string }) {
-	const fact = pageFacts[pageKey];
+function HomePageLead() {
+	const copy = GLOBAL_COPY.home;
 	return (
-		<dl className="site-06-public-fact__meta">
-			{lead !== fact.value ? (
-				<div>
-					<dt>Public fact</dt>
-					<dd>{fact.value}</dd>
-				</div>
-			) : null}
-			<div>
-				<dt>Evidence</dt>
-				<dd>{fact.source}</dd>
-			</div>
-			<div>
-				<dt>Boundary</dt>
-				<dd>{fact.boundary}</dd>
-			</div>
-		</dl>
-	);
-}
-
-function PageLead({ pageKey, fact }: { pageKey: HumanPageKey; fact?: keyof typeof pageFacts }) {
-	const copy = GLOBAL_COPY[pageKey];
-	const publicFact = fact ? pageFacts[fact] : undefined;
-	return (
-		<article className="site-06-page-lead" id={publicFact?.id} tabIndex={publicFact ? -1 : undefined}>
+		<header className="site-06-page-lead">
 			<p className="site-06-kicker">{copy.eyebrow}</p>
 			<h1>{copy.title}</h1>
 			<p className="site-06-hero__lead">{copy.lead}</p>
 			<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
-			{fact ? <PublicFactMeta pageKey={fact} lead={copy.lead} /> : null}
-		</article>
+		</header>
+	);
+}
+
+function RouteLead({ pageKey }: { pageKey: Exclude<HumanPageKey, "home" | "company" | "privacy"> }) {
+	const copy = GLOBAL_COPY[pageKey];
+	return (
+		<header className="site-06-page-lead">
+			<p className="site-06-kicker">{copy.eyebrow}</p>
+			<h1>{copy.title}</h1>
+			<p className="site-06-hero__lead">{copy.lead}</p>
+		</header>
 	);
 }
 
@@ -97,7 +84,7 @@ export function GlobalHomePage() {
 					credit="Photo: Nastuh Abootalebi / Unsplash"
 					className="site-06-home-cinematic"
 				>
-					<PageLead pageKey="home" />
+					<HomePageLead />
 					<HomeReadingScene />
 				</CinematicField>
 
@@ -137,7 +124,12 @@ export function GlobalHomePage() {
 					<EvidenceReviewScene />
 				</CinematicField>
 
-				<section className="site-06-section site-06-home-bridge">
+				<article
+					className="site-06-section site-06-home-bridge"
+					id={EN_READING_RECORDS[2]?.stableId}
+					data-stable-id={EN_READING_RECORDS[2]?.stableId}
+					tabIndex={-1}
+				>
 					<header className="site-06-split-intro">
 						<h2>One public truth. Two ways to read it.</h2>
 						<p>
@@ -145,10 +137,14 @@ export function GlobalHomePage() {
 							should serve both without creating two competing versions of the company.
 						</p>
 					</header>
-					<blockquote>{EN_READING_RECORDS[0]?.fact}</blockquote>
-					<aside>Category, purpose, source and scope stay canonical. Only the reading structure changes.</aside>
+					<blockquote>{EN_READING_RECORDS[2]?.fact}</blockquote>
+					<aside>
+						{EN_READING_RECORDS[2]?.evidence}
+						<br />
+						{EN_READING_RECORDS[2]?.boundary}
+					</aside>
 					<ActionLink href="/company">Open the dual reading</ActionLink>
-				</section>
+				</article>
 
 				<DarkClose pageKey="home" />
 			</div>
@@ -172,7 +168,7 @@ export function GlobalProductPage() {
 					credit="Photo: Nastuh Abootalebi / Unsplash"
 					className="site-06-product-cinematic"
 				>
-					<PageLead pageKey="product" fact="product" />
+					<RouteLead pageKey="product" />
 					<EvidenceSheet
 						label="Answer dossier · Illustrative structure"
 						annotation={
@@ -221,7 +217,7 @@ export function GlobalApproachPage() {
 					credit="Photo: Mikhail Nilov / Pexels"
 					className="site-06-approach-cinematic"
 				>
-					<PageLead pageKey="approach" fact="approach" />
+					<RouteLead pageKey="approach" />
 					<aside className="site-06-same-question-preview" aria-label="Baseline and retest evidence preview">
 						<p className="site-06-kicker">Same buying question</p>
 						<blockquote>What changed in the answer—and what evidence caused the change?</blockquote>
@@ -236,7 +232,18 @@ export function GlobalApproachPage() {
 
 				<section className="site-06-approach-stage">
 					<div className="site-06-section">
-						<EvidenceReviewScene preview />
+						<article className="site-06-approach-record" id={pageFacts.approach.id} tabIndex={-1}>
+							<header className="site-06-route-record-note">
+								<p>{pageFacts.approach.value}</p>
+								<p>
+									<strong>Public basis:</strong> {pageFacts.approach.source}
+								</p>
+								<p>
+									<strong>Review boundary:</strong> {pageFacts.approach.boundary}
+								</p>
+							</header>
+							<EvidenceReviewScene preview />
+						</article>
 					</div>
 				</section>
 
@@ -254,11 +261,6 @@ export function GlobalCompanyPage() {
 		<GlobalShell pageKey="company">
 			<div className="site-06-page-composition site-06-company-composition" data-page-composition="dual-reading-field">
 				<section className="site-06-company-field">
-					<header className="site-06-company-intro">
-						<p className="site-06-kicker">{GLOBAL_COPY.company.eyebrow}</p>
-						<h1>{GLOBAL_COPY.company.title}</h1>
-						<p className="site-06-hero__lead">{GLOBAL_COPY.company.lead}</p>
-					</header>
 					<CompanyReadingScene />
 				</section>
 
@@ -286,17 +288,23 @@ export function GlobalGeoPage() {
 		<GlobalShell pageKey="geo" tone="paper">
 			<div className="site-06-page-composition site-06-market-composition" data-page-composition="market-editorial">
 				<section className="site-06-market-editorial">
-					<PageLead pageKey="geo" fact="geo" />
+					<RouteLead pageKey="geo" />
 					<figure className="site-06-editorial-photo">
 						<img src="/brand/site-06/glass-meeting.jpg" alt="A business conversation in a glass meeting room" />
 						<figcaption>Photo: Andrea Piacquadio / Pexels</figcaption>
 					</figure>
 				</section>
 
-				<section className="site-06-section site-06-market-ledger" aria-label="Market conditions record">
+				<article
+					className="site-06-section site-06-market-ledger"
+					aria-label="Market conditions record"
+					id={pageFacts.geo.id}
+					tabIndex={-1}
+				>
 					<header>
 						<p className="site-06-kicker">One decision, read in its actual context</p>
 						<h2>Context is part of the evidence record.</h2>
+						<p>{pageFacts.geo.value}</p>
 					</header>
 					<dl>
 						<div>
@@ -320,7 +328,11 @@ export function GlobalGeoPage() {
 							<dd>The sources, scope, review date and boundaries available for inspection.</dd>
 						</div>
 					</dl>
-				</section>
+					<aside className="site-06-route-record-note">
+						<p>{pageFacts.geo.source}</p>
+						<p>{pageFacts.geo.boundary}</p>
+					</aside>
+				</article>
 
 				<DarkClose pageKey="geo" />
 			</div>
@@ -344,10 +356,17 @@ export function GlobalDiagnosticPage() {
 					credit="Photo: Zerrin Velizade / Pexels"
 					className="site-06-contact-cinematic"
 				>
-					<PageLead pageKey="diagnostic" fact="diagnostic" />
-					<div id="contact-form" className="site-06-contact-form">
-						<LeadForm locale="en" compact />
-					</div>
+					<article id={pageFacts.diagnostic.id} className="site-06-contact-scene" tabIndex={-1}>
+						<RouteLead pageKey="diagnostic" />
+						<div id="contact-form" className="site-06-contact-form">
+							<LeadForm locale="en" compact />
+						</div>
+						<aside className="site-06-contact-scene__record">
+							<p>{pageFacts.diagnostic.value}</p>
+							<p>{pageFacts.diagnostic.source}</p>
+							<p>{pageFacts.diagnostic.boundary}</p>
+						</aside>
+					</article>
 				</CinematicField>
 			</div>
 		</GlobalShell>
@@ -363,7 +382,9 @@ export function GlobalPrivacyPage() {
 						<p className="site-06-kicker">{GLOBAL_COPY.privacy.eyebrow}</p>
 						<h1>{GLOBAL_COPY.privacy.title}</h1>
 						<p className="site-06-hero__lead">{GLOBAL_COPY.privacy.lead}</p>
-						<PublicFactMeta pageKey="privacy" lead={GLOBAL_COPY.privacy.lead} />
+						<p className="site-06-privacy-document__purpose">{pageFacts.privacy.value}</p>
+						<p className="site-06-privacy-document__basis">{pageFacts.privacy.source}</p>
+						<p className="site-06-privacy-document__boundary">{pageFacts.privacy.boundary}</p>
 					</header>
 					<section>
 						<h2>Three visible details</h2>

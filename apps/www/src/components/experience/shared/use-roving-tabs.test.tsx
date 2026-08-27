@@ -50,7 +50,7 @@ describe("resolveRovingTabIndex", () => {
 
 describe("Site 06 English roving tab scenes", () => {
 	it.each([
-		["home dual reading", HomeReadingScene, 9, 4],
+		["home fixed-claim reading", HomeReadingScene, 2, 1],
 		["platform evidence", PlatformInspectorScene, 3, 1],
 		["evidence review", EvidenceReviewScene, 2, 1],
 		["company facts", CompanyReadingScene, 9, 4],

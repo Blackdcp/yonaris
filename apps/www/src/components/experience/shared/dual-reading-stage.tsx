@@ -80,13 +80,17 @@ function DualReadingRecord({ record, locale }: { record: ReadingRecord; locale: 
 
 export function DualReadingStage({
 	locale,
+	eyebrow,
 	heading,
+	headingLevel = "h2",
 	description,
 	records,
 	initialId,
 }: {
 	locale: "en" | "zh";
+	eyebrow?: string;
 	heading: string;
+	headingLevel?: "h1" | "h2";
 	description?: string;
 	records: readonly ReadingRecord[];
 	initialId: string;
@@ -102,11 +106,13 @@ export function DualReadingStage({
 	});
 
 	if (records.length === 0) return null;
+	const Heading = headingLevel;
 
 	return (
 		<section className="site-06-dual-stage" data-scene-object="dual-reading-stage">
 			<header className="site-06-dual-stage__copy">
-				<h2>{heading}</h2>
+				{eyebrow ? <p className="site-06-kicker">{eyebrow}</p> : null}
+				<Heading>{heading}</Heading>
 				{description ? <p>{description}</p> : null}
 				<div
 					className="site-06-dual-stage__records"
