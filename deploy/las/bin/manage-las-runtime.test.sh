@@ -126,6 +126,7 @@ set -Eeuo pipefail
 printf '%s\n' "$*" >>'__DOCKER_LOG__'
 printf 'docker %s\n' "$*" >>'__EVENT_LOG__'
 rehearsal_failure="$(cat '__ROOT__/rehearsal-failure' 2>/dev/null || true)"
+rehearsal_readiness="$(cat '__ROOT__/rehearsal-readiness' 2>/dev/null || true)"
 if [[ "$1" == info ]]; then
   [[ ! -e '__ROOT__/request-rebind' ]] || touch '__ROOT__/rebound'
   printf '["name=rootless"]\n'
@@ -159,7 +160,11 @@ fi
 if [[ "$1" == inspect && "$*" == *'{{.State.Health.Status}}'* ]]; then printf 'healthy\n'; exit 0; fi
 if [[ "$1" == image && "$2" == inspect ]]; then printf '%s\n' "${@: -1}"; exit 0; fi
 if [[ " $* " == *' compose '* && ( " $* " == *' pull '* || " $* " == *' up '* || " $* " == *' run '* ) ]]; then exit 0; fi
-if [[ "$1" == pull || ( "$1" == network && "$2" == create ) || ( "$1" == volume && "$2" == create ) ]]; then
+if [[ "$1" == pull || ( "$1" == volume && "$2" == create ) ]]; then
+	exit 0
+fi
+if [[ "$1" == network && "$2" == create ]]; then
+	[[ "$rehearsal_failure" != network-create ]] || exit 93
 	exit 0
 fi
 if [[ "$1" == run ]]; then
@@ -176,6 +181,11 @@ if [[ "$1" == exec ]]; then
 		exit 0
 	fi
 	if [[ " $* " == *' pg_isready '* ]]; then
+		if [[ "$rehearsal_readiness" =~ ^[1-9][0-9]*$ ]]; then
+			printf '%s\n' "$((rehearsal_readiness - 1))" >'__ROOT__/rehearsal-readiness'
+			exit 91
+		fi
+		[[ "$rehearsal_readiness" != never ]] || exit 91
 		printf 'accepting connections\n'
 		exit 0
 	fi
@@ -310,6 +320,7 @@ sed \
 	-e "s#/usr/bin/python3#$MOCK_BIN/python3#g" \
 	-e "s#/usr/bin/curl#$MOCK_BIN/curl#g" \
 	-e "s#/usr/bin/sleep#$MOCK_BIN/sleep#g" \
+	-e 's/^readonly MIGRATION_REHEARSAL_READY_ATTEMPTS=30$/readonly MIGRATION_REHEARSAL_READY_ATTEMPTS=3/' \
 	-e "s#/usr/local/libexec/yonaris-las#$STABLE_DIRECTORY#g" \
 	"$SOURCE" >"$MANAGER"
 chmod +x "$MANAGER"
@@ -330,6 +341,29 @@ run_manager() {
 
 run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1
 run_manager verify-boundary
+
+# Backup and rehearsal are direct-root-only operations. A sudo-derived caller
+# cannot reach state, Docker, or release work-directory side effects.
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+set +e
+RUNTIME_TEST_SUDO_USER=operator run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/sudo.dump" migration-readiness-runtime-v1 >/dev/null 2>&1
+sudo_backup_status=$?
+set -e
+[[ "$sudo_backup_status" -ne 0 && ! -s "$EVENT_LOG" && ! -s "$DOCKER_LOG" && ! -e "$WORK_ROOT" ]] || {
+	echo 'sudo-derived migration backup reached a side effect.' >&2
+	exit 1
+}
+set +e
+RUNTIME_TEST_SUDO_USER=operator run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/sudo.dump" "$WORK_ROOT/$RELEASE/sudo.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+sudo_rehearsal_status=$?
+set -e
+[[ "$sudo_rehearsal_status" -ne 0 && ! -s "$EVENT_LOG" && ! -s "$DOCKER_LOG" && ! -e "$WORK_ROOT" ]] || {
+	echo 'sudo-derived migration rehearsal reached a side effect.' >&2
+	exit 1
+}
 
 # A production dump can only be written to the release-scoped root-only work
 # directory after the exact migration-readiness runtime authorization.
@@ -358,12 +392,36 @@ assert_rehearsal_cleanup() {
 	grep -Fq "network rm $REHEARSAL_NETWORK" "$DOCKER_LOG"
 }
 
+assert_rehearsal_docker_attestation() {
+	local -a events=()
+	local index expected="state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+	mapfile -t events <"$EVENT_LOG"
+	for ((index = 0; index < ${#events[@]}; index += 1)); do
+		[[ "${events[$index]}" == docker\ * ]] || continue
+		[[ "${events[$index]}" == 'docker info --format {{json .SecurityOptions}}' ]] && continue
+		[[ "$index" -ge 1 && "${events[$((index - 1))]}" == "$expected" ]] || {
+			echo "Docker rehearsal action lacked an adjacent authorization: ${events[$index]}" >&2
+			exit 1
+		}
+	done
+}
+
+read_rehearsal_resources() {
+	REHEARSAL_NETWORK="$(awk '$1 == "network" && $2 == "create" { print $NF; exit }' "$DOCKER_LOG")"
+	REHEARSAL_VOLUME="$(awk '$1 == "volume" && $2 == "create" { print $NF; exit }' "$DOCKER_LOG")"
+	REHEARSAL_CONTAINER="$(awk '$1 == "run" && $2 == "--detach" { for (i = 1; i < NF; i += 1) if ($i == "--name") { print $(i + 1); exit } }' "$DOCKER_LOG")"
+	[[ "$REHEARSAL_NETWORK" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-network$ ]]
+	[[ "$REHEARSAL_VOLUME" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-volume$ ]]
+	[[ "$REHEARSAL_CONTAINER" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-postgres$ ]]
+}
+
 # The isolated restore occurs before the exact migration image, has no published
 # port, verifies PostgreSQL health, and records only fixed secret-free success.
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
 run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
 	"$WORK_ROOT/$RELEASE/database.dump" "$REHEARSAL_RESULT" migration-readiness-runtime-v1
+read_rehearsal_resources
 grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
 grep -Fq "pull postgres@$POSTGRES" "$DOCKER_LOG"
 grep -Fq "pull ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKER_LOG"
@@ -379,6 +437,47 @@ grep -Fq 'pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal' "$
 [[ "$(tr -d '\r' <"$REHEARSAL_RESULT")" == 'las-migration-rehearsal-runtime-v1 ok' ]]
 ! grep -F 'test-secret' "$REHEARSAL_RESULT"
 assert_rehearsal_cleanup
+assert_rehearsal_docker_attestation
+first_rehearsal_network="$REHEARSAL_NETWORK"
+
+# A readiness delay is retried before restore; a bounded timeout fails closed.
+printf '2\n' >"$TEST_ROOT/rehearsal-readiness"
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-delayed.result" migration-readiness-runtime-v1
+read_rehearsal_resources
+[[ "$REHEARSAL_NETWORK" != "$first_rehearsal_network" ]] || { echo 'Rehearsal resources were not invocation-unique.' >&2; exit 1; }
+[[ "$(grep -c 'pg_isready' "$DOCKER_LOG")" == 4 ]] || { echo 'Delayed readiness did not retry before and after migration.' >&2; exit 1; }
+assert_rehearsal_docker_attestation
+rm -f -- "$TEST_ROOT/rehearsal-readiness"
+
+printf 'never\n' >"$TEST_ROOT/rehearsal-readiness"
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+set +e
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-timeout.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+timeout_status=$?
+set -e
+read_rehearsal_resources
+[[ "$timeout_status" -ne 0 && "$(grep -c 'pg_isready' "$DOCKER_LOG")" == 3 ]] || { echo 'Rehearsal readiness timeout was not bounded.' >&2; exit 1; }
+assert_rehearsal_cleanup
+assert_rehearsal_docker_attestation
+rm -f -- "$TEST_ROOT/rehearsal-readiness"
+
+# A failed network creation owns no resource and must not remove a stale one.
+: >"$EVENT_LOG"
+: >"$DOCKER_LOG"
+printf 'network-create\n' >"$TEST_ROOT/rehearsal-failure"
+set +e
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-network-failure.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+network_failure_status=$?
+set -e
+[[ "$network_failure_status" -ne 0 ]] || { echo 'Injected network-create failure passed.' >&2; exit 1; }
+! grep -F 'network rm' "$DOCKER_LOG"
+rm -f -- "$TEST_ROOT/rehearsal-failure"
 
 # Cleanup is an EXIT-trap obligation, including restore and migration failure.
 for rehearsal_failure in restore migration; do
@@ -389,10 +488,16 @@ for rehearsal_failure in restore migration; do
 		"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-$rehearsal_failure.result" migration-readiness-runtime-v1 >/dev/null 2>&1
 	failure_status=$?
 	set -e
+	read_rehearsal_resources
 	[[ "$failure_status" -ne 0 ]] || { echo "Injected $rehearsal_failure failure passed." >&2; exit 1; }
 	assert_rehearsal_cleanup
 	rm -f -- "$TEST_ROOT/rehearsal-failure"
 done
+
+[[ "${RUNTIME_TEST_NEW_OPERATION_SLICE:-no}" != yes ]] || {
+	printf '%s\n' 'migration runtime new-operation tests passed'
+	exit 0
+}
 
 assert_preactivation_rejected() {
 	local name="$1"

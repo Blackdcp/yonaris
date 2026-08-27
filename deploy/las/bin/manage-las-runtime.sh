@@ -20,6 +20,7 @@ readonly PORTAL_WORKER_IMAGE='ghcr.io/blackdcp/yonaris-worker'
 readonly PORTAL_MIGRATE_IMAGE='ghcr.io/blackdcp/yonaris-db-migrate'
 readonly POSTGRES_IMAGE='postgres'
 readonly MARKETING_IMAGE='ghcr.io/blackdcp/yonaris-www'
+readonly MIGRATION_REHEARSAL_READY_ATTEMPTS=30
 readonly RUNTIME_UID="$(/usr/bin/id -u "$RUNTIME_USER")"
 readonly RUNTIME_GID="$(/usr/bin/id -g "$RUNTIME_USER")"
 readonly ROOTLESS_RUNTIME_DIR="/run/user/$RUNTIME_UID"
@@ -769,13 +770,37 @@ migration_rehearsal_docker() {
 }
 
 migration_rehearsal_cleanup() {
-	local status="$?" release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
-	local rehearsal_container="$7" rehearsal_volume="$8" rehearsal_network="$9"
+	local status="$?"
 	trap - EXIT
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" rm -f "$rehearsal_container" >/dev/null 2>&1 || :
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" volume rm "$rehearsal_volume" >/dev/null 2>&1 || :
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" network rm "$rehearsal_network" >/dev/null 2>&1 || :
+	if [[ "$MIGRATION_REHEARSAL_CONTAINER_CREATED" == true ]]; then
+		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			rm -f "$MIGRATION_REHEARSAL_CONTAINER" >/dev/null 2>&1 || :
+	fi
+	if [[ "$MIGRATION_REHEARSAL_VOLUME_CREATED" == true ]]; then
+		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			volume rm "$MIGRATION_REHEARSAL_VOLUME" >/dev/null 2>&1 || :
+	fi
+	if [[ "$MIGRATION_REHEARSAL_NETWORK_CREATED" == true ]]; then
+		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			network rm "$MIGRATION_REHEARSAL_NETWORK" >/dev/null 2>&1 || :
+	fi
 	return "$status"
+}
+
+wait_for_migration_rehearsal_postgres() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" rehearsal_container="$7"
+	local attempt
+	for ((attempt = 1; attempt <= MIGRATION_REHEARSAL_READY_ATTEMPTS; attempt += 1)); do
+		if migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+			exec "$rehearsal_container" pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal; then
+			return 0
+		fi
+		[[ "$attempt" -lt MIGRATION_REHEARSAL_READY_ATTEMPTS ]] && /usr/bin/sleep 1
+	done
+	return 1
 }
 
 migration_backup() {
@@ -806,7 +831,7 @@ migration_backup() {
 
 migration_rehearse() {
 	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" backup="$7" result="$8"
-	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_user='yonaris_rehearsal'
+	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_nonce rehearsal_user='yonaris_rehearsal'
 	local rehearsal_database='yonaris_rehearsal' rehearsal_password='yonaris_rehearsal'
 	local database_url
 	prepare_migration_work_directory "$release_tag" || return 1
@@ -814,34 +839,48 @@ migration_rehearse() {
 	result="$(migration_work_path "$release_tag" "$result")" || return 1
 	[[ ! -e "$result" && ! -L "$result" ]] || return 1
 	metadata_matches "$backup" file '0:0:600' && [[ -s "$backup" ]] || return 1
-	rehearsal_prefix="yonaris-migration-readiness-$release_tag"
+	rehearsal_nonce="$(/usr/bin/od -An -N8 -tx1 /dev/urandom | /usr/bin/tr -d '[:space:]')" || return 1
+	[[ "$rehearsal_nonce" =~ ^[0-9a-f]{16}$ ]] || return 1
+	rehearsal_prefix="yonaris-migration-readiness-$release_tag-$rehearsal_nonce"
 	rehearsal_network="$rehearsal_prefix-network"
 	rehearsal_volume="$rehearsal_prefix-volume"
 	rehearsal_container="$rehearsal_prefix-postgres"
 	database_url="postgresql://$rehearsal_user:$rehearsal_password@$rehearsal_container:5432/$rehearsal_database"
-	trap "migration_rehearsal_cleanup '$release_tag' '$web' '$worker' '$migrate' '$postgres' '$www' '$rehearsal_container' '$rehearsal_volume' '$rehearsal_network'" EXIT
+	MIGRATION_REHEARSAL_RELEASE="$release_tag"
+	MIGRATION_REHEARSAL_WEB="$web"
+	MIGRATION_REHEARSAL_WORKER="$worker"
+	MIGRATION_REHEARSAL_MIGRATE="$migrate"
+	MIGRATION_REHEARSAL_POSTGRES="$postgres"
+	MIGRATION_REHEARSAL_WWW="$www"
+	MIGRATION_REHEARSAL_CONTAINER="$rehearsal_container"
+	MIGRATION_REHEARSAL_VOLUME="$rehearsal_volume"
+	MIGRATION_REHEARSAL_NETWORK="$rehearsal_network"
+	MIGRATION_REHEARSAL_CONTAINER_CREATED=false
+	MIGRATION_REHEARSAL_VOLUME_CREATED=false
+	MIGRATION_REHEARSAL_NETWORK_CREATED=false
+	trap migration_rehearsal_cleanup EXIT
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$POSTGRES_IMAGE@$postgres" || return 1
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" network create --internal "$rehearsal_network" || return 1
+	MIGRATION_REHEARSAL_NETWORK_CREATED=true
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" volume create "$rehearsal_volume" || return 1
+	MIGRATION_REHEARSAL_VOLUME_CREATED=true
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --detach \
 		--name "$rehearsal_container" --network "$rehearsal_network" \
 		--mount "type=volume,source=$rehearsal_volume,target=/var/lib/postgresql/data" \
 		--env "POSTGRES_USER=$rehearsal_user" --env "POSTGRES_PASSWORD=$rehearsal_password" \
 		--env "POSTGRES_DB=$rehearsal_database" "$POSTGRES_IMAGE@$postgres" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		exec "$rehearsal_container" pg_isready --username "$rehearsal_user" --dbname "$rehearsal_database" || return 1
+	MIGRATION_REHEARSAL_CONTAINER_CREATED=true
+	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$rehearsal_container" || return 1
 	# The root shell opens the root-only backup before the rootless runtime inherits stdin.
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
 		exec -i "$rehearsal_container" pg_restore --username "$rehearsal_user" --dbname "$rehearsal_database" --no-owner --no-acl <"$backup" || return 1
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --rm \
 		--network "$rehearsal_network" --env "DATABASE_URL=$database_url" "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		exec "$rehearsal_container" pg_isready --username "$rehearsal_user" --dbname "$rehearsal_database" || return 1
+	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$rehearsal_container" || return 1
 	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' >"$result" || return 1
 	metadata_matches "$result" file '0:0:600' || return 1
-	migration_rehearsal_cleanup "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		"$rehearsal_container" "$rehearsal_volume" "$rehearsal_network"
+	migration_rehearsal_cleanup
 }
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The LAS runtime manager must run as root.'
@@ -863,7 +902,8 @@ if [[ $# -eq 1 ]]; then
 fi
 [[ $# -ge 3 ]] || fail 'Refusing invalid LAS runtime-manager request.' 2
 operation="$1"; release_tag="$2"
-if [[ ( "$operation" == bootstrap-portal-deploy || "$operation" == bootstrap-marketing-deploy ) && \
+if [[ ( "$operation" == bootstrap-portal-deploy || "$operation" == bootstrap-marketing-deploy || \
+	"$operation" == migration-backup || "$operation" == migration-rehearse ) && \
 	-n "${SUDO_USER:-}" ]]; then
 	fail 'Only a direct root operator may bootstrap the LAS runtime.' 2
 fi
