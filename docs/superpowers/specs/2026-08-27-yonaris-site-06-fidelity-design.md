@@ -72,7 +72,7 @@ Bordered records may be used when they represent a real document, source, or sta
 ### Chinese
 
 - **Home `/zh`:** cinematic business-walk field with the localized concentric Human/Agent claim reader, followed immediately by the dark anxiety selector. It must feel commercially urgent and locally written, not like the English hero translated into Chinese.
-- **System `/zh/product`:** the six-node system field is the hero and primary interaction. It cannot be replaced by a tab row above a generic record.
+- **System `/zh/product`:** a cinematic office-photo hero first previews the five business relationships; the following dark field contains the six-node spatial system as the primary interaction. The two-scale story cannot be collapsed into a tab row above a generic record.
 - **Breakdown `/zh/approach`:** the replay stage is the primary visual object and keeps the same de-identified example through 基线、断点、行动、复核.
 - **Human + Agent `/zh/company`:** a prominent dual-reading field explains the same public fact for people and agents. The mode control appears in the first viewport.
 - **Across markets `/zh/geo`:** editorial/photo composition uses Chinese buying-language differences and evidence conditions without framing customers by origin or destination.

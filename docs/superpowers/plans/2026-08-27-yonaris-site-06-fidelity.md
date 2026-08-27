@@ -205,20 +205,23 @@ git commit -m "recompose the English Site 06 experience"
 
 **Interfaces:**
 - Consumes: Task 1 visual objects, existing `EvidenceInspector`, `ReadingLens`, `ReviewSwitch`, `LeadForm`, and canonical Chinese facts.
-- Produces: seven Chinese route scenes with unique `data-page-composition` values: `anxiety-editorial`, `system-field`, `breakdown-replay`, `dual-reading-field-zh`, `market-editorial-zh`, `contact-cinematic-zh`, `privacy-editorial-zh`.
+- Produces: seven Chinese route scenes with unique `data-page-composition` values: `cinematic-anxiety`, `system-field`, `breakdown-replay`, `dual-reading-field-zh`, `market-editorial-zh`, `contact-cinematic-zh`, `privacy-editorial-zh`.
 
 - [ ] **Step 1: Write failing Chinese route-composition and interaction tests**
 
 Require all seven composition markers and these customer-visible behaviours:
 
 ```tsx
-it("makes the six-node relationship field the Chinese system hero", () => {
+it("keeps the relationship preview before the six-node system field", () => {
   const html = renderToStaticMarkup(<ChinaProductPage />);
   expect(html).toContain('data-page-composition="system-field"');
+  expect(html).toContain('data-scene-object="relationship-preview"');
   expect(html).toContain('data-scene-object="system-field"');
   expect(html).toContain("市场问题");
   expect(html).toContain("行动与复核");
-  expect(html.indexOf('data-scene-object="system-field"')).toBeLessThan(html.indexOf("site-06-section"));
+  expect(html.indexOf('data-scene-object="relationship-preview"')).toBeLessThan(
+    html.indexOf('data-scene-object="system-field"'),
+  );
 });
 
 it("keeps one example through 基线、断点、行动、复核", () => {
