@@ -4,7 +4,7 @@ import { CHINA_COPY, CHINA_READING_RECORDS } from "@/content/experience/china-co
 import type { HumanPageKey } from "@/content/experience/types";
 import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
 import { CanonicalRecordTransform } from "../shared/canonical-record-transform";
-import { CinematicField } from "../shared/cinematic-field";
+import { CinematicField, Site06ResponsiveImage } from "../shared/cinematic-field";
 import { DecisionTraceScene } from "../shared/decision-trace-scene";
 import { LeadForm } from "../shared/lead-form";
 import { ProductProofScene } from "../shared/product-proof-scene";
@@ -67,12 +67,7 @@ export function ChinaHomePage() {
 					</div>
 				</section>
 
-				<section
-					className="site-06-section site-06-zh-source-trace"
-					id={purposeRecord?.stableId}
-					data-stable-id={purposeRecord?.stableId}
-					tabIndex={-1}
-				>
+				<section className="site-06-section site-06-zh-source-trace">
 					<header className="site-06-split-intro">
 						<h2>不是再刷一层曝光，而是把“为什么选你”接到证据上。</h2>
 						<p>
@@ -80,13 +75,18 @@ export function ChinaHomePage() {
 							把断点放回同一张判断底稿里，让团队知道哪里值得先投入。
 						</p>
 					</header>
-					<header className="site-06-product-proof-context">
+					<article
+						className="site-06-product-proof-context"
+						id={purposeRecord?.stableId}
+						data-stable-id={purposeRecord?.stableId}
+						tabIndex={-1}
+					>
 						<p className="site-06-kicker">与判断底稿相连的产品证据</p>
 						<p>{purposeRecord?.fact}</p>
 						<small>
 							{purposeRecord?.evidence} · {purposeRecord?.boundary}
 						</small>
-					</header>
+					</article>
 					<ProductProofScene locale="zh" compact />
 				</section>
 
@@ -110,24 +110,24 @@ export function ChinaHomePage() {
 					</header>
 				</CinematicField>
 
-				<section
-					className="site-06-section site-06-zh-public-truth"
-					id={scopeRecord?.stableId}
-					data-stable-id={scopeRecord?.stableId}
-					tabIndex={-1}
-				>
+				<section className="site-06-section site-06-zh-public-truth">
 					<header className="site-06-split-intro">
 						<h2>同一套事实，人要能判断，Agent 也要能引用。</h2>
 						<p>
 							不是另做一个“机器专用网站”。类别、用途、依据和边界保持一致，只把同一事实组织成更适合不同读者使用的结构。
 						</p>
 					</header>
-					<div className="site-06-zh-public-truth__scope">
+					<article
+						className="site-06-zh-public-truth__scope"
+						id={scopeRecord?.stableId}
+						data-stable-id={scopeRecord?.stableId}
+						tabIndex={-1}
+					>
 						<p>{scopeRecord?.fact}</p>
 						<small>
 							{scopeRecord?.evidence} · {scopeRecord?.boundary}
 						</small>
-					</div>
+					</article>
 					<CanonicalRecordTransform locale="zh" compact />
 				</section>
 
@@ -309,13 +309,14 @@ export function ChinaGeoPage() {
 						<p>{copy.lead}</p>
 					</header>
 					<figure className="site-06-editorial-photo">
-						<img
-							src="/brand/site-06/glass-passage-original.png"
-							alt="玻璃会议空间里的商务对话"
-							width={1717}
-							height={916}
-							loading="lazy"
-							decoding="async"
+						<Site06ResponsiveImage
+							image={{
+								src: "/brand/site-06/glass-passage-original.png",
+								alt: "玻璃会议空间里的商务对话",
+								width: 1717,
+								height: 916,
+							}}
+							sizes="(max-width: 880px) 100vw, 50vw"
 						/>
 					</figure>
 				</section>

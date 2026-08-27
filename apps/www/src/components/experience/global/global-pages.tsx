@@ -4,7 +4,7 @@ import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
 import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
 import { CanonicalRecordTransform } from "../shared/canonical-record-transform";
-import { CinematicField } from "../shared/cinematic-field";
+import { CinematicField, Site06ResponsiveImage } from "../shared/cinematic-field";
 import { DecisionTraceScene } from "../shared/decision-trace-scene";
 import { EvidenceSheet } from "../shared/evidence-sheet";
 import { LeadForm } from "../shared/lead-form";
@@ -97,21 +97,21 @@ export function GlobalHomePage() {
 					<BuyingQuestionDossier />
 				</section>
 
-				<section
-					className="site-06-home-workbench"
-					id={EN_READING_RECORDS[1]?.stableId}
-					data-stable-id={EN_READING_RECORDS[1]?.stableId}
-					tabIndex={-1}
-				>
+				<section className="site-06-home-workbench">
 					<div className="site-06-section">
-						<header className="site-06-product-proof-context">
+						<article
+							className="site-06-product-proof-context"
+							id={EN_READING_RECORDS[1]?.stableId}
+							data-stable-id={EN_READING_RECORDS[1]?.stableId}
+							tabIndex={-1}
+						>
 							<p className="site-06-kicker">Product evidence attached to the decision system</p>
 							<h2>Inspect the working state behind the next review.</h2>
 							<p>{EN_READING_RECORDS[1]?.fact}</p>
 							<small>
 								{EN_READING_RECORDS[1]?.evidence} · {EN_READING_RECORDS[1]?.boundary}
 							</small>
-						</header>
+						</article>
 						<ProductProofScene locale="en" compact />
 					</div>
 				</section>
@@ -136,12 +136,7 @@ export function GlobalHomePage() {
 					<EvidenceReviewScene />
 				</CinematicField>
 
-				<section
-					className="site-06-section site-06-home-bridge"
-					id={EN_READING_RECORDS[2]?.stableId}
-					data-stable-id={EN_READING_RECORDS[2]?.stableId}
-					tabIndex={-1}
-				>
+				<section className="site-06-section site-06-home-bridge">
 					<header className="site-06-split-intro">
 						<h2>One public truth. Two ways to read it.</h2>
 						<p>
@@ -149,12 +144,17 @@ export function GlobalHomePage() {
 							should serve both without creating two competing versions of the company.
 						</p>
 					</header>
-					<div className="site-06-home-bridge__scope">
+					<article
+						className="site-06-home-bridge__scope"
+						id={EN_READING_RECORDS[2]?.stableId}
+						data-stable-id={EN_READING_RECORDS[2]?.stableId}
+						tabIndex={-1}
+					>
 						<p>{EN_READING_RECORDS[2]?.fact}</p>
 						<small>
 							{EN_READING_RECORDS[2]?.evidence} · {EN_READING_RECORDS[2]?.boundary}
 						</small>
-					</div>
+					</article>
 					<CanonicalRecordTransform locale="en" compact />
 					<aside className="site-06-home-bridge__note">
 						The category fact stays fixed while its public basis, boundary, stable identity and representations become
@@ -210,7 +210,13 @@ export function GlobalProductPage() {
 					</EvidenceSheet>
 				</CinematicField>
 
-				<section className="site-06-section site-06-product-trace" id={pageFacts.product.id} tabIndex={-1}>
+				<section className="site-06-section site-06-product-trace">
+					<article className="site-06-product-fact" id={pageFacts.product.id} tabIndex={-1}>
+						<p>{pageFacts.product.value}</p>
+						<small>
+							{pageFacts.product.source} · {pageFacts.product.boundary}
+						</small>
+					</article>
 					<ProductProofScene locale="en" />
 				</section>
 
@@ -334,13 +340,14 @@ export function GlobalGeoPage() {
 				<section className="site-06-market-editorial">
 					<RouteLead pageKey="geo" />
 					<figure className="site-06-editorial-photo">
-						<img
-							src="/brand/site-06/glass-passage-original.png"
-							alt="A business conversation in a glass meeting space"
-							width={1717}
-							height={916}
-							loading="lazy"
-							decoding="async"
+						<Site06ResponsiveImage
+							image={{
+								src: "/brand/site-06/glass-passage-original.png",
+								alt: "A business conversation in a glass meeting space",
+								width: 1717,
+								height: 916,
+							}}
+							sizes="(max-width: 880px) 100vw, 50vw"
 						/>
 					</figure>
 				</section>

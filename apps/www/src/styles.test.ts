@@ -257,6 +257,9 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(css, ".site-06-cinematic__media")).toContain(
 			"animation: site-06-photo-breathe 24s ease-in-out infinite alternate",
 		);
+		expect(ruleFor(css, ".site-06-cinematic > picture")).toContain("position: absolute");
+		expect(ruleFor(css, ".site-06-cinematic > picture")).toContain("inset: 0");
+		expect(ruleFor(css, ".site-06-editorial-photo > picture")).toContain("height: 100%");
 		expect(css).toContain("@keyframes site-06-photo-breathe");
 		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("animation: none");
 		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("transform: none");
@@ -271,11 +274,15 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(css, ".site-06-decision-trace__rings")).toContain("aspect-ratio: 1");
 		const traceButton = ruleFor(css, ".site-06-decision-trace__ring button");
 		expect(traceButton).toContain("min-height: 44px");
+		expect(traceButton).toContain("min-width: 44px");
+		expect(traceButton).toContain("padding: 8px 6px");
 		expect(traceButton).toContain("background: transparent");
 		expect(traceButton).toContain("border-radius: 0");
 
 		const proof = ruleFor(css, ".site-06-product-proof-scene");
 		expect(proof).toContain("border-radius: 0");
+		expect(proof).toContain("overflow: visible");
+		expect(proof).not.toContain("overflow: clip");
 		expect(proof).not.toContain("box-shadow");
 		expect(proof).not.toContain("grid-template-columns: repeat(4");
 		expect(ruleFor(css, ".site-06-product-proof-scene__ledger")).toContain("background: var(--site-paper)");
@@ -294,6 +301,34 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(css, '.site-06-canonical-record-transform input[type="range"]')).toContain("min-height: 44px");
 	});
 
+	it("keeps canonical microcopy readable and static rules neutral on warm paper", () => {
+		const css = read("styles/experience/site-06.css");
+		for (const selector of [
+			'.site-06-canonical-record-transform > p[role="status"]',
+			".site-06-canonical-record-transform dt",
+		]) {
+			expect(ruleFor(css, selector), `${selector} needs the high-contrast functional color`).toContain(
+				"color: color-mix(in srgb, currentColor 82%, transparent)",
+			);
+		}
+		const representation = ruleFor(css, ".site-06-canonical-record-transform nav a");
+		expect(representation).toContain("border-bottom: 1px solid var(--site-amber)");
+		expect(representation).not.toContain("var(--site-orange)");
+		const formSummary = ruleFor(css, ".site-06-contact-form .lead-form header > p");
+		expect(formSummary).toContain("border-left: 2px solid var(--site-amber)");
+		expect(formSummary).not.toContain("var(--site-orange)");
+	});
+
+	it("overrides the generic confirmation with a square dark localized contact scene", () => {
+		const css = read("styles/experience/site-06.css");
+		const confirmation = ruleFor(css, ".site-06-contact-form .lead-confirmation");
+		expect(confirmation).toContain("border-radius: 0");
+		expect(confirmation).toContain("background: var(--site-navy-secondary)");
+		expect(confirmation).toContain("color: var(--site-white)");
+		expect(ruleFor(css, ".site-06-contact-form .lead-confirmation > span")).toContain("color: var(--site-amber)");
+		expect(ruleFor(css, ".site-06-contact-form .lead-confirmation p")).toContain("color: rgb(255 255 255 / 78%)");
+	});
+
 	it("linearizes the product interactions at mobile widths without page overflow", () => {
 		const css = read("styles/experience/site-06.css");
 		const mobile = css.slice(
@@ -306,7 +341,7 @@ describe("zero-to-one stylesheet boundary", () => {
 			".site-06-decision-trace__rings",
 			".site-06-product-proof-scene__tabs",
 			".site-06-product-proof-scene__ledger section dl",
-			".site-06-canonical-record-transform > div",
+			".site-06-canonical-record-transform > fieldset",
 		]) {
 			expect(ruleFor(mobile, selector), `${selector} must linearize at 360px`).toContain(
 				"grid-template-columns: minmax(0, 1fr)",

@@ -135,7 +135,7 @@ export function CanonicalRecordTransform({ locale, compact = false }: { locale: 
 		>
 			<p>{record.fact}</p>
 
-			<div aria-label={copy.label}>
+			<fieldset aria-label={copy.label}>
 				<button
 					type="button"
 					aria-pressed={progress === canonicalRecordReadingProgress("human")}
@@ -160,7 +160,7 @@ export function CanonicalRecordTransform({ locale, compact = false }: { locale: 
 						onChange={(event) => setProgress(Number(event.currentTarget.value))}
 					/>
 				</label>
-			</div>
+			</fieldset>
 
 			<p role="status">{status}</p>
 

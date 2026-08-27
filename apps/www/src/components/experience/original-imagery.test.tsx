@@ -1,8 +1,24 @@
-import { existsSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { GlobalDiagnosticPage, GlobalGeoPage, GlobalHomePage } from "./global/global-pages";
+import {
+	ChinaApproachPage,
+	ChinaDiagnosticPage,
+	ChinaGeoPage,
+	ChinaHomePage,
+	ChinaProductPage,
+} from "./china/china-pages";
+import {
+	GlobalApproachPage,
+	GlobalDiagnosticPage,
+	GlobalGeoPage,
+	GlobalHomePage,
+	GlobalProductPage,
+} from "./global/global-pages";
 import { CinematicField } from "./shared/cinematic-field";
+
+const originalNames = ["decision-room", "glass-passage", "working-session"] as const;
+const responsiveWidths = [640, 1024, 1440] as const;
 
 describe("original Site 06 imagery", () => {
 	it("ships original assets and no public stock-photo credit", () => {
@@ -19,6 +35,51 @@ describe("original Site 06 imagery", () => {
 		for (const intrinsic of ['width="1535" height="1024"', 'width="1717" height="916"', 'width="1693" height="929"']) {
 			expect(markup).toContain(intrinsic);
 		}
+	});
+
+	it("ships high-quality responsive JPEG derivatives that are smaller than their PNG masters", () => {
+		for (const name of originalNames) {
+			const original = new URL(`../../../public/brand/site-06/${name}-original.png`, import.meta.url);
+			for (const width of responsiveWidths) {
+				const derivative = new URL(`../../../public/brand/site-06/${name}-${width}.jpg`, import.meta.url);
+				expect(existsSync(derivative), `${name}-${width}.jpg must exist`).toBe(true);
+				expect(statSync(derivative).size, `${name}-${width}.jpg must be smaller than its PNG master`).toBeLessThan(
+					statSync(original).size,
+				);
+			}
+		}
+	});
+
+	it("serves every routed original through a responsive picture while retaining the PNG fallback", () => {
+		const routedMarkup = [
+			<GlobalHomePage key="en-home" />,
+			<GlobalProductPage key="en-product" />,
+			<GlobalApproachPage key="en-approach" />,
+			<GlobalGeoPage key="en-geo" />,
+			<GlobalDiagnosticPage key="en-diagnostic" />,
+			<ChinaHomePage key="zh-home" />,
+			<ChinaProductPage key="zh-product" />,
+			<ChinaApproachPage key="zh-approach" />,
+			<ChinaGeoPage key="zh-geo" />,
+			<ChinaDiagnosticPage key="zh-diagnostic" />,
+		]
+			.map((page) => renderToStaticMarkup(page))
+			.join("\n");
+		const originalFallbacks =
+			routedMarkup.match(/src="\/brand\/site-06\/(?:decision-room|glass-passage|working-session)-original\.png"/g) ??
+			[];
+		expect(originalFallbacks).toHaveLength(12);
+		expect(routedMarkup.match(/<picture data-responsive-site-06-image="true">/g) ?? []).toHaveLength(
+			originalFallbacks.length,
+		);
+		expect(routedMarkup.match(/<source type="image\/jpeg"/g) ?? []).toHaveLength(originalFallbacks.length);
+		for (const name of originalNames) {
+			expect(routedMarkup).toContain(
+				`srcSet="/brand/site-06/${name}-640.jpg 640w, /brand/site-06/${name}-1024.jpg 1024w, /brand/site-06/${name}-1440.jpg 1440w"`,
+			);
+		}
+		expect(routedMarkup).toContain('sizes="(max-width: 720px) 100vw, (max-width: 1440px) 100vw, 1440px"');
+		expect(routedMarkup).toContain('sizes="(max-width: 880px) 100vw, 50vw"');
 	});
 
 	it("eagerly loads only an explicitly prioritized cinematic image", () => {
@@ -45,6 +106,8 @@ describe("original Site 06 imagery", () => {
 		expect(priorityMarkup).toContain('fetchPriority="high"');
 		expect(priorityMarkup).toContain('decoding="async"');
 		expect(priorityMarkup).toContain('width="1535" height="1024"');
+		expect(priorityMarkup).toContain('<picture data-responsive-site-06-image="true">');
+		expect(priorityMarkup).toContain('<source type="image/jpeg"');
 		expect(deferredMarkup).toContain('loading="lazy"');
 	});
 });

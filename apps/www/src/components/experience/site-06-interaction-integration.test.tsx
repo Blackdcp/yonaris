@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { EN_READING_RECORDS, PAGE_FACTS, ZH_READING_RECORDS } from "@/content/experience/canonical-public-facts";
 import {
 	ChinaApproachPage,
 	ChinaCompanyPage,
@@ -36,6 +37,42 @@ function expectUniqueStableIds(source: string): void {
 	}
 }
 
+function textContent(source: string): string {
+	return source
+		.replace(/<[^>]+>/g, " ")
+		.replace(/&amp;/g, "&")
+		.replace(/&quot;/g, '"')
+		.replace(/&#x27;/g, "'")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function expectSemanticFactArticle(
+	source: string,
+	fact: { id: string; value: string; source: string; boundary: string },
+): void {
+	const escapedId = fact.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const article = source.match(new RegExp(`<article(?=[^>]*\\bid="${escapedId}")[^>]*>[\\s\\S]*?<\\/article>`))?.[0];
+	expect(article, `${fact.id} must be a visible semantic article`).toBeTruthy();
+	expect(article?.match(/<article\b/g) ?? [], `${fact.id} must not nest another article`).toHaveLength(1);
+	expect(article?.match(/^<article[^>]*>/)?.[0] ?? "").not.toMatch(/\bhidden(?:=|\s|>)/);
+	const visibleText = textContent(article ?? "");
+	expect(visibleText).toContain(fact.value);
+	expect(visibleText).toContain(fact.source);
+	expect(visibleText).toContain(fact.boundary);
+}
+
+function readingFact(record: (typeof EN_READING_RECORDS)[number] | (typeof ZH_READING_RECORDS)[number]) {
+	return {
+		id: record.stableId,
+		value: record.fact,
+		source: record.evidence,
+		boundary: record.boundary,
+	};
+}
+
 describe("Site 06 interaction integration", () => {
 	it("places the English scenes in the prescribed home, product, and company surfaces", () => {
 		const home = markup(<GlobalHomePage />);
@@ -62,6 +99,19 @@ describe("Site 06 interaction integration", () => {
 		expect(company).toContain("<h1>The same company should remain clear to people and agents.</h1>");
 		expectUniqueStableIds(home);
 		expectUniqueStableIds(company);
+	});
+
+	it("keeps every replaced English and Chinese route anchor on an exact non-nested semantic fact article", () => {
+		const enHome = markup(<GlobalHomePage />);
+		const zhHome = markup(<ChinaHomePage />);
+		const enProduct = markup(<GlobalProductPage />);
+		for (const record of EN_READING_RECORDS.filter(({ id }) => id === "purpose" || id === "scope")) {
+			expectSemanticFactArticle(enHome, readingFact(record));
+		}
+		for (const record of ZH_READING_RECORDS.filter(({ id }) => id === "purpose" || id === "scope")) {
+			expectSemanticFactArticle(zhHome, readingFact(record));
+		}
+		expectSemanticFactArticle(enProduct, PAGE_FACTS.en.product);
 	});
 
 	it("places the Chinese scenes in the anxiety-first home and attaches product proof to the six-node system", () => {

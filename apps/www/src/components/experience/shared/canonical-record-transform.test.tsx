@@ -26,6 +26,7 @@ describe("CanonicalRecordTransform", () => {
 		expect(html).toContain("<div><dt>Public basis</dt>");
 		expect(html).toContain('aria-pressed="true"');
 		expect(html).toContain('aria-pressed="false"');
+		expect(html).toContain('<fieldset aria-label="One public record for people and agents">');
 		expect(html).not.toContain("token reduction");
 	});
 

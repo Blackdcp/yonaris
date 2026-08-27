@@ -1,16 +1,16 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, KeyboardEvent } from "react";
 import { useId } from "react";
 
-type RovingTabKey = "ArrowLeft" | "ArrowRight" | "Home" | "End";
+type RovingTabKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown" | "Home" | "End";
 
-const ROVING_KEYS = new Set<string>(["ArrowLeft", "ArrowRight", "Home", "End"]);
+const ROVING_KEYS = new Set<string>(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
 
 export function resolveRovingTabIndex(length: number, currentIndex: number, key: RovingTabKey): number {
 	if (length <= 0) return -1;
 	const normalizedIndex = ((currentIndex % length) + length) % length;
 	if (key === "Home") return 0;
 	if (key === "End") return length - 1;
-	if (key === "ArrowLeft") return (normalizedIndex - 1 + length) % length;
+	if (key === "ArrowLeft" || key === "ArrowUp") return (normalizedIndex - 1 + length) % length;
 	return (normalizedIndex + 1) % length;
 }
 

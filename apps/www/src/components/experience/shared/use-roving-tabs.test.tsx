@@ -41,6 +41,10 @@ describe("resolveRovingTabIndex", () => {
 		["ArrowLeft", 2, 1],
 		["ArrowRight", 1, 2],
 		["ArrowRight", 3, 0],
+		["ArrowUp", 0, 3],
+		["ArrowUp", 2, 1],
+		["ArrowDown", 1, 2],
+		["ArrowDown", 3, 0],
 		["Home", 3, 0],
 		["End", 0, 3],
 	] as const)("resolves %s from index %i to index %i", (key, current, expected) => {

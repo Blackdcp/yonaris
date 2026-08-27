@@ -843,6 +843,12 @@
 	animation: site-06-photo-breathe 24s ease-in-out infinite alternate;
 }
 
+.site-06-cinematic > picture {
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+}
+
 .site-06-cinematic__content {
 	position: relative;
 	z-index: 2;
@@ -1505,8 +1511,9 @@
 	position: absolute;
 	top: 50%;
 	right: 0;
+	min-width: 44px;
 	min-height: 44px;
-	padding: 8px 0;
+	padding: 8px 6px;
 	border: 0;
 	border-bottom: 2px solid transparent;
 	border-radius: 0;
@@ -1624,7 +1631,7 @@
 .site-06-product-proof-scene {
 	width: 100%;
 	min-width: 0;
-	overflow: clip;
+	overflow: visible;
 	border-top: 1px solid currentcolor;
 	border-bottom: 1px solid color-mix(in srgb, currentColor 36%, transparent);
 	border-radius: 0;
@@ -1840,13 +1847,18 @@
 }
 
 /* biome-ignore lint/style/noDescendingSpecificity: The canonical scene specializes a later route-level record. */
-.site-06-canonical-record-transform > div {
+.site-06-canonical-record-transform > fieldset {
 	display: grid;
 	grid-template-columns: auto auto minmax(240px, 1fr);
 	align-items: center;
 	max-width: 880px;
+	min-inline-size: 0;
+	margin: 0;
+	padding: 0;
 	border-top: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+	border-right: 0;
 	border-bottom: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+	border-left: 0;
 }
 
 .site-06-canonical-record-transform button {
@@ -1885,7 +1897,7 @@
 }
 
 .site-06-canonical-record-transform > p[role="status"] {
-	color: color-mix(in srgb, currentColor 60%, transparent);
+	color: color-mix(in srgb, currentColor 82%, transparent);
 	font-size: 0.74rem;
 }
 
@@ -1904,7 +1916,7 @@
 }
 
 .site-06-canonical-record-transform dt {
-	color: color-mix(in srgb, currentColor 58%, transparent);
+	color: color-mix(in srgb, currentColor 82%, transparent);
 	font-size: 0.72rem;
 }
 
@@ -1928,7 +1940,7 @@
 	display: inline-flex;
 	align-items: center;
 	min-height: 44px;
-	border-bottom: 1px solid var(--site-orange);
+	border-bottom: 1px solid var(--site-amber);
 }
 
 .site-06-home-bridge {
@@ -1961,6 +1973,28 @@
 	max-width: 58ch;
 	color: var(--site-ink-soft);
 	font-size: 0.78rem;
+	line-height: 1.58;
+}
+
+.site-06-product-fact {
+	display: grid;
+	grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.75fr);
+	margin-bottom: 44px;
+	padding: 24px 0;
+	border-top: 1px solid var(--site-ink);
+	border-bottom: 1px solid var(--site-rule);
+	gap: clamp(28px, 6vw, 74px);
+}
+
+.site-06-product-fact > p {
+	font-family: "Iowan Old Style", Baskerville, "Times New Roman", serif;
+	font-size: clamp(22px, 2.6vw, 33px);
+	line-height: 1.42;
+}
+
+.site-06-product-fact small {
+	color: var(--site-ink-soft);
+	font-size: 0.75rem;
 	line-height: 1.58;
 }
 
@@ -2268,6 +2302,12 @@
 	filter: saturate(0.78) sepia(0.22) contrast(1.04);
 }
 
+.site-06-editorial-photo > picture {
+	display: block;
+	width: 100%;
+	height: 100%;
+}
+
 .site-06-editorial-photo figcaption {
 	position: absolute;
 	right: 10px;
@@ -2387,10 +2427,31 @@
 .site-06-contact-form .lead-form header > p {
 	max-width: 62ch;
 	padding-left: 16px;
-	border-left: 2px solid var(--site-orange);
+	border-left: 2px solid var(--site-amber);
 	color: rgb(255 255 255 / 78%);
 	font-size: 0.82rem;
 	line-height: 1.62;
+}
+
+.site-06-contact-form .lead-confirmation {
+	width: 100%;
+	padding: clamp(28px, 5vw, 52px);
+	border: 1px solid rgb(255 255 255 / 30%);
+	border-radius: 0;
+	background: var(--site-navy-secondary);
+	color: var(--site-white);
+}
+
+.site-06-contact-form .lead-confirmation > span {
+	color: var(--site-amber);
+}
+
+.site-06-contact-form .lead-confirmation h2 {
+	color: var(--site-white);
+}
+
+.site-06-contact-form .lead-confirmation p {
+	color: rgb(255 255 255 / 78%);
 }
 
 .site-06-contact-form .lead-form fieldset {
@@ -3943,7 +4004,8 @@
 
 	.site-06-product-proof-context,
 	.site-06-home-bridge__scope,
-	.site-06-zh-public-truth__scope {
+	.site-06-zh-public-truth__scope,
+	.site-06-product-fact {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
@@ -3959,7 +4021,7 @@
 	}
 
 	/* biome-ignore lint/style/noDescendingSpecificity: Mobile canonical layout intentionally follows shared desktop primitives. */
-	.site-06-canonical-record-transform > div {
+	.site-06-canonical-record-transform > fieldset {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
