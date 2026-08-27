@@ -42,7 +42,8 @@ STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 grep -Fq 'bootstrap-marketing-deploy' "$SOURCE"
 grep -Fq 'bootstrap-runtime-authorization marketing' "$SOURCE"
 
-mkdir -p "$TREE/deploy/las" "$RUNTIME_HOME/.docker" "$RUNTIME_DIR" "$PROC/432/fd" "$PROC/net" "$MOCK_BIN" "$STABLE_DIRECTORY" "$(dirname -- "$ENV_FILE")"
+mkdir -p "$TREE/deploy/las" "$RUNTIME_HOME/.docker" "$RUNTIME_DIR" "$PROC/432/fd" "$PROC/net" \
+	"$MOCK_BIN" "$STABLE_DIRECTORY" "$TEST_ROOT/docker-resources" "$(dirname -- "$ENV_FILE")"
 printf 'services: {}\n' >"$TREE/deploy/las/compose.yaml"
 printf 'name: yonaris-marketing\nservices: {}\n' >"$TREE/deploy/las/compose.marketing.yaml"
 write_valid_env() {
@@ -127,6 +128,18 @@ printf '%s\n' "$*" >>'__DOCKER_LOG__'
 printf 'docker %s\n' "$*" >>'__EVENT_LOG__'
 rehearsal_failure="$(cat '__ROOT__/rehearsal-failure' 2>/dev/null || true)"
 rehearsal_readiness="$(cat '__ROOT__/rehearsal-readiness' 2>/dev/null || true)"
+resource_root='__ROOT__/docker-resources'
+named_argument() {
+	local previous='' argument
+	for argument in "$@"; do
+		if [[ "$previous" == --name ]]; then
+			printf '%s' "$argument"
+			return 0
+		fi
+		previous="$argument"
+	done
+	return 1
+}
 if [[ "$1" == info ]]; then
   [[ ! -e '__ROOT__/request-rebind' ]] || touch '__ROOT__/rebound'
   printf '["name=rootless"]\n'
@@ -160,11 +173,16 @@ fi
 if [[ "$1" == inspect && "$*" == *'{{.State.Health.Status}}'* ]]; then printf 'healthy\n'; exit 0; fi
 if [[ "$1" == image && "$2" == inspect ]]; then printf '%s\n' "${@: -1}"; exit 0; fi
 if [[ " $* " == *' compose '* && ( " $* " == *' pull '* || " $* " == *' up '* || " $* " == *' run '* ) ]]; then exit 0; fi
-if [[ "$1" == pull || ( "$1" == volume && "$2" == create ) ]]; then
+if [[ "$1" == pull ]]; then
 	exit 0
 fi
 if [[ "$1" == network && "$2" == create ]]; then
 	[[ "$rehearsal_failure" != network-create ]] || exit 93
+	touch "$resource_root/network-${@: -1}"
+	exit 0
+fi
+if [[ "$1" == volume && "$2" == create ]]; then
+	touch "$resource_root/volume-${@: -1}"
 	exit 0
 fi
 if [[ "$1" == run ]]; then
@@ -172,7 +190,23 @@ if [[ "$1" == run ]]; then
 		[[ "$rehearsal_failure" != migration ]] || exit 95
 		exit 0
 	fi
+	container_name="$(named_argument "$@")"
+	touch "$resource_root/container-$container_name"
 	printf 'rehearsal-postgres-id\n'
+	exit 0
+fi
+if [[ "$1" == create && " $* " == *' ghcr.io/blackdcp/yonaris-db-migrate@'* ]]; then
+	container_name="$(named_argument "$@")"
+	touch "$resource_root/container-$container_name"
+	printf 'rehearsal-migration-id\n'
+	exit 0
+fi
+if [[ "$1" == start && "$2" == --attach ]]; then
+	[[ "$rehearsal_failure" != migration ]] || exit 95
+	exit 0
+fi
+if [[ "$1" == wait ]]; then
+	printf '0\n'
 	exit 0
 fi
 if [[ "$1" == exec ]]; then
@@ -190,7 +224,32 @@ if [[ "$1" == exec ]]; then
 		exit 0
 	fi
 fi
-if [[ "$1" == rm || ( "$1" == volume && "$2" == rm ) || ( "$1" == network && "$2" == rm ) ]]; then
+if [[ "$1" == rm ]]; then
+	resource="$resource_root/container-${@: -1}"
+	[[ "$rehearsal_failure" != cleanup-all ]] || exit 98
+	[[ "$rehearsal_failure" == cleanup-linger ]] || rm -f -- "$resource"
+	exit 0
+fi
+if [[ "$1" == volume && "$2" == rm ]]; then
+	resource="$resource_root/volume-${@: -1}"
+	[[ "$rehearsal_failure" != cleanup-all ]] || exit 98
+	rm -f -- "$resource"
+	exit 0
+fi
+if [[ "$1" == network && "$2" == rm ]]; then
+	resource="$resource_root/network-${@: -1}"
+	[[ "$rehearsal_failure" != cleanup-all ]] || exit 98
+	rm -f -- "$resource"
+	exit 0
+fi
+if [[ ( "$1" == container || "$1" == volume || "$1" == network ) && "$2" == ls ]]; then
+	filter="${@: -1}"
+	name="${filter#name=^}"
+	name="${name#/}"
+	name="${name%\$}"
+	if [[ -e "$resource_root/$1-$name" ]]; then
+		printf '%s\n' "$name"
+	fi
 	exit 0
 fi
 exit 97
@@ -384,12 +443,23 @@ REHEARSAL_PREFIX="yonaris-migration-readiness-$RELEASE"
 REHEARSAL_NETWORK="$REHEARSAL_PREFIX-network"
 REHEARSAL_VOLUME="$REHEARSAL_PREFIX-volume"
 REHEARSAL_CONTAINER="$REHEARSAL_PREFIX-postgres"
+REHEARSAL_MIGRATION_CONTAINER="$REHEARSAL_PREFIX-migrate"
 REHEARSAL_RESULT="$WORK_ROOT/$RELEASE/rehearsal.result"
 
 assert_rehearsal_cleanup() {
 	grep -Fq "rm -f $REHEARSAL_CONTAINER" "$DOCKER_LOG"
+	[[ -z "$REHEARSAL_MIGRATION_CONTAINER" ]] || \
+		grep -Fq "rm -f $REHEARSAL_MIGRATION_CONTAINER" "$DOCKER_LOG"
 	grep -Fq "volume rm $REHEARSAL_VOLUME" "$DOCKER_LOG"
 	grep -Fq "network rm $REHEARSAL_NETWORK" "$DOCKER_LOG"
+}
+
+assert_rehearsal_absence_verification() {
+	grep -Fq "container ls --all --quiet --filter name=^/$REHEARSAL_CONTAINER\$" "$DOCKER_LOG"
+	[[ -z "$REHEARSAL_MIGRATION_CONTAINER" ]] || \
+		grep -Fq "container ls --all --quiet --filter name=^/$REHEARSAL_MIGRATION_CONTAINER\$" "$DOCKER_LOG"
+	grep -Fq "volume ls --quiet --filter name=^$REHEARSAL_VOLUME\$" "$DOCKER_LOG"
+	grep -Fq "network ls --quiet --filter name=^$REHEARSAL_NETWORK\$" "$DOCKER_LOG"
 }
 
 assert_rehearsal_docker_attestation() {
@@ -410,9 +480,12 @@ read_rehearsal_resources() {
 	REHEARSAL_NETWORK="$(awk '$1 == "network" && $2 == "create" { print $NF; exit }' "$DOCKER_LOG")"
 	REHEARSAL_VOLUME="$(awk '$1 == "volume" && $2 == "create" { print $NF; exit }' "$DOCKER_LOG")"
 	REHEARSAL_CONTAINER="$(awk '$1 == "run" && $2 == "--detach" { for (i = 1; i < NF; i += 1) if ($i == "--name") { print $(i + 1); exit } }' "$DOCKER_LOG")"
+	REHEARSAL_MIGRATION_CONTAINER="$(awk '$1 == "create" && $0 ~ /yonaris-db-migrate/ { for (i = 1; i < NF; i += 1) if ($i == "--name") { print $(i + 1); exit } }' "$DOCKER_LOG")"
 	[[ "$REHEARSAL_NETWORK" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-network$ ]]
 	[[ "$REHEARSAL_VOLUME" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-volume$ ]]
 	[[ "$REHEARSAL_CONTAINER" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-postgres$ ]]
+	[[ -z "$REHEARSAL_MIGRATION_CONTAINER" || \
+		"$REHEARSAL_MIGRATION_CONTAINER" =~ ^yonaris-migration-readiness-$RELEASE-[0-9a-f]{16}-migrate$ ]]
 }
 
 # The isolated restore occurs before the exact migration image, has no published
@@ -422,6 +495,7 @@ read_rehearsal_resources() {
 run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
 	"$WORK_ROOT/$RELEASE/database.dump" "$REHEARSAL_RESULT" migration-readiness-runtime-v1
 read_rehearsal_resources
+[[ -n "$REHEARSAL_MIGRATION_CONTAINER" ]] || { echo 'The migration rehearsal container is not tracked by name.' >&2; exit 1; }
 grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
 grep -Fq "pull postgres@$POSTGRES" "$DOCKER_LOG"
 grep -Fq "pull ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKER_LOG"
@@ -434,10 +508,20 @@ migration_line="$(grep -n "ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKE
 	exit 1
 }
 grep -Fq 'pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal' "$DOCKER_LOG"
-[[ "$(tr -d '\r' <"$REHEARSAL_RESULT")" == 'las-migration-rehearsal-runtime-v1 ok' ]]
+grep -Fq "wait $REHEARSAL_MIGRATION_CONTAINER" "$DOCKER_LOG"
+mapfile -t rehearsal_result_lines <"$REHEARSAL_RESULT"
+[[ "${#rehearsal_result_lines[@]}" -eq 3 && \
+	"${rehearsal_result_lines[0]%$'\r'}" == 'las-migration-rehearsal-runtime-v1 ok' && \
+	"${rehearsal_result_lines[1]%$'\r'}" == 'migration-exit-status 0' && \
+	"${rehearsal_result_lines[2]%$'\r'}" =~ ^completed-at-utc\ [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || {
+	echo 'Migration rehearsal result lacks the exact success status and UTC completion timestamp.' >&2
+	exit 1
+}
 ! grep -F 'test-secret' "$REHEARSAL_RESULT"
 assert_rehearsal_cleanup
+assert_rehearsal_absence_verification
 assert_rehearsal_docker_attestation
+[[ -z "$(find "$TEST_ROOT/docker-resources" -mindepth 1 -print -quit)" ]]
 first_rehearsal_network="$REHEARSAL_NETWORK"
 
 # A readiness delay is retried before restore; a bounded timeout fails closed.
@@ -493,8 +577,34 @@ for rehearsal_failure in restore migration; do
 	read_rehearsal_resources
 	[[ "$failure_status" -ne 0 ]] || { echo "Injected $rehearsal_failure failure passed." >&2; exit 1; }
 	assert_rehearsal_cleanup
+	assert_rehearsal_absence_verification
 	assert_rehearsal_docker_attestation
 	rm -f -- "$TEST_ROOT/rehearsal-failure"
+done
+
+# Cleanup is part of the success boundary. Every owned resource is attempted
+# even when removals fail, and a resource that remains after a successful
+# removal response is detected. Neither case may leave a rehearsal result.
+for cleanup_failure in cleanup-all cleanup-linger; do
+	: >"$EVENT_LOG"
+	: >"$DOCKER_LOG"
+	rm -f -- "$TEST_ROOT/docker-resources"/*
+	printf '%s\n' "$cleanup_failure" >"$TEST_ROOT/rehearsal-failure"
+	cleanup_result="$WORK_ROOT/$RELEASE/rehearsal-$cleanup_failure.result"
+	set +e
+	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+		"$WORK_ROOT/$RELEASE/database.dump" "$cleanup_result" migration-readiness-runtime-v1 >/dev/null 2>&1
+	cleanup_status=$?
+	set -e
+	read_rehearsal_resources
+	[[ "$cleanup_status" -ne 0 && ! -e "$cleanup_result" ]] || {
+		echo "Cleanup failure escaped the rehearsal boundary: $cleanup_failure" >&2
+		exit 1
+	}
+	assert_rehearsal_cleanup
+	assert_rehearsal_absence_verification
+	assert_rehearsal_docker_attestation
+	rm -f -- "$TEST_ROOT/rehearsal-failure" "$TEST_ROOT/docker-resources"/*
 done
 
 [[ "${RUNTIME_TEST_NEW_OPERATION_SLICE:-no}" != yes ]] || {

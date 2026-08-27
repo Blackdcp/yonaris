@@ -769,25 +769,50 @@ migration_rehearsal_docker() {
 	runtime_env /usr/bin/docker "$@"
 }
 
+migration_rehearsal_resource_is_absent() {
+	local kind="$1" name="$2" output
+	local -a command
+	case "$kind" in
+		container) command=(container ls --all --quiet --filter "name=^/$name$") ;;
+		volume) command=(volume ls --quiet --filter "name=^$name$") ;;
+		network) command=(network ls --quiet --filter "name=^$name$") ;;
+		*) return 1 ;;
+	esac
+	output="$(migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" \
+		"$MIGRATION_REHEARSAL_WORKER" "$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
+		"$MIGRATION_REHEARSAL_WWW" "${command[@]}")" || return 1
+	[[ -z "$output" ]]
+}
+
 migration_rehearsal_cleanup() {
-	local status="$?"
+	local status="$?" cleanup_status=0
 	trap - EXIT
+	if [[ "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER_CREATED" == true ]]; then
+		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			rm -f "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER" >/dev/null 2>&1 || cleanup_status=1
+		migration_rehearsal_resource_is_absent container "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER" || cleanup_status=1
+	fi
 	if [[ "$MIGRATION_REHEARSAL_CONTAINER_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
 			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
-			rm -f "$MIGRATION_REHEARSAL_CONTAINER" >/dev/null 2>&1 || :
+			rm -f "$MIGRATION_REHEARSAL_CONTAINER" >/dev/null 2>&1 || cleanup_status=1
+		migration_rehearsal_resource_is_absent container "$MIGRATION_REHEARSAL_CONTAINER" || cleanup_status=1
 	fi
 	if [[ "$MIGRATION_REHEARSAL_VOLUME_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
 			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
-			volume rm "$MIGRATION_REHEARSAL_VOLUME" >/dev/null 2>&1 || :
+			volume rm "$MIGRATION_REHEARSAL_VOLUME" >/dev/null 2>&1 || cleanup_status=1
+		migration_rehearsal_resource_is_absent volume "$MIGRATION_REHEARSAL_VOLUME" || cleanup_status=1
 	fi
 	if [[ "$MIGRATION_REHEARSAL_NETWORK_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
 			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
-			network rm "$MIGRATION_REHEARSAL_NETWORK" >/dev/null 2>&1 || :
+			network rm "$MIGRATION_REHEARSAL_NETWORK" >/dev/null 2>&1 || cleanup_status=1
+		migration_rehearsal_resource_is_absent network "$MIGRATION_REHEARSAL_NETWORK" || cleanup_status=1
 	fi
-	return "$status"
+	[[ "$status" -ne 0 ]] && return "$status"
+	return "$cleanup_status"
 }
 
 wait_for_migration_rehearsal_postgres() {
@@ -831,9 +856,9 @@ migration_backup() {
 
 migration_rehearse() {
 	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" backup="$7" result="$8"
-	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_nonce rehearsal_user='yonaris_rehearsal'
+	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_migration_container rehearsal_nonce rehearsal_user='yonaris_rehearsal'
 	local rehearsal_database='yonaris_rehearsal' rehearsal_password='yonaris_rehearsal'
-	local database_url
+	local database_url migration_exit_status completion_timestamp
 	prepare_migration_work_directory "$release_tag" || return 1
 	backup="$(migration_work_path "$release_tag" "$backup")" || return 1
 	result="$(migration_work_path "$release_tag" "$result")" || return 1
@@ -845,6 +870,7 @@ migration_rehearse() {
 	rehearsal_network="$rehearsal_prefix-network"
 	rehearsal_volume="$rehearsal_prefix-volume"
 	rehearsal_container="$rehearsal_prefix-postgres"
+	rehearsal_migration_container="$rehearsal_prefix-migrate"
 	database_url="postgresql://$rehearsal_user:$rehearsal_password@$rehearsal_container:5432/$rehearsal_database"
 	MIGRATION_REHEARSAL_RELEASE="$release_tag"
 	MIGRATION_REHEARSAL_WEB="$web"
@@ -853,9 +879,11 @@ migration_rehearse() {
 	MIGRATION_REHEARSAL_POSTGRES="$postgres"
 	MIGRATION_REHEARSAL_WWW="$www"
 	MIGRATION_REHEARSAL_CONTAINER="$rehearsal_container"
+	MIGRATION_REHEARSAL_MIGRATION_CONTAINER="$rehearsal_migration_container"
 	MIGRATION_REHEARSAL_VOLUME="$rehearsal_volume"
 	MIGRATION_REHEARSAL_NETWORK="$rehearsal_network"
 	MIGRATION_REHEARSAL_CONTAINER_CREATED=false
+	MIGRATION_REHEARSAL_MIGRATION_CONTAINER_CREATED=false
 	MIGRATION_REHEARSAL_VOLUME_CREATED=false
 	MIGRATION_REHEARSAL_NETWORK_CREATED=false
 	trap migration_rehearsal_cleanup EXIT
@@ -875,12 +903,22 @@ migration_rehearse() {
 	# The root shell opens the root-only backup before the rootless runtime inherits stdin.
 	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
 		exec -i "$rehearsal_container" pg_restore --username "$rehearsal_user" --dbname "$rehearsal_database" --no-owner --no-acl <"$backup" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --rm \
-		--network "$rehearsal_network" --env "DATABASE_URL=$database_url" "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" create \
+		--name "$rehearsal_migration_container" --network "$rehearsal_network" \
+		--env "DATABASE_URL=$database_url" "$PORTAL_MIGRATE_IMAGE@$migrate" >/dev/null || return 1
+	MIGRATION_REHEARSAL_MIGRATION_CONTAINER_CREATED=true
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		start --attach "$rehearsal_migration_container" || return 1
+	migration_exit_status="$(migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		wait "$rehearsal_migration_container")" || return 1
+	[[ "$migration_exit_status" == 0 ]] || return 1
 	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$rehearsal_container" || return 1
-	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' >"$result" || return 1
-	metadata_matches "$result" file '0:0:600' || return 1
-	migration_rehearsal_cleanup
+	migration_rehearsal_cleanup || return 1
+	completion_timestamp="$(/usr/bin/date -u +'%Y-%m-%dT%H:%M:%SZ')" || return 1
+	[[ "$completion_timestamp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
+	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' 'migration-exit-status 0' \
+		"completed-at-utc $completion_timestamp" >"$result" || return 1
+	metadata_matches "$result" file '0:0:600'
 }
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The LAS runtime manager must run as root.'

@@ -48,6 +48,18 @@ assert_not_contains() {
 	fi
 }
 
+assert_text_order() {
+	local text="$1" reason="$2" exact
+	shift 2
+	for exact in "$@"; do
+		if [[ "$text" != *"$exact"* ]]; then
+			printf 'Missing ordered security contract (%s): %s\n' "$reason" "$exact" >&2
+			exit 1
+		fi
+		text="${text#*"$exact"}"
+	done
+}
+
 for required_program in "$TRUST_INSTALLER" "$STATE_MANAGER" "$RUNTIME_MANAGER" \
 	"$CADDY_MANAGER" "$PRODUCER" "$BUNDLE_INSTALLER" "$ACTIVE_BUNDLE_LAUNCHER"; do
 	[[ -f "$required_program" ]] || {
@@ -212,6 +224,13 @@ assert_contains "$PRODUCER" "/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexis
 	'producer isolates the ctypes helper from hostile environment and imports'
 assert_not_contains "$PRODUCER" '/usr/bin/mv -nT' \
 	'producer never publishes evidence through racy mv no-clobber semantics'
+fresh_bootstrap_section="$(sed -n \
+	'/^## Establish the first canonical predecessor$/,/^Immediately attest the portal surface/p' "$RUNBOOK")"
+assert_text_order "$fresh_bootstrap_section" 'fresh bootstrap migration-readiness order' \
+	'  materialize sha-<40-lowercase-git-sha>' \
+	'/usr/local/libexec/yonaris-las/produce-las-migration-readiness \' \
+	'  migration-readiness \' \
+	'  bootstrap-portal-deploy sha-<40-lowercase-git-sha> \'
 
 # authorized_keys is exactly one LF-terminated forced entry, and effective sshd
 # policy cannot redirect keys or commands. Rootless Docker is an explicit host

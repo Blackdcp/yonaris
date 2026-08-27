@@ -352,6 +352,8 @@ From an already authenticated root console, use the exact producer and verifier
 sequence in the runbook; it is not an SSH operation:
 
 ```text
+/usr/local/libexec/yonaris-las/manage-las-release-state \
+  materialize sha-<40-lowercase-git-sha>
 /usr/local/libexec/yonaris-las/produce-las-migration-readiness \
   sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
 /usr/local/libexec/yonaris-las/manage-las-release-state \

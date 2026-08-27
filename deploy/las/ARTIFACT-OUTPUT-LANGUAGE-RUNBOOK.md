@@ -90,9 +90,10 @@ Perform bootstrap in this order from an already authenticated root console:
 4. preload the reviewed private Git commit into the root-only bare object store;
 5. stage one complete program-and-policy generation, then let the root-only
    installer publish and post-verify its atomic active pointer;
-6. after trustworthy migration evidence exists, bootstrap portal runtime and
-   attest its surface; use that receipt as the exact anchor to bootstrap www,
-   then bootstrap Caddy and attest the marketing surface;
+6. materialize the exact immutable release tree, produce and verify trustworthy
+   migration evidence for its authorized digest tuple, bootstrap portal runtime,
+   and attest its surface; use that receipt as the exact anchor to bootstrap
+   www, then bootstrap Caddy and attest the marketing surface;
 7. run the root verifier and forced SSH probes before enabling either workflow.
 
 Do not create migration evidence, a receipt, active-release marker, Caddy
@@ -224,12 +225,16 @@ equal `backup-sha256`. It must not expose credentials to deploy users,
 containers, or the SSH dispatcher.
 
 Run the producer only from an already authenticated root console (not through
-`sudo`) after the active stable bundle is installed. It uses only the Linux
-kernel's `renameat2(RENAME_NOREPLACE)` through a hash-bound ctypes helper; a
-missing symbol or unsupported kernel/filesystem fails closed, and there is no
-`mv -nT` fallback. Do not create, copy, edit, or hash evidence by hand:
+`sudo`) after the active stable bundle is installed and the exact release tree
+is materialized. Its authorization rejects an absent or invalid immutable tree.
+It uses only the Linux kernel's `renameat2(RENAME_NOREPLACE)` through a
+hash-bound ctypes helper; a missing symbol or unsupported kernel/filesystem
+fails closed, and there is no `mv -nT` fallback. Do not create, copy, edit, or
+hash evidence by hand:
 
 ```text
+/usr/local/libexec/yonaris-las/manage-las-release-state \
+  materialize sha-<40-lowercase-git-sha>
 /usr/local/libexec/yonaris-las/produce-las-migration-readiness \
   sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
 /usr/local/libexec/yonaris-las/manage-las-release-state \
@@ -237,7 +242,7 @@ missing symbol or unsupported kernel/filesystem fails closed, and there is no
   sha-<40> sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
 ```
 
-The second command must print exactly `las-migration-readiness-v1 ok` before a
+The verifier must print exactly `las-migration-readiness-v1 ok` before a
 portal bootstrap, database migration, or production workflow can proceed.
 
 The existing `/etc/caddy` directory must remain `root:root 0755` and the full
@@ -629,13 +634,20 @@ first bundle is active, use its fixed launchers from the same authenticated
 root console. The release must already have exact `deploy`,
 `marketing-deploy`, and `rollback` policy entries with one identical five-tuple.
 
-After the mandatory adapter is installed, run the producer and exact verifier
-sequence above. Do not fabricate its attestation. Once that exact evidence
-passes, materialize the release and bootstrap the portal runtime:
+After the mandatory adapter is installed, use this exact order. Materialization
+must finish before producer authorization; the verifier must pass before the
+runtime bootstrap. Do not fabricate the attestation:
 
 ```text
 /usr/local/libexec/yonaris-las/manage-las-release-state \
   materialize sha-<40-lowercase-git-sha>
+/usr/local/libexec/yonaris-las/produce-las-migration-readiness \
+  sha-<40-lowercase-git-sha> \
+  sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
+/usr/local/libexec/yonaris-las/manage-las-release-state \
+  migration-readiness \
+  sha-<40-lowercase-git-sha> \
+  sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www>
 /usr/local/libexec/yonaris-las/manage-las-runtime \
   bootstrap-portal-deploy sha-<40-lowercase-git-sha> \
   sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres> sha256:<www> \

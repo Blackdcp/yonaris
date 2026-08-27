@@ -244,20 +244,43 @@ work_directory="$(/usr/bin/mktemp -d "$release_work_root/.producer.XXXXXX")" || 
 /usr/bin/chmod 0700 -- "$work_directory" || fail 'Could not protect the migration work directory.'
 metadata_matches "$work_directory" directory '0:0:700' || fail 'The migration work directory has unsafe metadata.'
 
-cleanup_work() {
-	local status="$?"
-	trap - EXIT
-	/usr/bin/rm -f -- "${backup_temporary:-}" "${rehearsal_temporary:-}" "${attestation_temporary:-}"
+cleanup_publication_temporaries() {
+	local path cleanup_status=0
+	for path in "${backup_temporary:-}" "${rehearsal_temporary:-}" "${attestation_temporary:-}"; do
+		[[ -n "$path" ]] || continue
+		/usr/bin/rm -f -- "$path" || cleanup_status=1
+		[[ ! -e "$path" && ! -L "$path" ]] || cleanup_status=1
+	done
+	return "$cleanup_status"
+}
+
+cleanup_sensitive_work() {
+	local cleanup_status=0
 	if [[ -n "${work_directory:-}" ]]; then
 		[[ "$work_directory" == "$release_work_root"/.producer.* && "$work_directory" != "$release_work_root" ]] || \
-			exit 1
-		/usr/bin/chmod -R u+w -- "$work_directory" 2>/dev/null || true
-		/usr/bin/rm -rf -- "$work_directory"
+			return 1
+		if [[ -e "$work_directory" || -L "$work_directory" ]]; then
+			/usr/bin/rm -rf -- "$work_directory" || cleanup_status=1
+		fi
+		[[ ! -e "$work_directory" && ! -L "$work_directory" ]] || cleanup_status=1
 	fi
-	/usr/bin/rmdir -- "$release_work_root" 2>/dev/null || true
-	exit "$status"
+	if [[ -e "$release_work_root" || -L "$release_work_root" ]]; then
+		/usr/bin/rmdir -- "$release_work_root" || cleanup_status=1
+	fi
+	[[ ! -e "$release_work_root" && ! -L "$release_work_root" ]] || cleanup_status=1
+	[[ "$cleanup_status" -ne 0 ]] || work_directory=''
+	return "$cleanup_status"
 }
-trap cleanup_work EXIT
+
+cleanup_on_exit() {
+	local status="$?" cleanup_status=0
+	trap - EXIT
+	cleanup_publication_temporaries || cleanup_status=1
+	cleanup_sensitive_work || cleanup_status=1
+	[[ "$status" -ne 0 ]] && exit "$status"
+	exit "$cleanup_status"
+}
+trap cleanup_on_exit EXIT
 
 backup="$work_directory/database.dump"
 returned_copy="$work_directory/returned.dump"
@@ -284,17 +307,24 @@ returned_hash="$(/usr/bin/sha256sum -- "$returned_copy" | /usr/bin/awk '{print $
 runtime_manager migration-rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
 	"$returned_copy" "$rehearsal_result" migration-readiness-runtime-v1 || \
 	fail 'The fixed migration rehearsal operation failed.'
-metadata_matches "$rehearsal_result" file '0:0:600' && \
-	/usr/bin/cmp -s "$rehearsal_result" \
-		<(/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok') || \
+metadata_matches "$rehearsal_result" file '0:0:600' || fail 'The migration rehearsal result is invalid.'
+mapfile -t rehearsal_result_lines <"$rehearsal_result"
+[[ "${#rehearsal_result_lines[@]}" -eq 3 && \
+	"${rehearsal_result_lines[0]}" == 'las-migration-rehearsal-runtime-v1 ok' && \
+	"${rehearsal_result_lines[1]}" == 'migration-exit-status 0' && \
+	"${rehearsal_result_lines[2]}" =~ ^completed-at-utc\ [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || \
 	fail 'The migration rehearsal result is invalid.'
+completion_timestamp="${rehearsal_result_lines[2]#completed-at-utc }"
 
 printf -v backup_contents \
 	'las-migration-backup-evidence-v1\nrelease %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\noff-host-round-trip exact-bytes\n' \
 	"$release_tag" "$backup_hash" "$returned_hash"
 printf -v rehearsal_contents \
-	'las-migration-rehearsal-evidence-v1\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\nruntime-result las-migration-rehearsal-runtime-v1-ok\n' \
-	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$backup_hash" "$returned_hash"
+	'las-migration-rehearsal-evidence-v1\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\nruntime-result las-migration-rehearsal-runtime-v1-ok\nmigration-exit-status 0\ncompleted-at-utc %s\n' \
+	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$backup_hash" "$returned_hash" \
+	"$completion_timestamp"
+
+cleanup_sensitive_work || fail 'Could not remove and verify the sensitive migration work directory.'
 
 backup_temporary="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.backup.XXXXXX")" || \
 	fail 'Could not stage backup evidence.'
@@ -333,4 +363,7 @@ attestation_temporary=''
 
 durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || \
 	fail 'Published migration-readiness evidence failed exact verification.'
+cleanup_publication_temporaries && cleanup_sensitive_work || \
+	fail 'Migration-readiness cleanup did not complete.'
+trap - EXIT
 /usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'

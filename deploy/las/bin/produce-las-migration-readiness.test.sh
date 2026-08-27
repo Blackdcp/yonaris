@@ -29,6 +29,7 @@ REAL_STAT="$(command -v stat)"
 REAL_MV="$(command -v mv)"
 REAL_RM="$(command -v rm)"
 RELEASE='sha-0123456789abcdef0123456789abcdef01234567'
+COMPLETION_TIMESTAMP='2026-08-28T04:00:00Z'
 WEB='sha256:1111111111111111111111111111111111111111111111111111111111111111'
 WORKER='sha256:2222222222222222222222222222222222222222222222222222222222222222'
 MIGRATE='sha256:3333333333333333333333333333333333333333333333333333333333333333'
@@ -91,7 +92,8 @@ case "\${1:-}" in
 			"\$5" == "\$migrate" && "\$6" == "\$postgres" && "\$7" == "\$www" && \
 			"\${10}" == migration-readiness-runtime-v1 && ! -e '$TEST_ROOT/runtime-rehearsal-fail' ]] || exit 1
 		[[ "\$(cat -- "\$8")" == 'PGDMP-database-secret-bytes' ]] || exit 1
-		printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' >"\$9"
+		printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' 'migration-exit-status 0' \
+			'completed-at-utc $COMPLETION_TIMESTAMP' >"\$9"
 		chmod 0600 "\$9"
 		;;
 	*) exit 2 ;;
@@ -177,13 +179,18 @@ case "\${PRODUCER_TEST_RENAME_MODE:-success}:\$destination_path" in
 		exit 17
 		;;
 esac
+printf 'rename %s %s\n' "\$source_path" "\$destination_path" >>'$EVENT_LOG'
 exec '$REAL_MV' -T -- "\$source_path" "\$destination_path"
 STUB
 cat >"$MOCK_BIN/rm" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
+printf 'rm %s\n' "\$*" >>'$EVENT_LOG'
 if [[ "\${PRODUCER_TEST_RM_MODE:-}" == probe && "\$*" == *.renameat2-probe-* ]]; then
 	exit 92
+fi
+if [[ "\${PRODUCER_TEST_RM_MODE:-}" == work && "\$*" == *'/.producer.'* ]]; then
+	exit 93
 fi
 exec '$REAL_RM' "\$@"
 STUB
@@ -200,6 +207,7 @@ sed \
 	-e "s#/usr/bin/flock#$MOCK_BIN/flock#g" \
 	-e "s#/usr/bin/sync#$MOCK_BIN/sync#g" \
 	-e "s#/usr/bin/rm#$MOCK_BIN/rm#g" \
+	-e "s#$MOCK_BIN/rmdir#/usr/bin/rmdir#g" \
 	-e "s#/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' /usr/bin/python3#$MOCK_BIN/python3#g" \
 	"$PRODUCER_SOURCE" >"$PRODUCER"
 chmod 0755 "$PRODUCER"
@@ -351,6 +359,24 @@ grep -Fq 'runtime migration-rehearse' "$EVENT_LOG"
 assert_no_evidence
 assert_work_clean
 
+# The root-only backup, returned copy, and runtime result are deleted and their
+# absence is verified before any evidence rename. A work cleanup failure must
+# therefore publish no evidence and emit no success token.
+: >"$EVENT_LOG"
+PRODUCER_TEST_RM_MODE=work
+set +e
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	>"$TEST_ROOT/work-cleanup.out" 2>"$TEST_ROOT/work-cleanup.err"
+work_cleanup_status=$?
+set -e
+unset PRODUCER_TEST_RM_MODE
+[[ "$work_cleanup_status" -ne 0 ]] && grep -Fq 'runtime migration-rehearse' "$EVENT_LOG" && \
+	assert_no_evidence && ! grep -Fxq 'las-migration-readiness-v1 ok' "$TEST_ROOT/work-cleanup.out" || {
+	echo 'Producer published readiness before sensitive work cleanup succeeded.' >&2
+	exit 1
+}
+"$REAL_RM" -rf -- "$WORK_ROOT/$RELEASE"
+
 : >"$EVENT_LOG"
 PRODUCER_TEST_RENAME_MODE=fail-backup
 set +e
@@ -367,12 +393,19 @@ assert_work_clean
 : >"$EVENT_LOG"
 PRODUCER_TEST_RENAME_MODE=fail-rehearsal
 set +e
-run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
+	>/dev/null 2>"$TEST_ROOT/backup-only.err"
 backup_only_status=$?
 set -e
 unset PRODUCER_TEST_RENAME_MODE
 [[ "$backup_only_status" -ne 0 && -f "$EVIDENCE_ROOT/$RELEASE.backup" && \
-	! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
+	! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]] || {
+	echo 'Backup-only publication failure did not preserve the published evidence boundary.' >&2
+	cat "$TEST_ROOT/backup-only.err" >&2
+	cat "$EVENT_LOG" >&2
+	find "$EVIDENCE_ROOT" "$READINESS_ROOT" -maxdepth 1 -print >&2
+	exit 1
+}
 backup_only_hash="$(sha256sum -- "$EVIDENCE_ROOT/$RELEASE.backup" | awk '{print $1}')"
 set +e
 run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
@@ -454,6 +487,14 @@ rm -f "$TEST_ROOT/sync-failure"
 [[ "$post_attestation_sync_status" -ne 0 ]]
 [[ "$(run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
 	'las-migration-readiness-v1 ok' ]]
+work_cleanup_line="$(grep -nE '^rm -rf -- .*/migration-readiness-work-v1/.*/\.producer\.' "$EVENT_LOG" | tail -n 1 | cut -d: -f1)"
+backup_publish_line="$(grep -nF " $EVIDENCE_ROOT/$RELEASE.backup" "$EVENT_LOG" | grep 'rename ' | head -n 1 | cut -d: -f1)"
+[[ "$work_cleanup_line" =~ ^[1-9][0-9]*$ && "$backup_publish_line" =~ ^[1-9][0-9]*$ && \
+	"$work_cleanup_line" -lt "$backup_publish_line" ]] || {
+	echo 'Sensitive migration work was not removed before evidence publication.' >&2
+	cat "$EVENT_LOG" >&2
+	exit 1
+}
 : >"$EVENT_LOG"
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
 assert_no_runtime_or_adapter
@@ -469,6 +510,13 @@ grep -Fqx "sync -f $READINESS_ROOT" "$EVENT_LOG"
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$EVIDENCE_ROOT/$RELEASE.rehearsal")" == 0:0:400 && \
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$READINESS_ROOT/$RELEASE")" == 0:0:400 ]]
 [[ "$(wc -l <"$READINESS_ROOT/$RELEASE")" -eq 9 ]]
+mapfile -t rehearsal_evidence_lines <"$EVIDENCE_ROOT/$RELEASE.rehearsal"
+[[ "${#rehearsal_evidence_lines[@]}" -eq 12 && \
+	"${rehearsal_evidence_lines[10]}" == 'migration-exit-status 0' && \
+	"${rehearsal_evidence_lines[11]}" == "completed-at-utc $COMPLETION_TIMESTAMP" ]] || {
+	echo 'Published rehearsal evidence lacks the exact migration status and UTC completion timestamp.' >&2
+	exit 1
+}
 if grep -ERq 'database-secret|yonaris_rehearsal|DATABASE_URL|POSTGRES_' \
 	"$EVIDENCE_ROOT/$RELEASE.backup" "$EVIDENCE_ROOT/$RELEASE.rehearsal" "$READINESS_ROOT/$RELEASE"; then
 	echo 'Published migration-readiness evidence contains secret or database content.' >&2
