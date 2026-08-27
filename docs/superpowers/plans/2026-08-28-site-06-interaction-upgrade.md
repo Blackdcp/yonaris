@@ -148,7 +148,7 @@ Run: `git commit -m "feat(www): add deidentified product demo contract"`
 - Test: `apps/www/src/components/experience/shared/product-proof-scene.test.tsx`
 
 **Interfaces:**
-- Consumes: `productDemoFor(locale)` and existing `useAccessibleTabs`.
+- Consumes: `productDemoFor(locale)` and existing `useRovingTabs` from `use-roving-tabs.ts`.
 - Produces: `ProductProofScene({ locale, compact? }: { locale: ExperienceLocale; compact?: boolean })`.
 
 - [ ] **Step 1: Write the failing semantic-render test**
@@ -203,7 +203,7 @@ Run: `git commit -m "feat(www): add faithful product proof scene"`
 - Test: `apps/www/src/components/experience/shared/decision-trace-scene.test.tsx`
 
 **Interfaces:**
-- Consumes: `productDemoFor(locale)`, `useAccessibleTabs`, `ExperienceLocale`.
+- Consumes: `productDemoFor(locale)`, `useRovingTabs`, `ExperienceLocale`.
 - Produces: `DecisionTraceScene({ locale }: { locale: ExperienceLocale })`.
 
 - [ ] **Step 1: Write the failing invariant and SSR test**
