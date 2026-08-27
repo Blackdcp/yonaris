@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PAGE_FACTS } from "@/content/experience/canonical-public-facts";
 import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
+import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
 import { CinematicField } from "../shared/cinematic-field";
 import { EvidenceSheet } from "../shared/evidence-sheet";
 import { LeadForm } from "../shared/lead-form";
@@ -340,7 +341,12 @@ export function GlobalGeoPage() {
 	);
 }
 
-export function GlobalDiagnosticPage() {
+export function GlobalDiagnosticPage({
+	requestType = "consultation",
+}: {
+	requestType?: DiagnosticRequestType;
+} = {}) {
+	const isPrivacyRequest = requestType === "privacy";
 	return (
 		<GlobalShell pageKey="diagnostic">
 			<div
@@ -357,14 +363,35 @@ export function GlobalDiagnosticPage() {
 					className="site-06-contact-cinematic"
 				>
 					<article id={pageFacts.diagnostic.id} className="site-06-contact-scene" tabIndex={-1}>
-						<RouteLead pageKey="diagnostic" />
+						{isPrivacyRequest ? (
+							<header className="site-06-page-lead">
+								<p className="site-06-kicker">Privacy request</p>
+								<h1>Ask Yonaris to review a previous contact request.</h1>
+								<p className="site-06-hero__lead">
+									Use the same contact and company details so we can identify the record for manual review and
+									follow up through the channel you provide.
+								</p>
+							</header>
+						) : (
+							<RouteLead pageKey="diagnostic" />
+						)}
 						<div id="contact-form" className="site-06-contact-form">
-							<LeadForm locale="en" compact />
+							<LeadForm locale="en" compact requestType={requestType} />
 						</div>
 						<aside className="site-06-contact-scene__record">
-							<p>{pageFacts.diagnostic.value}</p>
-							<p>{pageFacts.diagnostic.source}</p>
-							<p>{pageFacts.diagnostic.boundary}</p>
+							{isPrivacyRequest ? (
+								<>
+									<p>The same three visible details identify an earlier contact request.</p>
+									<p>Yonaris privacy-request process · reviewed 27 Aug 2026</p>
+									<p>Submitting starts manual review; it does not automatically delete records.</p>
+								</>
+							) : (
+								<>
+									<p>{pageFacts.diagnostic.value}</p>
+									<p>{pageFacts.diagnostic.source}</p>
+									<p>{pageFacts.diagnostic.boundary}</p>
+								</>
+							)}
 						</aside>
 					</article>
 				</CinematicField>

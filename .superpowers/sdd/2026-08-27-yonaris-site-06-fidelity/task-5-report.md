@@ -154,11 +154,11 @@ Current contracts cover the intended behavior: localized machine labels, fixed H
 
 Follow-up start HEAD: `35987a0f`.
 
-The privacy pages now link to `/diagnostic?intent=privacy` and `/zh/diagnostic?intent=privacy`. The form keeps exactly three visible fields in each locale and derives one hidden, allowlisted `requestType`. The submit path reads and validates the current URL synchronously, so a submission cannot race the client effect. Unknown, repeated, or non-exact intent values default to `consultation`.
+The privacy pages now link to `/diagnostic?intent=privacy` and `/zh/diagnostic?intent=privacy`. The form keeps exactly three visible fields in each locale. The route derives one allowlisted `requestType` from SSR search or the queryless bootstrap state and passes that same value to the visible copy, hidden field, and submit payload. There is no client effect or separate submit-time parser to race or diverge. Unknown, repeated, or non-exact intent values default to `consultation`.
 
 The server schema independently defaults and allowlists the request type. Normal consultation subject/body output remains unchanged. Privacy requests receive explicit English or Chinese privacy/deletion subject and body markers. The delivery idempotency fingerprint includes the request type, keeping a privacy request distinct from an otherwise identical consultation.
 
-The first focused RED run produced eight failures across the schema, form, delivery, localized privacy, and Agent-fact contracts. After the initial GREEN, a real production browser check found the synchronous analytics bootstrap removing the allowlisted query before hydration. A second RED (two bootstrap cases) led to the narrow repair: retain only one exact `intent=privacy` value on diagnostic routes while continuing to remove legacy form values, unknown values, duplicate intents, and all query information from analytics event URLs.
+The first focused RED run produced eight failures across the schema, form, delivery, localized privacy, and Agent-fact contracts. After the initial GREEN, a real production browser check found the synchronous analytics bootstrap removing the allowlisted query before hydration. A second RED (two bootstrap cases) led to the narrow repair: capture only one exact `intent=privacy` value in safe history state, strip the complete diagnostic query before analytics loads, and clear stale state for unknown or repeated values.
 
 The English and Chinese privacy pages and canonical machine facts now state, narrowly, that form contents sent through Resend are processed and stored in the United States. Both Human pages link to Resend's official [region documentation](https://resend.com/docs/dashboard/domains/regions) and [Data Processing Addendum](https://resend.com/legal/dpa). They explain manual review, same-contact/company identification, reasonable operational and record-keeping retention, and that the form does not automatically delete records. No personal address or automated SLA is promised.
 
@@ -182,6 +182,48 @@ Fresh follow-up verification:
 - `pnpm verify:public-output-release`, site-manifest audit, and legacy-marketing audit — passed.
 
 Full-page privacy evidence is stored under `task-5-review/privacy-full`: EN 1440 `1440×1826`, EN 390 `390×2368`, ZH 1440 `1440×1540`, and ZH 390 `390×1971`. All four were inspected at original detail; each reports `scrollWidth === clientWidth`, and no overlap, clipping, generic closing stack, or unreadable source link was found. The corresponding four-width first views are in `task-5-captures/first-view`.
+
+## Final privacy-purpose and analytics hardening follow-up
+
+Follow-up start HEAD: `74897de9`.
+
+The privacy intent now changes the complete, visible purpose of both diagnostic routes without changing their compositions or their three-field contracts:
+
+- the kicker, H1, route lead, form label, form heading, form summary, submit label, disclosure, and success confirmation are localized privacy/manual-review copy;
+- the form and success state resolve `aria-labelledby` and `aria-describedby` to visible purpose text;
+- normal `/diagnostic` and `/zh/diagnostic` visits retain consultation copy and payloads;
+- unknown or repeated intent values clear any stale privacy marker and render consultation;
+- English and Chinese edition metadata and the root theme tag now use the Site 06 paper color `#f2ede3`.
+
+The early bootstrap runs before analytics. On an exact privacy query it records only the allowlisted marker in history state, adds the TanStack history key/index when the entry does not have one, and immediately replaces the URL with its queryless pathname/hash. This preserves the marker through router initialization and reload without retaining the query. Every other diagnostic query removes a stale marker and is stripped. `intent` and `requestType` are also blocked as analytics properties.
+
+TDD evidence:
+
+- initial focused RED: 8 files, 11 failed / 64 passed;
+- route first-view RED: 2 localized route-lead failures;
+- production browser exposed an additional TanStack initialization overwrite; the isolated RED was 1 failed / 7 passed;
+- final focused GREEN: 8 files, 75/75 before the router-state regression was added; final full GREEN: 34 files, 228/228.
+
+Production browser proof used a local `/api/diagnostic` interception and sent no real lead. EN and ZH both verified SSR privacy H1/form copy, exactly three visible fields, queryless public URL, preserved privacy state after hydration and reload, visible ARIA purpose, localized privacy submit/success copy, and intercepted `requestType=privacy`. Plausible/PostHog request URLs, referrers, and bodies were checked for diagnostic intent properties. Unknown and direct diagnostic visits remained consultation.
+
+Fresh visual evidence:
+
+- `task-5-review/privacy-intent/en-1440-first.png` and `en-1440-full.png`;
+- `task-5-review/privacy-intent/en-390-first.png` and `en-390-full.png`;
+- `task-5-review/privacy-intent/zh-1440-first.png` and `zh-1440-full.png`;
+- `task-5-review/privacy-intent/zh-390-first.png` and `zh-390-full.png`.
+
+All eight privacy-intent images and the four policy-page full captures were generated with `scrollWidth === clientWidth`; the four full privacy-intent compositions and four policy pages were inspected at original detail. The complete matrix was also regenerated: 156/156 production, 60/60 immutable-source reference, and 60/60 same-width pairs.
+
+Final follow-up gates:
+
+- `node --test apps/www/scripts/site-06-visual-matrix.test.mjs` — 11/11 passed;
+- `pnpm --filter @workspace/www test` — 34 files, 228/228 passed;
+- `pnpm --filter @workspace/www check-types` and `pnpm --filter e2e check-types` — passed;
+- `pnpm --filter @workspace/www build` — passed; only the existing >500 kB advisory remained;
+- source, artifact, and image-root public-output audits — `[]`;
+- public-output policy — 36/36 passed;
+- release verification, site-manifest classification, and legacy-marketing audit — passed.
 
 ## Remaining risks
 

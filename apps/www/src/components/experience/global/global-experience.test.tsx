@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 
 type PageKey = "home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy";
 type Page = () => React.ReactNode;
-type GlobalModule = { GLOBAL_PAGES?: Record<PageKey, Page> };
+type GlobalModule = {
+	GLOBAL_PAGES?: Record<PageKey, Page>;
+	GlobalDiagnosticPage?: (props: { requestType?: "consultation" | "privacy" }) => React.ReactNode;
+};
 type ReadingScenesModule = {
 	EN_READING_RECORDS?: readonly { id: string; fact: string }[];
 };
@@ -283,6 +286,23 @@ describe("Site 06 English experience", () => {
 		expect(privacy).toContain("does not automatically delete");
 		expect(privacy).toContain('href="/diagnostic?intent=privacy"');
 		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+	});
+
+	it("server-renders the validated privacy purpose into the English diagnostic composition", () => {
+		expect(subject?.GlobalDiagnosticPage).toBeDefined();
+		if (!subject?.GlobalDiagnosticPage) return;
+		const markup = renderToStaticMarkup(subject.GlobalDiagnosticPage({ requestType: "privacy" }));
+		const main = markup.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
+		const form = markup.match(/<form[\s\S]*?<\/form>/)?.[0] ?? "";
+		expect(main).toContain("Ask Yonaris to review a previous contact request.");
+		expect(main).toContain("identify the record for manual review");
+		expect(main).not.toContain("buying decision");
+		expect(main).not.toContain("requests a conversation");
+		expect(form).toContain("Ask Yonaris to review your contact records.");
+		expect(form).toContain("manual privacy review");
+		expect(form).toContain('name="requestType" value="privacy"');
+		expect(form.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+		expect(form).not.toContain("buying decision");
 	});
 
 	it("keeps the sales handoff to exactly three visible lead fields", () => {

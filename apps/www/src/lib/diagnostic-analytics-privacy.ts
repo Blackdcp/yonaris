@@ -1,3 +1,5 @@
+import { DIAGNOSTIC_INTENT_STATE_KEY } from "./diagnostic-request-intent";
+
 const SENSITIVE_PROPERTY_KEYS = new Set([
 	"website",
 	"brand",
@@ -16,11 +18,14 @@ const SENSITIVE_PROPERTY_KEYS = new Set([
 	"response",
 	"payload",
 	"lead",
+	"intent",
+	"requesttype",
 ]);
 const URL_PROPERTY_KEYS = new Set(["$current_url", "$referrer", "$initial_referrer", "$initial_current_url"]);
 
 export function buildDiagnosticAnalyticsBootstrapScript(): string {
-	return '(()=>{const p=location.pathname;if((p==="/diagnostic"||p==="/zh/diagnostic")&&location.search){const v=new URLSearchParams(location.search).getAll("intent");const q=v.length===1&&v[0]==="privacy"?"?intent=privacy":"";history.replaceState(history.state,"",location.pathname+q+location.hash)}})();';
+	const stateKey = JSON.stringify(DIAGNOSTIC_INTENT_STATE_KEY);
+	return `(()=>{const p=location.pathname;if((p==="/diagnostic"||p==="/zh/diagnostic")&&location.search){const v=new URLSearchParams(location.search).getAll("intent");const s=Object.assign({},history.state);const i=${stateKey};delete s[i];if(v.length===1&&v[0]==="privacy"){s[i]="privacy";if(!s.__TSR_key&&!s.key){const k=(Math.random()+1).toString(36).substring(7);s.__TSR_index=0;s.key=k;s.__TSR_key=k}}history.replaceState(s,"",location.pathname+location.hash)}})();`;
 }
 
 function sanitizeUrlLike(value: string): string {

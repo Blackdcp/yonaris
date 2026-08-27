@@ -8,6 +8,8 @@ describe("China edition SEO", () => {
 	it("uses native Chinese copy and canonical China routes", () => {
 		for (const key of HUMAN_PAGE_KEYS) {
 			const head = zhPageHead(key);
+			expect(head.meta).toContainEqual({ name: "theme-color", content: "#f2ede3" });
+			expect(head.meta).not.toContainEqual({ name: "theme-color", content: "#f6f4f1" });
 			const canonical = head.links.find((link) => link.rel === "canonical");
 			const ogImage = head.meta.find((item) => "property" in item && item.property === "og:image");
 			const ogImageUrl = new URL(ogImage?.content ?? "", "https://www.yonaris.com");

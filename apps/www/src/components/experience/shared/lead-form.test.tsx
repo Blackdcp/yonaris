@@ -28,8 +28,6 @@ type Subject = {
 		fields: Partial<Record<LeadField, { focus: () => void } | null>>,
 	) => LeadField | null;
 	submissionStateFromResult?: (result: { status: "confirmed" } | { status: "unconfirmed" }) => SubmissionState;
-	requestTypeFromSearch?: (search: string) => "consultation" | "privacy";
-	diagnosticLeadInputFromSearch?: (values: LeadValues, locale: "en" | "zh", search: string) => unknown;
 };
 
 const subject = (await import("./lead-form")) as Subject;
@@ -165,21 +163,7 @@ describe("LeadForm delivery states", () => {
 });
 
 describe("LeadForm privacy intent", () => {
-	it("allowlists only the exact privacy query intent and keeps three visible fields", () => {
-		expect(subject.requestTypeFromSearch).toBeDefined();
-		if (!subject.requestTypeFromSearch) return;
-		expect(subject.requestTypeFromSearch("?intent=privacy")).toBe("privacy");
-		for (const search of ["", "?intent=deletion", "?intent=privacy%20", "?intent=PRIVACY", "?other=privacy"])
-			expect(subject.requestTypeFromSearch(search), search).toBe("consultation");
-		expect(subject.diagnosticLeadInputFromSearch).toBeDefined();
-		expect(
-			subject.diagnosticLeadInputFromSearch?.(
-				{ name: "Ava", contact: "ava@example.com", company: "Acme", companyUrl: "" },
-				"en",
-				"?intent=privacy",
-			),
-		).toMatchObject({ requestType: "privacy", email: "ava@example.com" });
-
+	it("keeps privacy request metadata hidden without adding visible fields", () => {
 		const markup = renderView({
 			locale: "en",
 			requestType: "privacy",
@@ -189,5 +173,59 @@ describe("LeadForm privacy intent", () => {
 		});
 		expect(markup.match(/data-lead-field=/g) ?? []).toHaveLength(3);
 		expect(markup).toContain('type="hidden" name="requestType" value="privacy"');
+	});
+
+	it.each([
+		{
+			locale: "en" as const,
+			title: "Ask Yonaris to review your contact records.",
+			summary:
+				"Use the same name, work email and company as your earlier request so we can identify it for manual review.",
+			submit: "Submit privacy request",
+			disclosure: "This form starts a manual privacy review. It does not automatically delete records.",
+			successTitle: "Your privacy request is ready for manual review.",
+			successBody:
+				"We’ll use the details you provided to identify the earlier request and follow up through that contact channel.",
+			consultationPhrase: "buying decision",
+		},
+		{
+			locale: "zh" as const,
+			title: "请 Yonaris 核对你的联系记录。",
+			summary: "请填写与此前申请相同的姓名、电话和公司，方便人工识别并核对对应记录。",
+			submit: "提交隐私请求",
+			disclosure: "此表单会启动人工隐私核对，不会自动删除记录。",
+			successTitle: "隐私请求已收到，将由 Yonaris 人工核对。",
+			successBody: "我们会用你填写的联系方式识别此前申请，并通过该渠道跟进。",
+			consultationPhrase: "预约沟通",
+		},
+	])("renders a visible and accessible $locale privacy purpose through confirmation", (fixture) => {
+		const idle = renderView({
+			locale: fixture.locale,
+			requestType: "privacy",
+			values: { name: "", contact: "", company: "", companyUrl: "" },
+			submission: "idle",
+			errors: {},
+		});
+		expect(idle).toContain(`aria-labelledby="lead-${fixture.locale}-purpose-title"`);
+		expect(idle).toContain(
+			`aria-describedby="lead-${fixture.locale}-purpose-summary lead-${fixture.locale}-purpose-disclosure"`,
+		);
+		for (const text of [fixture.title, fixture.summary, fixture.submit, fixture.disclosure]) expect(idle).toContain(text);
+		expect(idle.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+		expect(idle).toContain('type="hidden" name="requestType" value="privacy"');
+		expect(idle).not.toContain(fixture.consultationPhrase);
+
+		const success = renderView({
+			locale: fixture.locale,
+			requestType: "privacy",
+			values: { name: "", contact: "", company: "", companyUrl: "" },
+			submission: "success",
+			errors: {},
+		});
+		expect(success).toContain(`aria-labelledby="lead-${fixture.locale}-success-title"`);
+		expect(success).toContain(`aria-describedby="lead-${fixture.locale}-success-body"`);
+		expect(success).toContain(fixture.successTitle);
+		expect(success).toContain(fixture.successBody);
+		expect(success).not.toContain(fixture.consultationPhrase);
 	});
 });

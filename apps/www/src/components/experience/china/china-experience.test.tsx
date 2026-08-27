@@ -5,6 +5,10 @@ import { describe, expect, it } from "vitest";
 type Page = () => React.ReactNode;
 type PageKey = "home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy";
 type ChinaPages = Record<PageKey, Page>;
+type ChinaModule = {
+	CHINA_PAGES?: ChinaPages;
+	ChinaDiagnosticPage?: (props: { requestType?: "consultation" | "privacy" }) => React.ReactNode;
+};
 
 const compositions = {
 	home: "cinematic-anxiety",
@@ -16,7 +20,7 @@ const compositions = {
 	privacy: "privacy-editorial-zh",
 } as const satisfies Record<PageKey, string>;
 
-const subject = (await import("./china-pages").catch(() => undefined)) as { CHINA_PAGES?: ChinaPages } | undefined;
+const subject = (await import("./china-pages").catch(() => undefined)) as ChinaModule | undefined;
 const siteCss = readFileSync(new URL("../../../styles/experience/site-06.css", import.meta.url), "utf8");
 
 function cssRule(source: string, selector: string): string {
@@ -195,6 +199,23 @@ describe("Site 06 中国站", () => {
 		expect(privacy).toContain('href="https://resend.com/legal/dpa"');
 		expect(privacy).toContain('href="/zh/diagnostic?intent=privacy"');
 		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+	});
+
+	it("在服务端首帧呈现经过校验的隐私请求目的", () => {
+		expect(subject?.ChinaDiagnosticPage).toBeDefined();
+		if (!subject?.ChinaDiagnosticPage) return;
+		const markup = renderToStaticMarkup(subject.ChinaDiagnosticPage({ requestType: "privacy" }));
+		const main = markup.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
+		const form = markup.match(/<form[\s\S]*?<\/form>/)?.[0] ?? "";
+		expect(main).toContain("请 Yonaris 核对此前的联系申请。");
+		expect(main).toContain("人工识别对应记录");
+		expect(main).not.toContain("最不想让 AI 答错");
+		expect(main).not.toContain("申请围绕所填问题与公司的后续沟通");
+		expect(form).toContain("请 Yonaris 核对你的联系记录。");
+		expect(form).toContain("启动人工隐私核对");
+		expect(form).toContain('name="requestType" value="privacy"');
+		expect(form.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+		expect(form).not.toContain("预约沟通");
 	});
 
 	it("retains the system labels and public breakdown boundaries", () => {

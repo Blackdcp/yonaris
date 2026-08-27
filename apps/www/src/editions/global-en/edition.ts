@@ -32,7 +32,7 @@ export function globalEnglishPageHead(key: GlobalEnglishPageKey) {
 		meta: [
 			{ title },
 			{ name: "description", content: page.metaDescription },
-			{ name: "theme-color", content: "#f6f4f1" },
+			{ name: "theme-color", content: "#f2ede3" },
 			...pageSocialMeta({ title, description: page.metaDescription, canonicalPath, locale: "en_US" }),
 		],
 		links: [

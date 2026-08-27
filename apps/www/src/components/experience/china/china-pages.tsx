@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { PAGE_FACTS, ZH_CATEGORY } from "@/content/experience/canonical-public-facts";
 import { CHINA_COPY, CHINA_READING_RECORDS } from "@/content/experience/china-copy";
 import type { HumanPageKey } from "@/content/experience/types";
+import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
 import { CinematicField } from "../shared/cinematic-field";
 import { LeadForm } from "../shared/lead-form";
 import {
@@ -208,17 +209,34 @@ export function ChinaGeoPage() {
 	);
 }
 
-export function ChinaDiagnosticPage() {
+export function ChinaDiagnosticPage({
+	requestType = "consultation",
+}: {
+	requestType?: DiagnosticRequestType;
+} = {}) {
 	const copy = CHINA_COPY.diagnostic;
 	const fact = PAGE_FACTS.zh.diagnostic;
+	const isPrivacyRequest = requestType === "privacy";
 	return (
 		<ChinaShell pageKey="diagnostic">
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-contact" data-page-composition="contact-cinematic-zh">
 				<CinematicField image={{ src: "/brand/site-06/working-session.jpg", alt: "暖色真实办公空间", focalPosition: "center center" }} credit="Photo: Annie Spratt / Unsplash" className="site-06-contact-cinematic">
 					<article className="site-06-contact-scene" id={fact.id} tabIndex={-1}>
-						<header className="site-06-zh-route-lead"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p></header>
-						<div id="contact-form" className="site-06-contact-form"><LeadForm locale="zh" compact /></div>
-						<span className="sr-only" data-contact-fact>{fact.value} {fact.source} {fact.boundary}</span>
+						{isPrivacyRequest ? (
+							<header className="site-06-zh-route-lead">
+								<p className="site-06-kicker">隐私请求</p>
+								<h1>请 Yonaris 核对此前的联系申请。</h1>
+								<p>填写与此前申请相同的联系信息和公司信息，方便人工识别对应记录，并通过你提供的渠道跟进。</p>
+							</header>
+						) : (
+							<header className="site-06-zh-route-lead"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p></header>
+						)}
+						<div id="contact-form" className="site-06-contact-form"><LeadForm locale="zh" compact requestType={requestType} /></div>
+						<span className="sr-only" data-contact-fact>
+							{isPrivacyRequest
+								? "相同的三项可见信息用于识别此前联系申请；提交后由 Yonaris 人工核对，表单不会自动删除记录。"
+								: `${fact.value} ${fact.source} ${fact.boundary}`}
+						</span>
 					</article>
 				</CinematicField>
 			</div>

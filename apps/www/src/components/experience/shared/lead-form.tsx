@@ -5,7 +5,6 @@ import {
 	resolveDiagnosticRequestIdentity,
 	submitDiagnosticRequest,
 } from "@/lib/diagnostic-client";
-import { diagnosticRequestTypeFromSearch } from "@/lib/diagnostic-request-intent";
 import { type DiagnosticLead, type DiagnosticRequestType, parseDiagnosticLead } from "@/lib/diagnostic-schema";
 
 export type LeadLocale = "en" | "zh";
@@ -79,19 +78,38 @@ const copy = {
 	},
 } as const;
 
+const privacyCopy = {
+	en: {
+		...copy.en,
+		label: "Privacy request",
+		title: "Ask Yonaris to review your contact records.",
+		summary:
+			"Use the same name, work email and company as your earlier request so we can identify it for manual review.",
+		submit: "Submit privacy request",
+		submitting: "Sending privacy request…",
+		successTitle: "Your privacy request is ready for manual review.",
+		successBody:
+			"We’ll use the details you provided to identify the earlier request and follow up through that contact channel.",
+		disclosure: "This form starts a manual privacy review. It does not automatically delete records.",
+	},
+	zh: {
+		...copy.zh,
+		label: "隐私请求",
+		title: "请 Yonaris 核对你的联系记录。",
+		summary: "请填写与此前申请相同的姓名、电话和公司，方便人工识别并核对对应记录。",
+		submit: "提交隐私请求",
+		submitting: "正在提交隐私请求…",
+		successTitle: "隐私请求已收到，将由 Yonaris 人工核对。",
+		successBody: "我们会用你填写的联系方式识别此前申请，并通过该渠道跟进。",
+		disclosure: "此表单会启动人工隐私核对，不会自动删除记录。",
+	},
+} as const;
+
 const visibleFieldOrder = ["name", "contact", "company"] as const;
 
 function toLead(values: LeadValues, locale: LeadLocale, requestType: DiagnosticRequestType = "consultation"): unknown {
 	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl, requestType };
 	return locale === "en" ? { ...base, email: values.contact } : { ...base, phone: values.contact };
-}
-
-export function requestTypeFromSearch(search: string): DiagnosticRequestType {
-	return diagnosticRequestTypeFromSearch(search);
-}
-
-export function diagnosticLeadInputFromSearch(values: LeadValues, locale: LeadLocale, search: string): unknown {
-	return toLead(values, locale, requestTypeFromSearch(search));
 }
 
 export function validateLeadValues(values: LeadValues, locale: LeadLocale): FieldErrors {
@@ -150,17 +168,29 @@ export function LeadFormView({
 	onUpdate,
 	onSubmit,
 }: LeadFormViewProps) {
-	const labels = copy[locale];
+	const labels = requestType === "privacy" ? privacyCopy[locale] : copy[locale];
 	if (submission === "success") {
+		const successTitleId = `lead-${locale}-success-title`;
+		const successBodyId = `lead-${locale}-success-body`;
 		return (
-			<section className="lead-confirmation" role="status" aria-live="polite" data-lead-state="success">
+			<section
+				className="lead-confirmation"
+				role="status"
+				aria-live="polite"
+				aria-labelledby={successTitleId}
+				aria-describedby={successBodyId}
+				data-lead-state="success"
+			>
 				<span>{labels.label}</span>
-				<h2>{labels.successTitle}</h2>
-				<p>{labels.successBody}</p>
+				<h2 id={successTitleId}>{labels.successTitle}</h2>
+				<p id={successBodyId}>{labels.successBody}</p>
 			</section>
 		);
 	}
 
+	const purposeTitleId = `lead-${locale}-purpose-title`;
+	const purposeSummaryId = `lead-${locale}-purpose-summary`;
+	const purposeDisclosureId = `lead-${locale}-purpose-disclosure`;
 	const nameErrorId = `lead-${locale}-name-error`;
 	const contactErrorId = `lead-${locale}-contact-error`;
 	const companyErrorId = `lead-${locale}-company-error`;
@@ -171,11 +201,13 @@ export function LeadFormView({
 			onSubmit={onSubmit}
 			noValidate
 			data-lead-state={submission}
+			aria-labelledby={purposeTitleId}
+			aria-describedby={`${purposeSummaryId} ${purposeDisclosureId}`}
 		>
 			<header>
 				<span>{labels.label}</span>
-				<h2>{labels.title}</h2>
-				<p>{labels.summary}</p>
+				<h2 id={purposeTitleId}>{labels.title}</h2>
+				<p id={purposeSummaryId}>{labels.summary}</p>
 			</header>
 			<fieldset>
 				<legend className="sr-only">{labels.label}</legend>
@@ -281,16 +313,23 @@ export function LeadFormView({
 			<button type="submit" disabled={submission === "submitting"}>
 				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
 			</button>
-			<p className="lead-disclosure">
+			<p className="lead-disclosure" id={purposeDisclosureId}>
 				{labels.disclosure} <a href={locale === "zh" ? "/zh/privacy" : "/privacy"}>{labels.privacy}</a>
 			</p>
 		</form>
 	);
 }
 
-export function LeadForm({ locale, compact = false }: { locale: LeadLocale; compact?: boolean }) {
+export function LeadForm({
+	locale,
+	compact = false,
+	requestType = "consultation",
+}: {
+	locale: LeadLocale;
+	compact?: boolean;
+	requestType?: DiagnosticRequestType;
+}) {
 	const [values, setValues] = useState<LeadValues>({ name: "", contact: "", company: "", companyUrl: "" });
-	const [requestType, setRequestType] = useState<DiagnosticRequestType>("consultation");
 	const [submission, setSubmission] = useState<SubmissionState>("idle");
 	const [errors, setErrors] = useState<FieldErrors>({});
 	const [validationFailed, setValidationFailed] = useState(false);
@@ -299,10 +338,7 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 	const identityRef = useRef<DiagnosticRequestIdentity | null>(null);
 	const controllerRef = useRef<AbortController | null>(null);
 
-	useEffect(() => {
-		setRequestType(requestTypeFromSearch(window.location.search));
-		return () => controllerRef.current?.abort();
-	}, []);
+	useEffect(() => () => controllerRef.current?.abort(), []);
 
 	function update(field: keyof LeadValues, value: string): void {
 		const next = { ...valuesRef.current, [field]: value };
@@ -332,9 +368,7 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 			return;
 		}
 
-		const parsed = parseDiagnosticLead(
-			diagnosticLeadInputFromSearch(valuesRef.current, locale, window.location.search),
-		);
+		const parsed = parseDiagnosticLead(toLead(valuesRef.current, locale, requestType));
 		if (!parsed.success) {
 			setValidationFailed(true);
 			return;

@@ -25,7 +25,7 @@ export const Route = createRootRoute({
 					name: "viewport",
 					content: "width=device-width, initial-scale=1",
 				},
-				{ name: "theme-color", content: "#f6f4f1" },
+				{ name: "theme-color", content: "#f2ede3" },
 				{ name: "apple-mobile-web-app-title", content: "Yonaris" },
 			],
 			links: [
