@@ -303,6 +303,9 @@ describe("zero-to-one stylesheet boundary", () => {
 
 	it("keeps canonical microcopy readable and static rules neutral on warm paper", () => {
 		const css = read("styles/experience/site-06.css");
+		const proofContext = ruleFor(css, ".site-06-product-proof-context small");
+		expect(proofContext).toContain("color: color-mix(in srgb, currentColor 68%, transparent)");
+		expect(proofContext).not.toContain("currentColor 60%");
 		for (const selector of [
 			'.site-06-canonical-record-transform > p[role="status"]',
 			".site-06-canonical-record-transform dt",

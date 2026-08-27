@@ -41,15 +41,33 @@ describe("resolveRovingTabIndex", () => {
 		["ArrowLeft", 2, 1],
 		["ArrowRight", 1, 2],
 		["ArrowRight", 3, 0],
+		["Home", 3, 0],
+		["End", 0, 3],
+	] as const)("resolves default horizontal %s from index %i to index %i", (key, current, expected) => {
+		expect(resolveRovingTabIndex(4, current, key)).toBe(expected);
+	});
+
+	it.each(["ArrowUp", "ArrowDown"] as const)("does not resolve or intercept %s for default horizontal tabs", (key) => {
+		expect(resolveRovingTabIndex(4, 1, key)).toBeNull();
+	});
+
+	it.each([
 		["ArrowUp", 0, 3],
 		["ArrowUp", 2, 1],
 		["ArrowDown", 1, 2],
 		["ArrowDown", 3, 0],
 		["Home", 3, 0],
 		["End", 0, 3],
-	] as const)("resolves %s from index %i to index %i", (key, current, expected) => {
-		expect(resolveRovingTabIndex(4, current, key)).toBe(expected);
+	] as const)("resolves explicit vertical %s from index %i to index %i", (key, current, expected) => {
+		expect(resolveRovingTabIndex(4, current, key, "vertical")).toBe(expected);
 	});
+
+	it.each(["ArrowLeft", "ArrowRight"] as const)(
+		"does not resolve or intercept %s for explicit vertical tabs",
+		(key) => {
+			expect(resolveRovingTabIndex(4, 1, key, "vertical")).toBeNull();
+		},
+	);
 });
 
 describe("Site 06 English roving tab scenes", () => {

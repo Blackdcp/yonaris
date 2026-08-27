@@ -1623,7 +1623,7 @@
 
 .site-06-product-proof-context small {
 	max-width: 720px;
-	color: color-mix(in srgb, currentColor 60%, transparent);
+	color: color-mix(in srgb, currentColor 68%, transparent);
 	font-size: 0.73rem;
 	line-height: 1.55;
 }

@@ -1,16 +1,22 @@
 import type { ButtonHTMLAttributes, HTMLAttributes, KeyboardEvent } from "react";
 import { useId } from "react";
 
-type RovingTabKey = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown" | "Home" | "End";
+export type RovingTabOrientation = "horizontal" | "vertical";
 
-const ROVING_KEYS = new Set<string>(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
-
-export function resolveRovingTabIndex(length: number, currentIndex: number, key: RovingTabKey): number {
+export function resolveRovingTabIndex(
+	length: number,
+	currentIndex: number,
+	key: string,
+	orientation: RovingTabOrientation = "horizontal",
+): number | null {
+	const backwardKey = orientation === "vertical" ? "ArrowUp" : "ArrowLeft";
+	const forwardKey = orientation === "vertical" ? "ArrowDown" : "ArrowRight";
+	if (key !== backwardKey && key !== forwardKey && key !== "Home" && key !== "End") return null;
 	if (length <= 0) return -1;
 	const normalizedIndex = ((currentIndex % length) + length) % length;
 	if (key === "Home") return 0;
 	if (key === "End") return length - 1;
-	if (key === "ArrowLeft" || key === "ArrowUp") return (normalizedIndex - 1 + length) % length;
+	if (key === backwardKey) return (normalizedIndex - 1 + length) % length;
 	return (normalizedIndex + 1) % length;
 }
 
@@ -19,18 +25,19 @@ export function useRovingTabs<T extends string>(options: {
 	active: T;
 	onChange: (next: T) => void;
 	idPrefix: string;
+	orientation?: RovingTabOrientation;
 }) {
-	const { items, active, onChange, idPrefix } = options;
+	const { items, active, onChange, idPrefix, orientation = "horizontal" } = options;
 	const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
 	const tabId = (item: T) => `${idPrefix}-tab-${instanceId}-${encodeURIComponent(item)}`;
 	const panelId = (item: T) => `${idPrefix}-panel-${instanceId}-${encodeURIComponent(item)}`;
 
 	function selectFromKeyboard(event: KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
-		if (!ROVING_KEYS.has(event.key)) return;
-		event.preventDefault();
-		const nextIndex = resolveRovingTabIndex(items.length, currentIndex, event.key as RovingTabKey);
+		const nextIndex = resolveRovingTabIndex(items.length, currentIndex, event.key, orientation);
+		if (nextIndex === null) return;
 		const next = items[nextIndex];
 		if (!next) return;
+		event.preventDefault();
 		onChange(next);
 		document.getElementById(tabId(next))?.focus();
 	}
