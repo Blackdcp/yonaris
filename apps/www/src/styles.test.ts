@@ -270,6 +270,7 @@ describe("zero-to-one stylesheet boundary", () => {
 		const trace = ruleFor(css, ".site-06-decision-trace");
 		expect(trace).toContain("position: relative");
 		expect(trace).toContain("display: grid");
+		expect(trace).toContain("--site-06-trace-control-rail-offset: clamp(52px, 4vw, 60px)");
 		expect(trace).not.toMatch(/background:|box-shadow:|border-radius:/);
 		expect(ruleFor(css, ".site-06-decision-trace__question")).toContain("pointer-events: none");
 		expect(ruleFor(css, ".site-06-decision-trace__rings")).toContain("aspect-ratio: 1");
@@ -279,6 +280,7 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(traceButton).toContain("padding: 8px 6px");
 		expect(traceButton).toContain("background: transparent");
 		expect(traceButton).toContain("border-radius: 0");
+		expect(traceButton).toContain("transform: translate(42%, calc(-50% + var(--site-06-trace-control-rail-offset)))");
 
 		const proof = ruleFor(css, ".site-06-product-proof-scene");
 		expect(proof).toContain("border-radius: 0");

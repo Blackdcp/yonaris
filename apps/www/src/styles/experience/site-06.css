@@ -1439,6 +1439,8 @@
 
 /* Product interaction upgrade: semantic geometry, one ledger, one canonical record. */
 .site-06-decision-trace {
+	--site-06-trace-control-rail-offset: clamp(52px, 4vw, 60px);
+
 	position: relative;
 	display: grid;
 	min-width: 0;
@@ -1523,7 +1525,7 @@
 	cursor: pointer;
 	font-size: 0.72rem;
 	font-weight: 650;
-	transform: translate(42%, -50%);
+	transform: translate(42%, calc(-50% + var(--site-06-trace-control-rail-offset)));
 }
 
 .site-06-decision-trace__ring:has(button[aria-selected="true"]) {
