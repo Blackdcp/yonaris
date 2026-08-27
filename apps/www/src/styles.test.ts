@@ -208,4 +208,12 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(css, ".site-06 .lead-form input")).toContain("min-height: 48px");
 		expect(ruleFor(css, ".site-06 .lead-form button")).toContain("background: var(--site-orange)");
 	});
+
+	it("resets the English Contact submit from the inherited capsule", () => {
+		const css = read("styles/experience/site-06.css");
+		const contactSubmit = ruleFor(css, ".site-06-contact-form .lead-form button");
+		expect(contactSubmit).toContain("border-radius: 0");
+		expect(contactSubmit).toContain("border-bottom: 3px solid var(--site-orange)");
+		expect(contactSubmit).toContain("background: transparent");
+	});
 });
