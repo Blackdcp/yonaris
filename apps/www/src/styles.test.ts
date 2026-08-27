@@ -135,6 +135,57 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(mobile, ".site-06-header__mobile-mode")).toContain("display: block");
 	});
 
+	it("reserves a legible Human wordmark beside mobile mode and menu controls at 360 and 390", () => {
+		const site = read("styles/experience/site-06.css");
+		const tablet = site.slice(site.indexOf("@media (max-width: 1050px)"), site.indexOf("@media (max-width: 900px)"));
+		const mobile = site.slice(
+			site.indexOf("@media (max-width: 720px)"),
+			site.indexOf("@media (prefers-reduced-motion"),
+		);
+		const acceptanceCases = [
+			{ locale: "en", width: 360 },
+			{ locale: "en", width: 390 },
+			{ locale: "zh", width: 360 },
+			{ locale: "zh", width: 390 },
+		] as const;
+
+		for (const { locale, width } of acceptanceCases) {
+			const tabletHeader = ruleFor(tablet, ".site-06-header__inner");
+			expect(tabletHeader, `${locale} ${width}px must reserve explicit brand, mode, locale, and menu tracks`).toContain(
+				"grid-template-columns: minmax(120px, 1fr) auto auto auto",
+			);
+			expect(tabletHeader, `${locale} ${width}px must use deliberate control spacing`).toContain("gap: 12px");
+			expect(mobile, `${locale} ${width}px must tighten spacing without hiding controls`).toMatch(
+				/\.site-06-header__inner\s*\{[^}]*gap:\s*8px;/su,
+			);
+			expect(mobile, `${locale} ${width}px must move the mode rail to its own full-width row`).toMatch(
+				/grid-template-areas:\s*"brand locale menu"\s*"mode mode mode";/su,
+			);
+			expect(ruleFor(mobile, ".site-06-brand"), `${locale} ${width}px needs a legible wordmark floor`).toContain(
+				"min-width: 120px",
+			);
+		}
+	});
+
+	it("keeps every compact Agent inner masthead and metadata band short enough to reveal the directory", () => {
+		const agent = read("styles/experience/agent.css");
+		const mobile = agent.slice(
+			agent.lastIndexOf("@media (max-width: 880px)"),
+			agent.lastIndexOf("@media (prefers-reduced-motion"),
+		);
+		const intro = ruleFor(mobile, ".agent-experience__route-intro");
+		const introCopy = ruleFor(mobile, ".agent-experience__route-intro .agent-experience__intro-copy");
+		const metadata = ruleFor(mobile, ".agent-experience__record-meta");
+
+		expect(intro).toContain("min-height: 0");
+		expect(intro).toContain("padding: 1rem 1.2rem");
+		expect(introCopy).toContain("max-width: 100%");
+		expect(metadata).toContain("padding: 0.7rem 1.2rem");
+		expect(ruleFor(mobile, ".agent-experience__route-intro .agent-experience__human-return")).toContain(
+			"margin-top: 0.7rem",
+		);
+	});
+
 	it("keeps Agent desktop micro-labels readable and Chinese headings stable at tablet width", () => {
 		const agent = read("styles/experience/agent.css");
 		for (const selector of [

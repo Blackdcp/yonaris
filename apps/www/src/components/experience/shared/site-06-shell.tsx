@@ -112,19 +112,19 @@ export function Site06Shell({
 					<div className="site-06-header__mobile-mode">
 						<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" compact />
 					</div>
+					<a
+						className="site-06-header__mobile-locale site-06-locale"
+						href={getLocaleSwitchPath(locale, pageKey, "human")}
+						hrefLang={localeTarget === "zh" ? "zh-CN" : "en"}
+						lang={localeTarget === "zh" ? "zh-CN" : "en"}
+					>
+						{localeLabel}
+					</a>
 					<details className="site-06-menu">
 						<summary>{locale === "en" ? "Menu" : "菜单"}</summary>
 						<div className="site-06-menu__panel">
 							<PrimaryNavigation locale={locale} pageKey={pageKey} mobile />
 							<HumanAgentLink locale={locale} pageKey={pageKey} className="site-06-mode" />
-							<a
-								className="site-06-locale"
-								href={getLocaleSwitchPath(locale, pageKey, "human")}
-								hrefLang={localeTarget === "zh" ? "zh-CN" : "en"}
-								lang={localeTarget === "zh" ? "zh-CN" : "en"}
-							>
-								{localeLabel}
-							</a>
 						</div>
 					</details>
 				</div>

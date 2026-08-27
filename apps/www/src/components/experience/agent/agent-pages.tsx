@@ -131,7 +131,11 @@ export function AgentPage({ locale, pageKey }: { locale: ExperienceLocale; pageK
 			</nav>
 
 			<main className="agent-experience__main">
-				<article className="agent-experience__document" data-page-composition="fact-directory">
+				<article
+					className="agent-experience__document"
+					data-page-composition="fact-directory"
+					data-agent-page-kind={pageKey === "home" ? "home" : "inner"}
+				>
 					{pageKey === "home" ? (
 						<header className="agent-experience__home-intro">
 							<div className="agent-experience__intro-copy">

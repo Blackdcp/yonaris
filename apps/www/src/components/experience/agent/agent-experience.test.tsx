@@ -246,19 +246,31 @@ describe("zero-to-one Agent experience", () => {
 		}
 	});
 
-	it("keeps the full Agent introduction on home and exposes inner directories in a compact masthead", () => {
+	it("keeps the full Agent introduction on home and marks all twelve inner routes for a first-viewport directory", () => {
 		for (const locale of ["en", "zh"] as const) {
 			const home = renderToStaticMarkup(<AgentPage locale={locale} pageKey="home" />);
-			const product = renderToStaticMarkup(<AgentPage locale={locale} pageKey="product" />);
 			const firstFact = getAgentTopic(locale, "home").groups[0]?.facts[0];
 			const dualRecord = home.match(/<article class="agent-experience__dual-record">[\s\S]*?<\/article>/u)?.[0] ?? "";
 			expect(home).toContain("agent-experience__home-intro");
+			expect(home).toContain('data-agent-page-kind="home"');
 			expect(home).toContain("agent-experience__dual-record");
 			expect(firstFact).toBeDefined();
 			expect(dualRecord.match(new RegExp(escapeRegex(firstFact?.value ?? "missing"), "g")) ?? []).toHaveLength(2);
-			expect(product).not.toContain("agent-experience__home-intro");
-			expect(product).toContain("agent-experience__route-intro");
-			expect(product).toContain('id="agent-fact-inspector" tabindex="-1" aria-live="polite"');
+
+			for (const pageKey of HUMAN_PAGE_KEYS.filter((key) => key !== "home")) {
+				const inner = renderToStaticMarkup(<AgentPage locale={locale} pageKey={pageKey} />);
+				expect(inner, `${locale}/${pageKey}`).toContain('data-agent-page-kind="inner"');
+				expect(inner, `${locale}/${pageKey}`).not.toContain("agent-experience__home-intro");
+				expect(inner, `${locale}/${pageKey}`).toContain("agent-experience__route-intro");
+				expect(inner, `${locale}/${pageKey}`).toContain('id="agent-fact-inspector" tabindex="-1" aria-live="polite"');
+				const intro = inner.indexOf('class="agent-experience__route-intro"');
+				const metadata = inner.indexOf('class="agent-experience__record-meta"');
+				const directory = inner.indexOf('class="agent-experience__directory-layout"');
+				expect(
+					[intro, metadata, directory],
+					`${locale}/${pageKey} needs the compact intro → metadata → directory path`,
+				).toEqual([...([intro, metadata, directory] as const)].sort((left, right) => left - right));
+			}
 		}
 	});
 

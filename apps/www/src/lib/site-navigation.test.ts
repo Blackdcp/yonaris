@@ -60,13 +60,16 @@ describe("Human site locale navigation", () => {
 			const markup = renderedShell(locale);
 			const header = markup.match(/<header[^>]*>[\s\S]*?<\/header>/u)?.[0] ?? "";
 			const mobileMode = header.indexOf('class="site-06-header__mobile-mode"');
+			const mobileLocale = header.indexOf('class="site-06-header__mobile-locale site-06-locale"');
 			const menu = header.indexOf('class="site-06-menu"');
 			expect(mobileMode).toBeGreaterThan(-1);
-			expect(menu).toBeGreaterThan(mobileMode);
-			expect(header.slice(mobileMode, menu)).toContain('data-mode-switch="true"');
-			expect(header.slice(mobileMode, menu)).toContain(
+			expect(mobileLocale).toBeGreaterThan(mobileMode);
+			expect(menu).toBeGreaterThan(mobileLocale);
+			expect(header.slice(mobileMode, mobileLocale)).toContain('data-mode-switch="true"');
+			expect(header.slice(mobileMode, mobileLocale)).toContain(
 				locale === "en" ? 'href="/agent/product"' : 'href="/zh/agent/product"',
 			);
+			expect(header.slice(mobileLocale, menu)).toContain(locale === "en" ? 'href="/zh/product"' : 'href="/product"');
 		}
 	});
 
