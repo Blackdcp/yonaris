@@ -1,5 +1,8 @@
 import { EN_READING_RECORDS } from "@/content/experience/canonical-public-facts";
+import { ComparisonStage, type ComparisonStageRecord } from "../shared/comparison-stage";
+import { DualReadingStage } from "../shared/dual-reading-stage";
 import { EvidenceInspector, type EvidenceRecord } from "../shared/evidence-inspector";
+import { EvidenceSheet } from "../shared/evidence-sheet";
 import { OrbitField } from "../shared/orbit-field";
 import { ReadingLens } from "../shared/reading-lens";
 import { type ReviewRecord, ReviewSwitch } from "../shared/review-switch";
@@ -15,7 +18,7 @@ export const EN_PLATFORM_RECORDS = [
 				The answer uses fit with the buyer’s operating conditions as an entry requirement, not a popularity signal.
 			</span>
 		),
-		source: "Company capability record · public company material · named market condition · reviewed 26 Aug 2026.",
+		source: "Company capability record · public company material · named market condition · reviewed 27 Aug 2026.",
 		boundary: "The source supports this market and scope; it does not support a universal claim.",
 		effect: "Without this connection, the company may not enter the comparison at all.",
 	},
@@ -28,7 +31,7 @@ export const EN_PLATFORM_RECORDS = [
 				prove.
 			</span>
 		),
-		source: "Scoped public evidence · first-party owner · decision-specific proof · reviewed 26 Aug 2026.",
+		source: "Scoped public evidence · first-party owner · decision-specific proof · reviewed 27 Aug 2026.",
 		boundary: "A first-party source supports the published fact; it is not independent validation.",
 		effect:
 			"A visible source gives the buying team something concrete to review instead of inheriting an unsupported claim.",
@@ -41,7 +44,7 @@ export const EN_PLATFORM_RECORDS = [
 				The delivery model remains useful only when its operating boundary stays visible beside the recommendation.
 			</span>
 		),
-		source: "Public delivery method · stated operating conditions · reviewed 26 Aug 2026.",
+		source: "Public delivery method · stated operating conditions · reviewed 27 Aug 2026.",
 		boundary: "The record describes a review method and does not promise a customer outcome.",
 		effect: "An explicit boundary lets the buyer compare delivery risk without treating suitability as certainty.",
 	},
@@ -68,41 +71,64 @@ export const EN_REVIEW_STATES = [
 
 export const EN_REVIEW_QUESTION = "Which company can support this decision without adding risk for the buying team?";
 
+const EN_COMPARISON_RECORDS = [
+	{
+		id: "baseline",
+		label: "Baseline",
+		answer: "The answer describes the company, but does not connect its strongest capability to the buying condition.",
+		evidence: "Public product language is broad and no source states the operating boundary.",
+		judgment: "The company is relevant, but not yet defensible as a preferred comparison.",
+		nextAction: "Publish the scoped proof required by the buying condition, then repeat the same question.",
+	},
+	{
+		id: "retest",
+		label: "Retest",
+		answer: "The answer can connect the capability to the buyer’s condition with a visible, scoped source.",
+		evidence: "The new source states the condition, scope and review date beside the capability.",
+		judgment: "Record the changed answer only if the question and review conditions remain comparable.",
+		nextAction: "Preserve the retest with its model, market, language, sources and any limits on attribution.",
+	},
+] as const satisfies readonly ComparisonStageRecord[];
+
 export function HomeReadingScene() {
 	return (
-		<div className="site-06-reading-scene">
+		<div className="site-06-home-orbit" data-scene-object="semantic-orbit-reader">
 			<OrbitField label="One market claim shown for human and agent reading" interactive>
 				<strong>One public claim, read in two ways</strong>
 			</OrbitField>
-			<ReadingLens locale="en" records={EN_READING_RECORDS} initialId="category" />
+			<div className="site-06-home-orbit__reader">
+				<ReadingLens locale="en" records={EN_READING_RECORDS} initialId="category" />
+			</div>
 		</div>
 	);
 }
 
 export function BuyingQuestionDossier() {
 	return (
-		<>
-			<article className="site-06-evidence-document" aria-label="Illustrative buying question and answer evidence">
-				<header>
-					<span>De-identified buying question</span>
-					<strong>Answer and evidence reading</strong>
-				</header>
-				<p className="site-06-evidence-document__answer">
-					Which partner can support a complex B2B decision across markets with evidence the buying team can review?
-				</p>
-				<p>
-					A defensible recommendation depends on what the company can prove, how the market describes the decision, and
-					whether the result can be reviewed under the same conditions.
-				</p>
-			</article>
+		<EvidenceSheet
+			label="Illustrative buying question and answer evidence"
+			className="site-06-buyer-dossier"
+			annotation={<span>De-identified buying question · Illustrative structure</span>}
+		>
+			<p className="site-06-buyer-dossier__question">
+				Which partner can support a complex B2B decision across markets with evidence the buying team can review?
+			</p>
+			<p className="site-06-buyer-dossier__answer">
+				A defensible recommendation depends on what the company can prove, how the market describes the decision, and
+				whether the result can be reviewed under the same conditions.
+			</p>
 			<EvidenceInspector records={EN_PLATFORM_RECORDS} initialId="fit" />
-		</>
+		</EvidenceSheet>
 	);
 }
 
 export function MarketAnswerCaseFile() {
 	return (
-		<article className="site-06-evidence-document" aria-label="Illustrative market answer case file">
+		<article
+			className="site-06-answer-workbench"
+			data-scene-object="answer-workbench"
+			aria-label="Illustrative market answer case file"
+		>
 			<header>
 				<span>Illustrative method structure</span>
 				<h2>Trace a market answer back to the decision.</h2>
@@ -130,26 +156,48 @@ export function MarketAnswerCaseFile() {
 }
 
 export function PlatformInspectorScene() {
-	return <EvidenceInspector records={EN_PLATFORM_RECORDS} initialId="fit" />;
-}
-
-export function EvidenceReviewScene({ preview = false }: { preview?: boolean }) {
 	return (
-		<>
-			{preview ? (
-				<section className="site-06-review-preview" aria-label="Baseline and retest evidence preview">
-					{EN_REVIEW_STATES.map((state) => (
-						<p key={state.id} data-review-state={state.id}>
-							<strong>{state.label}</strong> {state.answer}
-						</p>
-					))}
-				</section>
-			) : null}
-			<ReviewSwitch locale="en" question={EN_REVIEW_QUESTION} states={EN_REVIEW_STATES} initialId="baseline" />
-		</>
+		<div className="site-06-trace-workbench" data-scene-object="trace-workbench">
+			<aside className="site-06-trace-workbench__question">
+				<p className="site-06-kicker">One de-identified answer</p>
+				<blockquote>
+					The recommended partner demonstrates market fit, credible authority and a delivery model whose risk can be
+					reviewed.
+				</blockquote>
+			</aside>
+			<EvidenceInspector records={EN_PLATFORM_RECORDS} initialId="fit" />
+		</div>
 	);
 }
 
+export function EvidenceReviewScene({ preview = false }: { preview?: boolean }) {
+	if (preview) {
+		return (
+			<section aria-label="Illustrative method record · not a customer result">
+				<ComparisonStage
+					heading="Keep the question fixed. Let the evidence change."
+					description="This illustrative record shows the method, not a customer result. The buyer question and review conditions stay comparable across both readings."
+					question={EN_REVIEW_QUESTION}
+					records={EN_COMPARISON_RECORDS}
+					initialId="baseline"
+				/>
+			</section>
+		);
+	}
+
+	return <ReviewSwitch locale="en" question={EN_REVIEW_QUESTION} states={EN_REVIEW_STATES} initialId="baseline" />;
+}
+
 export function CompanyReadingScene() {
-	return <ReadingLens locale="en" records={EN_READING_RECORDS} initialId="category" />;
+	return (
+		<section aria-label="Read public facts">
+			<DualReadingStage
+				locale="en"
+				heading="One public record. Two legitimate readers."
+				description="Category, purpose and scope stay canonical while the reading hierarchy changes."
+				records={EN_READING_RECORDS}
+				initialId="category"
+			/>
+		</section>
+	);
 }

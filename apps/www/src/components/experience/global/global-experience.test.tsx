@@ -11,6 +11,15 @@ type ReadingScenesModule = {
 const subject = (await import("./global-pages").catch(() => undefined)) as GlobalModule | undefined;
 const scenes = (await import("./global-scenes").catch(() => undefined)) as ReadingScenesModule | undefined;
 const keys: PageKey[] = ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"];
+const compositions = {
+	home: "cinematic-orbit",
+	product: "evidence-workbench",
+	approach: "comparison-field",
+	company: "dual-reading-field",
+	geo: "market-editorial",
+	diagnostic: "contact-cinematic",
+	privacy: "privacy-editorial",
+} as const satisfies Record<PageKey, string>;
 
 function markupFor(page: PageKey): string {
 	expect(subject?.GLOBAL_PAGES, "Global Human pages must exist").toBeDefined();
@@ -27,6 +36,17 @@ function text(page: PageKey): string {
 }
 
 describe("Site 06 English experience", () => {
+	for (const [route, composition] of Object.entries(compositions) as [PageKey, string][]) {
+		it(`${route} has its own approved composition`, () => {
+			expect(markupFor(route)).toContain(`data-page-composition="${composition}"`);
+		});
+	}
+
+	it("does not route English pages through the old generic hero media", () => {
+		const pages = keys.map(markupFor);
+		expect(pages.filter((html) => html.includes("site-06-hero__media"))).toHaveLength(0);
+	});
+
 	it("publishes the approved English narrative on every primary page", () => {
 		expect(text("home")).toContain("See what buyers are being told before the first conversation.");
 		expect(text("product")).toContain("See what shaped the shortlist.");
@@ -121,6 +141,52 @@ describe("Site 06 English experience", () => {
 		expect(company).toContain("yonaris.category.ai-native-martech");
 		expect(company).toContain("yonaris.purpose.decision-system");
 		expect(company).toContain("yonaris.scope.martech-system");
+	});
+
+	it("changes Product source, boundary and buying effect with the selected phrase", () => {
+		const product = markupFor("product");
+		expect(product).toContain('data-scene-object="trace-workbench"');
+		const traceWorkbench = product.slice(product.indexOf('data-scene-object="trace-workbench"'));
+		expect(traceWorkbench.match(/role="tab"/g) ?? []).toHaveLength(3);
+		expect(traceWorkbench.match(/data-evidence-state=/g) ?? []).toHaveLength(3);
+		expect(traceWorkbench.match(/<dt>Source<\/dt>/g) ?? []).toHaveLength(3);
+		expect(traceWorkbench.match(/<dt>Boundary<\/dt>/g) ?? []).toHaveLength(3);
+		expect(traceWorkbench.match(/<dt>Buying effect<\/dt>/g) ?? []).toHaveLength(3);
+		expect(product).toContain("Company capability record · public company material");
+		expect(product).toContain("Scoped public evidence · first-party owner");
+		expect(product).toContain("Public delivery method · stated operating conditions");
+	});
+
+	it("holds one question constant across Approach baseline and retest", () => {
+		const approach = markupFor("approach");
+		expect(approach).toContain('data-scene-object="comparison-stage"');
+		expect(
+			approach.match(/Which company can support this decision without adding risk for the buying team\?/g) ?? [],
+		).toHaveLength(1);
+		expect(approach).toContain("Baseline");
+		expect(approach).toContain("Retest");
+	});
+
+	it("exposes Company fact and reading controls above the first section boundary", () => {
+		const company = markupFor("company");
+		const dualReading = company.indexOf('data-scene-object="dual-reading-stage"');
+		const firstSectionBoundary = company.indexOf('class="site-06-section');
+		expect(dualReading).toBeGreaterThan(-1);
+		expect(dualReading).toBeLessThan(firstSectionBoundary);
+		for (const label of ["Category", "Purpose", "Scope", "Human reading", "Agent reading"]) {
+			expect(company).toContain(label);
+		}
+	});
+
+	it("integrates exactly three visible Diagnostic fields into one cinematic scene", () => {
+		const diagnostic = markupFor("diagnostic");
+		const cinematicStart = diagnostic.indexOf('data-scene-object="cinematic-field"');
+		const formStart = diagnostic.indexOf('id="contact-form"');
+		const cinematicEnd = diagnostic.indexOf("</section>", formStart);
+		expect(cinematicStart).toBeGreaterThan(-1);
+		expect(formStart).toBeGreaterThan(cinematicStart);
+		expect(cinematicEnd).toBeGreaterThan(formStart);
+		expect(diagnostic.match(/data-lead-field=/g) ?? []).toHaveLength(3);
 	});
 
 	it("labels every illustrative record truthfully", () => {

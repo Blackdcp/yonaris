@@ -7,39 +7,14 @@ import { useRovingTabs } from "./use-roving-tabs";
 type ReadingMode = "human" | "agent";
 const readingModes = ["human", "agent"] as const;
 
-export function DualReadingStage({
-	locale,
-	heading,
-	description,
-	records,
-	initialId,
-}: {
-	locale: "en" | "zh";
-	heading: string;
-	description?: string;
-	records: readonly ReadingRecord[];
-	initialId: string;
-}) {
-	const recordIds = records.map((record) => record.id);
-	const fallbackId = records.some((record) => record.id === initialId) ? initialId : (recordIds[0] ?? initialId);
-	const [activeId, setActiveId] = useState(fallbackId);
+function DualReadingRecord({ record, locale }: { record: ReadingRecord; locale: "en" | "zh" }) {
 	const [mode, setMode] = useState<ReadingMode>("human");
-	const recordTabs = useRovingTabs({
-		items: recordIds,
-		active: activeId,
-		onChange: setActiveId,
-		idPrefix: "site-06-dual-record",
-	});
 	const modeTabs = useRovingTabs({
 		items: readingModes,
 		active: mode,
 		onChange: setMode,
-		idPrefix: "site-06-dual-mode",
+		idPrefix: `site-06-dual-mode-${record.id}`,
 	});
-	const activeRecord = records.find((record) => record.id === activeId) ?? records[0];
-
-	if (!activeRecord) return null;
-
 	const labels =
 		locale === "en"
 			? {
@@ -60,6 +35,75 @@ export function DualReadingStage({
 				};
 
 	return (
+		<article className="site-06-dual-stage__record" id={record.stableId} data-stable-id={record.stableId} tabIndex={-1}>
+			<div
+				className="site-06-dual-stage__modes"
+				role="tablist"
+				aria-label={locale === "en" ? "Choose a reading" : "选择阅读方式"}
+			>
+				{readingModes.map((item, index) => (
+					<button key={item} type="button" {...modeTabs.getTabProps(item, index)}>
+						{labels[item]}
+					</button>
+				))}
+			</div>
+			<section className="site-06-dual-stage__human" {...modeTabs.getPanelProps("human")}>
+				<p className="site-06-dual-stage__prompt">{record.prompt}</p>
+				<p className="site-06-dual-stage__answer">{record.human}</p>
+				<p className="site-06-dual-stage__meaning">{record.meaning}</p>
+			</section>
+			<section className="site-06-dual-stage__agent" {...modeTabs.getPanelProps("agent")}>
+				<dl>
+					<div>
+						<dt>{labels.fact}</dt>
+						<dd>{record.fact}</dd>
+					</div>
+					<div>
+						<dt>{labels.evidence}</dt>
+						<dd>{record.evidence}</dd>
+					</div>
+					<div>
+						<dt>{labels.boundary}</dt>
+						<dd>{record.boundary}</dd>
+					</div>
+					<div>
+						<dt>{labels.stableId}</dt>
+						<dd>
+							<code>{record.stableId}</code>
+						</dd>
+					</div>
+				</dl>
+			</section>
+		</article>
+	);
+}
+
+export function DualReadingStage({
+	locale,
+	heading,
+	description,
+	records,
+	initialId,
+}: {
+	locale: "en" | "zh";
+	heading: string;
+	description?: string;
+	records: readonly ReadingRecord[];
+	initialId: string;
+}) {
+	const recordIds = records.map((record) => record.id);
+	const fallbackId = records.some((record) => record.id === initialId) ? initialId : (recordIds[0] ?? initialId);
+	const [activeId, setActiveId] = useState(fallbackId);
+	const recordTabs = useRovingTabs({
+		items: recordIds,
+		active: activeId,
+		onChange: setActiveId,
+		idPrefix: "site-06-dual-record",
+	});
+
+	if (records.length === 0) return null;
+
+	return (
 		<section className="site-06-dual-stage" data-scene-object="dual-reading-stage">
 			<header className="site-06-dual-stage__copy">
 				<h2>{heading}</h2>
@@ -77,58 +121,8 @@ export function DualReadingStage({
 				</div>
 			</header>
 			{records.map((record) => (
-				<section
-					key={record.id}
-					className="site-06-dual-stage__panel"
-					{...recordTabs.getPanelProps(record.id)}
-				>
-					{record.id === activeRecord.id ? (
-						<article
-							className="site-06-dual-stage__record"
-							id={activeRecord.stableId}
-							data-stable-id={activeRecord.stableId}
-							tabIndex={-1}
-						>
-							<div
-								className="site-06-dual-stage__modes"
-								role="tablist"
-								aria-label={locale === "en" ? "Choose a reading" : "选择阅读方式"}
-							>
-								{readingModes.map((item, index) => (
-									<button key={item} type="button" {...modeTabs.getTabProps(item, index)}>
-										{labels[item]}
-									</button>
-								))}
-							</div>
-							<section className="site-06-dual-stage__human" {...modeTabs.getPanelProps("human")}>
-								<p className="site-06-dual-stage__prompt">{activeRecord.prompt}</p>
-								<p className="site-06-dual-stage__answer">{activeRecord.human}</p>
-								<p className="site-06-dual-stage__meaning">{activeRecord.meaning}</p>
-							</section>
-							<section className="site-06-dual-stage__agent" {...modeTabs.getPanelProps("agent")}>
-								<dl>
-									<div>
-										<dt>{labels.fact}</dt>
-										<dd>{activeRecord.fact}</dd>
-									</div>
-									<div>
-										<dt>{labels.evidence}</dt>
-										<dd>{activeRecord.evidence}</dd>
-									</div>
-									<div>
-										<dt>{labels.boundary}</dt>
-										<dd>{activeRecord.boundary}</dd>
-									</div>
-									<div>
-										<dt>{labels.stableId}</dt>
-										<dd>
-											<code>{activeRecord.stableId}</code>
-										</dd>
-									</div>
-								</dl>
-							</section>
-						</article>
-					) : null}
+				<section key={record.id} className="site-06-dual-stage__panel" {...recordTabs.getPanelProps(record.id)}>
+					<DualReadingRecord record={record} locale={locale} />
 				</section>
 			))}
 		</section>
