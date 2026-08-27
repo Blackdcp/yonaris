@@ -1,15 +1,15 @@
 [Unit]
-Description=Back up the Yonaris PostgreSQL database
-After=docker.service
-Requires=docker.service
+Description=Legacy-only LAS backup stub (disabled; no production capability)
 
 [Service]
 Type=oneshot
-User=yonaris-deploy
-Group=yonaris-deploy
-SupplementaryGroups=docker
+User=nobody
+Group=nogroup
 UMask=0077
-Environment=DEPLOY_ROOT=/opt/yonaris
-Environment=COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml
-Environment=ENV_FILE=/opt/yonaris/.env
-ExecStart=/usr/bin/bash /opt/yonaris/source/deploy/las/bin/backup.sh
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+RestrictAddressFamilies=none
+ExecStart=/usr/bin/false

@@ -3,3 +3,5 @@ Dockerfile* text eol=lf
 *.caddy text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+deploy/las/artifact-output-language-compatible text eol=lf
+deploy/las/caddy/cloudflare-origin-ca.pem text eol=lf

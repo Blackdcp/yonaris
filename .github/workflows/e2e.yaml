@@ -45,16 +45,23 @@ jobs:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: yonaris
+      # The override replaces the locally-built application images after base
+      # Compose interpolation, so syntactically-valid dummy digests are enough
+      # for these three. Postgres is pulled and must stay repository-authorized.
+      WEB_IMAGE_DIGEST: sha256:1111111111111111111111111111111111111111111111111111111111111111
+      WORKER_IMAGE_DIGEST: sha256:2222222222222222222222222222222222222222222222222222222222222222
+      MIGRATE_IMAGE_DIGEST: sha256:3333333333333333333333333333333333333333333333333333333333333333
+      POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       # Docker builds and the Playwright browser need more disk than the
       # standard hosted runner exposes after its preinstalled toolchains.
       - name: Free Disk Space
         if: ${{ !env.ACT }}
-        uses: jlumbroso/free-disk-space@main
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
         with:
           tool-cache: true
           android: true
@@ -65,10 +72,10 @@ jobs:
           swap-storage: true
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm
@@ -132,7 +139,7 @@ jobs:
             "$GITHUB_WORKSPACE/artifacts/yonaris-browser-extension-${GITHUB_SHA}.zip"
 
       - name: Upload Browser Runner extension
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: yonaris-browser-extension-${{ github.sha }}
           path: artifacts/yonaris-browser-extension-${{ github.sha }}.zip
@@ -150,7 +157,7 @@ jobs:
             --state-dir "$state_dir"
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -168,7 +175,7 @@ jobs:
 
       - name: Upload public-site failure results
         if: ${{ failure() && steps.public-site-tests.outcome == 'failure' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: public-site-test-results
           path: e2e/test-results-www/
@@ -177,7 +184,7 @@ jobs:
 
       - name: Upload public-site analytics failure results
         if: ${{ failure() && steps.public-site-analytics-tests.outcome == 'failure' }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: public-site-analytics-test-results
           path: e2e/test-results-www/analytics/
@@ -270,7 +277,7 @@ jobs:
         run: docker compose logs web worker
 
       - name: Upload Playwright report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: ${{ !cancelled() }}
         with:
           name: playwright-report
@@ -278,7 +285,7 @@ jobs:
           retention-days: 14
 
       - name: Upload test results
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         if: ${{ !cancelled() }}
         with:
           name: test-results

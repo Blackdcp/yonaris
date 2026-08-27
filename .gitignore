@@ -30,6 +30,7 @@ out/
 # misc
 .DS_Store
 *.pem
+!deploy/las/caddy/cloudflare-origin-ca.pem
 
 # debug
 npm-debug.log*

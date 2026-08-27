@@ -8,6 +8,8 @@ DEPLOY_SCRIPT="$SCRIPT_DIR/deploy-marketing.sh"
 COMPOSE_FILE="$REPO_ROOT/deploy/las/compose.marketing.yaml"
 CANDIDATE_TAG="sha-1111111111111111111111111111111111111111"
 PREVIOUS_TAG="sha-2222222222222222222222222222222222222222"
+CANDIDATE_WWW_DIGEST="sha256:1111111111111111111111111111111111111111111111111111111111111111"
+PREVIOUS_WWW_DIGEST="sha256:2222222222222222222222222222222222222222222222222222222222222222"
 FAKE_SECRET="re_A7k2L9m4N6p8Q1r3S5t7V9x2Z4b6C8d0"
 
 test_root="$(mktemp -d)"
@@ -50,6 +52,7 @@ assert_failure() {
 fixture="$test_root/fixture"
 mkdir -p "$fixture/bin" "$fixture/script"
 cp "$DEPLOY_SCRIPT" "$fixture/script/deploy-marketing.sh"
+cp "$SCRIPT_DIR/load-strict-dotenv.sh" "$fixture/script/load-strict-dotenv.sh"
 
 cat >"$fixture/script/install-marketing-caddy.sh" <<'STUB'
 #!/usr/bin/env bash
@@ -248,6 +251,8 @@ run_script() {
 		DEPLOY_TEST_UNAME="${DEPLOY_TEST_UNAME:-}" \
 		DEPLOY_TEST_TAMPER_INSTALL_BACKUP="${DEPLOY_TEST_TAMPER_INSTALL_BACKUP:-0}" \
 		DEPLOY_TEST_RECOVER_WRONG_CANDIDATE="${DEPLOY_TEST_RECOVER_WRONG_CANDIDATE:-0}" \
+		WWW_IMAGE_DIGEST="${DEPLOY_TEST_WWW_IMAGE_DIGEST:-$CANDIDATE_WWW_DIGEST}" \
+		PREVIOUS_WWW_IMAGE_DIGEST="$PREVIOUS_WWW_DIGEST" \
 		MARKETING_HEALTH_ATTEMPTS=1 \
 		bash "$fixture/script/deploy-marketing.sh" "$@" >"$OUTPUT_LOG" 2>&1
 }
@@ -274,6 +279,7 @@ env \
 	DEPLOY_TEST_CALL_LOG="$CALL_LOG" \
 	DEPLOY_TEST_ENV_LOG="$ENV_LOG" \
 	DEPLOY_TEST_RUNNING_TAG="$RUNNING_TAG" \
+	WWW_IMAGE_DIGEST="$CANDIDATE_WWW_DIGEST" \
 	bash -x "$fixture/script/deploy-marketing.sh" --verify-only "$CANDIDATE_TAG" >"$OUTPUT_LOG" 2>&1
 verify_status=$?
 set -e
@@ -313,6 +319,58 @@ for variant in missing-key blank-key test-key fake-key dummy-key fixture-key inv
 	if grep -Fq "$FAKE_SECRET" "$OUTPUT_LOG"; then fail "$variant failure redacts secret values"; else pass "$variant failure redacts secret values"; fi
 done
 
+# An environment file is dotenv data, never shell input. These payloads would
+# execute under `source`; the strict loader must reject them before any effect.
+for payload_variant in command-substitution backticks exported-function bash-env unknown-key duplicate-key; do
+	new_case "verify_no_eval_$payload_variant"
+	payload_marker="$CASE_ROOT/payload-executed"
+	case "$payload_variant" in
+		command-substitution)
+			printf 'RESEND_API_KEY=$(touch %q)\n' "$payload_marker" >>"$ENV_FILE"
+			;;
+		backticks)
+			printf 'RESEND_API_KEY=`touch %q`\n' "$payload_marker" >>"$ENV_FILE"
+			;;
+		exported-function)
+			printf 'BASH_FUNC_docker%%=() { touch %q; }\n' "$payload_marker" >>"$ENV_FILE"
+			;;
+		bash-env)
+			printf 'BASH_ENV=%s\n' "$payload_marker" >>"$ENV_FILE"
+			;;
+		unknown-key)
+			printf 'LD_PRELOAD=%s\n' "$payload_marker" >>"$ENV_FILE"
+			;;
+		duplicate-key)
+			printf 'IMAGE_TAG=%s\n' "$CANDIDATE_TAG" >>"$ENV_FILE"
+			;;
+	esac
+	before_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+	assert_failure 1 "$payload_variant dotenv payload is rejected" \
+		run_script --verify-only "$CANDIDATE_TAG"
+	after_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+	if [[ ! -e "$payload_marker" && "$before_digest" == "$after_digest" && ! -s "$CALL_LOG" ]]; then
+		pass "$payload_variant is non-executable and side-effect free"
+	else
+		fail "$payload_variant is non-executable and side-effect free"
+	fi
+done
+
+new_case verify_missing_digest
+before_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+set +e
+env -u WWW_IMAGE_DIGEST -u PREVIOUS_WWW_IMAGE_DIGEST \
+	PATH="$fixture/bin:$PATH" DEPLOY_ROOT="$DEPLOY_ROOT" \
+	MARKETING_COMPOSE_FILE="$COMPOSE_FILE" ENV_FILE="$ENV_FILE" \
+	bash "$fixture/script/deploy-marketing.sh" --verify-only "$CANDIDATE_TAG" >"$OUTPUT_LOG" 2>&1
+missing_digest_status=$?
+set -e
+after_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+if [[ "$missing_digest_status" == 2 && "$before_digest" == "$after_digest" && ! -s "$CALL_LOG" ]]; then
+	pass "missing root-authorized image digest is rejected before effects"
+else
+	fail "missing root-authorized image digest is rejected before effects"
+fi
+
 # RED: a successful release persists a complete, private rollback bundle.
 new_case release_success
 assert_success "normal release completes against isolated deployment doubles" run_script "$CANDIDATE_TAG"
@@ -320,7 +378,9 @@ if [[ "$(tr -d '[:space:]' <"$DEPLOY_ROOT/.marketing-release")" == "$CANDIDATE_T
 bundle="$DEPLOY_ROOT/marketing-rollbacks/$CANDIDATE_TAG"
 if [[ -f "$bundle/Caddyfile.previous" ]] && grep -Fq 'previous complete caddy config' "$bundle/Caddyfile.previous" &&
 	[[ "$(tr -d '[:space:]' <"$bundle/previous-image-tag")" == "$PREVIOUS_TAG" ]] &&
-	[[ "$(tr -d '[:space:]' <"$bundle/candidate-image-tag")" == "$CANDIDATE_TAG" ]]; then
+	[[ "$(tr -d '[:space:]' <"$bundle/candidate-image-tag")" == "$CANDIDATE_TAG" ]] &&
+	[[ "$(tr -d '[:space:]' <"$bundle/previous-image-digest")" == "$PREVIOUS_WWW_DIGEST" ]] &&
+	[[ "$(tr -d '[:space:]' <"$bundle/candidate-image-digest")" == "$CANDIDATE_WWW_DIGEST" ]]; then
 	pass "release stores the full predecessor Caddyfile and immutable image binding"
 else
 	fail "release stores the full predecessor Caddyfile and immutable image binding"
@@ -330,6 +390,18 @@ case "$(uname -s)" in
 	MINGW* | MSYS*) pass "durable rollback mode check is deferred to the Linux workflow fixture" ;;
 	*) if [[ "$bundle_mode" == 700 ]]; then pass "durable rollback bundle is mode 700"; else fail "durable rollback bundle is mode 700 (mode=$bundle_mode)"; fi ;;
 esac
+
+before_rollback_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+DEPLOY_TEST_WWW_IMAGE_DIGEST="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+assert_failure 1 "same tag with a replaced candidate digest is rejected" \
+	run_script --rollback "$CANDIDATE_TAG"
+unset DEPLOY_TEST_WWW_IMAGE_DIGEST
+after_rollback_digest="$(tree_snapshot "$DEPLOY_ROOT")"
+if [[ "$before_rollback_digest" == "$after_rollback_digest" ]]; then
+	pass "replaced candidate digest is rejected before rollback mutation"
+else
+	fail "replaced candidate digest is rejected before rollback mutation"
+fi
 if grep -Fq "env UNSET|$FAKE_SECRET|Yonaris <diagnostic@yonaris.com>|black.dcp@outlook.com" "$ENV_LOG"; then pass "normal deployment exports the validated values only to Compose"; else fail "normal deployment exports the validated values only to Compose"; fi
 if grep -Eq 'api\.resend\.com|/domains([/?[:space:]]|$)' "$CALL_LOG"; then fail "deployment never contacts Resend or a domain API"; else pass "deployment never contacts Resend or a domain API"; fi
 
@@ -342,6 +414,7 @@ if grep -Eq 'api\.resend\.com|/domains([/?[:space:]]|$)' "$CALL_LOG"; then fail 
 compose_json="$test_root/compose.json"
 if env \
 	IMAGE_TAG="$CANDIDATE_TAG" \
+	WWW_IMAGE_DIGEST="$CANDIDATE_WWW_DIGEST" \
 	RESEND_API_KEY="$FAKE_SECRET" \
 	RESEND_FROM_EMAIL='Yonaris <diagnostic@yonaris.com>' \
 	MARKETING_LEAD_RECIPIENT='black.dcp@outlook.com' \
@@ -375,6 +448,7 @@ fi
 mailto_compose_json="$test_root/compose-mailto-only.json"
 if env \
 	IMAGE_TAG="$CANDIDATE_TAG" \
+	WWW_IMAGE_DIGEST="$CANDIDATE_WWW_DIGEST" \
 	MARKETING_DIAGNOSTIC_DELIVERY_MODE=mailto-only \
 	docker compose --project-name yonaris-marketing-mailto-test --file "$COMPOSE_FILE" config --format json >"$mailto_compose_json"; then
 	if node - "$mailto_compose_json" <<'NODE'

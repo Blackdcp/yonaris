@@ -8,7 +8,7 @@ x-logging: &default-logging
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres@${POSTGRES_IMAGE_DIGEST:?Set the root-authorized Postgres image digest}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in the production env file}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the production env file}
@@ -32,7 +32,7 @@ services:
     logging: *default-logging
 
   db-migrate:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-db-migrate:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    image: ghcr.io/blackdcp/yonaris-db-migrate@${MIGRATE_IMAGE_DIGEST:?Set the root-authorized migration image digest}
     env_file:
       - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
         required: true
@@ -49,7 +49,7 @@ services:
     logging: *default-logging
 
   account-ops:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-worker:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    image: ghcr.io/blackdcp/yonaris-worker@${WORKER_IMAGE_DIGEST:?Set the root-authorized worker image digest}
     env_file:
       - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
         required: true
@@ -68,7 +68,7 @@ services:
     logging: *default-logging
 
   web:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-web:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    image: ghcr.io/blackdcp/yonaris-web@${WEB_IMAGE_DIGEST:?Set the root-authorized web image digest}
     env_file:
       - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
         required: true
@@ -94,7 +94,7 @@ services:
     logging: *default-logging
 
   worker:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-worker:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    image: ghcr.io/blackdcp/yonaris-worker@${WORKER_IMAGE_DIGEST:?Set the root-authorized worker image digest}
     env_file:
       - path: ${APP_ENV_FILE:?Set APP_ENV_FILE to the absolute production env file path}
         required: true

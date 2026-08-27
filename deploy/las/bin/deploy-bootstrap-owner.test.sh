@@ -15,10 +15,27 @@ ENV_FILE="$DEPLOY_ROOT/.env"
 EVENT_LOG="$TEST_ROOT/events.log"
 OLD_RELEASE="sha-1111111111111111111111111111111111111111"
 NEW_RELEASE="sha-2222222222222222222222222222222222222222"
+HOST_GUARD="$TEST_ROOT/host/guard-artifact-output-release"
 
-mkdir -p "$MOCK_BIN" "$MOCK_SCRIPT_DIR" "$DEPLOY_ROOT/backups"
-sed 's/\r$//' "$SCRIPT_UNDER_TEST" >"$MOCK_SCRIPT_DIR/deploy.sh"
+grep -Fq "LEGACY_DEPLOY_COMPATIBILITY='legacy-candidate-deploy-v1'" "$SCRIPT_UNDER_TEST"
+grep -Fq '$MIGRATE_IMAGE_DIGEST $POSTGRES_IMAGE_DIGEST" ]]' "$SCRIPT_UNDER_TEST"
+grep -Fq \
+  'for digest_variable in WEB_IMAGE_DIGEST WORKER_IMAGE_DIGEST MIGRATE_IMAGE_DIGEST POSTGRES_IMAGE_DIGEST; do' \
+  "$SCRIPT_UNDER_TEST"
+
+mkdir -p "$MOCK_BIN" "$MOCK_SCRIPT_DIR" "$DEPLOY_ROOT/backups" \
+  "$(dirname -- "$HOST_GUARD")"
+REAL_STAT="$(command -v stat)"
+REAL_READLINK="$(command -v readlink)"
+sed \
+  -e 's/\r$//' \
+  -e "s#/usr/local/libexec/yonaris-las/guard-artifact-output-release#$HOST_GUARD#g" \
+  -e "s#/usr/bin/stat#$MOCK_BIN/stat#g" \
+  -e "s#/usr/bin/readlink#$MOCK_BIN/readlink#g" \
+  "$SCRIPT_UNDER_TEST" >"$MOCK_SCRIPT_DIR/deploy.sh"
+cp -- "$SCRIPT_DIR/load-strict-dotenv.sh" "$MOCK_SCRIPT_DIR/load-strict-dotenv.sh"
 printf '{}\n' >"$COMPOSE_FILE"
+printf 'artifact-output-language-v1\n' >"$TEST_ROOT/artifact-output-language-compatible"
 cat >"$ENV_FILE" <<'EOF'
 POSTGRES_USER=yonaris
 POSTGRES_PASSWORD=database-password
@@ -148,8 +165,45 @@ echo "Unexpected flock invocation: $*" >&2
 exit 92
 EOF
 
+cat >"$MOCK_BIN/stat" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+path="${@: -1}"
+current_uid="$(/usr/bin/id -u)"
+current_gid="$(/usr/bin/id -g)"
+case "$path" in
+  */guard-artifact-output-release) printf '0:0:755\n' ;;
+  */artifact-output-languages | */artifact-output-languages/compatible-releases)
+    printf '%s:%s:700\n' "$current_uid" "$current_gid"
+    ;;
+  */compatible-releases/sha-* | */.release | */.release.tmp.* | \
+  */.release.backup.* | */.receipt.tmp.*)
+    printf '%s:%s:600\n' "$current_uid" "$current_gid"
+    ;;
+  *) exec "$REAL_STAT" "$@" ;;
+esac
+EOF
+
+cat >"$MOCK_BIN/readlink" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+exec "$REAL_READLINK" "$@"
+EOF
+
+cat >"$HOST_GUARD" <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+printf 'guard:%s\n' "$*" >>"$MOCK_EVENT_LOG"
+case "$1" in
+  candidate) [[ "$#" -eq 3 && "$3" == deploy ]] ;;
+  rollback) [[ "$#" -eq 2 ]] ;;
+  *) exit 2 ;;
+esac
+EOF
+
 chmod +x \
   "$MOCK_SCRIPT_DIR/deploy.sh" \
+  "$MOCK_SCRIPT_DIR/load-strict-dotenv.sh" \
   "$MOCK_SCRIPT_DIR/backup.sh" \
   "$MOCK_SCRIPT_DIR/check-sampling-storage.sh" \
   "$MOCK_SCRIPT_DIR/check-response-snapshot-storage.sh" \
@@ -158,7 +212,10 @@ chmod +x \
   "$MOCK_BIN/docker" \
   "$MOCK_BIN/curl" \
   "$MOCK_BIN/sleep" \
-  "$MOCK_BIN/flock"
+  "$MOCK_BIN/flock" \
+  "$MOCK_BIN/stat" \
+  "$MOCK_BIN/readlink" \
+  "$HOST_GUARD"
 
 run_deploy() {
   local bootstrap_result="$1"
@@ -171,6 +228,12 @@ run_deploy() {
     MOCK_EVENT_LOG="$EVENT_LOG" \
     MOCK_BOOTSTRAP_RESULT="$bootstrap_result" \
     MOCK_PRUNE_RESULT="$prune_result" \
+    REAL_STAT="$REAL_STAT" \
+    REAL_READLINK="$REAL_READLINK" \
+    WEB_IMAGE_DIGEST="sha256:1111111111111111111111111111111111111111111111111111111111111111" \
+    WORKER_IMAGE_DIGEST="sha256:2222222222222222222222222222222222222222222222222222222222222222" \
+    MIGRATE_IMAGE_DIGEST="sha256:3333333333333333333333333333333333333333333333333333333333333333" \
+    POSTGRES_IMAGE_DIGEST="sha256:4444444444444444444444444444444444444444444444444444444444444444" \
     bash "$MOCK_SCRIPT_DIR/deploy.sh" "$NEW_RELEASE"
 }
 
@@ -189,6 +252,24 @@ assert_order() {
 
 : >"$EVENT_LOG"
 printf '%s\n' "$OLD_RELEASE" >"$DEPLOY_ROOT/.release"
+chmod 600 "$DEPLOY_ROOT/.release"
+
+clean_env="$TEST_ROOT/clean.env"
+cp -- "$ENV_FILE" "$clean_env"
+payload_marker="$TEST_ROOT/dotenv-payload-executed"
+printf 'UNREVIEWED_PAYLOAD=$(touch %q)\n' "$payload_marker" >>"$ENV_FILE"
+set +e
+run_deploy success >"$TEST_ROOT/dotenv-payload.out" 2>"$TEST_ROOT/dotenv-payload.err"
+payload_status=$?
+set -e
+if [[ "$payload_status" -eq 0 || -e "$payload_marker" || -s "$EVENT_LOG" ]]; then
+  echo "Executable or unreviewed dotenv input was not rejected before side effects." >&2
+  exit 1
+fi
+grep -Fq 'Refusing unsupported production environment key' "$TEST_ROOT/dotenv-payload.err"
+cp -- "$clean_env" "$ENV_FILE"
+: >"$EVENT_LOG"
+
 success_output="$(run_deploy success)"
 grep -Fq '"status":"applied"' <<<"$success_output"
 grep -Fq -- 'account-ops node ./node_modules/tsx/dist/cli.mjs ./src/repair-local-admin.ts --bootstrap-owner --apply' "$EVENT_LOG"
@@ -210,6 +291,7 @@ fi
 
 : >"$EVENT_LOG"
 printf '%s\n' "$OLD_RELEASE" >"$DEPLOY_ROOT/.release"
+chmod 600 "$DEPLOY_ROOT/.release"
 set +e
 run_deploy failure >"$TEST_ROOT/failure.out" 2>"$TEST_ROOT/failure.err"
 failure_status=$?

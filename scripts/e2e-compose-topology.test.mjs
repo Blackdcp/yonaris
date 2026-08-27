@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,39 @@ import test from "node:test";
 
 const exec = promisify(execFile);
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const composeDigestEnvironment = {
+  WEB_IMAGE_DIGEST: `sha256:${"1".repeat(64)}`,
+  WORKER_IMAGE_DIGEST: `sha256:${"2".repeat(64)}`,
+  MIGRATE_IMAGE_DIGEST: `sha256:${"3".repeat(64)}`,
+  POSTGRES_IMAGE_DIGEST: `sha256:${"4".repeat(64)}`,
+};
+
+test("the E2E workflow preserves diagnostics and supplies the base Compose digest contract", async () => {
+  const workflow = await readFile(
+    path.join(repositoryRoot, ".github", "workflows", "e2e.yaml"),
+    "utf8",
+  );
+
+  for (const contract of [
+    `WEB_IMAGE_DIGEST: sha256:${"1".repeat(64)}`,
+    `WORKER_IMAGE_DIGEST: sha256:${"2".repeat(64)}`,
+    `MIGRATE_IMAGE_DIGEST: sha256:${"3".repeat(64)}`,
+    "POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST }}",
+    "uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be",
+    "uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "name: Upload Browser Runner extension",
+    "name: Upload public-site failure results",
+    "name: Upload public-site analytics failure results",
+    "name: Upload Playwright report",
+    "name: Upload test results",
+  ]) {
+    assert.equal(workflow.includes(contract), true, `missing E2E workflow contract: ${contract}`);
+  }
+  assert.equal(workflow.includes("actions/upload-artifact@v7"), false);
+  assert.equal(workflow.includes("actions/cache@v6"), false);
+  assert.equal(workflow.includes("jlumbroso/free-disk-space@main"), false);
+});
 
 test("the E2E Compose override activates every dependency required by web", async (t) => {
   try {
@@ -37,6 +71,7 @@ test("the E2E Compose override activates every dependency required by web", asyn
         POSTGRES_DB: "yonaris",
         POSTGRES_PASSWORD: "postgres",
         POSTGRES_USER: "postgres",
+        ...composeDigestEnvironment,
       },
     },
   );
@@ -78,6 +113,7 @@ test("the E2E Compose override exposes Postgres only on loopback for host-side f
         POSTGRES_DB: "yonaris",
         POSTGRES_PASSWORD: "postgres",
         POSTGRES_USER: "postgres",
+        ...composeDigestEnvironment,
       },
     },
   );

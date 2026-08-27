@@ -1,9 +1,23 @@
-# Reviewed response snapshot backfills
+# Reviewed response snapshot backfill validation
 
-Production is inert while this directory contains only `*.example.json` files and no `requests/` directory. To run a backfill, first deploy the code and schema with snapshot capture disabled. Then create a separate reviewed commit containing exactly one file in `requests/`.
+This directory is a validation-contract archive, not a production queue. The
+former `response-snapshot-backfill` forced-command operation is permanently
+rejected by the LAS dispatcher and policy parsers. Do not create a production
+`requests/` directory, add a policy line, restore its workflow call, or expose
+the runtime dotenv or Docker socket to the candidate helper.
 
-The request must enumerate the exact sorted run IDs, approved brand, end-exclusive UTC observation window, exact channels, expected count, a SHA-256 fingerprint calculated from the existing run/prompt/scope/citation identities, and the immutable source commit SHA reviewed for the operation. PPIO requests additionally require `sourceFailureCode` to be exactly `snapshot_contract_invalid`.
+Historical request fixtures bind exact sorted run IDs, an approved brand,
+end-exclusive UTC window, channels, expected count, source commit, and a
+fingerprint of existing run/prompt/scope/citation identities. PPIO fixtures
+also require `sourceFailureCode=snapshot_contract_invalid`.
 
-The operation always performs a dry-run before apply. It uses a per-brand advisory lock and chunks of 100. Its only database write set is `response_snapshots` and `response_snapshot_outbox`; it never updates observations, prompt runs, citations, prompts, scopes, or metrics. A failed chunk can be safely rerun.
+Those constraints remain requirements for tests and any future replacement:
+dry-run before apply, a per-brand advisory lock, chunks of 100, and a database
+write set limited to `response_snapshots` and `response_snapshot_outbox`.
+Observations, prompt runs, citations, prompts, scopes, and metrics must remain
+unchanged.
 
-After a successful production operation, retain the durable receipt under `/opt/yonaris/operation-receipts/response-snapshot-backfills/`, verify the customer view and hashes, then remove the one-shot request in a follow-up commit.
+A replacement requires a new operation name, stable fixed arguments,
+root-owned durable evidence, and an exact protocol bound to the active
+immutable release and five-digest receipt. Re-enabling the retired operation or
+its old `/opt/yonaris/operation-receipts` path is not supported.

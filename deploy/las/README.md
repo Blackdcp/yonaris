@@ -5,18 +5,30 @@ instance. It does not modify the existing `api.cheng-zi-ai.com` route, the
 default `127.0.0.1:4173` route, the running One API container, or the stopped
 `new-api-prod` container.
 
+> **Production status: NOT READY.** The repository verifies an exact
+> root-owned backup/rehearsal migration attestation, but it does not contain a
+> trustworthy producer for that evidence. Do not hand-create or hash files to
+> satisfy the verifier, do not apply a migration, and do not enable or run a
+> production deployment. Keep `LAS_DEPLOY_ENABLED=false` and
+> `LAS_FORCED_COMMAND_ENABLED=false` until an independently reviewed stable
+> producer performs the backup, off-host durability check, rehearsal, and
+> attestation and the complete bootstrap is reverified.
+
 ## Production layout
 
 - `yonaris.com` is proxied by the existing host Caddy to the marketing site on
   `127.0.0.1:1516`.
 - `portal.yonaris.com` is proxied by the existing host Caddy to
   `127.0.0.1:1515`.
-- PostgreSQL is available only on the private `yonaris_backend` Docker network.
+- PostgreSQL is available only on the private `yonaris_backend` Docker network
+  and is pinned to a separately reviewed PostgreSQL 16 registry digest.
 - GitHub Actions builds immutable Web, Worker, migration, and marketing images
-  in GHCR. Portal and marketing deployments use separate workflows and release
-  markers.
-- The LAS host checks out the exact Git commit before running its deployment
-  script, so Compose and deployment-script changes travel with the release.
+  in GHCR. The root policy binds those four digests plus PostgreSQL as one exact
+  five-digest tuple for every release SHA.
+- The LAS host materializes the authorized Git object into a root-owned,
+  immutable release tree. Only root-owned stable managers may consume Compose
+  files from that tree; the dispatcher no longer runs candidate deployment
+  scripts, and a mutable checkout is not a production input.
 
 ## 1. GitHub repository
 
@@ -53,53 +65,76 @@ sudo cp -a /etc/caddy/Caddyfile /root/yonaris-preflight/Caddyfile
 ```
 
 Do not replace the full Caddyfile: it also owns `cheng-zi-ai.com`,
-`api.cheng-zi-ai.com`, and `jiacanmou.uk`. The marketing installer only accepts
+`api.cheng-zi-ai.com`, and `jiacanmou.uk`. The stable Caddy manager only accepts
 the reviewed Yonaris redirect block and replaces that exact block atomically.
 Do not remove the stopped `new-api-prod` container or the route to port 4173.
 
-## 4. Bootstrap the deployment account and checkout
+## 4. Bootstrap accounts and canonical host state
 
-Create a dedicated account. Membership in the Docker group is privileged, but
-keeps the GitHub workflow out of the root SSH account and avoids broad
-passwordless sudo rules:
+Create three distinct locked accounts. `yonaris-gate` is only the forced SSH
+principal, `yonaris-deploy` owns only explicitly scoped non-runtime mutable
+data and is never an execution fallback for release scripts, and
+`yonaris-runtime` is the deliberately small TCB that owns the isolated
+rootless daemon. None may be a member of the `docker` group or use
+`/var/run/docker.sock`; rootful Docker access is host-root access and defeats
+the forced-command boundary. The verifier scans the complete NSS passwd
+database so each of these UIDs and the `caddy` UID belongs to exactly its named
+account; it also requires the runtime numeric GID to have one canonical group.
 
-```bash
-sudo adduser --disabled-password --gecos '' yonaris-deploy
-sudo usermod -aG docker yonaris-deploy
-sudo install -d -o yonaris-deploy -g yonaris-deploy -m 750 /opt/yonaris
-sudo install -d -o yonaris-deploy -g yonaris-deploy -m 700 \
-  /opt/yonaris/backups /opt/yonaris/import
-sudo install -d -o yonaris-deploy -g yonaris-deploy -m 700 \
-  /home/yonaris-deploy/.ssh
-```
-
-There are two separate SSH trust directions:
-
-1. Add the GitHub Actions deployment public key to
-   `/home/yonaris-deploy/.ssh/authorized_keys`; store only its private key in
-   the `LAS_SSH_PRIVATE_KEY` repository secret.
-2. Generate a different key as `yonaris-deploy`, add its public key to the
-   private `Blackdcp/yonaris` repository as a read-only deploy key.
+Create the accounts with the exact home and shell contracts checked by the
+root verifier. These commands are for a fresh host; if an account already
+exists, reconcile it offline and re-run the verifier instead of creating a
+second identity:
 
 ```bash
-sudo -H -u yonaris-deploy ssh-keygen -t ed25519 \
-  -f /home/yonaris-deploy/.ssh/id_ed25519 -N ''
-sudo cat /home/yonaris-deploy/.ssh/id_ed25519.pub
+sudo adduser --disabled-password --gecos '' \
+  --home /home/yonaris-deploy --shell /usr/sbin/nologin yonaris-deploy
+sudo adduser --disabled-password --gecos '' \
+  --home /home/yonaris-gate --shell /bin/bash yonaris-gate
+sudo adduser --disabled-password --gecos '' \
+  --home /var/lib/yonaris-runtime --shell /usr/sbin/nologin yonaris-runtime
+sudo passwd -l yonaris-deploy
+sudo passwd -l yonaris-gate
+sudo passwd -l yonaris-runtime
+sudo gpasswd -d yonaris-deploy docker || true
+sudo gpasswd -d yonaris-gate docker || true
+sudo gpasswd -d yonaris-runtime docker || true
+sudo loginctl enable-linger yonaris-runtime
 ```
 
-Verify GitHub's published SSH host fingerprint before adding `github.com` to
-`/home/yonaris-deploy/.ssh/known_hosts`. After the deploy key and host key are
-in place, clone and create the production environment file:
+Do not create a deploy-user Git key or production checkout. The repository is
+private, while the dispatcher deliberately has no credential and performs no
+network fetch of any kind. Before authorizing a SHA, a root operator must
+import that exact commit into
+`/var/lib/yonaris/las-objects.git` from either an offline reviewed Git bundle
+or a root-only, read-only GitHub credential used from an authenticated root
+console. Verify the resulting object ID, remove the transfer material, remove
+every repository remote/include/partial-clone setting, and only then install
+the policy that names it. The canonical store must have no alternate object
+database, promisor pack, legacy remote/branch file, or missing reachable
+object. Every stable root reader also sets `GIT_NO_LAZY_FETCH=1`, disables
+credential helpers/prompts, and denies every Git transport. No Git credential may be readable by
+`yonaris-gate`, `yonaris-deploy`, `yonaris-runtime`, or a container.
 
-```bash
-sudo -H -u yonaris-deploy git clone git@github.com:Blackdcp/yonaris.git \
-  /opt/yonaris/source
-sudo -H -u yonaris-deploy cp \
-  /opt/yonaris/source/deploy/las/env.example /opt/yonaris/.env
-sudo -H -u yonaris-deploy chmod 600 /opt/yonaris/.env
-```
+The complete account, directory, bare-store, fixed-launcher, runtime-env,
+initial predecessor receipt/marker, sudoers, and rootless-daemon sequence is in
+[ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md](ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md).
+Follow it before enabling either workflow variable. In particular,
+`/run/lock/yonaris` and the Caddy-owned `/run/caddy` runtime directory must be
+recreated by the exact root-owned tmpfiles rule after every boot; a one-time
+`mkdir` is insufficient. The legacy backup service/timer must be inactive and
+masked, and any installed legacy Caddy entrypoint must be absent or the
+byte-exact fail-closed stub accepted by the verifier.
 
-Edit `/opt/yonaris/.env`. Generate production values with:
+Create the production configuration as
+`/etc/yonaris/las-runtime.env`, a regular single-link file owned
+`root:yonaris-runtime` with mode `0440`. Start from the reviewed `env.example`
+outside any mutable checkout. The stable runtime manager parses it as strict
+UTF-8 data, never shell code: unknown/duplicate keys, NUL, expansions,
+malformed quoting, unsafe unquoted values, placeholders, invalid UUID/base64,
+provider mismatch, or a `DATABASE_URL` that does not exactly agree with the
+PostgreSQL fields all fail before Docker access. Generate production values
+with:
 
 ```bash
 openssl rand -hex 24
@@ -107,6 +142,15 @@ openssl rand -base64 48
 openssl rand -base64 32
 uuidgen
 ```
+
+Keep `ARTIFACT_ZH_CN_ENABLED=false` for the first output-language-compatible
+release. Chinese artifact writes require the separate, irreversible two-phase
+procedure in [ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md](ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md).
+The flag accepts only the exact lowercase values `true` or `false`. Once the
+root activation marker exists, both `ARTIFACT_ZH_CN_ENABLED=true` and
+`WORKER_ENABLED=true` are mandatory; the inverse mismatch also fails closed.
+Keep `RESPONSE_SNAPSHOT_ENABLED=false`: its former candidate-side activation
+operation is permanently outside the production protocol.
 
 The database password must be copied into both `POSTGRES_PASSWORD` and the
 password component of `DATABASE_URL`. For the initial data migration, do not
@@ -121,15 +165,17 @@ when a Bright Data token is configured, defaults to all six Bright Data
 channels. Set `BRIGHTDATA_SERP_ZONE` to the exact name of an active,
 account-owned Bright Data SERP zone: deployment rejects a missing value, the UI
 keeps Google AI Overview disabled when it is absent outside deployment, and
-Yonaris validates the account metadata before it creates the paid cohort. The deploy
-script rejects missing required values and every `replace_with_...` placeholder.
+Yonaris validates the account metadata before it creates the paid cohort. The
+stable runtime preflight rejects missing required values and every
+`replace_with_...` placeholder.
 After PostgreSQL is initialized, changing `POSTGRES_PASSWORD` in the file alone
 does not rotate the database user's password.
 
 `WORKER_ENABLED=true` runs scheduled evaluations. Set it to `false` for a
 static showcase environment: Web remains available and queued jobs are kept,
 but no model or scraper requests are processed. Change it back to `true` and
-deploy again when recurring collection should resume.
+deploy again when recurring collection should resume. This showcase mode is
+not permitted after the one-way output-language activation marker exists.
 
 Set `WORKER_QUEUE_SCOPE=analysis-only` together with `WORKER_ENABLED=true` to
 run onboarding brand analysis without consuming queued prompt evaluations or
@@ -140,16 +186,18 @@ scheduling new ones. The default `full` scope processes every production queue.
 pair per cycle. Existing scheduled jobs must be rescheduled when their cadence
 changes; changing the environment file alone does not rewrite queued job data.
 
-Log in to GHCR once on the server with a read-only classic token that has the
-`read:packages` scope:
+Provision GHCR read-only authentication into
+`/var/lib/yonaris-runtime/.docker/config.json` from root-only transfer material,
+then set the file to `yonaris-runtime:yonaris-runtime 0600` and destroy the
+transfer copy. Do not invoke Docker directly as any service account. Registry
+login/rotation that needs a live daemon must be implemented as a reviewed,
+fixed-argument operation in the root-owned stable runtime manager.
+The daemon argv has one exact rootless Unix host and no `--config-file`
+override. A default rootless `~/.config/docker/daemon.json`, if present, must be
+owned/mode-locked as documented in the runbook and may not define `hosts`.
 
-```bash
-echo '<GHCR_READ_TOKEN>' | sudo -H -u yonaris-deploy \
-  docker login ghcr.io -u Blackdcp --password-stdin
-```
-
-Do not put model-provider credentials in GitHub. They stay only in
-`/opt/yonaris/.env` on the LAS host.
+Do not put model-provider credentials in GitHub. They stay only in the
+root-owned `/etc/yonaris/las-runtime.env` on the LAS host.
 
 ## 5. Caddy and HTTPS
 
@@ -163,12 +211,34 @@ portal.yonaris.com {
 }
 ```
 
-The marketing workflow starts and health-checks the isolated `www` Compose
-project before `install-marketing-caddy.sh` replaces only the apex redirect
-block. The installer validates a candidate Caddyfile, atomically installs it,
-performs a graceful reload through the Caddy admin API, and checks both apex
-and portal directly against the origin. Any failure restores and reloads the
-previous configuration before the marketing container is rolled back.
+The root-owned runtime helper starts and health-checks the isolated `www`
+project. The root-owned stable Caddy helper then accepts only the exact apex
+fragment from the immutable, policy-authorized release tree. It validates a
+candidate Caddyfile, records predecessor/candidate hashes in the durable
+transition journal, atomically installs it, performs a graceful reload, and
+checks both apex and portal directly against the origin. Any failure restores,
+reloads, and post-verifies the exact predecessor. The retired deploy-user
+Caddy entrypoint remains fail-closed and must never receive a Docker socket or
+host-root mount.
+
+The first `bootstrap-activate` cutover is stricter: it binds the arbitrary
+legacy full-file backup separately from a derived predecessor that preserves
+the old business routes but enforces the Unix admin boundary. Before recording
+or installing the candidate, it atomically installs, restarts, and verifies
+that secured predecessor so the raw legacy file is never the rollback target.
+If the predecessor cannot be verified, Caddy is stopped and the default TCP
+admin endpoint is confirmed closed. A failed candidate may roll back only to
+the verified secured predecessor, and the bootstrap journal is cleared only
+after admin-boundary and origin-health verification. Later transactions reload
+only through the Unix socket.
+
+Caddy administration is Unix-socket-only at
+`unix//run/caddy/admin.sock|0600`; the default localhost TCP admin ports must be
+closed. Direct origin checks use the immutable release's reviewed Cloudflare
+Origin CA, installed as root-owned
+`/etc/yonaris/las-origin-health-ca.pem` and verified against its pinned digest.
+The exact tmpfiles contract recreates `/run/caddy` as `caddy:caddy 0750` after
+boot, and stable operations reject a missing or misowned admin socket.
 
 Port 1516 is intentionally fixed in both the isolated Compose file and the
 reviewed Caddy fragment so their upstreams cannot drift.
@@ -189,18 +259,12 @@ Transfer `yonaris.dump` and its SHA-256 file to `/opt/yonaris/import/` on the
 LAS host, then run `sha256sum -c yonaris.dump.sha256` there. Before any
 customers use production, start the empty database and restore it:
 
-```bash
-cd /opt/yonaris/source
-sudo -H -u yonaris-deploy docker compose --project-name yonaris \
-  --env-file /opt/yonaris/.env \
-  --file deploy/las/compose.yaml up -d postgres
-
-sudo -H -u yonaris-deploy docker compose --project-name yonaris \
-  --env-file /opt/yonaris/.env \
-  --file deploy/las/compose.yaml exec -T postgres \
-  pg_restore -U yonaris -d yonaris --clean --if-exists --no-owner --no-acl \
-  </opt/yonaris/import/yonaris.dump
-```
+Do not run `docker compose` as `yonaris-deploy` and do not temporarily expose
+the runtime socket for this import. A root operator must add a reviewed,
+fixed-argument import operation to the stable runtime helper, bind it to the
+active release and PostgreSQL digest in the root policy, and execute it through
+that helper. Until that operation is installed and verified, the import is
+intentionally blocked.
 
 The restore command replaces matching objects in the new Yonaris database. It
 must not be used after production begins receiving writes.
@@ -209,14 +273,9 @@ For a guarded first import, the checked-in helper refuses any database whose
 public schema is non-empty and compares every table count in the export
 manifest:
 
-```bash
-sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  ENV_FILE=/opt/yonaris/.env \
-  bash /opt/yonaris/source/deploy/las/bin/restore-initial.sh \
-  /opt/yonaris/import/yonaris.dump \
-  /opt/yonaris/import/yonaris.manifest.txt
-```
+The same rule applies to `restore-initial.sh`: it is evidence and validation
+logic for the future fixed operation, not authorization to give candidate code
+the runtime socket.
 
 To repeat only the row-count verification after the initial restore, append
 `--verify-only` to the command.
@@ -226,41 +285,79 @@ To repeat only the row-count verification after the initial restore, append
 Add these repository secrets:
 
 - `LAS_HOST`: the LAS fixed IPv4 address
-- `LAS_USER`: `yonaris-deploy`
+- `LAS_USER`: `yonaris-gate`
 - `LAS_SSH_PRIVATE_KEY`: its private deployment key
 - `LAS_SSH_KNOWN_HOSTS`: the verified host-key line for the LAS server
 
-The deployment account owns `/opt/yonaris` and can use Docker; it does not need
-sudo. Once the server is ready, set repository variable
-`LAS_DEPLOY_ENABLED=true`, then manually run the workflow once. Future merges
-to `main` deploy automatically.
+Add these repository variables:
+
+- `LAS_DEPLOY_ENABLED`: keep `false` until bootstrap and the forced probe pass.
+- `LAS_FORCED_COMMAND_ENABLED`: keep `false` until the exact forced boundary
+  passes both the probe and arbitrary-command rejection checks.
+- `LAS_POSTGRES_IMAGE_DIGEST`: the exact reviewed `sha256:` registry digest for
+  the approved `postgres:16-alpine` image. Mutable tags are not accepted.
+
+The deployment account owns only explicitly scoped mutable candidate data and
+has no Docker socket or sudo access. The locked `yonaris-runtime` account owns
+the rootless daemon and registry configuration; only the root-owned stable
+runtime helper may enter that TCB with fixed, policy-bound arguments.
+The separate `yonaris-gate` account owns no runtime data and has one exact
+`NOPASSWD` command: the root-owned dispatcher. The dispatcher calls root
+verification/state code itself, never runs a candidate release script or
+enters `yonaris-deploy`, and uses `yonaris-runtime` only inside the stable
+runtime helper; see
+[ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md](ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md).
+The root operator must preload each immutable SHA and authorize its exact
+operation before Actions can request it through the stable boundary. The
+candidate and deployment key cannot install or edit the trust policy, stable
+programs, attestation, or
+root-controlled `authorized_keys`. The cutover is proved with the same Actions
+key using the exact no-side-effect `yonaris-las-v1 probe` response and an exact
+protocol rejection of an arbitrary command.
+Stable programs and their policy are published only as one root-owned,
+versioned bundle through one atomic active pointer; the fixed sudo/SSH
+entrypoints are byte-identical launchers. See the linked runbook for staging,
+fsync, post-verification, and crash-reconciliation requirements. The launcher
+pins one exact bundle generation before entering the dispatcher. Every probe
+and normal operation then takes the common control lock before invoking a
+stable peer, requires the canonical active pointer to still match that pin,
+and reruns the verifier from the pinned generation. A normal mutation converts
+the lock to exclusive mode and repeats the complete pointer/verifier/journal/
+activation check because that conversion is not atomic. Thus a request queued
+through a candidate generation that the installer later rolls back exits 75
+before Git materialization, state mutation, Docker, or Caddy.
+The same locked revalidation rejects the stable-bundle journal, its publication
+temporary, or the active-pointer temporary with exit 75 before any stable peer
+or Git read. This check belongs to the dispatcher, not the generic verifier:
+the root-only bundle installer must be able to verify and reconcile its own
+candidate while that journal remains durable.
+Once the server is ready and the forced probe succeeds, set both
+`LAS_DEPLOY_ENABLED=true` and `LAS_FORCED_COMMAND_ENABLED=true`. There is no
+Phase 1 unrestricted compatibility deployment. Future merges to `main` deploy
+only through the stable dispatcher. At present the migration-attestation
+producer prerequisite above is unmet, so this instruction is intentionally
+blocked and both variables must remain `false`.
 
 ## 8. Daily backups
 
-Install the included systemd timer after the first successful deployment:
-
-```bash
-sudo cp /opt/yonaris/source/deploy/las/systemd/yonaris-backup.service \
-  /etc/systemd/system/yonaris-backup.service
-sudo cp /opt/yonaris/source/deploy/las/systemd/yonaris-backup.timer \
-  /etc/systemd/system/yonaris-backup.timer
-sudo systemctl daemon-reload
-sudo systemctl enable --now yonaris-backup.timer
-sudo systemctl list-timers yonaris-backup.timer
-```
-
-The timer writes custom-format dumps and checksums to
-`/opt/yonaris/backups`, retaining 30 days. These backups share the LAS system
-disk, so they protect against application and migration mistakes but not loss
-of the server or disk. Add encrypted off-host object-storage replication before
-the portal contains irreplaceable customer data.
+The checked-in legacy timer is a deprecated fail-closed compatibility stub, not
+an authorized production entrypoint. Do not install or enable it; any installed
+legacy service and timer must instead be inactive and masked. Until a
+fixed-argument backup operation is added
+to the stable runtime manager, automated database backup is intentionally
+blocked. The replacement must be bound to the active immutable tree, the
+five-digest receipt, the dedicated rootless daemon, a root-owned destination,
+and encrypted off-host replication before the portal contains irreplaceable
+customer data.
 
 ## Marketing site
 
 The `www` image serves `apps/www` on `127.0.0.1:1516` in the independent
-`yonaris-marketing` Compose project. Its deployment script and `.marketing-release`
-marker are separate from the portal release. `portal.yonaris.com`, its
-database, containers, and deployment URL remain unchanged.
+`yonaris-marketing` Compose project. Its canonical root-owned marker is
+`/etc/yonaris/las-active-marketing-release-v1`; the deploy-user-owned
+`.marketing-release` is only a non-authoritative Caddy rollback detail.
+`portal.yonaris.com`, its database, containers, and deployment URL remain
+unchanged.
 
 ### Diagnostic request delivery
 
@@ -271,7 +368,7 @@ domain-scoped **Sending Access** API key. A Full Access key is neither required
 nor appropriate for this service. Domain verification is a one-time release
 prerequisite; deployment intentionally performs no Resend domain API lookup.
 
-Set these values in `/opt/yonaris/.env`:
+Set these values in `/etc/yonaris/las-runtime.env`:
 
 ```dotenv
 MARKETING_DIAGNOSTIC_DELIVERY_MODE=resend
@@ -297,35 +394,43 @@ Caddy forwards only `/`, the homepage's static assets, its OG image, and the
 single-page `robots.txt`/`sitemap.xml` endpoints. Legacy documentation, status,
 and product-marketing routes in `apps/www` are not exposed on the production
 domain. Portal and marketing workflows share both an ordered Actions queue and
-a host-side source lock, so fetch/checkout/deploy operations cannot race.
+the root-owned `/run/lock/yonaris` directory inode, so object import,
+materialization, and deployment cannot race. After
+the forced-command cutover, marketing also passes the stable candidate guard
+and requires a compatible active portal rollback receipt before runtime
+switch; an existing irreversible marker is validated as well.
 
 ## Operations
 
-Create a database backup:
+Database backups:
 
-```bash
-sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  ENV_FILE=/opt/yonaris/.env \
-  bash /opt/yonaris/source/deploy/las/bin/backup.sh
-```
+Direct `docker compose exec` and checkout-owned backup scripts are prohibited.
+Backups must be implemented as another fixed-argument stable runtime-helper
+operation bound to the active release and its five-digest receipt.
 
-Roll Web and Worker back to an earlier immutable image tag:
+Roll Web and Worker back to an earlier immutable release only through the
+production workflow. After Chinese artifact output has been activated, the
+stable host guard must approve both the candidate Git object and the healthy
+compatibility receipt. Direct execution from an old checkout is forbidden; see
+[ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md](ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md).
+The `deploy.sh` inside the immutable materialized tree is an implementation
+detail of that guarded workflow, not a manual rollback entry point.
 
-```bash
-sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  ENV_FILE=/opt/yonaris/.env \
-  bash /opt/yonaris/source/deploy/las/bin/deploy.sh sha-<full-40-character-commit>
-```
+An application rollback does not reverse a database migration. Production
+migration must remain blocked until a fixed stable operation can create a
+checksummed root-owned backup, restore that exact backup into an isolated
+PostgreSQL instance, and run the immutable candidate migration digest against
+the copy before touching production. The checked-in rehearsal and backup
+scripts are validation logic, not production authorization. Schema-destructive
+releases additionally require a reviewed restore plan.
 
-An application rollback does not reverse a database migration. Before every
-production migration, the deploy script runs a storage preflight, creates a
-checksummed database backup, and restores that exact backup into an isolated
-PostgreSQL instance. The immutable candidate `db-migrate` image must upgrade
-the isolated copy successfully before it can touch production. After the real
-migration, the strict storage preflight must also pass before Web or Worker is
-updated. Schema-destructive releases still require a planned database restore.
+The production SSH and policy surface contains only `probe`, `deploy`,
+`marketing-preflight`, `marketing-deploy`, and `marketing-verify`. The eleven
+former candidate-side report/import/repair/sampling/snapshot/browser-runner
+operations are permanently disabled; the exact list and rejection contract are
+in the linked artifact-language runbook. Do not restore their workflow jobs or
+add their names to a policy. A future capability that needs Docker or host
+state requires a new stable fixed operation and protocol review.
 
 This deployment never runs global Docker prune commands because the LAS host is
 shared with other applications.

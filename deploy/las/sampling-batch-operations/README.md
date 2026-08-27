@@ -1,9 +1,22 @@
-# Explicit Sampling Batch Operations
+# Explicit Sampling batch validation
 
-This directory contains the reviewed contract machinery for explicit one-time Sampling batch operations. It does not schedule work and does not itself create a batch.
+This directory preserves reviewed validation machinery for historical one-time
+Sampling requests. It does not schedule work or authorize production access.
+The former `sampling-batch-operation` forced-command operation is permanently
+rejected by the LAS dispatcher and policy parsers.
 
-The `requests/` directory is intentionally empty in the Browser Extension release. The retired StepFun CN / Doubao six-sample request used the legacy host Runner route and must not start during deployment. Administrators now create domestic runs explicitly from Portal and execute them through a paired local browser extension.
+The `requests/` directory is intentionally empty. The retired StepFun CN /
+Doubao six-sample request used the legacy host Runner route and must not start
+during deployment. Administrators create domestic runs explicitly in Portal
+and execute them through a paired local browser extension.
 
-If a future release intentionally carries an approved one-time request, the deployment workflow validates that exact request, runs against the immutable deployed SHA under the production environment and SSH lock, checks status, dry-runs, then makes one idempotent `--apply` call.
+Do not add a production request or policy line, restore the old workflow call,
+or expose the runtime dotenv or Docker socket to the candidate helper. A future
+one-time Sampling capability requires a new operation name, a newly reviewed
+stable fixed-argument manager path, and a new exact protocol bound to the
+active immutable release and its five-digest receipt.
 
-The worker uses its fixed idempotency key to make replays a no-op. Operation output is deliberately reduced to lifecycle-safe fields; it never relays prompt text, database connection data, or container output.
+Any replacement must retain the fixed idempotency and redacted-output
+requirements: replays are no-ops, and output never relays prompt text, database
+connection data, secrets, or container output. Re-enabling the retired name is
+not supported.

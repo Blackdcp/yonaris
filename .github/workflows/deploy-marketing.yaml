@@ -15,11 +15,7 @@ on:
       - docker/Dockerfile.www
       - deploy/las/compose.marketing.yaml
       - deploy/las/caddy/**
-      - deploy/las/bin/deploy-marketing.sh
-      - deploy/las/bin/deploy-marketing.test.sh
-      - deploy/las/bin/install-marketing-caddy.sh
-      - deploy/las/bin/install-marketing-caddy.test.sh
-      - deploy/las/bin/marketing-workflow.test.mjs
+      - deploy/las/bin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -41,6 +37,8 @@ jobs:
   build:
     name: Build and prove marketing image
     runs-on: ubuntu-latest
+    outputs:
+      www_digest: ${{ steps.push_image.outputs.digest }}
     permissions:
       contents: read
       packages: write
@@ -68,6 +66,17 @@ jobs:
           bash -n deploy/las/bin/install-marketing-caddy.sh
           bash deploy/las/bin/deploy-marketing.test.sh
           bash deploy/las/bin/install-marketing-caddy.test.sh
+          bash deploy/las/bin/dispatch-las-command.test.sh
+          bash deploy/las/bin/guard-artifact-output-release.test.sh
+          bash deploy/las/bin/verify-las-forced-command.test.sh
+          bash deploy/las/bin/install-las-trust-policy.test.sh
+          bash deploy/las/bin/manage-las-release-state.test.sh
+          bash deploy/las/bin/manage-las-runtime.test.sh
+          bash deploy/las/bin/manage-las-caddy.test.sh
+          bash deploy/las/bin/install-las-stable-bundle.test.sh
+          bash deploy/las/bin/las-final-hardening.test.sh
+          bash deploy/las/bin/las-privilege-boundary.test.sh
+          bash deploy/las/bin/artifact-output-language-security.test.sh
           node --test deploy/las/bin/marketing-workflow.test.mjs
           node --test deploy/las/caddy/yonaris-marketing.test.mjs
           node --test apps/www/scripts/smoke-marketing.test.mjs
@@ -119,15 +128,26 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push the already-verified image
+        id: push_image
         env:
           IMAGE_REF: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/yonaris-www:sha-${{ github.sha }}
-        run: docker push "$IMAGE_REF"
+        run: |
+          push_output="$(docker push "$IMAGE_REF")"
+          printf '%s\n' "$push_output"
+          digest="$(printf '%s\n' "$push_output" | sed -n 's/^.*digest: \(sha256:[0-9a-f]\{64\}\).*$/\1/p' | tail -n 1)"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo 'Registry push did not return an immutable image digest.' >&2
+            exit 1
+          fi
+          echo "digest=$digest" >>"$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy marketing
     needs:
       - build
-    if: vars.LAS_DEPLOY_ENABLED == 'true'
+    if: >-
+      vars.LAS_DEPLOY_ENABLED == 'true' &&
+      vars.LAS_FORCED_COMMAND_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -149,62 +169,69 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" >~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Prove the exact forced-command boundary
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+        run: |
+          probe_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "yonaris-las-v1 probe")"
+          if [[ "$probe_output" != 'yonaris-las-probe-v1 ok' ]]; then
+            echo 'The LAS forced-command probe returned an unexpected response.' >&2
+            exit 1
+          fi
+          set +e
+          rejection_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "true" 2>&1)"
+          rejection_status=$?
+          set -e
+          if [[ "$rejection_status" -ne 2 || \
+            "$rejection_output" != 'Refusing non-protocol LAS SSH command.' ]]; then
+            echo 'The LAS key did not return the exact dispatcher rejection for an arbitrary command.' >&2
+            exit 1
+          fi
+
       - name: Remote secret preflight before source mutation
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
           RELEASE_SHA: ${{ github.sha }}
+          WWW_DIGEST: ${{ needs.build.outputs.www_digest }}
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "env DEPLOY_ROOT=/opt/yonaris MARKETING_COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.marketing.yaml ENV_FILE=/opt/yonaris/.env bash -s -- --verify-only sha-$RELEASE_SHA" \
-            <deploy/las/bin/deploy-marketing.sh
+            "yonaris-las-v1 marketing-preflight sha-$RELEASE_SHA $WWW_DIGEST"
 
       - name: Lock source and deploy the exact release
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
           RELEASE_SHA: ${{ github.sha }}
+          WWW_DIGEST: ${{ needs.build.outputs.www_digest }}
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "env RELEASE_SHA=$RELEASE_SHA flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -s" <<'REMOTE'
-          set -Eeuo pipefail
-          cd /opt/yonaris/source
-          git fetch --depth=50 origin main
-          git checkout --detach "$RELEASE_SHA"
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          env \
-            DEPLOY_ROOT=/opt/yonaris \
-            MARKETING_COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.marketing.yaml \
-            ENV_FILE=/opt/yonaris/.env \
-            bash /opt/yonaris/source/deploy/las/bin/deploy-marketing.sh sha-$RELEASE_SHA
-          REMOTE
+            "yonaris-las-v1 marketing-deploy sha-$RELEASE_SHA $WWW_DIGEST"
 
       - name: Verify live marker, image, and governed health
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
           RELEASE_SHA: ${{ github.sha }}
+          WWW_DIGEST: ${{ needs.build.outputs.www_digest }}
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "env RELEASE_SHA=$RELEASE_SHA bash -s" <<'REMOTE'
-          set -Eeuo pipefail
-          test "$(tr -d '[:space:]' </opt/yonaris/.marketing-release)" = "sha-$RELEASE_SHA"
-          container_id="$(docker compose --project-name yonaris-marketing --env-file /opt/yonaris/.env --file /opt/yonaris/source/deploy/las/compose.marketing.yaml ps -q www)"
-          test -n "$container_id"
-          deployed_image="$(docker inspect --format '{{.Config.Image}}' "$container_id")"
-          test "$deployed_image" = "ghcr.io/blackdcp/yonaris-www:sha-$RELEASE_SHA"
-          curl --fail --silent --show-error --max-time 15 https://yonaris.com/ >/dev/null
-          curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
-          curl --fail --silent --show-error --max-time 15 https://yonaris.com/company >/dev/null
-          test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 https://yonaris.com/resources)" = 404
-          test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 15 https://yonaris.com/status)" = 404
-          REMOTE
+            "yonaris-las-v1 marketing-verify sha-$RELEASE_SHA $WWW_DIGEST"

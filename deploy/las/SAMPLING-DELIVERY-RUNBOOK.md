@@ -2,6 +2,11 @@
 
 本 Runbook 适用于当前 Yonaris 的人工 consumer-surface Sampling 交付。目标是固定考核分母、保留可核验的执行证据，并把计分样本与观察样本分开。执行入口为管理员登录后的 `Sampling`（`/admin/sampling`）。
 
+> **LAS 发布状态：No-Go。** 当前仓库只有 migration readiness 验证器，
+> 没有可信的 root-owned backup/rehearsal attestation producer。禁止手工伪造
+> attestation/evidence，禁止执行 migration 或生产 deploy。以下 Sampling
+> 操作规范可用于已经独立验证的环境和产品验收，但不能解除 LAS 的发布阻断。
+
 ## Browser Runner（默认关闭）
 
 Browser Runner 是平台侧的执行能力，不属于客户账户权限。当前发布只提供“显式启动一批”的执行链，不创建 cron、定时任务或每日自动批次；在合同生效并完成真实站 UAT 之前，生产环境必须保持 `BROWSER_RUNNER_ENABLED=false` 或不配置该变量。
@@ -44,7 +49,9 @@ Yonaris 当前会校验并保存：冻结的 scope、prompt 文本、目标平�
 交付负责人逐项确认：
 
 - [ ] 目标 release 包含数据库迁移 `0016_delivery_manifests`、`0017_sampling_scope_lane`、`0018_sampling_evidence_artifacts`。
-- [ ] 发布前数据库备份成功，且知道对应的上一稳定 immutable image tag。
+- [ ] 已安装并验证绑定 active release、五 digest receipt 和 rootless runtime
+  的固定参数数据库备份操作，且知道对应的上一稳定 immutable release。
+  旧 timer 或候选脚本备份不计入本项；稳定备份操作尚未上线时为 No-Go。
 - [ ] Web 可经 HTTPS 登录，Worker 稳定运行，服务器和数据库剩余空间足够保存证据及备份。
 - [ ] 至少两名人员参加见证 UAT：一名操作员、一名见证人；两人的姓名、时间、平台、市场和结论记录在交付单中。
 - [ ] 客户已书面确认 scored prompt、目标平台、样本数、测量窗口、market、locale、timezone、会话模式和搜索模式。
@@ -122,12 +129,11 @@ Yonaris 当前会校验并保存：冻结的 scope、prompt 文本、目标平�
 
 随后由发布运维在 LAS 主机执行只读核对，不向客户或操作员提供数据库凭据：
 
-```bash
-sudo -H -u yonaris-deploy docker compose --project-name yonaris \
-  --env-file /opt/yonaris/.env \
-  --file /opt/yonaris/source/deploy/las/compose.yaml exec postgres \
-  sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
-```
+不得把 rootless Docker socket、runtime env 或数据库凭据交给
+`yonaris-deploy`，也不得从 mutable checkout 直接执行 `docker compose`。
+该只读核对应由 root 运维通过稳定 runtime helper 的固定参数、active
+release 和五 digest receipt 完成；若主机尚未安装该只读操作，本步骤应
+fail closed 并暂停交付，而不是临时开放 socket。
 
 在 `psql` 中先按唯一 batch 名查完整 UUID，再替换下方 `<batch-uuid>`：
 
@@ -165,26 +171,49 @@ ORDER BY t.id;
 
 ## 8. 发布与回滚
 
-按 [LAS deployment guide](./README.md) 发布完整 40 位 commit 对应的 immutable tag。发布脚本会先备份数据库、执行迁移，再健康检查 Web 和 Worker：
+只有在 [LAS deployment guide](./README.md) 所列可信 migration evidence
+producer 与全部 bootstrap 前置均完成后，才可发布完整 40 位 commit 对应的
+immutable release。forced dispatcher 只允许 policy 绑定的 stable runtime
+manager 拉取精确 digest、执行迁移，并核对 Web、Worker 和 PostgreSQL 的实际
+container/registry digest 与健康状态；候选脚本不能取得 runtime socket：
 
-```bash
-sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  ENV_FILE=/opt/yonaris/.env \
-  bash /opt/yonaris/source/deploy/las/bin/deploy.sh \
-  sha-<full-40-character-commit>
+由 root 运维先核对 portal workflow 输出的 Web、Worker、migration、
+PostgreSQL 四个 `sha256:` digest，并把它们与当前获批的 www digest 作为
+同一五-digest tuple 写入该 SHA 的 root-owned policy。PostgreSQL 必须使用
+仓库变量 `LAS_POSTGRES_IMAGE_DIGEST` 指向已审核的 `postgres:16-alpine`
+registry digest。随后 GitHub Actions 通过唯一 forced protocol 执行：
+
+```text
+yonaris-las-v1 deploy sha-<full-40-character-commit> \
+  sha256:<web> sha256:<worker> sha256:<migrate> sha256:<postgres>
 ```
+
+www digest 不作为 portal deploy 命令参数传输；dispatcher 从同一 SHA 的
+root policy 读取并要求 receipt 最终保存完整五-digest tuple。不得省略四个
+portal 参数，也不得把 tag 当作 digest。
+
+旧 `sampling-batch-operation` 名称已从 forced dispatcher、policy parser 和
+production workflow 永久移除。`sampling-batch-operations/requests/` 为空，
+现有 candidate helper 仍需读取 runtime dotenv 并直接调用 Compose；不得为它
+增加 request 或 policy 授权，也不得恢复该旧协议。若未来确需主机侧一次性
+Sampling 能力，必须设计一个新名称、新的 fixed-argument stable manager
+operation 和新的 exact protocol，并重新评审 active release、五 digest、
+幂等与证据边界。当前管理员只从 Portal 手工创建批次，并通过已批准的人工/
+浏览器扩展交付流程执行。
 
 发布后先完成第 5 节两条 observation UAT，全部通过才开放正式 scored batch。若失败，立即停止新建、claim 和提交正式任务，保留所有已冻结 manifest 和已落账 observation，不得手改数据库。
 
-应用回滚到上一稳定 tag：
+应用回滚到上一稳定版本时，仍使用 canonical `deploy` 协议，但目标改为上一
+release，并传入其 receipt/policy 中的 Web、Worker、migration、PostgreSQL
+四个 digest；当前 active release 还必须有同 tuple 的 `rollback` 授权与
+durable receipt。不得直接执行 checkout 中的 `deploy.sh`。若 pending journal
+存在，普通操作必须失败，由 root 按 artifact output-language runbook 对账
+实际 digest 后恢复。
 
-```bash
-sudo -H -u yonaris-deploy env DEPLOY_ROOT=/opt/yonaris \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  ENV_FILE=/opt/yonaris/.env \
-  bash /opt/yonaris/source/deploy/las/bin/deploy.sh \
-  sha-<previous-full-40-character-commit>
+```text
+yonaris-las-v1 deploy sha-<previous-full-40-character-commit> \
+  sha256:<previous-web> sha256:<previous-worker> \
+  sha256:<previous-migrate> sha256:<previous-postgres>
 ```
 
 应用回滚不会反向撤销数据库迁移；Sampling manifest、任务和证据应原样保留。数据库 restore 只允许在正式事故流程中进行，并必须评估备份之后的客户写入；不得为了重置不利样本而恢复数据库。

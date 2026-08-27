@@ -24,8 +24,22 @@ if [[ ! "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
 	exit 2
 fi
 
+digest_is_valid() {
+	[[ "$1" =~ ^sha256:[0-9a-f]{64}$ ]]
+}
+
+if ! digest_is_valid "${WWW_IMAGE_DIGEST:-}"; then
+	echo "A root-authorized sha256 marketing image digest is required." >&2
+	exit 2
+fi
+if [[ "$mode" != verify ]] && ! digest_is_valid "${PREVIOUS_WWW_IMAGE_DIGEST:-}"; then
+	echo "A durable predecessor marketing image digest is required." >&2
+	exit 2
+fi
+
 SCRIPT_SOURCE="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_SOURCE")" && pwd)"
+DOTENV_LOADER="$SCRIPT_DIR/load-strict-dotenv.sh"
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/yonaris}"
 MARKETING_COMPOSE_FILE="${MARKETING_COMPOSE_FILE:-$(cd -- "$SCRIPT_DIR/.." && pwd)/compose.marketing.yaml}"
 ENV_FILE="${ENV_FILE:-$DEPLOY_ROOT/.env}"
@@ -34,6 +48,8 @@ ROLLBACK_ROOT="$DEPLOY_ROOT/marketing-rollbacks"
 ROLLBACK_BUNDLE="$ROLLBACK_ROOT/$release_tag"
 HEALTH_ATTEMPTS="${MARKETING_HEALTH_ATTEMPTS:-45}"
 CADDY_TARGET_CONFIG="${CADDY_TARGET_CONFIG:-/etc/caddy/Caddyfile}"
+STABLE_TRANSITION_MANAGED="${YONARIS_STABLE_TRANSITION_MANAGED:-0}"
+STABLE_PREDECESSOR_RELEASE="${YONARIS_PREDECESSOR_MARKETING_RELEASE:-}"
 
 if [[ ! -f "$MARKETING_COMPOSE_FILE" ]]; then
 	echo "Missing marketing Compose file." >&2
@@ -45,12 +61,17 @@ if [[ ! -f "$ENV_FILE" ]]; then
 	exit 1
 fi
 
+if [[ ! -f "$DOTENV_LOADER" || ! -r "$DOTENV_LOADER" || -L "$DOTENV_LOADER" ]]; then
+	echo "Missing strict dotenv loader." >&2
+	exit 1
+fi
+
+# shellcheck source=deploy/las/bin/load-strict-dotenv.sh
+source "$DOTENV_LOADER"
+
 load_marketing_environment() {
 	set +x
-	set -a
-	# shellcheck disable=SC1090
-	source "$ENV_FILE"
-	set +a
+	load_strict_dotenv "$ENV_FILE"
 }
 
 is_placeholder_secret() {
@@ -137,7 +158,7 @@ read_immutable_tag() {
 }
 
 validate_bound_bundle() {
-	local marker_tag candidate_tag previous_tag expected_backup_sha actual_backup_sha candidate_caddy_sha actual_current_caddy expected_current_caddy rollback_phase
+	local marker_tag candidate_tag previous_tag candidate_digest previous_digest expected_backup_sha actual_backup_sha candidate_caddy_sha actual_current_caddy expected_current_caddy rollback_phase
 	marker_tag="$(read_immutable_tag "$RELEASE_FILE")" || {
 		echo "Recovery requires a valid current release marker." >&2
 		return 1
@@ -148,8 +169,16 @@ validate_bound_bundle() {
 	}
 	candidate_tag="$(read_immutable_tag "$ROLLBACK_BUNDLE/candidate-image-tag")" || return 1
 	previous_tag="$(read_immutable_tag "$ROLLBACK_BUNDLE/previous-image-tag")" || return 1
+	candidate_digest="$(tr -d '[:space:]' <"$ROLLBACK_BUNDLE/candidate-image-digest")" || return 1
+	previous_digest="$(tr -d '[:space:]' <"$ROLLBACK_BUNDLE/previous-image-digest")" || return 1
 	[[ "$candidate_tag" == "$release_tag" && "$previous_tag" != "$candidate_tag" ]] || {
 		echo "Rollback bundle binding is invalid." >&2
+		return 1
+	}
+	digest_is_valid "$candidate_digest" && digest_is_valid "$previous_digest" && \
+		[[ "$candidate_digest" == "$WWW_IMAGE_DIGEST" && \
+			"$previous_digest" == "$PREVIOUS_WWW_IMAGE_DIGEST" ]] || {
+		echo "Rollback bundle image digests do not match the root-authorized evidence." >&2
 		return 1
 	}
 	[[ -f "$ROLLBACK_BUNDLE/candidate-caddy-sha256" && -f "$ROLLBACK_BUNDLE/previous-caddy-sha256" ]] || {
@@ -230,7 +259,7 @@ fi
 
 cd -- "$(dirname -- "$MARKETING_COMPOSE_FILE")"
 compose=(docker compose --project-name yonaris-marketing --env-file "$ENV_FILE" --file "$MARKETING_COMPOSE_FILE")
-helper_image="${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-www:${release_tag}"
+helper_image="${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-www@$WWW_IMAGE_DIGEST"
 
 health_local_app() {
 	for _ in $(seq 1 "$HEALTH_ATTEMPTS"); do
@@ -244,10 +273,12 @@ health_local_app() {
 
 start_and_health_app() {
 	local tag="$1"
-	if ! IMAGE_TAG="$tag" "${compose[@]}" pull www; then
+	local digest="$2"
+	digest_is_valid "$digest" || return 1
+	if ! IMAGE_TAG="$tag" WWW_IMAGE_DIGEST="$digest" "${compose[@]}" pull www; then
 		echo "Could not refresh marketing image $tag; trying the local immutable image." >&2
 	fi
-	if ! IMAGE_TAG="$tag" "${compose[@]}" up -d --no-deps --pull never www; then
+	if ! IMAGE_TAG="$tag" WWW_IMAGE_DIGEST="$digest" "${compose[@]}" up -d --no-deps --pull never www; then
 		return 1
 	fi
 	health_local_app
@@ -255,7 +286,8 @@ start_and_health_app() {
 
 restore_app_or_recovery_exit() {
 	local tag="$1"
-	if start_and_health_app "$tag"; then
+	local digest="$2"
+	if start_and_health_app "$tag" "$digest"; then
 		return 0
 	fi
 	echo "The previous immutable marketing app could not be restored." >&2
@@ -310,7 +342,7 @@ if [[ "$mode" == recover ]]; then
 		echo "Could not prepare the bound recovery attempt." >&2
 		exit 75
 	fi
-	if ! start_and_health_app "$release_tag"; then
+	if ! start_and_health_app "$release_tag" "$WWW_IMAGE_DIGEST"; then
 		echo "Candidate app recovery failed; Caddy was not touched." >&2
 		exit 75
 	fi
@@ -345,7 +377,7 @@ fi
 
 if [[ "$mode" == rollback ]]; then
 	previous_tag="$(read_immutable_tag "$ROLLBACK_BUNDLE/previous-image-tag")"
-	if ! start_and_health_app "$previous_tag"; then
+	if ! start_and_health_app "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"; then
 		echo "The predecessor app failed before Caddy rollback; current Caddy was not touched." >&2
 		exit 1
 	fi
@@ -382,7 +414,7 @@ if [[ "$mode" == rollback ]]; then
 
 	if ! atomic_write_bundle_value "restore-in-progress" "$pending_marker"; then
 		echo "Could not persist rollback marker recovery state; Caddy was not touched." >&2
-		if ! start_and_health_app "$release_tag"; then
+		if ! start_and_health_app "$release_tag" "$WWW_IMAGE_DIGEST"; then
 			echo "Candidate app recovery could not be confirmed." >&2
 		fi
 		exit 75
@@ -397,7 +429,7 @@ if [[ "$mode" == rollback ]]; then
 	set -e
 	if ((caddy_restore_status != 0)); then
 		echo "Caddy rollback was not confirmed; restoring the candidate app and preserving recovery material." >&2
-		if ! start_and_health_app "$release_tag"; then
+		if ! start_and_health_app "$release_tag" "$WWW_IMAGE_DIGEST"; then
 			echo "CRITICAL: neither the predecessor Caddyfile nor candidate app recovery was confirmed." >&2
 		fi
 		exit 75
@@ -416,10 +448,18 @@ if [[ "$mode" == rollback ]]; then
 	exit 0
 fi
 
-previous_tag="$(read_immutable_tag "$RELEASE_FILE")" || {
-	echo "A normal deployment requires a valid predecessor release marker." >&2
-	exit 1
-}
+if [[ "$STABLE_TRANSITION_MANAGED" == 1 ]]; then
+	previous_tag="$STABLE_PREDECESSOR_RELEASE"
+	[[ "$previous_tag" =~ ^sha-[0-9a-f]{40}$ ]] || {
+		echo "A stable deployment requires the root dispatcher's predecessor release." >&2
+		exit 1
+	}
+else
+	previous_tag="$(read_immutable_tag "$RELEASE_FILE")" || {
+		echo "A normal deployment requires a valid predecessor release marker." >&2
+		exit 1
+	}
+fi
 
 if [[ "$previous_tag" == "$release_tag" ]]; then
 	echo "The requested immutable release is already marked current; refusing to overwrite its rollback bundle." >&2
@@ -432,9 +472,9 @@ if [[ -e "$ROLLBACK_BUNDLE" ]]; then
 fi
 
 echo "Starting the Yonaris marketing candidate."
-if ! start_and_health_app "$release_tag"; then
+if ! start_and_health_app "$release_tag" "$WWW_IMAGE_DIGEST"; then
 	echo "The candidate app failed before the Caddy switch." >&2
-	restore_app_or_recovery_exit "$previous_tag"
+	restore_app_or_recovery_exit "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"
 	exit 1
 fi
 
@@ -442,10 +482,12 @@ if ! make_private_directory "$ROLLBACK_ROOT" ||
 	! make_private_directory "$ROLLBACK_BUNDLE" ||
 	! atomic_write_bundle_value "$previous_tag" "$ROLLBACK_BUNDLE/previous-image-tag" ||
 	! atomic_write_bundle_value "$release_tag" "$ROLLBACK_BUNDLE/candidate-image-tag" ||
+	! atomic_write_bundle_value "$PREVIOUS_WWW_IMAGE_DIGEST" "$ROLLBACK_BUNDLE/previous-image-digest" ||
+	! atomic_write_bundle_value "$WWW_IMAGE_DIGEST" "$ROLLBACK_BUNDLE/candidate-image-digest" ||
 	! atomic_write_bundle_value "unconfirmed-caddy-rollback" "$ROLLBACK_BUNDLE/recovery-status"; then
 	echo "Could not create the private rollback bundle; restoring the predecessor app." >&2
 	archive_candidate_bundle || true
-	restore_app_or_recovery_exit "$previous_tag"
+	restore_app_or_recovery_exit "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"
 	exit 75
 fi
 
@@ -465,10 +507,10 @@ fi
 if ((caddy_install_status != 0)); then
 	if ! archive_candidate_bundle; then
 		echo "Caddy was restored, but the failed candidate bundle could not be archived." >&2
-		restore_app_or_recovery_exit "$previous_tag"
+		restore_app_or_recovery_exit "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"
 		exit 75
 	fi
-	restore_app_or_recovery_exit "$previous_tag"
+	restore_app_or_recovery_exit "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"
 	exit 1
 fi
 
@@ -503,7 +545,7 @@ if ! atomic_write_marker "$release_tag"; then
 		echo "Caddy recovery after marker failure could not be confirmed; keeping the candidate app and bundle." >&2
 		exit 75
 	fi
-	restore_app_or_recovery_exit "$previous_tag"
+	restore_app_or_recovery_exit "$previous_tag" "$PREVIOUS_WWW_IMAGE_DIGEST"
 	archive_candidate_bundle || true
 	exit 75
 fi

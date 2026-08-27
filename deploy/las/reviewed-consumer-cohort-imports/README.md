@@ -1,8 +1,12 @@
-# Reviewed consumer cohort imports
+# Reviewed consumer cohort import validation fixtures
 
-This directory provides an explicit, one-shot production gate for reviewed consumer-web observations.
-Only one JSON file may exist in the requests directory. The immutable release helper validates its exact
-request ID, manifest path, and canonical manifest fingerprint before running a dry-run and one atomic apply.
+This directory preserves historical request and validation contracts. The
+former `reviewed-consumer-cohort-import` forced-command operation is
+permanently rejected by the LAS dispatcher and policy parsers and is not a
+production gate. Do not add a production request/policy line, restore its
+workflow call, or expose the runtime dotenv or Docker socket to its candidate
+helper.
 
-After production verification, remove the request file so later deployments cannot repeat the operation,
-and update the workflow static test so it no longer expects that completed one-shot request.
+Any future cohort import needs a newly named, independently reviewed stable
+fixed-argument operation and exact protocol bound to the active immutable
+release and five-digest receipt. Re-enabling the retired name is not supported.

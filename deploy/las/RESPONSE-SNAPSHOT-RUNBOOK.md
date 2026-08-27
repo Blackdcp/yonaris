@@ -2,6 +2,13 @@
 
 Yonaris response snapshots are immutable HTML and JSON answer records. They are not pixel screenshots of the provider UI. The customer application exposes the same read-only panel and downloads for Bright Data-backed overseas observations and Browser Runner domestic observations.
 
+> **LAS production status: unsupported.** Keep
+> `RESPONSE_SNAPSHOT_ENABLED=false`. Both former forced-command operations,
+> `response-snapshot-activation` and `response-snapshot-backfill`, are
+> permanently disabled. This document preserves the product/storage validation
+> contract; it does not authorize host preparation, dotenv changes, Docker
+> access, backfill, or deployment.
+
 ## Fixed v1 contract
 
 - retention: 90 days from `observedAt`, with an end-exclusive expiry boundary;
@@ -33,17 +40,23 @@ The E2E fixture suite never calls Bright Data, Doubao, DeepSeek or another paid 
 
 Keep `RESPONSE_SNAPSHOT_ENABLED=false` until all checks pass.
 
-```bash
-sudo env RESPONSE_SNAPSHOT_HOST_ROOT=/var/lib/yonaris/response-snapshots/v1 \
-  bash /opt/yonaris/source/deploy/las/bin/prepare-response-snapshot-storage.sh
+The current candidate activation script still needs to edit the runtime dotenv
+and call Compose for its round-trip. Those capabilities are deliberately
+unavailable to `yonaris-deploy`, and no equivalent fixed stable runtime-manager
+operation exists. The retired `response-snapshot-activation` name is rejected
+by the dispatcher and every policy parser and must never be root-authorized or
+executed. Keep `RESPONSE_SNAPSHOT_ENABLED=false` and treat activation as
+unsupported/fail closed.
 
-env DEPLOY_ROOT=/opt/yonaris \
-  ENV_FILE=/opt/yonaris/.env \
-  COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml \
-  bash /opt/yonaris/source/deploy/las/bin/check-response-snapshot-storage.sh
-```
-
-Set the exact six response snapshot variables shown in `env.example`, restart Web and Worker through the immutable deployment, and require the deployment's `--round-trip` probe to pass. The probe writes through the candidate Web image, reads and deletes through the candidate Worker image, and never creates a database record.
+Before enabling this feature, move host-directory preparation, strict dotenv
+publication, restart, and the candidate Web/Worker write-read-delete probe into
+enumerated root-owned stable operations bound to the active tree and five
+digests. The candidate script may validate the immutable request but must never
+receive the socket or dotenv. Any future capability requires a newly named,
+separately reviewed stable operation and exact protocol rather than restoring
+the retired request grammar. A missing object, policy line, active marker,
+receipt, or stable probe must still fail closed. Direct execution of the
+current prepare/check scripts is not an operational entrypoint.
 
 After enablement, verify a fixture or already-saved run from an ordinary customer account:
 
@@ -61,7 +74,17 @@ At 70% disk usage, investigate growth and export/archive older customer ranges. 
 
 ## Historical StepFun backfill
 
-Backfill is disabled unless a reviewed commit adds exactly one request under `response-snapshot-backfills/requests/`. Follow `response-snapshot-backfills/README.md`: enumerate the exact sorted run IDs, channels, end-exclusive UTC range, count, run fingerprint and reviewed source SHA. The production operation always executes dry-run before apply and writes only snapshot metadata/outbox/files; it never changes `prompt_runs`, citations, mentions, prompts, scopes or metric formulas.
+Backfill is permanently absent from the current LAS production surface. The
+existing candidate helper still reads the
+runtime dotenv and invokes Compose, so adding a request or policy line would
+not make it a supported production operation. The name
+`response-snapshot-backfill` remains rejected. A newly named future stable
+fixed operation may use the validation contract in
+`response-snapshot-backfills/README.md`: exact sorted
+run IDs, channels, end-exclusive UTC range, count, run fingerprint and reviewed
+source SHA; dry-run before apply; and a write set limited to snapshot
+metadata/outbox/files. Until that operation exists, do not add a production
+request and do not grant the candidate helper a socket or dotenv.
 
 After apply, sign in as the real StepFun customer and verify:
 
@@ -73,17 +96,27 @@ After apply, sign in as the real StepFun customer and verify:
 
 ## External export
 
-Customer users can download a bounded ZIP from the read-only product UI. For long-term custody outside LAS, mount a separate disk or Kodo-backed filesystem and run:
+Customer users can download a bounded ZIP from the read-only product UI. The
+checked-in host export script is validation logic, not a production root
+entrypoint. Long-term host export is intentionally blocked until a reviewed,
+fixed-argument stable operation binds the active immutable tree and receipt,
+an exact brand and end-exclusive UTC range, and a root-owned destination on a
+separate filesystem. Do not run the candidate script directly or grant it a
+runtime socket.
 
-```bash
-sudo env RESPONSE_SNAPSHOT_HOST_ROOT=/var/lib/yonaris/response-snapshots/v1 \
-  bash /opt/yonaris/source/deploy/las/bin/export-response-snapshots.sh \
-  --brand stepfun --from 2026-08-01 --to 2026-08-31 \
-  --destination /mnt/external/stepfun-2026-08
-```
-
-The destination must not exist, must be outside the live root, and must be on a different filesystem. Every gzip artifact is decompressed within a fixed limit, verified against its manifest, copied, re-hashed, fsynced, and accompanied by a redacted receipt. A copy on the LAS system disk is not disaster recovery. Kodo or a separately managed external disk is the durability boundary.
+That future operation must reject an existing destination and the live root.
+Every gzip artifact must be decompressed within a fixed limit, verified against
+its manifest, copied, re-hashed, fsynced, and accompanied by a redacted
+receipt. A copy on the LAS system disk is not disaster recovery. Kodo or a
+separately managed external disk is the durability boundary.
 
 ## Recovery
 
-Do not copy files back into the live root while Web or Worker is running. First disable snapshot capture, stop both services, verify the external receipt and manifests, restore only to an empty prepared root, rerun the read-only preflight, then redeploy. PostgreSQL snapshot metadata and the filesystem archive must be restored from the same recovery point.
+Do not copy files back into the live root while Web or Worker is running.
+Recovery requires a separately reviewed root-local stable operation: disable
+snapshot capture, stop both services through the runtime manager, verify the
+external receipt and manifests, restore only to an empty prepared root, rerun
+the read-only preflight, then redeploy. PostgreSQL snapshot metadata and the
+filesystem archive must be restored from the same recovery point. Until that
+operation exists, stop and escalate; do not recreate the old mutable-source
+procedure.

@@ -1,5 +1,11 @@
-PPIO English Program imports are one-shot, fixed-contract production operations.
+# Program import validation fixtures
 
-- Keep at most one checked-in request file under `requests/`.
-- The approved request creates the exact `Global Market` Program for the `PPIO` customer and imports the fixed 10 overseas prompts.
-- Delete the checked-in request after the production import succeeds so later releases do not re-run it.
+This directory preserves historical request/validation data only. The former
+`program-import` forced-command operation is permanently rejected by the LAS
+dispatcher and policy parsers and is not a production entrypoint. Do not add a
+production request, policy line, workflow call, socket, or runtime dotenv
+access for the candidate helper.
+
+If a future import is required, design a newly named, fixed-argument stable
+operation and exact protocol bound to the active immutable release and its
+five-digest receipt. Re-enabling `program-import` is not supported.

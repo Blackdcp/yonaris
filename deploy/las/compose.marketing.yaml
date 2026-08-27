@@ -2,7 +2,7 @@ name: yonaris-marketing
 
 services:
   www:
-    image: ${IMAGE_REGISTRY:-ghcr.io}/${IMAGE_NAMESPACE:-blackdcp}/yonaris-www:${IMAGE_TAG:?Set IMAGE_TAG in the production env file}
+    image: ghcr.io/blackdcp/yonaris-www@${WWW_IMAGE_DIGEST:?Set the root-authorized marketing image digest}
     environment:
       MARKETING_DIAGNOSTIC_DELIVERY_MODE: ${MARKETING_DIAGNOSTIC_DELIVERY_MODE:-resend}
       MARKETING_LEAD_RECIPIENT: ${MARKETING_LEAD_RECIPIENT:-}

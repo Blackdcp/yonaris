@@ -56,7 +56,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Test LAS Sampling storage preflight
         run: bash deploy/las/bin/check-sampling-storage.test.sh
@@ -70,14 +70,35 @@ jobs:
       - name: Test LAS bootstrap owner deployment gate
         run: bash deploy/las/bin/deploy-bootstrap-owner.test.sh
 
+      - name: Test LAS artifact output language release guard
+        run: bash deploy/las/bin/guard-artifact-output-release.test.sh
+
+      - name: Test stable LAS forced-command dispatcher
+        run: bash deploy/las/bin/dispatch-las-command.test.sh
+
+      - name: Test root LAS forced-command verifier
+        run: bash deploy/las/bin/verify-las-forced-command.test.sh
+
+      - name: Test root-local LAS trust-policy installer
+        run: bash deploy/las/bin/install-las-trust-policy.test.sh
+
+      - name: Test root LAS release-state manager
+        run: bash deploy/las/bin/manage-las-release-state.test.sh
+
+      - name: Test separate SSH gate and runtime privilege boundary
+        run: bash deploy/las/bin/las-privilege-boundary.test.sh
+
+      - name: Test LAS root trust and transactional security contract
+        run: bash deploy/las/bin/artifact-output-language-security.test.sh
+
       - name: Test idempotent LAS report operations
         run: bash deploy/las/bin/run-report-requests.test.sh
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 24
           cache: pnpm

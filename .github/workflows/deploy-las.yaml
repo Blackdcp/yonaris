@@ -8,8 +8,6 @@ on:
       - .github/workflows/deploy-las.yaml
       - .github/workflows/e2e.yaml
       - .github/workflows/mode-compat.yaml
-      - apps/browser-runner/**
-      - apps/browser-extension/**
       - apps/web/**
       - apps/worker/**
       - e2e/**
@@ -18,15 +16,8 @@ on:
       - docker/entrypoint.sh
       - deploy/las/compose.yaml
       - deploy/las/env.example
+      - deploy/las/artifact-output-language-compatible
       - deploy/las/bin/**
-      - deploy/las/browser-runner/**
-      - deploy/las/browser-runner-activation/**
-      - deploy/las/response-snapshot-activation/**
-      - deploy/las/response-snapshot-backfills/**
-      - deploy/las/reviewed-consumer-cohort-imports/**
-      - deploy/las/program-imports/**
-      - deploy/las/program-locale-repairs/**
-      - deploy/las/sampling-batch-operations/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -46,6 +37,7 @@ env:
 
 jobs:
   response_snapshot_activation_plan:
+    if: ${{ false }}
     name: Plan approved response snapshot activation
     runs-on: ubuntu-latest
     permissions:
@@ -55,7 +47,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect checked-in response snapshot activation request
         id: plan
@@ -100,6 +92,7 @@ jobs:
           fi
 
   browser_runner_activation_plan:
+    if: ${{ false }}
     name: Plan approved Browser Runner activation
     runs-on: ubuntu-latest
     permissions:
@@ -109,7 +102,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect checked-in activation request
         id: plan
@@ -135,6 +128,7 @@ jobs:
           fi
 
   report_operation_plan:
+    if: ${{ false }}
     name: Plan approved report operations
     runs-on: ubuntu-latest
     permissions:
@@ -143,7 +137,7 @@ jobs:
       has_requests: ${{ steps.plan.outputs.has_requests }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect checked-in report requests
         id: plan
@@ -162,6 +156,7 @@ jobs:
           fi
 
   sampling_batch_operation_plan:
+    if: ${{ false }}
     name: Plan approved sampling batch operation
     runs-on: ubuntu-latest
     permissions:
@@ -171,7 +166,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect and validate checked-in sampling batch request
         id: plan
@@ -215,6 +210,7 @@ jobs:
           fi
 
   overseas_formal_run_plan:
+    if: ${{ false }}
     name: Plan approved overseas formal one-shot
     runs-on: ubuntu-latest
     permissions:
@@ -224,7 +220,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect and validate checked-in overseas formal request
         id: plan
@@ -265,6 +261,7 @@ jobs:
           fi
 
   reviewed_consumer_cohort_import_plan:
+    if: ${{ false }}
     name: Plan reviewed consumer cohort import
     runs-on: ubuntu-latest
     permissions:
@@ -274,7 +271,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect and validate reviewed consumer import request
         id: plan
@@ -315,6 +312,7 @@ jobs:
           fi
 
   program_locale_repair_plan:
+    if: ${{ false }}
     name: Plan approved Program locale repair
     runs-on: ubuntu-latest
     permissions:
@@ -324,7 +322,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect and validate Program locale repair request
         id: plan
@@ -364,6 +362,7 @@ jobs:
           fi
 
   program_import_plan:
+    if: ${{ false }}
     name: Plan approved Program import
     runs-on: ubuntu-latest
     permissions:
@@ -373,7 +372,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Detect and validate Program import request
         id: plan
@@ -413,6 +412,7 @@ jobs:
           fi
 
   response_snapshot_backfill_plan:
+    if: ${{ false }}
     name: Plan reviewed response snapshot backfill
     runs-on: ubuntu-latest
     permissions:
@@ -422,7 +422,7 @@ jobs:
       request_name: ${{ steps.plan.outputs.request_name }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -516,7 +516,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Verify response snapshot host assets
         shell: bash
@@ -528,6 +528,17 @@ jobs:
           bash deploy/las/bin/activate-response-snapshot-storage.test.sh
           bash deploy/las/bin/audit-overseas-formal-readiness.test.sh
           bash deploy/las/bin/run-overseas-formal-one-shot.test.sh
+          bash deploy/las/bin/guard-artifact-output-release.test.sh
+          bash deploy/las/bin/dispatch-las-command.test.sh
+          bash deploy/las/bin/verify-las-forced-command.test.sh
+          bash deploy/las/bin/install-las-trust-policy.test.sh
+          bash deploy/las/bin/manage-las-release-state.test.sh
+          bash deploy/las/bin/manage-las-runtime.test.sh
+          bash deploy/las/bin/manage-las-caddy.test.sh
+          bash deploy/las/bin/install-las-stable-bundle.test.sh
+          bash deploy/las/bin/las-final-hardening.test.sh
+          bash deploy/las/bin/las-privilege-boundary.test.sh
+          bash deploy/las/bin/artifact-output-language-security.test.sh
           bash -n \
             deploy/las/bin/prepare-response-snapshot-storage.sh \
             deploy/las/bin/check-response-snapshot-storage.sh \
@@ -536,30 +547,57 @@ jobs:
             deploy/las/bin/activate-response-snapshot-storage.sh \
             deploy/las/bin/audit-overseas-formal-readiness.sh \
             deploy/las/bin/run-overseas-formal-one-shot.sh \
+            deploy/las/bin/guard-artifact-output-release.sh \
+            deploy/las/bin/dispatch-las-command.sh \
+            deploy/las/bin/verify-las-forced-command.sh \
+            deploy/las/bin/install-las-trust-policy.sh \
+            deploy/las/bin/manage-las-release-state.sh \
+            deploy/las/bin/manage-las-runtime.sh \
+            deploy/las/bin/manage-las-caddy.sh \
+            deploy/las/bin/install-las-stable-bundle.sh \
+            deploy/las/bin/run-las-active-bundle.sh \
+            deploy/las/bin/load-strict-dotenv.sh \
             deploy/las/bin/deploy.sh
 
   build-images:
     name: Build immutable images
     runs-on: ubuntu-latest
+    outputs:
+      web_digest: ${{ steps.build_web.outputs.digest }}
+      worker_digest: ${{ steps.build_worker.outputs.digest }}
+      migrate_digest: ${{ steps.build_migrate.outputs.digest }}
+      postgres_digest: ${{ steps.postgres_digest.outputs.digest }}
     permissions:
       contents: read
       packages: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Bind the reviewed Postgres registry digest
+        id: postgres_digest
+        env:
+          POSTGRES_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST }}
+        run: |
+          if [[ ! "$POSTGRES_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo 'LAS_POSTGRES_IMAGE_DIGEST must be an exact reviewed sha256 registry digest.' >&2
+            exit 1
+          fi
+          echo "digest=$POSTGRES_DIGEST" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
 
       - name: Log in to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push web
-        uses: docker/build-push-action@v7
+        id: build_web
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: docker/Dockerfile
@@ -571,7 +609,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=web
 
       - name: Build and push worker
-        uses: docker/build-push-action@v7
+        id: build_worker
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: docker/Dockerfile
@@ -583,7 +622,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=worker
 
       - name: Build and push db-migrate
-        uses: docker/build-push-action@v7
+        id: build_migrate
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
           file: docker/Dockerfile
@@ -601,7 +641,9 @@ jobs:
       - e2e-gate
       - mode-compat-gate
       - response-snapshot-storage-contract
-    if: vars.LAS_DEPLOY_ENABLED == 'true'
+    if: >-
+      vars.LAS_DEPLOY_ENABLED == 'true' &&
+      vars.LAS_FORCED_COMMAND_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -620,24 +662,56 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy immutable release
+      - name: Prove the exact forced-command boundary
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+        run: |
+          probe_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "yonaris-las-v1 probe")"
+          if [[ "$probe_output" != 'yonaris-las-probe-v1 ok' ]]; then
+            echo 'The LAS forced-command probe returned an unexpected response.' >&2
+            exit 1
+          fi
+          set +e
+          rejection_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "true" 2>&1)"
+          rejection_status=$?
+          set -e
+          if [[ "$rejection_status" -ne 2 || \
+            "$rejection_output" != 'Refusing non-protocol LAS SSH command.' ]]; then
+            echo 'The LAS key did not return the exact dispatcher rejection for an arbitrary command.' >&2
+            exit 1
+          fi
+
+      - name: Deploy immutable release through the stable forced dispatcher
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
           RELEASE_SHA: ${{ github.sha }}
+          WEB_DIGEST: ${{ needs.build-images.outputs.web_digest }}
+          WORKER_DIGEST: ${{ needs.build-images.outputs.worker_digest }}
+          MIGRATE_DIGEST: ${{ needs.build-images.outputs.migrate_digest }}
+          POSTGRES_DIGEST: ${{ needs.build-images.outputs.postgres_digest }}
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; git fetch --depth=50 origin main; git checkout --detach $RELEASE_SHA; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/deploy.sh sha-$RELEASE_SHA'"
+            "yonaris-las-v1 deploy sha-$RELEASE_SHA $WEB_DIGEST $WORKER_DIGEST $MIGRATE_DIGEST $POSTGRES_DIGEST"
 
   report-operations:
     name: Run approved production report operations
     needs:
       - deploy
       - report_operation_plan
-    if: needs.deploy.result == 'success' && needs.report_operation_plan.outputs.has_requests == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -667,14 +741,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-report-requests.sh sha-$RELEASE_SHA'"
+            "yonaris-las-v1 report-operations sha-$RELEASE_SHA"
 
   overseas-formal-readiness:
     name: Audit StepFun overseas formal readiness
     needs:
       - deploy
       - response-snapshot-activation
-    if: needs.deploy.result == 'success' && needs['response-snapshot-activation'].result == 'success'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -704,7 +778,7 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/audit-overseas-formal-readiness.sh sha-$RELEASE_SHA'"
+            "yonaris-las-v1 overseas-formal-readiness sha-$RELEASE_SHA"
 
   overseas-formal-one-shot:
     name: Run approved StepFun overseas formal one-shot
@@ -713,11 +787,7 @@ jobs:
       - response-snapshot-activation
       - overseas-formal-readiness
       - overseas_formal_run_plan
-    if: >-
-      needs.deploy.result == 'success' &&
-      needs['response-snapshot-activation'].result == 'success' &&
-      needs['overseas-formal-readiness'].result == 'success' &&
-      needs.overseas_formal_run_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -750,14 +820,14 @@ jobs:
             -o ServerAliveInterval=30 \
             -o ServerAliveCountMax=20 \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-overseas-formal-one-shot.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/overseas-formal-runs/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 overseas-formal-one-shot sha-$RELEASE_SHA $REQUEST_NAME"
 
   response-snapshot-activation:
     name: Activate approved response snapshot storage
     needs:
       - deploy
       - response_snapshot_activation_plan
-    if: needs.deploy.result == 'success' && needs.response_snapshot_activation_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -788,14 +858,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/activate-response-snapshot-storage.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/response-snapshot-activation/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 response-snapshot-activation sha-$RELEASE_SHA $REQUEST_NAME"
 
   sampling-batch-operation:
     name: Run approved production sampling batch operation
     needs:
       - deploy
       - sampling_batch_operation_plan
-    if: needs.deploy.result == 'success' && needs.sampling_batch_operation_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -826,13 +896,13 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-sampling-batch-operation.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/sampling-batch-operations/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 sampling-batch-operation sha-$RELEASE_SHA $REQUEST_NAME"
 
   local-demo-import:
     name: Import approved StepFun local demo observations
     needs:
       - deploy
-    if: needs.deploy.result == 'success'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -862,7 +932,7 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-             "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-local-demo-import.sh sha-$RELEASE_SHA'"
+            "yonaris-las-v1 local-demo-import sha-$RELEASE_SHA"
 
   reviewed-consumer-cohort-import:
     name: Import reviewed StepFun DeepSeek cohort
@@ -870,7 +940,7 @@ jobs:
       - deploy
       - local-demo-import
       - reviewed_consumer_cohort_import_plan
-    if: needs.reviewed_consumer_cohort_import_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -901,14 +971,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-reviewed-consumer-cohort-import.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/reviewed-consumer-cohort-imports/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 reviewed-consumer-cohort-import sha-$RELEASE_SHA $REQUEST_NAME"
 
   program-locale-repair:
     name: Repair approved production Program locale
     needs:
       - deploy
       - program_locale_repair_plan
-    if: needs.deploy.result == 'success' && needs.program_locale_repair_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -939,14 +1009,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-program-locale-repair.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/program-locale-repairs/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 program-locale-repair sha-$RELEASE_SHA $REQUEST_NAME"
 
   program-import:
     name: Import approved production Program
     needs:
       - deploy
       - program_import_plan
-    if: needs.deploy.result == 'success' && needs.program_import_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -977,14 +1047,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-program-import.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/program-imports/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 program-import sha-$RELEASE_SHA $REQUEST_NAME"
 
   response-snapshot-backfill:
     name: Backfill reviewed response snapshots
     needs:
       - deploy
       - response_snapshot_backfill_plan
-    if: needs.deploy.result == 'success' && needs.response_snapshot_backfill_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
@@ -1015,14 +1085,14 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/run-response-snapshot-backfill.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/response-snapshot-backfills/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 response-snapshot-backfill sha-$RELEASE_SHA $REQUEST_NAME"
 
   browser-runner-activation:
     name: Activate the approved Browser Runner principal
     needs:
       - deploy
       - browser_runner_activation_plan
-    if: needs.deploy.result == 'success' && needs.browser_runner_activation_plan.outputs.has_request == 'true'
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
@@ -1053,4 +1123,4 @@ jobs:
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -e; cd /opt/yonaris/source; test \"\$(git rev-parse HEAD)\" = \"$RELEASE_SHA\"; env DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash /opt/yonaris/source/deploy/las/bin/activate-browser-runner.sh sha-$RELEASE_SHA /opt/yonaris/source/deploy/las/browser-runner-activation/requests/$REQUEST_NAME'"
+            "yonaris-las-v1 browser-runner-activation sha-$RELEASE_SHA $REQUEST_NAME"
