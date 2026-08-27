@@ -2,13 +2,14 @@
 export type ProductDemoLocale = "en" | "zh";
 
 export type ProductDemoView = "overview" | "shareOfVoice" | "opportunities" | "queryFanOut";
+type ProductDemoMetric = "visibility" | "share" | "prompts" | "evaluations";
 
 export interface ProductDemoLabels {
 	readonly tabs: Readonly<Record<ProductDemoView, string>>;
 	readonly sampleWorkspace: string;
 	readonly sampleData: string;
 	readonly coverageBoundary: string;
-	readonly metricLabels: Readonly<Record<keyof ProductDemoOverview, string>>;
+	readonly metricLabels: Readonly<Record<ProductDemoMetric, string>>;
 }
 
 export interface ProductDemoOverview {
@@ -16,12 +17,12 @@ export interface ProductDemoOverview {
 	readonly share: number;
 	readonly prompts: number;
 	readonly evaluations: number;
+	readonly evaluationWindow: string;
+	readonly frequencyNote: string;
 }
 
 export interface ProductDemoShareOfVoiceRow {
 	readonly brand: string;
-	readonly share: number;
-	readonly mentions: number;
 }
 
 export interface ProductDemoShareOfVoice {
@@ -78,15 +79,22 @@ const EN: ProductDemoContent = {
 		coverageBoundary: "Coverage is limited to the selected market, language, prompts, models and evaluation window.",
 		metricLabels: { visibility: "AI Visibility", share: "Share of Voice", prompts: "Prompts", evaluations: "Evaluations" },
 	},
-	overview: { visibility: 79, share: 35, prompts: 42, evaluations: 3120 },
+	overview: {
+		visibility: 79,
+		share: 35,
+		prompts: 42,
+		evaluations: 3120,
+		evaluationWindow: "30-day evaluation window",
+		frequencyNote: "Approximately 100 evaluations per day.",
+	},
 	shareOfVoice: {
 		title: "Share of Voice Leaderboard",
 		summary: "A de-identified comparison of observed answers in the selected evaluation window.",
 		rows: [
-			{ brand: "Your brand", share: 35, mentions: 1092 },
-			{ brand: "Competitor A", share: 29, mentions: 905 },
-			{ brand: "Competitor B", share: 21, mentions: 655 },
-			{ brand: "Competitor C", share: 15, mentions: 468 },
+			{ brand: "Your brand" },
+			{ brand: "Competitor A" },
+			{ brand: "Competitor B" },
+			{ brand: "Competitor C" },
 		],
 	},
 	opportunities: {
@@ -119,15 +127,22 @@ const ZH: ProductDemoContent = {
 		coverageBoundary: "覆盖范围限于选定市场、语言、问题、模型和评估时间窗。",
 		metricLabels: { visibility: "AI 可见度", share: "声量份额", prompts: "问题数", evaluations: "评估次数" },
 	},
-	overview: { visibility: 79, share: 35, prompts: 42, evaluations: 3120 },
+	overview: {
+		visibility: 79,
+		share: 35,
+		prompts: 42,
+		evaluations: 3120,
+		evaluationWindow: "30 天评估时间窗",
+		frequencyNote: "约每天 100 次评估。",
+	},
 	shareOfVoice: {
 		title: "声量份额排行",
 		summary: "在选定评估时间窗内，对去标识答案进行比较。",
 		rows: [
-			{ brand: "你的品牌", share: 35, mentions: 1092 },
-			{ brand: "竞品 A", share: 29, mentions: 905 },
-			{ brand: "竞品 B", share: 21, mentions: 655 },
-			{ brand: "竞品 C", share: 15, mentions: 468 },
+			{ brand: "你的品牌" },
+			{ brand: "竞品 A" },
+			{ brand: "竞品 B" },
+			{ brand: "竞品 C" },
 		],
 	},
 	opportunities: {
