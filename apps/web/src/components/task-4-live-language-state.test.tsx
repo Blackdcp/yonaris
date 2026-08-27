@@ -257,6 +257,7 @@ describe("Task 4 live language state", () => {
 			reason: "insufficient-data" as const,
 			generatedFor: null,
 			lastEvaluatedAt: null,
+			outputLanguage: "en" as const,
 		};
 		const successGenerate = vi.fn(async () => result);
 		renderOpportunity(successGenerate);

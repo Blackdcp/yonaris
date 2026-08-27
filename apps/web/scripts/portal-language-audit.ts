@@ -209,7 +209,7 @@ export type CrossPlanOwnership = {
 	value: string;
 	occurrence: number;
 	owner: "portal-output-languages";
-	task: "Task 3" | "Task 4";
+	task: "Task 2" | "Task 3" | "Task 4";
 	reason: string;
 };
 
@@ -219,7 +219,7 @@ export type CrossPlanResolution = {
 	value: string;
 	occurrence: number;
 	owner: "portal-output-languages";
-	task: "Task 3" | "Task 4";
+	task: "Task 2" | "Task 3" | "Task 4";
 	resolution: "explicit-output-language";
 	evidence: string;
 	runtimeTest: string;
@@ -279,8 +279,20 @@ export const CROSS_PLAN_OWNERSHIP: CrossPlanOwnership[] = [
 	task4("apps/web/src/hooks/use-chart-export.tsx", "output-component", "ChartExportPreview"),
 ];
 
-/** Task 3/4 replaces deferred entries with exact reviewed attestations. */
-export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [];
+/** Task 2/3/4 replaces deferred entries with exact reviewed attestations. */
+export const CROSS_PLAN_RESOLUTIONS: CrossPlanResolution[] = [
+	{
+		file: "apps/web/src/hooks/use-opportunities.tsx",
+		kind: "output-language-binding",
+		value: "useOpportunities",
+		occurrence: 1,
+		owner: "portal-output-languages",
+		task: "Task 2",
+		resolution: "explicit-output-language",
+		evidence: "The hook binds the explicit output language into both its cache key and customer read request.",
+		runtimeTest: "apps/web/src/hooks/use-opportunities.test.ts",
+	},
+];
 
 function normalizedValue(value: string) {
 	return value.replace(/\s+/g, " ").trim();

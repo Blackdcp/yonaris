@@ -12,7 +12,8 @@
 		"./env": "./src/env.ts",
 		"./env-registry": "./src/env-registry.ts",
 		"./scrape-targets": "./src/scrape-targets.ts",
-		"./language": "./src/language.ts"
+		"./language": "./src/language.ts",
+		"./artifact-output-language": "./src/artifact-output-language.ts"
 	},
 	"devDependencies": {
 		"@types/node": "^26.1.1",

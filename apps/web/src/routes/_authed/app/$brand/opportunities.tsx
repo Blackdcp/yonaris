@@ -41,7 +41,7 @@ function OpportunitiesPage() {
 	const { brand: brandId } = Route.useParams();
 	const { brand } = useBrand(brandId);
 	const { scopeId, isScopeResolving } = useListFilters();
-	const { data, isLoading, isError } = useOpportunities(brandId, scopeId);
+	const { data, isLoading, isError } = useOpportunities(brandId, scopeId, "en");
 
 	const infoContent = t("opportunity.info");
 

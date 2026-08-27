@@ -77,6 +77,7 @@ declare global {
 			readonly AUTH0_CLIENT_SECRET?: string;
 			readonly ADMIN_AUTH0_SUB?: string;
 			readonly ADMIN_API_KEYS?: string;
+			readonly ARTIFACT_ZH_CN_ENABLED?: string;
 			readonly RESPONSE_SNAPSHOT_ENABLED?: string;
 			readonly RESPONSE_SNAPSHOT_ROOT?: string;
 			readonly RESPONSE_SNAPSHOT_RETENTION_DAYS?: string;

@@ -282,6 +282,12 @@ export const ENV_REGISTRY: EnvVarSpec[] = [
 		description: "Comma-separated bearer tokens accepted by the admin API.",
 	},
 	{
+		name: "ARTIFACT_ZH_CN_ENABLED",
+		scope: "server",
+		requiredBy: "optional",
+		description: "Default-off gate for writing Simplified Chinese generated artifacts.",
+	},
+	{
 		name: "DEFAULT_BRAND_DOMAINS",
 		scope: "server",
 		requiredBy: "optional",

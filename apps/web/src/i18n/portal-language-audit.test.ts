@@ -594,6 +594,25 @@ describe("portal UI-language literal audit", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
 		expect(validateCrossPlanOwnership(repositoryRoot)).toEqual([]);
 		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(22);
+		expect(CROSS_PLAN_RESOLUTIONS).toEqual([
+			{
+				file: "apps/web/src/hooks/use-opportunities.tsx",
+				kind: "output-language-binding",
+				value: "useOpportunities",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 2",
+				resolution: "explicit-output-language",
+				evidence: "The hook binds the explicit output language into both its cache key and customer read request.",
+				runtimeTest: "apps/web/src/hooks/use-opportunities.test.ts",
+			},
+		]);
+		expect(
+			collectExistingRuntimeTests(
+				repositoryRoot,
+				CROSS_PLAN_RESOLUTIONS.map((resolution) => resolution.runtimeTest),
+			),
+		).toEqual(new Set(["apps/web/src/hooks/use-opportunities.test.ts"]));
 		const withoutRegistry = validateCrossPlanOwnership(repositoryRoot, []);
 		for (const entry of CROSS_PLAN_OWNERSHIP) {
 			expect(withoutRegistry).toContain(
@@ -647,7 +666,6 @@ describe("portal UI-language literal audit", () => {
 		];
 
 		expect(validateCrossPlanOwnershipFromSources(unresolved, [exact])).toEqual([]);
-		expect(CROSS_PLAN_RESOLUTIONS).toEqual([]);
 		expect(
 			validateCrossPlanOwnershipFromSources([{ file: exact.file, source: "export const x = <p />;" }], [exact]),
 		).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing")]));

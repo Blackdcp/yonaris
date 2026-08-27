@@ -62,6 +62,7 @@ describe("opportunityGenerationMessage", () => {
 				reason: "insufficient-data",
 				generatedFor: null,
 				lastEvaluatedAt: null,
+				outputLanguage: "en",
 			}),
 		).toBe("No report was generated: this Program needs more tracking data.");
 	});
@@ -72,6 +73,7 @@ describe("opportunityGenerationMessage", () => {
 			reason: "insufficient-data" as const,
 			generatedFor: null,
 			lastEvaluatedAt: null,
+			outputLanguage: "en" as const,
 		};
 
 		expect(opportunityGenerationMessage(result, "zh-CN")).toBe("未生成报表：此项目需要更多追踪数据。");

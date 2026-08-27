@@ -17,6 +17,8 @@
  * is older than REFRESH_AFTER_DAYS, so a normal page load doesn't trigger an LLM call.
  */
 import { createServerFn } from "@tanstack/react-start";
+import { isArtifactZhCnWriteEnabled } from "@workspace/config/artifact-output-language";
+import type { OutputLanguage } from "@workspace/config/language";
 import { db } from "@workspace/lib/db/db";
 import { resolveMeasurementScopeForBrand } from "@workspace/lib/db/measurement-scopes";
 import { brandOpportunities, brands, competitors, measurementScopes } from "@workspace/lib/db/schema";
@@ -106,25 +108,32 @@ export interface OpportunitiesReport extends Omit<RawReport, "opportunities"> {
 	opportunities: ReportOpportunity[];
 }
 
-export type OpportunitiesReason = "insufficient-data" | "not_generated" | null;
+export type OpportunitiesReason = "insufficient-data" | "not_generated" | "temporarily-unavailable" | null;
 export interface OpportunitiesResponse {
 	report: OpportunitiesReport | null;
 	reason: OpportunitiesReason;
 	generatedFor: { brandName: string } | null;
 	lastEvaluatedAt: string | null;
+	outputLanguage: OutputLanguage;
 }
 
-/** A legacy report predates scoped opportunities and is safe only when the
- * requested scope is the brand's one and only measurement scope. */
+/** A legacy report predates both scoped opportunities and output languages, so
+ * it is usable only as English for the brand's one and only measurement scope. */
 export function canReadOpportunityReportInScope(input: {
 	reportScopeId: string | null;
+	reportOutputLanguage: string;
 	requestedScopeId: string;
+	requestedOutputLanguage: OutputLanguage;
 	totalScopeCount: number;
 	soleScopeId: string | null;
 }): boolean {
 	return (
-		input.reportScopeId === input.requestedScopeId ||
-		(input.reportScopeId === null && input.totalScopeCount === 1 && input.soleScopeId === input.requestedScopeId)
+		input.reportOutputLanguage === input.requestedOutputLanguage &&
+		(input.reportScopeId === input.requestedScopeId ||
+			(input.reportScopeId === null &&
+				input.requestedOutputLanguage === "en" &&
+				input.totalScopeCount === 1 &&
+				input.soleScopeId === input.requestedScopeId))
 	);
 }
 
@@ -169,6 +178,12 @@ const TASK = `Using ONLY the data above, return the structured output:
 - summary: 3-5 bullets, one short sentence each — the competitive gaps, where AI sources its answers, and the through-line of the plan. Don't restate overall/per-platform visibility or define metrics.
 - opportunities: 8-12 prioritized opportunities (highest impact first), each sorted into a category, with a plain-language "why" (the motivation, for a non-expert) and the tracked prompts it helps (verbatim). Spread them across the categories the data supports — don't force all four.
 - risks: 2-4 short caveats (hard-to-win areas or tactics to avoid).`;
+
+const OUTPUT_LANGUAGE_GUIDANCE = {
+	en: "Write every model-authored field in English.",
+	"zh-CN":
+		"所有由模型撰写的标题、摘要、理由、行动建议与注意事项均使用专业、自然的简体中文。原样保留相关 Prompt、品牌名、竞品名、URL 与引用证据。",
+} satisfies Record<OutputLanguage, string>;
 
 // ============================================================================
 // Digest builder
@@ -452,15 +467,15 @@ const MAX_GENERATION_ATTEMPTS = 3;
 /** Resolve the LLM output's prompt strings to tracked IDs (for deep-linking) and
  * attach each opportunity's cited pages split into the brand's vs competitors'. */
 function enrichReport(raw: RawReport, digest: Digest): OpportunitiesReport {
-	const idByText = new Map(digest.prompts.map((p) => [p.value.trim().toLowerCase(), p.id]));
+	const promptByText = new Map(digest.prompts.map((prompt) => [prompt.value.trim().toLowerCase(), prompt]));
 	return {
 		...raw,
 		opportunities: raw.opportunities.map((o) => {
-			const relatedPrompts: ReportPrompt[] = o.relatedPrompts.map((text) => ({
-				text,
-				promptId: idByText.get(text.trim().toLowerCase()) ?? null,
-			}));
-			const ids = relatedPrompts.map((p) => p.promptId).filter((id): id is string => id !== null);
+			const relatedPrompts: ReportPrompt[] = o.relatedPrompts.flatMap((text) => {
+				const prompt = promptByText.get(text.trim().toLowerCase());
+				return prompt ? [{ text: prompt.value, promptId: prompt.id }] : [];
+			});
+			const ids = relatedPrompts.map((prompt) => prompt.promptId).filter((id): id is string => id !== null);
 			return { ...o, relatedPrompts, ...citationsForPrompts(ids, digest.citationsByPrompt) };
 		}),
 	};
@@ -486,9 +501,16 @@ async function generateValidReport(prompt: string): Promise<{ report: RawReport;
 // Server functions
 // ============================================================================
 
+const opportunityRequestSchema = z.object({
+	brandId: z.string(),
+	scopeId: z.string().uuid(),
+	outputLanguage: z.enum(["en", "zh-CN"]).default("en"),
+});
+
 export const getOpportunitiesFn = createServerFn({ method: "GET" })
-	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid() }))
+	.validator(opportunityRequestSchema)
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
+		const outputLanguage = data.outputLanguage;
 		const session = await requireAuthSession();
 		await requireBrandAccess(session.user.id, data.brandId);
 		await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
@@ -505,36 +527,53 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
 		const [latestScoped] = await db
 			.select()
 			.from(brandOpportunities)
-			.where(and(eq(brandOpportunities.brandId, data.brandId), eq(brandOpportunities.scopeId, data.scopeId)))
+			.where(
+				and(
+					eq(brandOpportunities.brandId, data.brandId),
+					eq(brandOpportunities.scopeId, data.scopeId),
+					eq(brandOpportunities.outputLanguage, outputLanguage),
+				),
+			)
 			.orderBy(desc(brandOpportunities.createdAt))
 			.limit(1);
 		const [legacy] =
-			!latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
+			outputLanguage === "en" && !latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
 				? await db
 						.select()
 						.from(brandOpportunities)
-						.where(and(eq(brandOpportunities.brandId, data.brandId), isNull(brandOpportunities.scopeId)))
+						.where(
+							and(
+								eq(brandOpportunities.brandId, data.brandId),
+								isNull(brandOpportunities.scopeId),
+								eq(brandOpportunities.outputLanguage, "en"),
+							),
+						)
 						.orderBy(desc(brandOpportunities.createdAt))
 						.limit(1)
 				: [];
-		const latest = latestScoped ?? legacy;
-		if (
-			latest &&
+		const candidate = latestScoped ?? legacy;
+		const latest =
+			candidate &&
 			canReadOpportunityReportInScope({
-				reportScopeId: latest.scopeId ?? null,
+				reportScopeId: candidate.scopeId ?? null,
+				reportOutputLanguage: candidate.outputLanguage,
 				requestedScopeId: data.scopeId,
+				requestedOutputLanguage: outputLanguage,
 				totalScopeCount,
 				soleScopeId,
 			})
-		) {
+				? candidate
+				: undefined;
+		if (latest) {
 			return {
 				report: latest.report as OpportunitiesReport,
 				reason: null,
 				generatedFor: null,
 				lastEvaluatedAt: latest.createdAt.toISOString(),
+				outputLanguage,
 			};
 		}
-		return { report: null, reason: "not_generated", generatedFor: null, lastEvaluatedAt: null };
+		return { report: null, reason: "not_generated", generatedFor: null, lastEvaluatedAt: null, outputLanguage };
 	});
 
 /**
@@ -544,11 +583,21 @@ export const getOpportunitiesFn = createServerFn({ method: "GET" })
  * never be called by the customer workspace page loader or query hook.
  */
 export const generateOpportunitiesFn = createServerFn({ method: "POST" })
-	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid() }))
+	.validator(opportunityRequestSchema)
 	.handler(async ({ data }): Promise<OpportunitiesResponse> => {
+		const outputLanguage = data.outputLanguage;
 		const session = await requireAuthSession();
 		if (!canGenerateOpportunities(isAdmin(session))) {
 			throw new Error("Access denied. Platform administrator access required.");
+		}
+		if (outputLanguage === "zh-CN" && !isArtifactZhCnWriteEnabled()) {
+			return {
+				report: null,
+				reason: "temporarily-unavailable",
+				generatedFor: null,
+				lastEvaluatedAt: null,
+				outputLanguage,
+			};
 		}
 		const requestedScope = await resolveMeasurementScopeForBrand(data.brandId, data.scopeId);
 		if (requestedScope.samplingEvaluationRole !== "scored") {
@@ -565,62 +614,95 @@ export const generateOpportunitiesFn = createServerFn({ method: "POST" })
 		const [latestScoped] = await db
 			.select()
 			.from(brandOpportunities)
-			.where(and(eq(brandOpportunities.brandId, data.brandId), eq(brandOpportunities.scopeId, data.scopeId)))
+			.where(
+				and(
+					eq(brandOpportunities.brandId, data.brandId),
+					eq(brandOpportunities.scopeId, data.scopeId),
+					eq(brandOpportunities.outputLanguage, outputLanguage),
+				),
+			)
 			.orderBy(desc(brandOpportunities.createdAt))
 			.limit(1);
 		const [legacy] =
-			!latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
+			outputLanguage === "en" && !latestScoped && totalScopeCount === 1 && soleScopeId === data.scopeId
 				? await db
 						.select()
 						.from(brandOpportunities)
-						.where(and(eq(brandOpportunities.brandId, data.brandId), isNull(brandOpportunities.scopeId)))
+						.where(
+							and(
+								eq(brandOpportunities.brandId, data.brandId),
+								isNull(brandOpportunities.scopeId),
+								eq(brandOpportunities.outputLanguage, "en"),
+							),
+						)
 						.orderBy(desc(brandOpportunities.createdAt))
 						.limit(1)
 				: [];
-		const latest = latestScoped ?? legacy;
-		const lastEvaluatedAt = latest?.createdAt.toISOString() ?? null;
-		const isFresh = latest && Date.now() - new Date(latest.createdAt).getTime() < REFRESH_AFTER_DAYS * 86_400_000;
-		if (
-			latest &&
-			isFresh &&
+		const candidate = latestScoped ?? legacy;
+		const latest =
+			candidate &&
 			canReadOpportunityReportInScope({
-				reportScopeId: latest.scopeId ?? null,
+				reportScopeId: candidate.scopeId ?? null,
+				reportOutputLanguage: candidate.outputLanguage,
 				requestedScopeId: data.scopeId,
+				requestedOutputLanguage: outputLanguage,
 				totalScopeCount,
 				soleScopeId,
 			})
-		) {
-			return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
+				? candidate
+				: undefined;
+		const lastEvaluatedAt = latest?.createdAt.toISOString() ?? null;
+		const isFresh = latest && Date.now() - new Date(latest.createdAt).getTime() < REFRESH_AFTER_DAYS * 86_400_000;
+		if (latest && isFresh) {
+			return {
+				report: latest.report as OpportunitiesReport,
+				reason: null,
+				generatedFor: null,
+				lastEvaluatedAt,
+				outputLanguage,
+			};
 		}
 
 		const digest = await buildDigest(data.brandId, requestedScope.id, requestedScope.timezone);
 		if (!digest) {
-			if (
-				latest &&
-				canReadOpportunityReportInScope({
-					reportScopeId: latest.scopeId ?? null,
-					requestedScopeId: data.scopeId,
-					totalScopeCount,
-					soleScopeId,
-				})
-			)
-				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
-			return { report: null, reason: "insufficient-data", generatedFor: null, lastEvaluatedAt };
+			if (latest) {
+				return {
+					report: latest.report as OpportunitiesReport,
+					reason: null,
+					generatedFor: null,
+					lastEvaluatedAt,
+					outputLanguage,
+				};
+			}
+			return {
+				report: null,
+				reason: "insufficient-data",
+				generatedFor: null,
+				lastEvaluatedAt,
+				outputLanguage,
+			};
 		}
 
-		const prompt = `${GUIDANCE}\n\n=== BRAND DATA ===\n${digest.text}\n\n=== TASK ===\n${TASK}`;
+		const prompt = `${GUIDANCE}\n\n=== OUTPUT LANGUAGE ===\n${OUTPUT_LANGUAGE_GUIDANCE[outputLanguage]}\n\n=== BRAND DATA ===\n${digest.text}\n\n=== TASK ===\n${TASK}`;
 		const generated = await generateValidReport(prompt);
 		if (!generated) {
 			// Couldn't get a schema-valid report — serve the last good one if we have it.
-			if (latest)
-				return { report: latest.report as OpportunitiesReport, reason: null, generatedFor: null, lastEvaluatedAt };
+			if (latest) {
+				return {
+					report: latest.report as OpportunitiesReport,
+					reason: null,
+					generatedFor: null,
+					lastEvaluatedAt,
+					outputLanguage,
+				};
+			}
 			throw new Error("Failed to generate a valid opportunities report");
 		}
 
 		const report = enrichReport(generated.report, digest);
 		const [savedReport] = await db
 			.insert(brandOpportunities)
-			.values({ brandId: data.brandId, scopeId: data.scopeId, report, model: generated.model })
+			.values({ brandId: data.brandId, scopeId: data.scopeId, outputLanguage, report, model: generated.model })
 			.returning({ createdAt: brandOpportunities.createdAt });
 
 		return {
@@ -628,5 +710,6 @@ export const generateOpportunitiesFn = createServerFn({ method: "POST" })
 			reason: null,
 			generatedFor: { brandName: digest.brandName },
 			lastEvaluatedAt: savedReport?.createdAt.toISOString() ?? null,
+			outputLanguage,
 		};
 	});

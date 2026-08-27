@@ -45,6 +45,15 @@ describe("ENV_REGISTRY", () => {
 		);
 	});
 
+	it("registers the server-only Chinese artifact write gate", () => {
+		expect(ENV_REGISTRY).toContainEqual({
+			name: "ARTIFACT_ZH_CN_ENABLED",
+			scope: "server",
+			requiredBy: "optional",
+			description: "Default-off gate for writing Simplified Chinese generated artifacts.",
+		});
+	});
+
 	it("matches turbo.json globalEnv", () => {
 		const turbo = JSON.parse(readFileSync(turboJsonPath, "utf8")) as { globalEnv: string[] };
 		const turboVars = new Set(turbo.globalEnv);
