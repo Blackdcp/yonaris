@@ -225,6 +225,13 @@
       "when": 1787735383309,
       "tag": "0031_user_ui_language",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787803329566,
+      "tag": "0032_artifact_output_languages",
+      "breakpoints": true
     }
   ]
 }

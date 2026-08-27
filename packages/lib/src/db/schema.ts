@@ -967,6 +967,7 @@ export const reports = pgTable(
 		status: reportStatusEnum().notNull().default("pending"),
 		progress: integer("progress").notNull().default(0),
 		rawOutput: json("raw_output"),
+		outputLanguage: text("output_language").default("en").notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
 		updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -976,6 +977,10 @@ export const reports = pgTable(
 	},
 	(table) => ({
 		createdAtIdx: index("reports_created_at_idx").on(table.createdAt),
+		outputLanguageSupported: check(
+			"reports_output_language_supported",
+			sql`${table.outputLanguage} IN ('en', 'zh-CN')`,
+		),
 	}),
 ).enableRLS();
 
@@ -990,6 +995,7 @@ export const brandOpportunities = pgTable(
 			.references(() => brands.id)
 			.notNull(),
 		scopeId: uuid("scope_id"),
+		outputLanguage: text("output_language").default("en").notNull(),
 		/** The full enriched opportunities report the page renders (OpportunitiesReport JSON). */
 		report: json("report").notNull(),
 		/** Model/provider that generated it, when known. */
@@ -997,10 +1003,15 @@ export const brandOpportunities = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => ({
-		brandScopeCreatedIdx: index("brand_opportunities_brand_scope_created_at_idx").on(
+		brandScopeLanguageCreatedIdx: index("brand_opportunities_brand_scope_language_created_at_idx").on(
 			table.brandId,
 			table.scopeId,
+			table.outputLanguage,
 			table.createdAt,
+		),
+		outputLanguageSupported: check(
+			"brand_opportunities_output_language_supported",
+			sql`${table.outputLanguage} IN ('en', 'zh-CN')`,
 		),
 		scopeFk: foreignKey({
 			columns: [table.scopeId],

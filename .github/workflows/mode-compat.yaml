@@ -115,16 +115,20 @@ jobs:
           DROP TYPE public.response_snapshot_storage_backend;
           DROP TYPE public.overseas_run_call_status;
           DROP TYPE public.overseas_run_cohort_status;
+          DROP INDEX public.brand_opportunities_brand_scope_language_created_at_idx;
+          ALTER TABLE public.brand_opportunities DROP CONSTRAINT brand_opportunities_output_language_supported;
+          ALTER TABLE public.brand_opportunities DROP COLUMN output_language;
+          ALTER TABLE public.reports DROP CONSTRAINT reports_output_language_supported;
+          ALTER TABLE public.reports DROP COLUMN output_language;
           ALTER TABLE public."user" DROP CONSTRAINT user_ui_language_supported;
           ALTER TABLE public."user" DROP COLUMN ui_language;
           ALTER TABLE public.brand_opportunities DROP CONSTRAINT brand_opportunities_scope_fk;
-          DROP INDEX public.brand_opportunities_brand_scope_created_at_idx;
           ALTER TABLE public.brand_opportunities DROP COLUMN scope_id;
           CREATE INDEX brand_opportunities_brand_id_created_at_idx ON public.brand_opportunities USING btree (brand_id, created_at);
           DELETE FROM drizzle.__drizzle_migrations
           WHERE created_at IN (1786726866790, 1786893768101, 1786985859772, 1787019758271);
           DELETE FROM drizzle.__drizzle_migrations
-          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161, 1787325725764, 1787456563742, 1787735383309);
+          WHERE created_at IN (1787023000000, 1787205263160, 1787244569161, 1787325725764, 1787456563742, 1787735383309, 1787803329566);
           SQL
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
             'select count(*) from drizzle.__drizzle_migrations;')" = "22"
@@ -159,4 +163,4 @@ jobs:
           done
 
           test "$(psql "$DATABASE_URL" --no-psqlrc --tuples-only --no-align --command \
-            'select count(*) from drizzle.__drizzle_migrations;')" = "32"
+            'select count(*) from drizzle.__drizzle_migrations;')" = "33"
