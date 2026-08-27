@@ -14,7 +14,7 @@
 
 - Implement after the shared language contract from `2026-08-26-portal-language-foundation.md`.
 - `outputLanguage` is explicit and never inferred from `measurementScopes.locale`.
-- Existing report API clients that omit the new field default to English.
+- Every new Portal/admin/customer/internal call site must pass an exact `outputLanguage`. At compatibility boundaries only, an omitted legacy Opportunity argument and an omitted legacy public report API field normalize to `en`; invalid values such as `zh`, `CN`, or `zh-SG` are always rejected. Portal forms never rely on omission.
 - Existing report and Opportunity rows backfill to English.
 - Opportunity generation remains platform-admin-only and scored-Program-only.
 - Do not translate raw Prompts, answers, queries, citations, URLs, brand names, or competitor names.
@@ -106,23 +106,61 @@ git commit -m "Persist report and opportunity languages"
 - Modify: `apps/web/src/hooks/use-opportunities.tsx`
 - Modify: `apps/web/src/hooks/use-opportunities.test.ts`
 - Modify: `apps/web/src/server/opportunities-execution-boundary.test.ts`
+- Create: `apps/web/src/lib/artifact-language-selection.ts`
+- Create: `apps/web/src/lib/artifact-language-selection.test.ts`
+- Create: `apps/web/src/hooks/use-artifact-language-selection.tsx`
+- Create: `apps/web/src/hooks/use-artifact-language-selection.test.tsx`
 - Modify: `apps/web/src/components/opportunities-generation-control.tsx`
 - Modify: `apps/web/src/components/opportunities-generation-control.test.tsx`
+- Modify: `apps/web/src/components/task-4-live-language-state.test.tsx`
 - Modify: `apps/web/src/routes/_authed/admin/tools.tsx`
 - Modify: `apps/web/src/routes/_authed/app/$brand/opportunities.tsx`
+- Create: `apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx`
 - Modify: `apps/web/src/components/opportunities-report.tsx`
+- Create: `apps/web/src/components/opportunities-report.test.tsx`
+- Modify: `apps/web/src/lib/opportunities-empty-state.ts`
+- Modify: `apps/web/src/lib/opportunities-empty-state.test.ts`
 - Modify: `apps/web/src/i18n/catalogs/admin.ts`
 - Modify: `apps/web/src/i18n/catalogs/customer.ts`
-- Add: shared tab-scoped artifact-language selection helper/tests.
-- Modify: shared server configuration, LAS deploy/runbook/tests, and deployment environment examples for staged Chinese-output activation.
-- Modify: `e2e/fixtures.ts`, `e2e/seed.ts`, and the scheduled language-smoke spec/support files.
+- Create: `packages/config/src/artifact-output-language.ts`
+- Create: `packages/config/src/artifact-output-language.test.ts`
+- Modify: `packages/config/package.json`
+- Modify: `packages/config/src/env-registry.ts`
+- Modify: `packages/config/src/env-registry.test.ts`
+- Modify: `apps/web/src/env.d.ts`
+- Modify: `turbo.json`
+- Create: `deploy/las/artifact-output-language-compatible`
+- Modify: `deploy/las/bin/deploy.sh`
+- Create: `deploy/las/bin/guard-artifact-output-release.sh`
+- Create: `deploy/las/bin/guard-artifact-output-release.test.sh`
+- Modify: `deploy/las/env.example`
+- Create: `deploy/las/ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md`
+- Modify: `deploy/las/README.md`
+- Modify: `.github/workflows/mode-compat.yaml`
+- Modify: `.github/workflows/deploy-las.yaml`
+- Modify: `apps/web/scripts/portal-language-audit.ts`
+- Modify: `apps/web/scripts/portal-language-audit-manifest.ts`
+- Modify: `apps/web/src/i18n/portal-language-audit.test.ts`
+- Modify: `e2e/fixtures.ts`
+- Modify: `e2e/seed.ts`
+- Modify: `e2e/tests/portal-language.spec.ts`
+- Modify: `scripts/e2e-language-smoke-contract.test.mjs`
+- Create: `.changeset/select-opportunity-output-language.md` as an `@workspace/web` patch changeset for explicit Opportunity output-language selection.
 
 **Interfaces:**
-- `getOpportunitiesFn({ brandId, scopeId, outputLanguage })`.
-- `generateOpportunitiesFn({ brandId, scopeId, outputLanguage })`.
+- New callers use `getOpportunitiesFn({ brandId, scopeId, outputLanguage })` and `generateOpportunitiesFn({ brandId, scopeId, outputLanguage })`; each server validator uses `z.enum(["en", "zh-CN"]).default("en")` solely to normalize a legacy omitted argument to English.
 - `opportunitiesKeys.detail(brandId, scopeId, outputLanguage)`.
+- Every `OpportunitiesResponse`, including empty and temporarily unavailable results, returns the normalized `outputLanguage`.
+- `useArtifactLanguageSelection(surface, brandId, scopeId, seedLanguage)` returns `{ outputLanguage, isResolved, setOutputLanguage }`; consumers do not issue a query or mutation until `isResolved` is true.
 
-- [ ] **Step 1: Extend tests before production changes**
+**Implementation hazards closed by this task:**
+
+- Prompt guidance alone cannot guarantee byte-identical raw Prompts. Enrichment must resolve a model-returned related Prompt back to the canonical digest entry and emit the digest's exact original `value`; unmatched model strings are discarded rather than displayed or persisted as evidence.
+- The Portal audit currently accepts only Task 3/4 ownership, does not discover Opportunity components or the artifact-selection hook, and accepts an arbitrary non-empty `runtimeTest`. Extend it for Task 2, discover the exact Opportunity surfaces below, and require each runtime-test path to exist as a focused test file.
+- A repository-local `deploy.sh` cannot prevent an operator from checking out a pre-language commit and executing its older script. Install and use a stable host-side guard, invoke it in the workflow before checkout, and fail closed after activation when the guard is missing.
+- The existing `opportunities-empty-state` files, config export/registry declarations, Turbo/env declarations, audit files, shell-test registration, live-language regression test, and changeset are required even though the earlier short file list omitted them.
+
+- [ ] **Step 1: Write the RED server, validator, cache, and gate contracts**
 
 Add literal cache-key assertions:
 
@@ -132,21 +170,73 @@ expect(opportunitiesKeys.detail("brand", "scope", "en")).not.toEqual(
 );
 ```
 
-In execution-boundary tests, prove:
+Make the `createServerFn` test double actually parse with the supplied Zod schema; a test double that drops the validator cannot certify this boundary. Then prove:
 
 - an English GET cannot return the newest Chinese row;
 - a Chinese GET never uses a legacy null-scope English row;
-- Chinese generation does not consider a six-day-old English row fresh;
-- unauthorized generation is rejected before any read, write, or LLM call for both languages;
-- related Prompt text remains byte-identical in Chinese output.
+- Chinese generation does not consider an approximately six-day-old English row fresh and does not use it as the insufficient-data or LLM-failure fallback;
+- omitted legacy Opportunity language normalizes to `en`, while `zh`, `CN`, and `zh-SG` fail validation before authentication or database access;
+- unauthorized generation is rejected before scope resolution, database reads/writes, digest reads, or LLM calls for both languages;
+- with `ARTIFACT_ZH_CN_ENABLED` missing, `false`, or invalid, authorized Chinese POST returns a stable `temporarily-unavailable` reason and the requested output language before scope resolution, database, or LLM work;
+- authorization precedes the Chinese gate so an unauthorized caller cannot use it to probe feature state;
+- disabling the gate never hides an already persisted Chinese row from GET;
+- every successful insert includes the exact selected output language and every response, including empty results, carries the normalized language;
+- English and Chinese generation prompts each contain exactly one selected language-guidance block;
+- related Prompt text is canonicalized back to the byte-identical digest Prompt before insert/response, and an unmatched model string is not displayed or persisted;
+- scoped, legacy, fresh-cache, insufficient-data, and failed-generation paths all assert the exact Drizzle equality predicates rather than relying only on queued mock results.
+
+Add shared-config RED tests proving only exact `"true"` enables Chinese writes; missing, empty, `false`, `TRUE`, and arbitrary values remain fail-closed. Deployment validation separately rejects any non-`true|false` configured value.
 
 - [ ] **Step 2: Run tests and verify language arguments/columns are missing**
 
-- [ ] **Step 3: Thread and persist `outputLanguage`**
+Run from `apps/web`:
 
-Add `z.enum(["en", "zh-CN"])` to both server validators. Add language predicates to every current/latest/fallback query and insert. Include language in response metadata where the selector needs to display the loaded variant.
+```powershell
+& 'node_modules/.bin/vitest.CMD' run --project=unit src/hooks/use-opportunities.test.ts src/server/opportunities-execution-boundary.test.ts
+```
 
-- [ ] **Step 4: Make the model prompt language-explicit**
+Run from `packages/config`:
+
+```powershell
+& 'node_modules/.bin/vitest.CMD' run src/artifact-output-language.test.ts src/env-registry.test.ts
+```
+
+Verify failures show the missing language key, predicates, response metadata, validator default/rejections, gate, and canonical Prompt behavior rather than fixture or module-resolution errors.
+
+- [ ] **Step 3: Thread language through validators, reads, freshness, fallbacks, inserts, and cache**
+
+Normalize the server-boundary value once and use only that value afterward. Both scoped GET and generation-current queries must include:
+
+```ts
+and(
+	eq(brandOpportunities.brandId, data.brandId),
+	eq(brandOpportunities.scopeId, data.scopeId),
+	eq(brandOpportunities.outputLanguage, outputLanguage),
+)
+```
+
+Run the legacy null-scope fallback only for `outputLanguage === "en"`; its query must explicitly contain `eq(brandOpportunities.outputLanguage, "en")`. Extend the defensive scope predicate to compare report/request language as well as scope. A differently languaged row must be unusable even if a test double or unexpected database result returns it.
+
+All freshness checks and the insufficient-data/LLM-failure fallback operate only on that same-language `latest`. Insert `{ brandId, scopeId, outputLanguage, report, model }`. Return `outputLanguage` on current, generated, not-generated, insufficient-data, and temporary-unavailable results.
+
+Change the hook and key to require an explicit normalized language from new callers. Admin generation success invalidates or sets only `opportunitiesKeys.detail(brandId, scopeId, outputLanguage)`; it must not invalidate the other language.
+
+- [ ] **Step 4: Add the shared default-off Chinese-write gate before side effects**
+
+Create the shared server-only config helper and register/export `ARTIFACT_ZH_CN_ENABLED` through `packages/config`, `turbo.json`, and `apps/web/src/env.d.ts`. The POST order is fixed:
+
+1. Zod normalization/validation;
+2. authenticated session;
+3. platform-admin authorization;
+4. Chinese-write gate;
+5. Program ownership and scored-role resolution;
+6. database/digest reads;
+7. LLM;
+8. insert.
+
+GET is never gated. Map the typed temporary-unavailable reason to localized admin/customer copy rather than returning server-localized prose.
+
+- [ ] **Step 5: Make the model prompt language-explicit and canonicalize raw evidence**
 
 Append exactly one selected instruction block:
 
@@ -157,26 +247,134 @@ const OUTPUT_LANGUAGE_GUIDANCE = {
 } satisfies Record<OutputLanguage, string>;
 ```
 
-Do not translate `relatedPrompts` during enrichment.
+Do not translate `relatedPrompts` during enrichment. Build the lookup as normalized model text to `{ id, value }`, but emit the matched digest `value` exactly. Discard unmatched model strings. Citation title/domain/URL, brand and competitor names, and Prompt values never pass through UI or artifact-copy translation.
 
-- [ ] **Step 5: Add explicit admin and customer selectors**
+- [ ] **Step 6: Write the RED tab-storage, selector, render-boundary, and empty-state tests**
+
+Use exact surface keys:
+
+```text
+yonaris:artifact-output-language:v1:opportunities-admin:<encoded-brand>:<encoded-scope>
+yonaris:artifact-output-language:v1:opportunities-customer:<encoded-brand>:<encoded-scope>
+```
+
+Prove valid stored values survive a remount and an English/Chinese UI reload, missing or invalid values are immediately seeded, a selection is immediately persisted, brand/scope/surface keys are independent, and SSR/no-window or a `sessionStorage` `SecurityError` fails safely. Never use cookie, `localStorage`, locale routes, URL parameters, or Program data for this selection.
+
+Component/route tests must prove:
+
+- admin submit contains `{ brandId, scopeId, outputLanguage }` and restores the per-brand/scope token;
+- the Task 6 `LocalizedRawDetail` behavior remains intact after the control changes;
+- the customer selector issues only GET reads, and selecting a missing Chinese variant shows the localized not-generated state without invoking POST;
+- no query runs until the tab selection is resolved, avoiding a hydration-time request for a transient UI-language seed;
+- UI English/artifact Chinese and UI Chinese/artifact English render artifact static/model copy in the artifact language;
+- the document/page chrome remains on UI language while the exact Opportunity artifact root has `lang={data.outputLanguage}`;
+- Prompt, URL, brand, and competitor substrings are byte-identical across both artifact renders;
+- `not_generated`, `insufficient-data`, and `temporarily-unavailable` remain distinct in both UI languages.
+
+- [ ] **Step 7: Implement explicit admin/customer selectors and the nested artifact boundary**
 
 Admin generation submits the selected language. Customer Opportunities has an independent artifact-language selector. Store each surface's exact token in tab-scoped `sessionStorage` (keyed by relevant brand/scope), seed only if absent, and preserve it across the UI language switcher's `window.location.reload()`. Selecting Chinese with no generated row shows the localized not-generated state and never triggers generation. Put loaded Opportunity artifact content under `lang={data.outputLanguage}` while selector/page chrome remains under UI language.
 
-Gate every Chinese Opportunity write/generation boundary behind `ARTIFACT_ZH_CN_ENABLED` (default false), with a localized temporary-unavailable result and no DB/LLM side effect while disabled. Add LAS deployment compatibility markers so an activation attempt requires a previously healthy output-language-aware release, and every automatic rollback after activation may target only a recorded compatible release. Add shell/config contract tests and a two-phase activation/roll-forward runbook; the irreversible activation marker must survive later flag disablement.
+Within `OpportunitiesReport`, select static headings, descriptions, empty drill-down labels, counts, and disclaimer from the explicit artifact language rather than ambient `useI18n()`. The raw evidence exceptions remain verbatim beneath the artifact's primary language boundary.
 
-Register every newly discovered Opportunity artifact-language binding/component as an exact resolved surface tied to its focused selector/cache/render test. Do not suppress discovery merely because an `outputLanguage` prop or hook option exists.
+- [ ] **Step 8: Extend Portal discovery and register exact Task 2 resolutions**
 
-- [ ] **Step 6: Run Opportunity tests and access-boundary tests**
+Extend `CrossPlanOwnership.task` and `CrossPlanResolution.task` to accept `Task 2`. Teach discovery to recognize `OpportunitiesReport`, `OpportunitiesGenerationControl`, and `useArtifactLanguageSelection`. A resolution's `runtimeTest` must be a normalized, exact, existing test-file path; broad paths/globs, missing files, stale signatures, and ownership/resolution duplicates remain fatal.
 
-Extend the scheduled non-provider language-smoke project with deterministic English and Chinese Opportunity rows. Assert both UI/artifact cross-combinations, exact nested `lang`, distinguishable static/model copy, and byte-identical raw Prompt/URL evidence without invoking generation.
+After the production bindings exist, register these exact occurrence-1 resolutions with `owner: "portal-output-languages"`, `task: "Task 2"`, and `resolution: "explicit-output-language"`:
 
-- [ ] **Step 7: Commit**
+| File | Kind | Value | Focused runtime test |
+|---|---|---|---|
+| `apps/web/src/routes/_authed/admin/tools.tsx` | `output-component` | `OpportunitiesGenerationControl` | `apps/web/src/components/opportunities-generation-control.test.tsx` |
+| `apps/web/src/components/opportunities-generation-control.tsx` | `output-hook` | `useArtifactLanguageSelection` | `apps/web/src/components/opportunities-generation-control.test.tsx` |
+| `apps/web/src/routes/_authed/app/$brand/opportunities.tsx` | `output-hook` | `useArtifactLanguageSelection` | `apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx` |
+| `apps/web/src/routes/_authed/app/$brand/opportunities.tsx` | `output-component` | `OpportunitiesReport` | `apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx` |
+| `apps/web/src/components/opportunities-report.tsx` | `output-language-binding` | `OpportunitiesReport` | `apps/web/src/components/opportunities-report.test.tsx` |
+| `apps/web/src/components/opportunities-report.tsx` | `output-language-binding` | `OpportunityCard` | `apps/web/src/components/opportunities-report.test.tsx` |
+| `apps/web/src/hooks/use-opportunities.tsx` | `output-language-binding` | `useOpportunities` | `apps/web/src/hooks/use-opportunities.test.ts` |
+
+Run discovery and fail rather than silently broadening the registry if implementation creates any additional signature; add each real extra surface as its own exact reviewed resolution.
+
+- [ ] **Step 9: Implement and RED-test the LAS durable compatibility guard**
+
+Use these exact durable states:
+
+```text
+candidate capability: deploy/las/artifact-output-language-compatible
+healthy receipts:     $DEPLOY_ROOT/artifact-output-languages/compatible-releases/sha-<40>
+irreversible marker:  $DEPLOY_ROOT/artifact-output-languages/zh-cn-activated
+stable host guard:    $DEPLOY_ROOT/bin/guard-artifact-output-release.sh
+```
+
+The candidate capability file contains exactly one LF-terminated token, `artifact-output-language-v1`; the workflow and stable guard reject any other content.
+
+The two-phase contract is:
+
+1. deploy an output-language-aware release with `ARTIFACT_ZH_CN_ENABLED=false`;
+2. only after Web/Worker health succeeds, atomically write its compatible receipt and install/update the stable host guard;
+3. before a later `true` deployment starts a runtime, require the candidate capability and a healthy compatible receipt for the `.release` rollback target, then atomically create the irreversible marker;
+4. never remove the marker when the flag is later disabled;
+5. while the marker exists, an automatic rollback may target only a recorded compatible release, and a roll-forward candidate must carry the exact capability manifest.
+
+The workflow must run the installed host guard after fetching the requested SHA but before checkout. If the irreversible marker exists and the stable guard is absent/unreadable, fail closed. The guard inspects the candidate manifest from the fetched Git object, so checking out a pre-language commit cannot replace the guard before it decides. The runbook must require workflow/stable-guard entry for manual rollbacks; direct execution of an old checked-out deployment script is forbidden operationally.
+
+Shell RED tests cover: healthy Phase 1 receipt; activation without a healthy predecessor fails before Docker/database work; marker creation and later flag-disable survival; invalid flag rejection before side effects; automatic rollback only to a recorded-compatible predecessor; pre-language candidate rejection before checkout/start; atomic marker/receipt write failures; missing guard after activation; and idempotent repeat deployment. Register the shell test in CI.
+
+- [ ] **Step 10: Run focused Opportunity, selector, audit, config, and LAS tests**
+
+Run the relevant `apps/web` unit tests, `packages/config` tests, Portal language audit, and the new Bash guard contract. Confirm the exact Task 2 signatures above are resolutions rather than deferred ownership and no Task 6 raw-detail behavior regressed.
+
+- [ ] **Step 11: Add deterministic non-provider E2E fixtures and the four language combinations**
+
+Seed one English and one Chinese `brand_opportunities` row for the same fixed language-smoke brand and Program, using fixed UUIDs and fixed `created_at` values. Give them distinguishable static/model-authored copy but byte-identical `relatedPrompts[].text`, Prompt ID, citation title/domain/URL, brand, and competitor raw values. Explicitly include `brand_opportunities` in the E2E reset list even though brand truncation currently cascades.
+
+Keep `ARTIFACT_ZH_CN_ENABLED=false` in this scheduled non-provider project so the suite proves Chinese reads remain available while writes are gated. Exercise:
+
+- UI `en` / artifact `en`;
+- UI `zh-CN` / artifact `en`;
+- UI `en` / artifact `zh-CN`;
+- UI `zh-CN` / artifact `zh-CN`.
+
+For each relevant combination assert document `<html lang>` equals UI language, the nested Opportunity root `lang` equals artifact language, static and model copy are distinguishable and correct, and raw Prompt/URL evidence is byte-identical. Change UI language through the real full-page reload and prove the tab-scoped artifact token survives. Use the second language-smoke Program, which receives no Opportunity rows, for the read-only not-generated case; intercept/assert that no generation POST or provider work occurs. Extend `scripts/e2e-language-smoke-contract.test.mjs` to pin the deterministic rows and assertions.
+
+- [ ] **Step 12: Commit slice 1 — server/cache/config isolation**
+
+Only after the current Task 6 working tree is committed, stage the exact server/cache/config files and commit:
 
 ```powershell
-git add apps/web/src/server/opportunities.ts apps/web/src/hooks apps/web/src/components/opportunities* apps/web/src/routes/_authed apps/web/src/i18n packages/config/src deploy/las e2e/fixtures.ts e2e/seed.ts e2e/tests e2e/package.json
+git add -- apps/web/src/server/opportunities.ts apps/web/src/server/opportunities-execution-boundary.test.ts apps/web/src/hooks/use-opportunities.tsx apps/web/src/hooks/use-opportunities.test.ts packages/config/src/artifact-output-language.ts packages/config/src/artifact-output-language.test.ts packages/config/package.json packages/config/src/env-registry.ts packages/config/src/env-registry.test.ts apps/web/src/env.d.ts turbo.json
 git diff --cached --name-only
-git commit -m "Generate opportunities in the selected language"
+git commit -m "Isolate opportunity variants by language"
+```
+
+- [ ] **Step 13: Commit slice 2 — selectors/render/audit**
+
+Stage the storage helper/hook, Opportunity UI/routes/catalogs/empty-state/tests, Task 6 live-language regression, and the three Portal audit files. Preserve the already-committed `LocalizedRawDetail` integration. Commit:
+
+```powershell
+git add -- apps/web/src/lib/artifact-language-selection.ts apps/web/src/lib/artifact-language-selection.test.ts apps/web/src/hooks/use-artifact-language-selection.tsx apps/web/src/hooks/use-artifact-language-selection.test.tsx apps/web/src/components/opportunities-generation-control.tsx apps/web/src/components/opportunities-generation-control.test.tsx apps/web/src/components/task-4-live-language-state.test.tsx apps/web/src/routes/_authed/admin/tools.tsx 'apps/web/src/routes/_authed/app/$brand/opportunities.tsx' 'apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx' apps/web/src/components/opportunities-report.tsx apps/web/src/components/opportunities-report.test.tsx apps/web/src/lib/opportunities-empty-state.ts apps/web/src/lib/opportunities-empty-state.test.ts apps/web/src/i18n/catalogs/admin.ts apps/web/src/i18n/catalogs/customer.ts apps/web/scripts/portal-language-audit.ts apps/web/scripts/portal-language-audit-manifest.ts apps/web/src/i18n/portal-language-audit.test.ts
+git diff --cached --name-only
+git commit -m "Persist opportunity language selections"
+```
+
+- [ ] **Step 14: Commit slice 3 — LAS irreversible activation**
+
+Stage only the LAS manifest, stable guard/deploy scripts/tests, env/runbook/README, and the two workflow files. Commit:
+
+```powershell
+git add -- deploy/las/artifact-output-language-compatible deploy/las/bin/deploy.sh deploy/las/bin/guard-artifact-output-release.sh deploy/las/bin/guard-artifact-output-release.test.sh deploy/las/env.example deploy/las/ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md deploy/las/README.md .github/workflows/mode-compat.yaml .github/workflows/deploy-las.yaml
+git diff --cached --name-only
+git commit -m "Guard Chinese artifact activation"
+```
+
+- [ ] **Step 15: Commit slice 4 — E2E and product changeset**
+
+Stage only E2E fixtures/seed/spec/contract support and the new `@workspace/web` patch changeset. Reuse the language-smoke project scheduled by Task 6; do not rewrite or accidentally stage unrelated Task 6 files. Commit:
+
+```powershell
+git add -- e2e/fixtures.ts e2e/seed.ts e2e/tests/portal-language.spec.ts scripts/e2e-language-smoke-contract.test.mjs .changeset/select-opportunity-output-language.md
+git diff --cached --name-only
+git commit -m "Verify bilingual opportunity artifacts"
 ```
 
 ---
