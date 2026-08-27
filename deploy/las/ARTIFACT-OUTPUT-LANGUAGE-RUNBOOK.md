@@ -224,11 +224,10 @@ equal `backup-sha256`. It must not expose credentials to deploy users,
 containers, or the SSH dispatcher.
 
 Run the producer only from an already authenticated root console (not through
-`sudo`) after the active stable bundle is installed. It fail-closes unless
-`/usr/bin/mv` is GNU coreutils 8.32 or newer and an actual same-filesystem
-sentinel probe in the evidence parent proves `mv -nT` leaves an existing
-destination unchanged while preserving its source. Do not create, copy, edit,
-or hash evidence by hand:
+`sudo`) after the active stable bundle is installed. It uses only the Linux
+kernel's `renameat2(RENAME_NOREPLACE)` through a hash-bound ctypes helper; a
+missing symbol or unsupported kernel/filesystem fails closed, and there is no
+`mv -nT` fallback. Do not create, copy, edit, or hash evidence by hand:
 
 ```text
 /usr/local/libexec/yonaris-las/produce-las-migration-readiness \

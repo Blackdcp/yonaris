@@ -160,30 +160,23 @@ if [[ "\$failure" == post-attestation-directory && "\$target" == '$READINESS_ROO
 	exit 92
 fi
 STUB
-cat >"$MOCK_BIN/mv" <<STUB
+cat >"$MOCK_BIN/python3" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
-if [[ "\${1:-}" == --version ]]; then
-	printf '%s\n' "\${PRODUCER_TEST_MV_VERSION:-mv (GNU coreutils) 9.0}"
-	exit 0
-fi
-if [[ "\${PRODUCER_TEST_MV_MODE:-}" == overwrite-no-replace-probe && \
-	"\${@: -1}" == *.no-replace-destination.* ]]; then
-	cp -- "\${@: -2:1}" "\${@: -1}"
-	rm -f -- "\${@: -2:1}"
-	exit 0
-fi
-destination="\${@: -1}"
-printf 'mv %s\n' "\$*" >>'$EVENT_LOG'
-failure="\$(cat '$TEST_ROOT/mv-failure' 2>/dev/null || true)"
-case "\$failure:\$destination" in
-	backup:*.backup | rehearsal:*.rehearsal | attestation:'$READINESS_ROOT/$RELEASE') exit 91 ;;
-	race:*.backup)
-		printf '%s\n' 'concurrent root evidence' >"\$destination"
-		chmod 0400 "\$destination"
+source_path="\${@: -2:1}"
+destination_path="\${@: -1}"
+case "\${PRODUCER_TEST_RENAME_MODE:-success}:\$destination_path" in
+	unsupported:*) exit 95 ;;
+	fail-backup:*.backup | fail-rehearsal:*.rehearsal | fail-attestation:'$READINESS_ROOT/$RELEASE') exit 5 ;;
+	eexist-backup:*.backup)
+		printf '%s\n' 'concurrent root evidence' >"\$destination_path"
+		chmod 0400 "\$destination_path"
+		[[ -f "\$source_path" ]] || exit 96
+		printf 'rename-eexist-source-preserved %s\n' "\$source_path" >>'$EVENT_LOG'
+		exit 17
 		;;
 esac
-exec '$REAL_MV' "\$@"
+exec '$REAL_MV' -T -- "\$source_path" "\$destination_path"
 STUB
 chmod 0755 "$STATE_MANAGER" "$RUNTIME_MANAGER" "$ADAPTER" "$MOCK_BIN"/*
 
@@ -197,15 +190,14 @@ sed \
 	-e "s#/usr/bin/stat#$MOCK_BIN/stat#g" \
 	-e "s#/usr/bin/flock#$MOCK_BIN/flock#g" \
 	-e "s#/usr/bin/sync#$MOCK_BIN/sync#g" \
-	-e "s#/usr/bin/mv#$MOCK_BIN/mv#g" \
+	-e "s#/usr/bin/python3#$MOCK_BIN/python3#g" \
 	"$PRODUCER_SOURCE" >"$PRODUCER"
 chmod 0755 "$PRODUCER"
 
 run_producer() {
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		PRODUCER_TEST_UID="${PRODUCER_TEST_UID:-0}" SUDO_USER="${PRODUCER_TEST_SUDO_USER:-}" \
-		PRODUCER_TEST_MV_VERSION="${PRODUCER_TEST_MV_VERSION:-}" \
-		PRODUCER_TEST_MV_MODE="${PRODUCER_TEST_MV_MODE:-}" \
+		PRODUCER_TEST_RENAME_MODE="${PRODUCER_TEST_RENAME_MODE:-success}" \
 		/bin/bash --noprofile --norc -p "$PRODUCER" "$@"
 }
 
@@ -250,28 +242,16 @@ unset PRODUCER_TEST_UID
 [[ "$nonroot_status" -ne 0 ]]
 assert_no_runtime_or_adapter
 
-# Publication must never fall back to a non-atomic no-clobber implementation.
+# A modern userspace must still fail closed when direct renameat2 support is
+# unavailable on the host filesystem or kernel.
 : >"$EVENT_LOG"
-PRODUCER_TEST_MV_VERSION='mv (GNU coreutils) 8.31'
+PRODUCER_TEST_RENAME_MODE=unsupported
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-unsupported_mv_status=$?
+unsupported_rename_status=$?
 set -e
-unset PRODUCER_TEST_MV_VERSION
-[[ "$unsupported_mv_status" -ne 0 ]]
-assert_no_runtime_or_adapter
-assert_no_evidence
-
-# A modern version string is insufficient when the active filesystem cannot
-# preserve an existing destination and source in the no-replace probe.
-: >"$EVENT_LOG"
-PRODUCER_TEST_MV_MODE=overwrite-no-replace-probe
-set +e
-run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-nonatomic_mv_status=$?
-set -e
-unset PRODUCER_TEST_MV_MODE
-[[ "$nonatomic_mv_status" -ne 0 ]]
+unset PRODUCER_TEST_RENAME_MODE
+[[ "$unsupported_rename_status" -ne 0 ]]
 assert_no_runtime_or_adapter
 assert_no_evidence
 
@@ -346,12 +326,12 @@ assert_no_evidence
 assert_work_clean
 
 : >"$EVENT_LOG"
-printf '%s\n' backup >"$TEST_ROOT/mv-failure"
+PRODUCER_TEST_RENAME_MODE=fail-backup
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
 atomic_status=$?
 set -e
-rm -f "$TEST_ROOT/mv-failure"
+unset PRODUCER_TEST_RENAME_MODE
 [[ "$atomic_status" -ne 0 ]]
 assert_no_evidence
 assert_work_clean
@@ -359,12 +339,12 @@ assert_work_clean
 # A failure after only backup evidence is published remains verifier-invalid,
 # preserves the partial bytes, and cannot be retried into an automatic overwrite.
 : >"$EVENT_LOG"
-printf '%s\n' rehearsal >"$TEST_ROOT/mv-failure"
+PRODUCER_TEST_RENAME_MODE=fail-rehearsal
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
 backup_only_status=$?
 set -e
-rm -f "$TEST_ROOT/mv-failure"
+unset PRODUCER_TEST_RENAME_MODE
 [[ "$backup_only_status" -ne 0 && -f "$EVIDENCE_ROOT/$RELEASE.backup" && \
 	! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
 backup_only_hash="$(sha256sum -- "$EVIDENCE_ROOT/$RELEASE.backup" | awk '{print $1}')"
@@ -386,12 +366,12 @@ rm -f "$EVIDENCE_ROOT/$RELEASE.backup"
 # A failure after both evidence files but before the attestation likewise
 # remains verifier-invalid and fails closed without rerunning work.
 : >"$EVENT_LOG"
-printf '%s\n' attestation >"$TEST_ROOT/mv-failure"
+PRODUCER_TEST_RENAME_MODE=fail-attestation
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
 evidence_only_status=$?
 set -e
-rm -f "$TEST_ROOT/mv-failure"
+unset PRODUCER_TEST_RENAME_MODE
 [[ "$evidence_only_status" -ne 0 && -f "$EVIDENCE_ROOT/$RELEASE.backup" && \
 	-f "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
 set +e
@@ -411,14 +391,15 @@ rm -f "$EVIDENCE_ROOT/$RELEASE.backup" "$EVIDENCE_ROOT/$RELEASE.rehearsal"
 # A destination created after the producer's absence scan must not be
 # overwritten by publication. The raced bytes remain an explicit conflict.
 : >"$EVENT_LOG"
-printf '%s\n' race >"$TEST_ROOT/mv-failure"
+PRODUCER_TEST_RENAME_MODE=eexist-backup
 set +e
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
 publication_race_status=$?
 set -e
-rm -f "$TEST_ROOT/mv-failure"
+unset PRODUCER_TEST_RENAME_MODE
 [[ "$publication_race_status" -ne 0 ]]
 grep -Fqx 'concurrent root evidence' "$EVIDENCE_ROOT/$RELEASE.backup"
+grep -Fq 'rename-eexist-source-preserved' "$EVENT_LOG"
 [[ ! -e "$EVIDENCE_ROOT/$RELEASE.rehearsal" && ! -e "$READINESS_ROOT/$RELEASE" ]]
 rm -f "$EVIDENCE_ROOT/$RELEASE.backup"
 

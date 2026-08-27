@@ -204,6 +204,12 @@ assert_contains "$ACTIVE_BUNDLE_LAUNCHER" 'LAS_STABLE_BUNDLE_DIR="$bundle_direct
 	'fixed launcher pins the selected generation'
 assert_contains "$ACTIVE_BUNDLE_LAUNCHER" 'exec "$program_path" "$@"' \
 	'fixed launcher executes only a versioned peer'
+assert_contains "$PRODUCER" 'RENAME_NOREPLACE = 1' \
+	'producer uses the kernel no-replace primitive'
+assert_contains "$PRODUCER" 'ctypes.CDLL(None, use_errno=True).renameat2' \
+	'producer invokes renameat2 directly without a userspace fallback'
+assert_not_contains "$PRODUCER" '/usr/bin/mv -nT' \
+	'producer never publishes evidence through racy mv no-clobber semantics'
 
 # authorized_keys is exactly one LF-terminated forced entry, and effective sshd
 # policy cannot redirect keys or commands. Rootless Docker is an explicit host

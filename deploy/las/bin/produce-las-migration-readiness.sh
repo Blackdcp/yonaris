@@ -92,45 +92,72 @@ prepare_publication_file() {
 }
 
 publish_no_replace() {
-	local source="$1" destination="$2"
+	local source="$1" destination="$2" status
 	[[ ! -e "$destination" && ! -L "$destination" ]] || return 1
-	/usr/bin/mv -nT -- "$source" "$destination" || return 1
-	# GNU mv -n exits successfully when it declines a raced destination.
+	set +e
+	renameat2_no_replace "$source" "$destination"
+	status=$?
+	set -e
+	if [[ "$status" -ne 0 ]]; then
+		if [[ "$status" -eq 17 ]]; then
+			[[ -f "$source" && ! -L "$source" && ( -e "$destination" || -L "$destination" ) ]] || return 1
+		fi
+		return "$status"
+	fi
 	[[ ! -e "$source" && ! -L "$source" ]] || return 1
 	metadata_matches "$destination" file '0:0:400'
 }
 
-mv_supports_atomic_no_replace() {
-	local version major minor extra
-	version="$(/usr/bin/mv --version 2>/dev/null | /usr/bin/sed -n '1{s/^mv (GNU coreutils) \([0-9][0-9]*\)\.\([0-9][0-9]*\).*$/\1 \2/p;}')" || return 1
-	read -r major minor extra <<<"$version"
-	[[ -z "${extra:-}" && "$major" =~ ^[0-9]+$ && "$minor" =~ ^[0-9]+$ ]] || return 1
-	(( major > 8 || (major == 8 && minor >= 32) ))
+renameat2_no_replace() {
+	/usr/bin/python3 - "$1" "$2" <<'PY'
+import ctypes
+import errno
+import os
+import sys
+
+AT_FDCWD = -100
+RENAME_NOREPLACE = 1
+unsupported = {errno.ENOSYS, errno.EINVAL, errno.EXDEV}
+for name in ("ENOTSUP", "EOPNOTSUPP"):
+    value = getattr(errno, name, None)
+    if value is not None:
+        unsupported.add(value)
+
+try:
+    renameat2 = ctypes.CDLL(None, use_errno=True).renameat2
+except AttributeError:
+    sys.exit(95)
+renameat2.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+renameat2.restype = ctypes.c_int
+result = renameat2(AT_FDCWD, os.fsencode(sys.argv[1]), AT_FDCWD, os.fsencode(sys.argv[2]), RENAME_NOREPLACE)
+if result == 0:
+    sys.exit(0)
+error = ctypes.get_errno()
+if error == errno.EEXIST:
+    sys.exit(17)
+if error in unsupported:
+    sys.exit(95)
+sys.exit(1)
+PY
 }
 
-filesystem_supports_atomic_no_replace() {
-	local source destination source_hash destination_hash destination_after status
-	source="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.no-replace-source.XXXXXX")" || return 1
-	destination="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.no-replace-destination.XXXXXX")" || {
+renameat2_no_replace_is_supported() {
+	local source destination status
+	source="$(/usr/bin/mktemp "$MIGRATION_EVIDENCE_ROOT/.renameat2-probe-source.XXXXXX")" || return 1
+	destination="$MIGRATION_EVIDENCE_ROOT/.renameat2-probe-destination.${source##*.}"
+	[[ ! -e "$destination" && ! -L "$destination" ]] || {
 		/usr/bin/rm -f -- "$source"
 		return 1
 	}
-	/usr/bin/printf '%s\n' 'yonaris-las-no-replace-source-v1' >"$source" && \
-		/usr/bin/printf '%s\n' 'yonaris-las-no-replace-destination-v1' >"$destination" || {
-		/usr/bin/rm -f -- "$source" "$destination"
+	/usr/bin/printf '%s\n' 'yonaris-las-renameat2-probe-v1' >"$source" || {
+		/usr/bin/rm -f -- "$source"
 		return 1
 	}
-	source_hash="$(/usr/bin/sha256sum -- "$source" | /usr/bin/awk '{print $1}')" || return 1
-	destination_hash="$(/usr/bin/sha256sum -- "$destination" | /usr/bin/awk '{print $1}')" || return 1
 	set +e
-	/usr/bin/mv -nT -- "$source" "$destination"
+	renameat2_no_replace "$source" "$destination"
 	status=$?
 	set -e
-	destination_after="$(/usr/bin/sha256sum -- "$destination" | /usr/bin/awk '{print $1}')" || status=1
-	[[ "$status" -eq 0 && -f "$source" && \
-		"$(/usr/bin/sha256sum -- "$source" | /usr/bin/awk '{print $1}')" == "$source_hash" && \
-		"$destination_after" == "$destination_hash" ]]
-	status=$?
+	[[ "$status" -eq 0 && ! -e "$source" && ! -L "$source" && -f "$destination" ]] || status=1
 	/usr/bin/rm -f -- "$source" "$destination"
 	return "$status"
 }
@@ -153,8 +180,6 @@ durably_verify_readiness() {
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The migration-readiness producer must run as root.' 2
 [[ -z "${SUDO_USER:-}" ]] || fail 'The migration-readiness producer is direct-root only.' 2
-mv_supports_atomic_no_replace || \
-	fail 'GNU coreutils mv >= 8.32 with atomic no-replace support is required.' 2
 [[ $# -eq 6 ]] || fail 'Usage: produce-las-migration-readiness <release> <five digests>' 2
 release_tag="$1"; web="$2"; worker="$3"; migrate="$4"; postgres="$5"; www="$6"
 release_is_valid "$release_tag" && digest_is_valid "$web" && digest_is_valid "$worker" && \
@@ -178,8 +203,8 @@ prepare_private_directory "$MIGRATION_READINESS_ROOT" && \
 	prepare_private_directory "$MIGRATION_EVIDENCE_ROOT" && \
 	prepare_private_directory "$MIGRATION_WORK_ROOT" || \
 	fail 'The root-only migration-readiness directories are invalid.'
-filesystem_supports_atomic_no_replace || \
-	fail 'The migration-evidence filesystem lacks atomic no-replace publication support.' 2
+renameat2_no_replace_is_supported || \
+	fail 'The migration-evidence filesystem lacks renameat2 no-replace support.' 2
 metadata_matches "$STATE_MANAGER" file '0:0:755' && \
 	metadata_matches "$RUNTIME_MANAGER" file '0:0:755' && \
 	metadata_matches "$BACKUP_ADAPTER" file '0:0:755' || \

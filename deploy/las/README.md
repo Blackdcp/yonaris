@@ -342,10 +342,11 @@ The checked-in legacy timer is a deprecated fail-closed compatibility stub, not
 an authorized production entrypoint. Do not install or enable it; any installed
 legacy service and timer must instead be inactive and masked. The only migration
 evidence workflow is the root-only stable producer documented in the runbook.
-It requires GNU coreutils `mv` 8.32 or newer for atomic no-replace publication
-and proves that property with an existing-destination sentinel on the evidence
-filesystem. It also requires the mandatory root-owned off-host adapter, which
-must upload and download the same backup bytes before the local rehearsal.
+It publishes evidence only through direct
+`renameat2(RENAME_NOREPLACE)` and fails closed on unsupported kernels or
+filesystems; it never falls back to `mv -nT`. It also requires the mandatory
+root-owned off-host adapter, which must upload and download the same backup
+bytes before the local rehearsal.
 
 From an already authenticated root console, use the exact producer and verifier
 sequence in the runbook; it is not an SSH operation:
