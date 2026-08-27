@@ -26,8 +26,22 @@ export function diagnosticLeadFingerprint(input: unknown): string | null {
 	const lead = result.data;
 	return JSON.stringify(
 		lead.locale === "en"
-			? { locale: lead.locale, name: lead.name, email: lead.email, company: lead.company, companyUrl: lead.companyUrl }
-			: { locale: lead.locale, name: lead.name, phone: lead.phone, company: lead.company, companyUrl: lead.companyUrl },
+			? {
+					locale: lead.locale,
+					name: lead.name,
+					email: lead.email,
+					company: lead.company,
+					companyUrl: lead.companyUrl,
+					requestType: lead.requestType,
+				}
+			: {
+					locale: lead.locale,
+					name: lead.name,
+					phone: lead.phone,
+					company: lead.company,
+					companyUrl: lead.companyUrl,
+					requestType: lead.requestType,
+				},
 	);
 }
 

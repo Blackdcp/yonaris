@@ -187,7 +187,7 @@ Subtle photo movement, state cross-fades, and circle response may add life. They
 Copy the three approved prototype photographs into `apps/www/public/brand/site-06/` with descriptive names. Preserve source credits in a discreet caption or project asset note:
 
 - conference room: Nastuh Abootalebi / Unsplash
-- business people walking: Mikhail Nilov / Pexels
+- business people walking: Pavel Danilyuk / Pexels
 - glass business venue: Zerrin Velizade / Pexels
 
 Use existing wordmark and icon assets. Do not redraw or replace the Yonaris logo.

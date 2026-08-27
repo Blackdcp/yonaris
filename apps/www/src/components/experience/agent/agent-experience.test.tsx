@@ -136,6 +136,19 @@ describe("zero-to-one Agent experience", () => {
 		expect(zh).not.toMatch(/提供持续监控|自动持续监控|自动排名|实时排名|保证结果/);
 	});
 
+	it("publishes the operational privacy request and processor boundary in both machine fact sets", () => {
+		const en = JSON.stringify(AGENT_FACTS.global.privacy);
+		const zh = JSON.stringify(AGENT_FACTS.zh.privacy);
+		expect(en).toContain("privacy request");
+		expect(en).toContain("reviewed manually");
+		expect(en).toContain("processed and stored in the United States");
+		expect(en).toContain("does not automatically delete");
+		expect(zh).toContain("隐私请求");
+		expect(zh).toContain("人工核对并处理");
+		expect(zh).toContain("美国处理和存储");
+		expect(zh).toContain("不会自动删除");
+	});
+
 	it("keeps every Agent fact on a visible semantic Human target with matching evidence", () => {
 		for (const [locale, edition, pages] of [
 			["en", "global", GLOBAL_PAGES],

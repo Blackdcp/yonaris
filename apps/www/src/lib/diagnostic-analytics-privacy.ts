@@ -20,7 +20,7 @@ const SENSITIVE_PROPERTY_KEYS = new Set([
 const URL_PROPERTY_KEYS = new Set(["$current_url", "$referrer", "$initial_referrer", "$initial_current_url"]);
 
 export function buildDiagnosticAnalyticsBootstrapScript(): string {
-	return '(()=>{const p=location.pathname;if((p==="/diagnostic"||p==="/zh/diagnostic")&&location.search)history.replaceState(history.state,"",location.pathname+location.hash)})();';
+	return '(()=>{const p=location.pathname;if((p==="/diagnostic"||p==="/zh/diagnostic")&&location.search){const v=new URLSearchParams(location.search).getAll("intent");const q=v.length===1&&v[0]==="privacy"?"?intent=privacy":"";history.replaceState(history.state,"",location.pathname+q+location.hash)}})();';
 }
 
 function sanitizeUrlLike(value: string): string {

@@ -11,6 +11,7 @@ type SubmissionState = "idle" | "submitting" | "unconfirmed" | "success";
 type LeadFormViewProps = {
 	locale: "en" | "zh";
 	compact?: boolean;
+	requestType: "consultation" | "privacy";
 	values: LeadValues;
 	submission: SubmissionState;
 	errors: FieldErrors;
@@ -27,16 +28,29 @@ type Subject = {
 		fields: Partial<Record<LeadField, { focus: () => void } | null>>,
 	) => LeadField | null;
 	submissionStateFromResult?: (result: { status: "confirmed" } | { status: "unconfirmed" }) => SubmissionState;
+	requestTypeFromSearch?: (search: string) => "consultation" | "privacy";
+	diagnosticLeadInputFromSearch?: (values: LeadValues, locale: "en" | "zh", search: string) => unknown;
 };
 
 const subject = (await import("./lead-form")) as Subject;
 const noopUpdate = () => undefined;
 const noopSubmit = (event: React.FormEvent<HTMLFormElement>) => event.preventDefault();
 
-function renderView(props: Omit<LeadFormViewProps, "onUpdate" | "onSubmit">): string {
+function renderView(
+	props: Omit<LeadFormViewProps, "onUpdate" | "onSubmit" | "requestType"> & {
+		requestType?: LeadFormViewProps["requestType"];
+	},
+): string {
 	expect(subject.LeadFormView, "共享表单视图必须可回归测试").toBeDefined();
 	if (!subject.LeadFormView) return "";
-	return renderToStaticMarkup(<subject.LeadFormView {...props} onUpdate={noopUpdate} onSubmit={noopSubmit} />);
+	return renderToStaticMarkup(
+		<subject.LeadFormView
+			{...props}
+			requestType={props.requestType ?? "consultation"}
+			onUpdate={noopUpdate}
+			onSubmit={noopSubmit}
+		/>,
+	);
 }
 
 describe("LeadForm field feedback", () => {
@@ -93,6 +107,7 @@ describe("LeadForm delivery states", () => {
 		email: "ava@acme.example",
 		company: "Acme",
 		companyUrl: "",
+		requestType: "consultation",
 	};
 	const values = { name: "Ava Chen", contact: "ava@acme.example", company: "Acme", companyUrl: "" };
 
@@ -146,5 +161,33 @@ describe("LeadForm delivery states", () => {
 		expect(markup).toContain("重新发送");
 		expect(markup).not.toContain("mailto:");
 		expect(markup).not.toMatch(/投递服务|收件箱/);
+	});
+});
+
+describe("LeadForm privacy intent", () => {
+	it("allowlists only the exact privacy query intent and keeps three visible fields", () => {
+		expect(subject.requestTypeFromSearch).toBeDefined();
+		if (!subject.requestTypeFromSearch) return;
+		expect(subject.requestTypeFromSearch("?intent=privacy")).toBe("privacy");
+		for (const search of ["", "?intent=deletion", "?intent=privacy%20", "?intent=PRIVACY", "?other=privacy"])
+			expect(subject.requestTypeFromSearch(search), search).toBe("consultation");
+		expect(subject.diagnosticLeadInputFromSearch).toBeDefined();
+		expect(
+			subject.diagnosticLeadInputFromSearch?.(
+				{ name: "Ava", contact: "ava@example.com", company: "Acme", companyUrl: "" },
+				"en",
+				"?intent=privacy",
+			),
+		).toMatchObject({ requestType: "privacy", email: "ava@example.com" });
+
+		const markup = renderView({
+			locale: "en",
+			requestType: "privacy",
+			values: { name: "", contact: "", company: "", companyUrl: "" },
+			submission: "idle",
+			errors: {},
+		});
+		expect(markup.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+		expect(markup).toContain('type="hidden" name="requestType" value="privacy"');
 	});
 });

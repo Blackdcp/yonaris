@@ -274,8 +274,14 @@ describe("Site 06 English experience", () => {
 		expect(privacy).toContain("Resend");
 		expect(privacy).toContain("email processor");
 		expect(privacy).toContain("understand and respond to your request");
-		expect(privacy).toContain("only as long as reasonably needed");
-		expect(privacy).toContain('href="/diagnostic"');
+		expect(privacy).toContain("processed and stored in the United States");
+		expect(privacy).toContain('href="https://resend.com/docs/dashboard/domains/regions"');
+		expect(privacy).toContain('href="https://resend.com/legal/dpa"');
+		expect(privacy).toContain("documentation</a> and its <a");
+		expect(privacy).toContain("reviewed manually");
+		expect(privacy).toContain("same contact and company details");
+		expect(privacy).toContain("does not automatically delete");
+		expect(privacy).toContain('href="/diagnostic?intent=privacy"');
 		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 	});
 

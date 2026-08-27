@@ -86,7 +86,7 @@ function oneLine(value: string): string {
 }
 
 function emailText(lead: DiagnosticLead): string {
-	return lead.locale === "en"
+	const contact = lead.locale === "en"
 		? [
 				"Region: Global",
 				`Name: ${oneLine(lead.name)}`,
@@ -99,6 +99,21 @@ function emailText(lead: DiagnosticLead): string {
 				`电话：${oneLine(lead.phone)}`,
 				`公司：${oneLine(lead.company)}`,
 			].join("\n");
+	if (lead.requestType !== "privacy") return contact;
+	return lead.locale === "en"
+		? ["Request type: Privacy/deletion request", "Manual privacy action requested", "", contact].join("\n")
+		: ["请求类型：隐私/删除请求", "需要人工处理隐私请求", "", contact].join("\n");
+}
+
+function emailSubject(lead: DiagnosticLead): string {
+	if (lead.requestType === "privacy") {
+		return lead.locale === "en"
+			? `Yonaris privacy request / ${oneLine(lead.company)}`
+			: `Yonaris 隐私请求 / ${oneLine(lead.company)}`;
+	}
+	return lead.locale === "en"
+		? `Yonaris global website lead / ${oneLine(lead.company)}`
+		: `Yonaris 中国官网留资 / ${oneLine(lead.company)}`;
 }
 
 export async function readJsonBodyLimited(request: Request, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
@@ -231,10 +246,7 @@ export async function sendLeadWithResend(
 	const payload: Record<string, unknown> = {
 		from: input.env.RESEND_FROM_EMAIL,
 		to: [input.env.MARKETING_LEAD_RECIPIENT],
-		subject:
-			input.lead.locale === "en"
-				? `Yonaris global website lead / ${oneLine(input.lead.company)}`
-				: `Yonaris 中国官网留资 / ${oneLine(input.lead.company)}`,
+		subject: emailSubject(input.lead),
 		text: emailText(input.lead),
 	};
 	if (input.lead.locale === "en") payload.reply_to = input.lead.email;

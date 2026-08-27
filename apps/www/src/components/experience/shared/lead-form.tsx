@@ -5,7 +5,8 @@ import {
 	resolveDiagnosticRequestIdentity,
 	submitDiagnosticRequest,
 } from "@/lib/diagnostic-client";
-import { type DiagnosticLead, parseDiagnosticLead } from "@/lib/diagnostic-schema";
+import { diagnosticRequestTypeFromSearch } from "@/lib/diagnostic-request-intent";
+import { type DiagnosticLead, type DiagnosticRequestType, parseDiagnosticLead } from "@/lib/diagnostic-schema";
 
 export type LeadLocale = "en" | "zh";
 export type LeadField = "name" | "contact" | "company";
@@ -80,9 +81,17 @@ const copy = {
 
 const visibleFieldOrder = ["name", "contact", "company"] as const;
 
-function toLead(values: LeadValues, locale: LeadLocale): unknown {
-	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl };
+function toLead(values: LeadValues, locale: LeadLocale, requestType: DiagnosticRequestType = "consultation"): unknown {
+	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl, requestType };
 	return locale === "en" ? { ...base, email: values.contact } : { ...base, phone: values.contact };
+}
+
+export function requestTypeFromSearch(search: string): DiagnosticRequestType {
+	return diagnosticRequestTypeFromSearch(search);
+}
+
+export function diagnosticLeadInputFromSearch(values: LeadValues, locale: LeadLocale, search: string): unknown {
+	return toLead(values, locale, requestTypeFromSearch(search));
 }
 
 export function validateLeadValues(values: LeadValues, locale: LeadLocale): FieldErrors {
@@ -119,6 +128,7 @@ export function submissionStateFromResult(result: DiagnosticRequestResult): Subm
 export interface LeadFormViewProps {
 	locale: LeadLocale;
 	compact?: boolean;
+	requestType: DiagnosticRequestType;
 	values: LeadValues;
 	submission: SubmissionState;
 	errors: FieldErrors;
@@ -131,6 +141,7 @@ export interface LeadFormViewProps {
 export function LeadFormView({
 	locale,
 	compact = false,
+	requestType,
 	values,
 	submission,
 	errors,
@@ -245,6 +256,7 @@ export function LeadFormView({
 					) : null}
 				</div>
 			</fieldset>
+			<input type="hidden" name="requestType" value={requestType} />
 			<div className="lead-trap" aria-hidden="true">
 				<label htmlFor={`lead-${locale}-url`}>Website</label>
 				<input
@@ -278,6 +290,7 @@ export function LeadFormView({
 
 export function LeadForm({ locale, compact = false }: { locale: LeadLocale; compact?: boolean }) {
 	const [values, setValues] = useState<LeadValues>({ name: "", contact: "", company: "", companyUrl: "" });
+	const [requestType, setRequestType] = useState<DiagnosticRequestType>("consultation");
 	const [submission, setSubmission] = useState<SubmissionState>("idle");
 	const [errors, setErrors] = useState<FieldErrors>({});
 	const [validationFailed, setValidationFailed] = useState(false);
@@ -286,7 +299,10 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 	const identityRef = useRef<DiagnosticRequestIdentity | null>(null);
 	const controllerRef = useRef<AbortController | null>(null);
 
-	useEffect(() => () => controllerRef.current?.abort(), []);
+	useEffect(() => {
+		setRequestType(requestTypeFromSearch(window.location.search));
+		return () => controllerRef.current?.abort();
+	}, []);
 
 	function update(field: keyof LeadValues, value: string): void {
 		const next = { ...valuesRef.current, [field]: value };
@@ -316,7 +332,9 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 			return;
 		}
 
-		const parsed = parseDiagnosticLead(toLead(valuesRef.current, locale));
+		const parsed = parseDiagnosticLead(
+			diagnosticLeadInputFromSearch(valuesRef.current, locale, window.location.search),
+		);
 		if (!parsed.success) {
 			setValidationFailed(true);
 			return;
@@ -344,6 +362,7 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 		<LeadFormView
 			locale={locale}
 			compact={compact}
+			requestType={requestType}
 			values={values}
 			submission={submission}
 			errors={errors}

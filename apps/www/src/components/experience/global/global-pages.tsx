@@ -394,17 +394,21 @@ export function GlobalPrivacyPage() {
 						<h2>How the request is delivered</h2>
 						<p>
 							Yonaris uses Resend as an email processor to send the form contents to Yonaris. The details are used to
-							understand and respond to your request; browser analytics do not receive the form values.
+							understand and respond to your request; browser analytics do not receive the form values. According to{" "}
+							<a href="https://resend.com/docs/dashboard/domains/regions">Resend region documentation</a> and its{" "}
+							<a href="https://resend.com/legal/dpa">Data Processing Addendum</a>, form contents sent through Resend are
+							processed and stored in the United States.
 						</p>
 					</section>
 					<section>
 						<h2>Retention and deletion</h2>
 						<p>
-							Yonaris keeps the request only as long as reasonably needed to respond, arrange follow-up and meet
-							applicable record-keeping duties. To request deletion, use the public contact route and identify the
-							request you want removed. No personal email address is published here.
+							Retention depends on what is reasonably needed to respond, arrange follow-up and meet applicable
+							record-keeping duties. A privacy or deletion request is reviewed manually; the form does not automatically
+							delete a record. Use the same contact and company details as the earlier request so the team can identify
+							it. No personal email address is published here.
 						</p>
-						<ActionLink href="/diagnostic">Return to contact</ActionLink>
+						<ActionLink href="/diagnostic?intent=privacy">Request a privacy review</ActionLink>
 					</section>
 				</article>
 			</div>

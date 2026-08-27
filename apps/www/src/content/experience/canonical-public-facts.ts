@@ -120,9 +120,9 @@ const EN_PAGE_FACTS = {
 	},
 	privacy: {
 		id: "yonaris.privacy.contact-request",
-		value: "Contact details are sent to Yonaris through Resend, its email processor, and used to understand and respond to the request.",
+		value: "Contact details and privacy requests are sent to Yonaris through Resend, its email processor, and used only to understand and respond to the request; form contents sent through Resend are processed and stored in the United States.",
 		source: "Yonaris contact request privacy page · reviewed 27 Aug 2026",
-		boundary: "Yonaris keeps the request only as long as reasonably needed and accepts deletion requests through its public contact route.",
+		boundary: "Privacy requests use the same three visible fields, are reviewed manually, and the form does not automatically delete records; retention depends on reasonable operational and record-keeping needs.",
 	},
 } as const satisfies Partial<Record<HumanPageKey, CanonicalPageFact>>;
 
@@ -155,9 +155,9 @@ const ZH_PAGE_FACTS = {
 	},
 	privacy: {
 		id: "yonaris.privacy.contact-request",
-		value: "联系信息经邮件处理者 Resend 发送给 Yonaris，只用于理解并回复这次咨询。",
+		value: "联系信息和隐私请求经邮件处理者 Resend 发送给 Yonaris，只用于理解并回复申请；表单内容会在美国处理和存储。",
 		source: "Yonaris 中文咨询信息说明 · 2026 年 8 月 27 日核对",
-		boundary: "Yonaris 只在合理所需期限内保留申请，并通过公开预约沟通路径受理删除请求。",
+		boundary: "隐私请求使用相同的三项可见字段，由 Yonaris 人工核对并处理；表单不会自动删除记录，保存时间取决于合理的运营和记录义务需要。",
 	},
 } as const satisfies Partial<Record<HumanPageKey, CanonicalPageFact>>;
 

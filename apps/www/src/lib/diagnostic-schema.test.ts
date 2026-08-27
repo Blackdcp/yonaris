@@ -40,4 +40,18 @@ describe("regional diagnostic lead schema", () => {
 		expect(parseDiagnosticLead({ ...globalLead, website: "https://acme.example" }).success).toBe(false);
 		expect(parseDiagnosticLead({ ...globalLead, companyUrl: "https://bot.example" }).success).toBe(false);
 	});
+
+	it("defaults to consultation and allowlists only an explicit privacy request type", () => {
+		expect(parseDiagnosticLead(globalLead)).toMatchObject({
+			success: true,
+			data: { requestType: "consultation" },
+		});
+		expect(parseDiagnosticLead({ ...globalLead, requestType: "privacy" })).toMatchObject({
+			success: true,
+			data: { requestType: "privacy" },
+		});
+		for (const requestType of ["deletion", "privacy ", "lead", ""]) {
+			expect(parseDiagnosticLead({ ...globalLead, requestType }).success, requestType).toBe(false);
+		}
+	});
 });

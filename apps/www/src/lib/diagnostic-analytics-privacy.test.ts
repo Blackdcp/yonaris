@@ -31,6 +31,19 @@ describe("diagnostic analytics bootstrap", () => {
 		},
 	);
 
+	it.each(["/diagnostic", "/zh/diagnostic"])(
+		"preserves only the allowlisted privacy intent on %s while dropping every other query value",
+		(pathname) => {
+			const result = runBootstrap(pathname, "?intent=privacy&email=ava%40acme.example", "#request");
+
+			expect(result.calls).toEqual([[result.history.state, "", `${pathname}?intent=privacy#request`]]);
+			expect(runBootstrap(pathname, "?intent=deletion").calls).toEqual([[result.history.state, "", pathname]]);
+			expect(runBootstrap(pathname, "?intent=privacy&intent=privacy").calls).toEqual([
+				[result.history.state, "", pathname],
+			]);
+		},
+	);
+
 	it("leaves every non-diagnostic route untouched", () => {
 		const result = runBootstrap("/product", "?website=https%3A%2F%2Facme.example");
 		expect(result.calls).toEqual([]);

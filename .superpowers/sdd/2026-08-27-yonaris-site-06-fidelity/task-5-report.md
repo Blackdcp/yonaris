@@ -150,10 +150,44 @@ Current contracts cover the intended behavior: localized machine labels, fixed H
 - read-only e2e — 27 passed / exactly 14 approved stale / no additional failure.
 - `git diff --check` — run immediately before commit.
 
+## Operational privacy-request follow-up
+
+Follow-up start HEAD: `35987a0f`.
+
+The privacy pages now link to `/diagnostic?intent=privacy` and `/zh/diagnostic?intent=privacy`. The form keeps exactly three visible fields in each locale and derives one hidden, allowlisted `requestType`. The submit path reads and validates the current URL synchronously, so a submission cannot race the client effect. Unknown, repeated, or non-exact intent values default to `consultation`.
+
+The server schema independently defaults and allowlists the request type. Normal consultation subject/body output remains unchanged. Privacy requests receive explicit English or Chinese privacy/deletion subject and body markers. The delivery idempotency fingerprint includes the request type, keeping a privacy request distinct from an otherwise identical consultation.
+
+The first focused RED run produced eight failures across the schema, form, delivery, localized privacy, and Agent-fact contracts. After the initial GREEN, a real production browser check found the synchronous analytics bootstrap removing the allowlisted query before hydration. A second RED (two bootstrap cases) led to the narrow repair: retain only one exact `intent=privacy` value on diagnostic routes while continuing to remove legacy form values, unknown values, duplicate intents, and all query information from analytics event URLs.
+
+The English and Chinese privacy pages and canonical machine facts now state, narrowly, that form contents sent through Resend are processed and stored in the United States. Both Human pages link to Resend's official [region documentation](https://resend.com/docs/dashboard/domains/regions) and [Data Processing Addendum](https://resend.com/legal/dpa). They explain manual review, same-contact/company identification, reasonable operational and record-keeping retention, and that the form does not automatically delete records. No personal address or automated SLA is promised.
+
+`docs/operations/marketing-privacy-request-sop.md` records the manual operator path: use the submitted contact/company to identify earlier requests, inspect the recipient mailbox and Resend records where operationally available, contact the requester through the submitted channel, and retain only a minimal completion record. The stale design-spec credit was also corrected to Pavel Danilyuk.
+
+Production browser proof intercepted `/api/diagnostic`, so no lead was sent:
+
+- `/privacy` → `/diagnostic?intent=privacy`: three visible fields, hidden privacy marker, intercepted POST `requestType=privacy`;
+- `/zh/privacy` → `/zh/diagnostic?intent=privacy`: same contract;
+- `?intent=deletion`: consultation fallback.
+
+Fresh follow-up verification:
+
+- `pnpm --dir apps/www exec vitest run` — 33 files, 221/221 passed;
+- `pnpm --dir apps/www exec tsc --noEmit` — passed;
+- `pnpm --dir e2e exec tsc --noEmit` — passed;
+- `pnpm --dir apps/www build` — passed with only the existing >500 kB advisory;
+- production matrix — 156/156 production plus 60/60 immutable-source reference/pairs passed after the final copy repair;
+- `pnpm audit:public-output` — `[]`;
+- `pnpm test:public-output-policy` — 36/36 passed;
+- `pnpm verify:public-output-release`, site-manifest audit, and legacy-marketing audit — passed.
+
+Full-page privacy evidence is stored under `task-5-review/privacy-full`: EN 1440 `1440×1826`, EN 390 `390×2368`, ZH 1440 `1440×1540`, and ZH 390 `390×1971`. All four were inspected at original detail; each reports `scrollWidth === clientWidth`, and no overlap, clipping, generic closing stack, or unreadable source link was found. The corresponding four-width first views are in `task-5-captures/first-view`.
+
 ## Remaining risks
 
 - Fourteen read-only e2e assertions remain intentionally stale; changing production to satisfy them would reintroduce rejected localization, layout, selector, or glyph behavior.
 - The external binding path is machine-specific by design. The runner fails closed on its SHA; a new machine must provision that reviewed source at the recorded path before regenerating reference evidence.
 - The selected warm-office derivative is larger than its source, but it is not referenced by a current route and does not increase current route payloads.
 - The production bundle continues to emit the pre-existing >500 kB advisory.
+- Privacy/deletion handling is intentionally manual; operational completion depends on an authorized operator following the recorded SOP and on the record controls available in the recipient mailbox and Resend account.
 - No push or deployment was performed.

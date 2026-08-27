@@ -187,8 +187,13 @@ describe("Site 06 中国站", () => {
 		expect(privacy).toContain("Resend");
 		expect(privacy).toContain("邮件处理者");
 		expect(privacy).toContain("理解并回复这次咨询");
-		expect(privacy).toContain("合理所需的期限内保留");
-		expect(privacy).toContain('href="/zh/diagnostic"');
+		expect(privacy).toContain("人工核对并处理");
+		expect(privacy).toContain("相同的联系信息和公司信息");
+		expect(privacy).toContain("不会自动删除");
+		expect(privacy).toContain("美国处理和存储");
+		expect(privacy).toContain('href="https://resend.com/docs/dashboard/domains/regions"');
+		expect(privacy).toContain('href="https://resend.com/legal/dpa"');
+		expect(privacy).toContain('href="/zh/diagnostic?intent=privacy"');
 		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 	});
 
