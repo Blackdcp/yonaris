@@ -85,6 +85,85 @@ export const LANGUAGE_SMOKE_RUNS = {
   en: "00000000-0000-4000-8000-710000000022",
 } as const;
 
+export const LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE = {
+  brand: LANGUAGE_SMOKE_BRAND_NAME,
+  competitor: "原始竞品 / Raw Rival",
+  prompt: {
+    id: LANGUAGE_SMOKE_PROMPTS.cn.id,
+    text: LANGUAGE_SMOKE_PROMPTS.cn.value,
+  },
+  yourCitation: {
+    title: `${LANGUAGE_SMOKE_BRAND_NAME} / Raw Brand Evidence`,
+    domain: "language-smoke.example.cn",
+    url: LANGUAGE_SMOKE_BRAND_WEBSITE,
+  },
+  competitorCitation: {
+    title: "原始竞品 / Raw Rival",
+    domain: "raw-rival.example",
+    url: "https://raw-rival.example/evidence?source=language-smoke#unchanged",
+  },
+} as const;
+
+export const LANGUAGE_SMOKE_OPPORTUNITIES = {
+  en: {
+    id: "00000000-0000-4000-8000-720000000001",
+    brandId: LANGUAGE_SMOKE_BRAND_ID,
+    scopeId: LANGUAGE_SMOKE_SCOPES.cn.id,
+    outputLanguage: "en",
+    report: {
+      summary: ["English model summary: earn trusted third-party coverage."],
+      opportunities: [
+        {
+          category: "creation",
+          title: "English model opportunity: win the family EV comparison",
+          why: "English model rationale: trusted citations can improve answer presence.",
+          relatedPrompts: [
+            {
+              promptId: LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.id,
+              text: LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.text,
+            },
+          ],
+          yourCitations: [LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.yourCitation],
+          competitorCitations: [LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitorCitation],
+        },
+      ],
+      risks: ["English model risk: editorial placements are not guaranteed."],
+    },
+    model: "e2e-fixed-opportunity",
+    createdAt: "2026-08-20T08:00:00.000Z",
+  },
+  "zh-CN": {
+    id: "00000000-0000-4000-8000-720000000002",
+    brandId: LANGUAGE_SMOKE_BRAND_ID,
+    scopeId: LANGUAGE_SMOKE_SCOPES.cn.id,
+    outputLanguage: "zh-CN",
+    report: {
+      summary: ["中文模型摘要：争取可信的第三方内容收录。"],
+      opportunities: [
+        {
+          category: "creation",
+          title: "中文模型机会：进入家庭新能源车对比内容",
+          why: "中文模型理由：可信引用有助于提升品牌在 AI 回答中的呈现。",
+          relatedPrompts: [
+            {
+              promptId: LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.id,
+              text: LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.text,
+            },
+          ],
+          yourCitations: [LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.yourCitation],
+          competitorCitations: [LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitorCitation],
+        },
+      ],
+      risks: ["中文模型风险：编辑收录无法保证。"],
+    },
+    model: "e2e-fixed-opportunity",
+    createdAt: "2026-08-20T08:01:00.000Z",
+  },
+} as const;
+
+export const LANGUAGE_SMOKE_OPPORTUNITY_STORAGE_KEY =
+  `yonaris:artifact-output-language:v1:opportunities-customer:${LANGUAGE_SMOKE_BRAND_ID}:${LANGUAGE_SMOKE_SCOPES.cn.id}`;
+
 export const STEPFUN_ORG_ID = "stepfun-e2e-org";
 export const STEPFUN_BRAND_ID = "stepfun-e2e";
 export const STEPFUN_BRAND_NAME = "StepFun";

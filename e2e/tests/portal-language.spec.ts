@@ -2,6 +2,9 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   LANGUAGE_SMOKE_BRAND_ID,
   LANGUAGE_SMOKE_BRAND_NAME,
+  LANGUAGE_SMOKE_OPPORTUNITIES,
+  LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE,
+  LANGUAGE_SMOKE_OPPORTUNITY_STORAGE_KEY,
   LANGUAGE_SMOKE_PROMPTS,
   LANGUAGE_SMOKE_SCOPES,
   LANGUAGE_SMOKE_USER,
@@ -9,6 +12,38 @@ import {
 import { LANGUAGE_SMOKE_AUTH_STATE_PATH } from "../language-auth-setup";
 
 test.describe.configure({ mode: "serial" });
+
+type SmokeLanguage = "en" | "zh-CN";
+
+const OPPORTUNITY_LANGUAGE_COMBINATIONS = [
+  { uiLanguage: "en", artifactLanguage: "en" },
+  { uiLanguage: "zh-CN", artifactLanguage: "en" },
+  { uiLanguage: "zh-CN", artifactLanguage: "zh-CN" },
+  { uiLanguage: "en", artifactLanguage: "zh-CN" },
+] as const;
+
+const OPPORTUNITY_STATIC_COPY = {
+  en: {
+    selector: "Output language",
+    summary: "Summary",
+    category: "Content Creation (1)",
+    description: "New content to publish or earn for topics where your brand is absent.",
+    prompts: "Related Prompts",
+    yourCitations: "Your Citations",
+    competitorCitations: "Competitor Citations",
+    realityCheck: "Reality Check",
+  },
+  "zh-CN": {
+    selector: "输出语言",
+    summary: "摘要",
+    category: "内容创作 (1)",
+    description: "为品牌缺席的主题发布或赢得新的内容。",
+    prompts: "相关提示词",
+    yourCitations: "你的引用",
+    competitorCitations: "竞争对手引用",
+    realityCheck: "现实检验",
+  },
+} as const;
 
 async function chooseLanguage(page: Page, accessibleName: "English" | "简体中文", expectedLang: "en" | "zh-CN") {
   const exactUrl = page.url();
@@ -28,6 +63,11 @@ async function chooseLanguage(page: Page, accessibleName: "English" | "简体中
   await Promise.all([page.waitForEvent("load"), radio.check()]);
   await expect(page.locator("html")).toHaveAttribute("lang", expectedLang);
   expect(page.url()).toBe(exactUrl);
+}
+
+async function ensureUiLanguage(page: Page, expectedLang: SmokeLanguage) {
+  if ((await page.locator("html").getAttribute("lang")) === expectedLang) return;
+  await chooseLanguage(page, expectedLang === "en" ? "English" : "简体中文", expectedLang);
 }
 
 async function expectRawProgramValues(page: Page) {
@@ -77,6 +117,81 @@ async function expectRawSamplingSurface(
     new RegExp(LANGUAGE_SMOKE_BRAND_NAME),
   );
   await dialog.getByRole("button", { name: copy.cancel, exact: true }).click();
+}
+
+async function expectOpportunityLanguageCombination(
+  page: Page,
+  {
+    uiLanguage,
+    artifactLanguage,
+  }: {
+    uiLanguage: SmokeLanguage;
+    artifactLanguage: SmokeLanguage;
+  },
+) {
+  const staticCopy = OPPORTUNITY_STATIC_COPY[artifactLanguage];
+  const selectedVariant = LANGUAGE_SMOKE_OPPORTUNITIES[artifactLanguage];
+  const otherVariant = LANGUAGE_SMOKE_OPPORTUNITIES[artifactLanguage === "en" ? "zh-CN" : "en"];
+
+  await expect(page.locator("html")).toHaveAttribute("lang", uiLanguage);
+  await expect(page.getByLabel(OPPORTUNITY_STATIC_COPY[uiLanguage].selector, { exact: true })).toHaveValue(
+    artifactLanguage,
+  );
+  expect(
+    await page.evaluate(
+      (key) => window.sessionStorage.getItem(key),
+      LANGUAGE_SMOKE_OPPORTUNITY_STORAGE_KEY,
+    ),
+  ).toBe(artifactLanguage);
+
+  const report = page.locator('[data-slot="opportunities-report"]');
+  await expect(report).toHaveAttribute("lang", artifactLanguage);
+  await expect(report.getByText(staticCopy.summary, { exact: true })).toBeVisible();
+  await expect(report.getByRole("heading", { name: staticCopy.category, exact: true })).toBeVisible();
+  await expect(report.getByText(staticCopy.description, { exact: true })).toBeVisible();
+  await expect(report.getByText(selectedVariant.report.summary[0], { exact: true })).toBeVisible();
+  await expect(
+    report.getByRole("heading", { name: selectedVariant.report.opportunities[0].title, exact: true }),
+  ).toBeVisible();
+  await expect(report.getByText(selectedVariant.report.opportunities[0].why, { exact: true })).toBeVisible();
+  await expect(report.getByRole("heading", { name: staticCopy.realityCheck, exact: true })).toBeVisible();
+  await expect(report.getByText(selectedVariant.report.risks[0], { exact: true })).toBeVisible();
+  await expect(report.getByText(otherVariant.report.opportunities[0].title, { exact: true })).toHaveCount(0);
+
+  await report
+    .getByRole("button", { name: new RegExp(`^${staticCopy.prompts} \\(1\\)`) })
+    .click();
+  const promptLink = report.getByRole("link", {
+    name: LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.text,
+    exact: true,
+  });
+  await expect(promptLink).toBeVisible();
+  await expect(promptLink).toHaveAttribute(
+    "href",
+    `/app/${LANGUAGE_SMOKE_BRAND_ID}/prompts/${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.id}`,
+  );
+
+  await report
+    .getByRole("button", { name: new RegExp(`^${staticCopy.yourCitations} \\(1\\)`) })
+    .click();
+  const yourCitationLink = report.getByRole("link", {
+    name: `${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.yourCitation.title} · ${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.yourCitation.domain}`,
+    exact: true,
+  });
+  await expect(yourCitationLink).toBeVisible();
+  await expect(yourCitationLink).toContainText(LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.brand);
+  await expect(yourCitationLink).toHaveAttribute("href", LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.yourCitation.url);
+
+  await report
+    .getByRole("button", { name: new RegExp(`^${staticCopy.competitorCitations} \\(1\\)`) })
+    .click();
+  const citationLink = report.getByRole("link", {
+    name: `${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitorCitation.title} · ${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitorCitation.domain}`,
+    exact: true,
+  });
+  await expect(citationLink).toBeVisible();
+  await expect(citationLink).toContainText(LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitor);
+  await expect(citationLink).toHaveAttribute("href", LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.competitorCitation.url);
 }
 
 test.describe("complete bilingual portal coverage", () => {
@@ -155,6 +270,85 @@ test.describe("complete bilingual portal coverage", () => {
     await expect(page.getByRole("heading", { name: "项目" })).toBeVisible();
     await expectRawProgramValues(page);
     await chooseLanguage(page, "English", "en");
+  });
+
+  test("Opportunity UI and artifact languages stay independent across reloads with raw evidence unchanged", async ({
+    page,
+  }) => {
+    await page.goto(
+      `/app/${LANGUAGE_SMOKE_BRAND_ID}/opportunities` +
+        `?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#opportunity-language-matrix`,
+    );
+    await ensureUiLanguage(page, "en");
+
+    try {
+      await page.getByLabel("Output language", { exact: true }).selectOption("en");
+      await expectOpportunityLanguageCombination(page, OPPORTUNITY_LANGUAGE_COMBINATIONS[0]);
+
+      await chooseLanguage(page, "简体中文", "zh-CN");
+      await expectOpportunityLanguageCombination(page, OPPORTUNITY_LANGUAGE_COMBINATIONS[1]);
+
+      await page.getByLabel("输出语言", { exact: true }).selectOption("zh-CN");
+      await expectOpportunityLanguageCombination(page, OPPORTUNITY_LANGUAGE_COMBINATIONS[2]);
+
+      await chooseLanguage(page, "English", "en");
+      await expectOpportunityLanguageCombination(page, OPPORTUNITY_LANGUAGE_COMBINATIONS[3]);
+    } finally {
+      await ensureUiLanguage(page, "en");
+    }
+  });
+
+  test("selecting a missing Chinese Opportunity remains not_generated without a same-origin POST", async ({ page }) => {
+    await page.goto(
+      `/app/${LANGUAGE_SMOKE_BRAND_ID}/opportunities` +
+        `?scope=${LANGUAGE_SMOKE_SCOPES.en.id}#opportunity-not-generated`,
+    );
+    await ensureUiLanguage(page, "en");
+    await expect(
+      page.getByText("An administrator has not generated opportunities for this program yet.", { exact: true }),
+    ).toBeVisible();
+
+    const sameOriginPosts: string[] = [];
+    const origin = new URL(page.url()).origin;
+    await page.route(`${origin}/**`, async (route) => {
+      const request = route.request();
+      if (request.method() === "POST") {
+        sameOriginPosts.push(request.url());
+        await route.abort("blockedbyclient");
+        return;
+      }
+      await route.continue();
+    });
+
+    let responseBody = "";
+    const chineseRead = page.waitForResponse(async (response) => {
+      const request = response.request();
+      if (!response.ok() || request.method() !== "GET" || new URL(response.url()).origin !== origin) return false;
+      const candidateBody = await response.text().catch(() => "");
+      if (
+        candidateBody.includes("outputLanguage") &&
+        candidateBody.includes("zh-CN") &&
+        candidateBody.includes("not_generated")
+      ) {
+        responseBody = candidateBody;
+        return true;
+      }
+      return false;
+    });
+    await page.getByLabel("Output language", { exact: true }).selectOption("zh-CN");
+    await chineseRead;
+    expect(responseBody.includes("zh-CN")).toBe(true);
+    expect(responseBody.includes("not_generated")).toBe(true);
+    await expect(page.getByLabel("Output language", { exact: true })).toHaveValue("zh-CN");
+    const storageKey =
+      `yonaris:artifact-output-language:v1:opportunities-customer:${LANGUAGE_SMOKE_BRAND_ID}:` +
+      LANGUAGE_SMOKE_SCOPES.en.id;
+    expect(await page.evaluate((key) => window.sessionStorage.getItem(key), storageKey)).toBe("zh-CN");
+    await expect(
+      page.getByText("An administrator has not generated opportunities for this program yet.", { exact: true }),
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="opportunities-report"]')).toHaveCount(0);
+    expect(sameOriginPosts).toHaveLength(0);
   });
 
   test("query fan-out terminology switches without changing Prompt, query, scope, or URL", async ({ page }) => {

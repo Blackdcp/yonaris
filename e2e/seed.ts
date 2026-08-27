@@ -22,6 +22,7 @@ import {
   LANGUAGE_SMOKE_BRAND_ID,
   LANGUAGE_SMOKE_BRAND_NAME,
   LANGUAGE_SMOKE_BRAND_WEBSITE,
+  LANGUAGE_SMOKE_OPPORTUNITIES,
   LANGUAGE_SMOKE_ORG_ID,
   LANGUAGE_SMOKE_PROMPTS,
   LANGUAGE_SMOKE_RUNS,
@@ -91,6 +92,7 @@ async function seed() {
         delivery_tasks,
         delivery_batches,
         observation_attempts,
+        brand_opportunities,
         prompts,
         measurement_scopes,
         competitors,
@@ -179,7 +181,32 @@ async function seed() {
         ],
       );
     }
-    console.log("  Created dedicated bilingual smoke workspace (2 Programs, 2 Prompts, 2 runs)");
+    const englishOpportunity = LANGUAGE_SMOKE_OPPORTUNITIES.en;
+    const chineseOpportunity = LANGUAGE_SMOKE_OPPORTUNITIES["zh-CN"];
+    await client.query(
+      `INSERT INTO brand_opportunities
+       (id, brand_id, scope_id, output_language, report, model, created_at)
+       VALUES
+         ($1, $2, $3, $4, $5::json, $6, $7::timestamptz),
+         ($8, $9, $10, $11, $12::json, $13, $14::timestamptz)`,
+      [
+        englishOpportunity.id,
+        englishOpportunity.brandId,
+        englishOpportunity.scopeId,
+        englishOpportunity.outputLanguage,
+        JSON.stringify(englishOpportunity.report),
+        englishOpportunity.model,
+        englishOpportunity.createdAt,
+        chineseOpportunity.id,
+        chineseOpportunity.brandId,
+        chineseOpportunity.scopeId,
+        chineseOpportunity.outputLanguage,
+        JSON.stringify(chineseOpportunity.report),
+        chineseOpportunity.model,
+        chineseOpportunity.createdAt,
+      ],
+    );
+    console.log("  Created dedicated bilingual smoke workspace (2 Programs, 2 Prompts, 2 runs, 2 reports)");
 
     // -----------------------------------------------------------------------
     // Dedicated customer workspaces used by the real-identity boundary E2E.
