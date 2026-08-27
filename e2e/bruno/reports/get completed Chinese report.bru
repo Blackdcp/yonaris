@@ -1,11 +1,11 @@
 meta {
-  name: get completed English report
+  name: get completed Simplified Chinese report
   type: http
-  seq: 12
+  seq: 13
 }
 
 get {
-  url: {{baseUrl}}/api/v1/reports/{{completedReportId}}
+  url: {{baseUrl}}/api/v1/reports/{{chineseLanguageReportId}}
   body: none
   auth: inherit
 }
@@ -13,7 +13,7 @@ get {
 assert {
   res.status: eq 200
   res.body.status: eq completed
-  res.body.outputLanguage: eq en
+  res.body.outputLanguage: eq zh-CN
   res.body.prompts: isArray
   res.body.prompts[0].promptValue: eq 原始 Prompt / Raw Prompt 01
   res.body.prompts[0].mentions.mentionsTopK[0].entity: eq 原始竞品 / Raw Rival

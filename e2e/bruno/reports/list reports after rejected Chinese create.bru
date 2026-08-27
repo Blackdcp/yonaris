@@ -1,0 +1,35 @@
+meta {
+  name: rejected Chinese create has no persisted report
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/v1/reports?limit=100
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.reports: isArray
+}
+
+tests {
+  test("only the omitted and explicit English requests persisted", function() {
+    const reports = res.getBody().reports;
+    expect(reports.find(report => report.brandName === "Bruno Omitted Language Report"))
+      .to.have.property("outputLanguage", "en");
+    expect(reports.find(report => report.brandName === "Bruno Explicit English Report"))
+      .to.have.property("outputLanguage", "en");
+    for (const rejectedBrand of [
+      "Bruno Rejected Chinese Report",
+      "Bruno Invalid zh Report",
+      "Bruno Invalid CN Report",
+      "Bruno Invalid zh-SG Report"
+    ]) {
+      const rejected = reports.some(report => report.brandName === rejectedBrand);
+      expect(rejected, `${rejectedBrand} must not be persisted`).to.equal(false);
+    }
+  });
+}

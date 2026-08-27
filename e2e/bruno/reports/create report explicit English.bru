@@ -1,7 +1,7 @@
 meta {
-  name: create report defaults omitted output language to English
+  name: create report with explicit English output
   type: http
-  seq: 2
+  seq: 4
 }
 
 post {
@@ -12,8 +12,9 @@ post {
 
 body:json {
   {
-    "brandName": "Bruno Omitted Language Report",
-    "brandWebsite": "https://example.com"
+    "brandName": "Bruno Explicit English Report",
+    "brandWebsite": "https://example.com",
+    "outputLanguage": "en"
   }
 }
 
@@ -25,5 +26,5 @@ assert {
 }
 
 script:post-response {
-  bru.setVar("createdReportId", res.getBody().reportId);
+  bru.setVar("createdEnglishReportId", res.getBody().reportId);
 }

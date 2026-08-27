@@ -14,4 +14,6 @@ assert {
   res.status: eq 200
   res.body.reportId: eq {{createdReportId}}
   res.body.status: eq pending
+  res.body.brandName: eq Bruno Omitted Language Report
+  res.body.outputLanguage: eq en
 }

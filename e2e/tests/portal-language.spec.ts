@@ -6,6 +6,7 @@ import {
   LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE,
   LANGUAGE_SMOKE_OPPORTUNITY_STORAGE_KEY,
   LANGUAGE_SMOKE_PROMPTS,
+  LANGUAGE_SMOKE_REPORT_STORAGE_KEY,
   LANGUAGE_SMOKE_SCOPES,
   LANGUAGE_SMOKE_USER,
 } from "../fixtures";
@@ -20,6 +21,13 @@ const OPPORTUNITY_LANGUAGE_COMBINATIONS = [
   { uiLanguage: "zh-CN", artifactLanguage: "en" },
   { uiLanguage: "zh-CN", artifactLanguage: "zh-CN" },
   { uiLanguage: "en", artifactLanguage: "zh-CN" },
+] as const;
+
+const REPORT_LANGUAGE_COMBINATIONS = [
+  { uiLanguage: "en", artifactLanguage: "en", selector: "Output language" },
+  { uiLanguage: "en", artifactLanguage: "zh-CN", selector: "Output language" },
+  { uiLanguage: "zh-CN", artifactLanguage: "zh-CN", selector: "输出语言" },
+  { uiLanguage: "zh-CN", artifactLanguage: "en", selector: "输出语言" },
 ] as const;
 
 const OPPORTUNITY_STATIC_COPY = {
@@ -76,6 +84,29 @@ async function expectRawProgramValues(page: Page) {
     await expect(page.getByText(`${scope.market} / ${scope.locale}`, { exact: true })).toBeVisible();
     await expect(page.getByText(scope.timezone, { exact: true })).toBeVisible();
   }
+}
+
+async function expectReportLanguageCombination(
+  page: Page,
+  combination: (typeof REPORT_LANGUAGE_COMBINATIONS)[number],
+) {
+  await expect(page.locator("html")).toHaveAttribute("lang", combination.uiLanguage);
+  const selector = page.getByLabel(combination.selector, { exact: true });
+  await expect(selector).toBeEnabled();
+  await expect(selector).toHaveValue(combination.artifactLanguage);
+  await expect
+    .poll(() =>
+      page.evaluate((key) => window.sessionStorage.getItem(key), LANGUAGE_SMOKE_REPORT_STORAGE_KEY),
+    )
+    .toBe(combination.artifactLanguage);
+}
+
+async function reloadAndExpectReportLanguageCombination(
+  page: Page,
+  combination: (typeof REPORT_LANGUAGE_COMBINATIONS)[number],
+) {
+  await page.reload();
+  await expectReportLanguageCombination(page, combination);
 }
 
 async function ensurePromptExpanded(page: Page, prompt: string) {
@@ -293,6 +324,32 @@ test.describe("complete bilingual portal coverage", () => {
 
       await chooseLanguage(page, "English", "en");
       await expectOpportunityLanguageCombination(page, OPPORTUNITY_LANGUAGE_COMBINATIONS[3]);
+    } finally {
+      await ensureUiLanguage(page, "en");
+    }
+  });
+
+  test("Report creation UI and output languages stay independent across full reloads", async ({ page }) => {
+    await page.goto("/reports#report-language-matrix");
+    await ensureUiLanguage(page, "en");
+
+    try {
+      await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[0]);
+
+      await page.getByLabel("Output language", { exact: true }).selectOption("zh-CN");
+      await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[1]);
+      await reloadAndExpectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[1]);
+
+      await chooseLanguage(page, "简体中文", "zh-CN");
+      await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[2]);
+      await reloadAndExpectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[2]);
+
+      await page.getByLabel("输出语言", { exact: true }).selectOption("en");
+      await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[3]);
+      await reloadAndExpectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[3]);
+
+      await chooseLanguage(page, "English", "en");
+      await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[0]);
     } finally {
       await ensureUiLanguage(page, "en");
     }

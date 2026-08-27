@@ -1,0 +1,23 @@
+meta {
+  name: reject invalid CN report language
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/reports
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "brandName": "Bruno Invalid CN Report",
+    "brandWebsite": "https://example.com",
+    "outputLanguage": "CN"
+  }
+}
+
+assert {
+  res.status: eq 400
+}

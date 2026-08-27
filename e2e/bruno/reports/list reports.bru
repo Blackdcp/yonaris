@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{baseUrl}}/api/v1/reports
+  url: {{baseUrl}}/api/v1/reports?limit=100
   body: none
   auth: inherit
 }
@@ -14,5 +14,15 @@ assert {
   res.status: eq 200
   res.body.reports: isArray
   res.body.pagination: isDefined
-  res.body.pagination.total: gte 4
+  res.body.pagination.total: gte 5
+}
+
+tests {
+  test("list exposes each seeded report's persisted output language", function() {
+    const reports = res.getBody().reports;
+    const english = reports.find(report => report.id === "00000000-0000-0000-0000-300000000001");
+    const chinese = reports.find(report => report.id === "00000000-0000-0000-0000-300000000005");
+    expect(english).to.have.property("outputLanguage", "en");
+    expect(chinese).to.have.property("outputLanguage", "zh-CN");
+  });
 }

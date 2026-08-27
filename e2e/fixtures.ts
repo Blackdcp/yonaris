@@ -219,7 +219,81 @@ export const REPORT_IDS = {
   pending: "00000000-0000-0000-0000-300000000002",
   processing: "00000000-0000-0000-0000-300000000003",
   failed: "00000000-0000-0000-0000-300000000004",
+  languageZh: "00000000-0000-0000-0000-300000000005",
 } as const;
+
+export const LANGUAGE_SMOKE_REPORT_EVIDENCE = {
+  brand: TEST_BRAND_NAME,
+  competitor: "原始竞品 / Raw Rival",
+  prompt: {
+    id: "00000000-0000-4000-8000-730000000001",
+    text: "原始 Prompt / Raw Prompt 01",
+  },
+  query: "原始检索词 / Raw Query 01",
+  answer: "原始回答 / Raw answer 01",
+  citation: {
+    title: "原始证据 / Raw Evidence",
+    domain: "raw-evidence.example",
+    url: "https://raw-evidence.example/report?source=language-smoke#unchanged",
+  },
+} as const;
+
+export const LANGUAGE_SMOKE_REPORT_RAW_OUTPUT = {
+  competitors: [
+    {
+      name: LANGUAGE_SMOKE_REPORT_EVIDENCE.competitor,
+      domain: "raw-rival.example",
+    },
+  ],
+  prompts: [
+    {
+      brandId: TEST_BRAND_ID,
+      value: LANGUAGE_SMOKE_REPORT_EVIDENCE.prompt.text,
+      enabled: true,
+      tags: [],
+      systemTags: ["branded"],
+    },
+  ],
+  promptRuns: [
+    {
+      promptValue: LANGUAGE_SMOKE_REPORT_EVIDENCE.prompt.text,
+      runs: [
+        {
+          model: "e2e-raw-model",
+          version: "e2e-fixed-report",
+          webSearchEnabled: true,
+          rawOutput: {
+            promptId: LANGUAGE_SMOKE_REPORT_EVIDENCE.prompt.id,
+            citation: LANGUAGE_SMOKE_REPORT_EVIDENCE.citation,
+          },
+          webQueries: [LANGUAGE_SMOKE_REPORT_EVIDENCE.query],
+          textContent: LANGUAGE_SMOKE_REPORT_EVIDENCE.answer,
+          brandMentioned: true,
+          competitorsMentioned: [LANGUAGE_SMOKE_REPORT_EVIDENCE.competitor],
+        },
+      ],
+    },
+  ],
+} as const;
+
+export const LANGUAGE_SMOKE_REPORTS = {
+  en: {
+    id: REPORT_IDS.completed,
+    brandName: TEST_BRAND_NAME,
+    brandWebsite: TEST_BRAND_WEBSITE,
+    outputLanguage: "en",
+    createdAt: "2026-08-20T09:00:00.000Z",
+  },
+  "zh-CN": {
+    id: REPORT_IDS.languageZh,
+    brandName: TEST_BRAND_NAME,
+    brandWebsite: TEST_BRAND_WEBSITE,
+    outputLanguage: "zh-CN",
+    createdAt: "2026-08-20T09:01:00.000Z",
+  },
+} as const;
+
+export const LANGUAGE_SMOKE_REPORT_STORAGE_KEY = "yonaris:artifact-output-language:v1:report-create";
 
 // Second tenant — a brand in an org the E2E user is NOT a member of.
 export const NIKE_ORG_ID = "nike";

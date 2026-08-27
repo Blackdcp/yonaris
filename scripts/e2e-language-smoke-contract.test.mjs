@@ -134,6 +134,61 @@ test("opportunity fixtures pin two language variants to one Program and byte-ide
 	);
 });
 
+test("report fixtures pin persisted English and Chinese rows to byte-identical raw evidence", () => {
+	assert.deepEqual(fixtures.LANGUAGE_SMOKE_REPORT_EVIDENCE, {
+		brand: "Test Organization",
+		competitor: "原始竞品 / Raw Rival",
+		prompt: {
+			id: "00000000-0000-4000-8000-730000000001",
+			text: "原始 Prompt / Raw Prompt 01",
+		},
+		query: "原始检索词 / Raw Query 01",
+		answer: "原始回答 / Raw answer 01",
+		citation: {
+			title: "原始证据 / Raw Evidence",
+			domain: "raw-evidence.example",
+			url: "https://raw-evidence.example/report?source=language-smoke#unchanged",
+		},
+	});
+
+	const english = fixtures.LANGUAGE_SMOKE_REPORTS?.en;
+	const chinese = fixtures.LANGUAGE_SMOKE_REPORTS?.["zh-CN"];
+	assert.deepEqual(
+		[english?.id, chinese?.id],
+		["00000000-0000-0000-0000-300000000001", "00000000-0000-0000-0000-300000000005"],
+	);
+	assert.deepEqual([english?.outputLanguage, chinese?.outputLanguage], ["en", "zh-CN"]);
+	assert.deepEqual([english?.createdAt, chinese?.createdAt], ["2026-08-20T09:00:00.000Z", "2026-08-20T09:01:00.000Z"]);
+	assert.equal(english?.brandName, fixtures.LANGUAGE_SMOKE_REPORT_EVIDENCE.brand);
+	assert.equal(chinese?.brandName, english?.brandName);
+	assert.equal(chinese?.brandWebsite, english?.brandWebsite);
+
+	const rawOutput = fixtures.LANGUAGE_SMOKE_REPORT_RAW_OUTPUT;
+	assert.equal(rawOutput?.prompts[0].value, fixtures.LANGUAGE_SMOKE_REPORT_EVIDENCE.prompt.text);
+	assert.equal(rawOutput?.promptRuns[0].promptValue, fixtures.LANGUAGE_SMOKE_REPORT_EVIDENCE.prompt.text);
+	assert.deepEqual(rawOutput?.promptRuns[0].runs[0], {
+		model: "e2e-raw-model",
+		version: "e2e-fixed-report",
+		webSearchEnabled: true,
+		rawOutput: {
+			promptId: "00000000-0000-4000-8000-730000000001",
+			citation: {
+				title: "原始证据 / Raw Evidence",
+				domain: "raw-evidence.example",
+				url: "https://raw-evidence.example/report?source=language-smoke#unchanged",
+			},
+		},
+		webQueries: ["原始检索词 / Raw Query 01"],
+		textContent: "原始回答 / Raw answer 01",
+		brandMentioned: true,
+		competitorsMentioned: ["原始竞品 / Raw Rival"],
+	});
+	assert.equal(
+		fixtures.LANGUAGE_SMOKE_REPORT_STORAGE_KEY,
+		"yonaris:artifact-output-language:v1:report-create",
+	);
+});
+
 test("opportunity seed resets the table and inserts only deterministic columns and values", () => {
 	const source = read("e2e/seed.ts");
 	assert.match(source, /TRUNCATE TABLE[\s\S]*?brand_opportunities,[\s\S]*?brands/u);
@@ -144,6 +199,65 @@ test("opportunity seed resets the table and inserts only deterministic columns a
 	assert.ok(insert, "missing the exact deterministic two-row brand_opportunities insert");
 	assert.doesNotMatch(insert, /NOW\(|gen_random_uuid/u);
 	assert.match(source, /LANGUAGE_SMOKE_OPPORTUNITIES\["zh-CN"\]/u);
+});
+
+test("report seed inserts the two persisted language rows with deterministic SQL", () => {
+	const source = read("e2e/seed.ts");
+	assert.match(source, /TRUNCATE TABLE[\s\S]*?reports,[\s\S]*?brands/u);
+	const insert = source.match(
+		/INSERT INTO reports[\s\S]*?\(id, brand_name, brand_website, status, progress, output_language, raw_output,[\s\S]*?created_at, completed_at, updated_at\)[\s\S]*?VALUES\s*\(\$1, \$2, \$3, 'completed', 100, \$4, \$5::json, \$6::timestamptz,[\s\S]*?\$6::timestamptz, \$6::timestamptz\),\s*\(\$7, \$8, \$9, 'completed', 100, \$10, \$11::json, \$12::timestamptz,[\s\S]*?\$12::timestamptz, \$12::timestamptz\)/u,
+	)?.[0];
+	assert.ok(insert, "missing the exact deterministic two-row report language insert");
+	assert.doesNotMatch(insert, /NOW\(|gen_random_uuid/u);
+	assert.match(source, /LANGUAGE_SMOKE_REPORTS\["zh-CN"\]/u);
+	assert.equal(source.match(/JSON\.stringify\(LANGUAGE_SMOKE_REPORT_RAW_OUTPUT\)/gu)?.length, 2);
+});
+
+test("Bruno report contracts cover legacy default, explicit values, the write gate, and persisted reads", () => {
+	const legacyCreate = read("e2e/bruno/reports/create report.bru");
+	const legacyBody = legacyCreate.match(/body:json \{[\s\S]*?\n\}/u)?.[0];
+	assert.ok(legacyBody, "missing legacy report request body");
+	assert.doesNotMatch(legacyBody, /outputLanguage/u);
+	assert.match(legacyCreate, /res\.body\.outputLanguage: eq en/u);
+
+	const explicitEnglish = read("e2e/bruno/reports/create report explicit English.bru");
+	assert.match(explicitEnglish, /"outputLanguage": "en"/u);
+	assert.match(explicitEnglish, /res\.body\.outputLanguage: eq en/u);
+
+	const disabledChinese = read("e2e/bruno/reports/create report Simplified Chinese disabled 503.bru");
+	assert.match(disabledChinese, /"outputLanguage": "zh-CN"/u);
+	assert.match(disabledChinese, /res\.status: eq 503/u);
+	assert.match(disabledChinese, /res\.body\.code: eq report-output-language-temporarily-unavailable/u);
+
+	for (const invalid of ["zh", "CN", "zh-SG"]) {
+		const source = read(`e2e/bruno/reports/create report invalid ${invalid} 400.bru`);
+		assert.equal(source.includes(`"outputLanguage": "${invalid}"`), true);
+		assert.match(source, /res\.status: eq 400/u);
+	}
+
+	const rejectedRead = read("e2e/bruno/reports/list reports after rejected Chinese create.bru");
+	for (const rejectedBrand of [
+		"Bruno Rejected Chinese Report",
+		"Bruno Invalid zh Report",
+		"Bruno Invalid CN Report",
+		"Bruno Invalid zh-SG Report",
+	]) {
+		assert.match(rejectedRead, new RegExp(rejectedBrand, "u"));
+	}
+	assert.match(rejectedRead, /const rejected = reports\.some\([\s\S]*?expect\(rejected,[\s\S]*?\.to\.equal\(false\)/u);
+
+	const list = read("e2e/bruno/reports/list reports.bru");
+	assert.match(list, /00000000-0000-0000-0000-300000000001[\s\S]*?outputLanguage", "en"/u);
+	assert.match(list, /00000000-0000-0000-0000-300000000005[\s\S]*?outputLanguage", "zh-CN"/u);
+	for (const [file, language] of [
+		["e2e/bruno/reports/get completed report.bru", "en"],
+		["e2e/bruno/reports/get completed Chinese report.bru", "zh-CN"],
+	]) {
+		const source = read(file);
+		assert.match(source, new RegExp(`res\\.body\\.outputLanguage: eq ${language}`, "u"));
+		assert.match(source, /res\.body\.prompts\[0\]\.promptValue: eq 原始 Prompt \/ Raw Prompt 01/u);
+		assert.match(source, /res\.body\.prompts\[0\]\.mentions\.mentionsTopK\[0\]\.entity: eq 原始竞品 \/ Raw Rival/u);
+	}
 });
 
 test("opportunity browser smoke covers the four independent language combinations and read-only empty state", () => {
@@ -172,15 +286,33 @@ test("opportunity browser smoke covers the four independent language combination
 	assert.match(source, /finally/u);
 });
 
+test("report browser smoke covers four independent UI and output-language combinations across reloads", () => {
+	const source = read("e2e/tests/portal-language.spec.ts");
+	for (const combination of [
+		'{ uiLanguage: "en", artifactLanguage: "en", selector: "Output language" }',
+		'{ uiLanguage: "en", artifactLanguage: "zh-CN", selector: "Output language" }',
+		'{ uiLanguage: "zh-CN", artifactLanguage: "zh-CN", selector: "输出语言" }',
+		'{ uiLanguage: "zh-CN", artifactLanguage: "en", selector: "输出语言" }',
+	]) {
+		assert.equal(source.includes(combination), true, `missing report language combination: ${combination}`);
+	}
+	assert.match(source, /LANGUAGE_SMOKE_REPORT_STORAGE_KEY/u);
+	assert.match(source, /sessionStorage\.getItem\(key\)/u);
+	assert.match(source, /reloadAndExpectReportLanguageCombination\(page, REPORT_LANGUAGE_COMBINATIONS\[1\]\)/u);
+	assert.match(source, /reloadAndExpectReportLanguageCombination\(page, REPORT_LANGUAGE_COMBINATIONS\[3\]\)/u);
+	assert.match(source, /toBeEnabled\(\)/u);
+	assert.match(source, /toHaveAttribute\("lang", combination\.uiLanguage\)/u);
+});
+
 test("scheduled language smoke keeps Chinese writes off and provider work stubbed", () => {
 	const workflow = read(".github/workflows/e2e.yaml");
 	assert.match(workflow, /'ARTIFACT_ZH_CN_ENABLED=false'/u);
 	assert.match(workflow, /'ONBOARDING_LLM_TARGET=stub:stub'/u);
 });
 
-test("Opportunity selection ships as the exact web patch changeset", () => {
+test("Opportunity and report selection ship as the exact web patch changeset", () => {
 	assert.equal(
 		read(".changeset/select-opportunity-output-language.md"),
-		'---\n"@workspace/web": patch\n---\n\nLet Portal users independently select English or Simplified Chinese for Opportunity generation and viewing while preserving raw evidence.\n',
+		'---\n"@workspace/web": patch\n---\n\nLet Portal users select English or Simplified Chinese for Opportunities and reports independently of the interface language, while the report API preserves the chosen language and raw evidence.\n',
 	);
 });

@@ -1,0 +1,19 @@
+meta {
+  name: get explicitly English report
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/reports/{{createdEnglishReportId}}
+  body: none
+  auth: inherit
+}
+
+assert {
+  res.status: eq 200
+  res.body.reportId: eq {{createdEnglishReportId}}
+  res.body.status: eq pending
+  res.body.brandName: eq Bruno Explicit English Report
+  res.body.outputLanguage: eq en
+}

@@ -2,4 +2,4 @@
 "@workspace/web": patch
 ---
 
-Let Portal users independently select English or Simplified Chinese for Opportunity generation and viewing while preserving raw evidence.
+Let Portal users select English or Simplified Chinese for Opportunities and reports independently of the interface language, while the report API preserves the chosen language and raw evidence.

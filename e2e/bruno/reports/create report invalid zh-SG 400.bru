@@ -1,0 +1,23 @@
+meta {
+  name: reject invalid zh-SG report language
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/v1/reports
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "brandName": "Bruno Invalid zh-SG Report",
+    "brandWebsite": "https://example.com",
+    "outputLanguage": "zh-SG"
+  }
+}
+
+assert {
+  res.status: eq 400
+}

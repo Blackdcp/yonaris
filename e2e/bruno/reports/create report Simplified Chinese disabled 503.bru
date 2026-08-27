@@ -1,0 +1,26 @@
+meta {
+  name: reject Simplified Chinese report while writes are disabled
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/reports
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "brandName": "Bruno Rejected Chinese Report",
+    "brandWebsite": "https://example.com",
+    "outputLanguage": "zh-CN"
+  }
+}
+
+assert {
+  res.status: eq 503
+  res.body.error: eq Service Unavailable
+  res.body.code: eq report-output-language-temporarily-unavailable
+  res.body.reportId: isUndefined
+}

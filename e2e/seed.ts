@@ -25,6 +25,8 @@ import {
   LANGUAGE_SMOKE_OPPORTUNITIES,
   LANGUAGE_SMOKE_ORG_ID,
   LANGUAGE_SMOKE_PROMPTS,
+  LANGUAGE_SMOKE_REPORT_RAW_OUTPUT,
+  LANGUAGE_SMOKE_REPORTS,
   LANGUAGE_SMOKE_RUNS,
   LANGUAGE_SMOKE_SCOPES,
   LANGUAGE_SMOKE_USER,
@@ -584,37 +586,31 @@ async function seed() {
     // -----------------------------------------------------------------------
     // 6. Reports (mocked worker output — the worker itself is never invoked)
     // -----------------------------------------------------------------------
-    const completedReportRawOutput = {
-      competitors: [
-        { name: "Competitor Alpha", domain: "competitor-alpha.com" },
-        { name: "Competitor Beta", domain: "competitor-beta.com" },
-      ],
-      prompts: [
-        { brandId: REPORT_IDS.completed, value: "What is the best AI monitoring tool for tracking brand visibility?", enabled: true, tags: [], systemTags: ["branded"] },
-        { brandId: REPORT_IDS.completed, value: "Compare AI answer presence platforms and their features", enabled: true, tags: [], systemTags: ["unbranded"] },
-      ],
-      promptRuns: [
-        {
-          promptValue: "What is the best AI monitoring tool for tracking brand visibility?",
-          runs: [
-            { model: "chatgpt", version: "gpt-4o", webSearchEnabled: true, rawOutput: {}, webQueries: [], textContent: "Test Organization leads for AI brand monitoring.", brandMentioned: true, competitorsMentioned: ["Competitor Alpha"] },
-            { model: "claude", version: "claude-sonnet-4-6", webSearchEnabled: false, rawOutput: {}, webQueries: [], textContent: "Test Organization is a strong option.", brandMentioned: true, competitorsMentioned: [] },
-            { model: "google-ai-mode", version: "gemini-2.5-pro", webSearchEnabled: true, rawOutput: {}, webQueries: [], textContent: "Options include Competitor Alpha and Competitor Beta.", brandMentioned: false, competitorsMentioned: ["Competitor Alpha", "Competitor Beta"] },
-          ],
-        },
-        {
-          promptValue: "Compare AI answer presence platforms and their features",
-          runs: [
-            { model: "chatgpt", version: "gpt-4o", webSearchEnabled: false, rawOutput: {}, webQueries: [], textContent: "Test Organization stands out.", brandMentioned: true, competitorsMentioned: [] },
-          ],
-        },
-      ],
-    };
-
+    const englishLanguageReport = LANGUAGE_SMOKE_REPORTS.en;
+    const chineseLanguageReport = LANGUAGE_SMOKE_REPORTS["zh-CN"];
     await client.query(
-      `INSERT INTO reports (id, brand_name, brand_website, status, progress, raw_output, created_at, completed_at, updated_at)
-       VALUES ($1, $2, $3, 'completed', 100, $4, NOW(), NOW(), NOW())`,
-      [REPORT_IDS.completed, TEST_BRAND_NAME, TEST_BRAND_WEBSITE, JSON.stringify(completedReportRawOutput)],
+      `INSERT INTO reports
+       (id, brand_name, brand_website, status, progress, output_language, raw_output,
+        created_at, completed_at, updated_at)
+       VALUES
+         ($1, $2, $3, 'completed', 100, $4, $5::json, $6::timestamptz,
+          $6::timestamptz, $6::timestamptz),
+         ($7, $8, $9, 'completed', 100, $10, $11::json, $12::timestamptz,
+          $12::timestamptz, $12::timestamptz)`,
+      [
+        englishLanguageReport.id,
+        englishLanguageReport.brandName,
+        englishLanguageReport.brandWebsite,
+        englishLanguageReport.outputLanguage,
+        JSON.stringify(LANGUAGE_SMOKE_REPORT_RAW_OUTPUT),
+        englishLanguageReport.createdAt,
+        chineseLanguageReport.id,
+        chineseLanguageReport.brandName,
+        chineseLanguageReport.brandWebsite,
+        chineseLanguageReport.outputLanguage,
+        JSON.stringify(LANGUAGE_SMOKE_REPORT_RAW_OUTPUT),
+        chineseLanguageReport.createdAt,
+      ],
     );
 
     // Non-completed rows: exercise the status-only branch and list pagination.
@@ -624,12 +620,13 @@ async function seed() {
       [REPORT_IDS.failed, "failed", 20],
     ] as const) {
       await client.query(
-        `INSERT INTO reports (id, brand_name, brand_website, status, progress, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
+        `INSERT INTO reports
+         (id, brand_name, brand_website, status, progress, output_language, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'en', NOW(), NOW())`,
         [id, TEST_BRAND_NAME, TEST_BRAND_WEBSITE, status, progress],
       );
     }
-    console.log("  Created 4 reports (1 completed, 1 pending, 1 processing, 1 failed)");
+    console.log("  Created 5 reports (2 completed, 1 pending, 1 processing, 1 failed)");
 
     // -----------------------------------------------------------------------
     // 7. Second tenant (Nike) — a brand in an org the E2E user is NOT a
