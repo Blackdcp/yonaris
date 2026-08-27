@@ -7,31 +7,27 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import {
 	assertExistingReportMatches,
 	assessDatabaseReportCompletion,
+	buildDatabaseReportSummary,
 	DATABASE_REPORT_EXPECTED_RUNS,
+	DATABASE_REPORT_OUTPUT_LANGUAGE,
 	DATABASE_REPORT_TARGET,
 	type DatabaseReportRequest,
 	DatabaseReportRequestError,
+	type DatabaseReportSummaryState,
 	parseDatabaseReportCliOptions,
 	parseDatabaseReportRequest,
 	selectDeterministicPrompt,
 	selectExactlyOne,
 } from "./database-report-request";
+import { processFreshlyInsertedReport } from "./report-execution";
+import { reportExecutionStore } from "./report-execution-store";
 
 const REQUEST_DIRECTORY = resolve(__dirname, "report-requests");
 const MAX_REQUEST_BYTES = 16 * 1024;
 
 type ReportRow = typeof reports.$inferSelect;
 
-type SafeReportState = {
-	brandName: string;
-	promptCount: number | null;
-	competitorCount: number | null;
-	status: ReportRow["status"];
-	actualRuns: number | null;
-	createdAt: string | null;
-	completedAt: string | null;
-	updatedAt: string | null;
-};
+type SafeReportState = DatabaseReportSummaryState;
 
 class UnhealthyReportStateError extends DatabaseReportRequestError {
 	constructor(
@@ -55,6 +51,7 @@ function inspectReport(report: ReportRow): { healthy: boolean; state: SafeReport
 		healthy: assessment.healthy,
 		state: {
 			brandName: report.brandName,
+			outputLanguage: report.outputLanguage,
 			promptCount: assessment.promptCount,
 			competitorCount: assessment.competitorCount,
 			status: report.status,
@@ -63,25 +60,6 @@ function inspectReport(report: ReportRow): { healthy: boolean; state: SafeReport
 			completedAt: iso(report.completedAt),
 			updatedAt: iso(report.updatedAt),
 		},
-	};
-}
-
-function successfulSummary(request: DatabaseReportRequest, state: SafeReportState): Record<string, unknown> {
-	return {
-		ok: true,
-		requestId: request.requestId,
-		reportId: request.reportId,
-		brandName: state.brandName,
-		scopeKey: request.scope.keyExact,
-		promptCount: state.promptCount,
-		competitorCount: state.competitorCount,
-		target: request.execution.targets[0],
-		expectedRuns: DATABASE_REPORT_EXPECTED_RUNS,
-		status: state.status,
-		actualRuns: state.actualRuns,
-		createdAt: state.createdAt,
-		completedAt: state.completedAt,
-		updatedAt: state.updatedAt,
 	};
 }
 
@@ -230,6 +208,7 @@ async function resolveExecutionSnapshot(request: DatabaseReportRequest) {
 function dryRunState(snapshot: Awaited<ReturnType<typeof resolveExecutionSnapshot>>): SafeReportState {
 	return {
 		brandName: snapshot.brand.name,
+		outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 		promptCount: 1,
 		competitorCount: snapshot.competitorSnapshot.length,
 		status: "pending",
@@ -283,10 +262,16 @@ async function runReport(
 			id: request.reportId,
 			brandName: snapshot.brand.name,
 			brandWebsite: snapshot.brand.website,
+			outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 			status: "pending",
 		})
 		.onConflictDoNothing({ target: reports.id })
-		.returning({ id: reports.id });
+		.returning({
+			reportId: reports.id,
+			outputLanguage: reports.outputLanguage,
+			status: reports.status,
+			updatedAt: reports.updatedAt,
+		});
 	if (inserted.length !== 1) {
 		const existing = await findReport(request.reportId);
 		if (!existing) {
@@ -295,6 +280,7 @@ async function runReport(
 		assertExistingReportMatches(existing, {
 			brandName: snapshot.brand.name,
 			brandWebsite: snapshot.brand.website,
+			outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 		});
 		return existing;
 	}
@@ -302,23 +288,28 @@ async function runReport(
 	try {
 		await withSuppressedConsole(async () => {
 			const { processReportJob } = await import("./report-worker.js");
-			await processReportJob({
-				data: {
-					reportId: request.reportId,
-					brandName: snapshot.brand.name,
-					brandWebsite: snapshot.brand.website,
-					manualPrompts: [snapshot.prompt.value],
-					competitorSnapshot: snapshot.competitorSnapshot,
-					runsPerTargetOverride: 1,
-					expectedRunCount: DATABASE_REPORT_EXPECTED_RUNS,
-				},
-				log: () => undefined,
-				updateProgress: async (progress: number) => {
-					await db
-						.update(reports)
-						.set({ progress: Math.round(progress) })
-						.where(eq(reports.id, request.reportId));
-				},
+			await processFreshlyInsertedReport({
+				insertedRows: inserted,
+				expectedReportId: request.reportId,
+				expectedOutputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+				stateStore: reportExecutionStore,
+				now: () => new Date(),
+				process: async (claim) =>
+					processReportJob({
+						data: {
+							reportId: request.reportId,
+							brandName: snapshot.brand.name,
+							brandWebsite: snapshot.brand.website,
+							outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+							manualPrompts: [snapshot.prompt.value],
+							competitorSnapshot: snapshot.competitorSnapshot,
+							runsPerTargetOverride: 1,
+							expectedRunCount: DATABASE_REPORT_EXPECTED_RUNS,
+						},
+						claim,
+						stateStore: reportExecutionStore,
+						log: () => undefined,
+					}),
 			});
 		});
 	} catch {
@@ -360,7 +351,7 @@ async function main(): Promise<void> {
 		}
 		const inspection = inspectReport(report);
 		if (!inspection.healthy) throw new UnhealthyReportStateError(request, inspection.state);
-		process.stdout.write(`${JSON.stringify(successfulSummary(request, inspection.state))}\n`);
+		process.stdout.write(`${JSON.stringify(buildDatabaseReportSummary(request, inspection.state))}\n`);
 		return;
 	}
 
@@ -370,28 +361,31 @@ async function main(): Promise<void> {
 		assertExistingReportMatches(existing, {
 			brandName: snapshot.brand.name,
 			brandWebsite: snapshot.brand.website,
+			outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 		});
 		const inspection = inspectReport(existing);
 		if (!inspection.healthy) throw new UnhealthyReportStateError(request, inspection.state);
-		process.stdout.write(`${JSON.stringify(successfulSummary(request, inspection.state))}\n`);
+		process.stdout.write(`${JSON.stringify(buildDatabaseReportSummary(request, inspection.state))}\n`);
 		return;
 	}
 
 	if (options.mode === "dry-run") {
-		process.stdout.write(`${JSON.stringify(successfulSummary(request, dryRunState(snapshot)))}\n`);
+		process.stdout.write(`${JSON.stringify(buildDatabaseReportSummary(request, dryRunState(snapshot)))}\n`);
 		return;
 	}
 
 	const report = await runReport(request, snapshot);
 	const inspection = inspectReport(report);
 	if (!inspection.healthy) throw new UnhealthyReportStateError(request, inspection.state);
-	process.stdout.write(`${JSON.stringify(successfulSummary(request, inspection.state))}\n`);
+	process.stdout.write(`${JSON.stringify(buildDatabaseReportSummary(request, inspection.state))}\n`);
 }
 
 main().catch((error: unknown) => {
 	const known = error instanceof DatabaseReportRequestError;
 	const unhealthySummary =
-		error instanceof UnhealthyReportStateError ? { ...successfulSummary(error.request, error.state), ok: false } : null;
+		error instanceof UnhealthyReportStateError
+			? { ...buildDatabaseReportSummary(error.request, error.state), ok: false }
+			: null;
 	process.stderr.write(
 		`${JSON.stringify({
 			...(unhealthySummary ?? { ok: false }),

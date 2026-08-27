@@ -3,7 +3,10 @@ import { describe, it } from "node:test";
 import {
 	assertExistingReportMatches,
 	assessDatabaseReportCompletion,
+	buildDatabaseReportSummary,
+	DATABASE_REPORT_OUTPUT_LANGUAGE,
 	DATABASE_REPORT_TARGET,
+	type DatabaseReportRequest,
 	DatabaseReportRequestError,
 	parseDatabaseReportCliOptions,
 	parseDatabaseReportRequest,
@@ -12,7 +15,7 @@ import {
 
 const REPORT_ID = "47eeb1e1-7a75-4a76-b1bb-324b87d93034";
 
-const manifest = {
+const manifest: DatabaseReportRequest = {
 	schemaVersion: 1,
 	requestId: "mentensor-real-20260811",
 	reportId: REPORT_ID,
@@ -69,6 +72,45 @@ describe("database report request manifest", () => {
 			() => parseDatabaseReportRequest({ ...manifest, manualPrompts: ["secret"] }),
 			(error: unknown) => error instanceof DatabaseReportRequestError && error.code === "invalid_manifest_shape",
 		);
+		assert.throws(
+			() => parseDatabaseReportRequest({ ...manifest, outputLanguage: "zh-CN" }),
+			(error: unknown) => error instanceof DatabaseReportRequestError && error.code === "invalid_manifest_shape",
+		);
+	});
+});
+
+describe("database report receipt metadata", () => {
+	it("reports schema-version-1 database work as explicit English", () => {
+		assert.deepEqual(
+			buildDatabaseReportSummary(manifest, {
+				brandName: "MemTensor 原始品牌",
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+				promptCount: 1,
+				competitorCount: 2,
+				status: "completed",
+				actualRuns: 1,
+				createdAt: "2026-08-11T00:00:00.000Z",
+				completedAt: "2026-08-11T00:01:00.000Z",
+				updatedAt: "2026-08-11T00:01:00.000Z",
+			}),
+			{
+				ok: true,
+				requestId: "mentensor-real-20260811",
+				reportId: REPORT_ID,
+				brandName: "MemTensor 原始品牌",
+				outputLanguage: "en",
+				scopeKey: "legacy-unspecified",
+				promptCount: 1,
+				competitorCount: 2,
+				target: "chatgpt:brightdata:online",
+				expectedRuns: 1,
+				status: "completed",
+				actualRuns: 1,
+				createdAt: "2026-08-11T00:00:00.000Z",
+				completedAt: "2026-08-11T00:01:00.000Z",
+				updatedAt: "2026-08-11T00:01:00.000Z",
+			},
+		);
 	});
 });
 
@@ -109,8 +151,16 @@ describe("report UUID idempotency", () => {
 	it("accepts the same frozen brand snapshot as a no-op", () => {
 		assert.doesNotThrow(() =>
 			assertExistingReportMatches(
-				{ brandName: "Mentensor", brandWebsite: "https://mentensor.com" },
-				{ brandName: "Mentensor", brandWebsite: "https://mentensor.com" },
+				{
+					brandName: "Mentensor",
+					brandWebsite: "https://mentensor.com",
+					outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+				},
+				{
+					brandName: "Mentensor",
+					brandWebsite: "https://mentensor.com",
+					outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+				},
 			),
 		);
 	});
@@ -119,8 +169,35 @@ describe("report UUID idempotency", () => {
 		assert.throws(
 			() =>
 				assertExistingReportMatches(
-					{ brandName: "Another", brandWebsite: "https://another.example" },
-					{ brandName: "Mentensor", brandWebsite: "https://mentensor.com" },
+					{
+						brandName: "Another",
+						brandWebsite: "https://another.example",
+						outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+					},
+					{
+						brandName: "Mentensor",
+						brandWebsite: "https://mentensor.com",
+						outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+					},
+				),
+			(error: unknown) => error instanceof DatabaseReportRequestError && error.code === "report_id_conflict",
+		);
+	});
+
+	it("rejects a UUID reused for a different output language", () => {
+		assert.throws(
+			() =>
+				assertExistingReportMatches(
+					{
+						brandName: "Mentensor",
+						brandWebsite: "https://mentensor.com",
+						outputLanguage: "zh-CN",
+					},
+					{
+						brandName: "Mentensor",
+						brandWebsite: "https://mentensor.com",
+						outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
+					},
 				),
 			(error: unknown) => error instanceof DatabaseReportRequestError && error.code === "report_id_conflict",
 		);
@@ -156,6 +233,7 @@ describe("receipt replay completion checks", () => {
 				status: "completed",
 				completedAt: new Date("2026-08-11T00:00:00Z"),
 				rawOutput: JSON.stringify(completedOutput),
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 			}),
 			{ healthy: true, promptCount: 1, competitorCount: 1, actualRuns: 1 },
 		);
@@ -167,6 +245,7 @@ describe("receipt replay completion checks", () => {
 				status: "processing",
 				completedAt: null,
 				rawOutput: completedOutput,
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 			}).healthy,
 			false,
 		);
@@ -175,6 +254,7 @@ describe("receipt replay completion checks", () => {
 				status: "completed",
 				completedAt: new Date(),
 				rawOutput: "not-json",
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 			}).healthy,
 			false,
 		);
@@ -183,6 +263,7 @@ describe("receipt replay completion checks", () => {
 				status: "completed",
 				completedAt: new Date(),
 				rawOutput: { ...completedOutput, competitors: [] },
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 			}).healthy,
 			false,
 		);
@@ -190,6 +271,7 @@ describe("receipt replay completion checks", () => {
 			assessDatabaseReportCompletion({
 				status: "completed",
 				completedAt: new Date(),
+				outputLanguage: DATABASE_REPORT_OUTPUT_LANGUAGE,
 				rawOutput: {
 					...completedOutput,
 					promptRuns: [
@@ -199,6 +281,18 @@ describe("receipt replay completion checks", () => {
 						},
 					],
 				},
+			}).healthy,
+			false,
+		);
+	});
+
+	it("rejects an otherwise healthy schema-version-1 report stored as Chinese", () => {
+		assert.equal(
+			assessDatabaseReportCompletion({
+				status: "completed",
+				completedAt: new Date("2026-08-11T00:00:00Z"),
+				rawOutput: completedOutput,
+				outputLanguage: "zh-CN",
 			}).healthy,
 			false,
 		);

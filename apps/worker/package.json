@@ -18,12 +18,13 @@
 		"run:overseas-formal-one-shot": "tsx src/run-overseas-formal-one-shot.ts",
 		"import:reviewed-consumer-cohort": "tsx src/import-reviewed-consumer-cohort.ts",
 		"backfill:response-snapshots": "tsx src/backfill-response-snapshots.ts",
-		"test": "tsx --test src/local-admin-repair.test.ts src/database-report-request.test.ts src/customer-account-ops.test.ts src/local-demo-import-policy.test.ts src/local-demo-atomic-import-policy.test.ts src/reviewed-consumer-cohort-policy.test.ts src/reviewed-consumer-cohort-import-policy.test.ts src/program-locale-repair-policy.test.ts src/program-locale-repair-operation.test.ts src/program-import-policy.test.ts src/program-import-operation.test.ts src/sampling-batch-request.test.ts src/sampling-batch-operation.test.ts src/overseas-formal-readiness.test.ts src/overseas-formal-run-request.test.ts src/overseas-formal-run-policy.test.ts src/backfill-response-snapshots-policy.test.ts src/overseas-search-evidence-qualification.test.ts src/qualify-overseas-search-evidence.test.ts src/jobs/schedule-maintenance-policy.test.ts src/jobs/process-prompt-snapshot-policy.test.ts src/jobs/process-overseas-run-call.test.ts src/jobs/response-snapshot-maintenance-policy.test.ts src/jobs/response-snapshot-maintenance.test.ts",
+		"test": "tsx --test src/local-admin-repair.test.ts src/database-report-request.test.ts src/report-job-data.test.ts src/report-execution-store.test.ts src/report-execution.test.ts src/report-worker-claim.test.ts src/jobs/generate-report-language.test.ts src/customer-account-ops.test.ts src/local-demo-import-policy.test.ts src/local-demo-atomic-import-policy.test.ts src/reviewed-consumer-cohort-policy.test.ts src/reviewed-consumer-cohort-import-policy.test.ts src/program-locale-repair-policy.test.ts src/program-locale-repair-operation.test.ts src/program-import-policy.test.ts src/program-import-operation.test.ts src/sampling-batch-request.test.ts src/sampling-batch-operation.test.ts src/overseas-formal-readiness.test.ts src/overseas-formal-run-request.test.ts src/overseas-formal-run-policy.test.ts src/backfill-response-snapshots-policy.test.ts src/overseas-search-evidence-qualification.test.ts src/qualify-overseas-search-evidence.test.ts src/jobs/schedule-maintenance-policy.test.ts src/jobs/process-prompt-snapshot-policy.test.ts src/jobs/process-overseas-run-call.test.ts src/jobs/response-snapshot-maintenance-policy.test.ts src/jobs/response-snapshot-maintenance.test.ts",
 		"build": "tsc -p tsconfig.json",
 		"check-types": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sentry/node": "^10.66.0",
+		"@workspace/config": "workspace:*",
 		"@workspace/deployment": "workspace:*",
 		"@workspace/lib": "workspace:*",
 		"@workspace/whitelabel": "workspace:*",

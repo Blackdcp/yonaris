@@ -1,10 +1,11 @@
+import type { OutputLanguage } from "@workspace/config/language";
 import { getRunsPerPrompt } from "@workspace/lib/constants";
-import { db } from "@workspace/lib/db/db";
-import { reports } from "@workspace/lib/db/schema";
 import { analyzeBrand } from "@workspace/lib/onboarding";
-import { getProvider, type ModelConfig, parseScrapeTargets } from "@workspace/lib/providers";
+import { getProvider, type ModelConfig, type Provider, parseScrapeTargets } from "@workspace/lib/providers";
 import { computeSystemTags, isPromptBranded } from "@workspace/lib/tag-utils";
-import { eq } from "drizzle-orm";
+import { executeClaimedReport } from "./report-execution";
+import type { ReportExecutionClaim, ReportExecutionStore } from "./report-execution-store";
+import { buildManualReportCandidates, preserveProviderReportRun } from "./report-job-data";
 
 export interface CompetitorResult {
 	name: string;
@@ -52,9 +53,10 @@ export interface ReportJobData {
 	reportId: string;
 	brandName: string;
 	brandWebsite: string;
-	manualPrompts?: string[];
+	outputLanguage: OutputLanguage;
+	manualPrompts?: readonly string[];
 	/** Frozen database snapshot for controlled runs. Presence (including []) skips analyzeBrand entirely. */
-	competitorSnapshot?: CompetitorResult[];
+	competitorSnapshot?: readonly CompetitorResult[];
 	/** Internal account-ops override used by reviewed, budget-capped report manifests. */
 	runsPerTargetOverride?: number;
 	/** Fail the report before completion unless the final payload contains exactly this many runs. */
@@ -63,9 +65,24 @@ export interface ReportJobData {
 
 export interface ReportJobContext {
 	data: ReportJobData;
+	claim: ReportExecutionClaim;
+	stateStore: ReportExecutionStore;
 	log: (message: string) => void;
-	updateProgress: (progress: number) => void | Promise<void>;
 }
+
+export interface ReportWorkerDependencies {
+	analyzeBrand: typeof analyzeBrand;
+	parseScrapeTargets: (value?: string) => ModelConfig[];
+	getProvider: (provider: string) => Pick<Provider, "run">;
+	now: () => Date;
+}
+
+const productionDependencies: ReportWorkerDependencies = {
+	analyzeBrand,
+	parseScrapeTargets,
+	getProvider,
+	now: () => new Date(),
+};
 
 interface PromptRunResult {
 	promptValue: string;
@@ -73,7 +90,7 @@ interface PromptRunResult {
 		model: string;
 		version: string;
 		webSearchEnabled: boolean;
-		rawOutput: any;
+		rawOutput: unknown;
 		webQueries: string[];
 		textContent: string;
 		brandMentioned: boolean;
@@ -82,10 +99,27 @@ interface PromptRunResult {
 }
 
 interface ReportData {
-	competitors: CompetitorResult[];
+	competitors: readonly CompetitorResult[];
 	prompts: PromptData[];
 	promptRuns: PromptRunResult[];
 }
+
+async function settleAllOrThrowFirst<T>(promises: readonly Promise<T>[]): Promise<T[]> {
+	let firstObservedFailure: { reason: unknown } | undefined;
+	const tracked = promises.map((promise) =>
+		promise.catch((reason: unknown) => {
+			firstObservedFailure ??= { reason };
+			throw reason;
+		}),
+	);
+	const settled = await Promise.allSettled(tracked);
+	if (firstObservedFailure) throw firstObservedFailure.reason;
+	return settled.map((result) => (result as PromiseFulfilledResult<T>).value);
+}
+
+export type ReportProcessingResult =
+	| { success: true; reportId: string; outputLanguage: OutputLanguage }
+	| { success: false; reportId: string; outputLanguage: OutputLanguage; lostClaim: true };
 
 // Function to select optimal prompts from candidates based on test results
 function selectOptimalPrompts(
@@ -161,7 +195,8 @@ function selectOptimalPrompts(
 
 	// If we need more prompts or more brand mentions, add branded prompts
 	while (selectedPrompts.length < TARGET_PROMPTS_COUNT && brandedPrompts.length > 0) {
-		const prompt = brandedPrompts.shift()!;
+		const prompt = brandedPrompts.shift();
+		if (!prompt) break;
 		selectedPrompts.push(prompt.promptValue);
 		if (prompt.hasBrandMention) {
 			currentBrandMentions++;
@@ -179,7 +214,7 @@ function analyzeMentions(
 	content: string,
 	brandName: string,
 	brandWebsite: string,
-	competitors: CompetitorResult[],
+	competitors: readonly CompetitorResult[],
 ): {
 	brandMentioned: boolean;
 	competitorsMentioned: string[];
@@ -221,13 +256,14 @@ async function runPrompt(
 	promptValue: string,
 	brandName: string,
 	brandWebsite: string,
-	competitors: CompetitorResult[],
+	competitors: readonly CompetitorResult[],
 	scrapeConfigs: ModelConfig[],
 	job: ReportJobContext,
+	getProviderForReport: ReportWorkerDependencies["getProvider"],
 	runsPerTargetOverride?: number,
 ): Promise<PromptRunResult> {
 	const runOne = async (config: ModelConfig) => {
-		const providerImpl = getProvider(config.provider);
+		const providerImpl = getProviderForReport(config.provider);
 		const result = await providerImpl.run(config.model, promptValue, {
 			webSearch: config.webSearch,
 			version: config.version,
@@ -238,16 +274,15 @@ async function runPrompt(
 			brandWebsite,
 			competitors,
 		);
-		return {
+		return preserveProviderReportRun({
 			model: config.model,
-			version: result.modelVersion ?? config.version ?? config.provider,
+			configuredVersion: config.version,
+			provider: config.provider,
 			webSearchEnabled: config.webSearch,
-			rawOutput: result.rawOutput,
-			webQueries: result.webQueries,
-			textContent: result.textContent,
+			result,
 			brandMentioned,
 			competitorsMentioned,
-		};
+		});
 	};
 
 	const runPromises = scrapeConfigs.flatMap((config) => {
@@ -255,7 +290,7 @@ async function runPrompt(
 		return Array.from({ length: count }, () => runOne(config));
 	});
 
-	const runResults = await Promise.all(runPromises);
+	const runResults = await settleAllOrThrowFirst(runPromises);
 
 	job.log(`Completed ${runResults.length} runs for prompt: "${promptValue}"`);
 
@@ -265,225 +300,216 @@ async function runPrompt(
 	};
 }
 
-// Main report worker function
-export async function processReportJob(job: ReportJobContext) {
-	const {
-		reportId,
-		brandName,
-		brandWebsite,
-		manualPrompts,
-		competitorSnapshot,
-		runsPerTargetOverride,
-		expectedRunCount,
-	} = job.data;
+// Main report worker function. Queue and direct callers must atomically claim
+// the row before entering this function; every write below is claim-scoped.
+export function createProcessReportJob(dependencies: ReportWorkerDependencies) {
+	return async function processReportJob(job: ReportJobContext): Promise<ReportProcessingResult> {
+		const {
+			reportId,
+			brandName,
+			brandWebsite,
+			outputLanguage,
+			manualPrompts,
+			competitorSnapshot,
+			runsPerTargetOverride,
+			expectedRunCount,
+		} = job.data;
 
-	job.log(`Processing report ID: ${reportId} for brand: ${brandName}`);
+		try {
+			const outcome = await executeClaimedReport({
+				claim: job.claim,
+				stateStore: job.stateStore,
+				now: dependencies.now,
+				log: job.log,
+				run: async (updateProgress) => {
+					job.log(`Processing report ID: ${reportId} for brand: ${brandName} (output language: ${outputLanguage})`);
 
-	const scrapeConfigs = parseScrapeTargets(process.env.SCRAPE_TARGETS);
+					const scrapeConfigs = dependencies.parseScrapeTargets(process.env.SCRAPE_TARGETS);
+					const useManualPrompts = manualPrompts && manualPrompts.length > 0;
+					if (useManualPrompts) {
+						job.log(`Using ${manualPrompts.length} manual prompts - skipping auto-generation`);
+					}
+					if (competitorSnapshot !== undefined && !useManualPrompts) {
+						throw new Error("A competitor snapshot requires at least one manual prompt");
+					}
 
-	// Determine if we're using manual prompts
-	const useManualPrompts = manualPrompts && manualPrompts.length > 0;
-	if (useManualPrompts) {
-		job.log(`Using ${manualPrompts.length} manual prompts - skipping auto-generation`);
-	}
-	if (competitorSnapshot !== undefined && !useManualPrompts) {
-		throw new Error("A competitor snapshot requires at least one manual prompt");
-	}
+					await updateProgress(5);
 
-	try {
-		// Update report status to processing
-		await db.update(reports).set({ status: "processing", updatedAt: new Date() }).where(eq(reports.id, reportId));
+					// Step 1: Analyze brand — competitors + candidate prompts in one shared
+					// LLM call (same `analyzeBrand` the onboarding flow uses; provider-
+					// agnostic with native web search wired in). Manual-prompt path skips
+					// the prompt generation but still needs competitors.
+					let suggestedPrompts: Array<{ prompt: string }> = [];
+					let competitors: readonly CompetitorResult[];
+					if (competitorSnapshot !== undefined) {
+						competitors = competitorSnapshot.map((competitor) => ({ ...competitor }));
+						job.log(`Using frozen competitor snapshot (${competitors.length} competitors) - skipping brand analysis`);
+					} else {
+						job.log(`Analyzing brand: ${brandWebsite}`);
+						const suggestion = await dependencies.analyzeBrand({
+							website: brandWebsite,
+							brandName,
+							maxPrompts: useManualPrompts ? 0 : CANDIDATE_PROMPTS_COUNT,
+						});
+						// The report renderer's CompetitorResult expects a single primary domain;
+						// analyzeBrand returns the full list now. Take the first as the canonical
+						// one for the report's UI (which doesn't display the rest anyway).
+						competitors = suggestion.competitors
+							.filter((c) => c.domains.length > 0)
+							.map((c) => ({ name: c.name, domain: c.domains[0] }));
+						suggestedPrompts = suggestion.suggestedPrompts;
+					}
+					await updateProgress(35);
 
-		job.log(`Report ${reportId} marked as processing`);
-		job.updateProgress(5);
+					// Step 2: Build candidate prompt list — manual override or analyzeBrand output
+					const candidatePrompts: { prompt: string; brandedPrompt: boolean }[] = useManualPrompts
+						? buildManualReportCandidates(manualPrompts, (prompt) => isPromptBranded(prompt, brandName, brandWebsite))
+						: suggestedPrompts.map((p) => ({
+								prompt: p.prompt,
+								brandedPrompt: isPromptBranded(p.prompt, brandName, brandWebsite),
+							}));
 
-		// Step 1: Analyze brand — competitors + candidate prompts in one shared
-		// LLM call (same `analyzeBrand` the onboarding flow uses; provider-
-		// agnostic with native web search wired in). Manual-prompt path skips
-		// the prompt generation but still needs competitors.
-		let suggestedPrompts: Array<{ prompt: string }> = [];
-		let competitors: CompetitorResult[];
-		if (competitorSnapshot !== undefined) {
-			competitors = competitorSnapshot.map((competitor) => ({ ...competitor }));
-			job.log(`Using frozen competitor snapshot (${competitors.length} competitors) - skipping brand analysis`);
-		} else {
-			job.log(`Analyzing brand: ${brandWebsite}`);
-			const suggestion = await analyzeBrand({
-				website: brandWebsite,
-				brandName,
-				maxPrompts: useManualPrompts ? 0 : CANDIDATE_PROMPTS_COUNT,
-			});
-			// The report renderer's CompetitorResult expects a single primary domain;
-			// analyzeBrand returns the full list now. Take the first as the canonical
-			// one for the report's UI (which doesn't display the rest anyway).
-			competitors = suggestion.competitors
-				.filter((c) => c.domains.length > 0)
-				.map((c) => ({ name: c.name, domain: c.domains[0] }));
-			suggestedPrompts = suggestion.suggestedPrompts;
-		}
-		job.updateProgress(35);
-
-		// Step 2: Build candidate prompt list — manual override or analyzeBrand output
-		const candidatePrompts: { prompt: string; brandedPrompt: boolean }[] = useManualPrompts
-			? manualPrompts.map((prompt) => ({
-					prompt: prompt.toLowerCase().trim(),
-					brandedPrompt: isPromptBranded(prompt, brandName, brandWebsite),
-				}))
-			: suggestedPrompts.map((p) => ({
-					prompt: p.prompt,
-					brandedPrompt: isPromptBranded(p.prompt, brandName, brandWebsite),
-				}));
-
-		if (candidatePrompts.length === 0) {
-			job.log(`No candidate prompts available, report cannot continue`);
-			throw new Error("No candidate prompts available");
-		}
-		job.log(
-			`${useManualPrompts ? "Using" : "Generated"} ${candidatePrompts.length} candidate prompts ` +
-				`(${candidatePrompts.filter((p) => p.brandedPrompt).length} branded)`,
-		);
-		job.updateProgress(40);
-
-		// Step 4: Run all candidate prompts to test them
-		job.log(`Testing ${candidatePrompts.length} candidate prompts`);
-		const candidateResults: Array<{
-			promptValue: string;
-			brandedPrompt: boolean;
-			runs: Array<{
-				model: string;
-				version: string;
-				webSearchEnabled: boolean;
-				rawOutput: any;
-				webQueries: string[];
-				textContent: string;
-				brandMentioned: boolean;
-				competitorsMentioned: string[];
-			}>;
-		}> = [];
-
-		const totalCandidates = candidatePrompts.length;
-		let completedCandidates = 0;
-
-		// Run candidates in batches
-		const batchSize = 20;
-		for (let i = 0; i < candidatePrompts.length; i += batchSize) {
-			const batch = candidatePrompts.slice(i, i + batchSize);
-			const batchPromises = batch.map(async (candidate) => {
-				try {
-					const result = await runPrompt(
-						candidate.prompt,
-						brandName,
-						brandWebsite,
-						competitors,
-						scrapeConfigs,
-						job,
-						runsPerTargetOverride,
-					);
-					completedCandidates++;
-					const progress = 40 + (completedCandidates / totalCandidates) * 30; // 40-70% for testing
-					job.updateProgress(progress);
-					return {
-						promptValue: result.promptValue,
-						brandedPrompt: candidate.brandedPrompt,
-						runs: result.runs,
-					};
-				} catch (error) {
+					if (candidatePrompts.length === 0) {
+						job.log(`No candidate prompts available, report cannot continue`);
+						throw new Error("No candidate prompts available");
+					}
 					job.log(
-						`Error testing candidate "${candidate.prompt}": ${error instanceof Error ? error.message : "Unknown error"}`,
+						`${useManualPrompts ? "Using" : "Generated"} ${candidatePrompts.length} candidate prompts ` +
+							`(${candidatePrompts.filter((p) => p.brandedPrompt).length} branded)`,
 					);
-					completedCandidates++;
-					const progress = 40 + (completedCandidates / totalCandidates) * 30;
-					job.updateProgress(progress);
-					return {
-						promptValue: candidate.prompt,
-						brandedPrompt: candidate.brandedPrompt,
-						runs: [],
+					await updateProgress(40);
+
+					// Step 4: Run all candidate prompts to test them
+					job.log(`Testing ${candidatePrompts.length} candidate prompts`);
+					const candidateResults: Array<{
+						promptValue: string;
+						brandedPrompt: boolean;
+						runs: Array<{
+							model: string;
+							version: string;
+							webSearchEnabled: boolean;
+							rawOutput: unknown;
+							webQueries: string[];
+							textContent: string;
+							brandMentioned: boolean;
+							competitorsMentioned: string[];
+						}>;
+					}> = [];
+
+					const totalCandidates = candidatePrompts.length;
+					let completedCandidates = 0;
+
+					// Run candidates in batches
+					const batchSize = 20;
+					for (let i = 0; i < candidatePrompts.length; i += batchSize) {
+						const batch = candidatePrompts.slice(i, i + batchSize);
+						const batchPromises = batch.map(async (candidate) => {
+							try {
+								const result = await runPrompt(
+									candidate.prompt,
+									brandName,
+									brandWebsite,
+									competitors,
+									scrapeConfigs,
+									job,
+									dependencies.getProvider,
+									runsPerTargetOverride,
+								);
+								completedCandidates++;
+								const progress = 40 + (completedCandidates / totalCandidates) * 30; // 40-70% for testing
+								await updateProgress(progress);
+								return {
+									promptValue: result.promptValue,
+									brandedPrompt: candidate.brandedPrompt,
+									runs: result.runs,
+								};
+							} catch (error) {
+								job.log(
+									`Error testing candidate "${candidate.prompt}": ${error instanceof Error ? error.message : "Unknown error"}`,
+								);
+								throw error;
+							}
+						});
+
+						const batchResults = await settleAllOrThrowFirst(batchPromises);
+						candidateResults.push(...batchResults);
+
+						// Small delay between batches
+						if (i + batchSize < candidatePrompts.length) {
+							await new Promise((resolve) => setTimeout(resolve, 1000));
+						}
+					}
+
+					await updateProgress(70);
+
+					// Step 5: Select optimal prompts from candidates
+					job.log(`Selecting optimal ${TARGET_PROMPTS_COUNT} prompts from ${candidateResults.length} candidates`);
+					const selectedPromptValues = selectOptimalPrompts(candidateResults, brandName, brandWebsite);
+					await updateProgress(75);
+
+					// Step 6: Re-run selected prompts for final data
+					job.log(`Running final ${selectedPromptValues.length} selected prompts`);
+					const promptRuns: PromptRunResult[] = [];
+					const totalFinalRuns = selectedPromptValues.length;
+					let completedFinalRuns = 0;
+
+					// Get the results for selected prompts from candidateResults
+					const selectedPromptResults = candidateResults.filter((result) =>
+						selectedPromptValues.includes(result.promptValue),
+					);
+
+					// Use existing results instead of re-running
+					for (const result of selectedPromptResults) {
+						promptRuns.push({
+							promptValue: result.promptValue,
+							runs: result.runs,
+						});
+						completedFinalRuns++;
+						const progress = 75 + (completedFinalRuns / totalFinalRuns) * 20; // 75-95%
+						await updateProgress(progress);
+					}
+
+					await updateProgress(95);
+
+					// Create prompts data structure for storage
+					const prompts: PromptData[] = selectedPromptValues.map((promptValue) => ({
+						brandId: reportId,
+						value: promptValue,
+						enabled: true,
+						tags: [],
+						systemTags: computeSystemTags(promptValue, brandName, brandWebsite),
+					}));
+
+					// Create final report data
+					const reportData: ReportData = {
+						competitors,
+						prompts,
+						promptRuns,
 					};
-				}
+					const actualRunCount = promptRuns.reduce((total, promptRun) => total + promptRun.runs.length, 0);
+					if (expectedRunCount !== undefined && actualRunCount !== expectedRunCount) {
+						throw new Error(`Expected ${expectedRunCount} final report runs, received ${actualRunCount}`);
+					}
+
+					job.log(`Finalizing report with ${promptRuns.length} prompts and ${actualRunCount} model runs`);
+
+					return {
+						rawOutput: reportData,
+						result: { success: true as const, reportId, outputLanguage },
+					};
+				},
 			});
 
-			const batchResults = await Promise.all(batchPromises);
-			candidateResults.push(...batchResults);
-
-			// Small delay between batches
-			if (i + batchSize < candidatePrompts.length) {
-				await new Promise((resolve) => setTimeout(resolve, 1000));
+			if (outcome.disposition === "lost_claim") {
+				return { success: false, reportId, outputLanguage, lostClaim: true };
 			}
+			job.log(`Successfully completed report ${reportId}`);
+			return outcome.value;
+		} catch (error) {
+			job.log(`Error processing report ${reportId}: ${error instanceof Error ? error.message : "Unknown error"}`);
+			throw error;
 		}
-
-		job.updateProgress(70);
-
-		// Step 5: Select optimal prompts from candidates
-		job.log(`Selecting optimal ${TARGET_PROMPTS_COUNT} prompts from ${candidateResults.length} candidates`);
-		const selectedPromptValues = selectOptimalPrompts(candidateResults, brandName, brandWebsite);
-		job.updateProgress(75);
-
-		// Step 6: Re-run selected prompts for final data
-		job.log(`Running final ${selectedPromptValues.length} selected prompts`);
-		const promptRuns: PromptRunResult[] = [];
-		const totalFinalRuns = selectedPromptValues.length;
-		let completedFinalRuns = 0;
-
-		// Get the results for selected prompts from candidateResults
-		const selectedPromptResults = candidateResults.filter((result) =>
-			selectedPromptValues.includes(result.promptValue),
-		);
-
-		// Use existing results instead of re-running
-		for (const result of selectedPromptResults) {
-			promptRuns.push({
-				promptValue: result.promptValue,
-				runs: result.runs,
-			});
-			completedFinalRuns++;
-			const progress = 75 + (completedFinalRuns / totalFinalRuns) * 20; // 75-95%
-			job.updateProgress(progress);
-		}
-
-		job.updateProgress(95);
-
-		// Create prompts data structure for storage
-		const prompts: PromptData[] = selectedPromptValues.map((promptValue) => ({
-			brandId: reportId,
-			value: promptValue,
-			enabled: true,
-			tags: [],
-			systemTags: computeSystemTags(promptValue, brandName, brandWebsite),
-		}));
-
-		// Create final report data
-		const reportData: ReportData = {
-			competitors,
-			prompts,
-			promptRuns,
-		};
-		const actualRunCount = promptRuns.reduce((total, promptRun) => total + promptRun.runs.length, 0);
-		if (expectedRunCount !== undefined && actualRunCount !== expectedRunCount) {
-			throw new Error(`Expected ${expectedRunCount} final report runs, received ${actualRunCount}`);
-		}
-
-		job.log(`Finalizing report with ${promptRuns.length} prompts and ${actualRunCount} model runs`);
-
-		// Update report status to completed
-		await db
-			.update(reports)
-			.set({
-				status: "completed",
-				completedAt: new Date(),
-				updatedAt: new Date(),
-				rawOutput: reportData,
-			})
-			.where(eq(reports.id, reportId));
-
-		job.updateProgress(100);
-		job.log(`Successfully completed report ${reportId}`);
-		return { success: true, reportId };
-	} catch (error) {
-		job.log(`Error processing report ${reportId}: ${error instanceof Error ? error.message : "Unknown error"}`);
-
-		// Update report status to failed
-		await db.update(reports).set({ status: "failed", updatedAt: new Date() }).where(eq(reports.id, reportId));
-
-		throw error;
-	}
+	};
 }
+
+export const processReportJob = createProcessReportJob(productionDependencies);

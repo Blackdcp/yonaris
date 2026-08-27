@@ -4,6 +4,7 @@ import { getEffectiveBrandedStatus, isPromptBranded } from "@workspace/lib/tag-u
 export const DATABASE_REPORT_TARGET = "chatgpt:brightdata:online";
 export const DATABASE_REPORT_SCOPE_KEY = "legacy-unspecified";
 export const DATABASE_REPORT_EXPECTED_RUNS = 1;
+export const DATABASE_REPORT_OUTPUT_LANGUAGE = "en" as const;
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REQUEST_ID_PATTERN = /^[a-z0-9][a-z0-9._-]{2,99}$/;
@@ -32,6 +33,41 @@ export type DatabaseReportRequest = {
 	promptSelection: { limit: 1; preferUnbranded: true };
 	execution: { targets: [typeof DATABASE_REPORT_TARGET]; runsPerTarget: 1 };
 };
+
+export type DatabaseReportSummaryState = {
+	brandName: string;
+	outputLanguage: string;
+	promptCount: number | null;
+	competitorCount: number | null;
+	status: string;
+	actualRuns: number | null;
+	createdAt: string | null;
+	completedAt: string | null;
+	updatedAt: string | null;
+};
+
+export function buildDatabaseReportSummary(
+	request: DatabaseReportRequest,
+	state: DatabaseReportSummaryState,
+): Record<string, unknown> {
+	return {
+		ok: true,
+		requestId: request.requestId,
+		reportId: request.reportId,
+		brandName: state.brandName,
+		outputLanguage: state.outputLanguage,
+		scopeKey: request.scope.keyExact,
+		promptCount: state.promptCount,
+		competitorCount: state.competitorCount,
+		target: request.execution.targets[0],
+		expectedRuns: DATABASE_REPORT_EXPECTED_RUNS,
+		status: state.status,
+		actualRuns: state.actualRuns,
+		createdAt: state.createdAt,
+		completedAt: state.completedAt,
+		updatedAt: state.updatedAt,
+	};
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -210,13 +246,17 @@ export function selectDeterministicPrompt(
 }
 
 export function assertExistingReportMatches(
-	existing: { brandName: string; brandWebsite: string },
-	expected: { brandName: string; brandWebsite: string },
+	existing: { brandName: string; brandWebsite: string; outputLanguage: string },
+	expected: { brandName: string; brandWebsite: string; outputLanguage: typeof DATABASE_REPORT_OUTPUT_LANGUAGE },
 ): void {
-	if (existing.brandName !== expected.brandName || existing.brandWebsite !== expected.brandWebsite) {
+	if (
+		existing.brandName !== expected.brandName ||
+		existing.brandWebsite !== expected.brandWebsite ||
+		existing.outputLanguage !== expected.outputLanguage
+	) {
 		throw new DatabaseReportRequestError(
 			"report_id_conflict",
-			"The report UUID already belongs to a different brand snapshot",
+			"The report UUID already belongs to a different frozen snapshot",
 		);
 	}
 }
@@ -232,6 +272,7 @@ export function assessDatabaseReportCompletion(input: {
 	status: string;
 	completedAt: Date | null;
 	rawOutput: unknown;
+	outputLanguage: string;
 }): DatabaseReportCompletionAssessment {
 	let promptCount: number | null = null;
 	let competitorCount: number | null = null;
@@ -250,6 +291,7 @@ export function assessDatabaseReportCompletion(input: {
 	}
 	return {
 		healthy:
+			input.outputLanguage === DATABASE_REPORT_OUTPUT_LANGUAGE &&
 			input.status === "completed" &&
 			input.completedAt !== null &&
 			outputValid &&
