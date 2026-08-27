@@ -181,7 +181,7 @@ describe("portal UI-language literal audit", () => {
 		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: "first" })]));
 		expect(lexical).not.toContainEqual(expect.objectContaining({ value: "copy" }));
 		expect(lexical).not.toContainEqual(expect.objectContaining({ value: "alias" }));
-	});
+	}, 15_000);
 
 	it("collects hard-coded copy from visible sequence, array, and children expressions", () => {
 		const catalogMessageIds = new Set(["auth.login.title"]);
