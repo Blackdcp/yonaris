@@ -271,15 +271,25 @@ git commit -m "recompose the Chinese Site 06 experience"
 
 **Files:**
 - Modify: `apps/www/src/components/experience/agent/agent-pages.tsx`
+- Create: `apps/www/src/components/experience/agent/agent-directory.tsx`
 - Modify: `apps/www/src/components/experience/agent/agent-experience.test.tsx`
+- Modify: `apps/www/src/content/experience/agent-facts.ts`
+- Modify: `apps/www/src/components/experience/shared/human-agent-link.tsx`
 - Modify: `apps/www/src/styles/experience/agent.css`
 - Modify: `apps/www/src/styles/experience/site-06.css`
 - Modify: `apps/www/src/components/experience/shared/site-06-shell.tsx`
 - Modify: `apps/www/src/components/experience/shared/site-06-foundation.test.tsx`
+- Modify: `apps/www/src/lib/machine-documents.ts`
+- Modify: `apps/www/src/lib/machine-documents.test.ts`
+- Modify: `apps/www/src/lib/site-manifest.ts`
+- Modify: `apps/www/src/lib/site-manifest.test.ts`
+- Modify: `apps/www/src/lib/sitemap.test.ts`
+- Modify: `apps/www/src/lib/site-navigation.test.ts`
+- Modify: `e2e/www-tests/content-negotiation.spec.ts`
 
 **Interfaces:**
 - Consumes: canonical public fact records and stable Human/Markdown/JSON-LD route mappings.
-- Produces: a distinct `data-page-composition="fact-directory"` Agent surface with question index, answer document, fact anchors, evidence inspector, and stable record navigation.
+- Produces: a distinct `data-page-composition="fact-directory"` Agent surface with question index, answer document, real stable-fact anchors, evidence inspector, complete SSR fact directory, and stable record navigation. It also produces accurate representation labels, fully localized Chinese machine documents, an internally linked Human crawl graph, and current sitemap dates.
 
 - [ ] **Step 1: Write failing Agent-directory and motion tests**
 
@@ -288,13 +298,15 @@ it("renders a fact directory instead of the Human page stack", () => {
   const html = renderAgentRoute("home", "en");
   expect(html).toContain('data-page-composition="fact-directory"');
   expect(html).toContain('data-scene-object="question-index"');
+  expect(html).toContain('data-scene-object="answer-document"');
   expect(html).toContain('data-scene-object="fact-inspector"');
+  expect(html).toContain('data-scene-object="fact-directory"');
   expect(html).toContain("Stable ID");
   expect(html).not.toContain('data-page-composition="cinematic-orbit"');
 });
 ```
 
-Add a stylesheet behaviour test requiring normal-mode photo/geometry motion and reduced-motion cancellation. Keep keyboard tests for question, fact, and Human/Agent mode controls.
+Add a stylesheet behaviour test requiring normal-mode photo/geometry motion, no capsule controls, and reduced-motion cancellation. Keep keyboard tests for question, fact, and Human/Agent mode controls. Add RED tests that require all 14 Agent routes to render exact canonical facts in SSR with unique stable IDs; a mobile Human/Agent control visible without opening the menu; all seven locale-matched Human footer links; fully localized Chinese Markdown/JSON-LD; accurate “Available representations / 可用读取格式” wording while `Accept: application/ld+json` remains 406; and `2026-08-27` on all 14 Human sitemap entries.
 
 - [ ] **Step 2: Run Agent/foundation tests and verify RED**
 
@@ -308,14 +320,16 @@ Expected: FAIL because the current Agent page lacks the prototype's directory/in
 
 - [ ] **Step 3: Implement the fact directory and motion details**
 
-Use semantic buttons, headings, `aria-current`, visible focus, real anchors, and initial SSR facts. Do not claim the visual surface guarantees retrieval. Motion must be subtle, never move text, never auto-advance state, and stop under reduced motion. Keep the Human/Agent switch as prominent as the locale switch on desktop and mobile.
+Use semantic buttons, headings, `aria-current`, visible focus, real anchors, unique DOM IDs, and initial SSR facts. Questions may be localized, but answer sentences must render from canonical fact records rather than a duplicated copy table. Do not claim the visual surface guarantees ranking, inclusion, retrieval, or citation. Motion must be subtle, never move text, never auto-advance state, and stop under reduced motion. Keep the Human/Agent switch as prominent as the locale switch on desktop and always visible in the mobile header. Keep Human pages as the only indexed canonicals and Agent alternatives `noindex,follow`.
+
+Do not add late JSON-LD negotiation. Relabel the current UI as available representations and link the existing catalogue. Fully localize Chinese machine headings, field labels, Organization description, sources, boundaries, and related-entry labels. Add restrained footer links to all seven Human canonical routes per locale and update core verification/sitemap dates to `2026-08-27` without adding Agent entries to the sitemap.
 
 - [ ] **Step 4: Run Agent, SEO, and machine-surface verification**
 
 Run:
 
 ```powershell
-pnpm --filter @workspace/www exec vitest run src/components/experience/agent/agent-experience.test.tsx src/components/experience/shared/site-06-foundation.test.tsx src/components/experience/site-generation.test.tsx src/content/experience/category-contract.test.tsx
+pnpm --filter @workspace/www exec vitest run src/components/experience/agent/agent-experience.test.tsx src/components/experience/shared/site-06-foundation.test.tsx src/components/experience/site-generation.test.tsx src/content/experience/category-contract.test.tsx src/lib/machine-documents.test.ts src/lib/site-navigation.test.ts src/lib/site-manifest.test.ts src/lib/sitemap.test.ts
 pnpm --filter @workspace/www exec vitest run
 pnpm --filter @workspace/www check-types
 ```
@@ -325,7 +339,7 @@ Expected: all Human/Agent fact identity and visual tests PASS.
 - [ ] **Step 5: Commit Task 4**
 
 ```powershell
-git add apps/www/src/components/experience/agent apps/www/src/components/experience/shared/site-06-shell.tsx apps/www/src/styles/experience
+git add apps/www/src/components/experience/agent apps/www/src/components/experience/shared apps/www/src/content/experience apps/www/src/lib apps/www/src/styles/experience e2e/www-tests/content-negotiation.spec.ts
 git commit -m "build the Site 06 Agent fact directory"
 ```
 

@@ -53,7 +53,7 @@ The production system must faithfully implement the prototype's visual roles, us
 - **Dual-reading stage:** one canonical fact occupies the centre; Human and Agent readings expose different context without changing the fact.
 - **System field:** six connected nodes occupy a spatial relationship map. The selected node changes the explanation of what breaks when disconnected.
 - **Replay stage:** one de-identified Chinese example moves between 基线、断点、行动、复核 without pre-claiming improvement.
-- **Fact directory:** the Agent surface uses a question index, answer document, active fact anchor, and evidence inspector. It is visually and structurally distinct from the Human marketing pages.
+- **Fact directory:** the Agent surface uses a question index, answer document, real stable-fact anchors, evidence inspector, and a complete SSR fact directory. It is visually and structurally distinct from the Human marketing pages, and no meaning depends on client-side state.
 
 Bordered records may be used when they represent a real document, source, or state. Equal-size card walls, generic bento grids, feature tiles, numbered rails, and repeated dashboard frames remain rejected.
 
@@ -99,7 +99,7 @@ The prior blanket rejection of all infinite animation is removed. The correct ru
 - Mobile acceptance widths: `390` and `360`.
 - Cinematic photography remains contextual on mobile instead of becoming a tiny card; crops use explicit focal positions.
 - Spatial scenes linearize in a deliberate reading order while preserving their object identity.
-- Human/Agent and locale controls remain prominent in the mobile menu.
+- Human/Agent and locale controls remain prominent on desktop. A compact Human/Agent control stays visible in the mobile header without opening the menu, with an accessible equivalent retained inside the menu.
 - No horizontal overflow, clipped controls, inaccessible off-screen content, or poster-sized headings.
 
 ## Assets
@@ -120,8 +120,12 @@ Keep the existing Yonaris wordmark. Do not redraw or replace the logo. Preserve 
 
 - Exact English category: `AI-native MarTech infrastructure built for decisions made by people and shaped by agents.`
 - Exact Chinese category: `面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。`
-- Human pages remain canonical and indexable; Agent HTML, Markdown, and JSON-LD remain alternate representations of the same facts.
+- Human pages remain the only indexed canonicals. Agent HTML and machine documents remain `noindex,follow` alternate representations of the same facts; this release does not imply that the visible Agent view itself improves ranking or inclusion.
+- Agent topic URLs negotiate HTML and Markdown only. JSON-LD remains embedded on Human canonicals and available through linked catalogues; the UI must describe these as available representations rather than falsely claiming JSON-LD content negotiation.
 - Every meaningful Human fact remains in initial SSR output with stable anchors, evidence/source language, and boundaries.
+- Every locale footer exposes real links to all seven Human canonical routes so the indexable crawl graph does not depend only on sitemap or Agent pages.
+- Chinese Markdown and JSON-LD labels, organization description, sources, and boundaries are localized completely; they must not leak English document field labels.
+- Core fact verification and all Human sitemap `lastmod` values use `2026-08-27` for this reviewed release while preserving exactly 14 Human sitemap entries.
 - English form fields remain Name, Work email, Company. Chinese form fields remain 姓名、电话、公司. Accepted submissions continue through the existing provider-backed email endpoint.
 - Resources and retired public surfaces remain unavailable. No public upstream-origin claim, retired framework attribution, fake metric, fake logo, or fake customer result may appear.
 - Existing routes, redirects, robots, sitemap, content negotiation, canonical/hreflang, GET/HEAD behaviour, and deployment safety remain intact.
