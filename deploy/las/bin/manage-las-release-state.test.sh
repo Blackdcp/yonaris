@@ -460,10 +460,70 @@ run_manager migration-readiness "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTG
 missing_readiness_status=$?
 set -e
 [[ "$missing_readiness_status" -ne 0 ]]
+
+# Migration-readiness runtime access is authorized only for an exact immutable
+# candidate tree and its deploy policy tuple, while every recovery journal is
+# empty. No partial or conflicting readiness namespace may be crossed.
+[[ "$(run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
+	'las-migration-readiness-runtime-authorization-v1 ok' ]]
+grep -Fq "verifier " "$TEST_ROOT/bootstrap-events.log"
+grep -Fq "guard candidate $CANDIDATE deploy" "$TEST_ROOT/bootstrap-events.log"
+
+set +e
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" >/dev/null 2>&1
+authorization_arity_status=$?
+set -e
+[[ "$authorization_arity_status" -eq 2 ]]
+
+touch "$TEST_ROOT/guard-bad"
+set +e
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+authorization_policy_status=$?
+set -e
+rm -f "$TEST_ROOT/guard-bad"
+[[ "$authorization_policy_status" -ne 0 ]]
+
+touch "$TEST_ROOT/verifier-fail"
+set +e
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+authorization_boundary_status=$?
+set -e
+rm -f "$TEST_ROOT/verifier-fail"
+[[ "$authorization_boundary_status" -ne 0 ]]
+
+mv "$BINDING_ROOT/$CANDIDATE" "$BINDING_ROOT/$CANDIDATE.saved"
+set +e
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+authorization_tree_status=$?
+set -e
+mv "$BINDING_ROOT/$CANDIDATE.saved" "$BINDING_ROOT/$CANDIDATE"
+[[ "$authorization_tree_status" -ne 0 ]]
+
+for pending_journal in "$JOURNAL" "$TRUST_DIRECTORY/las-caddy-bootstrap-pending-v1" "$STABLE_BUNDLE_JOURNAL"; do
+	printf '%s\n' pending >"$pending_journal"
+	set +e
+	run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+	authorization_pending_status=$?
+	set -e
+	rm -f "$pending_journal"
+	[[ "$authorization_pending_status" -ne 0 ]]
+done
+
+printf '%s\n' 'partial conflicting backup evidence' >"$MIGRATION_EVIDENCE_ROOT/$CANDIDATE.backup"
+chmod 0400 "$MIGRATION_EVIDENCE_ROOT/$CANDIDATE.backup"
+set +e
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+authorization_conflict_status=$?
+set -e
+rm -f "$MIGRATION_EVIDENCE_ROOT/$CANDIDATE.backup"
+[[ "$authorization_conflict_status" -ne 0 ]]
+
 write_migration_readiness "$PREDECESSOR"
 write_migration_readiness "$CANDIDATE"
 [[ "$(run_manager migration-readiness "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
 	'las-migration-readiness-v1 ok' ]]
+[[ "$(run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
+	'las-migration-readiness-runtime-authorization-v1 ok' ]]
 set +e
 run_manager migration-readiness "$CANDIDATE" \
 	'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \

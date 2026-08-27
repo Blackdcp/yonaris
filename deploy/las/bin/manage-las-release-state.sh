@@ -260,6 +260,20 @@ verify_migration_readiness() {
 		"$(/usr/bin/sha256sum -- "$rehearsal" | /usr/bin/awk '{print $1}')" == "$rehearsal_hash" ]]
 }
 
+migration_readiness_absent_or_matches() {
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
+	local backup="$MIGRATION_EVIDENCE_ROOT/$release_tag.backup"
+	local rehearsal="$MIGRATION_EVIDENCE_ROOT/$release_tag.rehearsal"
+	metadata_matches "$MIGRATION_READINESS_ROOT" directory '0:0:700' && \
+		metadata_matches "$MIGRATION_EVIDENCE_ROOT" directory '0:0:700' || return 1
+	if [[ ! -e "$attestation" && ! -L "$attestation" && \
+		! -e "$backup" && ! -L "$backup" && ! -e "$rehearsal" && ! -L "$rehearsal" ]]; then
+		return 0
+	fi
+	verify_migration_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+}
+
 tree_manifest() {
 	local tree="$1"
 	local entry relative mode ownership digest listing records manifest_digest
@@ -544,6 +558,25 @@ case "$command_name" in
 		verify_migration_readiness "$2" "$3" "$4" "$5" "$6" "$7" || \
 			fail 'The root-owned migration backup and rehearsal attestation is absent or does not match this release.'
 		/usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'
+		;;
+	migration-readiness-runtime-authorization)
+		[[ $# -eq 7 ]] || exit 2
+		candidate="$2"; web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"
+		release_is_valid "$candidate" && digest_is_valid "$web" && digest_is_valid "$worker" && \
+			digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || exit 2
+		verify_forced_root_boundary && ensure_root_state || \
+			fail 'Migration readiness requires the exact forced root boundary.'
+		[[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" && \
+			! -e "$CADDY_BOOTSTRAP_JOURNAL" && ! -L "$CADDY_BOOTSTRAP_JOURNAL" && \
+			! -e "$STABLE_BUNDLE_JOURNAL" && ! -L "$STABLE_BUNDLE_JOURNAL" ]] || \
+			fail 'Migration readiness is forbidden while LAS recovery state is pending.'
+		validate_release_tree "$candidate" || \
+			fail 'Migration readiness lacks the exact immutable candidate tree.'
+		authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" "$www" || \
+			fail 'Migration readiness digests do not match the exact deploy policy tuple.'
+		migration_readiness_absent_or_matches "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" || \
+			fail 'Existing migration readiness evidence conflicts with this release tuple.'
+		/usr/bin/printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
 		;;
 	pending-runtime-tuple)
 		[[ $# -eq 8 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
@@ -838,6 +871,7 @@ case "$command_name" in
 	*)
 		/usr/bin/printf '%s\n' \
 			'Usage: manage-las-release-state migration-readiness <release> <five digests>' \
+			'       manage-las-release-state migration-readiness-runtime-authorization <release> <five digests>' \
 			'       manage-las-release-state pending-runtime-tuple <portal|marketing> <release> <five digests>' \
 			'       manage-las-release-state pending-rollback-runtime-tuple <portal|marketing> <release> <five digests>' \
 			'       manage-las-release-state bootstrap-runtime-authorization <portal|marketing> <release> <five digests>' \
