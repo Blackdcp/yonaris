@@ -477,10 +477,12 @@ network_failure_status=$?
 set -e
 [[ "$network_failure_status" -ne 0 ]] || { echo 'Injected network-create failure passed.' >&2; exit 1; }
 ! grep -F 'network rm' "$DOCKER_LOG"
+assert_rehearsal_docker_attestation
 rm -f -- "$TEST_ROOT/rehearsal-failure"
 
 # Cleanup is an EXIT-trap obligation, including restore and migration failure.
 for rehearsal_failure in restore migration; do
+	: >"$EVENT_LOG"
 	: >"$DOCKER_LOG"
 	printf '%s\n' "$rehearsal_failure" >"$TEST_ROOT/rehearsal-failure"
 	set +e
@@ -491,6 +493,7 @@ for rehearsal_failure in restore migration; do
 	read_rehearsal_resources
 	[[ "$failure_status" -ne 0 ]] || { echo "Injected $rehearsal_failure failure passed." >&2; exit 1; }
 	assert_rehearsal_cleanup
+	assert_rehearsal_docker_attestation
 	rm -f -- "$TEST_ROOT/rehearsal-failure"
 done
 
