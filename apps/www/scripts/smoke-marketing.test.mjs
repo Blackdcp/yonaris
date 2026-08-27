@@ -283,6 +283,7 @@ async function startFixture({
 	wrongHreflangDestination = false,
 	wrongMachineAlternate = false,
 	wrongStableMachineAlternate = false,
+	relativeMachineLinks = false,
 	rejectedTemplateGlyph = "",
 } = {}) {
 	const requests = [];
@@ -402,6 +403,7 @@ async function startFixture({
 				.replace(/^\/zh\/agent\/index\.md$/u, "/zh")
 				.replace(/^\/agent\/index\.md$/u, "/")
 				.replace(/\/agent\/(.+)\.md$/u, "/$1");
+			const machineHref = relativeMachineLinks ? (path) => path : publicHref;
 			response
 				.writeHead(200, {
 					"Content-Type": "text/markdown; charset=utf-8",
@@ -410,7 +412,7 @@ async function startFixture({
 					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 					Vary: "Accept",
 					"X-Robots-Tag": "noindex, follow",
-					Link: `<${url.pathname}>; rel="canonical"; type="text/markdown", <${humanPath}>; rel="alternate"; type="text/html", <${catalogPath}>; rel="alternate"; type="application/ld+json"${wrongCatalogLink}, <${peerPath}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+					Link: `<${machineHref(url.pathname)}>; rel="canonical"; type="text/markdown", <${machineHref(humanPath)}>; rel="alternate"; type="text/html", <${machineHref(catalogPath)}>; rel="alternate"; type="application/ld+json"${wrongCatalogLink}, <${machineHref(peerPath)}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", <${machineHref("/llms.txt")}>; rel="describedby"; type="text/plain"`,
 				})
 				.end(`# Facts\n\nStable ID: fixture.claim\n\n${ALL_COPY}`);
 			return;
@@ -421,6 +423,7 @@ async function startFixture({
 			const peerPath = locale === "en" ? "/zh/agent/catalog.json" : "/agent/catalog.json";
 			const humanPath = locale === "en" ? "/" : "/zh";
 			const catalogue = fixtureCatalog(locale);
+			const machineHref = relativeMachineLinks ? (path) => path : publicHref;
 			if (catalogFanIn) {
 				const sharedItemList = catalogue["@graph"].find((node) => node["@type"] === "ItemList")?.["@id"];
 				for (const node of catalogue["@graph"]) {
@@ -435,7 +438,7 @@ async function startFixture({
 					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 					Vary: "Accept",
 					"X-Robots-Tag": "noindex, follow",
-					Link: `<${url.pathname}>; rel="canonical"; type="application/ld+json", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="application/ld+json"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+					Link: `<${machineHref(url.pathname)}>; rel="canonical"; type="application/ld+json", <${machineHref(humanPath)}>; rel="alternate"; type="text/html", <${machineHref(peerPath)}>; rel="alternate"; type="application/ld+json"; hreflang="${locale === "en" ? "zh-CN" : "en"}", <${machineHref("/llms.txt")}>; rel="describedby"; type="text/plain"`,
 				})
 				.end(
 					JSON.stringify(
@@ -709,6 +712,15 @@ test("release smoke rejects a stable machine catalog alternate with the wrong de
 	const fixture = await startFixture({ wrongStableMachineAlternate: true });
 	try {
 		await assert.rejects(() => runMarketingSmoke(fixture.url), /LINK \/agent\/index\.md: invalid catalog alternate/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects relative machine Link targets", async () => {
+	const fixture = await startFixture({ relativeMachineLinks: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /LINK \/agent\/index\.md: missing canonical/u);
 	} finally {
 		await fixture.close();
 	}

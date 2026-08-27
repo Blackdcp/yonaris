@@ -1,5 +1,6 @@
 import type { Locale } from "@/content/site/types";
 import { resolveRepresentation, rewriteMarkdownRequest } from "./markdown-negotiation";
+import { siteHref } from "./site-origin";
 
 export interface MachineLink {
 	href: string;
@@ -72,7 +73,7 @@ function serializeLink(link: MachineLink): string {
 	const parameters = [`rel="${link.rel}"`];
 	if (link.type) parameters.push(`type="${link.type}"`);
 	if (link.hrefLang) parameters.push(`hreflang="${link.hrefLang}"`);
-	return `<${link.href}>; ${parameters.join("; ")}`;
+	return `<${siteHref(link.href)}>; ${parameters.join("; ")}`;
 }
 
 export function appendVary(headers: Headers, dimension: string): void {

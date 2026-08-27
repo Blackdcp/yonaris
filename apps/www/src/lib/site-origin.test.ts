@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { canonicalUrl, SITE_URL, siteHref } from "./site-origin";
 
 function sourceFiles(directory: string): string[] {
 	return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -12,6 +13,12 @@ function sourceFiles(directory: string): string[] {
 }
 
 describe("site origin contract", () => {
+	it("keeps every public canonical absolute when no build-time override is supplied", () => {
+		expect(SITE_URL).toMatch(/^https?:\/\//u);
+		expect(siteHref("/product")).toBe("https://yonaris.com/product");
+		expect(canonicalUrl("/")).toBe("https://yonaris.com/");
+	});
+
 	it("keeps site-origin as the sole configured origin reader", () => {
 		const src = fileURLToPath(new URL("../", import.meta.url));
 		const readers = sourceFiles(src)

@@ -335,9 +335,9 @@ function parsedHttpLinks(header) {
 	});
 }
 
-function hasExactHttpLink(links, { rel, path, type, hrefLang }) {
+function hasExactHttpLink(links, { rel, path, type, hrefLang }, expectedOrigin) {
 	const candidates = matchingLinks(links, { rel, type, hrefLang });
-	return candidates.length === 1 && candidates[0].href === path;
+	return candidates.length === 1 && candidates[0].href === new URL(path, `${expectedOrigin}/`).href;
 }
 
 const decodedPublicTerm = (...codePoints) => String.fromCodePoint(...codePoints);
@@ -615,7 +615,7 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls, expectedO
 	}
 }
 
-function checkMachineHeaders(route, response, failures, contentType) {
+function checkMachineHeaders(route, response, failures, contentType, expectedOrigin) {
 	const actualType = response.headers.get("content-type") ?? "";
 	if (!typeMatches(actualType, contentType))
 		failures.push(`TYPE ${route.path}: expected ${contentType}, received ${actualType || "none"}`);
@@ -631,33 +631,44 @@ function checkMachineHeaders(route, response, failures, contentType) {
 		failures.push(`ROBOTS ${route.path}: expected noindex, follow`);
 
 	const links = parsedHttpLinks(response.headers.get("link") ?? "");
-	if (!hasExactHttpLink(links, { rel: "canonical", path: route.path, type: contentType }))
+	if (!hasExactHttpLink(links, { rel: "canonical", path: route.path, type: contentType }, expectedOrigin))
 		failures.push(`LINK ${route.path}: missing canonical`);
-	if (route.humanPath && !hasExactHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }))
+	if (
+		route.humanPath &&
+		!hasExactHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }, expectedOrigin)
+	)
 		failures.push(`LINK ${route.path}: missing Human alternate`);
 	if (
 		route.catalogPath &&
-		!hasExactHttpLink(links, {
-			rel: "alternate",
-			path: route.catalogPath,
-			type: "application/ld+json",
-		})
+		!hasExactHttpLink(
+			links,
+			{
+				rel: "alternate",
+				path: route.catalogPath,
+				type: "application/ld+json",
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`LINK ${route.path}: invalid catalog alternate`);
 	if (
-		!hasExactHttpLink(links, {
-			rel: "alternate",
-			path: route.peerPath,
-			type: contentType,
-			hrefLang: route.peerLanguage,
-		})
+		!hasExactHttpLink(
+			links,
+			{
+				rel: "alternate",
+				path: route.peerPath,
+				type: contentType,
+				hrefLang: route.peerLanguage,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`LINK ${route.path}: missing locale peer`);
-	if (!hasExactHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+	if (!hasExactHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 		failures.push(`LINK ${route.path}: missing llms.txt relation`);
 }
 
-async function checkAgentMarkdownRoute(route, baseUrl, failures) {
+async function checkAgentMarkdownRoute(route, baseUrl, failures, expectedOrigin) {
 	try {
 		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
 		if (response.status >= 500) {
@@ -668,7 +679,7 @@ async function checkAgentMarkdownRoute(route, baseUrl, failures) {
 			failures.push(`${response.status} ${route.path}`);
 			return;
 		}
-		checkMachineHeaders(route, response, failures, "text/markdown");
+		checkMachineHeaders(route, response, failures, "text/markdown", expectedOrigin);
 		const body = await response.text();
 		checkPublicOutput(route.path, body, failures);
 		if (!/^Stable ID: [a-z0-9.-]+$/mu.test(body) && !/^稳定 ID：[a-z0-9.-]+$/mu.test(body))
@@ -679,7 +690,7 @@ async function checkAgentMarkdownRoute(route, baseUrl, failures) {
 	}
 }
 
-async function checkAgentCatalogRoute(route, baseUrl, failures) {
+async function checkAgentCatalogRoute(route, baseUrl, failures, expectedOrigin) {
 	try {
 		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
 		if (response.status >= 500) {
@@ -690,7 +701,7 @@ async function checkAgentCatalogRoute(route, baseUrl, failures) {
 			failures.push(`${response.status} ${route.path}`);
 			return;
 		}
-		checkMachineHeaders(route, response, failures, "application/ld+json");
+		checkMachineHeaders(route, response, failures, "application/ld+json", expectedOrigin);
 		const body = await response.text();
 		checkPublicOutput(route.path, body, failures);
 		try {
@@ -875,8 +886,8 @@ export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", opt
 
 	for (const route of [...HUMAN_HTML_ROUTES, ...AGENT_HTML_ROUTES])
 		await checkReadableRoute(route, baseUrl, failures, assetUrls, expectedOrigin);
-	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures);
-	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures);
+	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures, expectedOrigin);
+	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures, expectedOrigin);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);
 	const negotiationCases = await checkNegotiationMatrix(baseUrl, failures);
 

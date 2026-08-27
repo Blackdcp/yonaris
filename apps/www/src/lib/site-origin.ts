@@ -1,6 +1,7 @@
 const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
+const defaultSiteUrl = "https://yonaris.com";
 
-export const SITE_URL = configuredSiteUrl ? configuredSiteUrl.replace(/\/$/, "") : "";
+export const SITE_URL = (configuredSiteUrl || defaultSiteUrl).replace(/\/$/, "");
 
 export function canonicalUrl(path: string): string | undefined {
 	if (path.startsWith("http")) return path;
