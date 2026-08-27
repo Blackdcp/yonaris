@@ -120,9 +120,9 @@ const EN_PAGE_FACTS = {
 	},
 	privacy: {
 		id: "yonaris.privacy.contact-request",
-		value: "Contact details are used to understand and respond to the request.",
+		value: "Contact details are sent to Yonaris through Resend, its email processor, and used to understand and respond to the request.",
 		source: "Yonaris contact request privacy page · reviewed 27 Aug 2026",
-		boundary: "This fact applies to the three contact details submitted through the consultation form.",
+		boundary: "Yonaris keeps the request only as long as reasonably needed and accepts deletion requests through its public contact route.",
 	},
 } as const satisfies Partial<Record<HumanPageKey, CanonicalPageFact>>;
 
@@ -155,9 +155,9 @@ const ZH_PAGE_FACTS = {
 	},
 	privacy: {
 		id: "yonaris.privacy.contact-request",
-		value: "联系信息只用于理解并回复这次咨询。",
+		value: "联系信息经邮件处理者 Resend 发送给 Yonaris，只用于理解并回复这次咨询。",
 		source: "Yonaris 中文咨询信息说明 · 2026 年 8 月 27 日核对",
-		boundary: "该事实适用于咨询表单提交的姓名、电话与公司信息。",
+		boundary: "Yonaris 只在合理所需期限内保留申请，并通过公开预约沟通路径受理删除请求。",
 	},
 } as const satisfies Partial<Record<HumanPageKey, CanonicalPageFact>>;
 

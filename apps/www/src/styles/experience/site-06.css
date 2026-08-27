@@ -185,7 +185,7 @@
 	display: none;
 }
 
-.site-06-header__mobile-locale {
+.site-06-header .site-06-header__mobile-locale {
 	display: none;
 }
 
@@ -1756,8 +1756,8 @@
 
 .site-06-contact-scene__record {
 	grid-column: 2;
-	color: rgb(255 255 255 / 45%);
-	font-size: 0.68rem;
+	color: rgb(255 255 255 / 82%);
+	font-size: 0.75rem;
 	line-height: 1.55;
 }
 
@@ -2713,7 +2713,7 @@
 		grid-column: 2;
 	}
 
-	.site-06-header__mobile-locale {
+	.site-06-header .site-06-header__mobile-locale {
 		display: inline-flex;
 		grid-column: 3;
 	}
@@ -2979,7 +2979,7 @@
 		grid-area: mode;
 	}
 
-	.site-06-header__mobile-locale {
+	.site-06-header .site-06-header__mobile-locale {
 		grid-area: locale;
 	}
 

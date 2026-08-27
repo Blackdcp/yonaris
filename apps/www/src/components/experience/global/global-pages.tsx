@@ -214,7 +214,7 @@ export function GlobalApproachPage() {
 						alt: "Two business people walking outside a modern workplace",
 						focalPosition: "center 72%",
 					}}
-					credit="Photo: Mikhail Nilov / Pexels"
+					credit="Photo: Pavel Danilyuk / Pexels"
 					className="site-06-approach-cinematic"
 				>
 					<RouteLead pageKey="approach" />
@@ -391,15 +391,19 @@ export function GlobalPrivacyPage() {
 						<p>Name, work email and company are the only visible fields required for an English contact request.</p>
 					</section>
 					<section>
-						<h2>Your details stay with this request.</h2>
+						<h2>How the request is delivered</h2>
 						<p>
-							We use your details to understand and respond to the request. If it cannot be completed, the page keeps
-							your entries so you can try again. Browser analytics do not receive the form values.
+							Yonaris uses Resend as an email processor to send the form contents to Yonaris. The details are used to
+							understand and respond to your request; browser analytics do not receive the form values.
 						</p>
 					</section>
 					<section>
-						<h2>A short return route</h2>
-						<p>No long questionnaire or prepared report is required before the first conversation.</p>
+						<h2>Retention and deletion</h2>
+						<p>
+							Yonaris keeps the request only as long as reasonably needed to respond, arrange follow-up and meet
+							applicable record-keeping duties. To request deletion, use the public contact route and identify the
+							request you want removed. No personal email address is published here.
+						</p>
 						<ActionLink href="/diagnostic">Return to contact</ActionLink>
 					</section>
 				</article>

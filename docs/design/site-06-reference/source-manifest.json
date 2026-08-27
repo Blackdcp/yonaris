@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "immutableBinding": {
+    "path": "E:/Yonaris/.superpowers/brainstorm/1950-1787739192/content/site-system-multipage-agent-06.html",
+    "sha256": "e26b204b528481ddd3274d4a546f1a9acd02a0f7f5e94de80b1070a1d05b46da"
+  },
+  "repositoryDerivative": {
+    "path": "docs/design/site-06-reference/site-system-multipage-agent-06.html",
+    "sha256": "2825795608f670b468a412b362c3640270418634fffe307c0fcc8d045be283c1",
+    "structuralChanges": false,
+    "transforms": [
+      "One footer sentence received a non-structural safety wording substitution.",
+      "Two business-walk credits received a non-structural factual attribution correction."
+    ]
+  },
+  "assetDerivatives": [
+    {
+      "sourcePath": "E:/Yonaris/.superpowers/brainstorm/1950-1787739192/content/photo-business-walk-pexels-8526452.jpg",
+      "sourceSha256": "48ab7f4a441249c76ebbd7a102f336fd267e295c4e35e06f24640afdbd2fa01f",
+      "derivativePath": "docs/design/site-06-reference/assets/photo-business-walk-pexels-8526452.jpg",
+      "derivativeSha256": "db995fb32f261fcecdd4d6b60688764bbbdc36ed440b2961fb068a840200e390",
+      "transform": "APP and COM metadata segments removed only; compressed scan, decoded pixels, dimensions, and visual structure are unchanged."
+    },
+    {
+      "sourcePath": "E:/Yonaris/.superpowers/brainstorm/1950-1787739192/content/photo-warm-office-pexels-31771712.jpg",
+      "sourceSha256": "422e4e4b34dbf71fc2aa5a00229f9dc595ec42ccb66b67ff2b513da3e5b98159",
+      "derivativePath": "docs/design/site-06-reference/assets/photo-warm-office-pexels-31771712.jpg",
+      "derivativeSha256": "f2332ec8c09034426234a5a05f392b27d72a0ab1390e919623e80449509fc259",
+      "transform": "Audit-safe Chromium canvas encoding at quality 0.99; dimensions and visual structure are unchanged."
+    }
+  ]
+}

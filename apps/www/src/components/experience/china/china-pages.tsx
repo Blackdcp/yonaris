@@ -28,7 +28,7 @@ export function ChinaHomePage() {
 			<div className="site-06-page-composition site-06-page-composition--cinematic site-06-zh-home" data-page-composition="cinematic-anxiety">
 				<CinematicField
 					image={{ src: "/brand/site-06/business-walk.jpg", alt: "两位商务人士在现代办公园区交流", focalPosition: "center center" }}
-					credit="Photo: Mikhail Nilov / Pexels"
+					credit="Photo: Pavel Danilyuk / Pexels"
 					className="site-06-zh-home__cinematic"
 				>
 					<header className="site-06-zh-home__lead">
@@ -235,8 +235,8 @@ export function ChinaPrivacyPage() {
 				<article className="site-06-privacy-document" id={fact.id} tabIndex={-1}>
 					<header className="site-06-privacy-document__header"><p className="site-06-kicker">{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.lead}</p><p className="site-06-privacy-document__purpose">{fact.value}</p><p className="site-06-privacy-document__basis">{fact.source}</p><p className="site-06-privacy-document__boundary">{fact.boundary}</p></header>
 					<section><h2>只要求三项可见信息</h2><p>姓名、电话和公司，是中文咨询申请唯一要求填写的可见字段。</p></section>
-					<section><h2>这些信息只用于回复这次咨询</h2><p>我们用这些信息理解并回复本次申请。若申请未完成，页面会保留已填内容，方便再次尝试；浏览器分析不会收到表单字段内容。</p></section>
-					<section><h2>回到一道具体问题</h2><div><p>第一次沟通不要求长问卷或预先准备完整报告。</p><ActionLink href="/zh/diagnostic">返回预约沟通</ActionLink></div></section>
+					<section><h2>咨询怎样送达</h2><p>Yonaris 使用 Resend 作为邮件处理者，把表单内容发送给 Yonaris，用于理解并回复这次咨询；浏览器分析不会收到表单字段内容。</p></section>
+					<section><h2>保存期限与删除请求</h2><div><p>为回复咨询、安排合理后续和履行适用记录义务，Yonaris 只在合理所需的期限内保留申请。若希望删除，请通过公开预约沟通路径说明需要删除的申请；这里不公开个人邮箱。</p><ActionLink href="/zh/diagnostic">返回预约沟通</ActionLink></div></section>
 				</article>
 			</div>
 		</ChinaShell>

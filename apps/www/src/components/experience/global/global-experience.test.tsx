@@ -264,9 +264,19 @@ describe("Site 06 English experience", () => {
 			expect(markup).toContain("Photo: Nastuh Abootalebi / Unsplash");
 		}
 		expect(approach).toContain('src="/brand/site-06/business-walk.jpg"');
-		expect(approach).toContain("Photo: Mikhail Nilov / Pexels");
+		expect(approach).toContain("Photo: Pavel Danilyuk / Pexels");
 		expect(diagnostic).toContain('src="/brand/site-06/glass-venue.jpg"');
 		expect(diagnostic).toContain("Photo: Zerrin Velizade / Pexels");
+	});
+
+	it("discloses the localized contact-data processor, purpose, retention, and deletion route", () => {
+		const privacy = markupFor("privacy");
+		expect(privacy).toContain("Resend");
+		expect(privacy).toContain("email processor");
+		expect(privacy).toContain("understand and respond to your request");
+		expect(privacy).toContain("only as long as reasonably needed");
+		expect(privacy).toContain('href="/diagnostic"');
+		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 	});
 
 	it("keeps the sales handoff to exactly three visible lead fields", () => {

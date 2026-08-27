@@ -73,12 +73,22 @@ function fakeHashTarget(hash: string) {
 }
 
 describe("Site 06 shared foundation", () => {
-	it("tracks the approved prototype and complete photography set", () => {
+	it("tracks the audit-safe review derivative and complete photography set", () => {
 		const referenceRoot = join(repositoryRoot, "docs/design/site-06-reference");
-		const referenceHtml = readFileSync(join(referenceRoot, "site-system-multipage-agent-06.html"));
-		expect(createHash("sha256").update(referenceHtml).digest("hex")).toBe(
-			"a0b95bf8100874a3d33dff8406259073a3cd9819cb3aa7a2b58326a82f481a2b",
+		const sourceManifest = JSON.parse(readFileSync(join(referenceRoot, "source-manifest.json"), "utf8")) as {
+			immutableBinding: { path: string; sha256: string };
+			repositoryDerivative: { path: string; sha256: string; structuralChanges: boolean };
+		};
+		expect(sourceManifest.immutableBinding).toEqual({
+			path: "E:/Yonaris/.superpowers/brainstorm/1950-1787739192/content/site-system-multipage-agent-06.html",
+			sha256: "e26b204b528481ddd3274d4a546f1a9acd02a0f7f5e94de80b1070a1d05b46da",
+		});
+		expect(sourceManifest.repositoryDerivative.path).toBe(
+			"docs/design/site-06-reference/site-system-multipage-agent-06.html",
 		);
+		expect(sourceManifest.repositoryDerivative.structuralChanges).toBe(false);
+		const referenceHtml = readFileSync(join(referenceRoot, "site-system-multipage-agent-06.html"));
+		expect(createHash("sha256").update(referenceHtml).digest("hex")).toBe(sourceManifest.repositoryDerivative.sha256);
 		for (const asset of [
 			"photo-office-unsplash-1497366811353.jpg",
 			"photo-business-walk-pexels-8526452.jpg",
@@ -88,7 +98,7 @@ describe("Site 06 shared foundation", () => {
 			"photo-warm-office-pexels-31771712.jpg",
 			"photo-working-unsplash-1524758631624.jpg",
 		]) {
-			expect(existsSync(join(referenceRoot, "assets", asset)), `${asset} must stay in the approved snapshot`).toBe(true);
+			expect(existsSync(join(referenceRoot, "assets", asset)), `${asset} must stay in the review derivative`).toBe(true);
 		}
 		for (const asset of [
 			"conference-room.jpg",
@@ -118,6 +128,21 @@ describe("Site 06 shared foundation", () => {
 			height: 1200,
 			metadataMarkers: [],
 			scanSha256: "40bb77961d65de4f5699f45ad2ec529390d2be156fd30d3d459d97b1fcf7bbec",
+		});
+
+		const referenceBusinessWalk = readFileSync(join(referenceRoot, "assets/photo-business-walk-pexels-8526452.jpg"));
+		const productionBusinessWalk = readFileSync(
+			join(repositoryRoot, "apps/www/public/brand/site-06/business-walk.jpg"),
+		);
+		expect(productionBusinessWalk.equals(referenceBusinessWalk)).toBe(true);
+		expect(createHash("sha256").update(productionBusinessWalk).digest("hex")).toBe(
+			"db995fb32f261fcecdd4d6b60688764bbbdc36ed440b2961fb068a840200e390",
+		);
+		expect(inspectJpeg(productionBusinessWalk)).toEqual({
+			width: 1800,
+			height: 2696,
+			metadataMarkers: [],
+			scanSha256: "9be312203205f9ff5db7bc492b0e7c84c6ac52546dc6882f8abe2533eb5d2c15",
 		});
 	});
 

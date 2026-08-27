@@ -172,6 +172,7 @@ describe("Site 06 中国站", () => {
 	it("preserves exact Chinese category casing, source credit, and disclosure affordance", () => {
 		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
 		expect(render("approach")).toContain("Photo: Scott Graham / Unsplash");
+		expect(render("home")).toContain("Photo: Pavel Danilyuk / Pexels");
 
 		const closed = cssRule(siteCss, ".site-06-zh-public-truth__records summary::after");
 		expect(closed).toContain('content: "查看事实"');
@@ -179,6 +180,16 @@ describe("Site 06 中国站", () => {
 		expect(cssRule(siteCss, ".site-06-zh-public-truth__records details[open] summary::after")).toContain(
 			'content: "收起事实"',
 		);
+	});
+
+	it("用中文说明联系信息处理者、用途、保存期和删除路径", () => {
+		const privacy = render("privacy");
+		expect(privacy).toContain("Resend");
+		expect(privacy).toContain("邮件处理者");
+		expect(privacy).toContain("理解并回复这次咨询");
+		expect(privacy).toContain("合理所需的期限内保留");
+		expect(privacy).toContain('href="/zh/diagnostic"');
+		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
 	});
 
 	it("retains the system labels and public breakdown boundaries", () => {
