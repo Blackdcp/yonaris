@@ -346,8 +346,8 @@ git commit -m "build the Site 06 Agent fact directory"
 ### Task 5: Add visual-fidelity gates, complete responsive QA, and release
 
 **Files:**
-- Create: `e2e/www-tests/site-06-fidelity.spec.ts`
-- Create: `e2e/www-tests/site-06-fidelity.spec.ts-snapshots/*`
+- Create: `e2e/www-tests/site-06-visual-matrix.spec.ts`
+- Create: `e2e/www-tests/site-06-visual-matrix.spec.ts-snapshots/*`
 - Modify: `e2e/www-tests/dual-region-release.spec.ts`
 - Modify: `apps/www/scripts/smoke-marketing.mjs`
 - Modify: `.changeset/site-06-marketing.md`
@@ -376,14 +376,14 @@ for (const fixture of fidelityRoutes) {
 }
 ```
 
-Use separate projects/fixtures at `1440`, `1280`, `390`, and `360`. Screenshot the first viewport for every visible route and full pages for English home, Chinese home, Product/System, Evidence/Breakdown, Human + Agent, Contact, and Agent home.
+Use deterministic fixtures at `1440`, `1280`, `390`, and `360`. Screenshot the first viewport for every one of the 28 visible Human and Agent routes at all four widths (112 artifacts), then add full pages for both Human homes; English and Chinese Product/System, Evidence/Breakdown, Human + Agent, and Contact; and both Agent homes. Run with one worker, wait for fonts, hide the caret, disable animation for baselines, and add reduced-motion spot captures separately.
 
 - [ ] **Step 2: Run the new browser test and verify RED**
 
 Run the production server through Playwright `webServer`, then:
 
 ```powershell
-pnpm exec playwright test --config e2e/playwright.config.ts e2e/www-tests/site-06-fidelity.spec.ts --project=chromium
+pnpm --filter e2e exec playwright test --config playwright.www.config.ts www-tests/site-06-visual-matrix.spec.ts --workers=1
 ```
 
 Expected before baselines/last fixes: FAIL on absent baseline screenshots or any remaining composition, responsive, or interaction mismatch.
@@ -401,7 +401,7 @@ pnpm --filter @workspace/www exec vitest run
 pnpm --filter @workspace/www check-types
 pnpm exec tsc -p e2e/tsconfig.json --noEmit
 pnpm --filter @workspace/www build
-pnpm exec playwright test --config e2e/playwright.config.ts e2e/www-tests/dual-region-release.spec.ts e2e/www-tests/site-06-fidelity.spec.ts --project=chromium
+pnpm --filter e2e exec playwright test --config playwright.www.config.ts www-tests/dual-region-release.spec.ts www-tests/site-06-visual-matrix.spec.ts --workers=1
 pnpm --filter @workspace/www smoke:marketing:caddy
 pnpm audit:public-output
 pnpm test:public-output-policy
