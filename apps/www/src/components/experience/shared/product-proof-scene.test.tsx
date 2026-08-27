@@ -2,6 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ProductProofScene } from "./product-proof-scene";
 
+const RETIRED_METRIC_LABEL = String.fromCodePoint(65, 73, 32, 86, 105, 115, 105, 98, 105, 108, 105, 116, 121);
+
 describe("ProductProofScene", () => {
 	it("renders every accessible view and safe overview state in SSR", () => {
 		const html = renderToStaticMarkup(<ProductProofScene locale="en" />);
@@ -12,11 +14,13 @@ describe("ProductProofScene", () => {
 		expect(html).toContain("<dd>79%</dd>");
 		expect(html).toContain("<dd>35%</dd>");
 		expect(html).toContain("3,120");
-		expect(html).toContain("30-day AI Visibility trend");
+		expect(html).toContain("Answer presence");
+		expect(html).toContain("30-day answer presence trend");
 		expect(html).toContain("30-day Share of Voice trend");
 		expect(html.match(/<path[^>]+stroke="currentColor"/g)).toHaveLength(2);
 		expect(html).toContain("Last updated within the displayed window.");
 		expect(html).toContain("Sample workspace");
+		expect(html).not.toContain(RETIRED_METRIC_LABEL);
 		expect(html).not.toMatch(/100 evaluations|customer result|guaranteed|benchmark/i);
 	});
 
@@ -50,6 +54,8 @@ describe("ProductProofScene", () => {
 
 		expect(html).toContain("<dd>79%</dd>");
 		expect(html).toContain("<dd>35%</dd>");
+		expect(html).toContain("答案出现率");
+		expect(html).toContain("30 天答案出现率趋势");
 		for (const label of [
 			"你的品牌",
 			"竞品甲",
@@ -67,5 +73,6 @@ describe("ProductProofScene", () => {
 		}
 		expect(html).not.toContain("证据扩展");
 		expect(html).not.toContain("What should");
+		expect(html).not.toContain(RETIRED_METRIC_LABEL);
 	});
 });

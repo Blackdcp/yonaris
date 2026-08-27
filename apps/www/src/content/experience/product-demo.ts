@@ -92,7 +92,7 @@ const EN: ProductDemoContent = {
 		originalPrompt: "Tracked prompt",
 		rewrittenQuery: "Rewritten web query",
 		metricLabels: {
-			visibility: "AI Visibility",
+			visibility: "Answer presence",
 			share: "Share of Voice",
 			prompts: "Prompts",
 			evaluations: "Evaluations",
@@ -105,7 +105,7 @@ const EN: ProductDemoContent = {
 		evaluations: 3120,
 		evaluationWindow: "30-day evaluation window",
 		frequencyNote: "Runs approximately once per day.",
-		trends: { visibility: "30-day AI Visibility trend", share: "30-day Share of Voice trend" },
+		trends: { visibility: "30-day answer presence trend", share: "30-day Share of Voice trend" },
 		lastUpdated: "Last updated within the displayed window.",
 	},
 	shareOfVoice: {
@@ -183,7 +183,7 @@ const ZH: ProductDemoContent = {
 		reviewAction: "复核行动",
 		originalPrompt: "跟踪问题",
 		rewrittenQuery: "改写后的网页查询",
-		metricLabels: { visibility: "AI 可见度", share: "声量份额", prompts: "问题数", evaluations: "评估次数" },
+		metricLabels: { visibility: "答案出现率", share: "声量份额", prompts: "问题数", evaluations: "评估次数" },
 	},
 	overview: {
 		visibility: 79,
@@ -192,7 +192,7 @@ const ZH: ProductDemoContent = {
 		evaluations: 3120,
 		evaluationWindow: "30 天评估时间窗",
 		frequencyNote: "约每天运行一次。",
-		trends: { visibility: "30 天 AI 可见度趋势", share: "30 天声量份额趋势" },
+		trends: { visibility: "30 天答案出现率趋势", share: "30 天声量份额趋势" },
 		lastUpdated: "最近一次更新在当前显示时间窗内。",
 	},
 	shareOfVoice: {

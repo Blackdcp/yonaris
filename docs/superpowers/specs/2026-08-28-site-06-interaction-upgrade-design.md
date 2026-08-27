@@ -33,20 +33,20 @@ The existing full-bleed cinematic hero remains the first visual object. Its righ
 
 The trace cycles through four real review states:
 
-- **Observe:** current AI visibility, tracked prompts, evaluations, and review window;
+- **Observe:** current answer presence, tracked prompts, evaluations, and review window;
 - **Compare:** current share of voice and the tracked comparison set;
 - **Inspect:** source or evidence boundary requiring review;
 - **Decide:** a reviewable recommendation and comparable retest condition.
 
 The central buying question remains fixed while the active ring, label, readout, and attached explanation change. Visitors can select every state directly. Automatic progression stops after direct interaction, pauses while off-screen, and is disabled under reduced motion. The English and Chinese experiences use the same interaction model but different localized decision framing.
 
-Only values already present in deterministic product fixtures may appear as figures: 79% current visibility, 35% current share, 42 prompts, 3,120 evaluations in 30 days, and approximately one-day run frequency. All public examples are labelled as synthetic/de-identified sample workspace data, not benchmarks or customer results.
+Only values already present in deterministic product fixtures may appear as figures: 79% current answer presence, 35% current share, 42 prompts, 3,120 evaluations in 30 days, and approximately one-day run frequency. All public examples are labelled as synthetic/de-identified sample workspace data, not benchmarks or customer results.
 
 ### 2. Faithful product proof
 
 Add a reusable product proof scene with four selectable views:
 
-- **Overview:** AI Visibility and Share of Voice with their 30-day trends plus prompts, evaluations, frequency, and last-updated metadata.
+- **Overview:** Answer presence and Share of Voice with their 30-day trends plus prompts, evaluations, frequency, and last-updated metadata.
 - **Share of Voice:** current share and a leaderboard using fixture totals; public brand names are replaced with `Your brand`, `Competitor A`, `Competitor B`, and `Competitor C`.
 - **Opportunities:** document-style rows representing the implemented Creation, Existing Content, Outreach, and evidence expansion model. Copy is explicitly illustrative and does not promise outcomes.
 - **Query Fan-Out:** the implemented page labels and prompt-to-query relationship. No unsupported aggregate figure is shown. A visible boundary states that coverage depends on the selected engine and observation target.

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Site 06 remains the binding visual baseline; no generic split hero, bento grid, equal card wall, particle field, carousel, oversized heading, arrow-glyph CTA, or pill system.
-- Figures are limited to fixture-backed values: 79% visibility, 35% share, 42 prompts, 3,120 evaluations in 30 days, and approximately one-day frequency.
+- Figures are limited to fixture-backed values: 79% answer presence, 35% share, 42 prompts, 3,120 evaluations in 30 days, and approximately one-day frequency.
 - Citations and Query Fan-Out show no unsupported aggregate counts.
 - English and Chinese share component behaviour but use independent localized content.
 - English lead fields remain Name, Work email, Company; Chinese lead fields remain 姓名、电话、公司.
@@ -162,7 +162,7 @@ describe("ProductProofScene", () => {
   it("renders real product labels, safe values, and accessible views", () => {
     const html = renderToStaticMarkup(<ProductProofScene locale="en" />);
     expect(html).toContain('role="tablist"');
-    expect(html).toContain("AI Visibility");
+    expect(html).toContain("Answer presence");
     expect(html).toContain("Share of Voice Leaderboard");
     expect(html).toContain("3,120");
     expect(html).toContain("Query Fan-Out");

@@ -19,11 +19,11 @@ describe("public product demo content", () => {
 		const zh = productDemoFor("zh");
 
 		expect(en.overview.trends).toEqual({
-			visibility: "30-day AI Visibility trend",
+			visibility: "30-day answer presence trend",
 			share: "30-day Share of Voice trend",
 		});
 		expect(en.overview.lastUpdated).toBe("Last updated within the displayed window.");
-		expect(zh.overview.trends).toEqual({ visibility: "30 天 AI 可见度趋势", share: "30 天声量份额趋势" });
+		expect(zh.overview.trends).toEqual({ visibility: "30 天答案出现率趋势", share: "30 天声量份额趋势" });
 		expect(zh.overview.lastUpdated).toBe("最近一次更新在当前显示时间窗内。");
 	});
 
