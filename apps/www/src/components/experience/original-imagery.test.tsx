@@ -15,11 +15,23 @@ describe("original Site 06 imagery", () => {
 			.join("\n");
 		expect(markup).not.toMatch(/Unsplash|Pexels|Photo:/i);
 		expect(markup).toContain("/brand/site-06/decision-room-original.png");
+		expect(markup).toContain('src="/brand/site-06/working-session-original.png"');
+		for (const intrinsic of ['width="1535" height="1024"', 'width="1717" height="916"', 'width="1693" height="929"']) {
+			expect(markup).toContain(intrinsic);
+		}
 	});
 
 	it("eagerly loads only an explicitly prioritized cinematic image", () => {
 		const priorityMarkup = renderToStaticMarkup(
-			<CinematicField image={{ src: "/brand/site-06/decision-room-original.png", alt: "Decision room" }} priority>
+			<CinematicField
+				image={{
+					src: "/brand/site-06/decision-room-original.png",
+					alt: "Decision room",
+					width: 1535,
+					height: 1024,
+				}}
+				priority
+			>
 				<p>First viewport</p>
 			</CinematicField>,
 		);
@@ -32,6 +44,7 @@ describe("original Site 06 imagery", () => {
 		expect(priorityMarkup).toContain('loading="eager"');
 		expect(priorityMarkup).toContain('fetchPriority="high"');
 		expect(priorityMarkup).toContain('decoding="async"');
+		expect(priorityMarkup).toContain('width="1535" height="1024"');
 		expect(deferredMarkup).toContain('loading="lazy"');
 	});
 });

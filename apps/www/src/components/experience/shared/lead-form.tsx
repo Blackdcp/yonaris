@@ -27,7 +27,8 @@ const copy = {
 	en: {
 		label: "Start a conversation",
 		title: "Tell us where we should reach you.",
-		summary: "Share your name, work email and company. We’ll begin with the buying decision.",
+		summary:
+			"The first conversation will frame one market question, determine whether it can be observed and evidenced, and identify one useful next action.",
 		name: "Name",
 		contact: "Work email",
 		company: "Company",
@@ -53,7 +54,7 @@ const copy = {
 	zh: {
 		label: "预约沟通",
 		title: "怎么联系你？",
-		summary: "留下姓名、电话和公司。我们会从你最不想让 AI 答错的问题开始。",
+		summary: "第一次沟通会从团队最怕 AI 答错的客户问题开始，判断它能否被观测、能否找到证据，并确定一个有用的下一步。",
 		name: "姓名",
 		contact: "电话",
 		company: "公司",

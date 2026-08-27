@@ -160,6 +160,26 @@ describe("LeadForm delivery states", () => {
 		expect(markup).not.toContain("mailto:");
 		expect(markup).not.toMatch(/投递服务|收件箱/);
 	});
+
+	it.each([
+		{
+			locale: "en" as const,
+			phrases: ["frame one market question", "observed and evidenced", "one useful next action"],
+		},
+		{
+			locale: "zh" as const,
+			phrases: ["最怕 AI 答错的客户问题", "能否被观测", "一个有用的下一步"],
+		},
+	])("explains the first $locale consultation without adding a visible field", ({ locale, phrases }) => {
+		const markup = renderView({
+			locale,
+			values: { name: "", contact: "", company: "", companyUrl: "" },
+			submission: "idle",
+			errors: {},
+		});
+		for (const phrase of phrases) expect(markup).toContain(phrase);
+		expect(markup.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+	});
 });
 
 describe("LeadForm privacy intent", () => {
@@ -210,10 +230,13 @@ describe("LeadForm privacy intent", () => {
 		expect(idle).toContain(
 			`aria-describedby="lead-${fixture.locale}-purpose-summary lead-${fixture.locale}-purpose-disclosure"`,
 		);
-		for (const text of [fixture.title, fixture.summary, fixture.submit, fixture.disclosure]) expect(idle).toContain(text);
+		for (const text of [fixture.title, fixture.summary, fixture.submit, fixture.disclosure])
+			expect(idle).toContain(text);
 		expect(idle.match(/data-lead-field=/g) ?? []).toHaveLength(3);
 		expect(idle).toContain('type="hidden" name="requestType" value="privacy"');
 		expect(idle).not.toContain(fixture.consultationPhrase);
+		expect(idle).not.toContain("frame one market question");
+		expect(idle).not.toContain("最怕 AI 答错的客户问题");
 
 		const success = renderView({
 			locale: fixture.locale,

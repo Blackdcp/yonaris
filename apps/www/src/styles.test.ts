@@ -262,6 +262,72 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("transform: none");
 	});
 
+	it("styles the three product interactions as editorial scene primitives", () => {
+		const css = read("styles/experience/site-06.css");
+		const trace = ruleFor(css, ".site-06-decision-trace");
+		expect(trace).toContain("position: relative");
+		expect(trace).toContain("display: grid");
+		expect(trace).not.toMatch(/background:|box-shadow:|border-radius:/);
+		expect(ruleFor(css, ".site-06-decision-trace__rings")).toContain("aspect-ratio: 1");
+		const traceButton = ruleFor(css, ".site-06-decision-trace__ring button");
+		expect(traceButton).toContain("min-height: 44px");
+		expect(traceButton).toContain("background: transparent");
+		expect(traceButton).toContain("border-radius: 0");
+
+		const proof = ruleFor(css, ".site-06-product-proof-scene");
+		expect(proof).toContain("border-radius: 0");
+		expect(proof).not.toContain("box-shadow");
+		expect(proof).not.toContain("grid-template-columns: repeat(4");
+		expect(ruleFor(css, ".site-06-product-proof-scene__ledger")).toContain("background: var(--site-paper)");
+		const proofTab = ruleFor(css, ".site-06-product-proof-scene__tabs button");
+		expect(proofTab).toContain("min-height: 44px");
+		expect(proofTab).toContain("background: transparent");
+		expect(proofTab).toContain("border-radius: 0");
+
+		const canonical = ruleFor(css, ".site-06-canonical-record-transform");
+		expect(canonical).toContain("border-top: 1px solid");
+		expect(canonical).not.toMatch(/box-shadow:|grid-template-columns:\s*repeat\(2/);
+		const canonicalButton = ruleFor(css, ".site-06-canonical-record-transform button");
+		expect(canonicalButton).toContain("min-height: 44px");
+		expect(canonicalButton).toContain("background: transparent");
+		expect(canonicalButton).toContain("border-radius: 0");
+		expect(ruleFor(css, '.site-06-canonical-record-transform input[type="range"]')).toContain("min-height: 44px");
+	});
+
+	it("linearizes the product interactions at mobile widths without page overflow", () => {
+		const css = read("styles/experience/site-06.css");
+		const mobile = css.slice(
+			css.indexOf("@media (max-width: 720px)"),
+			css.indexOf("@media (prefers-reduced-motion: reduce)"),
+		);
+		expect(ruleFor(css, ".site-06")).toContain("overflow-x: clip");
+		for (const selector of [
+			".site-06-decision-trace",
+			".site-06-decision-trace__rings",
+			".site-06-product-proof-scene__tabs",
+			".site-06-product-proof-scene__ledger section dl",
+			".site-06-canonical-record-transform > div",
+		]) {
+			expect(ruleFor(mobile, selector), `${selector} must linearize at 360px`).toContain(
+				"grid-template-columns: minmax(0, 1fr)",
+			);
+		}
+	});
+
+	it("cancels scene travel and line drawing when reduced motion is requested", () => {
+		const css = read("styles/experience/site-06.css");
+		const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+		for (const selector of [
+			".site-06-decision-trace__ring",
+			".site-06-product-proof-scene svg path",
+			".site-06-canonical-record-transform",
+		]) {
+			const declarations = ruleFor(reduced, selector);
+			expect(declarations, `${selector} must cancel travel`).toContain("animation: none");
+			expect(declarations, `${selector} must cancel translation`).toContain("transform: none");
+		}
+	});
+
 	it("drifts non-text Agent geometry and completely cancels motion when requested", () => {
 		const agent = read("styles/experience/agent.css");
 		const site = read("styles/experience/site-06.css");
@@ -295,7 +361,16 @@ describe("zero-to-one stylesheet boundary", () => {
 		const css = read("styles/experience/site-06.css");
 		const contactSubmit = ruleFor(css, ".site-06-contact-form .lead-form button");
 		expect(contactSubmit).toContain("border-radius: 0");
-		expect(contactSubmit).toContain("border-bottom: 3px solid var(--site-orange)");
-		expect(contactSubmit).toContain("background: transparent");
+		expect(contactSubmit).toContain("background: var(--site-orange)");
+		expect(contactSubmit).toContain("color: var(--site-navy)");
+		for (const selector of [
+			".site-06-action",
+			".site-06-decision-trace__ring button",
+			".site-06-product-proof-scene__tabs button",
+			".site-06-canonical-record-transform button",
+		]) {
+			expect(ruleFor(css, selector), `${selector} must remain editorial`).toContain("background: transparent");
+		}
+		expect(ruleFor(css, ".site-06-skip-link")).not.toContain("background: var(--site-orange)");
 	});
 });

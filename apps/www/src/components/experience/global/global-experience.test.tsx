@@ -18,7 +18,7 @@ const compositions = {
 	home: "cinematic-orbit",
 	product: "evidence-workbench",
 	approach: "comparison-field",
-	company: "dual-reading-field",
+	company: "canonical-record-field",
 	geo: "market-editorial",
 	diagnostic: "contact-cinematic",
 	privacy: "privacy-editorial",
@@ -131,35 +131,32 @@ describe("Site 06 English experience", () => {
 		const approach = markupFor("approach");
 		const company = markupFor("company");
 
-		expect(home).toContain('data-scene-object="fixed-claim-reader"');
-		expect(home).toContain('aria-label="Choose a reading"');
+		expect(home).toContain('data-scene-object="decision-trace"');
 		expect(home).toContain("Illustrative buying question and answer evidence");
 		expect(home).toContain('data-scene-object="inline-evidence-note"');
-		expect(home).toContain("Illustrative method record · not a customer result");
-		expect(product).toContain('aria-label="Inspect an observed answer"');
-		expect(product.match(/data-evidence-state=/g) ?? []).toHaveLength(3);
+		expect(home).toContain('data-scene-object="product-proof"');
+		expect(home).toContain('data-scene-object="canonical-record-transform"');
+		expect(product).toContain('data-scene-object="product-proof"');
 		expect(approach).toContain('aria-label="Illustrative method record · not a customer result"');
 		expect(approach.match(/data-review-state=/g) ?? []).toHaveLength(2);
-		expect(company).toContain('aria-label="Read public facts"');
+		expect(company).toContain('data-scene-object="canonical-record-transform"');
 		expect(company.match(/data-stable-id=/g) ?? []).toHaveLength(3);
 		expect(company).toContain("yonaris.category.ai-native-martech");
 		expect(company).toContain("yonaris.purpose.decision-system");
 		expect(company).toContain("yonaris.scope.martech-system");
 	});
 
-	it("keeps Home to one fixed claim and one Human or Agent mode switch", () => {
+	it("keeps the Home buying question fixed across four causal decision states", () => {
 		const home = markupFor("home");
-		const start = home.indexOf('data-scene-object="fixed-claim-reader"');
+		const start = home.indexOf('data-scene-object="decision-trace"');
 		const end = home.indexOf('class="site-06-section site-06-home-dossier"');
-		const orbitReader = home.slice(start, end);
+		const decisionTrace = home.slice(start, end);
 
 		expect(start).toBeGreaterThan(-1);
-		expect(orbitReader.match(/role="tab"/g) ?? []).toHaveLength(2);
-		expect(orbitReader.match(/role="tabpanel"/g) ?? []).toHaveLength(2);
-		expect(orbitReader).toContain("Human reading");
-		expect(orbitReader).toContain("Agent reading");
-		for (const label of ["Fact", "Evidence", "Boundary", "Stable ID"]) expect(orbitReader).toContain(label);
-		for (const label of ["Category", "Purpose", "Scope"]) expect(orbitReader).not.toContain(`>${label}<`);
+		expect(decisionTrace.match(/role="tab"/g) ?? []).toHaveLength(4);
+		expect(decisionTrace.match(/role="tabpanel"/g) ?? []).toHaveLength(4);
+		expect(decisionTrace.match(/Which partner can support this decision\?/g) ?? []).toHaveLength(1);
+		for (const label of ["Observe", "Compare", "Inspect", "Decide"]) expect(decisionTrace).toContain(label);
 	});
 
 	it("puts Home evidence phrases inside the answer and updates one attached margin note", () => {
@@ -192,21 +189,16 @@ describe("Site 06 English experience", () => {
 		expect(markupFor("home")).toContain('class="site-06-action" href="/diagnostic"');
 	});
 
-	it("changes Product source, boundary and buying effect with the selected phrase", () => {
+	it("replaces the Product phrase inspector with the four-view product proof", () => {
 		const product = markupFor("product");
-		expect(product).toContain('data-scene-object="trace-workbench"');
-		expect(product).toContain('class="site-06-trace-workbench site-06-inspector"');
-		const traceWorkbench = product.slice(product.indexOf('data-scene-object="trace-workbench"'));
-		expect(traceWorkbench.match(/role="tab"/g) ?? []).toHaveLength(3);
-		const answerEnd = traceWorkbench.indexOf("</blockquote>");
-		expect(traceWorkbench.slice(0, answerEnd).match(/role="tab"/g) ?? []).toHaveLength(3);
-		expect(traceWorkbench.match(/data-evidence-state=/g) ?? []).toHaveLength(3);
-		expect(traceWorkbench.match(/<dt>Source<\/dt>/g) ?? []).toHaveLength(3);
-		expect(traceWorkbench.match(/<dt>Boundary<\/dt>/g) ?? []).toHaveLength(3);
-		expect(traceWorkbench.match(/<dt>Buying effect<\/dt>/g) ?? []).toHaveLength(3);
-		expect(product).toContain("Company capability record · public company material");
-		expect(product).toContain("Scoped public evidence · first-party owner");
-		expect(product).toContain("Public delivery method · stated operating conditions");
+		const proof = product.slice(product.indexOf('data-scene-object="product-proof"'));
+		expect(proof.match(/role="tab"/g) ?? []).toHaveLength(4);
+		expect(proof.match(/role="tabpanel"/g) ?? []).toHaveLength(4);
+		for (const label of ["Overview", "Share of Voice", "Opportunities", "Query Fan-Out"]) {
+			expect(proof).toContain(label);
+		}
+		expect(product).toContain('id="yonaris.platform.inspectable-evidence"');
+		expect(product).not.toContain('data-scene-object="trace-workbench"');
 	});
 
 	it("holds one question constant across Approach baseline and retest", () => {
@@ -220,21 +212,20 @@ describe("Site 06 English experience", () => {
 		expect(approach).toContain("Retest");
 	});
 
-	it("exposes Company fact and reading controls above the first section boundary", () => {
+	it("exposes one canonical Company record and separate purpose and scope anchors", () => {
 		const company = markupFor("company");
-		const dualReading = company.indexOf('data-scene-object="dual-reading-stage"');
+		const transform = company.indexOf('data-scene-object="canonical-record-transform"');
 		const firstSectionBoundary = company.indexOf('class="site-06-section');
-		expect(dualReading).toBeGreaterThan(-1);
-		expect(dualReading).toBeLessThan(firstSectionBoundary);
-		expect(company).toContain('class="site-06-dual-stage site-06-reading"');
-		for (const label of ["Category", "Purpose", "Scope", "Human reading", "Agent reading"]) {
+		expect(transform).toBeGreaterThan(-1);
+		expect(transform).toBeLessThan(firstSectionBoundary);
+		for (const label of ["Human reading", "Agent reading", "Public basis", "Boundary", "Stable identity"]) {
 			expect(company).toContain(label);
 		}
 		expect(company.match(/<h1/g) ?? []).toHaveLength(1);
-		expect(company).not.toContain('class="site-06-company-intro"');
-		const stage = company.slice(company.indexOf('data-scene-object="dual-reading-stage"'), firstSectionBoundary);
-		expect(stage).toContain("One public record. Two legitimate readers.");
-		expect(stage).toContain("<h1");
+		expect(company).toContain('id="yonaris.category.ai-native-martech"');
+		expect(company).toContain('id="yonaris.purpose.decision-system"');
+		expect(company).toContain('id="yonaris.scope.martech-system"');
+		expect(company).not.toContain('data-scene-object="dual-reading-stage"');
 	});
 
 	it("integrates exactly three visible Diagnostic fields into one cinematic scene", () => {
@@ -266,7 +257,7 @@ describe("Site 06 English experience", () => {
 			expect(markup).toContain('src="/brand/site-06/decision-room-original.png"');
 		}
 		expect(approach).toContain('src="/brand/site-06/glass-passage-original.png"');
-		expect(diagnostic).toContain('src="/brand/site-06/glass-passage-original.png"');
+		expect(diagnostic).toContain('src="/brand/site-06/working-session-original.png"');
 		expect([home, product, approach, diagnostic].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
 	});
 

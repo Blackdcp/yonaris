@@ -129,14 +129,15 @@ describe("Human website generation", () => {
 		expect(chinaMarkup).not.toContain('name="email"');
 	});
 
-	it("does not repeat a section heading on the same page", () => {
+	it("does not repeat a visible section heading on the same page", () => {
 		expect(globalSubject?.GLOBAL_PAGES).toBeDefined();
 		expect(chinaSubject?.CHINA_PAGES).toBeDefined();
 		if (!globalSubject?.GLOBAL_PAGES || !chinaSubject?.CHINA_PAGES) return;
 		for (const pages of [globalSubject.GLOBAL_PAGES, chinaSubject.CHINA_PAGES]) {
 			for (const key of globalPages) {
 				const markup = renderToStaticMarkup(pages[key]());
-				const headings = [...markup.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map((match) => match[1]);
+				const visibleMarkup = markup.replace(/<section[^>]* hidden=""[^>]*>[\s\S]*?<\/section>/g, "");
+				const headings = [...visibleMarkup.matchAll(/<h2[^>]*>(.*?)<\/h2>/g)].map((match) => match[1]);
 				expect(new Set(headings).size, key).toBe(headings.length);
 			}
 		}

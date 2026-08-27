@@ -14,7 +14,7 @@ const compositions = {
 	home: "cinematic-anxiety",
 	product: "system-field",
 	approach: "breakdown-replay",
-	company: "dual-reading-field-zh",
+	company: "canonical-record-field-zh",
 	geo: "market-editorial-zh",
 	diagnostic: "contact-cinematic-zh",
 	privacy: "privacy-editorial-zh",
@@ -91,17 +91,19 @@ describe("Site 06 中国站", () => {
 		expect(home.indexOf('data-scene-object="cinematic-field"')).toBeLessThan(
 			home.indexOf('data-scene-object="anxiety-selector"'),
 		);
+		expect(home.indexOf('data-scene-object="decision-trace"')).toBeLessThan(
+			home.indexOf('data-scene-object="anxiety-selector"'),
+		);
 		expectAccessibleTabs(home.match(/data-anxiety-selector[\s\S]*?<\/section>/)?.[0] ?? "", 5);
-		expect(home).toContain('data-scene-object="fact-disclosure"');
-		expect(home.match(/<details[^>]*data-public-fact=/g) ?? []).toHaveLength(3);
-		for (const label of ["事实", "证据", "边界", "稳定 ID"]) expect(home).toContain(label);
+		expect(home).toContain('data-scene-object="product-proof"');
+		expect(home).toContain('data-scene-object="canonical-record-transform"');
+		expect(home).not.toContain('data-scene-object="fact-disclosure"');
 	});
 
 	it("keeps orbit geometry without a second center label behind each overlaid record", () => {
 		const home = render("home");
 		const product = render("product");
 		for (const [markup, label] of [
-			[home, "同一条公开事实的人类与 Agent 双阅读"],
 			[home, "当前问题怎样影响客户选择"],
 			[product, "围绕同一道业务问题连接的六个节点"],
 		] as const) {
@@ -129,6 +131,11 @@ describe("Site 06 中国站", () => {
 		expect(system.match(/data-preview-relation=/g) ?? []).toHaveLength(5);
 		expect(system.match(/data-system-node=/g) ?? []).toHaveLength(6);
 		expectAccessibleTabs(system.match(/data-scene-object="system-field"[\s\S]*?<\/section>/)?.[0] ?? "", 6);
+		expect(system).toContain('data-system-output="product-proof"');
+		expect(system).toContain('data-scene-object="product-proof"');
+		expect(system.indexOf('data-scene-object="system-field"')).toBeLessThan(
+			system.indexOf('data-system-output="product-proof"'),
+		);
 	});
 
 	it("keeps one example through 基线、断点、行动、复核", () => {
@@ -173,18 +180,12 @@ describe("Site 06 中国站", () => {
 		expect(cssRule(mobile, ".site-06-zh-system-field__nodes button")).toContain("position: static");
 	});
 
-	it("preserves exact Chinese category casing, original imagery, and disclosure affordance", () => {
+	it("preserves exact Chinese category casing and route-appropriate original imagery", () => {
 		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
 		expect(render("approach")).toContain('src="/brand/site-06/working-session-original.png"');
 		expect(render("home")).toContain('src="/brand/site-06/glass-passage-original.png"');
+		expect(render("home")).toContain('src="/brand/site-06/working-session-original.png"');
 		expect([render("approach"), render("home")].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
-
-		const closed = cssRule(siteCss, ".site-06-zh-public-truth__records summary::after");
-		expect(closed).toContain('content: "查看事实"');
-		expect(closed).not.toMatch(/border-radius|background/);
-		expect(cssRule(siteCss, ".site-06-zh-public-truth__records details[open] summary::after")).toContain(
-			'content: "收起事实"',
-		);
 	});
 
 	it("用中文说明联系信息处理者、用途、保存期和删除路径", () => {
@@ -229,24 +230,28 @@ describe("Site 06 中国站", () => {
 			expect(breakdown).toContain(state);
 	});
 
-	it("shows one canonical fact through human and Agent readings", () => {
+	it("shows one canonical fact through a progressive Human and Agent record", () => {
 		const home = render("home");
 		const company = render("company");
-			for (const markup of [home, company]) {
+		for (const markup of [home, company]) {
 			expect(markup).toContain("人类阅读");
 			expect(markup).toContain("Agent 阅读");
-			expect(markup).toContain("事实");
-			expect(markup).toContain("证据");
+			expect(markup).toContain("公开依据");
 			expect(markup).toContain("边界");
-			expect(markup).toContain("稳定 ID");
+			expect(markup).toContain("稳定标识");
+			expect(markup).toContain('data-scene-object="canonical-record-transform"');
 		}
-		expect(company).toContain('data-page-composition="dual-reading-field-zh"');
-		expect(company.indexOf('aria-label="选择阅读方式"')).toBeLessThan(company.indexOf("机器可读，不等于机器写作"));
+		expect(company).toContain('data-page-composition="canonical-record-field-zh"');
+		expect(company.indexOf('data-scene-object="canonical-record-transform"')).toBeLessThan(
+			company.indexOf("机器可读，不等于机器写作"),
+		);
 		expect(company).toContain('data-scene-object="canonical-fact-record"');
 		expect(company).toContain('data-scene-object="company-close"');
 		expect(company.indexOf('data-scene-object="canonical-fact-record"')).toBeLessThan(
 			company.indexOf('data-scene-object="company-close"'),
 		);
+		expect(company).not.toContain('data-scene-object="dual-reading-stage"');
+		expect(company).not.toContain('class="site-06-zh-company-record"');
 	});
 
 	it("changes market conditions without defining an origin or destination service", () => {

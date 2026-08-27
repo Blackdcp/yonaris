@@ -3,18 +3,13 @@ import { PAGE_FACTS } from "@/content/experience/canonical-public-facts";
 import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
 import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
+import { CanonicalRecordTransform } from "../shared/canonical-record-transform";
 import { CinematicField } from "../shared/cinematic-field";
+import { DecisionTraceScene } from "../shared/decision-trace-scene";
 import { EvidenceSheet } from "../shared/evidence-sheet";
 import { LeadForm } from "../shared/lead-form";
-import {
-	BuyingQuestionDossier,
-	CompanyReadingScene,
-	EN_READING_RECORDS,
-	EvidenceReviewScene,
-	HomeReadingScene,
-	MarketAnswerCaseFile,
-	PlatformInspectorScene,
-} from "./global-scenes";
+import { ProductProofScene } from "../shared/product-proof-scene";
+import { BuyingQuestionDossier, EN_READING_RECORDS, EvidenceReviewScene } from "./global-scenes";
 import { GlobalShell } from "./global-shell";
 
 function ActionLink({ href, children }: { href: string; children: ReactNode }) {
@@ -81,12 +76,14 @@ export function GlobalHomePage() {
 						src: "/brand/site-06/decision-room-original.png",
 						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
+						width: 1535,
+						height: 1024,
 					}}
 					priority
 					className="site-06-home-cinematic"
 				>
 					<HomePageLead />
-					<HomeReadingScene />
+					<DecisionTraceScene locale="en" />
 				</CinematicField>
 
 				<section className="site-06-section site-06-home-dossier">
@@ -100,9 +97,22 @@ export function GlobalHomePage() {
 					<BuyingQuestionDossier />
 				</section>
 
-				<section className="site-06-home-workbench">
+				<section
+					className="site-06-home-workbench"
+					id={EN_READING_RECORDS[1]?.stableId}
+					data-stable-id={EN_READING_RECORDS[1]?.stableId}
+					tabIndex={-1}
+				>
 					<div className="site-06-section">
-						<MarketAnswerCaseFile />
+						<header className="site-06-product-proof-context">
+							<p className="site-06-kicker">Product evidence attached to the decision system</p>
+							<h2>Inspect the working state behind the next review.</h2>
+							<p>{EN_READING_RECORDS[1]?.fact}</p>
+							<small>
+								{EN_READING_RECORDS[1]?.evidence} · {EN_READING_RECORDS[1]?.boundary}
+							</small>
+						</header>
+						<ProductProofScene locale="en" compact />
 					</div>
 				</section>
 
@@ -111,6 +121,8 @@ export function GlobalHomePage() {
 						src: "/brand/site-06/glass-passage-original.png",
 						alt: "People moving through a glass business passage",
 						focalPosition: "center center",
+						width: 1717,
+						height: 916,
 					}}
 					className="site-06-home-comparison-photo"
 				>
@@ -124,7 +136,7 @@ export function GlobalHomePage() {
 					<EvidenceReviewScene />
 				</CinematicField>
 
-				<article
+				<section
 					className="site-06-section site-06-home-bridge"
 					id={EN_READING_RECORDS[2]?.stableId}
 					data-stable-id={EN_READING_RECORDS[2]?.stableId}
@@ -137,14 +149,19 @@ export function GlobalHomePage() {
 							should serve both without creating two competing versions of the company.
 						</p>
 					</header>
-					<blockquote>{EN_READING_RECORDS[2]?.fact}</blockquote>
-					<aside>
-						{EN_READING_RECORDS[2]?.evidence}
-						<br />
-						{EN_READING_RECORDS[2]?.boundary}
+					<div className="site-06-home-bridge__scope">
+						<p>{EN_READING_RECORDS[2]?.fact}</p>
+						<small>
+							{EN_READING_RECORDS[2]?.evidence} · {EN_READING_RECORDS[2]?.boundary}
+						</small>
+					</div>
+					<CanonicalRecordTransform locale="en" compact />
+					<aside className="site-06-home-bridge__note">
+						The category fact stays fixed while its public basis, boundary, stable identity and representations become
+						explicit.
 					</aside>
-					<ActionLink href="/company">Open the dual reading</ActionLink>
-				</article>
+					<ActionLink href="/company">Read the corresponding public record</ActionLink>
+				</section>
 
 				<DarkClose pageKey="home" />
 			</div>
@@ -164,6 +181,8 @@ export function GlobalProductPage() {
 						src: "/brand/site-06/decision-room-original.png",
 						alt: "A team reviewing a decision in a warm meeting room",
 						focalPosition: "center center",
+						width: 1535,
+						height: 1024,
 					}}
 					priority
 					className="site-06-product-cinematic"
@@ -191,8 +210,8 @@ export function GlobalProductPage() {
 					</EvidenceSheet>
 				</CinematicField>
 
-				<section className="site-06-section site-06-product-trace">
-					<PlatformInspectorScene />
+				<section className="site-06-section site-06-product-trace" id={pageFacts.product.id} tabIndex={-1}>
+					<ProductProofScene locale="en" />
 				</section>
 
 				<DarkClose pageKey="product" />
@@ -213,6 +232,8 @@ export function GlobalApproachPage() {
 						src: "/brand/site-06/glass-passage-original.png",
 						alt: "People moving through a glass business passage",
 						focalPosition: "center 72%",
+						width: 1717,
+						height: 916,
 					}}
 					priority
 					className="site-06-approach-cinematic"
@@ -257,14 +278,26 @@ export function GlobalApproachPage() {
 }
 
 export function GlobalCompanyPage() {
+	const copy = GLOBAL_COPY.company;
+	const supportingRecords = EN_READING_RECORDS.filter((record) => record.id !== "category");
 	return (
 		<GlobalShell pageKey="company">
-			<div className="site-06-page-composition site-06-company-composition" data-page-composition="dual-reading-field">
+			<div
+				className="site-06-page-composition site-06-company-composition"
+				data-page-composition="canonical-record-field"
+			>
 				<section className="site-06-company-field">
-					<CompanyReadingScene />
+					<div className="site-06-company-lead">
+						<header className="site-06-page-lead">
+							<p className="site-06-kicker">{copy.eyebrow}</p>
+							<h1>{copy.title}</h1>
+							<p className="site-06-hero__lead">{copy.lead}</p>
+						</header>
+						<CanonicalRecordTransform locale="en" />
+					</div>
 				</section>
 
-				<section className="site-06-section site-06-company-document">
+				<section className="site-06-section site-06-company-document" data-scene-object="canonical-fact-record">
 					<header className="site-06-split-intro">
 						<h2>Machine-readable does not mean machine-written.</h2>
 						<p>
@@ -272,6 +305,17 @@ export function GlobalCompanyPage() {
 							retrieval. They do not guarantee ranking, inclusion, retrieval or citation.
 						</p>
 					</header>
+					<section className="site-06-company-anchor-ledger" aria-label="Yonaris purpose and scope records">
+						{supportingRecords.map((record) => (
+							<article key={record.id} id={record.stableId} data-stable-id={record.stableId} tabIndex={-1}>
+								<span>{record.prompt}</span>
+								<p>{record.fact}</p>
+								<small>
+									{record.evidence} · {record.boundary}
+								</small>
+							</article>
+						))}
+					</section>
 					<p className="site-06-company-document__statement">
 						People receive context for a decision. Agents receive the same facts with evidence, scope and a stable
 						relationship to the rest of the company record.
@@ -290,7 +334,14 @@ export function GlobalGeoPage() {
 				<section className="site-06-market-editorial">
 					<RouteLead pageKey="geo" />
 					<figure className="site-06-editorial-photo">
-						<img src="/brand/site-06/glass-passage-original.png" alt="A business conversation in a glass meeting space" />
+						<img
+							src="/brand/site-06/glass-passage-original.png"
+							alt="A business conversation in a glass meeting space"
+							width={1717}
+							height={916}
+							loading="lazy"
+							decoding="async"
+						/>
 					</figure>
 				</section>
 
@@ -339,11 +390,7 @@ export function GlobalGeoPage() {
 	);
 }
 
-export function GlobalDiagnosticPage({
-	requestType = "consultation",
-}: {
-	requestType?: DiagnosticRequestType;
-} = {}) {
+export function GlobalDiagnosticPage({ requestType = "consultation" }: { requestType?: DiagnosticRequestType } = {}) {
 	const isPrivacyRequest = requestType === "privacy";
 	return (
 		<GlobalShell pageKey="diagnostic">
@@ -353,9 +400,11 @@ export function GlobalDiagnosticPage({
 			>
 				<CinematicField
 					image={{
-						src: "/brand/site-06/glass-passage-original.png",
-						alt: "People moving through a glass business passage",
+						src: "/brand/site-06/working-session-original.png",
+						alt: "A working session reviewing evidence together",
 						focalPosition: "center center",
+						width: 1693,
+						height: 929,
 					}}
 					priority
 					className="site-06-contact-cinematic"
@@ -366,8 +415,8 @@ export function GlobalDiagnosticPage({
 								<p className="site-06-kicker">Privacy request</p>
 								<h1>Ask Yonaris to review a previous contact request.</h1>
 								<p className="site-06-hero__lead">
-									Use the same contact and company details so we can identify the record for manual review and
-									follow up through the channel you provide.
+									Use the same contact and company details so we can identify the record for manual review and follow up
+									through the channel you provide.
 								</p>
 							</header>
 						) : (
