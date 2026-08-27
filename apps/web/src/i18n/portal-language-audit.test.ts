@@ -593,7 +593,7 @@ describe("portal UI-language literal audit", () => {
 	it("keeps every deferred output-language surface assigned to an exact owner and task", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
 		expect(validateCrossPlanOwnership(repositoryRoot)).toEqual([]);
-		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(20);
+		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(19);
 		expect(CROSS_PLAN_RESOLUTIONS).toEqual([
 			{
 				file: "apps/web/src/routes/_authed/reports/index.tsx",
@@ -639,6 +639,75 @@ describe("portal UI-language literal audit", () => {
 				resolution: "explicit-output-language",
 				evidence: "Each history item derives its artifact-language label from that report's persisted outputLanguage.",
 				runtimeTest: "apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "output-language-binding",
+				value: "validateReportRenderSearch",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence:
+					"The render route accepts only exact en or zh-CN overrides and otherwise falls back to persisted language.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "output-copy",
+				value: "getReportCopy",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence: "Printable report metadata resolves its title from the selected artifact language.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "ambient-ui-language",
+				value: "useI18n",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence: "Ambient Portal UI language supplies only the screen selector labels outside the artifact root.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "output-copy",
+				value: "getReportCopy",
+				occurrence: 2,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence: "Route-owned printable copy and formatters resolve from the selected artifact language.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "output-language-binding",
+				value: "setOutputLanguage",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence:
+					"The screen selector writes only a validated render-query override and never mutates UI or Program preferences.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
+			},
+			{
+				file: "apps/web/src/routes/_authed/reports/render/$reportId.tsx",
+				kind: "output-component",
+				value: "ReportPromptChartPrint",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence:
+					"The route passes the exact selected token and raw run evidence at its chart boundary; child consumption remains independently deferred.",
+				runtimeTest: "apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
 			},
 			{
 				file: "apps/web/src/routes/_authed/admin/tools.tsx",
@@ -727,6 +796,7 @@ describe("portal UI-language literal audit", () => {
 			new Set([
 				"apps/web/src/routes/_authed/reports/index-output-language-browser-runtime.browser.test.tsx",
 				"apps/web/src/routes/_authed/reports/index-output-language-transition.test.ts",
+				"apps/web/src/routes/_authed/reports/render/report-render-language.test.tsx",
 				"apps/web/src/components/opportunities-generation-control.test.tsx",
 				"apps/web/src/routes/_authed/app/$brand/opportunities-output-language.test.tsx",
 				"apps/web/src/components/opportunities-report.test.tsx",
@@ -752,6 +822,11 @@ describe("portal UI-language literal audit", () => {
 		}
 		expect(CROSS_PLAN_OWNERSHIP).toEqual(
 			expect.arrayContaining([
+				expect.objectContaining({
+					file: "apps/web/src/components/prompt-chart-print.tsx",
+					owner: "portal-output-languages",
+					task: "Task 4",
+				}),
 				expect.objectContaining({
 					file: "apps/web/src/components/base-chart-print.tsx",
 					owner: "portal-output-languages",
