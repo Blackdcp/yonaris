@@ -3,3 +3,4 @@ Dockerfile* text eol=lf
 *.caddy text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+docs/design/site-06-reference/site-system-multipage-agent-06.html -text

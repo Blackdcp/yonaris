@@ -1,9 +1,15 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { OrbitField } from "./orbit-field";
 import * as readingLens from "./reading-lens";
 
 const { ReadingLens } = readingLens;
+const sharedRoot = dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = join(sharedRoot, "../../../../../..");
 
 type HashTarget = {
 	location: { hash: string };
@@ -36,6 +42,39 @@ function fakeHashTarget(hash: string) {
 }
 
 describe("Site 06 shared foundation", () => {
+	it("tracks the approved prototype and complete photography set", () => {
+		const referenceRoot = join(repositoryRoot, "docs/design/site-06-reference");
+		const referenceHtml = readFileSync(join(referenceRoot, "site-system-multipage-agent-06.html"));
+		expect(createHash("sha256").update(referenceHtml).digest("hex")).toBe(
+			"e26b204b528481ddd3274d4a546f1a9acd02a0f7f5e94de80b1070a1d05b46da",
+		);
+		for (const asset of [
+			"photo-office-unsplash-1497366811353.jpg",
+			"photo-business-walk-pexels-8526452.jpg",
+			"photo-lobby-pexels-18592586.jpg",
+			"photo-evidence-unsplash-1450101499163.jpg",
+			"photo-glass-meeting-pexels-3760089.jpg",
+			"photo-warm-office-pexels-31771712.jpg",
+			"photo-working-unsplash-1524758631624.jpg",
+		]) {
+			expect(existsSync(join(referenceRoot, "assets", asset)), `${asset} must stay in the approved snapshot`).toBe(true);
+		}
+		for (const asset of [
+			"conference-room.jpg",
+			"business-walk.jpg",
+			"glass-venue.jpg",
+			"evidence-room.jpg",
+			"glass-meeting.jpg",
+			"warm-office.jpg",
+			"working-session.jpg",
+		]) {
+			expect(
+				existsSync(join(repositoryRoot, "apps/www/public/brand/site-06", asset)),
+				`${asset} must be available to the marketing app`,
+			).toBe(true);
+		}
+	});
+
 	it("renders one meaningful orbit and an accessible dual reading", () => {
 		const lens = renderToStaticMarkup(
 			<ReadingLens

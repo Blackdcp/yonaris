@@ -165,11 +165,6 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(read("components/experience/global/global-pages.tsx")).not.toContain("global.css");
 	});
 
-	it("does not use continuous decorative keyframes", () => {
-		const output = ["base.css", "site-06.css", "agent.css"].map((file) => read(`styles/experience/${file}`)).join("\n");
-		expect(output).not.toMatch(/animation(?:-iteration-count)?\s*:[^;{}]*\binfinite\b/i);
-	});
-
 	it("locks the Site 06 visual limits and motion fallback", () => {
 		const css = read("styles/experience/site-06.css");
 		const reducedMotion = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
@@ -178,7 +173,26 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(css).toContain("font-size: clamp(38px, 4vw, 48px)");
 		expect(css).toContain("@media (prefers-reduced-motion: reduce)");
 		expect(reducedMotion).toMatch(/\.site-06-hero__media:hover img\s*\{[^}]*transform:\s*none;/s);
-		expect(css).not.toMatch(/animation(?:-iteration-count)?\s*:[^;{}]*\binfinite\b/i);
+	});
+
+	it("keeps cinematic depth and cancels photo breathing for reduced motion", () => {
+		const css = read("styles/experience/site-06.css");
+		const reducedMotion = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+		for (const selector of [
+			".site-06-cinematic",
+			".site-06-evidence-sheet",
+			".site-06-comparison-stage",
+			".site-06-dual-stage",
+		]) {
+			expect(ruleFor(css, selector), `${selector} must remain a scene primitive`).not.toBe("");
+		}
+		expect(ruleFor(css, ".site-06-cinematic::before")).toMatch(/linear-gradient/);
+		expect(ruleFor(css, ".site-06-cinematic__media")).toContain(
+			"animation: site-06-photo-breathe 24s ease-in-out infinite alternate",
+		);
+		expect(css).toContain("@keyframes site-06-photo-breathe");
+		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("animation: none");
+		expect(ruleFor(reducedMotion, ".site-06-cinematic__media")).toContain("transform: none");
 	});
 
 	it("styles Site 06 actions, photo credits, section leads, and the shared contact form", () => {
