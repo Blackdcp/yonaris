@@ -1,5 +1,6 @@
 import type { Decorator } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { I18nProvider } from "../src/i18n/provider";
 import "../src/styles.css";
 
 const queryClient = new QueryClient({
@@ -22,4 +23,10 @@ const withBrandTheme: Decorator = (Story, context) => {
 	);
 };
 
-export const decorators: Decorator[] = [withBrandTheme, withQueryClient];
+const withDefaultLocale: Decorator = (Story) => (
+	<I18nProvider locale="en">
+		<Story />
+	</I18nProvider>
+);
+
+export const decorators: Decorator[] = [withBrandTheme, withQueryClient, withDefaultLocale];

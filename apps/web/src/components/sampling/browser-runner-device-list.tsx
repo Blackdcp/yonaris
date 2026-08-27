@@ -15,6 +15,7 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Copy, KeyRound, Laptop, Loader2, ShieldX } from "lucide-react";
 import { useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { browserRunnerDeviceIsOnline } from "./sampling-run-now-dialog";
@@ -180,8 +181,7 @@ export function BrowserRunnerDeviceList({
 							<AlertTitle>{t(error.id, error.values)}</AlertTitle>
 							{error.detail && (
 								<AlertDescription>
-									<p>{t("sampling.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{error.detail}</pre>
+									<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={error.detail} />
 								</AlertDescription>
 							)}
 						</Alert>

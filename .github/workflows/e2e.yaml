@@ -10,8 +10,8 @@
 #
 # This workflow is the SINGLE SOURCE OF TRUTH for E2E test orchestration.
 # Run locally via: pnpm test:e2e-local  (replays this workflow with
-# https://github.com/nektos/act); `pnpm test:e2e` runs just the fixture specs
-# against an already-running stack.
+# https://github.com/nektos/act); `pnpm test:e2e` runs the fixture and isolated
+# language-smoke specs against an already-running stack.
 
 name: E2E Tests
 
@@ -82,8 +82,8 @@ jobs:
       - name: Unit tests
         run: pnpm turbo test
 
-      - name: Verify E2E Compose topology
-        run: node --test scripts/e2e-compose-topology.test.mjs
+      - name: Verify E2E contracts
+        run: node --test scripts/e2e-compose-topology.test.mjs scripts/e2e-language-smoke-contract.test.mjs
 
       - name: Build and verify Browser Runner extension
         run: |
@@ -237,7 +237,7 @@ jobs:
       # Phase 1 — worker still down. Run everything that reads the seeded
       # fixtures, so no background job can mutate them mid-suite.
       - name: Run Playwright E2E tests
-        run: pnpm -C e2e exec playwright test --project=fixtures
+        run: pnpm -C e2e exec playwright test --project=fixtures --project=language-smoke
 
       - name: Run Bruno API tests
         run: pnpm test:api
@@ -283,6 +283,7 @@ jobs:
           name: test-results
           path: |
             e2e/test-results/
+            e2e/test-results-language-smoke/
             e2e/test-results-sampling/
             e2e/test-results-worker/
           retention-days: 7

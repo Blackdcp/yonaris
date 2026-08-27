@@ -21,6 +21,7 @@ import { Input } from "@workspace/ui/components/input";
 import { Label } from "@workspace/ui/components/label";
 import { Check, Copy, Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { OpportunitiesGenerationControl } from "@/components/opportunities-generation-control";
 import { type LocalizedMessage, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
@@ -140,12 +141,7 @@ function AnalyzeBrandDialog() {
 					{error && (
 						<div className="text-sm text-destructive">
 							<p>{t(error.id, error.values)}</p>
-							{error.detail && (
-								<>
-									<p>{t("admin.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{error.detail}</pre>
-								</>
-							)}
+							{error.detail && <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error.detail} />}
 						</div>
 					)}
 
@@ -310,8 +306,7 @@ function ToolsPage() {
 			{opportunityScopes.error && (
 				<div className="text-sm text-destructive">
 					<p>{t("providerTool.opportunity.errorScopes")}</p>
-					<p>{t("admin.raw.errorDetails")}</p>
-					<pre className="whitespace-pre-wrap">{rawErrorDetail(opportunityScopes.error)}</pre>
+					<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={rawErrorDetail(opportunityScopes.error) ?? ""} />
 				</div>
 			)}
 		</div>

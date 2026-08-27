@@ -5,6 +5,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { AlertTriangle, ArrowLeft, Loader2, LockKeyhole } from "lucide-react";
 import { useEffect, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import {
 	clearSamplingLease,
 	readSamplingLease,
@@ -170,12 +171,7 @@ function SamplingTaskPage() {
 				<AlertTitle>{t("sampling.task.loadError")}</AlertTitle>
 				<AlertDescription>
 					<p>{t("sampling.task.notFound")}</p>
-					{detail && (
-						<>
-							<p>{t("sampling.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{detail}</pre>
-						</>
-					)}
+					{detail && <LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={detail} />}
 				</AlertDescription>
 			</Alert>
 		);

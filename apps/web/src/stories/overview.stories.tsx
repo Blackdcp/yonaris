@@ -174,7 +174,9 @@ export const ChineseOnboardingReviewAndSave: Story = {
 		expect.soft(textboxes[1]).toHaveValue("https://evidence.example.cn/path?q=CN");
 		expect.soft(canvas.getByText("docs.example.cn")).toBeVisible();
 		expect.soft(canvas.getByText("Step 原始别名")).toBeVisible();
-		expect.soft(canvas.getByText("Which AI IDE works in 中国?")).toBeVisible();
+		const promptInputs = canvas.getAllByRole("textbox", { name: "提示词文本" });
+		expect(promptInputs).toHaveLength(2);
+		for (const input of promptInputs) expect.soft(input).toHaveValue("Which AI IDE works in 中国?");
 
 		let saveButton = canvas.getByRole("button", { name: /Start tracking|开始追踪/ });
 		expect.soft(saveButton).toHaveTextContent("开始追踪（1 个新提示词）");

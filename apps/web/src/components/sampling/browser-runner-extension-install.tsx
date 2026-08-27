@@ -3,6 +3,7 @@ import { Button } from "@workspace/ui/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card";
 import { Download, PackageCheck, TriangleAlert } from "lucide-react";
 import { useEffect, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { useI18n } from "@/i18n/provider";
 
 const EXTENSION_FILE_NAME = "yonaris-browser-extension.zip";
@@ -80,10 +81,7 @@ export function BrowserRunnerExtensionInstall({
 						<AlertDescription>
 							<p>{t("sampling.extension.digestWarning")}</p>
 							{metadataError.detail && (
-								<>
-									<p>{t("sampling.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{metadataError.detail}</pre>
-								</>
+								<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={metadataError.detail} />
 							)}
 						</AlertDescription>
 					</Alert>

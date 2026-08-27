@@ -24,6 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Settings, TrendingDown, TrendingUp } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { type LocalizedMessage, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName } from "@/lib/route-head";
@@ -214,12 +215,7 @@ function DelayOverrideDialog({ brand, onUpdate }: { brand: BrandStats; onUpdate:
 					{error && (
 						<div className="text-sm text-destructive">
 							<p>{t(error.id, error.values)}</p>
-							{error.detail && (
-								<>
-									<p>{t("admin.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{error.detail}</pre>
-								</>
-							)}
+							{error.detail && <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error.detail} />}
 						</div>
 					)}
 				</div>
@@ -347,12 +343,7 @@ function AdminDashboard() {
 					<CardTitle className="text-destructive">{t("admin.error.title")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{typeof error === "string" && (
-						<>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{error}</pre>
-						</>
-					)}
+					{typeof error === "string" && <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error} />}
 				</CardContent>
 			</Card>
 		);

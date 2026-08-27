@@ -17,6 +17,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@workspace/ui/components/table";
 import { useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import type { MessageId } from "@/i18n/catalog";
 import { translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
@@ -202,8 +203,10 @@ function CustomerAccessPage() {
 								{createWorkspace.error && (
 									<div className="text-sm text-destructive">
 										<p>{t("admin.access.error.createWorkspace")}</p>
-										<p>{t("admin.raw.errorDetails")}</p>
-										<pre className="whitespace-pre-wrap">{rawErrorDetail(createWorkspace.error)}</pre>
+										<LocalizedRawDetail
+											labelId="admin.raw.errorDetails"
+											detail={rawErrorDetail(createWorkspace.error) ?? ""}
+										/>
 									</div>
 								)}
 							</div>
@@ -265,8 +268,10 @@ function CustomerAccessPage() {
 								{createAccount.error && (
 									<div className="text-sm text-destructive">
 										<p>{t("admin.access.error.createAccount")}</p>
-										<p>{t("admin.raw.errorDetails")}</p>
-										<pre className="whitespace-pre-wrap">{rawErrorDetail(createAccount.error)}</pre>
+										<LocalizedRawDetail
+											labelId="admin.raw.errorDetails"
+											detail={rawErrorDetail(createAccount.error) ?? ""}
+										/>
 									</div>
 								)}
 							</div>
@@ -362,22 +367,19 @@ function CustomerAccessPage() {
 					{workspaces.error && (
 						<div className="text-sm text-destructive">
 							<p>{t("admin.access.error.workspaces")}</p>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{rawErrorDetail(workspaces.error)}</pre>
+							<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={rawErrorDetail(workspaces.error) ?? ""} />
 						</div>
 					)}
 					{access.error && (
 						<div className="text-sm text-destructive">
 							<p>{t("admin.access.error.accounts")}</p>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{rawErrorDetail(access.error)}</pre>
+							<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={rawErrorDetail(access.error) ?? ""} />
 						</div>
 					)}
 					{resetPassword.error && (
 						<div className="text-sm text-destructive">
 							<p>{t("admin.access.error.reset")}</p>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{rawErrorDetail(resetPassword.error)}</pre>
+							<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={rawErrorDetail(resetPassword.error) ?? ""} />
 						</div>
 					)}
 				</CardContent>

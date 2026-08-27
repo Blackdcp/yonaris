@@ -14,6 +14,7 @@ import { Checkbox } from "@workspace/ui/components/checkbox";
 import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { BrowserRunnerDeviceView, SamplingRunNowInput, SamplingRunNowProgram } from "./types";
@@ -235,8 +236,7 @@ export function SamplingRunNowDialog({
 						<AlertTitle>{t(error.id, error.values)}</AlertTitle>
 						{error.detail && (
 							<AlertDescription>
-								<p>{t("sampling.raw.errorDetails")}</p>
-								<pre className="whitespace-pre-wrap">{error.detail}</pre>
+								<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={error.detail} />
 							</AlertDescription>
 						)}
 					</Alert>

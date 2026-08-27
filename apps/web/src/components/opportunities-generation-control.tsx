@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@work
 import { Label } from "@workspace/ui/components/label";
 import { Loader2, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { type LocalizedMessage, type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { OpportunitiesResponse } from "@/server/opportunities";
@@ -111,8 +112,7 @@ export function OpportunitiesGenerationControl({
 				{message && <p className="text-sm text-muted-foreground">{t(message.id, message.values)}</p>}
 				{message?.detail && (
 					<div className="text-sm text-destructive">
-						<p>{t("admin.raw.errorDetails")}</p>
-						<pre className="whitespace-pre-wrap">{message.detail}</pre>
+						<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={message.detail} />
 					</div>
 				)}
 			</CardContent>

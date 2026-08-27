@@ -33,6 +33,7 @@ import {
 	X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
@@ -534,11 +535,13 @@ export function SamplingTaskWorkbench({
 							{task.automation?.needsHumanReason && (
 								<div>
 									<p>{t("sampling.workbench.takeover.reason")}</p>
-									<p className="font-medium">{t("sampling.raw.executionDetails")}</p>
 									{task.automation.needsHumanCode && (
 										<code className="block break-all">{task.automation.needsHumanCode}</code>
 									)}
-									<pre className="whitespace-pre-wrap">{task.automation.needsHumanReason}</pre>
+									<LocalizedRawDetail
+										labelId="sampling.raw.executionDetails"
+										detail={task.automation.needsHumanReason}
+									/>
 								</div>
 							)}
 							{submitMayHaveOccurred && <p>{t("sampling.workbench.takeover.submitMayHaveOccurred")}</p>}
@@ -811,8 +814,7 @@ export function SamplingTaskWorkbench({
 										<AlertTitle>{t("sampling.workbench.evidence.recoveryError")}</AlertTitle>
 										{typeof evidenceArtifactsError === "string" && (
 											<AlertDescription>
-												<p>{t("sampling.raw.errorDetails")}</p>
-												<pre className="whitespace-pre-wrap">{evidenceArtifactsError}</pre>
+												<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={evidenceArtifactsError} />
 											</AlertDescription>
 										)}
 									</Alert>
@@ -914,12 +916,7 @@ export function SamplingTaskWorkbench({
 																: "sampling.workbench.evidence.uploadFailed",
 														)}
 													</p>
-													{item.error && (
-														<>
-															<p>{t("sampling.raw.errorDetails")}</p>
-															<pre className="whitespace-pre-wrap">{item.error}</pre>
-														</>
-													)}
+													{item.error && <LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={item.error} />}
 												</div>
 											)}
 											{artifact && (
@@ -932,8 +929,7 @@ export function SamplingTaskWorkbench({
 											)}
 											{item.error && item.state === "ready" && (
 												<div className="text-sm text-destructive">
-													<p>{t("sampling.raw.errorDetails")}</p>
-													<pre className="whitespace-pre-wrap">{item.error}</pre>
+													<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={item.error} />
 												</div>
 											)}
 										</div>
@@ -960,22 +956,14 @@ export function SamplingTaskWorkbench({
 													{fileName}: {t(presentation.id, presentation.values)}
 												</p>
 												{presentation.detail && (
-													<>
-														<p>{t("sampling.raw.errorDetails")}</p>
-														<pre className="whitespace-pre-wrap">{presentation.detail}</pre>
-													</>
+													<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={presentation.detail} />
 												)}
 											</li>
 										);
 									})}
 								</ul>
 							)}
-							{error.detail && (
-								<>
-									<p>{t("sampling.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{error.detail}</pre>
-								</>
-							)}
+							{error.detail && <LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={error.detail} />}
 						</AlertDescription>
 					</Alert>
 				)}
@@ -1131,10 +1119,7 @@ export function SamplingTaskWorkbench({
 							<div className="text-destructive">
 								<p>{t("sampling.task.heartbeatError")}</p>
 								{typeof heartbeatError === "string" && (
-									<>
-										<p>{t("sampling.raw.errorDetails")}</p>
-										<pre className="whitespace-pre-wrap">{heartbeatError}</pre>
-									</>
+									<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={heartbeatError} />
 								)}
 							</div>
 						)}

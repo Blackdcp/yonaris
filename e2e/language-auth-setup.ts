@@ -47,16 +47,21 @@ export async function provisionLanguageSmokeIdentity(input: { browser: Browser; 
           [LANGUAGE_SMOKE_ORG_ID, userId],
         );
       }
-      await client.query(`UPDATE "user" SET role = 'admin' WHERE id = $1`, [userId]);
+      await client.query(`UPDATE "user" SET role = 'admin', ui_language = 'en' WHERE id = $1`, [userId]);
     } finally {
       await client.end();
     }
 
     const sessionResponse = await page.request.get("/api/auth/get-session");
     const session = (await sessionResponse.json()) as {
-      user?: { email?: string; role?: string };
+      user?: { email?: string; role?: string; uiLanguage?: string };
     };
-    if (!sessionResponse.ok() || session.user?.email !== LANGUAGE_SMOKE_USER.email || session.user?.role !== "admin") {
+    if (
+      !sessionResponse.ok() ||
+      session.user?.email !== LANGUAGE_SMOKE_USER.email ||
+      session.user?.role !== "admin" ||
+      session.user?.uiLanguage !== "en"
+    ) {
       throw new Error("Language smoke identity did not resolve as the dedicated platform user");
     }
 

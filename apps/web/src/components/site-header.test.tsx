@@ -4,7 +4,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/provider";
 
-const mocks = vi.hoisted(() => ({ pathname: "/app/brand-1", brandName: "Acme" as string | undefined }));
+const mocks = vi.hoisted(() => ({
+	pathname: "/app/brand-1",
+	brandName: "Acme" as string | undefined,
+	breadcrumbProps: [] as Array<Record<string, unknown>>,
+	sidebarTriggerProps: [] as Array<Record<string, unknown>>,
+}));
 
 vi.mock("@tanstack/react-router", () => ({
 	Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
@@ -14,7 +19,10 @@ vi.mock("@workspace/ui/components/badge", () => ({
 	Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }));
 vi.mock("@workspace/ui/components/breadcrumb", () => ({
-	Breadcrumb: ({ children }: { children: ReactNode }) => <nav>{children}</nav>,
+	Breadcrumb: ({ children, ...props }: { children: ReactNode } & Record<string, unknown>) => {
+		mocks.breadcrumbProps.push(props);
+		return <nav>{children}</nav>;
+	},
 	BreadcrumbItem: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 	BreadcrumbLink: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 	BreadcrumbList: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -23,9 +31,10 @@ vi.mock("@workspace/ui/components/breadcrumb", () => ({
 }));
 vi.mock("@workspace/ui/components/separator", () => ({ Separator: () => <i>|</i> }));
 vi.mock("@workspace/ui/components/sidebar", () => ({
-	SidebarTrigger: ({ label, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label?: string }) => (
-		<button type="button" aria-label={label} {...props} />
-	),
+	SidebarTrigger: ({ label, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { label?: string }) => {
+		mocks.sidebarTriggerProps.push({ label });
+		return <button type="button" aria-label={label} {...props} />;
+	},
 }));
 vi.mock("@/components/demo-mode-pill", () => ({ DemoModePill: () => null }));
 vi.mock("@/components/measurement-scope-switcher", () => ({ MeasurementScopeSwitcher: () => null }));
@@ -49,6 +58,18 @@ describe("SiteHeader localization", () => {
 	beforeEach(() => {
 		mocks.pathname = "/app/brand-1";
 		mocks.brandName = "Acme";
+		mocks.breadcrumbProps.length = 0;
+		mocks.sidebarTriggerProps.length = 0;
+	});
+
+	it.each([
+		["en", "Toggle sidebar", "Breadcrumb", "More"],
+		["zh-CN", "切换侧边栏", "面包屑导航", "更多"],
+	] as const)("passes localized %s accessibility props to shared header controls", (locale, trigger, label, more) => {
+		renderHeader(locale, "/app/brand-1");
+
+		expect(mocks.sidebarTriggerProps.at(-1)).toMatchObject({ label: trigger });
+		expect(mocks.breadcrumbProps.at(-1)).toMatchObject({ label, moreLabel: more });
 	});
 
 	it("localizes brand breadcrumbs, context, and the sidebar control", () => {

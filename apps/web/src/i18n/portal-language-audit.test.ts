@@ -1,11 +1,19 @@
+/* biome-ignore-all lint/suspicious/noTemplateCurlyInString: mutation fixtures intentionally contain template syntax */
 import { describe, expect, it } from "vitest";
 import {
 	CROSS_PLAN_OWNERSHIP,
+	CROSS_PLAN_RESOLUTIONS,
 	type CrossPlanOwnership,
+	type CrossPlanResolution,
+	collectExistingRuntimeTests,
 	collectPortalLanguageCandidatesFromSource,
 	runPortalLanguageAudit,
 	validateCrossPlanOwnership,
+	validateCrossPlanOwnershipFromSources,
 	validateExactClassifications,
+	validateRawDetailMarkerOwnershipFromSources,
+	validateRouteHeadersFromSources,
+	validateSharedCallsitesFromSources,
 } from "../../scripts/portal-language-audit";
 import type { LiteralClassification } from "../../scripts/portal-language-audit-manifest";
 
@@ -20,7 +28,7 @@ describe("portal UI-language literal audit", () => {
 					<p>{\`Template \${rawValue}\`}</p>
 					<span>{"Joined " + rawValue}</span>
 					<time>{new Date().toLocaleDateString("en-US")}</time>
-					<pre>{error.message}</pre>
+					<div data-raw-detail="true"><pre>{error.message}</pre></div>
 				</section>;
 			}
 		`;
@@ -41,6 +49,514 @@ describe("portal UI-language literal audit", () => {
 		);
 		expect(candidates).toContainEqual(
 			expect.objectContaining({ kind: "text-prop", value: `\`Raw value \${rawValue}\`` }),
+		);
+	});
+
+	it("collects AST-visible expression, conditional, logical, property, and indirect error forms", () => {
+		const source = [
+			"const rawFailure = getFailure();",
+			'const item = { label: "Windows", description: condition ? "macOS" : "Linux" };',
+			'toast.error(condition ? "Could not save" : fallbackMessage);',
+			'export const x = <section title={condition ? "Visible title" : fallbackTitle}',
+			"aria-label={condition && `Raw ${rawValue}`}>",
+			'{"Visible expression"}',
+			'{condition ? "First branch" : "Second branch"}',
+			"{condition && indirectCopy}",
+			'<div data-raw-detail="true"><pre>{rawFailure}</pre></div>',
+			"</section>;",
+		].join("\n");
+
+		const candidates = collectPortalLanguageCandidatesFromSource("sample.tsx", source);
+		const signatures = candidates.map(({ kind, value, region }) => `${kind}:${value}:${region ?? "none"}`);
+
+		expect(signatures).toEqual(
+			expect.arrayContaining([
+				"jsx-text:Visible expression:none",
+				"jsx-text:First branch:none",
+				"jsx-text:Second branch:none",
+				"rendered-identifier:indirectCopy:none",
+				"metadata-copy:Windows:none",
+				"metadata-copy:macOS:none",
+				"metadata-copy:Linux:none",
+				"toast-dialog-copy:Could not save:none",
+				"toast-dialog-copy:fallbackMessage:none",
+				"text-prop:Visible title:none",
+				"text-prop:fallbackTitle:none",
+				"text-prop:`Raw ${rawValue}`:none",
+				"raw-error-interpolation:rawFailure:raw-detail",
+			]),
+		);
+	});
+
+	it("does not auto-accept generic identifiers, token-like text, or unresolved catalog calls", () => {
+		const candidates = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`export const x = <>{name}{value}{id}<p>provider.consumer_web</p>{t("missing.catalog.id")}</>;`,
+		);
+		const errors = validateExactClassifications(candidates, []);
+
+		for (const value of ["name", "value", "id", "provider.consumer_web", "missing.catalog.id"]) {
+			expect(errors).toEqual(expect.arrayContaining([expect.stringContaining(value)]));
+		}
+
+		const catalogCollisions = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`export const x = <><p>auth.login.title</p><p>{citation.title}</p></>;`,
+			{ catalogMessageIds: new Set(["auth.login.title", "citation.title"]) },
+		);
+		const collisionErrors = validateExactClassifications(catalogCollisions, []);
+		for (const value of ["auth.login.title", "citation.title"]) {
+			expect(collisionErrors).toEqual(expect.arrayContaining([expect.stringContaining(value)]));
+		}
+	});
+
+	it("traces visible string bindings so hard-coded copy mutations stale exact classifications", () => {
+		const before = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`const copy = "Hardcoded English"; export const x = <p>{copy}</p>;`,
+		);
+		const hardcoded = before.find((candidate) => candidate.value === "Hardcoded English");
+		expect(hardcoded).toBeDefined();
+		const exact = before.map<LiteralClassification>((candidate) => ({
+			...candidate,
+			category: "proper-noun",
+			reason: "Mutation fixture.",
+		}));
+		const after = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`const copy = "Changed hard-coded copy"; export const x = <p>{copy}</p>;`,
+		);
+		const errors = validateExactClassifications(after, exact);
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("Changed hard-coded copy")]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale classification")]));
+	});
+
+	it("requires imported translator provenance and resolves lexical aliases without shadow or cycle false greens", () => {
+		const catalogMessageIds = new Set(["auth.login.title"]);
+		const real = collectPortalLanguageCandidatesFromSource(
+			"real.tsx",
+			`import { useI18n as importedHook } from "@/i18n/provider";
+			 export function Real() { const { t: tr } = importedHook(); return <p>{tr("auth.login.title")}</p>; }`,
+			{ catalogMessageIds },
+		);
+		expect(real).toContainEqual(
+			expect.objectContaining({ kind: "localized-key", value: "auth.login.title", catalogResolved: true }),
+		);
+		const direct = collectPortalLanguageCandidatesFromSource(
+			"direct.tsx",
+			`import { translate as catalogTranslate } from "@/i18n/catalog";
+			 export const x = <p>{catalogTranslate("en", "auth.login.title")}</p>;`,
+			{ catalogMessageIds },
+		);
+		expect(direct).toContainEqual(
+			expect.objectContaining({ kind: "localized-key", value: "auth.login.title", catalogResolved: true }),
+		);
+
+		for (const source of [
+			`function t() { return "fake"; } export const x = <p>{t("auth.login.title")}</p>;`,
+			`function translate() { return "fake"; } export const x = <p>{translate("en", "auth.login.title")}</p>;`,
+			`import type { MessageId } from "@/i18n/catalog";
+			 function t(_id: MessageId) { return "fake"; } export const x = <p>{t("auth.login.title")}</p>;`,
+			`import { useI18n } from "@/i18n/provider";
+			 const { t } = useI18n(); function Sample() { const t = () => "fake"; return <p>{t("auth.login.title")}</p>; }`,
+		]) {
+			const candidates = collectPortalLanguageCandidatesFromSource("fake.tsx", source, { catalogMessageIds });
+			expect(validateExactClassifications(candidates, [])).toEqual(
+				expect.arrayContaining([expect.stringContaining("auth.login.title")]),
+			);
+		}
+
+		const lexical = collectPortalLanguageCandidatesFromSource(
+			"lexical.tsx",
+			`const copy = "Outer copy"; const alias = copy;
+			 function Inner() { const copy = "Inner copy"; return <><p>{copy}</p><p>{alias}</p></>; }
+			 const combined = flag ? \`Template \${name}\` : "Fallback " + name;
+			 let first = second; let second = first;
+			 export const x = <><Inner /><p>{combined}</p><p>{first}</p></>;`,
+		);
+		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: "Inner copy" })]));
+		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: "Outer copy" })]));
+		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: "`Template ${name}`" })]));
+		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: '"Fallback " + name' })]));
+		expect(lexical).toEqual(expect.arrayContaining([expect.objectContaining({ value: "first" })]));
+		expect(lexical).not.toContainEqual(expect.objectContaining({ value: "copy" }));
+		expect(lexical).not.toContainEqual(expect.objectContaining({ value: "alias" }));
+	});
+
+	it("collects hard-coded copy from visible sequence, array, and children expressions", () => {
+		const catalogMessageIds = new Set(["auth.login.title"]);
+		const candidates = collectPortalLanguageCandidatesFromSource(
+			"visible-branches.tsx",
+			`import { useI18n } from "@/i18n/provider";
+			 export function VisibleBranches() { const { t } = useI18n(); return <>
+			 <p>{(t("auth.login.title"), "Sequence hard-coded English")}</p>
+			 <p>{[t("auth.login.title"), "Array hard-coded English"]}</p>
+			 <Widget children="Children hard-coded English" />
+			 </>; }`,
+			{ catalogMessageIds },
+		);
+		const errors = validateExactClassifications(candidates, []);
+
+		for (const value of ["Sequence hard-coded English", "Array hard-coded English", "Children hard-coded English"]) {
+			expect(errors).toEqual(expect.arrayContaining([expect.stringContaining(value)]));
+		}
+	});
+
+	it("collects mixed JSX branches, display props, qualified dialogs, local property copy, and satisfies wrappers", () => {
+		const sources = [
+			`export const x = <>{flag ? <i>Safe</i> : "Hardcoded fallback"}</>;`,
+			`export const x = <p>{flag ? <i /> : "Hardcoded nested fallback"}</p>;`,
+			`export const x = <p>{render(flag ? <i /> : "Hardcoded call fallback")}</p>;`,
+			`export const x = <p>{render(<i />, "Hardcoded second argument")}</p>;`,
+			`export const x = <><EmptyState message="Hardcoded message" content={"Hardcoded content"} /></>;`,
+			`const caption = "Hardcoded caption"; export const x = <Widget helpText="Hardcoded help" caption={caption} value="machine-value" />;`,
+			`export function ask() { window.confirm("Window hardcoded"); globalThis.confirm("Global hardcoded"); }`,
+			`const COPY = { empty: "Hardcoded empty" }; export const x = <p>{COPY.empty}</p>;`,
+			`enum COPY { empty = "Hardcoded enum empty" } export const x = <p>{COPY.empty}</p>;`,
+			`const title = "Hardcoded title"; export const route = { head: () => ({ meta: [{ title }] }) };`,
+			`export const x = <p>{("Visible satisfies" satisfies string)}</p>;`,
+		];
+		const candidates = sources.flatMap((source, index) =>
+			collectPortalLanguageCandidatesFromSource(`structural-${index}.tsx`, source),
+		);
+		const errors = validateExactClassifications(candidates, []);
+		for (const value of [
+			"Hardcoded fallback",
+			"Hardcoded nested fallback",
+			"Hardcoded call fallback",
+			"Hardcoded second argument",
+			"Hardcoded message",
+			"Hardcoded content",
+			"Hardcoded help",
+			"Hardcoded caption",
+			"Window hardcoded",
+			"Global hardcoded",
+			"Hardcoded empty",
+			"Hardcoded enum empty",
+			"Hardcoded title",
+			"Visible satisfies",
+		]) {
+			expect(errors).toEqual(expect.arrayContaining([expect.stringContaining(value)]));
+		}
+		expect(candidates).not.toContainEqual(expect.objectContaining({ value: "machine-value" }));
+	});
+
+	it("traces object destructuring to the exact hard-coded property source", () => {
+		const before = collectPortalLanguageCandidatesFromSource(
+			"object-binding.tsx",
+			`const COPY = { empty: "Hardcoded empty" }; const { empty } = COPY; export const x = <p>{empty}</p>;`,
+		);
+		const exact = before.map<LiteralClassification>((candidate) => ({
+			...candidate,
+			category: "proper-noun",
+			reason: "Exact mutation fixture.",
+		}));
+		const after = collectPortalLanguageCandidatesFromSource(
+			"object-binding.tsx",
+			`const COPY = { empty: "Changed empty" }; const { empty } = COPY; export const x = <p>{empty}</p>;`,
+		);
+		const errors = validateExactClassifications(after, exact);
+
+		expect(before).toEqual(expect.arrayContaining([expect.objectContaining({ value: "Hardcoded empty" })]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("Changed empty")]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale classification")]));
+	});
+
+	it("collects later assignments to visible literal bindings", () => {
+		const before = collectPortalLanguageCandidatesFromSource(
+			"assigned-copy.tsx",
+			`let copy = "Old hard-coded"; copy = "New hard-coded"; export function X() { return <p>{copy}</p>; }`,
+		);
+		const exact = before.map<LiteralClassification>((candidate) => ({
+			...candidate,
+			category: "proper-noun",
+			reason: "Exact assignment mutation fixture.",
+		}));
+		const after = collectPortalLanguageCandidatesFromSource(
+			"assigned-copy.tsx",
+			`let copy = "Old hard-coded"; copy = "Changed hard-coded"; export function X() { return <p>{copy}</p>; }`,
+		);
+		const errors = validateExactClassifications(after, exact);
+
+		expect(before).toEqual(expect.arrayContaining([expect.objectContaining({ value: "New hard-coded" })]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("Changed hard-coded")]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale classification")]));
+	});
+
+	it("pins the exact shared component owners and callsites", () => {
+		const sidebarSource = `import { useI18n } from "@/i18n/provider";
+			import { Sidebar } from "@workspace/ui/components/sidebar";
+			export function AppSidebar() { const { t } = useI18n(); return <>
+			<Sidebar mobileTitle={t("accessibility.sidebarTitle")} mobileDescription={t("accessibility.sidebarDescription")} />
+			</>; }`;
+		const headerSource = `import { useI18n } from "@/i18n/provider";
+			import { SidebarTrigger } from "@workspace/ui/components/sidebar";
+			import { Breadcrumb } from "@workspace/ui/components/breadcrumb";
+			export function SiteHeader() { const { t } = useI18n(); return <>
+			<SidebarTrigger label={t("accessibility.toggleSidebar")} />
+			<Breadcrumb label={t("accessibility.breadcrumb")} moreLabel={t("accessibility.more")} />
+			</>; }`;
+		const tagsSource = `import { useI18n } from "@/i18n/provider";
+			import { TagsInput } from "@workspace/ui/components/tags-input";
+			export function LocalizedTagsInput() { const { t } = useI18n(); return <>
+			<TagsInput emptyText={t("customer.filters.noResults")}
+			 removeTagLabel={(tag) => t("accessibility.removeTag", { tag })}
+			 maximumReachedText={t("filter.maximumReached")} entryHintText={t("filter.entryHint")}
+			 addValueText={t("filter.addValue")} />
+			</>; }`;
+		const sources = [
+			{ component: "AppSidebar", source: sidebarSource },
+			{ component: "SiteHeader", source: headerSource },
+			{ component: "LocalizedTagsInput", source: tagsSource },
+		];
+		expect(validateSharedCallsitesFromSources(sources)).toEqual([]);
+		const missingOwner = sidebarSource.replace("AppSidebar", "SidebarSurrogate");
+		expect(
+			validateSharedCallsitesFromSources([{ component: "AppSidebar", source: missingOwner }, ...sources.slice(1)]),
+		).toEqual(expect.arrayContaining([expect.stringContaining("imported Sidebar")]));
+		const missingCallsite = sidebarSource.replaceAll("Sidebar", "Panel");
+		expect(
+			validateSharedCallsitesFromSources([{ component: "AppSidebar", source: missingCallsite }, ...sources.slice(1)]),
+		).toEqual(expect.arrayContaining([expect.stringContaining("imported Sidebar")]));
+	});
+
+	it("rejects every static route segment that can reach the visible breadcrumb fallback", () => {
+		const siteHeader = `const PAGE_NAME_IDS = { settings: "navigation.settings", brand: "navigation.brand" };`;
+		const errors = validateRouteHeadersFromSources(siteHeader, [
+			{
+				file: "billing.tsx",
+				source: `export const Route = createFileRoute("/_authed/app/$brand/settings/billing")({});`,
+			},
+		]);
+
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("billing")]));
+	});
+
+	it("accepts raw error evidence only inside an explicitly labelled raw-detail region", () => {
+		const unlabelled = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`export const x = <pre>{rawFailure}</pre>;`,
+		);
+		const markerOnly = collectPortalLanguageCandidatesFromSource(
+			"sample.tsx",
+			`export const x = <section data-raw-detail="true"><pre>{rawFailure}</pre></section>;`,
+		);
+		const labelled = collectPortalLanguageCandidatesFromSource(
+			"labelled.tsx",
+			`import { LocalizedRawDetail as Detail } from "@/components/localized-raw-detail";
+			 export function X() { return <Detail labelId="admin.raw.errorDetails" detail={rawFailure} />; }`,
+			{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+		);
+		const falseLabels = [
+			`<section><p>{t("error.unexpected.subtitle")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p>{t("error.unexpected.subtitle")}</p><p>{t("error.unexpected.subtitle")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><pre data-raw-detail><span>{t("admin.raw.errorDetails")}</span>{error.message}</pre></section>`,
+			`<section><p>{t("error.unexpected.subtitle")}</p>{false && <p>{t("admin.raw.errorDetails")}</p>}<pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><pre data-raw-detail aria-label={t("admin.raw.errorDetails")}>{error.message}</pre></section>`,
+			`<section><p hidden>{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p aria-hidden="true">{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p className="hidden">{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p className={"hidden"}>{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p style={{ display: "none" }}>{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p aria-hidden={true as const}>{t("admin.raw.errorDetails")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p>{t("admin.raw.errorDetails")}{t("error.unexpected.subtitle")}</p><pre data-raw-detail>{error.message}</pre></section>`,
+			`<section><p>{t("admin.raw.errorDetails")}</p>{t("error.unexpected.subtitle")}<pre data-raw-detail>{error.message}</pre></section>`,
+			`<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error.message} />`,
+		].map((body, index) =>
+			collectPortalLanguageCandidatesFromSource(
+				`false-label-${index}.tsx`,
+				`import { useI18n } from "@/i18n/provider";
+				 function LocalizedRawDetail(props: unknown) { return null; }
+				 export function X() { const { t } = useI18n(); return ${body}; }`,
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails", "error.unexpected.subtitle"]) },
+			),
+		);
+		falseLabels.push(
+			collectPortalLanguageCandidatesFromSource(
+				"wrong-module.tsx",
+				`import { LocalizedRawDetail } from "@/components/raw-detail-barrel";
+				 export const x = <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error.message} />;`,
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"translated-detail.tsx",
+				`import { LocalizedRawDetail } from "@/components/localized-raw-detail";
+				 import { useI18n } from "@/i18n/provider";
+				 export function X() { const { t } = useI18n(); return <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={t("admin.raw.errorDetails")} />; }`,
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"translated-detail-alias.tsx",
+				'import { LocalizedRawDetail } from "@/components/localized-raw-detail"; import { useI18n } from "@/i18n/provider"; export function X() { const { t } = useI18n(); const detail = t("admin.raw.errorDetails"); return <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={detail} />; }',
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"translated-detail-nested.tsx",
+				'import { LocalizedRawDetail } from "@/components/localized-raw-detail"; import { useI18n } from "@/i18n/provider"; export function X() { const { t } = useI18n(); return <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={format(t("admin.raw.errorDetails"))} />; }',
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"wrong-label.tsx",
+				'import { LocalizedRawDetail } from "@/components/localized-raw-detail"; export const x = <LocalizedRawDetail labelId="wrong.raw.label" detail={error.message} />;',
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"dynamic-label.tsx",
+				'import { LocalizedRawDetail } from "@/components/localized-raw-detail"; export const x = <LocalizedRawDetail labelId={dynamicLabel} detail={error.message} />;',
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+			collectPortalLanguageCandidatesFromSource(
+				"missing-label.tsx",
+				'import { LocalizedRawDetail } from "@/components/localized-raw-detail"; export const x = <LocalizedRawDetail detail={error.message} />;',
+				{ catalogMessageIds: new Set(["admin.raw.errorDetails"]) },
+			),
+		);
+		const unlabelledExact: LiteralClassification = {
+			file: "sample.tsx",
+			kind: "raw-error-interpolation",
+			value: "rawFailure",
+			occurrence: 1,
+			category: "raw-evidence",
+			reason: "Explicitly labelled raw diagnostic detail.",
+		};
+		const markerOnlyExact = { ...unlabelledExact };
+		const labelledCandidate = labelled.find((candidate) => candidate.kind === "raw-error-interpolation");
+		const labelledExact: LiteralClassification[] = labelledCandidate
+			? [{ ...labelledCandidate, category: "raw-evidence", reason: "Visible localized raw-detail label." }]
+			: [];
+
+		for (const category of ["raw-evidence", "domain-value", "machine-token", "localized-key"] as const) {
+			expect(validateExactClassifications(unlabelled, [{ ...unlabelledExact, category }])).toEqual(
+				expect.arrayContaining([expect.stringContaining("raw error lacks labelled raw-detail region")]),
+			);
+		}
+		expect(validateExactClassifications(markerOnly, [markerOnlyExact])).toEqual(
+			expect.arrayContaining([expect.stringContaining("visible localized label")]),
+		);
+		expect(validateExactClassifications(labelled, labelledExact)).toEqual([]);
+		for (const candidates of falseLabels) {
+			const exact = candidates
+				.filter((candidate) => candidate.kind === "raw-error-interpolation")
+				.map<LiteralClassification>((candidate) => ({
+					...candidate,
+					category: "raw-evidence",
+					reason: "Generic, dead, attribute-only, or in-marker copy cannot label raw detail.",
+				}));
+			expect(validateExactClassifications(candidates, exact).join("\n")).toMatch(
+				/raw (?:error lacks labelled raw-detail region|detail lacks visible localized label)/u,
+			);
+		}
+
+		for (const value of ["error.message", "caughtError", "getFailure()", "failure.message.stack.cause"]) {
+			const hazard = collectPortalLanguageCandidatesFromSource("hazard.tsx", `export const x = <pre>{${value}}</pre>;`);
+			const candidate = hazard.find((entry) => entry.value === value);
+			expect(candidate).toEqual(expect.objectContaining({ kind: "raw-error-interpolation" }));
+			const exact = candidate
+				? [{ ...candidate, category: "domain-value" as const, reason: "Must not bypass the raw-region gate." }]
+				: [];
+			expect(validateExactClassifications(hazard, exact)).toEqual(
+				expect.arrayContaining([expect.stringContaining("raw error lacks labelled raw-detail region")]),
+			);
+		}
+		expect(
+			validateExactClassifications(
+				labelled,
+				labelledExact.map((entry) => ({ ...entry, category: "machine-token" })),
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("labelled raw hazard must use raw-evidence")]));
+	});
+
+	it("allows the raw marker only in the exact canonical component implementation", () => {
+		const canonical = {
+			file: "apps/web/src/components/localized-raw-detail.tsx",
+			source: `export function LocalizedRawDetail({ detail }) { return <pre data-raw-detail>{detail}</pre>; }`,
+		};
+		expect(validateRawDetailMarkerOwnershipFromSources([canonical])).toEqual([]);
+		expect(
+			validateRawDetailMarkerOwnershipFromSources([
+				canonical,
+				{ file: "apps/web/src/example.tsx", source: `export const x = <pre data-raw-detail>{error}</pre>;` },
+			]),
+		).toEqual(expect.arrayContaining([expect.stringContaining("outside canonical component")]));
+	});
+
+	it("traces raw state setters and later assignments to rendered values", () => {
+		for (const source of [
+			`export function X() { const [error, setError] = useState(null); try { run(); } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); } return <p>{error}</p>; }`,
+			`export function X() { let error = null; try { run(); } catch (caught) { error = caught.message; } return <p>{error}</p>; }`,
+		]) {
+			const candidates = collectPortalLanguageCandidatesFromSource("raw-assignment.tsx", source);
+			const manifest = candidates.map<LiteralClassification>((candidate) => ({
+				...candidate,
+				category: "domain-value",
+				reason: "Raw setter/assignment must remain syntax-enforced.",
+			}));
+			expect(candidates).toEqual(
+				expect.arrayContaining([expect.objectContaining({ kind: "raw-error-interpolation", value: "error" })]),
+			);
+			expect(validateExactClassifications(candidates, manifest)).toEqual(
+				expect.arrayContaining([expect.stringContaining("raw error lacks labelled raw-detail region")]),
+			);
+		}
+	});
+
+	it("enforces nested raw hazards independently of their outer visible-copy classification", () => {
+		for (const source of [
+			"export const x = <p>{`Failure: ${error.message}`}</p>;",
+			'export const x = <p>{"Failure: " + error.message}</p>;',
+			"export const x = <p>{format(error.message)}</p>;",
+		]) {
+			const candidates = collectPortalLanguageCandidatesFromSource("nested-raw.tsx", source);
+			const classifications = candidates.map<LiteralClassification>((candidate) => ({
+				...candidate,
+				category: "domain-value",
+				reason: "Outer copy must not hide nested raw evidence.",
+			}));
+			expect(candidates).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						kind: "raw-error-interpolation",
+						value: "error.message",
+					}),
+				]),
+			);
+			expect(validateExactClassifications(candidates, classifications)).toEqual(
+				expect.arrayContaining([expect.stringContaining("raw error lacks labelled raw-detail region")]),
+			);
+		}
+	});
+
+	it("traces raw aliases, catch parameters, stringification, and mixed JSX arms to the visible sink region", () => {
+		for (const [source, expectedValue] of [
+			[`const display = error.message; export const x = <p>{display}</p>;`, "display"],
+			[`try { run(); } catch (error) { x = <p>{error}</p>; }`, "error"],
+			[`export const x = <p>{String(error)}</p>;`, "String(error)"],
+			[`export const x = <>{flag ? <i>Safe</i> : error.message}</>;`, "error.message"],
+		] as const) {
+			const candidates = collectPortalLanguageCandidatesFromSource("raw-flow.tsx", source);
+			expect(candidates).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						kind: "raw-error-interpolation",
+						value: expectedValue,
+						region: undefined,
+					}),
+				]),
+			);
+		}
+
+		const labelled = collectPortalLanguageCandidatesFromSource(
+			"raw-flow.tsx",
+			`const display = error.message; export const x = <pre data-raw-detail>{display}</pre>;`,
+		);
+		expect(labelled).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					kind: "raw-error-interpolation",
+					value: "display",
+					region: "raw-detail",
+				}),
+			]),
 		);
 	});
 
@@ -77,7 +593,13 @@ describe("portal UI-language literal audit", () => {
 	it("keeps every deferred output-language surface assigned to an exact owner and task", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
 		expect(validateCrossPlanOwnership(repositoryRoot)).toEqual([]);
-		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(12);
+		expect(CROSS_PLAN_OWNERSHIP).toHaveLength(22);
+		const withoutRegistry = validateCrossPlanOwnership(repositoryRoot, []);
+		for (const entry of CROSS_PLAN_OWNERSHIP) {
+			expect(withoutRegistry).toContain(
+				`unregistered output-language dependency: ${entry.file} ${entry.kind} ${entry.value} occurrence ${entry.occurrence}`,
+			);
+		}
 		expect(CROSS_PLAN_OWNERSHIP).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
@@ -104,8 +626,501 @@ describe("portal UI-language literal audit", () => {
 		const errors = validateCrossPlanOwnership(repositoryRoot, incomplete);
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("cross-plan owner is empty")]));
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("cross-plan task is empty")]));
-		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale cross-plan ownership")]));
-		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("missing cross-plan ownership")]));
+		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing cross-plan ownership")]));
+	});
+
+	it("requires exact deferred or resolved registry entries for every discovered output dependency", () => {
+		const exact: CrossPlanOwnership = {
+			file: "apps/web/src/components/sample-print.tsx",
+			kind: "ambient-ui-language",
+			value: "useI18n",
+			occurrence: 1,
+			owner: "portal-output-languages",
+			task: "Task 4",
+			reason: "Explicit output-language propagation remains deferred.",
+		};
+		const unresolved = [
+			{
+				file: exact.file,
+				source: 'import { useI18n } from "@/i18n/provider"; export function SamplePrint() { useI18n(); return <p />; }',
+			},
+		];
+
+		expect(validateCrossPlanOwnershipFromSources(unresolved, [exact])).toEqual([]);
+		expect(CROSS_PLAN_RESOLUTIONS).toEqual([]);
+		expect(
+			validateCrossPlanOwnershipFromSources([{ file: exact.file, source: "export const x = <p />;" }], [exact]),
+		).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing")]));
+		expect(validateCrossPlanOwnershipFromSources(unresolved, [exact, exact])).toEqual(
+			expect.arrayContaining([expect.stringContaining("duplicate")]),
+		);
+		expect(validateCrossPlanOwnershipFromSources(unresolved, [{ ...exact, file: "apps/web/src/**" }])).toEqual(
+			expect.arrayContaining([expect.stringContaining("broad")]),
+		);
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[{ file: "apps/web/src/components/new-output.tsx", source: "export const x = <NovelPrint />;" }],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("unregistered output-language dependency")]));
+		for (const source of [
+			'import { PromptsDisplay } from "@/components/prompts-display"; export const x = <PromptsDisplay />;',
+			'import { useI18n } from "@/i18n/provider"; export function PromptsDisplay() { useI18n(); return <p />; }',
+			'import { BaseChart } from "./base-chart"; export function ChartExportPreview() { return <BaseChart />; }',
+		]) {
+			expect(
+				validateCrossPlanOwnershipFromSources([{ file: "apps/web/src/components/connected-output.tsx", source }], []),
+			).toEqual(expect.arrayContaining([expect.stringContaining("unregistered output-language dependency")]));
+		}
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/new-output.tsx",
+						source:
+							"export function NewOutput({ outputLanguage }) { useOutputI18n(outputLanguage); return <NovelPrint outputLanguage={outputLanguage} />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component NovelPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/ui-bound-output.tsx",
+						source:
+							"export function UiBoundOutput({ uiLanguage }) { return <NovelPrint outputLanguage={uiLanguage} />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component NovelPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/ui-bound-export.tsx",
+						source: "export function UiBoundExport({ uiLanguage }) { useChartExport({ outputLanguage: uiLanguage }); }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-hook useChartExport")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/fake-export.tsx",
+						source:
+							"function useChartExport() {} export function SampleOutput({ outputLanguage }) { useChartExport({ outputLanguage }); return <p />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-hook useChartExport")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/logged-output-language.tsx",
+						source:
+							"export function SampleOutput({ outputLanguage }) { console.log({ outputLanguage }); return <p />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/intrinsic-output-language.tsx",
+						source:
+							"export function SampleOutput({ outputLanguage }) { return <div outputLanguage={outputLanguage} />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/aliased-ui-output.tsx",
+						source:
+							"export function AliasedOutput({ uiLanguage }) { const outputLanguage = uiLanguage; return <NovelPrint outputLanguage={outputLanguage} />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component NovelPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/unknown-output.tsx",
+						source:
+							"export function SampleOutput({ outputLanguage }) { return <NovelPrint outputLanguage={outputLanguage} />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component NovelPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/imported-output.tsx",
+						source:
+							'import { BaseChartPrint as Printable } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { return <Printable outputLanguage={outputLanguage} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component Printable")]));
+		for (const [file, expression] of [
+			["void-copy.tsx", "void copy"],
+			["event-handler.tsx", "undefined"],
+			["non-copy-logical.tsx", 'copy && "Hardcoded"'],
+		] as const) {
+			const rendered =
+				file === "event-handler.tsx" ? "<button onClick={() => copy}>Hardcoded</button>" : `<p>{${expression}}</p>`;
+			expect(
+				validateCrossPlanOwnershipFromSources(
+					[
+						{
+							file: `apps/web/src/components/${file}`,
+							source: `import { getReportCopy } from "@/i18n/report-copy";
+							 export function SampleOutput({ outputLanguage }) {
+							 const copy = getReportCopy(outputLanguage); return ${rendered}; }`,
+						},
+					],
+					[],
+				),
+			).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		}
+		for (const expression of ["copy.title", "flag && copy.title", "format(copy.title)"]) {
+			expect(
+				validateCrossPlanOwnershipFromSources(
+					[
+						{
+							file: "apps/web/src/components/visible-copy.tsx",
+							source: `import { getReportCopy } from "@/i18n/report-copy";
+							 export function SampleOutput({ outputLanguage }) {
+							 const copy = getReportCopy(outputLanguage); return <p>{${expression}}</p>; }`,
+						},
+					],
+					[],
+				),
+			).toEqual(expect.arrayContaining([expect.stringContaining("output-copy getReportCopy")]));
+		}
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/destructured-output.tsx",
+						source:
+							'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput(props) { const { outputLanguage: language } = props; return <BaseChartPrint outputLanguage={language} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component BaseChartPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/true-output-alias.tsx",
+						source:
+							'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { const uiLanguage = outputLanguage; return <BaseChartPrint outputLanguage={uiLanguage} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component BaseChartPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/shadowed-output.tsx",
+						source:
+							'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage, uiLanguage }) { { const outputLanguage = uiLanguage; return <BaseChartPrint outputLanguage={outputLanguage} />; } }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component BaseChartPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/arbitrary-output-object.tsx",
+						source:
+							'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { const settings = { outputLanguage }; const unrelated = { outputLanguage: "en" }; return <BaseChartPrint outputLanguage={unrelated.outputLanguage} data-settings={settings} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/i18n-locale-output.tsx",
+						source:
+							'import { useI18n } from "@/i18n/provider"; import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput() { const { locale: outputLanguage } = useI18n(); return <BaseChartPrint outputLanguage={outputLanguage} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-component BaseChartPrint")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/imported-export.tsx",
+						source:
+							'import { useChartExport as exportChart } from "@/hooks/use-chart-export"; export function SampleOutput({ outputLanguage }) { exportChart({ outputLanguage }); return <p />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-hook useChartExport")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/output-i18n-rendered.tsx",
+						source:
+							'import { useOutputI18n } from "@/i18n/output-i18n"; export function SampleOutput({ outputLanguage }) { const { t } = useOutputI18n(outputLanguage); return <p>{t("report.title")}</p>; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-copy useOutputI18n")]));
+		for (const [file, source] of [
+			[
+				"apps/web/src/components/parser-only.tsx",
+				'import { parseReportRenderLanguage } from "@/i18n/report-language"; export function SampleOutput({ outputLanguage }) { parseReportRenderLanguage(outputLanguage); return <p />; }',
+			],
+			[
+				"apps/web/src/components/copy-discarded.tsx",
+				'import { getReportCopy } from "@/i18n/report-copy"; export function SampleOutput({ outputLanguage }) { getReportCopy(outputLanguage); return <p />; }',
+			],
+		] as const) {
+			expect(validateCrossPlanOwnershipFromSources([{ file, source }], [])).toEqual(
+				expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]),
+			);
+		}
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/copy-rendered.tsx",
+						source:
+							'import { getReportCopy } from "@/i18n/report-copy"; export function SampleOutput({ outputLanguage }) { const copy = getReportCopy(outputLanguage); return <p>{copy.title}</p>; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-copy getReportCopy")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/unused-output-language.tsx",
+						source: "export function SampleOutput({ outputLanguage }) { return <p />; }",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/rendered-output-language.tsx",
+						source: "export const SampleOutput = ({ outputLanguage }) => <p>{outputLanguage}</p>;",
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[
+					{
+						file: "apps/web/src/components/resolved-output-language.tsx",
+						source:
+							'import { getReportCopy } from "@/i18n/report-copy"; import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { const copy = getReportCopy(outputLanguage); return <BaseChartPrint outputLanguage={outputLanguage} title={copy.title} />; }',
+					},
+				],
+				[],
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-copy getReportCopy")]));
+
+		const resolvedFile = "apps/web/src/components/attested-output.tsx";
+		const resolvedSource =
+			'import { BaseChartPrint as Printable } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { return <Printable outputLanguage={outputLanguage} />; }';
+		const runtimeTest = "e2e/tests/portal-language.spec.ts";
+		const knownRuntimeTests = new Set([runtimeTest]);
+		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
+		expect(collectExistingRuntimeTests(repositoryRoot, [runtimeTest])).toEqual(knownRuntimeTests);
+		const resolutions: CrossPlanResolution[] = [
+			{
+				file: resolvedFile,
+				kind: "output-language-binding",
+				value: "SampleOutput",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence: "Reviewed explicit output-language boundary.",
+				runtimeTest,
+			},
+			{
+				file: resolvedFile,
+				kind: "output-component",
+				value: "Printable",
+				occurrence: 1,
+				owner: "portal-output-languages",
+				task: "Task 4",
+				resolution: "explicit-output-language",
+				evidence: "Reviewed explicit output-language boundary.",
+				runtimeTest,
+			},
+		];
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[{ file: resolvedFile, source: resolvedSource }],
+				[],
+				resolutions,
+				knownRuntimeTests,
+			),
+		).toEqual([]);
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[{ file: resolvedFile, source: resolvedSource }],
+				[],
+				resolutions.slice(1),
+				knownRuntimeTests,
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("output-language-binding SampleOutput")]));
+		expect(
+			validateCrossPlanOwnershipFromSources(
+				[{ file: resolvedFile, source: resolvedSource }],
+				[],
+				[{ ...resolutions[0], value: "MissingSurface" } as CrossPlanResolution],
+				knownRuntimeTests,
+			),
+		).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing cross-plan resolution")]));
+
+		for (const [invalidRuntimeTest, expectedError] of [
+			["apps/web/src/i18n/missing-output-language.spec.ts", "does not name an existing regular file"],
+			["C:/repo/e2e/tests/output-language.spec.ts", "must be repo-relative"],
+			["../e2e/tests/output-language.spec.ts", "must not contain . or .. segments"],
+			["e2e/tests/*.spec.ts", "must not contain glob syntax"],
+			["e2e/tests/output-language.ts", "must use an allowed test suffix"],
+			["e2e\\tests\\output-language.spec.ts", "must use POSIX separators"],
+			["e2e/tests/./output-language.spec.ts", "must not contain . or .. segments"],
+			["e2e//tests/output-language.spec.ts", "must be normalized"],
+		] as const) {
+			const invalidResolutions = resolutions.map((resolution) => ({ ...resolution, runtimeTest: invalidRuntimeTest }));
+			expect(
+				validateCrossPlanOwnershipFromSources(
+					[{ file: resolvedFile, source: resolvedSource }],
+					[],
+					invalidResolutions,
+					knownRuntimeTests,
+				),
+			).toEqual(expect.arrayContaining([expect.stringContaining(expectedError)]));
+		}
+	});
+
+	it("discovers output surfaces conservatively regardless of dead flow, mutation, slots, aliases, or apparent binding", () => {
+		const fixtures = [
+			{
+				file: "dead-jsx.tsx",
+				source:
+					'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { const discarded = <BaseChartPrint outputLanguage={outputLanguage} />; return <p />; }',
+				expected: "output-component BaseChartPrint",
+			},
+			{
+				file: "dead-return.tsx",
+				source:
+					'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage }) { if (false) return <BaseChartPrint outputLanguage={outputLanguage} />; return <p />; }',
+				expected: "output-component BaseChartPrint",
+			},
+			{
+				file: "dead-hook.tsx",
+				source:
+					'import { useChartExport } from "@/hooks/use-chart-export"; export function SampleOutput({ outputLanguage }) { if (false) useChartExport({ outputLanguage }); return <p />; }',
+				expected: "output-hook useChartExport",
+			},
+			{
+				file: "reassigned.tsx",
+				source:
+					'import { BaseChartPrint } from "./base-chart-print"; export function SampleOutput({ outputLanguage, uiLanguage }) { let language = outputLanguage; language = uiLanguage; return <BaseChartPrint outputLanguage={language} />; }',
+				expected: "output-component BaseChartPrint",
+			},
+			{
+				file: "destructured-slot.tsx",
+				source:
+					'import { getReportCopy } from "@/i18n/report-copy"; export function SampleOutput({ outputLanguage }) { const copy = getReportCopy(outputLanguage); const [visible, hidden] = ["English only", copy.title]; return <p>{visible}</p>; }',
+				expected: "output-copy getReportCopy",
+			},
+			{
+				file: "non-copy-property.tsx",
+				source:
+					'import { getReportCopy } from "@/i18n/report-copy"; export function SampleOutput({ outputLanguage }) { const copy = getReportCopy(outputLanguage); return <p>{copy.title.length}</p>; }',
+				expected: "output-copy getReportCopy",
+			},
+			{
+				file: "local-alias.tsx",
+				source:
+					'import { BaseChartPrint } from "./base-chart-print"; const Artifact = BaseChartPrint; export function SampleOutput({ outputLanguage }) { return <Artifact outputLanguage={outputLanguage} />; }',
+				expected: "output-component Artifact",
+			},
+			{
+				file: "barrel-alias.tsx",
+				source:
+					'import { BaseChartPrint as Artifact } from "@/components"; export function SampleOutput({ outputLanguage }) { return <Artifact outputLanguage={outputLanguage} />; }',
+				expected: "output-component Artifact",
+			},
+			{
+				file: "hoc-alias.tsx",
+				source:
+					'import { memo } from "react"; import { BaseChartPrint } from "./base-chart-print"; const Artifact = memo(BaseChartPrint); export function SampleOutput({ outputLanguage }) { return <Artifact outputLanguage={outputLanguage} />; }',
+				expected: "output-component Artifact",
+			},
+			{
+				file: "namespace-copy.tsx",
+				source:
+					'import * as reportCopy from "@/i18n/report-copy"; export function Artifact(props) { return <p>{reportCopy.getReportCopy(props.outputLanguage).title}</p>; }',
+				expected: "output-copy getReportCopy",
+			},
+		];
+
+		for (const fixture of fixtures) {
+			expect(
+				validateCrossPlanOwnershipFromSources(
+					[{ file: `apps/web/src/components/${fixture.file}`, source: fixture.source }],
+					[],
+				),
+			).toEqual(expect.arrayContaining([expect.stringContaining(fixture.expected)]));
+		}
+	});
+
+	it("does not file-wide exempt an unrelated literal in an output-language-owned file", () => {
+		const candidates = collectPortalLanguageCandidatesFromSource(
+			"apps/web/src/components/base-chart-print.tsx",
+			"export const x = <p>New unrelated literal</p>;",
+		);
+
+		expect(validateExactClassifications(candidates, [])).toEqual(
+			expect.arrayContaining([expect.stringContaining("New unrelated literal")]),
+		);
 	});
 
 	it("keeps the current portal tree, route headers, and shared compatibility call sites classified", () => {

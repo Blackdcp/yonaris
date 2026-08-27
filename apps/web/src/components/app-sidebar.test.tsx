@@ -1,8 +1,10 @@
 import type { UiLanguage } from "@workspace/config/language";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/provider";
+
+const sharedUi = vi.hoisted(() => ({ sidebarProps: [] as Array<Record<string, unknown>> }));
 
 vi.mock("@tanstack/react-router", () => ({
 	Link: ({ children, to, ...props }: { children: ReactNode; to: string }) => (
@@ -16,7 +18,10 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@workspace/ui/components/sidebar", () => ({
-	Sidebar: ({ children }: { children: ReactNode }) => <aside>{children}</aside>,
+	Sidebar: ({ children, ...props }: { children: ReactNode } & Record<string, unknown>) => {
+		sharedUi.sidebarProps.push(props);
+		return <aside>{children}</aside>;
+	},
 	SidebarContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 	SidebarHeader: ({ children }: { children: ReactNode }) => <header>{children}</header>,
 	SidebarGroup: ({ children }: { children: ReactNode }) => <section>{children}</section>,
@@ -42,6 +47,10 @@ function renderSidebar(props: React.ComponentProps<typeof AppSidebar>, locale: U
 }
 
 describe("AppSidebar workspace separation", () => {
+	beforeEach(() => {
+		sharedUi.sidebarProps.length = 0;
+	});
+
 	it("shows only customer navigation inside a brand workspace, even for a platform admin", () => {
 		const markup = renderSidebar({ isAdmin: true, hasReportAccess: true, canManageBrand: true, brand: onboardedBrand });
 
@@ -101,6 +110,18 @@ describe("AppSidebar workspace separation", () => {
 		expect(markup).toContain("Programs");
 		expect(markup).toContain('href="/app/brand-1/"');
 		expect(markup).toContain('href="/app/brand-1/programs"');
+	});
+
+	it.each([
+		["en", "Sidebar", "Displays the mobile sidebar."],
+		["zh-CN", "侧边栏", "显示移动端侧边栏。"],
+	] as const)("passes localized %s mobile accessibility props to Sidebar", (locale, title, description) => {
+		renderSidebar({ brand: onboardedBrand }, locale);
+
+		expect(sharedUi.sidebarProps.at(-1)).toMatchObject({
+			mobileTitle: title,
+			mobileDescription: description,
+		});
 	});
 
 	it("localizes the complete platform navigation while preserving access gates", () => {

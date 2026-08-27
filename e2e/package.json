@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "test:e2e": "playwright test --project=fixtures",
+    "test:e2e": "playwright test --project=fixtures --project=language-smoke",
     "test:www": "playwright test --config playwright.www.config.ts --grep-invert @visual",
     "test:www:analytics": "playwright test --config playwright.analytics.config.ts",
     "test:www:visual": "playwright test --config playwright.www.config.ts --grep @visual --workers=1",

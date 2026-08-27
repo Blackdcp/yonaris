@@ -38,6 +38,18 @@ async function expectRawProgramValues(page: Page) {
   }
 }
 
+async function ensurePromptExpanded(page: Page, prompt: string) {
+  const toggle = page.locator('button[aria-expanded]').filter({ hasText: prompt }).first();
+  await expect(toggle).toBeVisible();
+  if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+}
+
+async function expectFanoutHelper(page: Page, helper: string) {
+  await page.getByRole("heading", { level: 1 }).locator("[aria-label]").hover();
+  await expect(page.getByText(helper, { exact: true }).first()).toBeVisible();
+}
+
 async function expectRawSamplingSurface(
   page: Page,
   copy: {
@@ -152,24 +164,33 @@ test.describe("complete bilingual portal coverage", () => {
     await page.goto(target);
     const exactTargetUrl = page.url();
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.value, { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: LANGUAGE_SMOKE_PROMPTS.cn.value }).click();
+    await ensurePromptExpanded(page, LANGUAGE_SMOKE_PROMPTS.cn.value);
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery, { exact: true })).toBeVisible();
 
     await chooseLanguage(page, "简体中文", "zh-CN");
     await expect(page.getByText("AI 检索脉络", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: "检索路径", exact: true })).toBeVisible();
+    await expect(page.getByText("衍生检索词", { exact: true }).first()).toBeVisible();
+    await expectFanoutHelper(page, "查看 AI 为回答当前问题而展开的实际联网搜索词。");
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.value, { exact: true })).toBeVisible();
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery, { exact: true })).toBeVisible();
     expect(page.url()).toBe(exactTargetUrl);
 
     await chooseLanguage(page, "English", "en");
     await expect(page.getByText("Query Fan-Out", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Search Paths", exact: true })).toBeVisible();
+    await expect(page.getByText("Derived Queries", { exact: true }).first()).toBeVisible();
+    await expectFanoutHelper(
+      page,
+      "When an AI engine with web search capabilities responds to a prompt, it may choose to make a number of web searches before creating its answer. These underlying web searches, presented here as derived queries, are only available for some engines.",
+    );
 
     await page.goto(
       `/app/${LANGUAGE_SMOKE_BRAND_ID}/query-fan-out` +
         `?scope=${LANGUAGE_SMOKE_SCOPES.en.id}&model=chatgpt#english-program`,
     );
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.value, { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: LANGUAGE_SMOKE_PROMPTS.en.value }).click();
+    await ensurePromptExpanded(page, LANGUAGE_SMOKE_PROMPTS.en.value);
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.derivedQuery, { exact: true })).toBeVisible();
     await chooseLanguage(page, "简体中文", "zh-CN");
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.value, { exact: true })).toBeVisible();

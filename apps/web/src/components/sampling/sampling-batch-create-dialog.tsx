@@ -14,6 +14,7 @@ import { Label } from "@workspace/ui/components/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@workspace/ui/components/select";
 import { Loader2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import type { LocalizedMessage } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import {
@@ -540,12 +541,7 @@ export function SamplingBatchCreateDialog({
 					{error && (
 						<div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
 							<p>{t(error.id, error.values)}</p>
-							{error.detail && (
-								<>
-									<p className="mt-2 font-medium">{t("sampling.raw.errorDetails")}</p>
-									<pre className="whitespace-pre-wrap">{error.detail}</pre>
-								</>
-							)}
+							{error.detail && <LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={error.detail} />}
 						</div>
 					)}
 				</div>

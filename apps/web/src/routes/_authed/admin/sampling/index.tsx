@@ -8,6 +8,7 @@ import { Skeleton } from "@workspace/ui/components/skeleton";
 import { AlertTriangle, Bot, CheckCircle2, Laptop, UserRoundCheck, XCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { ListPagination } from "@/components/list-pagination";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import {
 	type OverseasRunCohortView,
 	OverseasRunNowDialog,
@@ -514,10 +515,7 @@ function SamplingQueuePage() {
 					<AlertDescription>
 						<p>{t(actionError.id, actionError.values)}</p>
 						{actionError.detail && (
-							<>
-								<p>{t("sampling.raw.errorDetails")}</p>
-								<pre className="whitespace-pre-wrap">{actionError.detail}</pre>
-							</>
+							<LocalizedRawDetail labelId="sampling.raw.errorDetails" detail={actionError.detail} />
 						)}
 					</AlertDescription>
 				</Alert>
@@ -531,8 +529,10 @@ function SamplingQueuePage() {
 					<AlertTriangle />
 					<AlertTitle>{t("sampling.queue.supportError")}</AlertTitle>
 					<AlertDescription>
-						<p>{t("sampling.raw.errorDetails")}</p>
-						<pre className="whitespace-pre-wrap">{rawErrorDetail(devicesQuery.error ?? overseasQuery.error)}</pre>
+						<LocalizedRawDetail
+							labelId="sampling.raw.errorDetails"
+							detail={rawErrorDetail(devicesQuery.error ?? overseasQuery.error) ?? ""}
+						/>
 					</AlertDescription>
 				</Alert>
 			)}
@@ -549,8 +549,10 @@ function SamplingQueuePage() {
 					<AlertTriangle />
 					<AlertTitle>{t("sampling.queue.loadError")}</AlertTitle>
 					<AlertDescription>
-						<p>{t("sampling.raw.errorDetails")}</p>
-						<pre className="whitespace-pre-wrap">{rawErrorDetail(contextQuery.error ?? listQuery.error)}</pre>
+						<LocalizedRawDetail
+							labelId="sampling.raw.errorDetails"
+							detail={rawErrorDetail(contextQuery.error ?? listQuery.error) ?? ""}
+						/>
 					</AlertDescription>
 				</Alert>
 			) : (

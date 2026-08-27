@@ -18,7 +18,9 @@ import { Textarea } from "@workspace/ui/components/textarea";
 import { ExternalLink } from "lucide-react";
 import { useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { SiteHeader } from "@/components/site-header";
+import { useI18n } from "@/i18n/provider";
 import { canAccessPlatformReports } from "@/lib/auth/execution-boundaries";
 import { hasReportAccess, isAdmin, requireAuthSession } from "@/lib/auth/helpers";
 import { getDeployment } from "@/lib/config/server";
@@ -67,6 +69,7 @@ export const Route = createFileRoute("/_authed/reports/")({
 
 function ReportsPage() {
 	const { isAdmin, hasReportAccess } = Route.useRouteContext();
+	const { t } = useI18n();
 	const queryClient = useQueryClient();
 
 	const {
@@ -213,7 +216,16 @@ function ReportsPage() {
 												</p>
 											</div>
 
-											{submitError && <p className="text-sm text-destructive">{submitError}</p>}
+											{submitError && (
+												<div className="text-sm text-destructive">
+													<p>{t("error.unexpected.subtitle")}</p>
+													<LocalizedRawDetail
+														labelId="admin.raw.errorDetails"
+														detail={submitError}
+														variant="destructive"
+													/>
+												</div>
+											)}
 											{success && <p className="text-sm text-green-600">{success}</p>}
 
 											<Button type="submit" disabled={createMutation.isPending} className="cursor-pointer">
@@ -229,9 +241,12 @@ function ReportsPage() {
 										{error && (
 											<Card>
 												<CardContent className="py-8 text-center">
-													<p className="text-destructive">
-														{error instanceof Error ? error.message : "Failed to load reports"}
-													</p>
+													<p className="text-destructive">{t("error.unexpected.subtitle")}</p>
+													<LocalizedRawDetail
+														labelId="admin.raw.errorDetails"
+														detail={error instanceof Error ? error.message : String(error)}
+														variant="destructive"
+													/>
 												</CardContent>
 											</Card>
 										)}

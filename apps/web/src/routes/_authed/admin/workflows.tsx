@@ -32,6 +32,7 @@ import {
 	XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { type MessageId, translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName } from "@/lib/route-head";
@@ -322,12 +323,7 @@ function RetryButton({ promptId, onSuccess }: { promptId?: string; jobId?: strin
 			{error && (
 				<div className="text-xs text-red-500">
 					<p>{t("workflow.retry.error")}</p>
-					{typeof error === "string" && (
-						<>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{error}</pre>
-						</>
-					)}
+					{typeof error === "string" && <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error} />}
 				</div>
 			)}
 		</div>
@@ -422,10 +418,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 					{isFailed && job.failedReason && (
 						<div>
 							<p className="text-muted-foreground mb-1">{t("workflow.job.errorMessage")}</p>
-							<p className="text-sm font-medium text-red-800">{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-								{job.failedReason}
-							</pre>
+							<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={job.failedReason} variant="destructive" />
 						</div>
 					)}
 					{/* Job Logs Section */}
@@ -440,16 +433,11 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 							<div className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-800">
 								<p>{t("workflow.job.errorLogs")}</p>
 								{typeof logsError === "string" && (
-									<>
-										<p>{t("admin.raw.errorDetails")}</p>
-										<pre className="whitespace-pre-wrap">{logsError}</pre>
-									</>
+									<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={logsError} />
 								)}
 							</div>
 						) : logs.length > 0 ? (
-							<pre className="bg-muted rounded p-3 text-xs overflow-x-auto max-h-80 whitespace-pre-wrap">
-								{logs.join("\n")}
-							</pre>
+							<LocalizedRawDetail labelId="admin.raw.executionDetails" detail={logs.join("\n")} variant="log" />
 						) : (
 							<p className="text-sm text-muted-foreground italic">{t("workflow.job.noLogs")}</p>
 						)}
@@ -476,10 +464,7 @@ function JobDetailsDialog({ job, onRetrySuccess }: { job: RecentJob; onRetrySucc
 										<div className="text-sm text-red-600">
 											<p>{t("workflow.retry.error")}</p>
 											{typeof retryError === "string" && (
-												<>
-													<p>{t("admin.raw.errorDetails")}</p>
-													<pre className="whitespace-pre-wrap">{retryError}</pre>
-												</>
+												<LocalizedRawDetail labelId="admin.raw.errorDetails" detail={retryError} />
 											)}
 										</div>
 									)}
@@ -755,12 +740,7 @@ function WorkflowsPage() {
 					<CardTitle className="text-destructive">{t("workflow.error.title")}</CardTitle>
 				</CardHeader>
 				<CardContent>
-					{typeof error === "string" && (
-						<>
-							<p>{t("admin.raw.errorDetails")}</p>
-							<pre className="whitespace-pre-wrap">{error}</pre>
-						</>
-					)}
+					{typeof error === "string" && <LocalizedRawDetail labelId="admin.raw.errorDetails" detail={error} />}
 				</CardContent>
 			</Card>
 		);

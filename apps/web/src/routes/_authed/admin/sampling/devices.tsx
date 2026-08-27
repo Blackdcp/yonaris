@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Button } from "@workspace/ui/components/button";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
+import { LocalizedRawDetail } from "@/components/localized-raw-detail";
 import { BrowserRunnerDeviceList } from "@/components/sampling/browser-runner-device-list";
 import { BrowserRunnerExtensionInstall } from "@/components/sampling/browser-runner-extension-install";
 import type { BrowserRunnerDeviceView, SamplingContextView } from "@/components/sampling/types";
@@ -82,8 +83,10 @@ function BrowserRunnerDevicesPage() {
 					<TriangleAlert />
 					<AlertTitle>{t("sampling.devices.error")}</AlertTitle>
 					<AlertDescription>
-						<p>{t("sampling.raw.errorDetails")}</p>
-						<pre className="whitespace-pre-wrap">{rawErrorDetail(contextQuery.error ?? devicesQuery.error)}</pre>
+						<LocalizedRawDetail
+							labelId="sampling.raw.errorDetails"
+							detail={rawErrorDetail(contextQuery.error ?? devicesQuery.error) ?? ""}
+						/>
 					</AlertDescription>
 				</Alert>
 			) : (

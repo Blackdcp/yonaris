@@ -231,6 +231,9 @@ describe("Query Fan-Out route localization", () => {
 		expect(english).toContain("Prompt Runs w/ Exposed Search Inputs");
 		expect(english).toContain("Average Search Paths");
 		expect(english).toContain("The web searches AI engines run when answering your prompts.");
+		expect(english).toContain(
+			"When an AI engine with web search capabilities responds to a prompt, it may choose to make a number of web searches before creating its answer. These underlying web searches, presented here as derived queries, are only available for some engines.",
+		);
 	});
 
 	it("localizes the Chinese route head from context without changing brand or app names", () => {
