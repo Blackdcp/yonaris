@@ -271,6 +271,7 @@ describe("zero-to-one stylesheet boundary", () => {
 		expect(trace).toContain("position: relative");
 		expect(trace).toContain("display: grid");
 		expect(trace).not.toMatch(/background:|box-shadow:|border-radius:/);
+		expect(ruleFor(css, ".site-06-decision-trace__question")).toContain("pointer-events: none");
 		expect(ruleFor(css, ".site-06-decision-trace__rings")).toContain("aspect-ratio: 1");
 		const traceButton = ruleFor(css, ".site-06-decision-trace__ring button");
 		expect(traceButton).toContain("min-height: 44px");

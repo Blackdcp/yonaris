@@ -1450,6 +1450,7 @@
 .site-06-decision-trace__question {
 	position: absolute;
 	z-index: 3;
+	pointer-events: none;
 	top: clamp(156px, 42%, 202px);
 	left: 50%;
 	width: min(38%, 176px);
