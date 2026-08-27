@@ -121,6 +121,8 @@ describe("Site 06 中国站", () => {
 		const system = render("product");
 		expect(system).toContain('data-page-composition="system-field"');
 		expect(system).toContain('data-scene-object="relationship-preview"');
+		expect(system).toContain('<section class="site-06-zh-relationship-preview"');
+		expect(system).toContain('aria-label="五项业务关系预览"');
 		expect(system).toContain('data-scene-object="system-field"');
 		expect(system).toContain("data-system-map");
 		expect(system).toContain("市场问题");

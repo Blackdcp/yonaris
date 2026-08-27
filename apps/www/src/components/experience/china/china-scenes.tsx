@@ -94,11 +94,15 @@ export function SystemRelationshipPreview() {
 	] as const;
 
 	return (
-		<div className="site-06-zh-relationship-preview" data-scene-object="relationship-preview" aria-label="五项业务关系预览">
+		<section
+			className="site-06-zh-relationship-preview"
+			data-scene-object="relationship-preview"
+			aria-label="五项业务关系预览"
+		>
 			{preview.map(([label, detail], index) => (
 				<div key={label} data-preview-relation={index + 1}><strong>{label}</strong><span>{detail}</span></div>
 			))}
-		</div>
+		</section>
 	);
 }
 
