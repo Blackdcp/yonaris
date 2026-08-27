@@ -412,7 +412,7 @@ git diff --check
 
 Expected: all PASS; no large new bundle warning beyond the existing advisory.
 
-Exception handling is exact, not open-ended: the existing read-only `content-negotiation.spec.ts` currently contains eight assertions for the retired mixed-language contract (seven require English `Language:` inside Chinese Markdown and one requires the former Human-canonical label). The localized app tests and the marketing matrix must pass; those exact eight stale assertions are recorded as repository-test debt and must not be satisfied by reintroducing English leakage. Any additional e2e failure is a release blocker. Task 5 does not modify `e2e/**` because that would trigger the out-of-scope portal/LAS deployment.
+Exception handling is exact, not open-ended. The existing read-only e2e project retains ten assertions from superseded contracts: eight in `content-negotiation.spec.ts` (seven require English `Language:` inside Chinese Markdown and one requires the former Human-canonical label); one English interaction assertion requires the rejected Home `Category / Purpose / Scope` ReadingLens instead of the binding fixed Human/Agent claim reader; and one Chinese system assertion requires a two-row desktop grid instead of the binding six-position orbit while its mobile 44px/overflow/interaction checks remain valid. The localized app tests and the marketing matrix must pass and explicitly cover the replacement behavior. These exact ten stale assertions must not be satisfied by reintroducing English leakage or rejected visual structures. Any other e2e failure is a release blocker. Task 5 does not modify `e2e/**` because that would trigger the out-of-scope portal/LAS deployment.
 
 - [ ] **Step 5: Commit Task 5**
 
