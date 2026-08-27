@@ -346,19 +346,19 @@ git commit -m "build the Site 06 Agent fact directory"
 ### Task 5: Add visual-fidelity gates, complete responsive QA, and release
 
 **Files:**
-- Create: `e2e/www-tests/site-06-visual-matrix.spec.ts`
-- Create: `e2e/www-tests/site-06-visual-matrix.spec.ts-snapshots/*`
-- Modify: `e2e/www-tests/dual-region-release.spec.ts`
+- Create: `apps/www/scripts/site-06-visual-matrix.mjs`
+- Create: `apps/www/scripts/site-06-visual-matrix.test.mjs`
+- Create: `apps/www/src/lib/site-06-visual-contract.test.ts`
 - Modify: `apps/www/scripts/smoke-marketing.mjs`
 - Modify: `.changeset/site-06-marketing.md`
 
 **Interfaces:**
 - Consumes: all route-specific `data-page-composition` and `data-scene-object` markers from Tasks 1–4.
-- Produces: committed desktop/mobile screenshot baselines and a release gate that fails if route-specific compositions collapse back into one generic template.
+- Produces: a marketing-scoped desktop/mobile capture matrix, archived review artifacts, and structural gates that fail if route-specific compositions collapse back into one generic template.
 
 - [ ] **Step 1: Write failing production-browser fidelity tests**
 
-Use a literal route matrix and assert composition identity, media role, heading size, no generic hero card, prominent mode control, no overflow, and interaction state change:
+Use a literal route matrix in the marketing-scoped runner and assert composition identity, media role, heading size, no generic hero card, prominent mode control, no overflow, and interaction state change. The runner may load the already-installed Playwright runtime from the `e2e` workspace, but it must not create or modify any file under `e2e/**`:
 
 ```ts
 for (const fixture of fidelityRoutes) {
@@ -367,30 +367,26 @@ for (const fixture of fidelityRoutes) {
     await expect(page.locator(`[data-page-composition="${fixture.composition}"]`)).toHaveCount(1);
     await expect(page.locator("h1")).toHaveCSS("font-size", fixture.desktopH1);
     await expect(page.locator(".site-06-hero__media")).toHaveCount(0);
-    await expect(page).toHaveScreenshot(fixture.snapshot, {
-      animations: "disabled",
-      caret: "hide",
-      fullPage: false,
-    });
+      await captureApprovedViewport(page, fixture, width);
   });
 }
 ```
 
-Use deterministic fixtures at `1440`, `1280`, `390`, and `360`. Screenshot the first viewport for every one of the 28 visible Human and Agent routes at all four widths (112 artifacts), then add full pages for both Human homes; English and Chinese Product/System, Evidence/Breakdown, Human + Agent, and Contact; and both Agent homes. Run with one worker, wait for fonts, hide the caret, disable animation for baselines, and add reduced-motion spot captures separately.
+Use deterministic fixtures at `1440`, `1280`, `390`, and `360`. Screenshot the first viewport for every one of the 28 visible Human and Agent routes at all four widths (112 artifacts), then add full pages for both Human homes; English and Chinese Product/System, Evidence/Breakdown, Human + Agent, and Contact; and both Agent homes. Run serially, wait for fonts, hide the caret, disable animation for deterministic evidence, and add reduced-motion spot captures separately. Archive the inspected images under the ignored SDD evidence directory and record the exact path and counts in the report; do not commit large screenshots or touch `e2e/**`.
 
 - [ ] **Step 2: Run the new browser test and verify RED**
 
-Run the production server through Playwright `webServer`, then:
+Run the production server and the marketing-scoped runner, then:
 
 ```powershell
-pnpm --filter e2e exec playwright test --config playwright.www.config.ts www-tests/site-06-visual-matrix.spec.ts --workers=1
+node apps/www/scripts/site-06-visual-matrix.mjs --base-url http://127.0.0.1:4173 --output .superpowers/sdd/2026-08-27-yonaris-site-06-fidelity/task-5-captures
 ```
 
-Expected before baselines/last fixes: FAIL on absent baseline screenshots or any remaining composition, responsive, or interaction mismatch.
+Expected before last fixes: FAIL on any remaining composition, responsive, interaction, localization, or overflow mismatch.
 
 - [ ] **Step 3: Generate and inspect the screenshot matrix**
 
-Render the tracked approved prototype and production pages at matching widths. Compare side by side for composition, image role, type hierarchy, colour balance, spacing rhythm, interaction affordance, and route distinctness. Update production code, not expectations, for genuine drift. Generate final Playwright baselines only after visual review.
+Render the tracked approved prototype and production pages at matching widths. Compare side by side for composition, image role, type hierarchy, colour balance, spacing rhythm, interaction affordance, and route distinctness. Update production code, not expectations, for genuine drift. Retain the final deterministic evidence set only after visual review.
 
 - [ ] **Step 4: Run the complete release gate**
 
@@ -401,7 +397,8 @@ pnpm --filter @workspace/www exec vitest run
 pnpm --filter @workspace/www check-types
 pnpm exec tsc -p e2e/tsconfig.json --noEmit
 pnpm --filter @workspace/www build
-pnpm --filter e2e exec playwright test --config playwright.www.config.ts www-tests/dual-region-release.spec.ts www-tests/site-06-visual-matrix.spec.ts --workers=1
+node apps/www/scripts/site-06-visual-matrix.mjs --base-url http://127.0.0.1:4173 --output .superpowers/sdd/2026-08-27-yonaris-site-06-fidelity/task-5-captures
+pnpm --filter e2e exec playwright test --config playwright.www.config.ts www-tests/dual-region-release.spec.ts www-tests/content-negotiation.spec.ts www-tests/site-routing.spec.ts --workers=1
 pnpm --filter @workspace/www smoke:marketing:caddy
 pnpm audit:public-output
 pnpm test:public-output-policy
@@ -418,9 +415,11 @@ Expected: all PASS; no large new bundle warning beyond the existing advisory.
 - [ ] **Step 5: Commit Task 5**
 
 ```powershell
-git add e2e/www-tests apps/www/scripts .changeset/site-06-marketing.md
+git add apps/www/scripts apps/www/src/lib/site-06-visual-contract.test.ts apps/www/src .changeset/site-06-marketing.md docs/superpowers/plans/2026-08-27-yonaris-site-06-fidelity.md
 git commit -m "verify the faithful Site 06 release"
 ```
+
+Task 5 must leave `e2e/**` unchanged. Those existing tests are still run read-only, but committing there triggers the full portal/LAS deployment in addition to the marketing workflow; this release is deliberately website-scoped.
 
 - [ ] **Step 6: Review, push, deploy, and verify production**
 
