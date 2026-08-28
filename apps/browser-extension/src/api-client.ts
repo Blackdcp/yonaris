@@ -9,7 +9,11 @@ import {
 	type PairingResponse,
 	PORTAL_ORIGIN,
 } from "./contracts";
-import type { RunnerCompletionInput, RunnerFailureInput } from "./coordinator/task-runner";
+import type {
+	RunnerCompletionInput,
+	RunnerEvidenceUploadDescriptor,
+	RunnerFailureInput,
+} from "./coordinator/task-runner";
 import { CURRENT_ADAPTER_VERSIONS } from "./surface-readiness";
 import { extensionSurfaceDefinition } from "./surface-registry";
 
@@ -130,10 +134,12 @@ export class BrowserRunnerApiClient {
 		runnerSessionId: string,
 		adapterVersion: string,
 		screenshot: Uint8Array,
+		descriptor?: RunnerEvidenceUploadDescriptor,
 	): Promise<string> {
+		const maximumBytes = descriptor?.role === "primary" ? 4 * 1024 * 1024 : descriptor?.role === "segment" ? 1024 * 1024 : 2 * 1024 * 1024;
 		if (
 			screenshot.byteLength < 3 ||
-			screenshot.byteLength > 2 * 1024 * 1024 ||
+			screenshot.byteLength > maximumBytes ||
 			screenshot[0] !== 0xff ||
 			screenshot[1] !== 0xd8 ||
 			screenshot[2] !== 0xff
@@ -150,7 +156,7 @@ export class BrowserRunnerApiClient {
 				"X-Yonaris-Lease-Token": claim.leaseToken,
 				"X-Yonaris-Lease-Generation": String(claim.leaseGeneration),
 				"X-Yonaris-Evidence-Kind": "screenshot",
-				"X-Yonaris-Filename": encodeURIComponent(`response-${claim.taskId}.jpg`),
+				"X-Yonaris-Filename": encodeURIComponent(evidenceFilename(claim.taskId, descriptor)),
 				"X-Yonaris-Runner-Session-Id": requiredText(runnerSessionId, "runner session id", 300),
 				"X-Yonaris-Adapter-Version": requiredText(adapterVersion, "adapter version", 100),
 			},
@@ -260,6 +266,23 @@ export class BrowserRunnerApiClient {
 			clearTimeout(timeout);
 		}
 	}
+}
+
+function evidenceFilename(taskId: string, descriptor: RunnerEvidenceUploadDescriptor | undefined): string {
+	if (!descriptor) return `response-${taskId}.jpg`;
+	if (descriptor.role === "primary") return `response-${taskId}-complete.jpg`;
+	if (
+		!Number.isSafeInteger(descriptor.segmentIndex) ||
+		!Number.isSafeInteger(descriptor.segmentCount) ||
+		descriptor.segmentIndex < 1 ||
+		descriptor.segmentCount < descriptor.segmentIndex
+	) {
+		throw new BrowserRunnerApiError("Browser Runner evidence segment metadata is invalid");
+	}
+	const width = Math.max(3, String(descriptor.segmentCount).length);
+	return `response-${taskId}-segment-${String(descriptor.segmentIndex).padStart(width, "0")}-of-${String(
+		descriptor.segmentCount,
+	).padStart(width, "0")}.jpg`;
 }
 
 function parseClaim(value: unknown, expectedSurface?: BrowserExtensionSurface): BrowserExtensionClaim {

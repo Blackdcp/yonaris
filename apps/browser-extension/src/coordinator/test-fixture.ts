@@ -89,7 +89,17 @@ export function fakeTabDriver(events: string[], adapter: ConsumerWebAdapter, ope
 		adapter,
 		captureEvidence: async () => {
 			events.push("tab:capture");
-			return Uint8Array.from([0xff, 0xd8, 0xff]);
+			return {
+				expectedSegmentCount: 1,
+				segments: [
+					{
+						bytes: Uint8Array.from([0xff, 0xd8, 0xff]),
+						overlapTopCssPx: 0,
+						devicePixelRatio: 1,
+					},
+				],
+				composite: Uint8Array.from([0xff, 0xd8, 0xff]),
+			};
 		},
 		close: async () => {
 			events.push("tab:close");
@@ -128,9 +138,10 @@ export function fakeRunnerApi(events: string[]) {
 			events.push("api:submit_confirmed");
 		},
 		heartbeatTask: async () => undefined,
-		uploadEvidence: async () => {
-			events.push("api:upload_screenshot");
-			return "artifact-1";
+		uploadEvidence: async (_claim: unknown, _session: string, _adapter: string, _bytes: Uint8Array, descriptor?: { role: string }) => {
+			const role = descriptor?.role ?? "legacy";
+			events.push(`api:upload_${role}`);
+			return role === "primary" ? "artifact-primary" : "artifact-segment-1";
 		},
 		completeTask: async () => {
 			events.push("api:complete");

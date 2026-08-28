@@ -22,7 +22,8 @@ describe("runClaimedTask", () => {
 					"api:submit_confirmed",
 					"adapter:collect",
 					"tab:capture",
-					"api:upload_screenshot",
+					"api:upload_segment",
+					"api:upload_primary",
 					"api:complete",
 					"tab:close",
 				].includes(event),
@@ -33,7 +34,8 @@ describe("runClaimedTask", () => {
 			"api:submit_confirmed",
 			"adapter:collect",
 			"tab:capture",
-			"api:upload_screenshot",
+			"api:upload_segment",
+			"api:upload_primary",
 			"api:complete",
 			"tab:close",
 		]);
@@ -104,7 +106,8 @@ describe("runClaimedTask", () => {
 
 		await expect(runClaimedTask(claimedTask(), dependencies)).resolves.toEqual({ status: "succeeded" });
 		expect(events).not.toContain("api:needs_human");
-		expect(events).not.toContain("api:upload_screenshot");
+		expect(events).not.toContain("api:upload_segment");
+		expect(events).not.toContain("api:upload_primary");
 		expect(completions).toEqual([
 			expect.objectContaining({
 				visualEvidence: {
@@ -118,6 +121,51 @@ describe("runClaimedTask", () => {
 		]);
 		expect(events.at(-1)).toBe("tab:close");
 		await expect(dependencies.journal.entries()).resolves.toEqual({});
+	});
+
+	test("completes with the successfully uploaded segments when a long capture is partial", async () => {
+		const events: string[] = [];
+		const dependencies = fixtureDependencies(events);
+		const adapter = fakeAdapter(events);
+		dependencies.tabs.open = async () => ({
+			tabId: 42,
+			adapter,
+			captureEvidence: async () => ({
+				expectedSegmentCount: 3,
+				segments: [
+					{ bytes: Uint8Array.from([0xff, 0xd8, 0xff, 1]), overlapTopCssPx: 0, devicePixelRatio: 1 },
+					{ bytes: Uint8Array.from([0xff, 0xd8, 0xff, 2]), overlapTopCssPx: 64, devicePixelRatio: 1 },
+				],
+				composite: null,
+			}),
+			close: async () => {
+				events.push("tab:close");
+			},
+		});
+		let upload = 0;
+		dependencies.api.uploadEvidence = async () => {
+			upload += 1;
+			events.push(`api:upload:${upload}`);
+			return `artifact-${upload}`;
+		};
+		const completions: Array<Record<string, unknown>> = [];
+		dependencies.api.completeTask = async (_claim, input) => {
+			completions.push(input as unknown as Record<string, unknown>);
+		};
+
+		await expect(runClaimedTask(claimedTask(), dependencies)).resolves.toEqual({ status: "succeeded" });
+		expect(completions).toEqual([
+			expect.objectContaining({
+				visualEvidence: {
+					status: "partial",
+					primaryArtifactId: null,
+					segmentArtifactIds: ["artifact-1", "artifact-2"],
+					expectedSegmentCount: 3,
+					capturedSegmentCount: 2,
+				},
+			}),
+		]);
+		expect(events).not.toContain("api:needs_human");
 	});
 
 	test("pre-submit navigation failure is offered once to the server retry policy", async () => {
@@ -137,7 +185,17 @@ describe("runClaimedTask", () => {
 		const preservedTab = {
 			tabId: 42,
 			adapter,
-			captureEvidence: async () => Uint8Array.from([0xff, 0xd8, 0xff]),
+			captureEvidence: async () => ({
+				expectedSegmentCount: 1,
+				segments: [
+					{
+						bytes: Uint8Array.from([0xff, 0xd8, 0xff]),
+						overlapTopCssPx: 0,
+						devicePixelRatio: 1,
+					},
+				],
+				composite: Uint8Array.from([0xff, 0xd8, 0xff]),
+			}),
 			close: async () => {
 				events.push("tab:close");
 			},

@@ -7,6 +7,7 @@ import {
 import type { AdapterError, ConsumerWebAdapter } from "./contracts";
 import { createDocumentDomPort, isDomElementVisible, readStructuredSearchEvidence } from "./dom-port";
 import { doubaoSelectorContract } from "./doubao";
+import { createDocumentEvidenceCaptureSessionManager } from "./evidence-capture-session";
 import { probeSearchEvidenceCandidates } from "./evidence-probe";
 import { inspectLatestStructuredSearchEvidenceAsync } from "./search-evidence";
 
@@ -18,11 +19,18 @@ type AdapterCommand =
 			promptText: string;
 	  }
 	| { kind: "yonaris_adapter"; action: "collect_current_answer" }
+	| { kind: "yonaris_adapter"; action: "begin_evidence_capture"; promptText: string }
+	| {
+			kind: "yonaris_adapter";
+			action: "advance_evidence_capture" | "end_evidence_capture";
+			sessionId: string;
+	  }
 	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" | "inspect_search_candidates" };
 
 const port = createDocumentDomPort(document, location);
 const surfaceDefinition = extensionSurfaceForUrl(new URL(location.href));
 const adapter = surfaceDefinition.createAdapter(port);
+const evidenceCapture = createDocumentEvidenceCaptureSessionManager(document);
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
 	if (!isAdapterCommand(message)) return false;
@@ -63,6 +71,19 @@ async function execute(
 			return adapter.resumeSubmitted(command.promptText);
 		case "collect_current_answer":
 			return adapter.collectCurrentAnswer();
+		case "begin_evidence_capture":
+			assertApprovedCapturePage(surfaceDefinition, readPageUrl());
+			return evidenceCapture.begin({
+				promptSelector: surfaceDefinition.contract.userMessage,
+				promptText: command.promptText,
+				answerSelector: surfaceDefinition.contract.answer,
+				completionSelector: surfaceDefinition.contract.completion,
+			});
+		case "advance_evidence_capture":
+			assertApprovedCapturePage(surfaceDefinition, readPageUrl());
+			return evidenceCapture.advance(command.sessionId);
+		case "end_evidence_capture":
+			return evidenceCapture.end(command.sessionId);
 		case "inspect_search_candidates": {
 			const initialConversationUrl = readPageUrl();
 			if (!isApprovedSurfaceConversationUrl(surfaceDefinition, initialConversationUrl)) {
@@ -122,13 +143,26 @@ function isAdapterCommand(value: unknown): value is AdapterCommand {
 			"confirm_submitted",
 			"resume_submitted",
 			"collect_current_answer",
+			"begin_evidence_capture",
+			"advance_evidence_capture",
+			"end_evidence_capture",
 			"inspect_search_evidence",
 			"inspect_search_candidates",
 		].includes(value.action)
 	)
 		return false;
 	return (
-		!["prepare", "submit_once", "confirm_submitted", "resume_submitted"].includes(value.action) ||
-		("promptText" in value && typeof value.promptText === "string")
+		(!["prepare", "submit_once", "confirm_submitted", "resume_submitted", "begin_evidence_capture"].includes(
+			value.action,
+		) ||
+			("promptText" in value && typeof value.promptText === "string")) &&
+		(!["advance_evidence_capture", "end_evidence_capture"].includes(value.action) ||
+			("sessionId" in value && typeof value.sessionId === "string"))
 	);
+}
+
+function assertApprovedCapturePage(surfaceDefinition: ExtensionSurfaceDefinition, pageUrl: string): void {
+	if (!isApprovedSurfaceConversationUrl(surfaceDefinition, pageUrl)) {
+		throw new Error("Visual evidence capture requires the approved consumer conversation URL");
+	}
 }

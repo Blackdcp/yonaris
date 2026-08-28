@@ -45,21 +45,99 @@ describe("ChromeTabDriver", () => {
 		}
 	});
 
-	test("captures the claimed active tab and re-verifies it after cropping", async () => {
+	test("captures every planned answer frame and re-verifies the active tab", async () => {
 		const events: string[] = [];
 		const crop = async (dataUrl: string, rect: { x: number }) => {
 			events.push(`crop:${dataUrl}:${rect.x}`);
 			return Uint8Array.from([0xff, 0xd8, 0xff]);
 		};
-		const driver = new ChromeTabDriver(fakeGateway(events), { wait: async () => undefined, captureCroppedJpeg: crop });
+		const gateway = fakeGateway(events, {
+			onMessage: (_tabId, command) => {
+				if (command.action === "begin_evidence_capture") {
+					return {
+						ok: true,
+						value: {
+							sessionId: "capture-1",
+							index: 0,
+							expectedSegmentCount: 2,
+							overlapTopCssPx: 0,
+							rect: { x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 },
+							done: false,
+						},
+					};
+				}
+				if (command.action === "advance_evidence_capture") {
+					return {
+						ok: true,
+						value: {
+							sessionId: "capture-1",
+							index: 1,
+							expectedSegmentCount: 2,
+							overlapTopCssPx: 64,
+							rect: { x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 },
+							done: true,
+						},
+					};
+				}
+				return { ok: true, value: undefined };
+			},
+		});
+		const driver = new ChromeTabDriver(gateway, {
+			wait: async (milliseconds) => {
+				events.push(`wait:${milliseconds}`);
+			},
+			captureCroppedJpeg: crop,
+			composeEvidenceJpeg: async () => Uint8Array.from([0xff, 0xd8, 0xff, 0x01]),
+		});
 		const tab = await driver.open(claimedTask());
 
-		await expect(tab.captureEvidence({ x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 })).resolves.toEqual(
-			Uint8Array.from([0xff, 0xd8, 0xff]),
-		);
-		expect(events).toContain("capture:7:jpeg:82");
+		await expect(
+			tab.captureEvidence("Prompt A", { x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 }),
+		).resolves.toEqual({
+			expectedSegmentCount: 2,
+			segments: [
+				{ bytes: Uint8Array.from([0xff, 0xd8, 0xff]), overlapTopCssPx: 0, devicePixelRatio: 1 },
+				{ bytes: Uint8Array.from([0xff, 0xd8, 0xff]), overlapTopCssPx: 64, devicePixelRatio: 1 },
+			],
+			composite: Uint8Array.from([0xff, 0xd8, 0xff, 0x01]),
+		});
+		expect(events.filter((event) => event === "capture:7:jpeg:82")).toHaveLength(2);
 		expect(events).toContain("crop:data:image/jpeg;base64,fixture:10");
-		expect(events.filter((event) => event === "get:42")).toHaveLength(4);
+		expect(events).toContain("wait:500");
+		expect(events).toContain("message:42:end_evidence_capture");
+		expect(events.filter((event) => event === "get:42")).toHaveLength(7);
+	});
+
+	test("ends the page capture session when a frame cannot be cropped", async () => {
+		const events: string[] = [];
+		const gateway = fakeGateway(events, {
+			onMessage: (_tabId, command) =>
+				command.action === "begin_evidence_capture"
+					? {
+							ok: true,
+							value: {
+								sessionId: "capture-1",
+								index: 0,
+								expectedSegmentCount: 1,
+								overlapTopCssPx: 0,
+								rect: { x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 },
+								done: true,
+							},
+						}
+					: { ok: true, value: undefined },
+		});
+		const driver = new ChromeTabDriver(gateway, {
+			wait: async () => undefined,
+			captureCroppedJpeg: async () => {
+				throw new Error("crop failed");
+			},
+		});
+		const tab = await driver.open(claimedTask());
+
+		await expect(
+			tab.captureEvidence("Prompt A", { x: 10, y: 20, width: 100, height: 80, devicePixelRatio: 1 }),
+		).rejects.toThrow("crop failed");
+		expect(events.at(-1)).toBe("message:42:end_evidence_capture");
 	});
 
 	test("rejects a recovered tab that has navigated outside the claimed channel", async () => {
@@ -144,7 +222,12 @@ describe("ChromeTabDriver", () => {
 
 function fakeGateway(
 	events: string[],
-	options: { url?: string; response?: unknown; activeTab?: { id: number; url: string; status: string } } = {},
+	options: {
+		url?: string;
+		response?: unknown;
+		activeTab?: { id: number; url: string; status: string };
+		onMessage?: (tabId: number, command: Parameters<ChromeTabsGateway["sendMessage"]>[1]) => unknown;
+	} = {},
 ): ChromeTabsGateway {
 	return {
 		create: async (url, createOptions?: { active: boolean }) => {
@@ -177,6 +260,7 @@ function fakeGateway(
 		},
 		sendMessage: async (tabId, command) => {
 			events.push(`message:${tabId}:${command.action}`);
+			if (options.onMessage) return options.onMessage(tabId, command);
 			return options.response ?? { ok: true, value: undefined };
 		},
 	};

@@ -196,8 +196,9 @@ export function assertBrowserRunnerVisualEvidenceProtocol(input: {
 		!Number.isSafeInteger(visualEvidence.expectedSegmentCount) ||
 		!Number.isSafeInteger(visualEvidence.capturedSegmentCount) ||
 		visualEvidence.expectedSegmentCount < 1 ||
-		visualEvidence.expectedSegmentCount > MAX_VISUAL_EVIDENCE_SEGMENTS ||
+		visualEvidence.expectedSegmentCount > 10_000 ||
 		visualEvidence.capturedSegmentCount < 1 ||
+		visualEvidence.capturedSegmentCount > MAX_VISUAL_EVIDENCE_SEGMENTS ||
 		visualEvidence.capturedSegmentCount > visualEvidence.expectedSegmentCount ||
 		(visualEvidence.segmentArtifactIds.length !== visualEvidence.capturedSegmentCount &&
 			!(

@@ -379,6 +379,46 @@ describe("BrowserRunnerApiClient", () => {
 		});
 	});
 
+	it("names primary and ordered segment uploads without exposing page metadata", async () => {
+		const calls: Request[] = [];
+		let artifact = 0;
+		const client = authenticatedClient(calls, async () =>
+			Response.json({ artifact: { id: `artifact-${++artifact}` } }, { status: 201 }),
+		);
+		const bytes = Uint8Array.from([0xff, 0xd8, 0xff, 0x01]);
+
+		await client.uploadEvidence(claimedTask(), "session-1", "adapter-v1", bytes, {
+			role: "segment",
+			segmentIndex: 2,
+			segmentCount: 12,
+		});
+		await client.uploadEvidence(claimedTask(), "session-1", "adapter-v1", bytes, { role: "primary" });
+
+		expect(decodeURIComponent(calls[0]?.headers.get("X-Yonaris-Filename") ?? "")).toBe(
+			"response-task-1-segment-002-of-012.jpg",
+		);
+		expect(decodeURIComponent(calls[1]?.headers.get("X-Yonaris-Filename") ?? "")).toBe(
+			"response-task-1-complete.jpg",
+		);
+		expect(JSON.stringify([...calls[0]?.headers.entries()])).not.toContain("chat.deepseek.com");
+	});
+
+	it("rejects a segment larger than 1 MiB before upload", async () => {
+		const calls: Request[] = [];
+		const client = authenticatedClient(calls, async () => Response.json({ artifact: { id: "artifact-1" } }));
+		const bytes = new Uint8Array(1024 * 1024 + 1);
+		bytes.set([0xff, 0xd8, 0xff]);
+
+		await expect(
+			client.uploadEvidence(claimedTask(), "session-1", "adapter-v1", bytes, {
+				role: "segment",
+				segmentIndex: 1,
+				segmentCount: 1,
+			}),
+		).rejects.toThrow(/screenshot evidence is invalid/i);
+		expect(calls).toHaveLength(0);
+	});
+
 	it("rejects inconsistent search evidence before contacting the Portal", async () => {
 		const calls: Request[] = [];
 		const client = authenticatedClient(calls, async () => Response.json({ duplicate: false }));

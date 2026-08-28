@@ -6,6 +6,7 @@ import {
 } from "../adapters/contracts";
 import type { BrowserExtensionClaim } from "../contracts";
 import type { BrowserRunnerVisualEvidence } from "@workspace/lib/browser-extension-contract";
+import type { EvidenceSegment } from "./screenshot";
 import type { DurableTaskJournal } from "./journal";
 
 export type RunnerFailureInput = {
@@ -23,6 +24,10 @@ export type RunnerCompletionInput = {
 	visualEvidence?: BrowserRunnerVisualEvidence;
 };
 
+export type RunnerEvidenceUploadDescriptor =
+	| { role: "primary" }
+	| { role: "segment"; segmentIndex: number; segmentCount: number };
+
 export interface RunnerApi {
 	recordSubmitIntent(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void>;
 	confirmSubmitted(claim: BrowserExtensionClaim, runnerSessionId: string): Promise<void>;
@@ -32,6 +37,7 @@ export interface RunnerApi {
 		runnerSessionId: string,
 		adapterVersion: string,
 		screenshot: Uint8Array,
+		descriptor?: RunnerEvidenceUploadDescriptor,
 	): Promise<string>;
 	completeTask(claim: BrowserExtensionClaim, input: RunnerCompletionInput): Promise<void>;
 	failTask(claim: BrowserExtensionClaim, input: RunnerFailureInput): Promise<{ retryScheduled: boolean }>;
@@ -40,7 +46,10 @@ export interface RunnerApi {
 export interface RunnerTab {
 	tabId: number;
 	adapter: ConsumerWebAdapter;
-	captureEvidence(rect: EvidenceViewportRect): Promise<Uint8Array>;
+	captureEvidence(
+		promptText: string,
+		fallbackRect: EvidenceViewportRect,
+	): Promise<{ expectedSegmentCount: number; segments: EvidenceSegment[]; composite: Uint8Array | null }>;
 	close(): Promise<void>;
 }
 
@@ -152,22 +161,68 @@ export async function runClaimedTask(
 			capturedSegmentCount: 0,
 		};
 		try {
-			const screenshot = await tab.captureEvidence(answer.evidenceViewportRect);
-			const artifactId = await dependencies.api.uploadEvidence(
-				claim,
-				runnerSessionId,
-				answer.adapterVersion,
-				screenshot,
-			);
-			await dependencies.journal.advance(claim.taskId, "uploaded");
-			phase = "uploaded";
-			visualEvidence = {
-				status: "complete",
-				primaryArtifactId: artifactId,
-				segmentArtifactIds: [],
-				expectedSegmentCount: 1,
-				capturedSegmentCount: 1,
-			};
+			const captured = await tab.captureEvidence(claim.promptText, answer.evidenceViewportRect);
+			const segmentArtifactIds: string[] = [];
+			for (const [index, segment] of captured.segments.entries()) {
+				try {
+					segmentArtifactIds.push(
+						await dependencies.api.uploadEvidence(
+							claim,
+							runnerSessionId,
+							answer.adapterVersion,
+							segment.bytes,
+							{ role: "segment", segmentIndex: index + 1, segmentCount: captured.expectedSegmentCount },
+						),
+					);
+				} catch {
+					// Preserve every segment that can be uploaded; a missing frame makes the evidence partial.
+				}
+			}
+			let primaryArtifactId: string | null = null;
+			if (
+				captured.composite &&
+				captured.segments.length === captured.expectedSegmentCount &&
+				segmentArtifactIds.length === captured.expectedSegmentCount
+			) {
+				try {
+					primaryArtifactId = await dependencies.api.uploadEvidence(
+						claim,
+						runnerSessionId,
+						answer.adapterVersion,
+						captured.composite,
+						{ role: "primary" },
+					);
+				} catch {
+					// Segment evidence remains usable if the long composite cannot be uploaded.
+				}
+			}
+			if (primaryArtifactId || segmentArtifactIds.length > 0) {
+				await dependencies.journal.advance(claim.taskId, "uploaded");
+				phase = "uploaded";
+			}
+			visualEvidence = primaryArtifactId
+				? {
+						status: "complete",
+						primaryArtifactId,
+						segmentArtifactIds,
+						expectedSegmentCount: captured.expectedSegmentCount,
+						capturedSegmentCount: segmentArtifactIds.length,
+					}
+				: segmentArtifactIds.length > 0
+					? {
+							status: "partial",
+							primaryArtifactId: null,
+							segmentArtifactIds,
+							expectedSegmentCount: captured.expectedSegmentCount,
+							capturedSegmentCount: segmentArtifactIds.length,
+						}
+					: {
+							status: "unavailable",
+							primaryArtifactId: null,
+							segmentArtifactIds: [],
+							expectedSegmentCount: 0,
+							capturedSegmentCount: 0,
+						};
 		} catch {
 			// A verified answer remains valid even when optional visual evidence is unavailable.
 		}

@@ -4,9 +4,14 @@ import {
 	type ConsumerWebAdapter,
 	type EvidenceViewportRect,
 } from "../adapters/contracts";
+import type { EvidenceCaptureFrame } from "../adapters/evidence-capture-session";
 import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contracts";
 import { extensionSurfaceDefinition } from "../surface-registry";
-import { captureCroppedJpeg } from "./screenshot";
+import {
+	captureBoundedCroppedJpeg,
+	composeEvidenceJpeg,
+	type EvidenceSegment,
+} from "./screenshot";
 import { type RunnerTab, type RunnerTabDriver, RunnerTabOpenError } from "./task-runner";
 
 type AdapterCommand =
@@ -15,6 +20,12 @@ type AdapterCommand =
 			kind: "yonaris_adapter";
 			action: "prepare" | "submit_once" | "confirm_submitted" | "resume_submitted";
 			promptText: string;
+	  }
+	| { kind: "yonaris_adapter"; action: "begin_evidence_capture"; promptText: string }
+	| {
+			kind: "yonaris_adapter";
+			action: "advance_evidence_capture" | "end_evidence_capture";
+			sessionId: string;
 	  };
 
 type BrowserTab = { id?: number; windowId?: number; active?: boolean; url?: string; status?: string };
@@ -32,15 +43,21 @@ export interface ChromeTabsGateway {
 export class ChromeTabDriver implements RunnerTabDriver {
 	readonly #gateway: ChromeTabsGateway;
 	readonly #wait: (milliseconds: number) => Promise<void>;
-	readonly #captureCroppedJpeg: typeof captureCroppedJpeg;
+	readonly #captureCroppedJpeg: typeof captureBoundedCroppedJpeg;
+	readonly #composeEvidenceJpeg: typeof composeEvidenceJpeg;
 
 	constructor(
 		gateway: ChromeTabsGateway = chromeTabsGateway(),
-		options: { wait?: (milliseconds: number) => Promise<void>; captureCroppedJpeg?: typeof captureCroppedJpeg } = {},
+		options: {
+			wait?: (milliseconds: number) => Promise<void>;
+			captureCroppedJpeg?: typeof captureBoundedCroppedJpeg;
+			composeEvidenceJpeg?: typeof composeEvidenceJpeg;
+		} = {},
 	) {
 		this.#gateway = gateway;
 		this.#wait = options.wait ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
-		this.#captureCroppedJpeg = options.captureCroppedJpeg ?? captureCroppedJpeg;
+		this.#captureCroppedJpeg = options.captureCroppedJpeg ?? captureBoundedCroppedJpeg;
+		this.#composeEvidenceJpeg = options.composeEvidenceJpeg ?? composeEvidenceJpeg;
 	}
 
 	async open(claim: BrowserExtensionClaim): Promise<RunnerTab> {
@@ -95,15 +112,51 @@ export class ChromeTabDriver implements RunnerTabDriver {
 	}
 
 	#runnerTab(tabId: number, surface: BrowserExtensionSurface): RunnerTab {
+		const adapter = new ContentScriptAdapter(this.#gateway, tabId, surface);
 		return {
 			tabId,
-			adapter: new ContentScriptAdapter(this.#gateway, tabId, surface),
-			captureEvidence: (rect) => this.#captureEvidence(tabId, surface, rect),
+			adapter,
+			captureEvidence: (promptText, fallbackRect) =>
+				this.#captureEvidence(tabId, surface, adapter, promptText, fallbackRect),
 			close: () => this.#gateway.remove(tabId),
 		};
 	}
 
 	async #captureEvidence(
+		tabId: number,
+		surface: BrowserExtensionSurface,
+		adapter: ContentScriptAdapter,
+		promptText: string,
+		fallbackRect: EvidenceViewportRect,
+	): Promise<{ expectedSegmentCount: number; segments: EvidenceSegment[]; composite: Uint8Array | null }> {
+		void fallbackRect;
+		let sessionId: string | null = null;
+		const segments: EvidenceSegment[] = [];
+		let expectedSegmentCount = 0;
+		try {
+			let frame = await adapter.beginEvidenceCapture(promptText);
+			sessionId = frame.sessionId;
+			expectedSegmentCount = frame.expectedSegmentCount;
+			for (;;) {
+				const bytes = await this.#captureFrame(tabId, surface, frame.rect);
+				segments.push({
+					bytes,
+					overlapTopCssPx: frame.overlapTopCssPx,
+					devicePixelRatio: frame.rect.devicePixelRatio,
+				});
+				if (frame.done) break;
+				await this.#wait(500);
+				frame = await adapter.advanceEvidenceCapture(sessionId);
+			}
+			const composite =
+				segments.length === expectedSegmentCount ? await this.#composeEvidenceJpeg(segments) : null;
+			return { expectedSegmentCount, segments, composite };
+		} finally {
+			if (sessionId) await adapter.endEvidenceCapture(sessionId).catch(() => undefined);
+		}
+	}
+
+	async #captureFrame(
 		tabId: number,
 		surface: BrowserExtensionSurface,
 		rect: EvidenceViewportRect,
@@ -160,6 +213,22 @@ class ContentScriptAdapter implements ConsumerWebAdapter {
 
 	async collectCurrentAnswer(): Promise<CollectedAnswer> {
 		return (await this.#command({ kind: "yonaris_adapter", action: "collect_current_answer" })) as CollectedAnswer;
+	}
+
+	async beginEvidenceCapture(promptText: string): Promise<EvidenceCaptureFrame> {
+		return assertEvidenceCaptureFrame(
+			await this.#command({ kind: "yonaris_adapter", action: "begin_evidence_capture", promptText }),
+		);
+	}
+
+	async advanceEvidenceCapture(sessionId: string): Promise<EvidenceCaptureFrame> {
+		return assertEvidenceCaptureFrame(
+			await this.#command({ kind: "yonaris_adapter", action: "advance_evidence_capture", sessionId }),
+		);
+	}
+
+	async endEvidenceCapture(sessionId: string): Promise<void> {
+		await this.#command({ kind: "yonaris_adapter", action: "end_evidence_capture", sessionId });
 	}
 
 	async #command(command: AdapterCommand): Promise<unknown> {
@@ -241,6 +310,29 @@ function adapterCode(value: unknown): AdapterError["code"] {
 		return value;
 	}
 	return "page_drift";
+}
+
+function assertEvidenceCaptureFrame(value: unknown): EvidenceCaptureFrame {
+	if (!isRecord(value) || !isRecord(value.rect)) throw new Error("Visual evidence capture frame is invalid");
+	const rect = value.rect;
+	if (
+		typeof value.sessionId !== "string" ||
+		!value.sessionId ||
+		!Number.isSafeInteger(value.index) ||
+		(value.index as number) < 0 ||
+		!Number.isSafeInteger(value.expectedSegmentCount) ||
+		(value.expectedSegmentCount as number) < 1 ||
+		!Number.isFinite(value.overlapTopCssPx) ||
+		(value.overlapTopCssPx as number) < 0 ||
+		typeof value.done !== "boolean" ||
+		![rect.x, rect.y, rect.width, rect.height, rect.devicePixelRatio].every(Number.isFinite) ||
+		(rect.width as number) <= 0 ||
+		(rect.height as number) <= 0 ||
+		(rect.devicePixelRatio as number) <= 0
+	) {
+		throw new Error("Visual evidence capture frame is invalid");
+	}
+	return value as unknown as EvidenceCaptureFrame;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
