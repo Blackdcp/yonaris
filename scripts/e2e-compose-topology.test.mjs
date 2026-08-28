@@ -30,8 +30,6 @@ test("the E2E workflow preserves diagnostics and supplies the base Compose diges
     "uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
     "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
     "name: Upload Browser Runner extension",
-    "name: Upload public-site failure results",
-    "name: Upload public-site analytics failure results",
     "name: Upload Playwright report",
     "name: Upload test results",
   ]) {

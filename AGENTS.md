@@ -6,7 +6,6 @@ Yonaris is AI-native MarTech infrastructure built for decisions made by people a
 
 - `apps/web` — product dashboard (TanStack Start + Vite, port 3000)
 - `apps/worker` — pg-boss background jobs (AI evaluations, citation tracking, reports)
-- `apps/www` — bilingual marketing site, Human pages, Agent documents, and lead delivery (port 3001)
 - `apps/browser-extension` — signed browser extension package for approved collection workflows
 - `apps/browser-runner` — isolated browser execution and approved egress service
 - `packages/lib` — shared logic and the Drizzle schema/migrations
@@ -26,7 +25,7 @@ Yonaris is AI-native MarTech infrastructure built for decisions made by people a
 - `pnpm format` — Biome format
 - Migrations: from `packages/lib`, `pnpm exec drizzle-kit migrate` (NEVER RUN THESE UNLESS EXPLICITLY INSTRUCTED BY THE USER)
 - E2E tests need Playwright browsers (`pnpm exec playwright install`) and a running app; they are separate from unit tests
-- shadcn components: always install with the CLI (`pnpm dlx shadcn@latest add <component>`, from `packages/ui` or `apps/www` — each has its own `components.json`) — never hand-create them
+- shadcn components: always install with the CLI (`pnpm dlx shadcn@latest add <component>`, from `packages/ui`) — never hand-create them
 
 Do not routinely run formatting, linting, type checks, or tests after making changes; CI provides the default validation and these commands should not be part of every agent interaction. Run a targeted command only when it is strictly necessary to diagnose or iterate on the current work, or when the user explicitly requests it. Never run `pnpm lint` or the full test suite by default.
 

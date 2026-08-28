@@ -10,10 +10,9 @@ This repository and its deployment materials are proprietary and confidential. T
 
 ## Product surfaces
 
-- `apps/www`: public Yonaris company and product site
 - `apps/web`: authenticated product workspace
 - `apps/worker`: managed evidence collection and processing
-- `deploy/las`: production release automation
+- `deploy/las`: Portal production release automation
 
 ## Internal development
 
