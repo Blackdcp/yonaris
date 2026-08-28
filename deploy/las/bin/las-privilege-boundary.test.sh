@@ -35,6 +35,14 @@ grep -Fq 'deploy | rollback' "$DISPATCHER"
 grep -Fq 'arg1 arg2 arg3 arg4 extra' "$DISPATCHER"
 grep -Fq '[[ "$(/usr/bin/id -u)" == 0 ]]' "$DISPATCHER"
 grep -Fq '/usr/sbin/runuser -u "$RUNTIME_USER" -- /usr/bin/env -i' "$RUNTIME_MANAGER"
+grep -Fq 'portal-runtime-v2' "$RUNTIME_MANAGER"
+grep -Fq 'migration-readiness-runtime-v2' "$RUNTIME_MANAGER"
+grep -Fq 'authorize_requested_portal_rollback' "$RUNTIME_MANAGER"
+grep -Fq 'authorize_failed_deploy_portal_rollback' "$RUNTIME_MANAGER"
+if grep -Eq 'MARKETING_|marketing|compose\.marketing|WWW_IMAGE_DIGEST|yonaris-www|1516|www-sha256' "$RUNTIME_MANAGER"; then
+	echo 'Stable runtime manager still exposes the retired marketing capability or fifth digest.' >&2
+	exit 1
+fi
 if grep -Fq '/usr/sbin/runuser' "$DISPATCHER"; then
 	echo 'Root dispatcher must not execute candidate code under another identity.' >&2
 	exit 1

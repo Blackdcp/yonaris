@@ -296,6 +296,14 @@ assert_contains "$RUNTIME_MANAGER" 'set(services) != set(expected)' 'exact rende
 assert_contains "$RUNTIME_MANAGER" 'volume count is not exact' 'exact rendered volume set'
 assert_contains "$RUNTIME_MANAGER" 'published port count is not exact' 'exact rendered port set'
 assert_contains "$RUNTIME_MANAGER" 'http://127.0.0.1:1515/' 'portal host HTTP probe'
+assert_contains "$RUNTIME_MANAGER" 'portal-runtime-v2' 'Portal runtime accepts the four-digest v2 interface'
+assert_contains "$RUNTIME_MANAGER" 'migration-readiness-runtime-v2' 'backup and rehearsal accept four digests'
+assert_contains "$RUNTIME_MANAGER" 'authorize_requested_portal_rollback' 'requested rollback uses the candidate tuple'
+assert_contains "$RUNTIME_MANAGER" 'authorize_failed_deploy_portal_rollback' 'failed deploy recovery uses predecessor evidence'
+assert_contains "$RUNTIME_MANAGER" 'RESEND_API_KEY' 'Portal transactional email remains available'
+for retired_runtime_surface in MARKETING_ marketing compose.marketing WWW_IMAGE_DIGEST yonaris-www 1516 www-sha256; do
+	assert_not_contains "$RUNTIME_MANAGER" "$retired_runtime_surface" 'runtime has no retired marketing capability or fifth digest'
+done
 assert_contains "$PORTAL_WORKFLOW" 'web_digest:' 'portal build digest workflow output'
 assert_contains "$PORTAL_WORKFLOW" 'worker_digest:' 'worker build digest workflow output'
 assert_contains "$PORTAL_WORKFLOW" 'migrate_digest:' 'migration build digest workflow output'

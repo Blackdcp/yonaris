@@ -19,7 +19,6 @@ readonly PORTAL_WEB_IMAGE='ghcr.io/blackdcp/yonaris-web'
 readonly PORTAL_WORKER_IMAGE='ghcr.io/blackdcp/yonaris-worker'
 readonly PORTAL_MIGRATE_IMAGE='ghcr.io/blackdcp/yonaris-db-migrate'
 readonly POSTGRES_IMAGE='postgres'
-readonly MARKETING_IMAGE='ghcr.io/blackdcp/yonaris-www'
 readonly MIGRATION_REHEARSAL_READY_ATTEMPTS=30
 readonly RUNTIME_UID="$(/usr/bin/id -u "$RUNTIME_USER")"
 readonly RUNTIME_GID="$(/usr/bin/id -g "$RUNTIME_USER")"
@@ -98,8 +97,7 @@ allowed = {
     "DATABASE_URL", "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD", "DEEPSEEK_API_KEY",
     "DEFAULT_DELAY_HOURS", "DEPLOYMENT_ID", "DEPLOYMENT_MODE", "DISABLE_TELEMETRY",
     "ENVIRONMENT", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "IMAGE_NAMESPACE",
-    "IMAGE_REGISTRY", "IMAGE_TAG", "JINA_API_KEY", "MARKETING_DIAGNOSTIC_DELIVERY_MODE",
-    "MARKETING_LEAD_RECIPIENT", "MISTRAL_API_KEY", "OLOSTEP_API_KEY", "OPENAI_API_KEY",
+    "IMAGE_REGISTRY", "IMAGE_TAG", "JINA_API_KEY", "MISTRAL_API_KEY", "OLOSTEP_API_KEY", "OPENAI_API_KEY",
     "OPENROUTER_API_KEY", "OXYLABS_PASSWORD", "OXYLABS_USERNAME", "POSTGRES_DB",
     "POSTGRES_PASSWORD", "POSTGRES_USER", "RESEND_API_KEY", "RESEND_FROM_EMAIL",
     "RESPONSE_SNAPSHOT_ENABLED", "RESPONSE_SNAPSHOT_HOST_ROOT",
@@ -404,65 +402,54 @@ compose_portal() {
 }
 
 validate_compose_model() {
-	local kind="$1" tree="$2" web="$3" worker="$4" migrate="$5" postgres="$6" www="$7"
+	local tree="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
 	local output
 	output="$(/usr/bin/mktemp "$STATE_DIRECTORY/.las-compose-model.XXXXXX")" || return 1
-	if [[ "$kind" == portal ]]; then
-		compose_portal "$tree" "$web" "$worker" "$migrate" "$postgres" config --format json >"$output" || {
-			/usr/bin/rm -f -- "$output"; return 1;
-		}
-	else
-		compose_marketing "$tree" "$www" config --format json >"$output" || {
-			/usr/bin/rm -f -- "$output"; return 1;
-		}
-	fi
+	compose_portal "$tree" "$web" "$worker" "$migrate" "$postgres" config --format json >"$output" || {
+		/usr/bin/rm -f -- "$output"; return 1;
+	}
 	set +e
-	/usr/bin/python3 - "$kind" "$web" "$worker" "$migrate" "$postgres" "$www" "$output" "$ENV_FILE" <<'PY'
+	/usr/bin/python3 - "$web" "$worker" "$migrate" "$postgres" "$output" "$ENV_FILE" <<'PY'
 import json
 import pathlib
 import sys
 
-kind, web, worker, migrate, postgres, www, path, env_path = sys.argv[1:]
+web, worker, migrate, postgres, path, env_path = sys.argv[1:]
 model = json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
 def reject(reason):
     raise SystemExit(f"rendered Compose rejected: {reason}")
 if set(model) - {"name", "networks", "services", "volumes"}:
     reject("unknown top-level key")
-if model.get("name") != ("yonaris" if kind == "portal" else "yonaris-marketing"):
+if model.get("name") != "yonaris":
     reject("project name is not exact")
 services = model.get("services")
 if not isinstance(services, dict):
     reject("services is not an object")
-expected = ({
+expected = {
     "postgres": f"postgres@{postgres}",
     "db-migrate": f"ghcr.io/blackdcp/yonaris-db-migrate@{migrate}",
     "account-ops": f"ghcr.io/blackdcp/yonaris-worker@{worker}",
     "web": f"ghcr.io/blackdcp/yonaris-web@{web}",
     "worker": f"ghcr.io/blackdcp/yonaris-worker@{worker}",
-} if kind == "portal" else {"www": f"ghcr.io/blackdcp/yonaris-www@{www}"})
+}
 if set(services) != set(expected):
     reject("service set is not exact")
-if kind == "portal":
-    if set(model.get("networks", {})) != {"backend"} or set(model.get("volumes", {})) != {"postgres_data"}:
-        reject("portal network or volume set is not exact")
-    network = model["networks"]["backend"]
-    volume = model["volumes"]["postgres_data"]
-    if (not isinstance(network, dict) or set(network) - {"name", "external"}
-            or network.get("name") != "yonaris_backend" or network.get("external", False) is not False):
-        reject("backend network definition is not exact")
-    if (not isinstance(volume, dict) or set(volume) - {"name", "driver"}
-            or volume.get("name") != "yonaris_postgres_data" or volume.get("driver", "local") != "local"):
-        reject("Postgres named volume definition is not exact")
-else:
-    if model.get("networks") not in (None, {}) or model.get("volumes") not in (None, {}):
-        reject("marketing declares a top-level network or volume")
+if set(model.get("networks", {})) != {"backend"} or set(model.get("volumes", {})) != {"postgres_data"}:
+    reject("portal network or volume set is not exact")
+network = model["networks"]["backend"]
+volume = model["volumes"]["postgres_data"]
+if (not isinstance(network, dict) or set(network) - {"name", "external"}
+        or network.get("name") != "yonaris_backend" or network.get("external", False) is not False):
+    reject("backend network definition is not exact")
+if (not isinstance(volume, dict) or set(volume) - {"name", "driver"}
+        or volume.get("name") != "yonaris_postgres_data" or volume.get("driver", "local") != "local"):
+    reject("Postgres named volume definition is not exact")
 allowed = {
     "postgres": {"cpus", "environment", "healthcheck", "image", "logging", "mem_limit", "networks", "restart", "shm_size", "stop_grace_period", "volumes"},
     "db-migrate": {"cpus", "depends_on", "environment", "image", "logging", "mem_limit", "networks", "profiles", "restart"},
     "account-ops": {"cpus", "depends_on", "environment", "image", "logging", "mem_limit", "networks", "profiles", "restart", "volumes"},
     "web": {"cpus", "depends_on", "environment", "healthcheck", "image", "logging", "mem_limit", "networks", "ports", "restart", "stop_grace_period", "volumes"},
     "worker": {"cpus", "depends_on", "environment", "image", "logging", "mem_limit", "networks", "restart", "stop_grace_period", "volumes"},
-    "www": {"cpus", "environment", "healthcheck", "image", "logging", "mem_limit", "ports", "restart", "stop_grace_period"},
 }
 dotenv = {}
 for line in pathlib.Path(env_path).read_text(encoding="utf-8").splitlines():
@@ -477,22 +464,20 @@ required = {
     "account-ops": {"depends_on", "environment", "image", "networks", "profiles", "restart", "volumes"},
     "web": {"depends_on", "environment", "healthcheck", "image", "networks", "ports", "restart", "volumes"},
     "worker": {"depends_on", "environment", "image", "networks", "restart", "volumes"},
-    "www": {"environment", "healthcheck", "image", "ports", "restart"},
 }
 expected_restart = {
     "postgres": "unless-stopped", "db-migrate": "no", "account-ops": "no",
-    "web": "unless-stopped", "worker": "unless-stopped", "www": "unless-stopped",
+    "web": "unless-stopped", "worker": "unless-stopped",
 }
 expected_limits = {
     "postgres": (1.0, 1024**3), "db-migrate": (1.0, 1024**3),
     "account-ops": (0.5, 512 * 1024**2), "web": (1.0, 1024**3),
-    "worker": (1.5, 2 * 1024**3), "www": (0.5, 512 * 1024**2),
+    "worker": (1.5, 2 * 1024**3),
 }
-expected_stop = {"postgres": "60s", "web": "30s", "worker": "90s", "www": "20s"}
+expected_stop = {"postgres": "60s", "web": "30s", "worker": "90s"}
 expected_health = {
     "postgres": (["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"], "5s", "5s", 12, "20s"),
     "web": (["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "5", "http://127.0.0.1:3000/"], "15s", "6s", 8, "45s"),
-    "www": (["CMD", "curl", "--fail", "--silent", "--show-error", "--max-time", "5", "http://127.0.0.1:3000/"], "15s", "6s", 8, "30s"),
 }
 def duration_matches(value, expected):
     nanos = {"5s": 5_000_000_000, "6s": 6_000_000_000, "15s": 15_000_000_000,
@@ -507,9 +492,9 @@ for name, service in services.items():
     if (not isinstance(service, dict) or service.get("image") != expected[name]
             or set(service) - allowed[name] or not required[name].issubset(service)):
         reject(f"{name} has unknown/missing keys or a mismatched image")
-    if kind == "portal" and set(service.get("networks", {})) != {"backend"}:
+    if set(service.get("networks", {})) != {"backend"}:
         reject(f"{name} network attachment is not exact")
-    if kind == "portal" and service.get("networks", {}).get("backend") not in (None, {}):
+    if service.get("networks", {}).get("backend") not in (None, {}):
         reject(f"{name} network attachment options are not exact")
 
     environment = service.get("environment")
@@ -527,15 +512,6 @@ for name, service in services.items():
     elif name in {"db-migrate", "account-ops", "web", "worker"}:
         if environment != dotenv:
             reject(f"{name} env_file expansion is not exact")
-    elif name == "www":
-        expected_environment = {
-            "MARKETING_DIAGNOSTIC_DELIVERY_MODE": dotenv.get("MARKETING_DIAGNOSTIC_DELIVERY_MODE", "resend"),
-            "MARKETING_LEAD_RECIPIENT": dotenv.get("MARKETING_LEAD_RECIPIENT", ""),
-            "RESEND_API_KEY": dotenv.get("RESEND_API_KEY", ""),
-            "RESEND_FROM_EMAIL": dotenv.get("RESEND_FROM_EMAIL", ""),
-        }
-        if environment != expected_environment:
-            reject("marketing environment shape or value is not exact")
     if service.get("restart") != expected_restart[name]:
         reject(f"{name} restart policy is not exact")
     expected_cpu, expected_memory = expected_limits[name]
@@ -592,7 +568,7 @@ for name, service in services.items():
         if any(token in str(source) or token in str(target) for token in ("docker.sock", "/proc", "/sys", "/dev", "/run")):
             reject(f"{name} volume reaches a runtime/kernel path")
     ports = service.get("ports", [])
-    expected_port = 1515 if name == "web" else 1516 if name == "www" else None
+    expected_port = 1515 if name == "web" else None
     if (expected_port is None and ports) or (expected_port is not None and len(ports) != 1):
         reject(f"{name} published port count is not exact")
     for port in ports:
@@ -609,70 +585,42 @@ PY
 	return "$status"
 }
 
-compose_marketing() {
-	local tree="$1" www="$2"
-	shift 2
-	runtime_env WWW_IMAGE_DIGEST="$www" \
-		/usr/bin/docker compose --project-name yonaris-marketing --env-file "$ENV_FILE" \
-			--file "$tree/deploy/las/compose.marketing.yaml" "$@"
+authorize_requested_portal_rollback() {
+	state_attestation 'las-pending-runtime-tuple-v1 ok' pending-runtime-tuple portal "$@"
+}
+
+authorize_failed_deploy_portal_rollback() {
+	state_attestation 'las-pending-rollback-runtime-tuple-v1 ok' pending-rollback-runtime-tuple portal "$@"
 }
 
 authorize_portal_mutation() {
-	local gate="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6" www="$7"
+	local gate="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6"
 	verify_runtime_boundary || return 1
 	state_attestation 'las-migration-readiness-v1 ok' migration-readiness \
-		"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || return 1
+		"$release_tag" "$web" "$worker" "$migrate" "$postgres" || return 1
 	case "$gate" in
 		pending)
 			state_attestation 'las-pending-runtime-tuple-v1 ok' pending-runtime-tuple portal \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+				"$release_tag" "$web" "$worker" "$migrate" "$postgres"
 			;;
 		rollback)
-			state_attestation 'las-pending-rollback-runtime-tuple-v1 ok' pending-rollback-runtime-tuple portal \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+			authorize_requested_portal_rollback "$release_tag" "$web" "$worker" "$migrate" "$postgres" || \
+				authorize_failed_deploy_portal_rollback "$release_tag" "$web" "$worker" "$migrate" "$postgres"
 			;;
 		bootstrap)
 			state_attestation 'las-bootstrap-runtime-authorization-v1 ok' bootstrap-runtime-authorization portal \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+				"$release_tag" "$web" "$worker" "$migrate" "$postgres"
 			;;
 		*) return 1 ;;
 	esac
 }
 
 portal_mutation() {
-	local gate="$1" tree="$2" release_tag="$3" web="$4" worker="$5" migrate="$6" postgres="$7" www="$8"
-	shift 8
-	authorize_portal_mutation "$gate" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || \
+	local gate="$1" tree="$2" release_tag="$3" web="$4" worker="$5" migrate="$6" postgres="$7"
+	shift 7
+	authorize_portal_mutation "$gate" "$release_tag" "$web" "$worker" "$migrate" "$postgres" || \
 		return 1
 	compose_portal "$tree" "$web" "$worker" "$migrate" "$postgres" "$@"
-}
-
-authorize_marketing_mutation() {
-	local gate="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6" www="$7"
-	verify_runtime_boundary || return 1
-	case "$gate" in
-		pending)
-			state_attestation 'las-pending-runtime-tuple-v1 ok' pending-runtime-tuple marketing \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
-			;;
-		rollback)
-			state_attestation 'las-pending-rollback-runtime-tuple-v1 ok' pending-rollback-runtime-tuple marketing \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
-			;;
-		bootstrap)
-			state_attestation 'las-bootstrap-runtime-authorization-v1 ok' bootstrap-runtime-authorization marketing \
-				"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
-			;;
-		*) return 1 ;;
-	esac
-}
-
-marketing_mutation() {
-	local gate="$1" tree="$2" release_tag="$3" web="$4" worker="$5" migrate="$6" postgres="$7" www="$8"
-	shift 8
-	authorize_marketing_mutation "$gate" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || \
-		return 1
-	compose_marketing "$tree" "$www" "$@"
 }
 
 image_has_repo_digest() {
@@ -712,13 +660,6 @@ verify_portal() {
 		/usr/bin/curl --fail --silent --show-error --max-time 15 http://127.0.0.1:1515/ >/dev/null
 }
 
-verify_marketing() {
-	local tree="$1" www="$2" id
-	id="$(compose_marketing "$tree" "$www" ps -q www)" || return 1
-	container_matches "$id" "$MARKETING_IMAGE" "$www" yes && \
-		/usr/bin/curl --fail --silent --show-error --max-time 15 http://127.0.0.1:1516/ >/dev/null
-}
-
 migration_work_path() {
 	local release_tag="$1" path="$2" release_root normalized
 	release_root="$MIGRATION_WORK_ROOT/$release_tag"
@@ -736,9 +677,9 @@ prepare_migration_work_directory() {
 }
 
 authorize_migration_readiness_runtime() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
 	state_attestation 'las-migration-readiness-runtime-authorization-v1 ok' \
-		migration-readiness-runtime-authorization "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+		migration-readiness-runtime-authorization "$release_tag" "$web" "$worker" "$migrate" "$postgres"
 }
 
 postgres_runtime_values() {
@@ -763,9 +704,9 @@ PY
 }
 
 migration_rehearsal_docker() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
-	shift 6
-	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || return 1
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
+	shift 5
+	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" || return 1
 	runtime_env /usr/bin/docker "$@"
 }
 
@@ -780,7 +721,7 @@ migration_rehearsal_resource_is_absent() {
 	esac
 	output="$(migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" \
 		"$MIGRATION_REHEARSAL_WORKER" "$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
-		"$MIGRATION_REHEARSAL_WWW" "${command[@]}")" || return 1
+		"${command[@]}")" || return 1
 	[[ -z "$output" ]]
 }
 
@@ -789,25 +730,25 @@ migration_rehearsal_cleanup() {
 	trap - EXIT
 	if [[ "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
-			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
 			rm -f "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER" >/dev/null 2>&1 || cleanup_status=1
 		migration_rehearsal_resource_is_absent container "$MIGRATION_REHEARSAL_MIGRATION_CONTAINER" || cleanup_status=1
 	fi
 	if [[ "$MIGRATION_REHEARSAL_CONTAINER_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
-			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
 			rm -f "$MIGRATION_REHEARSAL_CONTAINER" >/dev/null 2>&1 || cleanup_status=1
 		migration_rehearsal_resource_is_absent container "$MIGRATION_REHEARSAL_CONTAINER" || cleanup_status=1
 	fi
 	if [[ "$MIGRATION_REHEARSAL_VOLUME_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
-			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
 			volume rm "$MIGRATION_REHEARSAL_VOLUME" >/dev/null 2>&1 || cleanup_status=1
 		migration_rehearsal_resource_is_absent volume "$MIGRATION_REHEARSAL_VOLUME" || cleanup_status=1
 	fi
 	if [[ "$MIGRATION_REHEARSAL_NETWORK_CREATED" == true ]]; then
 		migration_rehearsal_docker "$MIGRATION_REHEARSAL_RELEASE" "$MIGRATION_REHEARSAL_WEB" "$MIGRATION_REHEARSAL_WORKER" \
-			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" "$MIGRATION_REHEARSAL_WWW" \
+			"$MIGRATION_REHEARSAL_MIGRATE" "$MIGRATION_REHEARSAL_POSTGRES" \
 			network rm "$MIGRATION_REHEARSAL_NETWORK" >/dev/null 2>&1 || cleanup_status=1
 		migration_rehearsal_resource_is_absent network "$MIGRATION_REHEARSAL_NETWORK" || cleanup_status=1
 	fi
@@ -816,10 +757,10 @@ migration_rehearsal_cleanup() {
 }
 
 wait_for_migration_rehearsal_postgres() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" rehearsal_container="$7"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" rehearsal_container="$6"
 	local attempt
 	for ((attempt = 1; attempt <= MIGRATION_REHEARSAL_READY_ATTEMPTS; attempt += 1)); do
-		if migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+		if migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
 			exec "$rehearsal_container" pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal; then
 			return 0
 		fi
@@ -829,7 +770,7 @@ wait_for_migration_rehearsal_postgres() {
 }
 
 migration_backup() {
-	local tree="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6" www="$7" output="$8"
+	local tree="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6" output="$7"
 	local -a postgres_values
 	local postgres_user postgres_database
 	prepare_migration_work_directory "$release_tag" || return 1
@@ -840,8 +781,8 @@ migration_backup() {
 	postgres_user="${postgres_values[0]%$'\r'}"
 	postgres_database="${postgres_values[1]%$'\r'}"
 	[[ -n "$postgres_user" && -n "$postgres_database" ]] || return 1
-	validate_compose_model portal "$tree" "$web" "$worker" "$migrate" "$postgres" '' || return 1
-	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || return 1
+	validate_compose_model "$tree" "$web" "$worker" "$migrate" "$postgres" || return 1
+	authorize_migration_readiness_runtime "$release_tag" "$web" "$worker" "$migrate" "$postgres" || return 1
 	if ! compose_portal "$tree" "$web" "$worker" "$migrate" "$postgres" \
 		exec -T postgres pg_dump --username "$postgres_user" --dbname "$postgres_database" \
 		--format custom --no-owner --no-acl >"$output"; then
@@ -855,7 +796,7 @@ migration_backup() {
 }
 
 migration_rehearse() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6" backup="$7" result="$8"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" backup="$6" result="$7"
 	local rehearsal_prefix rehearsal_network rehearsal_volume rehearsal_container rehearsal_migration_container rehearsal_nonce rehearsal_user='yonaris_rehearsal'
 	local rehearsal_database='yonaris_rehearsal' rehearsal_password='yonaris_rehearsal'
 	local database_url migration_exit_status completion_timestamp
@@ -877,7 +818,6 @@ migration_rehearse() {
 	MIGRATION_REHEARSAL_WORKER="$worker"
 	MIGRATION_REHEARSAL_MIGRATE="$migrate"
 	MIGRATION_REHEARSAL_POSTGRES="$postgres"
-	MIGRATION_REHEARSAL_WWW="$www"
 	MIGRATION_REHEARSAL_CONTAINER="$rehearsal_container"
 	MIGRATION_REHEARSAL_MIGRATION_CONTAINER="$rehearsal_migration_container"
 	MIGRATION_REHEARSAL_VOLUME="$rehearsal_volume"
@@ -887,32 +827,32 @@ migration_rehearse() {
 	MIGRATION_REHEARSAL_VOLUME_CREATED=false
 	MIGRATION_REHEARSAL_NETWORK_CREATED=false
 	trap migration_rehearsal_cleanup EXIT
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$POSTGRES_IMAGE@$postgres" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" network create --internal "$rehearsal_network" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" pull "$POSTGRES_IMAGE@$postgres" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" pull "$PORTAL_MIGRATE_IMAGE@$migrate" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" network create --internal "$rehearsal_network" || return 1
 	MIGRATION_REHEARSAL_NETWORK_CREATED=true
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" volume create "$rehearsal_volume" || return 1
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" volume create "$rehearsal_volume" || return 1
 	MIGRATION_REHEARSAL_VOLUME_CREATED=true
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" run --detach \
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" run --detach \
 		--name "$rehearsal_container" --network "$rehearsal_network" \
 		--mount "type=volume,source=$rehearsal_volume,target=/var/lib/postgresql/data" \
 		--env "POSTGRES_USER=$rehearsal_user" --env "POSTGRES_PASSWORD=$rehearsal_password" \
 		--env "POSTGRES_DB=$rehearsal_database" "$POSTGRES_IMAGE@$postgres" || return 1
 	MIGRATION_REHEARSAL_CONTAINER_CREATED=true
-	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$rehearsal_container" || return 1
+	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$rehearsal_container" || return 1
 	# The root shell opens the root-only backup before the rootless runtime inherits stdin.
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
 		exec -i "$rehearsal_container" pg_restore --username "$rehearsal_user" --dbname "$rehearsal_database" --no-owner --no-acl <"$backup" || return 1
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" create \
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" create \
 		--name "$rehearsal_migration_container" --network "$rehearsal_network" \
 		--env "DATABASE_URL=$database_url" "$PORTAL_MIGRATE_IMAGE@$migrate" >/dev/null || return 1
 	MIGRATION_REHEARSAL_MIGRATION_CONTAINER_CREATED=true
-	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+	migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
 		start --attach "$rehearsal_migration_container" || return 1
-	migration_exit_status="$(migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+	migration_exit_status="$(migration_rehearsal_docker "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
 		wait "$rehearsal_migration_container")" || return 1
 	[[ "$migration_exit_status" == 0 ]] || return 1
-	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$rehearsal_container" || return 1
+	wait_for_migration_rehearsal_postgres "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$rehearsal_container" || return 1
 	migration_rehearsal_cleanup || return 1
 	completion_timestamp="$(/usr/bin/date -u +'%Y-%m-%dT%H:%M:%SZ')" || return 1
 	[[ "$completion_timestamp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
@@ -940,8 +880,8 @@ if [[ $# -eq 1 ]]; then
 fi
 [[ $# -ge 3 ]] || fail 'Refusing invalid LAS runtime-manager request.' 2
 operation="$1"; release_tag="$2"
-if [[ ( "$operation" == bootstrap-portal-deploy || "$operation" == bootstrap-marketing-deploy || \
-	"$operation" == migration-backup || "$operation" == migration-rehearse ) && \
+if [[ ( "$operation" == bootstrap-portal-deploy || "$operation" == migration-backup || \
+	"$operation" == migration-rehearse ) && \
 	-n "${SUDO_USER:-}" ]]; then
 	fail 'Only a direct root operator may bootstrap the LAS runtime.' 2
 fi
@@ -951,82 +891,55 @@ verify_runtime_boundary || fail 'The isolated LAS runtime boundary is invalid.'
 
 case "$operation" in
 	migration-backup)
-		[[ $# -eq 9 ]] || fail 'Migration backup requires five exact image digests and an output path.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; output="$8"; expected_marker="$9"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == migration-readiness-runtime-v1 ]] || exit 2
-		migration_backup "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$output" || \
+		[[ $# -eq 8 ]] || fail 'Migration backup requires four exact image digests and an output path.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; output="$7"; expected_marker="$8"
+		for digest in "$web" "$worker" "$migrate" "$postgres"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == migration-readiness-runtime-v2 ]] || exit 2
+		migration_backup "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$output" || \
 			fail 'Migration backup failed.'
 		;;
 	migration-rehearse)
-		[[ $# -eq 10 ]] || fail 'Migration rehearsal requires five exact image digests, backup, and result paths.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; backup="$8"; result="$9"; expected_marker="${10}"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == migration-readiness-runtime-v1 ]] || exit 2
-		migration_rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$backup" "$result" || \
+		[[ $# -eq 9 ]] || fail 'Migration rehearsal requires four exact image digests, backup, and result paths.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; backup="$7"; result="$8"; expected_marker="$9"
+		for digest in "$web" "$worker" "$migrate" "$postgres"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == migration-readiness-runtime-v2 ]] || exit 2
+		migration_rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$backup" "$result" || \
 			fail 'Migration rehearsal failed.'
 		;;
 	portal-preflight | portal-deploy | portal-rollback | portal-verify)
-		[[ $# -eq 8 ]] || fail 'Portal runtime operations require five exact image digests.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; expected_marker="$8"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == portal-runtime-v1 ]] || exit 2
-		validate_compose_model portal "$tree" "$web" "$worker" "$migrate" "$postgres" '' || \
+		[[ $# -eq 7 ]] || fail 'Portal runtime operations require four exact image digests.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; expected_marker="$7"
+		for digest in "$web" "$worker" "$migrate" "$postgres"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == portal-runtime-v2 ]] || exit 2
+		validate_compose_model "$tree" "$web" "$worker" "$migrate" "$postgres" || \
 			fail 'Portal Compose exceeds the parsed stable runtime allowlist.'
 		case "$operation" in
 			portal-preflight) exit 0 ;;
 			portal-deploy)
-				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull postgres db-migrate web worker
-				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --wait postgres
-				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" --profile operations run --rm db-migrate
-				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps web worker
+				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" pull postgres db-migrate web worker
+				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" up -d --wait postgres
+				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" --profile operations run --rm db-migrate
+				portal_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" up -d --no-deps web worker
 				;;
 			portal-rollback)
-				portal_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull postgres web worker
-				portal_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps postgres web worker
+				portal_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" pull postgres web worker
+				portal_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" up -d --no-deps postgres web worker
 				;;
 		esac
 		verify_portal "$tree" "$web" "$worker" "$migrate" "$postgres"
 		;;
 	bootstrap-portal-deploy)
-		[[ $# -eq 8 ]] || fail 'Bootstrap portal runtime requires five exact image digests.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; expected_marker="$8"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == portal-bootstrap-runtime-v1 ]] || exit 2
-		validate_compose_model portal "$tree" "$web" "$worker" "$migrate" "$postgres" '' || \
+		[[ $# -eq 7 ]] || fail 'Bootstrap portal runtime requires four exact image digests.' 2
+		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; expected_marker="$7"
+		for digest in "$web" "$worker" "$migrate" "$postgres"; do digest_is_valid "$digest" || exit 2; done
+		[[ "$expected_marker" == portal-bootstrap-runtime-v2 ]] || exit 2
+		validate_compose_model "$tree" "$web" "$worker" "$migrate" "$postgres" || \
 			fail 'Portal Compose exceeds the parsed stable runtime allowlist.'
-		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull postgres db-migrate web worker
-		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --wait postgres
-		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" --profile operations run --rm db-migrate
-		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps web worker
+		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" pull postgres db-migrate web worker
+		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" up -d --wait postgres
+		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" --profile operations run --rm db-migrate
+		portal_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" up -d --no-deps web worker
 		verify_portal "$tree" "$web" "$worker" "$migrate" "$postgres"
-		;;
-	bootstrap-marketing-deploy)
-		[[ $# -eq 8 ]] || fail 'Bootstrap marketing runtime requires five exact image digests.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; expected_marker="$8"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == marketing-bootstrap-runtime-v1 ]] || exit 2
-		validate_compose_model marketing "$tree" '' '' '' '' "$www" || \
-			fail 'Marketing Compose exceeds the parsed stable runtime allowlist.'
-		marketing_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull www
-		marketing_mutation bootstrap "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps www
-		verify_marketing "$tree" "$www"
-		;;
-	marketing-preflight | marketing-deploy | marketing-rollback | marketing-verify)
-		[[ $# -eq 8 ]] || fail 'Marketing runtime operations require five exact image digests.' 2
-		web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"; expected_marker="$8"
-		for digest in "$web" "$worker" "$migrate" "$postgres" "$www"; do digest_is_valid "$digest" || exit 2; done
-		[[ "$expected_marker" == marketing-runtime-v1 ]] || exit 2
-		validate_compose_model marketing "$tree" '' '' '' '' "$www" || \
-			fail 'Marketing Compose exceeds the parsed stable runtime allowlist.'
-		if [[ "$operation" == marketing-deploy ]]; then
-			marketing_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull www
-			marketing_mutation pending "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps www
-		elif [[ "$operation" == marketing-rollback ]]; then
-			marketing_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" pull www
-			marketing_mutation rollback "$tree" "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" up -d --no-deps www
-		fi
-		[[ "$operation" == marketing-preflight ]] || verify_marketing "$tree" "$www"
 		;;
 	*) fail 'Refusing unknown LAS runtime-manager operation.' 2 ;;
 esac

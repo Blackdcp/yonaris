@@ -46,6 +46,15 @@ contains "$VERIFIER" "RUNTIME_ENV='/etc/yonaris/las-runtime.env'"
 contains "$RUNTIME_MANAGER" '/usr/sbin/runuser -u "$RUNTIME_USER" -- /usr/bin/env -i'
 contains "$RUNTIME_MANAGER" "DOCKER_HOST='unix:///run/user/"
 not_contains "$RUNTIME_MANAGER" '/opt/yonaris/source'
+contains "$RUNTIME_MANAGER" 'portal-runtime-v2'
+contains "$RUNTIME_MANAGER" 'migration-readiness-runtime-v2'
+contains "$RUNTIME_MANAGER" 'authorize_requested_portal_rollback'
+contains "$RUNTIME_MANAGER" 'authorize_failed_deploy_portal_rollback'
+contains "$RUNTIME_MANAGER" 'RESEND_API_KEY'
+contains "$RUNTIME_MANAGER" 'RESEND_FROM_EMAIL'
+for retired_runtime_surface in MARKETING_ marketing compose.marketing WWW_IMAGE_DIGEST yonaris-www 1516 www-sha256; do
+	not_contains "$RUNTIME_MANAGER" "$retired_runtime_surface"
+done
 
 # Host Caddy is a read-only Portal boundary verifier. Release deployment cannot
 # mutate configuration, reload Caddy, or restore the retired marketing surface.

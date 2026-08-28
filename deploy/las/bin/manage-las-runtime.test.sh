@@ -30,22 +30,24 @@ WEB='sha256:1111111111111111111111111111111111111111111111111111111111111111'
 WORKER='sha256:2222222222222222222222222222222222222222222222222222222222222222'
 MIGRATE='sha256:3333333333333333333333333333333333333333333333333333333333333333'
 POSTGRES='sha256:4444444444444444444444444444444444444444444444444444444444444444'
-WWW='sha256:5555555555555555555555555555555555555555555555555555555555555555'
+RETIRED_FIFTH_DIGEST='sha256:5555555555555555555555555555555555555555555555555555555555555555'
 REAL_STAT="$(command -v stat)"
 REAL_READLINK="$(command -v readlink)"
 REAL_TR="$(command -v tr)"
 REAL_AWK="$(command -v awk)"
-REAL_PYTHON="$(command -v python3)"
+REAL_PYTHON="${RUNTIME_TEST_REAL_PYTHON:-$(command -v python3)}"
 STABLE_DIRECTORY="$TEST_ROOT/usr/local/libexec/yonaris-las"
 STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 
-grep -Fq 'bootstrap-marketing-deploy' "$SOURCE"
-grep -Fq 'bootstrap-runtime-authorization marketing' "$SOURCE"
+! grep -Eq 'MARKETING_|marketing|compose\.marketing|WWW_IMAGE_DIGEST|yonaris-www|1516|www-sha256' "$SOURCE"
+grep -Fq 'RESEND_API_KEY' "$SOURCE"
+grep -Fq 'RESEND_FROM_EMAIL' "$SOURCE"
+grep -Fq 'portal-runtime-v2' "$SOURCE"
+grep -Fq 'migration-readiness-runtime-v2' "$SOURCE"
 
 mkdir -p "$TREE/deploy/las" "$RUNTIME_HOME/.docker" "$RUNTIME_DIR" "$PROC/432/fd" "$PROC/net" \
 	"$MOCK_BIN" "$STABLE_DIRECTORY" "$TEST_ROOT/docker-resources" "$(dirname -- "$ENV_FILE")"
 printf 'services: {}\n' >"$TREE/deploy/las/compose.yaml"
-printf 'name: yonaris-marketing\nservices: {}\n' >"$TREE/deploy/las/compose.marketing.yaml"
 write_valid_env() {
 	cat >"$ENV_FILE" <<'EOF'
 POSTGRES_USER=postgres
@@ -63,11 +65,13 @@ WORKER_ENABLED=true
 WORKER_QUEUE_SCOPE=full
 RUNS_PER_PROMPT=5
 DISABLE_TELEMETRY=1
+RESEND_API_KEY=test-resend-secret
+RESEND_FROM_EMAIL=Yonaris_Portal_noreply_at_example.com
 EOF
 }
 write_valid_env
 printf '%s\n' allow >"$STATE_MODE"
-PORTAL_ENV_JSON='{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"test-secret","POSTGRES_DB":"yonaris","DATABASE_URL":"postgresql://postgres:test-secret@postgres:5432/yonaris","DEPLOYMENT_ID":"11111111-1111-4111-8111-111111111111","APP_URL":"https://portal.yonaris.com","BETTER_AUTH_SECRET":"e2e-session-secret-with-at-least-thirty-two-characters","CREDENTIAL_ENCRYPTION_KEY":"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=","SCRAPE_TARGETS":"chatgpt:olostep:online","OLOSTEP_API_KEY":"test-olostep-secret","ARTIFACT_ZH_CN_ENABLED":"false","WORKER_ENABLED":"true","WORKER_QUEUE_SCOPE":"full","RUNS_PER_PROMPT":"5","DISABLE_TELEMETRY":"1"}'
+PORTAL_ENV_JSON='{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"test-secret","POSTGRES_DB":"yonaris","DATABASE_URL":"postgresql://postgres:test-secret@postgres:5432/yonaris","DEPLOYMENT_ID":"11111111-1111-4111-8111-111111111111","APP_URL":"https://portal.yonaris.com","BETTER_AUTH_SECRET":"e2e-session-secret-with-at-least-thirty-two-characters","CREDENTIAL_ENCRYPTION_KEY":"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=","SCRAPE_TARGETS":"chatgpt:olostep:online","OLOSTEP_API_KEY":"test-olostep-secret","ARTIFACT_ZH_CN_ENABLED":"false","WORKER_ENABLED":"true","WORKER_QUEUE_SCOPE":"full","RUNS_PER_PROMPT":"5","DISABLE_TELEMETRY":"1","RESEND_API_KEY":"test-resend-secret","RESEND_FROM_EMAIL":"Yonaris_Portal_noreply_at_example.com"}'
 printf '432\n' >"$RUNTIME_DIR/docker.pid"
 printf 'socket-placeholder\n' >"$RUNTIME_DIR/docker.sock"
 printf 'socket-placeholder\n' >"$PROC/432/fd/7"
@@ -91,16 +95,6 @@ write_valid_model() {
     "account-ops":{"image":"ghcr.io/blackdcp/yonaris-worker@$WORKER","environment":$PORTAL_ENV_JSON,"networks":{"backend":null},"profiles":["operations"],"restart":"no","depends_on":{"postgres":{"condition":"service_healthy"}},"volumes":[{"type":"bind","source":"$STATE/response-snapshots/v1","target":"$STATE/response-snapshots/v1"}],"cpus":0.5,"mem_limit":536870912,"logging":{"driver":"json-file","options":{"max-file":"5","max-size":"20m"}}},
     "web":{"image":"ghcr.io/blackdcp/yonaris-web@$WEB","environment":$PORTAL_ENV_JSON,"healthcheck":{"test":["CMD","curl","--fail","--silent","--show-error","--max-time","5","http://127.0.0.1:3000/"],"interval":"15s","timeout":"6s","retries":8,"start_period":"45s"},"networks":{"backend":null},"ports":[{"host_ip":"127.0.0.1","published":"1515","target":3000}],"restart":"unless-stopped","depends_on":{"postgres":{"condition":"service_healthy"}},"volumes":[{"type":"bind","source":"$STATE/response-snapshots/v1","target":"$STATE/response-snapshots/v1"}],"cpus":1,"mem_limit":1073741824,"stop_grace_period":"30s","logging":{"driver":"json-file","options":{"max-file":"5","max-size":"20m"}}},
     "worker":{"image":"ghcr.io/blackdcp/yonaris-worker@$WORKER","environment":$PORTAL_ENV_JSON,"networks":{"backend":null},"restart":"unless-stopped","depends_on":{"postgres":{"condition":"service_healthy"}},"volumes":[{"type":"bind","source":"$STATE/response-snapshots/v1","target":"$STATE/response-snapshots/v1"}],"cpus":1.5,"mem_limit":2147483648,"stop_grace_period":"90s","logging":{"driver":"json-file","options":{"max-file":"5","max-size":"20m"}}}
-  }
-}
-EOF
-}
-write_valid_marketing_model() {
-	cat >"$MODEL" <<EOF
-{
-  "name":"yonaris-marketing",
-  "services":{
-    "www":{"image":"ghcr.io/blackdcp/yonaris-www@$WWW","environment":{"MARKETING_DIAGNOSTIC_DELIVERY_MODE":"resend","MARKETING_LEAD_RECIPIENT":"","RESEND_API_KEY":"","RESEND_FROM_EMAIL":""},"healthcheck":{"test":["CMD","curl","--fail","--silent","--show-error","--max-time","5","http://127.0.0.1:3000/"],"interval":"15s","timeout":"6s","retries":8,"start_period":"30s"},"ports":[{"host_ip":"127.0.0.1","published":"1516","target":3000}],"restart":"unless-stopped","cpus":0.5,"mem_limit":536870912,"stop_grace_period":"20s","logging":{"driver":"json-file","options":{"max-file":"5","max-size":"20m"}}}
   }
 }
 EOF
@@ -152,7 +146,6 @@ fi
 if [[ " $* " == *' compose '* && " $* " == *' ps -q postgres '* ]]; then printf 'postgres-id\n'; exit 0; fi
 if [[ " $* " == *' compose '* && " $* " == *' ps -q web '* ]]; then printf 'web-id\n'; exit 0; fi
 if [[ " $* " == *' compose '* && " $* " == *' ps -q worker '* ]]; then printf 'worker-id\n'; exit 0; fi
-if [[ " $* " == *' compose '* && " $* " == *' ps -q www '* ]]; then printf 'www-id\n'; exit 0; fi
 if [[ " $* " == *' compose '* && " $* " == *' exec -T postgres pg_dump '* ]]; then
 	printf 'postgres-custom-dump\n'
 	exit 0
@@ -165,7 +158,6 @@ if [[ "$1" == inspect && "$*" == *'{{.Config.Image}}'* ]]; then
 	case "${@: -1}" in
 		postgres-id) printf 'postgres@__POSTGRES__\n' ;;
 		web-id) printf 'ghcr.io/blackdcp/yonaris-web@__WEB__\n' ;;
-		www-id) printf 'ghcr.io/blackdcp/yonaris-www@__WWW__\n' ;;
 		*) exit 96 ;;
 	esac
 	exit 0
@@ -262,7 +254,6 @@ sed -i \
 	-e "s#__WEB__#$WEB#g" \
 	-e "s#__WORKER__#$WORKER#g" \
 	-e "s#__POSTGRES__#$POSTGRES#g" \
-	-e "s#__WWW__#$WWW#g" \
 	"$MOCK_BIN/docker"
 cat >"$MOCK_BIN/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -288,11 +279,11 @@ case "$1" in
 		printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
 		;;
 	pending-runtime-tuple)
-		[[ "$mode" != deny-pending ]] || exit 1
+		[[ "$mode" != deny-pending && "$mode" != failed-deploy-rollback && "$mode" != deny-all-rollback ]] || exit 1
 		printf '%s\n' 'las-pending-runtime-tuple-v1 ok'
 		;;
 	pending-rollback-runtime-tuple)
-		[[ "$mode" != deny-rollback ]] || exit 1
+		[[ "$mode" != deny-rollback && "$mode" != requested-rollback && "$mode" != deny-all-rollback ]] || exit 1
 		printf '%s\n' 'las-pending-rollback-runtime-tuple-v1 ok'
 		;;
 	bootstrap-runtime-authorization)
@@ -326,7 +317,7 @@ case "$path" in
   */migration-readiness-work-v1/sha-*/*) metadata='0:0:600' ;;
   */migration-readiness-work-v1 | */migration-readiness-work-v1/sha-*) metadata='0:0:700' ;;
   */las-release-trees | */las-release-trees/sha-*) metadata='0:0:555' ;;
-  */compose.yaml | */compose.marketing.yaml) metadata='0:0:444' ;;
+  */compose.yaml) metadata='0:0:444' ;;
   */manage-las-release-state) metadata='0:0:755' ;;
   */var/lib/yonaris-runtime) metadata='0:2002:750' ;;
   */var/lib/yonaris-runtime/.docker | */var/lib/yonaris-runtime/.config | \
@@ -398,16 +389,80 @@ run_manager() {
 		/bin/bash "${shell_flags[@]}" "$MANAGER" "$@"
 }
 
-run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1
+run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2
 run_manager verify-boundary
+
+# The active runtime grammar is Portal-only and binds four digests. Retired
+# marketing operations and a fifth digest fail before any stable state or
+# mutable Docker operation can be reached.
+for retired_request in fifth-digest marketing; do
+	: >"$EVENT_LOG"
+	: >"$DOCKER_LOG"
+	set +e
+	case "$retired_request" in
+		fifth-digest)
+			run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+				"$RETIRED_FIFTH_DIGEST" portal-runtime-v2 >/dev/null 2>&1
+			;;
+		marketing)
+			run_manager marketing-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+				portal-runtime-v2 >/dev/null 2>&1
+			;;
+	esac
+	retired_status=$?
+	set -e
+	[[ "$retired_status" -ne 0 ]] && ! grep -Eq '^state ' "$EVENT_LOG" || {
+		echo "Retired runtime request reached state: $retired_request" >&2
+		exit 1
+	}
+	! grep -Eq '^.* compose .* (pull|up|run)( |$)' "$DOCKER_LOG"
+done
+
+# Requested rollback uses the journal candidate tuple; failed-deploy recovery
+# first rejects that tuple and then authorizes only the predecessor receipt.
+for rollback_kind in requested-rollback failed-deploy-rollback denied-rollback; do
+	: >"$EVENT_LOG"
+	: >"$DOCKER_LOG"
+	case "$rollback_kind" in
+		requested-rollback) printf '%s\n' requested-rollback >"$STATE_MODE" ;;
+		failed-deploy-rollback) printf '%s\n' failed-deploy-rollback >"$STATE_MODE" ;;
+		denied-rollback) printf '%s\n' deny-all-rollback >"$STATE_MODE" ;;
+	esac
+	set +e
+	run_manager portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2 >/dev/null 2>&1
+	rollback_status=$?
+	set -e
+	grep -Fqx "state pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
+	case "$rollback_kind" in
+		requested-rollback)
+			[[ "$rollback_status" -eq 0 ]]
+			! grep -Fq 'state pending-rollback-runtime-tuple' "$EVENT_LOG"
+			;;
+		failed-deploy-rollback)
+			[[ "$rollback_status" -eq 0 ]]
+			grep -Fqx "state pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
+			;;
+		denied-rollback)
+			[[ "$rollback_status" -ne 0 ]]
+			grep -Fqx "state pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
+			! grep -Eq '^.* compose .* (pull|up|run)( |$)' "$DOCKER_LOG"
+			;;
+	esac
+done
+printf '%s\n' allow >"$STATE_MODE"
+
+[[ "${RUNTIME_TEST_PORTAL_AUTH_SLICE:-no}" != yes ]] || {
+	printf '%s\n' 'portal-only runtime authorization tests passed'
+	exit 0
+}
 
 # Backup and rehearsal are direct-root-only operations. A sudo-derived caller
 # cannot reach state, Docker, or release work-directory side effects.
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
 set +e
-RUNTIME_TEST_SUDO_USER=operator run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/sudo.dump" migration-readiness-runtime-v1 >/dev/null 2>&1
+RUNTIME_TEST_SUDO_USER=operator run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/sudo.dump" migration-readiness-runtime-v2 >/dev/null 2>&1
 sudo_backup_status=$?
 set -e
 [[ "$sudo_backup_status" -ne 0 && ! -s "$EVENT_LOG" && ! -s "$DOCKER_LOG" && ! -e "$WORK_ROOT" ]] || {
@@ -415,8 +470,8 @@ set -e
 	exit 1
 }
 set +e
-RUNTIME_TEST_SUDO_USER=operator run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/sudo.dump" "$WORK_ROOT/$RELEASE/sudo.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+RUNTIME_TEST_SUDO_USER=operator run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/sudo.dump" "$WORK_ROOT/$RELEASE/sudo.result" migration-readiness-runtime-v2 >/dev/null 2>&1
 sudo_rehearsal_status=$?
 set -e
 [[ "$sudo_rehearsal_status" -ne 0 && ! -s "$EVENT_LOG" && ! -s "$DOCKER_LOG" && ! -e "$WORK_ROOT" ]] || {
@@ -428,13 +483,13 @@ set -e
 # directory after the exact migration-readiness runtime authorization.
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
-run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/database.dump" migration-readiness-runtime-v1
-grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
+run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/database.dump" migration-readiness-runtime-v2
+grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
 grep -Fq 'exec -T postgres pg_dump --username postgres --dbname yonaris --format custom --no-owner --no-acl' "$DOCKER_LOG"
 [[ -s "$WORK_ROOT/$RELEASE/database.dump" ]] || { echo 'Migration backup was empty.' >&2; exit 1; }
-if run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$TEST_ROOT/outside.dump" migration-readiness-runtime-v1; then
+if run_manager migration-backup "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$TEST_ROOT/outside.dump" migration-readiness-runtime-v2; then
 	echo 'Unsafe migration backup output was accepted.' >&2
 	exit 1
 fi
@@ -464,7 +519,7 @@ assert_rehearsal_absence_verification() {
 
 assert_rehearsal_docker_attestation() {
 	local -a events=()
-	local index expected="state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+	local index expected="state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 	mapfile -t events <"$EVENT_LOG"
 	for ((index = 0; index < ${#events[@]}; index += 1)); do
 		[[ "${events[$index]}" == docker\ * ]] || continue
@@ -492,11 +547,11 @@ read_rehearsal_resources() {
 # port, verifies PostgreSQL health, and records only fixed secret-free success.
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
-run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/database.dump" "$REHEARSAL_RESULT" migration-readiness-runtime-v1
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$REHEARSAL_RESULT" migration-readiness-runtime-v2
 read_rehearsal_resources
 [[ -n "$REHEARSAL_MIGRATION_CONTAINER" ]] || { echo 'The migration rehearsal container is not tracked by name.' >&2; exit 1; }
-grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG"
+grep -Fqx "state migration-readiness-runtime-authorization $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
 grep -Fq "pull postgres@$POSTGRES" "$DOCKER_LOG"
 grep -Fq "pull ghcr.io/blackdcp/yonaris-db-migrate@$MIGRATE" "$DOCKER_LOG"
 grep -Fq "network create --internal $REHEARSAL_NETWORK" "$DOCKER_LOG"
@@ -528,8 +583,8 @@ first_rehearsal_network="$REHEARSAL_NETWORK"
 printf '2\n' >"$TEST_ROOT/rehearsal-readiness"
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
-run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-delayed.result" migration-readiness-runtime-v1
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-delayed.result" migration-readiness-runtime-v2
 read_rehearsal_resources
 [[ "$REHEARSAL_NETWORK" != "$first_rehearsal_network" ]] || { echo 'Rehearsal resources were not invocation-unique.' >&2; exit 1; }
 [[ "$(grep -c 'pg_isready' "$DOCKER_LOG")" == 4 ]] || { echo 'Delayed readiness did not retry before and after migration.' >&2; exit 1; }
@@ -540,8 +595,8 @@ printf 'never\n' >"$TEST_ROOT/rehearsal-readiness"
 : >"$EVENT_LOG"
 : >"$DOCKER_LOG"
 set +e
-run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-timeout.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-timeout.result" migration-readiness-runtime-v2 >/dev/null 2>&1
 timeout_status=$?
 set -e
 read_rehearsal_resources
@@ -555,8 +610,8 @@ rm -f -- "$TEST_ROOT/rehearsal-readiness"
 : >"$DOCKER_LOG"
 printf 'network-create\n' >"$TEST_ROOT/rehearsal-failure"
 set +e
-run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-network-failure.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+	"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-network-failure.result" migration-readiness-runtime-v2 >/dev/null 2>&1
 network_failure_status=$?
 set -e
 [[ "$network_failure_status" -ne 0 ]] || { echo 'Injected network-create failure passed.' >&2; exit 1; }
@@ -570,8 +625,8 @@ for rehearsal_failure in restore migration; do
 	: >"$DOCKER_LOG"
 	printf '%s\n' "$rehearsal_failure" >"$TEST_ROOT/rehearsal-failure"
 	set +e
-	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-		"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-$rehearsal_failure.result" migration-readiness-runtime-v1 >/dev/null 2>&1
+	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+		"$WORK_ROOT/$RELEASE/database.dump" "$WORK_ROOT/$RELEASE/rehearsal-$rehearsal_failure.result" migration-readiness-runtime-v2 >/dev/null 2>&1
 	failure_status=$?
 	set -e
 	read_rehearsal_resources
@@ -592,8 +647,8 @@ for cleanup_failure in cleanup-all cleanup-linger; do
 	printf '%s\n' "$cleanup_failure" >"$TEST_ROOT/rehearsal-failure"
 	cleanup_result="$WORK_ROOT/$RELEASE/rehearsal-$cleanup_failure.result"
 	set +e
-	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" \
-		"$WORK_ROOT/$RELEASE/database.dump" "$cleanup_result" migration-readiness-runtime-v1 >/dev/null 2>&1
+	run_manager migration-rehearse "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" \
+		"$WORK_ROOT/$RELEASE/database.dump" "$cleanup_result" migration-readiness-runtime-v2 >/dev/null 2>&1
 	cleanup_status=$?
 	set -e
 	read_rehearsal_resources
@@ -746,7 +801,7 @@ rm -rf -- "$RUNTIME_HOME/.config"
 cp "$ENV_FILE" "$TEST_ROOT/runtime.env.valid"
 for invalid_env in missing-required placeholder uuid credential-key artifact-bool worker-bool \
 	queue-scope runs database-user database-password database-name database-host \
-	database-port database-scheme provider-missing provider-placeholder provider-unknown target-empty; do
+	database-port database-scheme provider-missing provider-placeholder provider-unknown target-empty marketing-key; do
 	cp "$TEST_ROOT/runtime.env.valid" "$ENV_FILE"
 	case "$invalid_env" in
 		missing-required) sed -i '/^APP_URL=/d' "$ENV_FILE" ;;
@@ -767,6 +822,7 @@ for invalid_env in missing-required placeholder uuid credential-key artifact-boo
 		provider-placeholder) sed -i 's/^OLOSTEP_API_KEY=.*/OLOSTEP_API_KEY=replace_with_key/' "$ENV_FILE" ;;
 		provider-unknown) sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:unknown:online/' "$ENV_FILE" ;;
 		target-empty) sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:olostep:online,/' "$ENV_FILE" ;;
+		marketing-key) printf '%s\n' 'MARKETING_LEAD_RECIPIENT=retired@example.com' >>"$ENV_FILE" ;;
 	esac
 	rm -f -- "$DOCKER_LOG"
 	set +e
@@ -802,39 +858,33 @@ assert_exact_state_call() {
 # Every generic or bootstrap mutation request must reach the matching stable
 # state interface and remain mutation-free when that evidence is unavailable.
 write_valid_model
-for gate_case in readiness pending rollback bootstrap bootstrap-marketing sudo-bootstrap; do
+for gate_case in readiness pending rollback bootstrap sudo-bootstrap; do
 	printf '%s\n' allow >"$STATE_MODE"
 	: >"$EVENT_LOG"
 	: >"$DOCKER_LOG"
 	case "$gate_case" in
 		readiness)
 			printf '%s\n' deny-readiness >"$STATE_MODE"
-			command=(portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1)
-			expected="migration-readiness $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+			command=(portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2)
+			expected="migration-readiness $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 			;;
 		pending)
 			printf '%s\n' deny-pending >"$STATE_MODE"
-			command=(portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1)
-			expected="pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+			command=(portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2)
+			expected="pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 			;;
 		rollback)
-			printf '%s\n' deny-rollback >"$STATE_MODE"
-			command=(portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1)
-			expected="pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+			printf '%s\n' deny-all-rollback >"$STATE_MODE"
+			command=(portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2)
+			expected="pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 			;;
 		bootstrap)
 			printf '%s\n' deny-bootstrap >"$STATE_MODE"
-			command=(bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-bootstrap-runtime-v1)
-			expected="bootstrap-runtime-authorization portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
-			;;
-		bootstrap-marketing)
-			write_valid_marketing_model
-			printf '%s\n' deny-bootstrap >"$STATE_MODE"
-			command=(bootstrap-marketing-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" marketing-bootstrap-runtime-v1)
-			expected="bootstrap-runtime-authorization marketing $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+			command=(bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-bootstrap-runtime-v2)
+			expected="bootstrap-runtime-authorization portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 			;;
 		sudo-bootstrap)
-			command=(bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-bootstrap-runtime-v1)
+			command=(bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-bootstrap-runtime-v2)
 			expected=''
 			;;
 	esac
@@ -848,6 +898,9 @@ for gate_case in readiness pending rollback bootstrap bootstrap-marketing sudo-b
 	set -e
 	[[ "$gate_status" -ne 0 ]] || { echo "Denied runtime gate passed: $gate_case" >&2; exit 1; }
 	[[ -z "$expected" ]] || assert_exact_state_call "$expected"
+	if [[ "$gate_case" == rollback ]]; then
+		assert_exact_state_call "pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
+	fi
 	if [[ -z "$expected" && -s "$EVENT_LOG" ]]; then
 		echo 'sudo-derived bootstrap reached a stable state helper.' >&2
 		exit 1
@@ -860,15 +913,12 @@ assert_mutation_sequence() {
 	local gate_kind="$1" expected_count="$2" readiness_required="$3"
 	local -a events=()
 	mapfile -t events <"$EVENT_LOG"
-	local index mutation_count=0 expected_gate expected_readiness
-	expected_readiness="state migration-readiness $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW"
+	local index mutation_count=0 expected_gate expected_readiness readiness_offset
+	expected_readiness="state migration-readiness $RELEASE $WEB $WORKER $MIGRATE $POSTGRES"
 	case "$gate_kind" in
-		portal) expected_gate="state pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
-		portal-rollback) expected_gate="state pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
-		marketing) expected_gate="state pending-runtime-tuple marketing $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
-		marketing-rollback) expected_gate="state pending-rollback-runtime-tuple marketing $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
-		bootstrap) expected_gate="state bootstrap-runtime-authorization portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
-		bootstrap-marketing) expected_gate="state bootstrap-runtime-authorization marketing $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" ;;
+		portal | requested-rollback) expected_gate="state pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" ;;
+		failed-deploy-rollback) expected_gate="state pending-rollback-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" ;;
+		bootstrap) expected_gate="state bootstrap-runtime-authorization portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" ;;
 	esac
 	for ((index = 0; index < ${#events[@]}; index += 1)); do
 		if [[ "${events[$index]}" =~ ^docker\ compose\ .*\ (pull|up|run)(\ |$) ]]; then
@@ -878,7 +928,9 @@ assert_mutation_sequence() {
 				exit 1
 			}
 			if [[ "$readiness_required" == yes ]]; then
-				[[ "$index" -ge 2 && "${events[$((index - 2))]}" == "$expected_readiness" ]] || {
+				readiness_offset=2
+				[[ "$gate_kind" != failed-deploy-rollback ]] || readiness_offset=3
+				[[ "$index" -ge "$readiness_offset" && "${events[$((index - readiness_offset))]}" == "$expected_readiness" ]] || {
 					echo "Docker mutation lacked its adjacent migration readiness gate." >&2
 					exit 1
 				}
@@ -893,29 +945,26 @@ assert_mutation_sequence() {
 
 printf '%s\n' allow >"$STATE_MODE"
 : >"$EVENT_LOG"
-run_manager portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1
+run_manager portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2
 assert_mutation_sequence portal 4 yes
 
 : >"$EVENT_LOG"
-run_manager portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1
-assert_mutation_sequence portal-rollback 2 yes
+printf '%s\n' requested-rollback >"$STATE_MODE"
+run_manager portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2
+assert_mutation_sequence requested-rollback 2 yes
+
+# A failed deploy is authorized only by the predecessor receipt path after the
+# requested-candidate path rejects the tuple.
+: >"$EVENT_LOG"
+printf '%s\n' failed-deploy-rollback >"$STATE_MODE"
+run_manager portal-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2
+grep -Fqx "state pending-runtime-tuple portal $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG"
+assert_mutation_sequence failed-deploy-rollback 2 yes
 
 : >"$EVENT_LOG"
-run_manager bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-bootstrap-runtime-v1
+printf '%s\n' allow >"$STATE_MODE"
+run_manager bootstrap-portal-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-bootstrap-runtime-v2
 assert_mutation_sequence bootstrap 4 yes
-
-write_valid_marketing_model
-: >"$EVENT_LOG"
-run_manager bootstrap-marketing-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" marketing-bootstrap-runtime-v1
-assert_mutation_sequence bootstrap-marketing 2 no
-
-: >"$EVENT_LOG"
-run_manager marketing-deploy "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" marketing-runtime-v1
-assert_mutation_sequence marketing 2 no
-
-: >"$EVENT_LOG"
-run_manager marketing-rollback "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" marketing-runtime-v1
-assert_mutation_sequence marketing-rollback 2 no
 write_valid_model
 
 # The irreversible marker requires both language writes and the Worker.
@@ -968,7 +1017,7 @@ for attack in service privileged socket tag named-socket missing-port disabled-h
 	  environment-value) "$REAL_PYTHON" -c 'import json,sys;p=sys.argv[1];d=json.load(open(p));d["services"]["web"]["environment"]["POSTGRES_DB"]="attacker";json.dump(d,open(p,"w"))' "$MODEL" ;;
 	esac
 	set +e
-	run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1 >/dev/null 2>&1
+	run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2 >/dev/null 2>&1
 	status=$?
 	set -e
 	[[ "$status" -ne 0 ]] || { echo "Rendered Compose $attack attack passed" >&2; exit 1; }
@@ -997,7 +1046,7 @@ cp "$TEST_ROOT/runtime.env.valid" "$ENV_FILE"
 write_valid_model
 touch "$TEST_ROOT/fake-socket"
 set +e
-run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1 >/dev/null 2>&1
+run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2 >/dev/null 2>&1
 fake_status=$?
 set -e
 rm -f "$TEST_ROOT/fake-socket"
@@ -1006,7 +1055,7 @@ rm -f "$TEST_ROOT/fake-socket"
 # Rebinding between the pre/post identity snapshots also fails.
 touch "$TEST_ROOT/request-rebind"
 set +e
-run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" portal-runtime-v1 >/dev/null 2>&1
+run_manager portal-preflight "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" portal-runtime-v2 >/dev/null 2>&1
 race_status=$?
 set -e
 rm -f "$TEST_ROOT/request-rebind" "$TEST_ROOT/rebound"
