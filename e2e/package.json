@@ -14,7 +14,7 @@
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.61.1",
     "@types/pg": "^8.20.0",
-    "@usebruno/cli": "3.5.2",
+    "@usebruno/cli": "4.0.0",
     "@workspace/lib": "workspace:*",
     "fflate": "^0.7.4",
     "pg": "^8.22.0",
