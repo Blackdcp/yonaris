@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
 	assertReadableResponseSnapshot,
 	parseResponseSnapshotVisualEvidenceManifest,
+	parseResponseSnapshotVisualEvidenceManifestV3,
 	ResponseSnapshotAccessError,
 	resolveResponseSnapshotActorAccess,
 	responseSnapshotAccessAction,
@@ -31,34 +32,55 @@ describe("response snapshot customer access", () => {
 		const now = new Date("2026-08-20T00:00:00.000Z");
 		const expiresAt = new Date("2026-11-18T00:00:00.000Z");
 		expect(() =>
-				assertReadableResponseSnapshot({ status: "pending", isCurrent: true, storageBackend: null, storageKey: null, expiresAt, now }),
+			assertReadableResponseSnapshot({
+				status: "pending",
+				isCurrent: true,
+				storageBackend: null,
+				storageKey: null,
+				expiresAt,
+				now,
+			}),
 		).toThrowError(expect.objectContaining({ code: "pending" }));
 		expect(() =>
-				assertReadableResponseSnapshot({ status: "expired", isCurrent: true, storageBackend: null, storageKey: null, expiresAt, now }),
+			assertReadableResponseSnapshot({
+				status: "expired",
+				isCurrent: true,
+				storageBackend: null,
+				storageKey: null,
+				expiresAt,
+				now,
+			}),
 		).toThrowError(expect.objectContaining({ code: "expired" }));
 		expect(() =>
-				assertReadableResponseSnapshot({ status: "failed", isCurrent: true, storageBackend: null, storageKey: null, expiresAt, now }),
+			assertReadableResponseSnapshot({
+				status: "failed",
+				isCurrent: true,
+				storageBackend: null,
+				storageKey: null,
+				expiresAt,
+				now,
+			}),
 		).toThrowError(expect.objectContaining({ code: "not_found" }));
 		expect(() =>
-				assertReadableResponseSnapshot({
+			assertReadableResponseSnapshot({
 				status: "ready",
 				isCurrent: false,
-					storageBackend: "filesystem",
-					storageKey: "2026/08/15/stepfun/run-1/r1",
-					expiresAt,
-					now,
-				}),
+				storageBackend: "filesystem",
+				storageKey: "2026/08/15/stepfun/run-1/r1",
+				expiresAt,
+				now,
+			}),
 		).toThrowError(expect.objectContaining({ code: "not_found" }));
 		expect(
 			assertReadableResponseSnapshot({
 				status: "ready",
 				isCurrent: true,
-					storageBackend: "filesystem",
-					storageKey: "2026/08/15/stepfun/run-1/r1",
-					expiresAt,
-					now,
-				}),
-			).toBe("2026/08/15/stepfun/run-1/r1");
+				storageBackend: "filesystem",
+				storageKey: "2026/08/15/stepfun/run-1/r1",
+				expiresAt,
+				now,
+			}),
+		).toBe("2026/08/15/stepfun/run-1/r1");
 		expect(() =>
 			assertReadableResponseSnapshot({
 				status: "ready",
@@ -123,5 +145,42 @@ describe("response snapshot customer access", () => {
 				manifest.runId,
 			),
 		).toThrow(/manifest/i);
+	});
+
+	it("binds complete and partial v3 evidence to ordered manifest references", () => {
+		const runId = "11111111-1111-4111-8111-111111111111";
+		const first = {
+			artifactId: "22222222-2222-4222-8222-222222222222",
+			mediaType: "image/jpeg",
+			sha256: "a".repeat(64),
+			bytes: 1_024,
+		};
+		const second = { ...first, artifactId: "33333333-3333-4333-8333-333333333333", sha256: "b".repeat(64) };
+		const primary = { ...first, artifactId: "44444444-4444-4444-8444-444444444444", sha256: "c".repeat(64) };
+		const visualEvidence = {
+			status: "complete",
+			primary,
+			segments: [first, second],
+			expectedSegmentCount: 2,
+			capturedSegmentCount: 2,
+		};
+		const manifest = {
+			schemaVersion: "response-snapshot-manifest.v3",
+			runId,
+			artifacts: {},
+			visualEvidence,
+		};
+
+		expect(
+			parseResponseSnapshotVisualEvidenceManifestV3(new TextEncoder().encode(JSON.stringify(manifest)), runId),
+		).toEqual(visualEvidence);
+		expect(() =>
+			parseResponseSnapshotVisualEvidenceManifestV3(
+				new TextEncoder().encode(
+					JSON.stringify({ ...manifest, visualEvidence: { ...visualEvidence, capturedSegmentCount: 1 } }),
+				),
+				runId,
+			),
+		).toThrow(/visual evidence/i);
 	});
 });

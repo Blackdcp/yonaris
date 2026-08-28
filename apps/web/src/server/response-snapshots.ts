@@ -149,6 +149,14 @@ export type AuthorizedResponseSnapshotScreenshot = {
 
 export type ResponseSnapshotVisualEvidenceReference = Omit<AuthorizedResponseSnapshotScreenshot, "content">;
 
+export type ResponseSnapshotVisualEvidenceManifestV3 = {
+	status: "complete" | "partial" | "unavailable";
+	primary: ResponseSnapshotVisualEvidenceReference | null;
+	segments: ResponseSnapshotVisualEvidenceReference[];
+	expectedSegmentCount: number;
+	capturedSegmentCount: number;
+};
+
 export function parseResponseSnapshotVisualEvidenceManifest(
 	manifestJson: Uint8Array,
 	expectedRunId: string,
@@ -193,11 +201,82 @@ export function parseResponseSnapshotVisualEvidenceManifest(
 	};
 }
 
+export function parseResponseSnapshotVisualEvidenceManifestV3(
+	manifestJson: Uint8Array,
+	expectedRunId: string,
+): ResponseSnapshotVisualEvidenceManifestV3 {
+	let manifest: unknown;
+	try {
+		manifest = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(manifestJson));
+	} catch {
+		throw new Error("Response snapshot v3 manifest is invalid");
+	}
+	if (typeof manifest !== "object" || manifest === null) throw new Error("Response snapshot v3 manifest is invalid");
+	const value = manifest as Record<string, unknown>;
+	if (
+		value.schemaVersion !== "response-snapshot-manifest.v3" ||
+		value.runId !== expectedRunId ||
+		typeof value.visualEvidence !== "object" ||
+		value.visualEvidence === null
+	) {
+		throw new Error("Response snapshot v3 manifest identity is invalid");
+	}
+	const evidence = value.visualEvidence as Record<string, unknown>;
+	if (!Array.isArray(evidence.segments)) throw new Error("Response snapshot v3 visual evidence is invalid");
+	const primary = evidence.primary === null ? null : parseVisualEvidenceReference(evidence.primary, 4 * 1024 * 1024);
+	const segments = evidence.segments.map((segment) => parseVisualEvidenceReference(segment, 1024 * 1024));
+	const expectedSegmentCount = Number(evidence.expectedSegmentCount);
+	const capturedSegmentCount = Number(evidence.capturedSegmentCount);
+	const stateMatches =
+		evidence.status === "unavailable"
+			? primary === null && segments.length === 0 && expectedSegmentCount === 0 && capturedSegmentCount === 0
+			: evidence.status === "partial"
+				? primary === null && segments.length === capturedSegmentCount && capturedSegmentCount < expectedSegmentCount
+				: evidence.status === "complete"
+					? primary !== null &&
+						segments.length === capturedSegmentCount &&
+						capturedSegmentCount === expectedSegmentCount
+					: false;
+	if (!stateMatches) throw new Error("Response snapshot v3 visual evidence is invalid");
+	return {
+		status: evidence.status as ResponseSnapshotVisualEvidenceManifestV3["status"],
+		primary,
+		segments,
+		expectedSegmentCount,
+		capturedSegmentCount,
+	};
+}
+
+function parseVisualEvidenceReference(value: unknown, maximumBytes: number): ResponseSnapshotVisualEvidenceReference {
+	if (typeof value !== "object" || value === null) throw new Error("Response snapshot visual evidence is invalid");
+	const evidence = value as Record<string, unknown>;
+	if (
+		typeof evidence.artifactId !== "string" ||
+		!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(evidence.artifactId) ||
+		evidence.mediaType !== "image/jpeg" ||
+		typeof evidence.sha256 !== "string" ||
+		!/^[0-9a-f]{64}$/u.test(evidence.sha256) ||
+		typeof evidence.bytes !== "number" ||
+		!Number.isSafeInteger(evidence.bytes) ||
+		evidence.bytes < 1 ||
+		evidence.bytes > maximumBytes
+	) {
+		throw new Error("Response snapshot visual evidence is invalid");
+	}
+	return {
+		artifactId: evidence.artifactId,
+		mediaType: "image/jpeg",
+		sha256: evidence.sha256,
+		bytes: evidence.bytes,
+	};
+}
+
 export async function loadAuthorizedResponseSnapshotScreenshot(
 	snapshot: AuthorizedResponseSnapshot,
 	expected: ResponseSnapshotVisualEvidenceReference,
 ): Promise<AuthorizedResponseSnapshotScreenshot | null> {
-	if (snapshot.schemaVersion !== "response-snapshot.v2") return null;
+	if (snapshot.schemaVersion !== "response-snapshot.v2" && snapshot.schemaVersion !== "response-snapshot.v3")
+		return null;
 	const scopeCondition = snapshot.scopeId
 		? eq(evidenceArtifacts.scopeId, snapshot.scopeId)
 		: isNull(evidenceArtifacts.scopeId);

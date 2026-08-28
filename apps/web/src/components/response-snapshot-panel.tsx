@@ -18,8 +18,15 @@ const STATE_MESSAGES: Partial<Record<ResponseSnapshot["status"], MessageId>> = {
 	expired: "snapshot.state.expired",
 };
 
-function assetUrl(snapshotId: string, asset: "html" | "json" | "manifest" | "screenshot", download: boolean) {
-	return `/api/app/response-snapshots/${encodeURIComponent(snapshotId)}?asset=${asset}&download=${download ? 1 : 0}`;
+function assetUrl(
+	snapshotId: string,
+	asset: "html" | "json" | "manifest" | "screenshot",
+	download: boolean,
+	artifactId?: string,
+) {
+	const params = new URLSearchParams({ asset, download: download ? "1" : "0" });
+	if (artifactId) params.set("artifactId", artifactId);
+	return `/api/app/response-snapshots/${encodeURIComponent(snapshotId)}?${params.toString()}`;
 }
 
 type ExportEstimate = {
@@ -130,6 +137,10 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 		timeStyle: "short",
 		timeZone: "Asia/Shanghai",
 	});
+	const evidence = snapshot.visualEvidence;
+	const v3 = snapshot.schemaVersion === "response-snapshot.v3";
+	const evidenceUrl = (artifactId: string, download: boolean) =>
+		assetUrl(snapshot.id, "screenshot", download, v3 ? artifactId : undefined);
 
 	return (
 		<section className="space-y-3 rounded-md border bg-background p-4" aria-label={t("snapshot.title")}>
@@ -151,19 +162,64 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 				</p>
 			) : (
 				<>
-					{snapshot.visualEvidence && (
-						<figure className="space-y-2 rounded-md border bg-muted/20 p-3">
-							<figcaption className="text-sm font-medium">{t("snapshot.browserEvidence")}</figcaption>
-							<img
-								src={assetUrl(snapshot.id, "screenshot", false)}
-								alt={t("snapshot.visualAlt", { channel })}
-								loading="lazy"
-								className="max-h-[32rem] w-auto max-w-full rounded-md border bg-white"
-							/>
-							<p className="text-xs text-muted-foreground">
-								{t("snapshot.screenshotHash")}:{" "}
-								<code className="break-all text-foreground">{snapshot.visualEvidence.sha256}</code>
-							</p>
+					{evidence && (
+						<figure className="space-y-3 rounded-md border bg-muted/20 p-3">
+							<figcaption className="flex flex-wrap items-center justify-between gap-2 text-sm font-medium">
+								<span>{t("snapshot.browserEvidence")}</span>
+								<span className="text-xs font-normal text-muted-foreground">
+									{t(`snapshot.evidence.${evidence.status}` as MessageId, {
+										captured: evidence.capturedSegmentCount,
+										expected: evidence.expectedSegmentCount,
+									})}
+								</span>
+							</figcaption>
+
+							{evidence.status === "complete" && evidence.primary && (
+								<>
+									<img
+										src={evidenceUrl(evidence.primary.artifactId, false)}
+										alt={t("snapshot.visualAlt", { channel })}
+										loading="lazy"
+										className="max-h-[48rem] w-auto max-w-full rounded-md border bg-white object-contain object-top"
+									/>
+									<p className="text-xs text-muted-foreground">
+										{t("snapshot.screenshotHash")}:{" "}
+										<code className="break-all text-foreground">{evidence.primary.sha256}</code>
+									</p>
+								</>
+							)}
+
+							{evidence.status === "unavailable" && (
+								<p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+									{t("snapshot.evidenceUnavailableDescription")}
+								</p>
+							)}
+
+							{evidence.segments.length > 0 && (
+								<details open={evidence.status === "partial"} className="space-y-2">
+									<summary className="cursor-pointer text-sm font-medium">
+										{t("snapshot.evidenceSegments", { count: evidence.segments.length })}
+									</summary>
+									<div className="grid gap-3 sm:grid-cols-2">
+										{evidence.segments.map((segment, index) => (
+											<div key={segment.artifactId} className="space-y-2 rounded-md border bg-background p-2">
+												<img
+													src={evidenceUrl(segment.artifactId, false)}
+													alt={t("snapshot.segmentAlt", { channel, index: index + 1 })}
+													loading="lazy"
+													className="max-h-[32rem] w-auto max-w-full rounded border bg-white object-contain object-top"
+												/>
+												<a
+													className="text-xs underline underline-offset-4"
+													href={evidenceUrl(segment.artifactId, true)}
+												>
+													{t("snapshot.downloadEvidencePart", { index: index + 1 })}
+												</a>
+											</div>
+										))}
+									</div>
+								</details>
+							)}
 						</figure>
 					)}
 					<iframe
@@ -185,8 +241,8 @@ export function ResponseSnapshotPanel({ snapshot, channel }: { snapshot: Respons
 						</p>
 					</div>
 					<div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-						{snapshot.visualEvidence && (
-							<a className="underline underline-offset-4" href={assetUrl(snapshot.id, "screenshot", true)}>
+						{evidence?.primary && (
+							<a className="underline underline-offset-4" href={evidenceUrl(evidence.primary.artifactId, true)}>
 								{t("snapshot.downloadScreenshot")}
 							</a>
 						)}

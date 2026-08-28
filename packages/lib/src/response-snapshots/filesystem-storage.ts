@@ -2,7 +2,11 @@ import { createHash, randomUUID } from "node:crypto";
 import { chmod, lstat, mkdir, open, readdir, readFile, rename, rmdir, unlink } from "node:fs/promises";
 import { isAbsolute, parse, relative, resolve, sep } from "node:path";
 import { gunzipSync } from "node:zlib";
-import type { PreparedResponseSnapshotBundle, ResponseSnapshotVisualEvidence } from "./contract";
+import type {
+	PreparedResponseSnapshotBundle,
+	ResponseSnapshotVisualEvidence,
+	ResponseSnapshotVisualEvidenceV3,
+} from "./contract";
 import type {
 	ResponseSnapshotAsset,
 	ResponseSnapshotAssetName,
@@ -47,6 +51,7 @@ type SnapshotManifest = SnapshotManifestBase &
 	(
 		| { schemaVersion: "response-snapshot-manifest.v1" }
 		| { schemaVersion: "response-snapshot-manifest.v2"; visualEvidence: ResponseSnapshotVisualEvidence }
+		| { schemaVersion: "response-snapshot-manifest.v3"; visualEvidence: ResponseSnapshotVisualEvidenceV3 }
 	);
 
 type ParsedStorageKey = {
@@ -480,7 +485,8 @@ function parseManifest(value: Uint8Array): SnapshotManifest {
 	if (
 		!isRecord(parsed) ||
 		(parsed.schemaVersion !== "response-snapshot-manifest.v1" &&
-			parsed.schemaVersion !== "response-snapshot-manifest.v2") ||
+			parsed.schemaVersion !== "response-snapshot-manifest.v2" &&
+			parsed.schemaVersion !== "response-snapshot-manifest.v3") ||
 		typeof parsed.runId !== "string"
 	) {
 		throw new ResponseSnapshotStorageIntegrityError("Snapshot manifest contract is invalid");
@@ -493,10 +499,80 @@ function parseManifest(value: Uint8Array): SnapshotManifest {
 	if (parsed.schemaVersion === "response-snapshot-manifest.v1") {
 		return { ...common, schemaVersion: parsed.schemaVersion };
 	}
+	if (parsed.schemaVersion === "response-snapshot-manifest.v3") {
+		return {
+			...common,
+			schemaVersion: parsed.schemaVersion,
+			visualEvidence: parseVisualEvidenceV3(parsed.visualEvidence),
+		};
+	}
 	return {
 		...common,
 		schemaVersion: parsed.schemaVersion,
 		visualEvidence: parseVisualEvidence(parsed.visualEvidence),
+	};
+}
+
+function parseVisualEvidenceV3(value: unknown): ResponseSnapshotVisualEvidenceV3 {
+	if (!isRecord(value) || !Array.isArray(value.segments)) {
+		throw new ResponseSnapshotStorageIntegrityError("Snapshot visual evidence metadata is invalid");
+	}
+	const primary = value.primary === null ? null : parseVisualEvidenceReference(value.primary, 4 * 1024 * 1024);
+	const segments = value.segments.map((segment) => parseVisualEvidenceReference(segment, 1024 * 1024));
+	const ids = [...(primary ? [primary.artifactId] : []), ...segments.map(({ artifactId }) => artifactId)];
+	const totalBytes = [...(primary ? [primary.bytes] : []), ...segments.map(({ bytes }) => bytes)].reduce(
+		(total, bytes) => total + bytes,
+		0,
+	);
+	const expectedSegmentCount = Number(value.expectedSegmentCount);
+	const capturedSegmentCount = Number(value.capturedSegmentCount);
+	const validCounts =
+		Number.isSafeInteger(expectedSegmentCount) &&
+		Number.isSafeInteger(capturedSegmentCount) &&
+		expectedSegmentCount >= 0 &&
+		expectedSegmentCount <= 10_000 &&
+		capturedSegmentCount >= 0 &&
+		capturedSegmentCount <= 18 &&
+		segments.length === capturedSegmentCount;
+	const validState =
+		value.status === "unavailable"
+			? primary === null && segments.length === 0 && expectedSegmentCount === 0 && capturedSegmentCount === 0
+			: value.status === "partial"
+				? primary === null && capturedSegmentCount > 0 && capturedSegmentCount < expectedSegmentCount
+				: value.status === "complete"
+					? primary !== null && capturedSegmentCount === expectedSegmentCount && expectedSegmentCount > 0
+					: false;
+	if (!validCounts || !validState || new Set(ids).size !== ids.length || totalBytes > 6 * 1024 * 1024) {
+		throw new ResponseSnapshotStorageIntegrityError("Snapshot visual evidence metadata is invalid");
+	}
+	return {
+		status: value.status as ResponseSnapshotVisualEvidenceV3["status"],
+		primary,
+		segments,
+		expectedSegmentCount,
+		capturedSegmentCount,
+	};
+}
+
+function parseVisualEvidenceReference(value: unknown, maximumBytes: number): ResponseSnapshotVisualEvidence {
+	if (
+		!isRecord(value) ||
+		typeof value.artifactId !== "string" ||
+		!UUID_PATTERN.test(value.artifactId) ||
+		value.mediaType !== "image/jpeg" ||
+		typeof value.sha256 !== "string" ||
+		!SHA256_PATTERN.test(value.sha256) ||
+		!Number.isInteger(value.bytes) ||
+		Number(value.bytes) < 1 ||
+		Number(value.bytes) > maximumBytes
+	) {
+		throw new ResponseSnapshotStorageIntegrityError("Snapshot visual evidence metadata is invalid");
+	}
+	return {
+		artifactId: value.artifactId,
+		mediaType: "image/jpeg",
+		sha256: value.sha256,
+		bytes: Number(value.bytes),
 	};
 }
 

@@ -20,9 +20,10 @@ export class ResponseSnapshotHttpError extends Error {
 export function parseResponseSnapshotAssetSelector(url: URL): {
 	asset: ResponseSnapshotAppAssetName;
 	download: boolean;
+	artifactId?: string;
 } {
 	const keys = [...url.searchParams.keys()];
-	if (keys.some((key) => key !== "asset" && key !== "download")) {
+	if (keys.some((key) => key !== "asset" && key !== "download" && key !== "artifactId")) {
 		throw new ResponseSnapshotHttpError(400, "Unknown response snapshot query parameter");
 	}
 	if (url.searchParams.getAll("asset").length !== 1 || url.searchParams.getAll("download").length !== 1) {
@@ -36,7 +37,15 @@ export function parseResponseSnapshotAssetSelector(url: URL): {
 	if (download !== "0" && download !== "1") {
 		throw new ResponseSnapshotHttpError(400, "download must be 0 or 1");
 	}
-	return { asset, download: download === "1" };
+	const artifactIds = url.searchParams.getAll("artifactId");
+	if (artifactIds.length > 1 || (artifactIds.length === 1 && asset !== "screenshot")) {
+		throw new ResponseSnapshotHttpError(400, "artifactId is supported only once for screenshot assets");
+	}
+	const artifactId = artifactIds[0];
+	if (artifactId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(artifactId)) {
+		throw new ResponseSnapshotHttpError(400, "artifactId must be a GUID");
+	}
+	return { asset, download: download === "1", ...(artifactId ? { artifactId } : {}) };
 }
 
 export function attachmentContentDisposition(fileName: string): string {

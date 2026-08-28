@@ -597,24 +597,85 @@ export const getPromptRunsFn = createServerFn({ method: "GET" })
 						expiresAt: responseSnapshots.expiresAt,
 						htmlSha256: responseSnapshots.htmlSha256,
 						jsonSha256: responseSnapshots.jsonSha256,
-						visualEvidence: sql<null | { mediaType: string; sha256: string; bytes: number }>`(
-							SELECT json_build_object(
-								'mediaType', ${evidenceArtifacts.mediaType},
-								'sha256', ${evidenceArtifacts.sha256},
-								'bytes', ${evidenceArtifacts.byteSize}
+						visualEvidence: sql<null | {
+							status: string;
+							expectedSegmentCount: number;
+							capturedSegmentCount: number;
+							primary: null | { artifactId: string; mediaType: string; sha256: string; bytes: number };
+							segments: Array<{ artifactId: string; mediaType: string; sha256: string; bytes: number }>;
+						}>`CASE
+							WHEN ${responseSnapshots.status} <> 'ready'
+								OR ${responseSnapshots.expiresAt} <= now()
+							THEN NULL
+							WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v2'
+							THEN json_build_object(
+								'status', 'complete',
+								'expectedSegmentCount', 1,
+								'capturedSegmentCount', 1,
+								'primary', (
+									SELECT json_build_object(
+										'artifactId', ${evidenceArtifacts.id},
+										'mediaType', ${evidenceArtifacts.mediaType},
+										'sha256', ${evidenceArtifacts.sha256},
+										'bytes', ${evidenceArtifacts.byteSize}
+									)
+									FROM ${evidenceArtifacts}
+									WHERE ${evidenceArtifacts.observationAttemptId} = ${promptRuns.observationAttemptId}
+										AND ${evidenceArtifacts.brandId} = ${responseSnapshots.brandId}
+										AND ${evidenceArtifacts.scopeId} IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+										AND ${evidenceArtifacts.kind} = 'screenshot'
+										AND ${evidenceArtifacts.status} = 'attached'
+										AND ${evidenceArtifacts.mediaType} = 'image/jpeg'
+									LIMIT 1
+								),
+								'segments', '[]'::json
 							)
-							FROM ${evidenceArtifacts}
-							WHERE ${evidenceArtifacts.observationAttemptId} = ${promptRuns.observationAttemptId}
-								AND ${evidenceArtifacts.brandId} = ${responseSnapshots.brandId}
-								AND ${evidenceArtifacts.scopeId} IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
-								AND ${evidenceArtifacts.kind} = 'screenshot'
-								AND ${evidenceArtifacts.status} = 'attached'
-								AND ${evidenceArtifacts.mediaType} = 'image/jpeg'
-								AND ${responseSnapshots.schemaVersion} = 'response-snapshot.v2'
-								AND ${responseSnapshots.status} = 'ready'
-								AND ${responseSnapshots.expiresAt} > now()
-							LIMIT 1
-						)`,
+							WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v3'
+							THEN json_build_object(
+								'status', ${promptRuns.rawOutput}->'visualEvidence'->>'status',
+								'expectedSegmentCount', (${promptRuns.rawOutput}->'visualEvidence'->>'expectedSegmentCount')::integer,
+								'capturedSegmentCount', (${promptRuns.rawOutput}->'visualEvidence'->>'capturedSegmentCount')::integer,
+								'primary', (
+									SELECT json_build_object(
+										'artifactId', ${evidenceArtifacts.id},
+										'mediaType', ${evidenceArtifacts.mediaType},
+										'sha256', ${evidenceArtifacts.sha256},
+										'bytes', ${evidenceArtifacts.byteSize}
+									)
+									FROM ${evidenceArtifacts}
+									WHERE ${evidenceArtifacts.id}::text = ${promptRuns.rawOutput}->'visualEvidence'->>'primaryArtifactId'
+										AND ${evidenceArtifacts.observationAttemptId} = ${promptRuns.observationAttemptId}
+										AND ${evidenceArtifacts.brandId} = ${responseSnapshots.brandId}
+										AND ${evidenceArtifacts.scopeId} IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+										AND ${evidenceArtifacts.kind} = 'screenshot'
+										AND ${evidenceArtifacts.status} = 'attached'
+										AND ${evidenceArtifacts.mediaType} = 'image/jpeg'
+								),
+								'segments', COALESCE((
+									SELECT json_agg(
+										json_build_object(
+											'artifactId', segment_artifact.id,
+											'mediaType', segment_artifact.media_type,
+											'sha256', segment_artifact.sha256,
+											'bytes', segment_artifact.byte_size
+										)
+										ORDER BY segment_ref.ordinality
+									)
+									FROM jsonb_array_elements_text(
+										COALESCE((${promptRuns.rawOutput}->'visualEvidence'->'segmentArtifactIds')::jsonb, '[]'::jsonb)
+									) WITH ORDINALITY AS segment_ref(artifact_id, ordinality)
+									JOIN evidence_artifacts AS segment_artifact
+										ON segment_artifact.id::text = segment_ref.artifact_id
+									WHERE segment_artifact.observation_attempt_id = ${promptRuns.observationAttemptId}
+										AND segment_artifact.brand_id = ${responseSnapshots.brandId}
+										AND segment_artifact.scope_id IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+										AND segment_artifact.kind = 'screenshot'
+										AND segment_artifact.status = 'attached'
+										AND segment_artifact.media_type = 'image/jpeg'
+								), '[]'::json)
+							)
+							ELSE NULL
+						END`,
 					},
 				})
 				.from(promptRuns)

@@ -8,6 +8,7 @@ import {
 	prepareResponseSnapshotBundle,
 	type ResponseSnapshotDraft,
 	type ResponseSnapshotDraftV2,
+	type ResponseSnapshotDraftV3,
 	ResponseSnapshotValidationError,
 } from "./contract";
 import type { ResponseSnapshotStorage } from "./storage";
@@ -45,7 +46,7 @@ export function createResponseSnapshotService(dependencies: {
 	};
 	const record = async (input: {
 		reservation: SnapshotReservation;
-		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2;
+		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3;
 	}) => {
 		let bundle: ReturnType<typeof prepareResponseSnapshotBundle>;
 		try {
@@ -126,7 +127,7 @@ export function createResponseSnapshotService(dependencies: {
 export async function recordResponseSnapshot(
 	input: {
 		reservation: SnapshotReservation;
-		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2;
+		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3;
 		storage: ResponseSnapshotStorage;
 	},
 	dependencies?: { persistence?: ResponseSnapshotPersistence; now?: () => Date },

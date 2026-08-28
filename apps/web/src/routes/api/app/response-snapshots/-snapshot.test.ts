@@ -185,6 +185,117 @@ describe("customer response snapshot asset route", () => {
 		);
 	});
 
+	it("serves only the exact v3 primary or segment declared by the manifest", async () => {
+		const primaryId = "44444444-4444-4444-8444-444444444444";
+		const segmentId = "55555555-5555-4555-8555-555555555555";
+		const visualEvidence = {
+			status: "complete",
+			primary: {
+				artifactId: primaryId,
+				mediaType: "image/jpeg",
+				sha256: screenshotSha256,
+				bytes: screenshotBytes.byteLength,
+			},
+			segments: [
+				{
+					artifactId: segmentId,
+					mediaType: "image/jpeg",
+					sha256: screenshotSha256,
+					bytes: screenshotBytes.byteLength,
+				},
+			],
+			expectedSegmentCount: 1,
+			capturedSegmentCount: 1,
+		};
+		const v3ManifestBytes = Buffer.from(
+			`${JSON.stringify({
+				schemaVersion: "response-snapshot-manifest.v3",
+				runId: promptRunId,
+				artifacts: {},
+				visualEvidence,
+			})}\n`,
+			"utf8",
+		);
+		const v3ManifestSha256 = createHash("sha256").update(v3ManifestBytes).digest("hex");
+		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
+			...(await mocks.loadAuthorizedResponseSnapshot()),
+			schemaVersion: "response-snapshot.v3",
+			manifestSha256: v3ManifestSha256,
+		});
+		mocks.get.mockResolvedValue({
+			asset: "manifest",
+			body: v3ManifestBytes,
+			contentType: "application/json; charset=utf-8",
+			contentEncoding: null,
+			sha256: v3ManifestSha256,
+			bytes: v3ManifestBytes.byteLength,
+			storedBytes: v3ManifestBytes.byteLength,
+		});
+		mocks.loadAuthorizedResponseSnapshotScreenshot.mockImplementation(async (_snapshot, expected) => ({
+			...expected,
+			content: screenshotBytes,
+		}));
+
+		const primaryResponse = await get(`asset=screenshot&download=1&artifactId=${primaryId}`);
+		const segmentResponse = await get(`asset=screenshot&download=0&artifactId=${segmentId}`);
+
+		expect(primaryResponse.status).toBe(200);
+		expect(primaryResponse.headers.get("content-disposition")).toContain(primaryId);
+		expect(segmentResponse.status).toBe(200);
+		expect(mocks.loadAuthorizedResponseSnapshotScreenshot).toHaveBeenNthCalledWith(
+			1,
+			expect.anything(),
+			visualEvidence.primary,
+		);
+		expect(mocks.loadAuthorizedResponseSnapshotScreenshot).toHaveBeenNthCalledWith(
+			2,
+			expect.anything(),
+			visualEvidence.segments[0],
+		);
+	});
+
+	it("rejects missing and undeclared v3 visual evidence identities", async () => {
+		const primaryId = "44444444-4444-4444-8444-444444444444";
+		const v3ManifestBytes = Buffer.from(
+			JSON.stringify({
+				schemaVersion: "response-snapshot-manifest.v3",
+				runId: promptRunId,
+				artifacts: {},
+				visualEvidence: {
+					status: "complete",
+					primary: {
+						artifactId: primaryId,
+						mediaType: "image/jpeg",
+						sha256: screenshotSha256,
+						bytes: screenshotBytes.byteLength,
+					},
+					segments: [],
+					expectedSegmentCount: 0,
+					capturedSegmentCount: 0,
+				},
+			}),
+		);
+		const v3ManifestSha256 = createHash("sha256").update(v3ManifestBytes).digest("hex");
+		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
+			...(await mocks.loadAuthorizedResponseSnapshot()),
+			schemaVersion: "response-snapshot.v3",
+			manifestSha256: v3ManifestSha256,
+		});
+		mocks.get.mockResolvedValue({
+			asset: "manifest",
+			body: v3ManifestBytes,
+			contentType: "application/json; charset=utf-8",
+			contentEncoding: null,
+			sha256: v3ManifestSha256,
+			bytes: v3ManifestBytes.byteLength,
+			storedBytes: v3ManifestBytes.byteLength,
+		});
+
+		expect((await get("asset=screenshot&download=0")).status).toBe(400);
+		expect((await get("asset=screenshot&download=0&artifactId=66666666-6666-4666-8666-666666666666")).status).toBe(404);
+		expect(mocks.loadAuthorizedResponseSnapshotScreenshot).not.toHaveBeenCalled();
+	});
+
 	it("returns 404 when a legacy snapshot has no attached visual evidence", async () => {
 		mocks.loadAuthorizedResponseSnapshot.mockResolvedValue({
 			...(await mocks.loadAuthorizedResponseSnapshot()),

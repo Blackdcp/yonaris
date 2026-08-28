@@ -6,6 +6,7 @@ import type {
 	ResponseSnapshotContentSource,
 	ResponseSnapshotDraft,
 	ResponseSnapshotDraftV2,
+	ResponseSnapshotDraftV3,
 } from "../response-snapshots/contract";
 import type { StoredResponseSnapshot } from "../response-snapshots/storage";
 import { db } from "./db";
@@ -55,7 +56,9 @@ export interface ResponseSnapshotPersistence {
 	completeExpiredDeletion(snapshotId: string): Promise<void>;
 	listStalePendingReservations(before: Date, limit: number): Promise<SnapshotReservation[]>;
 	supersedeStaleReservation(reservation: SnapshotReservation, failedAt: Date): Promise<SnapshotReservation>;
-	loadReconstructedDraft(snapshotId: string): Promise<ResponseSnapshotDraft | ResponseSnapshotDraftV2>;
+	loadReconstructedDraft(
+		snapshotId: string,
+	): Promise<ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3>;
 }
 
 type SnapshotHashIdentity = {
@@ -453,19 +456,26 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 					schemaVersion: responseSnapshots.schemaVersion,
 					brandId: responseSnapshots.brandId,
 					observationAttemptId: promptRuns.observationAttemptId,
+					captureMetadata: observationAttempts.captureMetadata,
 				})
 				.from(responseSnapshots)
 				.innerJoin(promptRuns, eq(promptRuns.id, responseSnapshots.promptRunId))
+				.leftJoin(observationAttempts, eq(observationAttempts.id, promptRuns.observationAttemptId))
 				.where(eq(responseSnapshots.id, snapshotId))
 				.limit(1)
 				.for("update");
-			if (!snapshot || snapshot.status !== "expired") return;
-			if (snapshot.schemaVersion === "response-snapshot.v2") {
+			if (snapshot?.status !== "expired") return;
+			if (snapshot.schemaVersion === "response-snapshot.v2" || snapshot.schemaVersion === "response-snapshot.v3") {
 				if (!snapshot.observationAttemptId) {
-					throw new ResponseSnapshotStateError("Expired v2 snapshot has no observation attempt");
+					throw new ResponseSnapshotStateError("Expired structured snapshot has no observation attempt");
 				}
 				const artifacts = await tx
-					.select({ id: evidenceArtifacts.id })
+					.select({
+						artifactId: evidenceArtifacts.id,
+						mediaType: evidenceArtifacts.mediaType,
+						sha256: evidenceArtifacts.sha256,
+						bytes: evidenceArtifacts.byteSize,
+					})
 					.from(evidenceArtifacts)
 					.where(
 						and(
@@ -477,10 +487,31 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 						),
 					)
 					.for("update");
-				if (artifacts.length !== 1) {
-					throw new ResponseSnapshotStateError("Expired v2 snapshot must have exactly one attached JPEG");
+				if (snapshot.schemaVersion === "response-snapshot.v2") {
+					const [artifact] = artifacts;
+					if (!artifact || artifacts.length !== 1) {
+						throw new ResponseSnapshotStateError("Expired v2 snapshot must have exactly one attached JPEG");
+					}
+					await tx.delete(evidenceArtifacts).where(eq(evidenceArtifacts.id, artifact.artifactId));
+				} else {
+					if (
+						!isStructuredRecoveryMetadata(snapshot.captureMetadata) ||
+						snapshot.captureMetadata.responseSnapshotSchemaVersion !== "response-snapshot.v3"
+					) {
+						throw new ResponseSnapshotStateError("Expired v3 snapshot has no visual evidence metadata");
+					}
+					const visualEvidence = reconstructV3VisualEvidence(snapshot.captureMetadata.visualEvidence, artifacts);
+					const artifactIds = [
+						...(visualEvidence.primary ? [visualEvidence.primary.artifactId] : []),
+						...visualEvidence.segments.map((artifact) => artifact.artifactId),
+					];
+					if (artifactIds.length !== artifacts.length) {
+						throw new ResponseSnapshotStateError("Expired v3 snapshot visual evidence is inconsistent");
+					}
+					if (artifactIds.length > 0) {
+						await tx.delete(evidenceArtifacts).where(inArray(evidenceArtifacts.id, artifactIds));
+					}
 				}
-				await tx.delete(evidenceArtifacts).where(eq(evidenceArtifacts.id, artifacts[0]!.id));
 			}
 			await tx
 				.update(responseSnapshots)
@@ -606,7 +637,7 @@ export const databaseResponseSnapshotPersistence: ResponseSnapshotPersistence = 
 			.where(eq(citations.promptRunId, row.runId))
 			.orderBy(asc(citations.citationIndex), asc(citations.id));
 		const visualEvidenceRows =
-			isV2RecoveryMetadata(row.captureMetadata) && row.observationAttemptId
+			isStructuredRecoveryMetadata(row.captureMetadata) && row.observationAttemptId
 				? await db
 						.select({
 							artifactId: evidenceArtifacts.id,
@@ -688,8 +719,8 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 	base: ReconstructedResponseSnapshotBase;
 	captureMetadata: unknown;
 	visualEvidence: readonly ReconstructedVisualEvidence[];
-}): ResponseSnapshotDraft | ResponseSnapshotDraftV2 {
-	if (!isV2RecoveryMetadata(input.captureMetadata)) {
+}): ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3 {
+	if (!isStructuredRecoveryMetadata(input.captureMetadata)) {
 		const legacyQueryAvailability: ResponseSnapshotDraft["queryAvailability"] = (() => {
 			switch (input.base.queryAvailability) {
 				case "available":
@@ -718,13 +749,24 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 	if (!isValidCaptureDiagnostics(captureDiagnostics, input.base)) {
 		throw new ResponseSnapshotStateError("Structured snapshot recovery diagnostics do not match the stored run");
 	}
+	if (input.captureMetadata.responseSnapshotSchemaVersion === "response-snapshot.v3") {
+		return {
+			...input.base,
+			queryAvailability,
+			schemaVersion: "response-snapshot.v3",
+			captureMethod: "consumer_web_browser",
+			contentSource: "rendered_from_structured_response",
+			adapterVersion: adapterVersion.trim(),
+			captureDiagnostics,
+			visualEvidence: reconstructV3VisualEvidence(input.captureMetadata.visualEvidence, input.visualEvidence),
+		};
+	}
 	if (input.visualEvidence.length !== 1) {
 		throw new ResponseSnapshotStateError("Structured snapshot recovery requires exactly one attached JPEG");
 	}
 	const [visualEvidence] = input.visualEvidence;
 	if (
-		!visualEvidence ||
-		visualEvidence.mediaType !== "image/jpeg" ||
+		visualEvidence?.mediaType !== "image/jpeg" ||
 		!/^[0-9a-f]{64}$/u.test(visualEvidence.sha256) ||
 		!Number.isSafeInteger(visualEvidence.bytes) ||
 		visualEvidence.bytes < 1 ||
@@ -749,18 +791,100 @@ export function buildReconstructedResponseSnapshotDraft(input: {
 	};
 }
 
-function isV2RecoveryMetadata(value: unknown): value is {
-	responseSnapshotSchemaVersion: "response-snapshot.v2";
+function isStructuredRecoveryMetadata(value: unknown): value is {
+	responseSnapshotSchemaVersion: "response-snapshot.v2" | "response-snapshot.v3";
 	adapterVersion?: unknown;
 	queryAvailability?: unknown;
 	captureDiagnostics?: unknown;
+	visualEvidence?: unknown;
 } {
 	return (
 		typeof value === "object" &&
 		value !== null &&
 		"responseSnapshotSchemaVersion" in value &&
-		value.responseSnapshotSchemaVersion === "response-snapshot.v2"
+		(value.responseSnapshotSchemaVersion === "response-snapshot.v2" ||
+			value.responseSnapshotSchemaVersion === "response-snapshot.v3")
 	);
+}
+
+function reconstructV3VisualEvidence(
+	value: unknown,
+	artifacts: readonly ReconstructedVisualEvidence[],
+): ResponseSnapshotDraftV3["visualEvidence"] {
+	if (typeof value !== "object" || value === null) {
+		throw new ResponseSnapshotStateError("Structured v3 snapshot recovery visual evidence is invalid");
+	}
+	const evidence = value as Record<string, unknown>;
+	const status = evidence.status;
+	const primaryArtifactId = evidence.primaryArtifactId;
+	const segmentArtifactIds = evidence.segmentArtifactIds;
+	const expectedSegmentCount = evidence.expectedSegmentCount;
+	const capturedSegmentCount = evidence.capturedSegmentCount;
+	if (
+		(status !== "complete" && status !== "partial" && status !== "unavailable") ||
+		(primaryArtifactId !== null && typeof primaryArtifactId !== "string") ||
+		!Array.isArray(segmentArtifactIds) ||
+		!segmentArtifactIds.every((artifactId) => typeof artifactId === "string") ||
+		!Number.isSafeInteger(expectedSegmentCount) ||
+		!Number.isSafeInteger(capturedSegmentCount) ||
+		Number(expectedSegmentCount) < 0 ||
+		Number(capturedSegmentCount) < 0 ||
+		Number(capturedSegmentCount) > 18
+	) {
+		throw new ResponseSnapshotStateError("Structured v3 snapshot recovery visual evidence is invalid");
+	}
+	const segmentIds = segmentArtifactIds as string[];
+	const stateMatches =
+		status === "unavailable"
+			? primaryArtifactId === null &&
+				segmentIds.length === 0 &&
+				expectedSegmentCount === 0 &&
+				capturedSegmentCount === 0
+			: status === "partial"
+				? primaryArtifactId === null &&
+					segmentIds.length === capturedSegmentCount &&
+					Number(capturedSegmentCount) < Number(expectedSegmentCount)
+				: typeof primaryArtifactId === "string" &&
+					segmentIds.length === capturedSegmentCount &&
+					capturedSegmentCount === expectedSegmentCount;
+	if (
+		!stateMatches ||
+		new Set([...(primaryArtifactId ? [primaryArtifactId] : []), ...segmentIds]).size !==
+			segmentIds.length + (primaryArtifactId ? 1 : 0)
+	) {
+		throw new ResponseSnapshotStateError("Structured v3 snapshot recovery visual evidence is inconsistent");
+	}
+	const artifactsById = new Map(artifacts.map((artifact) => [artifact.artifactId, artifact]));
+	const reference = (artifactId: string, maximumBytes: number) => {
+		const artifact = artifactsById.get(artifactId);
+		if (
+			artifact?.mediaType !== "image/jpeg" ||
+			!/^[0-9a-f]{64}$/u.test(artifact.sha256) ||
+			!Number.isSafeInteger(artifact.bytes) ||
+			artifact.bytes < 1 ||
+			artifact.bytes > maximumBytes
+		) {
+			throw new ResponseSnapshotStateError("Structured v3 snapshot recovery JPEG metadata is invalid");
+		}
+		return {
+			artifactId: artifact.artifactId,
+			mediaType: "image/jpeg" as const,
+			sha256: artifact.sha256,
+			bytes: artifact.bytes,
+		};
+	};
+	const primary = typeof primaryArtifactId === "string" ? reference(primaryArtifactId, 4 * 1024 * 1024) : null;
+	const segments = segmentIds.map((artifactId) => reference(artifactId, 1024 * 1024));
+	if ((primary?.bytes ?? 0) + segments.reduce((total, segment) => total + segment.bytes, 0) > 6 * 1024 * 1024) {
+		throw new ResponseSnapshotStateError("Structured v3 snapshot recovery visual evidence exceeds its byte budget");
+	}
+	return {
+		status,
+		primary,
+		segments,
+		expectedSegmentCount: Number(expectedSegmentCount),
+		capturedSegmentCount: Number(capturedSegmentCount),
+	};
 }
 
 function normalizeRecoveryQueryAvailability(
@@ -822,10 +946,12 @@ export function hydratePreparedResponseSnapshotBundle(
 		snapshot.schemaVersion === "response-snapshot.v1" && snapshot.templateVersion === "response-snapshot-html.v1";
 	const isV2 =
 		snapshot.schemaVersion === "response-snapshot.v2" && snapshot.templateVersion === "response-snapshot-html.v2";
+	const isV3 =
+		snapshot.schemaVersion === "response-snapshot.v3" && snapshot.templateVersion === "response-snapshot-html.v2";
 	if (
 		!snapshot.contentSource ||
 		!snapshot.captureMethod ||
-		(!isV1 && !isV2) ||
+		(!isV1 && !isV2 && !isV3) ||
 		!snapshot.htmlSha256 ||
 		!snapshot.jsonSha256 ||
 		!snapshot.manifestSha256 ||
@@ -856,9 +982,11 @@ export function hydratePreparedResponseSnapshotBundle(
 		htmlGzipBytes: snapshot.htmlGzipBytes,
 		jsonGzipBytes: snapshot.jsonGzipBytes,
 	};
-	return isV2
-		? { ...common, schemaVersion: "response-snapshot.v2", templateVersion: "response-snapshot-html.v2" }
-		: { ...common, schemaVersion: "response-snapshot.v1", templateVersion: "response-snapshot-html.v1" };
+	return isV3
+		? { ...common, schemaVersion: "response-snapshot.v3", templateVersion: "response-snapshot-html.v2" }
+		: isV2
+			? { ...common, schemaVersion: "response-snapshot.v2", templateVersion: "response-snapshot-html.v2" }
+			: { ...common, schemaVersion: "response-snapshot.v1", templateVersion: "response-snapshot-html.v1" };
 }
 
 function stableFailureCode(value: string): string {

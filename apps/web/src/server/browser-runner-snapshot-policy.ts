@@ -1,7 +1,11 @@
 import { statfs as nodeStatfs } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import type { SnapshotReservation } from "@workspace/lib/db/response-snapshots";
-import type { ResponseSnapshotDraft, ResponseSnapshotDraftV2 } from "@workspace/lib/response-snapshots/contract";
+import type {
+	ResponseSnapshotDraft,
+	ResponseSnapshotDraftV2,
+	ResponseSnapshotDraftV3,
+} from "@workspace/lib/response-snapshots/contract";
 import { FilesystemResponseSnapshotStorage } from "@workspace/lib/response-snapshots/filesystem-storage";
 import { recordResponseSnapshot } from "@workspace/lib/response-snapshots/service";
 
@@ -136,6 +140,20 @@ export function buildBrowserRunnerResponseSnapshotDraftV2(input: {
 }): ResponseSnapshotDraftV2 {
 	return {
 		schemaVersion: "response-snapshot.v2",
+		...buildStructuredBrowserRunnerResponseSnapshotDraft(input),
+		visualEvidence: input.visualEvidence,
+	};
+}
+
+type StructuredBrowserRunnerSnapshotInput = Omit<
+	Parameters<typeof buildBrowserRunnerResponseSnapshotDraftV2>[0],
+	"visualEvidence"
+>;
+
+function buildStructuredBrowserRunnerResponseSnapshotDraft(
+	input: StructuredBrowserRunnerSnapshotInput,
+): Omit<ResponseSnapshotDraftV2, "schemaVersion" | "visualEvidence"> {
+	return {
 		runId: input.promptRunId,
 		brandId: input.brandId,
 		scopeId: input.scopeId,
@@ -160,16 +178,31 @@ export function buildBrowserRunnerResponseSnapshotDraftV2(input: {
 		observedAt: input.observedAt.toISOString(),
 		captureMethod: "consumer_web_browser",
 		contentSource: "rendered_from_structured_response",
-		visualEvidence: input.visualEvidence,
 		adapterVersion: input.adapterVersion,
 		captureDiagnostics: input.captureDiagnostics,
+	};
+}
+
+export function buildBrowserRunnerResponseSnapshotDraftV3(
+	input: StructuredBrowserRunnerSnapshotInput & {
+		visualEvidence: ResponseSnapshotDraftV3["visualEvidence"];
+	},
+): ResponseSnapshotDraftV3 {
+	return {
+		schemaVersion: "response-snapshot.v3",
+		...buildStructuredBrowserRunnerResponseSnapshotDraft(input),
+		visualEvidence: input.visualEvidence,
 	};
 }
 
 export async function archiveBrowserRunnerResponseSnapshotBestEffort(
 	input: {
 		reservation: SnapshotReservation;
-		draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | (() => ResponseSnapshotDraft | ResponseSnapshotDraftV2);
+		draft:
+			| ResponseSnapshotDraft
+			| ResponseSnapshotDraftV2
+			| ResponseSnapshotDraftV3
+			| (() => ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3);
 		storageRoot: string;
 	},
 	dependencies: { record?: typeof recordResponseSnapshot } = {},

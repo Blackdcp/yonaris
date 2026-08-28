@@ -241,6 +241,73 @@ describe("response snapshot database policies", () => {
 		).toThrow(/exactly one attached JPEG/i);
 	});
 
+	it("reconstructs ordered complete v3 evidence and rejects missing referenced artifacts", () => {
+		const primaryId = "44444444-4444-4444-8444-444444444444";
+		const firstId = "55555555-5555-4555-8555-555555555555";
+		const secondId = "66666666-6666-4666-8666-666666666666";
+		const base = {
+			runId: "11111111-1111-4111-8111-111111111111",
+			brandId: "ppio",
+			scopeId: "22222222-2222-4222-8222-222222222222",
+			promptId: "33333333-3333-4333-8333-333333333333",
+			promptText: "What is PPIO?",
+			answerText: "PPIO provides cloud computing services.",
+			citations: [],
+			webQueries: [],
+			queryAvailability: "unavailable" as const,
+			brandMentioned: true,
+			competitorsMentioned: [],
+			channel: "doubao.consumer_web",
+			modelVersion: "consumer-web",
+			market: "CN",
+			locale: "zh-CN",
+			timezone: "Asia/Shanghai",
+			observedAt: "2026-08-20T01:02:03.000Z",
+		};
+		const captureMetadata = {
+			responseSnapshotSchemaVersion: "response-snapshot.v3",
+			adapterVersion: "doubao-web-20260828-localpc-v14",
+			queryAvailability: "unknown",
+			captureDiagnostics: {
+				answerCount: 1,
+				queryCount: 0,
+				citationCount: 0,
+				completionCount: 1,
+				extractorVersion: "doubao-search-evidence.v1",
+				evidenceSource: "dom",
+				searchBlockCount: 1,
+				queryCandidateCount: 0,
+				citationCandidateCount: 0,
+			},
+			visualEvidence: {
+				status: "complete",
+				primaryArtifactId: primaryId,
+				segmentArtifactIds: [firstId, secondId],
+				expectedSegmentCount: 2,
+				capturedSegmentCount: 2,
+			},
+		};
+		const artifacts = [
+			{ artifactId: secondId, mediaType: "image/jpeg", sha256: "c".repeat(64), bytes: 2_048 },
+			{ artifactId: primaryId, mediaType: "image/jpeg", sha256: "a".repeat(64), bytes: 4_096 },
+			{ artifactId: firstId, mediaType: "image/jpeg", sha256: "b".repeat(64), bytes: 1_024 },
+		];
+
+		const reconstructed = buildReconstructedResponseSnapshotDraft({ base, captureMetadata, visualEvidence: artifacts });
+
+		expect(reconstructed).toMatchObject({
+			schemaVersion: "response-snapshot.v3",
+			visualEvidence: {
+				status: "complete",
+				primary: { artifactId: primaryId },
+				segments: [{ artifactId: firstId }, { artifactId: secondId }],
+			},
+		});
+		expect(() =>
+			buildReconstructedResponseSnapshotDraft({ base, captureMetadata, visualEvidence: artifacts.slice(0, 2) }),
+		).toThrow(/JPEG metadata/i);
+	});
+
 	it("does not expose the unavailable query sentinel while reconstructing a stale provider snapshot", () => {
 		expect(resolveReconstructedQueryEvidence(["unavailable"], true, true)).toEqual({
 			webQueries: [],

@@ -28,6 +28,7 @@ import { BrowserRunnerSnapshotCapacityError } from "./browser-runner-snapshot-po
 
 const guid1 = "11111111-1111-4111-8111-111111111111";
 const guid2 = "22222222-2222-4222-8222-222222222222";
+const guid3 = "33333333-3333-4333-8333-333333333333";
 const futureDoubaoV8Binding = (surface: BrowserExtensionSurface, requestedAdapterVersion: string | undefined) =>
 	isBrowserExtensionAdapterVersionBindingSatisfied({
 		surface,
@@ -87,6 +88,55 @@ function observationInput() {
 			evidenceArtifactIds: [guid1, guid2],
 			citations: [],
 			webQueries: [],
+		},
+	};
+}
+
+function structuredV3ObservationInput(
+	visualEvidence: {
+		status: "complete" | "partial" | "unavailable";
+		primaryArtifactId: string | null;
+		segmentArtifactIds: string[];
+		expectedSegmentCount: number;
+		capturedSegmentCount: number;
+	} = {
+		status: "unavailable",
+		primaryArtifactId: null,
+		segmentArtifactIds: [],
+		expectedSegmentCount: 0,
+		capturedSegmentCount: 0,
+	},
+) {
+	return {
+		...observationInput(),
+		adapterVersion: "doubao-web-20260821-localpc-v13",
+		observation: {
+			answerText: "阶跃星辰是一家人工智能公司。",
+			observedAt: "2026-08-12T12:00:00.000+08:00",
+			pageUrl: "https://www.doubao.com/chat/abc",
+			sessionMode: "dedicated_sampling_profile" as const,
+			searchMode: "native_auto" as const,
+			webSearchObserved: false,
+			queryAvailability: "not_searched" as const,
+			evidenceArtifactIds: [
+				...(visualEvidence.primaryArtifactId ? [visualEvidence.primaryArtifactId] : []),
+				...visualEvidence.segmentArtifactIds,
+			],
+			citations: [],
+			webQueries: [],
+			schemaVersion: "browser-runner-observation.v3" as const,
+			visualEvidence,
+			captureDiagnostics: {
+				answerCount: 1 as const,
+				queryCount: 0,
+				citationCount: 0,
+				completionCount: 1 as const,
+				extractorVersion: "doubao-search-evidence.v1",
+				evidenceSource: "none" as const,
+				searchBlockCount: 0,
+				queryCandidateCount: 0,
+				citationCandidateCount: 0,
+			},
 		},
 	};
 }
@@ -645,6 +695,43 @@ describe("Browser Runner service contracts", () => {
 		).toBe(false);
 	});
 
+	it.each([
+		structuredV3ObservationInput(),
+		structuredV3ObservationInput({
+			status: "partial",
+			primaryArtifactId: null,
+			segmentArtifactIds: [guid1],
+			expectedSegmentCount: 2,
+			capturedSegmentCount: 1,
+		}),
+		structuredV3ObservationInput({
+			status: "complete",
+			primaryArtifactId: guid1,
+			segmentArtifactIds: [guid2, guid3],
+			expectedSegmentCount: 2,
+			capturedSegmentCount: 2,
+		}),
+	])("accepts a consistent v3 $observation.visualEvidence.status completion", (input) => {
+		expect(browserRunnerObservationSchema.safeParse(input).success).toBe(true);
+	});
+
+	it("rejects a v3 evidence manifest whose ordered ids do not match the artifacts", () => {
+		const input = structuredV3ObservationInput({
+			status: "partial",
+			primaryArtifactId: null,
+			segmentArtifactIds: [guid1],
+			expectedSegmentCount: 2,
+			capturedSegmentCount: 1,
+		});
+
+		expect(
+			browserRunnerObservationSchema.safeParse({
+				...input,
+				observation: { ...input.observation, evidenceArtifactIds: [guid2] },
+			}).success,
+		).toBe(false);
+	});
+
 	it("accepts native-auto search with an explicitly unknown observation", () => {
 		const input = observationInput();
 		expect(
@@ -770,4 +857,53 @@ describe("Browser Runner service contracts", () => {
 			).toThrow(/bounded JPEG screenshot/i);
 		},
 	);
+
+	it("accepts complete, partial, and unavailable v3 staged evidence without weakening v2", () => {
+		const metadata = (id: string, bytes: number) => ({
+			id,
+			kind: "screenshot" as const,
+			mediaType: "image/jpeg",
+			byteSize: bytes,
+			sha256: "a".repeat(64),
+		});
+		expect(
+			assertBrowserRunnerEvidenceSelection(
+				"browser_extension.doubao",
+				[metadata(guid3, 400_000), metadata(guid1, 3_000_000), metadata(guid2, 500_000)],
+				[guid1, guid2, guid3],
+				"doubao-web-20260821-localpc-v13",
+				{
+					status: "complete",
+					primaryArtifactId: guid1,
+					segmentArtifactIds: [guid2, guid3],
+					expectedSegmentCount: 2,
+					capturedSegmentCount: 2,
+				},
+			),
+		).toEqual({ artifactId: guid1, mediaType: "image/jpeg", sha256: "a".repeat(64), bytes: 3_000_000 });
+		expect(
+			assertBrowserRunnerEvidenceSelection(
+				"browser_extension.doubao",
+				[metadata(guid2, 500_000)],
+				[guid2],
+				"doubao-web-20260821-localpc-v13",
+				{
+					status: "partial",
+					primaryArtifactId: null,
+					segmentArtifactIds: [guid2],
+					expectedSegmentCount: 2,
+					capturedSegmentCount: 1,
+				},
+			),
+		).toBeNull();
+		expect(
+			assertBrowserRunnerEvidenceSelection("browser_extension.doubao", [], [], "doubao-web-20260821-localpc-v13", {
+				status: "unavailable",
+				primaryArtifactId: null,
+				segmentArtifactIds: [],
+				expectedSegmentCount: 0,
+				capturedSegmentCount: 0,
+			}),
+		).toBeNull();
+	});
 });

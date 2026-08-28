@@ -4,6 +4,7 @@ import {
 	prepareResponseSnapshotBundle,
 	type ResponseSnapshotDraft,
 	type ResponseSnapshotDraftV2,
+	type ResponseSnapshotDraftV3,
 	ResponseSnapshotValidationError,
 } from "./contract";
 
@@ -39,6 +40,45 @@ function validDraft(overrides: Partial<ResponseSnapshotDraft> = {}): ResponseSna
 		sourcePayloadSha256: "a".repeat(64),
 		...overrides,
 	};
+}
+
+function validV3Draft(status: "complete" | "partial" | "unavailable" = "complete"): ResponseSnapshotDraftV3 {
+	const primary = {
+		artifactId: "44444444-4444-4444-8444-444444444444",
+		mediaType: "image/jpeg" as const,
+		sha256: "a".repeat(64),
+		bytes: 2_000_000,
+	};
+	const segments = [
+		{
+			artifactId: "55555555-5555-4555-8555-555555555555",
+			mediaType: "image/jpeg" as const,
+			sha256: "b".repeat(64),
+			bytes: 500_000,
+		},
+		{
+			artifactId: "66666666-6666-4666-8666-666666666666",
+			mediaType: "image/jpeg" as const,
+			sha256: "c".repeat(64),
+			bytes: 600_000,
+		},
+	];
+	return {
+		...validV2Draft(),
+		schemaVersion: "response-snapshot.v3",
+		visualEvidence:
+			status === "complete"
+				? { status, primary, segments, expectedSegmentCount: 2, capturedSegmentCount: 2 }
+				: status === "partial"
+					? {
+							status,
+							primary: null,
+							segments: segments.slice(0, 1),
+							expectedSegmentCount: 2,
+							capturedSegmentCount: 1,
+						}
+					: { status, primary: null, segments: [], expectedSegmentCount: 0, capturedSegmentCount: 0 },
+	} as ResponseSnapshotDraftV3;
 }
 
 function validV2Draft(overrides: Record<string, unknown> = {}): ResponseSnapshotDraftV2 {
@@ -93,6 +133,21 @@ function validV2Draft(overrides: Record<string, unknown> = {}): ResponseSnapshot
 }
 
 describe("response snapshot contract", () => {
+	it.each(["complete", "partial", "unavailable"] as const)(
+		"serializes a structured v3 snapshot with %s visual evidence",
+		(status) => {
+			const bundle = prepareResponseSnapshotBundle(validV3Draft(status));
+			const json = JSON.parse(gunzipSync(bundle.jsonGzip).toString("utf8"));
+			const manifest = JSON.parse(Buffer.from(bundle.manifestJson).toString("utf8"));
+
+			expect(bundle.schemaVersion).toBe("response-snapshot.v3");
+			expect(bundle.templateVersion).toBe("response-snapshot-html.v2");
+			expect(json.visualEvidence.status).toBe(status);
+			expect(manifest.schemaVersion).toBe("response-snapshot-manifest.v3");
+			expect(manifest.visualEvidence).toEqual(json.visualEvidence);
+		},
+	);
+
 	it("serializes a structured v2 snapshot without provider HTML", () => {
 		const bundle = prepareResponseSnapshotBundle(validV2Draft());
 		const json = JSON.parse(gunzipSync(bundle.jsonGzip).toString("utf8"));

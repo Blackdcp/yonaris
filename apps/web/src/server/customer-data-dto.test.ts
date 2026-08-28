@@ -176,19 +176,26 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
-				snapshot: {
-					id: "snapshot-1",
-					status: "ready",
-					schemaVersion: "response-snapshot.v2",
-					contentSource: "rendered_from_structured_response",
+			snapshot: {
+				id: "snapshot-1",
+				status: "ready",
+				schemaVersion: "response-snapshot.v2",
+				contentSource: "rendered_from_structured_response",
 				createdAt: new Date("2026-08-12T11:01:30.000Z"),
 				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
 				htmlSha256: "a".repeat(64),
 				jsonSha256: "b".repeat(64),
 				visualEvidence: {
-					mediaType: "image/jpeg",
-					sha256: "c".repeat(64),
-					bytes: 12345,
+					status: "complete",
+					expectedSegmentCount: 1,
+					capturedSegmentCount: 1,
+					primary: {
+						artifactId: "22222222-2222-4222-8222-222222222222",
+						mediaType: "image/jpeg",
+						sha256: "c".repeat(64),
+						bytes: 12345,
+					},
+					segments: [],
 				},
 				storageBackend: "filesystem",
 				storageKey: "private/key",
@@ -209,19 +216,26 @@ describe("customer prompt-run DTO", () => {
 			webQueries: [],
 			brandMentioned: true,
 			competitorsMentioned: ["Competitor"],
-				snapshot: {
-					id: "snapshot-1",
-					status: "ready",
-					schemaVersion: "response-snapshot.v2",
-					contentSource: "rendered_from_structured_response",
+			snapshot: {
+				id: "snapshot-1",
+				status: "ready",
+				schemaVersion: "response-snapshot.v2",
+				contentSource: "rendered_from_structured_response",
 				createdAt: "2026-08-12T11:01:30.000Z",
 				expiresAt: "2026-11-10T11:00:00.000Z",
 				htmlSha256: "a".repeat(64),
 				jsonSha256: "b".repeat(64),
 				visualEvidence: {
-					mediaType: "image/jpeg",
-					sha256: "c".repeat(64),
-					bytes: 12345,
+					status: "complete",
+					expectedSegmentCount: 1,
+					capturedSegmentCount: 1,
+					primary: {
+						artifactId: "22222222-2222-4222-8222-222222222222",
+						mediaType: "image/jpeg",
+						sha256: "c".repeat(64),
+						bytes: 12345,
+					},
+					segments: [],
 				},
 			},
 		});
@@ -254,11 +268,65 @@ describe("customer prompt-run DTO", () => {
 				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
 				htmlSha256: "a".repeat(64),
 				jsonSha256: "b".repeat(64),
-				visualEvidence: { mediaType: "image/jpeg", sha256: "c".repeat(64), bytes: 12_345 },
+				visualEvidence: {
+					status: "complete",
+					expectedSegmentCount: 1,
+					capturedSegmentCount: 1,
+					primary: {
+						artifactId: "22222222-2222-4222-8222-222222222222",
+						mediaType: "image/jpeg",
+						sha256: "c".repeat(64),
+						bytes: 12_345,
+					},
+					segments: [],
+				},
 			},
 		} as never);
 
 		expect(dto.snapshot?.visualEvidence).toBeNull();
+	});
+
+	it("preserves ordered partial v3 evidence without inventing a composite", () => {
+		const firstId = "33333333-3333-4333-8333-333333333333";
+		const secondId = "44444444-4444-4444-8444-444444444444";
+		const dto = toCustomerPromptRunDto({
+			id: "run-v3",
+			model: "kimi",
+			version: "displayed-version",
+			observedAt: new Date("2026-08-12T11:00:00.000Z"),
+			createdAt: new Date("2026-08-12T11:01:00.000Z"),
+			webSearchEnabled: false,
+			answerText: "Partial answer",
+			webQueries: [],
+			brandMentioned: false,
+			competitorsMentioned: [],
+			snapshot: {
+				id: "snapshot-v3",
+				status: "ready",
+				schemaVersion: "response-snapshot.v3",
+				contentSource: "rendered_from_structured_response",
+				createdAt: new Date("2026-08-12T11:01:30.000Z"),
+				expiresAt: new Date("2026-11-10T11:00:00.000Z"),
+				htmlSha256: "a".repeat(64),
+				jsonSha256: "b".repeat(64),
+				visualEvidence: {
+					status: "partial",
+					expectedSegmentCount: 3,
+					capturedSegmentCount: 2,
+					primary: null,
+					segments: [
+						{ artifactId: firstId, mediaType: "image/jpeg", sha256: "c".repeat(64), bytes: 1_024 },
+						{ artifactId: secondId, mediaType: "image/jpeg", sha256: "d".repeat(64), bytes: 2_048 },
+					],
+				},
+			},
+		});
+
+		expect(dto.snapshot?.visualEvidence).toMatchObject({
+			status: "partial",
+			primary: null,
+			segments: [{ artifactId: firstId }, { artifactId: secondId }],
+		});
 	});
 
 	it("pins the prompt-runs handler to an explicit safe projection", () => {
@@ -278,8 +346,10 @@ describe("customer prompt-run DTO", () => {
 		expect(handler).toContain("evidenceArtifacts.status} = 'attached'");
 		expect(handler).toContain("evidenceArtifacts.mediaType} = 'image/jpeg'");
 		expect(handler).toContain("responseSnapshots.schemaVersion} = 'response-snapshot.v2'");
-		expect(handler).toContain("responseSnapshots.expiresAt} > now()");
-		expect(handler).not.toContain("promptRuns.rawOutput");
+		expect(handler).toContain("responseSnapshots.schemaVersion} = 'response-snapshot.v3'");
+		expect(handler).toContain("segmentArtifactIds");
+		expect(handler).toContain("responseSnapshots.expiresAt} <= now()");
+		expect(handler).not.toContain("rawOutput: promptRuns.rawOutput");
 		expect(handler).not.toContain("promptRuns.provider");
 		expect(handler).not.toContain("promptRuns.captureRouteKey");
 		expect(handler).not.toContain("observationAttemptId: promptRuns.observationAttemptId");

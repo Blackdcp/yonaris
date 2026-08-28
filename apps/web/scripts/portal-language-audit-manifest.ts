@@ -1237,7 +1237,7 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 			[
 				"apps/web/src/components/response-snapshot-panel.tsx",
 				"rendered-identifier",
-				"snapshot.visualEvidence.sha256",
+				"evidence.primary.sha256",
 				1,
 			],
 			["apps/web/src/components/response-snapshot-panel.tsx", "rendered-identifier", "snapshot.htmlSha256", 1],

@@ -1,7 +1,9 @@
 import {
+	assertBrowserRunnerVisualEvidenceProtocol,
 	assertExtensionEvidenceProtocol,
 	BROWSER_EXTENSION_SURFACES,
 	type BrowserExtensionSurface,
+	type BrowserRunnerVisualEvidence,
 	browserExtensionCaptureRoute,
 	isBrowserExtensionCaptureRoute,
 	isBrowserExtensionSurface,
@@ -55,10 +57,12 @@ import {
 	BrowserRunnerSnapshotCapacityError,
 	buildBrowserRunnerResponseSnapshotDraft,
 	buildBrowserRunnerResponseSnapshotDraftV2,
+	buildBrowserRunnerResponseSnapshotDraftV3,
 } from "./browser-runner-snapshot-policy";
 import {
 	browserRunnerLegacyObservationSchema,
 	browserRunnerStructuredObservationSchema,
+	browserRunnerStructuredObservationV3Schema,
 	prepareSamplingObservation,
 } from "./sampling-observation";
 
@@ -114,14 +118,20 @@ export const browserRunnerObservationSchema = browserRunnerLeaseSchema
 		runnerSessionId: z.string().trim().min(1).max(300),
 		adapterVersion: z.string().trim().min(1).max(100),
 		browserVersion: z.string().trim().min(1).max(200),
-		observation: z.union([browserRunnerLegacyObservationSchema, browserRunnerStructuredObservationSchema]),
+		observation: z.union([
+			browserRunnerLegacyObservationSchema,
+			browserRunnerStructuredObservationSchema,
+			browserRunnerStructuredObservationV3Schema,
+		]),
 	})
 	.superRefine((input, context) => {
 		const requiresStructuredObservation = Object.values(STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS).includes(
 			input.adapterVersion,
 		);
 		const isStructuredObservation =
-			"schemaVersion" in input.observation && input.observation.schemaVersion === "browser-runner-observation.v2";
+			"schemaVersion" in input.observation &&
+			(input.observation.schemaVersion === "browser-runner-observation.v2" ||
+				input.observation.schemaVersion === "browser-runner-observation.v3");
 		if (requiresStructuredObservation !== isStructuredObservation) {
 			context.addIssue({
 				code: "custom",
@@ -139,16 +149,44 @@ type BrowserRunnerEvidenceArtifact = {
 	sha256?: string;
 };
 
-type BrowserRunnerVisualEvidence = {
+type BrowserRunnerVisualEvidenceReference = {
 	artifactId: string;
 	mediaType: "image/jpeg";
 	sha256: string;
 	bytes: number;
 };
 
-function assertVisualEvidence(value: BrowserRunnerVisualEvidence | null): BrowserRunnerVisualEvidence {
+function assertVisualEvidence(
+	value: BrowserRunnerVisualEvidenceReference | null,
+): BrowserRunnerVisualEvidenceReference {
 	if (!value) throw new Error("Structured browser extension completion is missing its staged JPEG evidence");
 	return value;
+}
+
+function responseSnapshotVisualEvidenceV3(
+	visualEvidence: BrowserRunnerVisualEvidence,
+	artifacts: readonly BrowserRunnerEvidenceArtifact[],
+) {
+	const artifactsById = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
+	const reference = (artifactId: string) => {
+		const artifact = artifactsById.get(artifactId);
+		if (artifact?.mediaType !== "image/jpeg" || artifact.byteSize === undefined || artifact.sha256 === undefined) {
+			throw new Error("Browser extension visual evidence metadata is unavailable for snapshot archiving");
+		}
+		return {
+			artifactId,
+			mediaType: "image/jpeg" as const,
+			sha256: artifact.sha256,
+			bytes: artifact.byteSize,
+		};
+	};
+	return {
+		status: visualEvidence.status,
+		primary: visualEvidence.primaryArtifactId ? reference(visualEvidence.primaryArtifactId) : null,
+		segments: visualEvidence.segmentArtifactIds.map(reference),
+		expectedSegmentCount: visualEvidence.expectedSegmentCount,
+		capturedSegmentCount: visualEvidence.capturedSegmentCount,
+	};
 }
 
 function assertLegacyAnswerHtml(observation: z.infer<typeof browserRunnerObservationSchema>["observation"]): string {
@@ -163,10 +201,50 @@ export function assertBrowserRunnerEvidenceSelection(
 	artifacts: readonly BrowserRunnerEvidenceArtifact[],
 	evidenceArtifactIds: readonly string[],
 	adapterVersion?: string,
-): BrowserRunnerVisualEvidence | null {
+	visualEvidence?: BrowserRunnerVisualEvidence,
+): BrowserRunnerVisualEvidenceReference | null {
 	const submittedArtifactIds = new Set(evidenceArtifactIds);
-	const submittedArtifacts = artifacts.filter(({ id }) => submittedArtifactIds.has(id));
+	const artifactsById = new Map(artifacts.map((artifact) => [artifact.id, artifact]));
+	const submittedArtifacts = evidenceArtifactIds
+		.map((artifactId) => artifactsById.get(artifactId))
+		.filter((artifact): artifact is BrowserRunnerEvidenceArtifact => Boolean(artifact));
 	if (isBrowserExtensionCaptureRoute(captureRouteKey)) {
+		if (visualEvidence) {
+			if (
+				submittedArtifactIds.size !== evidenceArtifactIds.length ||
+				submittedArtifacts.length !== evidenceArtifactIds.length
+			) {
+				throw new Error("Browser extension visual evidence contains missing or duplicate staged artifacts");
+			}
+			assertBrowserRunnerVisualEvidenceProtocol({
+				visualEvidence,
+				artifactIds: evidenceArtifactIds,
+				mediaTypes: submittedArtifacts.map(({ mediaType }) => mediaType ?? ""),
+				byteSizes: submittedArtifacts.map(({ byteSize }) => byteSize ?? 0),
+			});
+			for (const artifact of submittedArtifacts) {
+				if (
+					artifact.kind !== "screenshot" ||
+					artifact.mediaType !== "image/jpeg" ||
+					artifact.byteSize === undefined ||
+					artifact.sha256 === undefined ||
+					!/^[0-9a-f]{64}$/u.test(artifact.sha256)
+				) {
+					throw new Error("Browser extension visual evidence requires valid staged JPEG metadata");
+				}
+			}
+			if (!visualEvidence.primaryArtifactId) return null;
+			const primary = artifactsById.get(visualEvidence.primaryArtifactId);
+			if (primary?.mediaType !== "image/jpeg" || primary.byteSize === undefined || primary.sha256 === undefined) {
+				throw new Error("Browser extension visual evidence primary artifact is invalid");
+			}
+			return {
+				artifactId: primary.id,
+				mediaType: primary.mediaType,
+				sha256: primary.sha256,
+				bytes: primary.byteSize,
+			};
+		}
 		if (evidenceArtifactIds.length !== 1 || submittedArtifactIds.size !== 1 || submittedArtifacts.length !== 1) {
 			throw new Error("Browser extension completion requires exactly one staged page snapshot");
 		}
@@ -628,6 +706,7 @@ export async function completeRunnerTask(
 		stagedArtifacts,
 		observation.evidenceArtifactIds,
 		input.adapterVersion,
+		"visualEvidence" in observation ? observation.visualEvidence : undefined,
 	);
 	const attempt = await claimImportedObservationAttempt({
 		sourceKey: `delivery-task:${task.id}`,
@@ -677,10 +756,14 @@ export async function completeRunnerTask(
 			competitorsMentioned: prepared.mentionResult.competitorsMentioned,
 			extractedCitations: prepared.citations,
 			deliveryClaim,
-			evidenceArtifacts: {
-				artifactIds: observation.evidenceArtifactIds,
-				uriForArtifact: (artifactId) => runnerEvidenceUrl(task.brandId, artifactId),
-			},
+			...(observation.evidenceArtifactIds.length > 0
+				? {
+						evidenceArtifacts: {
+							artifactIds: observation.evidenceArtifactIds,
+							uriForArtifact: (artifactId: string) => runnerEvidenceUrl(task.brandId, artifactId),
+						},
+					}
+				: {}),
 			reserveResponseSnapshot: snapshotCaptureEnabled,
 		});
 	} catch (error) {
@@ -710,8 +793,8 @@ export async function completeRunnerTask(
 			reservation: promptRun.snapshotReservation,
 			storageRoot: process.env.RESPONSE_SNAPSHOT_ROOT ?? "",
 			draft: () =>
-				"schemaVersion" in observation && observation.schemaVersion === "browser-runner-observation.v2"
-					? buildBrowserRunnerResponseSnapshotDraftV2({
+				"schemaVersion" in observation && observation.schemaVersion === "browser-runner-observation.v3"
+					? buildBrowserRunnerResponseSnapshotDraftV3({
 							promptRunId: promptRun.id,
 							brandId: brand.id,
 							scopeId: scope.id,
@@ -735,34 +818,62 @@ export async function completeRunnerTask(
 							timezone: scope.timezone,
 							observedAt: prepared.observedAt,
 							adapterVersion: input.adapterVersion,
-							visualEvidence: assertVisualEvidence(visualEvidence),
+							visualEvidence: responseSnapshotVisualEvidenceV3(observation.visualEvidence, stagedArtifacts),
 							captureDiagnostics: observation.captureDiagnostics,
 						})
-					: buildBrowserRunnerResponseSnapshotDraft({
-							promptRunId: promptRun.id,
-							brandId: brand.id,
-							scopeId: scope.id,
-							promptId: task.promptId,
-							promptText: task.promptText,
-							answerText: observation.answerText,
-							answerHtml: assertLegacyAnswerHtml(observation),
-							citations: prepared.citations.map((citation) => ({
-								url: citation.url,
-								title: citation.title ?? null,
-								domain: citation.domain,
-								citationIndex: citation.citationIndex,
-							})),
-							webQueries: observation.webQueries,
-							webSearchEnabled: prepared.config.webSearch,
-							brandMentioned: prepared.mentionResult.brandMentioned,
-							competitorsMentioned: prepared.mentionResult.competitorsMentioned,
-							channel: prepared.target.surfaceTargetKey,
-							modelVersion: recordedVersion,
-							market: scope.market,
-							locale: scope.locale,
-							timezone: scope.timezone,
-							observedAt: prepared.observedAt,
-						}),
+					: "schemaVersion" in observation && observation.schemaVersion === "browser-runner-observation.v2"
+						? buildBrowserRunnerResponseSnapshotDraftV2({
+								promptRunId: promptRun.id,
+								brandId: brand.id,
+								scopeId: scope.id,
+								promptId: task.promptId,
+								promptText: task.promptText,
+								answerText: observation.answerText,
+								citations: prepared.citations.map((citation) => ({
+									url: citation.url,
+									title: citation.title ?? null,
+									domain: citation.domain,
+									citationIndex: citation.citationIndex,
+								})),
+								webQueries: observation.webQueries,
+								queryAvailability: observation.queryAvailability,
+								brandMentioned: prepared.mentionResult.brandMentioned,
+								competitorsMentioned: prepared.mentionResult.competitorsMentioned,
+								channel: prepared.target.surfaceTargetKey,
+								modelVersion: recordedVersion,
+								market: scope.market,
+								locale: scope.locale,
+								timezone: scope.timezone,
+								observedAt: prepared.observedAt,
+								adapterVersion: input.adapterVersion,
+								visualEvidence: assertVisualEvidence(visualEvidence),
+								captureDiagnostics: observation.captureDiagnostics,
+							})
+						: buildBrowserRunnerResponseSnapshotDraft({
+								promptRunId: promptRun.id,
+								brandId: brand.id,
+								scopeId: scope.id,
+								promptId: task.promptId,
+								promptText: task.promptText,
+								answerText: observation.answerText,
+								answerHtml: assertLegacyAnswerHtml(observation),
+								citations: prepared.citations.map((citation) => ({
+									url: citation.url,
+									title: citation.title ?? null,
+									domain: citation.domain,
+									citationIndex: citation.citationIndex,
+								})),
+								webQueries: observation.webQueries,
+								webSearchEnabled: prepared.config.webSearch,
+								brandMentioned: prepared.mentionResult.brandMentioned,
+								competitorsMentioned: prepared.mentionResult.competitorsMentioned,
+								channel: prepared.target.surfaceTargetKey,
+								modelVersion: recordedVersion,
+								market: scope.market,
+								locale: scope.locale,
+								timezone: scope.timezone,
+								observedAt: prepared.observedAt,
+							}),
 		});
 		return {
 			duplicate: false,

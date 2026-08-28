@@ -15,6 +15,7 @@ node_modules
 
 # testing
 /coverage
+packages/lib/.auth-generator-test-*/
 
 # next.js
 .next/

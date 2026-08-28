@@ -155,6 +155,29 @@ export function toCustomerBrandDto(source: CustomerBrandSource, effectiveModels:
 	};
 }
 
+type CustomerVisualEvidenceReference = {
+	artifactId: string;
+	mediaType: "image/jpeg";
+	sha256: string;
+	bytes: number;
+};
+
+type CustomerVisualEvidence = {
+	status: "complete" | "partial" | "unavailable";
+	expectedSegmentCount: number;
+	capturedSegmentCount: number;
+	primary: CustomerVisualEvidenceReference | null;
+	segments: CustomerVisualEvidenceReference[];
+};
+
+type RawCustomerVisualEvidence = {
+	status: string;
+	expectedSegmentCount: number;
+	capturedSegmentCount: number;
+	primary: null | { artifactId: string; mediaType: string; sha256: string; bytes: number };
+	segments: Array<{ artifactId: string; mediaType: string; sha256: string; bytes: number }>;
+};
+
 export interface CustomerPromptRunDto {
 	id: string;
 	model: string;
@@ -174,11 +197,7 @@ export interface CustomerPromptRunDto {
 		expiresAt: string;
 		htmlSha256: string | null;
 		jsonSha256: string | null;
-		visualEvidence: null | {
-			mediaType: "image/jpeg";
-			sha256: string;
-			bytes: number;
-		};
+		visualEvidence: CustomerVisualEvidence | null;
 	};
 }
 
@@ -202,11 +221,7 @@ export function toCustomerPromptRunDto(input: {
 		expiresAt: Date;
 		htmlSha256: string | null;
 		jsonSha256: string | null;
-		visualEvidence: null | {
-			mediaType: string;
-			sha256: string;
-			bytes: number;
-		};
+		visualEvidence: RawCustomerVisualEvidence | null;
 	};
 }): CustomerPromptRunDto {
 	return {
@@ -229,20 +244,76 @@ export function toCustomerPromptRunDto(input: {
 					expiresAt: input.snapshot.expiresAt.toISOString(),
 					htmlSha256: input.snapshot.htmlSha256,
 					jsonSha256: input.snapshot.jsonSha256,
-					visualEvidence:
-						input.snapshot.schemaVersion === "response-snapshot.v2" &&
-						input.snapshot.visualEvidence?.mediaType === "image/jpeg" &&
-						SHA256_PATTERN.test(input.snapshot.visualEvidence.sha256) &&
-						Number.isSafeInteger(input.snapshot.visualEvidence.bytes) &&
-						input.snapshot.visualEvidence.bytes > 0 &&
-						input.snapshot.visualEvidence.bytes <= 2 * 1024 * 1024
-							? {
-									mediaType: "image/jpeg",
-									sha256: input.snapshot.visualEvidence.sha256,
-									bytes: input.snapshot.visualEvidence.bytes,
-								}
-							: null,
+					visualEvidence: normalizeCustomerVisualEvidence(input.snapshot.schemaVersion, input.snapshot.visualEvidence),
 				}
 			: null,
+	};
+}
+
+function normalizeCustomerVisualEvidence(
+	schemaVersion: string | null,
+	value: RawCustomerVisualEvidence | null,
+): CustomerVisualEvidence | null {
+	if (
+		(schemaVersion !== "response-snapshot.v2" && schemaVersion !== "response-snapshot.v3") ||
+		!value ||
+		!Array.isArray(value.segments) ||
+		!Number.isSafeInteger(value.expectedSegmentCount) ||
+		!Number.isSafeInteger(value.capturedSegmentCount)
+	) {
+		return null;
+	}
+	const reference = (item: RawCustomerVisualEvidence["primary"]): CustomerVisualEvidenceReference | null => {
+		if (
+			!item ||
+			!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(item.artifactId) ||
+			item.mediaType !== "image/jpeg" ||
+			!SHA256_PATTERN.test(item.sha256) ||
+			!Number.isSafeInteger(item.bytes) ||
+			item.bytes < 1 ||
+			item.bytes > 4 * 1024 * 1024
+		) {
+			return null;
+		}
+		return {
+			artifactId: item.artifactId,
+			mediaType: "image/jpeg",
+			sha256: item.sha256,
+			bytes: item.bytes,
+		};
+	};
+	const primary = reference(value.primary);
+	const segments = value.segments.map(reference);
+	if (segments.some((segment) => !segment)) return null;
+	const status = value.status;
+	if (status !== "complete" && status !== "partial" && status !== "unavailable") return null;
+	const stateMatches =
+		schemaVersion === "response-snapshot.v2"
+			? status === "complete" &&
+				primary !== null &&
+				segments.length === 0 &&
+				value.expectedSegmentCount === 1 &&
+				value.capturedSegmentCount === 1
+			: status === "unavailable"
+				? primary === null &&
+					segments.length === 0 &&
+					value.expectedSegmentCount === 0 &&
+					value.capturedSegmentCount === 0
+				: status === "partial"
+					? primary === null &&
+						segments.length === value.capturedSegmentCount &&
+						value.capturedSegmentCount < value.expectedSegmentCount
+					: status === "complete"
+						? primary !== null &&
+							segments.length === value.capturedSegmentCount &&
+							value.capturedSegmentCount === value.expectedSegmentCount
+						: false;
+	if (!stateMatches) return null;
+	return {
+		status,
+		expectedSegmentCount: value.expectedSegmentCount,
+		capturedSegmentCount: value.capturedSegmentCount,
+		primary,
+		segments: segments as CustomerVisualEvidenceReference[],
 	};
 }

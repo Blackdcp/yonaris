@@ -1,10 +1,16 @@
+import { createHash } from "node:crypto";
 import { Readable } from "node:stream";
 import { createGunzip } from "node:zlib";
 import { db } from "@workspace/lib/db/db";
-import { promptRuns, responseSnapshotAccessEvents, responseSnapshots } from "@workspace/lib/db/schema";
+import {
+	evidenceArtifacts,
+	promptRuns,
+	responseSnapshotAccessEvents,
+	responseSnapshots,
+} from "@workspace/lib/db/schema";
 import type { ResponseSnapshotAssetName, ResponseSnapshotStorage } from "@workspace/lib/response-snapshots/storage";
 import { type Archiver, type ArchiverError, ZipArchive } from "archiver";
-import { and, asc, eq, gt, gte, lt } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { checkBrandAccess, isAdmin, isImpersonatedSession } from "@/lib/auth/helpers";
 import { ResponseSnapshotAccessError, resolveResponseSnapshotActorAccess } from "./response-snapshots";
 
@@ -40,6 +46,9 @@ export type ResponseSnapshotExportRow = {
 	id: string;
 	promptRunId: string;
 	brandId: string;
+	scopeId: string | null;
+	observationAttemptId: string | null;
+	schemaVersion: string | null;
 	status: "pending" | "ready" | "failed" | "expired";
 	isCurrent: boolean;
 	storageBackend: "filesystem" | "kodo" | null;
@@ -53,6 +62,21 @@ export type ResponseSnapshotExportRow = {
 	htmlSha256: string | null;
 	jsonSha256: string | null;
 	manifestSha256: string | null;
+	visualEvidenceExpectedArtifactCount: number;
+	visualEvidence: ResponseSnapshotExportEvidence[];
+};
+
+export type ResponseSnapshotExportEvidence = {
+	artifactId: string;
+	role: "primary" | "segment";
+	position: number;
+	bytes: number;
+	sha256: string;
+};
+
+export type ResponseSnapshotExportEvidenceArtifact = ResponseSnapshotExportEvidence & {
+	mediaType: "image/jpeg";
+	content: Buffer;
 };
 
 type SnapshotSession = {
@@ -151,6 +175,42 @@ export function assertResponseSnapshotExportRows(
 				throw new ResponseSnapshotExportPolicyError("Export contains invalid artifact hashes");
 			}
 		}
+		const evidenceIds = new Set<string>();
+		if (
+			!Number.isSafeInteger(row.visualEvidenceExpectedArtifactCount) ||
+			row.visualEvidenceExpectedArtifactCount < 0 ||
+			row.visualEvidenceExpectedArtifactCount > 19 ||
+			row.visualEvidence.length !== row.visualEvidenceExpectedArtifactCount
+		) {
+			throw new ResponseSnapshotExportPolicyError("Export contains incomplete visual evidence metadata");
+		}
+		let previousSegmentPosition = 0;
+		for (const [index, evidence] of row.visualEvidence.entries()) {
+			const maximumBytes = evidence.role === "primary" ? 4 * 1024 * 1024 : 1024 * 1024;
+			const validPosition =
+				evidence.role === "primary"
+					? evidence.position === 0 && index === 0
+					: Number.isSafeInteger(evidence.position) &&
+						evidence.position > previousSegmentPosition &&
+						evidence.position <= 18;
+			if (
+				!validPosition ||
+				evidenceIds.has(evidence.artifactId) ||
+				!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(evidence.artifactId) ||
+				!/^[0-9a-f]{64}$/u.test(evidence.sha256) ||
+				!Number.isSafeInteger(evidence.bytes) ||
+				evidence.bytes < 1 ||
+				evidence.bytes > maximumBytes
+			) {
+				throw new ResponseSnapshotExportPolicyError("Export contains invalid visual evidence metadata");
+			}
+			evidenceIds.add(evidence.artifactId);
+			if (evidence.role === "segment") previousSegmentPosition = evidence.position;
+			uncompressedBytes += evidence.bytes;
+			if (!Number.isSafeInteger(uncompressedBytes) || uncompressedBytes >= RESPONSE_SNAPSHOT_EXPORT_MAX_BYTES) {
+				throw new ResponseSnapshotExportPolicyError("Export exceeds 2 GiB; split the export by month");
+			}
+		}
 	}
 	return { count: rows.length, uncompressedBytes };
 }
@@ -181,6 +241,9 @@ export async function loadResponseSnapshotExportRows(
 			id: responseSnapshots.id,
 			promptRunId: responseSnapshots.promptRunId,
 			brandId: responseSnapshots.brandId,
+			scopeId: responseSnapshots.scopeId,
+			observationAttemptId: promptRuns.observationAttemptId,
+			schemaVersion: responseSnapshots.schemaVersion,
 			status: responseSnapshots.status,
 			isCurrent: responseSnapshots.isCurrent,
 			storageBackend: responseSnapshots.storageBackend,
@@ -194,6 +257,68 @@ export async function loadResponseSnapshotExportRows(
 			htmlSha256: responseSnapshots.htmlSha256,
 			jsonSha256: responseSnapshots.jsonSha256,
 			manifestSha256: responseSnapshots.manifestSha256,
+			visualEvidenceExpectedArtifactCount: sql<number>`CASE
+				WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v2' THEN 1
+				WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v3' THEN
+					CASE WHEN ${promptRuns.rawOutput}->'visualEvidence'->>'primaryArtifactId' IS NULL THEN 0 ELSE 1 END
+					+ json_array_length(COALESCE(${promptRuns.rawOutput}->'visualEvidence'->'segmentArtifactIds', '[]'::json))
+				ELSE 0
+			END`,
+			visualEvidence: sql<ResponseSnapshotExportEvidence[]>`CASE
+				WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v2' THEN COALESCE((
+					SELECT json_agg(json_build_object(
+						'artifactId', v2_artifact.id,
+						'role', 'primary',
+						'position', 0,
+						'bytes', v2_artifact.byte_size,
+						'sha256', v2_artifact.sha256
+					))
+					FROM (
+						SELECT artifact.id, artifact.byte_size, artifact.sha256
+						FROM evidence_artifacts AS artifact
+						WHERE artifact.observation_attempt_id = ${promptRuns.observationAttemptId}
+							AND artifact.brand_id = ${responseSnapshots.brandId}
+							AND artifact.scope_id IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+							AND artifact.kind = 'screenshot'
+							AND artifact.status = 'attached'
+							AND artifact.media_type = 'image/jpeg'
+						ORDER BY artifact.created_at, artifact.id
+						LIMIT 1
+					) AS v2_artifact
+				), '[]'::json)
+				WHEN ${responseSnapshots.schemaVersion} = 'response-snapshot.v3' THEN COALESCE((
+					SELECT json_agg(
+						json_build_object(
+							'artifactId', artifact.id,
+							'role', evidence_ref.role,
+							'position', evidence_ref.position,
+							'bytes', artifact.byte_size,
+							'sha256', artifact.sha256
+						)
+						ORDER BY evidence_ref.position
+					)
+					FROM (
+						SELECT
+							${promptRuns.rawOutput}->'visualEvidence'->>'primaryArtifactId' AS artifact_id,
+							'primary'::text AS role,
+							0::bigint AS position
+						WHERE ${promptRuns.rawOutput}->'visualEvidence'->>'primaryArtifactId' IS NOT NULL
+						UNION ALL
+						SELECT segment_ref.artifact_id, 'segment'::text, segment_ref.ordinality
+						FROM jsonb_array_elements_text(
+							COALESCE((${promptRuns.rawOutput}->'visualEvidence'->'segmentArtifactIds')::jsonb, '[]'::jsonb)
+						) WITH ORDINALITY AS segment_ref(artifact_id, ordinality)
+					) AS evidence_ref
+					JOIN evidence_artifacts AS artifact ON artifact.id::text = evidence_ref.artifact_id
+					WHERE artifact.observation_attempt_id = ${promptRuns.observationAttemptId}
+						AND artifact.brand_id = ${responseSnapshots.brandId}
+						AND artifact.scope_id IS NOT DISTINCT FROM ${responseSnapshots.scopeId}
+						AND artifact.kind = 'screenshot'
+						AND artifact.status = 'attached'
+						AND artifact.media_type = 'image/jpeg'
+				), '[]'::json)
+				ELSE '[]'::json
+			END`,
 		})
 		.from(responseSnapshots)
 		.innerJoin(promptRuns, eq(promptRuns.id, responseSnapshots.promptRunId))
@@ -209,6 +334,47 @@ export async function loadResponseSnapshotExportRows(
 			),
 		)
 		.orderBy(asc(responseSnapshots.observedAt), asc(responseSnapshots.id));
+}
+
+export async function loadResponseSnapshotExportEvidenceArtifacts(
+	row: ResponseSnapshotExportRow,
+): Promise<ResponseSnapshotExportEvidenceArtifact[]> {
+	if (row.visualEvidence.length === 0) return [];
+	if (!row.observationAttemptId) {
+		throw new ResponseSnapshotExportPolicyError("Snapshot visual evidence has no observation attempt");
+	}
+	const scopeCondition = row.scopeId ? eq(evidenceArtifacts.scopeId, row.scopeId) : isNull(evidenceArtifacts.scopeId);
+	const rows = await db
+		.select({
+			artifactId: evidenceArtifacts.id,
+			mediaType: evidenceArtifacts.mediaType,
+			sha256: evidenceArtifacts.sha256,
+			bytes: evidenceArtifacts.byteSize,
+			content: evidenceArtifacts.content,
+		})
+		.from(evidenceArtifacts)
+		.where(
+			and(
+				inArray(
+					evidenceArtifacts.id,
+					row.visualEvidence.map((evidence) => evidence.artifactId),
+				),
+				eq(evidenceArtifacts.observationAttemptId, row.observationAttemptId),
+				eq(evidenceArtifacts.brandId, row.brandId),
+				scopeCondition,
+				eq(evidenceArtifacts.kind, "screenshot"),
+				eq(evidenceArtifacts.status, "attached"),
+				eq(evidenceArtifacts.mediaType, "image/jpeg"),
+			),
+		);
+	const rowsById = new Map(rows.map((artifact) => [artifact.artifactId, artifact]));
+	return row.visualEvidence.map((evidence) => {
+		const artifact = rowsById.get(evidence.artifactId);
+		if (artifact?.mediaType !== "image/jpeg") {
+			throw new ResponseSnapshotExportPolicyError("Snapshot visual evidence changed after export preflight");
+		}
+		return { ...evidence, mediaType: "image/jpeg", content: Buffer.from(artifact.content) };
+	});
 }
 
 export async function acquireResponseSnapshotExportLock(actorUserId: string): Promise<ResponseSnapshotExportLock> {
@@ -245,6 +411,7 @@ export async function acquireResponseSnapshotExportLock(actorUserId: string): Pr
 export function createResponseSnapshotExportArchive(input: {
 	rows: readonly ResponseSnapshotExportRow[];
 	storage: Pick<ResponseSnapshotStorage, "get">;
+	loadEvidenceArtifacts?: (row: ResponseSnapshotExportRow) => Promise<ResponseSnapshotExportEvidenceArtifact[]>;
 	onArchived?: () => Promise<void>;
 }) {
 	const archive = new ZipArchive({ zlib: { level: 6 } });
@@ -289,6 +456,7 @@ async function populateArchive(
 	input: {
 		rows: readonly ResponseSnapshotExportRow[];
 		storage: Pick<ResponseSnapshotStorage, "get">;
+		loadEvidenceArtifacts?: (row: ResponseSnapshotExportRow) => Promise<ResponseSnapshotExportEvidenceArtifact[]>;
 		onArchived?: () => Promise<void>;
 	},
 ): Promise<void> {
@@ -307,6 +475,34 @@ async function populateArchive(
 			const body = Readable.from(Buffer.from(asset.body));
 			const source = asset.contentEncoding === "gzip" ? body.pipe(createGunzip()) : body;
 			await appendArchiveEntry(archive, source, buildResponseSnapshotExportEntryPath(row, assetName));
+		}
+		const evidenceArtifacts = await (input.loadEvidenceArtifacts ?? loadResponseSnapshotExportEvidenceArtifacts)(row);
+		if (evidenceArtifacts.length !== row.visualEvidence.length) {
+			throw new ResponseSnapshotExportPolicyError("Snapshot visual evidence changed after export preflight");
+		}
+		for (const [index, expected] of row.visualEvidence.entries()) {
+			const evidence = evidenceArtifacts[index];
+			if (
+				!evidence ||
+				evidence.artifactId !== expected.artifactId ||
+				evidence.role !== expected.role ||
+				evidence.position !== expected.position ||
+				evidence.mediaType !== "image/jpeg" ||
+				evidence.sha256 !== expected.sha256 ||
+				evidence.bytes !== expected.bytes ||
+				evidence.content.byteLength !== expected.bytes ||
+				evidence.content[0] !== 0xff ||
+				evidence.content[1] !== 0xd8 ||
+				evidence.content[2] !== 0xff ||
+				createHash("sha256").update(evidence.content).digest("hex") !== expected.sha256
+			) {
+				throw new ResponseSnapshotExportPolicyError("Snapshot visual evidence changed after export preflight");
+			}
+			await appendArchiveEntry(
+				archive,
+				Readable.from(evidence.content),
+				buildResponseSnapshotExportEvidenceEntryPath(row, evidence),
+			);
 		}
 	}
 	await input.onArchived?.();
@@ -341,6 +537,19 @@ export function buildResponseSnapshotExportEntryPath(
 	assertSafeSegment(row.channel, "channel");
 	assertSafeSegment(row.promptRunId, "run id");
 	const fileName = asset === "manifest" ? "manifest.json" : `snapshot.${asset}`;
+	return `${beijingDate(row.observedAt)}/${row.channel}/${row.promptRunId}/${fileName}`;
+}
+
+export function buildResponseSnapshotExportEvidenceEntryPath(
+	row: Pick<ResponseSnapshotExportRow, "observedAt" | "channel" | "promptRunId">,
+	evidence: Pick<ResponseSnapshotExportEvidence, "role" | "position">,
+): string {
+	assertSafeSegment(row.channel, "channel");
+	assertSafeSegment(row.promptRunId, "run id");
+	const fileName =
+		evidence.role === "primary"
+			? "evidence/complete.jpg"
+			: `evidence/segment-${String(evidence.position).padStart(3, "0")}.jpg`;
 	return `${beijingDate(row.observedAt)}/${row.channel}/${row.promptRunId}/${fileName}`;
 }
 

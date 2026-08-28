@@ -25,9 +25,27 @@ describe("response snapshot HTTP contract", () => {
 			asset: "screenshot",
 			download: false,
 		});
+		const artifactId = "22222222-2222-4222-8222-222222222222";
+		expect(
+			parseResponseSnapshotAssetSelector(
+				new URL(`https://portal.example/snapshot?asset=screenshot&download=1&artifactId=${artifactId}`),
+			),
+		).toEqual({ asset: "screenshot", download: true, artifactId });
 		for (const search of ["asset=../../secret", "asset=html&download=yes", "asset=html&extra=1"]) {
 			expect(() => parseResponseSnapshotAssetSelector(new URL(`https://portal.example/snapshot?${search}`))).toThrow();
 		}
+		expect(() =>
+			parseResponseSnapshotAssetSelector(
+				new URL(
+					"https://portal.example/snapshot?asset=html&download=0&artifactId=22222222-2222-4222-8222-222222222222",
+				),
+			),
+		).toThrow();
+		expect(() =>
+			parseResponseSnapshotAssetSelector(
+				new URL("https://portal.example/snapshot?asset=screenshot&download=0&artifactId=not-a-guid"),
+			),
+		).toThrow();
 	});
 
 	it("sandboxes inline HTML and disables caching and MIME sniffing", () => {

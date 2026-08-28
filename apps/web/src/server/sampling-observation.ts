@@ -137,9 +137,112 @@ export const browserRunnerStructuredObservationSchema = samplingObservationBaseS
 		}
 	});
 
+const browserRunnerVisualEvidenceSchema = z
+	.object({
+		status: z.enum(["complete", "partial", "unavailable"]),
+		primaryArtifactId: z.guid().nullable(),
+		segmentArtifactIds: z.array(z.guid()).max(18),
+		expectedSegmentCount: z.number().int().min(0).max(10_000),
+		capturedSegmentCount: z.number().int().min(0).max(18),
+	})
+	.strict();
+
+export const browserRunnerStructuredObservationV3Schema = samplingObservationBaseSchema
+	.extend({
+		schemaVersion: z.literal("browser-runner-observation.v3"),
+		evidenceArtifactIds: z.array(z.guid()).max(19),
+		queryAvailability: z.enum(["exposed", "unavailable", "not_searched", "unknown"]),
+		citations: z.array(structuredCitationSchema).max(200).default([]),
+		captureDiagnostics: z
+			.object({
+				answerCount: z.literal(1),
+				queryCount: z.number().int().min(0).max(100),
+				citationCount: z.number().int().min(0).max(200),
+				completionCount: z.literal(1),
+				extractorVersion: z.string().trim().min(1).max(100),
+				evidenceSource: z.enum(["dom", "network", "dom_and_network", "none"]),
+				searchBlockCount: z.number().int().min(0).max(10_000),
+				queryCandidateCount: z.number().int().min(0).max(10_000),
+				citationCandidateCount: z.number().int().min(0).max(10_000),
+			})
+			.strict(),
+		visualEvidence: browserRunnerVisualEvidenceSchema,
+	})
+	.superRefine((observation, context) => {
+		if (observation.captureDiagnostics.queryCount !== observation.webQueries.length) {
+			context.addIssue({ code: "custom", path: ["captureDiagnostics", "queryCount"], message: "Query count mismatch" });
+		}
+		if (observation.captureDiagnostics.citationCount !== observation.citations.length) {
+			context.addIssue({
+				code: "custom",
+				path: ["captureDiagnostics", "citationCount"],
+				message: "Citation count mismatch",
+			});
+		}
+		const expectedAvailability =
+			observation.queryAvailability === "exposed"
+				? observation.webSearchObserved === true && observation.webQueries.length > 0
+				: observation.queryAvailability === "unavailable"
+					? observation.webSearchObserved === true && observation.webQueries.length === 0
+					: observation.queryAvailability === "not_searched"
+						? observation.webSearchObserved === false && observation.webQueries.length === 0
+						: observation.webSearchObserved === null && observation.webQueries.length === 0;
+		if (!expectedAvailability) {
+			context.addIssue({
+				code: "custom",
+				path: ["queryAvailability"],
+				message: "Query availability is inconsistent with observed search evidence",
+			});
+		}
+		const citationUrls = new Set<string>();
+		for (const [index, citation] of observation.citations.entries()) {
+			const canonicalUrl = new URL(citation.url).href;
+			if (citationUrls.has(canonicalUrl)) {
+				context.addIssue({
+					code: "custom",
+					path: ["citations", index, "url"],
+					message: "Citation URLs must be unique",
+				});
+			}
+			citationUrls.add(canonicalUrl);
+		}
+		const evidence = observation.visualEvidence;
+		const declaredIds = [
+			...(evidence.primaryArtifactId ? [evidence.primaryArtifactId] : []),
+			...evidence.segmentArtifactIds,
+		];
+		const idsMatch =
+			declaredIds.length === observation.evidenceArtifactIds.length &&
+			declaredIds.every((id, index) => id === observation.evidenceArtifactIds[index]) &&
+			new Set(declaredIds).size === declaredIds.length;
+		const countMatches =
+			evidence.segmentArtifactIds.length === evidence.capturedSegmentCount &&
+			evidence.capturedSegmentCount <= evidence.expectedSegmentCount;
+		const stateMatches =
+			evidence.status === "unavailable"
+				? evidence.primaryArtifactId === null &&
+					evidence.segmentArtifactIds.length === 0 &&
+					evidence.expectedSegmentCount === 0 &&
+					evidence.capturedSegmentCount === 0
+				: evidence.status === "partial"
+					? evidence.primaryArtifactId === null &&
+						evidence.capturedSegmentCount > 0 &&
+						evidence.capturedSegmentCount < evidence.expectedSegmentCount
+					: evidence.primaryArtifactId !== null &&
+						evidence.expectedSegmentCount > 0 &&
+						evidence.capturedSegmentCount === evidence.expectedSegmentCount;
+		if (!idsMatch || !countMatches || !stateMatches) {
+			context.addIssue({ code: "custom", path: ["visualEvidence"], message: "Visual evidence is inconsistent" });
+		}
+	});
+
 export type BrowserRunnerLegacyObservation = z.infer<typeof browserRunnerLegacyObservationSchema>;
 export type BrowserRunnerStructuredObservation = z.infer<typeof browserRunnerStructuredObservationSchema>;
-export type BrowserRunnerObservation = BrowserRunnerLegacyObservation | BrowserRunnerStructuredObservation;
+export type BrowserRunnerStructuredObservationV3 = z.infer<typeof browserRunnerStructuredObservationV3Schema>;
+export type BrowserRunnerObservation =
+	| BrowserRunnerLegacyObservation
+	| BrowserRunnerStructuredObservation
+	| BrowserRunnerStructuredObservationV3;
 
 export const samplingObservationInputSchema = samplingObservationBaseSchema.extend({
 	operatorAttested: z.literal(true),
@@ -164,8 +267,16 @@ function normalizeCitations(input: SamplingObservationBase["citations"]): Citati
 	return normalized;
 }
 
-function assertEvidencePolicy(input: SamplingObservationBase, protocol: DeliveryProtocol): void {
-	if (input.evidenceArtifactIds.length < protocol.evidence.minimumArtifacts) {
+function assertEvidencePolicy(
+	input: SamplingObservationBase & {
+		schemaVersion?: "browser-runner-observation.v2" | "browser-runner-observation.v3";
+	},
+	protocol: DeliveryProtocol,
+): void {
+	if (
+		input.schemaVersion !== "browser-runner-observation.v3" &&
+		input.evidenceArtifactIds.length < protocol.evidence.minimumArtifacts
+	) {
 		throw new Error(`At least ${protocol.evidence.minimumArtifacts} evidence artifact(s) are required`);
 	}
 	if (new Set(input.evidenceArtifactIds).size !== input.evidenceArtifactIds.length) {
@@ -199,9 +310,10 @@ export function prepareSamplingObservation(input: {
 	observation: SamplingObservationBase & {
 		operatorAttested?: true;
 		answerHtml?: string;
-		schemaVersion?: "browser-runner-observation.v2";
+		schemaVersion?: "browser-runner-observation.v2" | "browser-runner-observation.v3";
 		queryAvailability?: BrowserRunnerStructuredObservation["queryAvailability"];
 		captureDiagnostics?: BrowserRunnerStructuredObservation["captureDiagnostics"];
+		visualEvidence?: BrowserRunnerStructuredObservationV3["visualEvidence"];
 	};
 	captureActor?:
 		| { kind: "operator"; id: string }
@@ -277,15 +389,18 @@ export function prepareSamplingObservation(input: {
 		webSearch: input.observation.searchMode !== "off",
 	};
 	const structuredCaptureDiagnostics =
-		input.observation.schemaVersion === "browser-runner-observation.v2"
+		input.observation.schemaVersion === "browser-runner-observation.v2" ||
+		input.observation.schemaVersion === "browser-runner-observation.v3"
 			? input.observation.captureDiagnostics
 			: undefined;
 	const structuredQueryAvailability =
-		input.observation.schemaVersion === "browser-runner-observation.v2"
+		input.observation.schemaVersion === "browser-runner-observation.v2" ||
+		input.observation.schemaVersion === "browser-runner-observation.v3"
 			? input.observation.queryAvailability
 			: undefined;
 	if (
-		input.observation.schemaVersion === "browser-runner-observation.v2" &&
+		(input.observation.schemaVersion === "browser-runner-observation.v2" ||
+			input.observation.schemaVersion === "browser-runner-observation.v3") &&
 		(!structuredCaptureDiagnostics || !structuredQueryAvailability)
 	) {
 		throw new Error("Structured Browser Runner observations require search evidence metadata");
@@ -319,11 +434,18 @@ export function prepareSamplingObservation(input: {
 					localizationRegistrationSource: "server_bound_runner_registration",
 				}
 			: {}),
-		...(input.observation.schemaVersion === "browser-runner-observation.v2"
+		...(input.observation.schemaVersion === "browser-runner-observation.v2" ||
+		input.observation.schemaVersion === "browser-runner-observation.v3"
 			? {
-					responseSnapshotSchemaVersion: "response-snapshot.v2",
+					responseSnapshotSchemaVersion:
+						input.observation.schemaVersion === "browser-runner-observation.v3"
+							? "response-snapshot.v3"
+							: "response-snapshot.v2",
 					queryAvailability: structuredQueryAvailability,
 					captureDiagnostics: structuredCaptureDiagnostics,
+					...(input.observation.schemaVersion === "browser-runner-observation.v3"
+						? { visualEvidence: input.observation.visualEvidence }
+						: {}),
 				}
 			: {}),
 	};
@@ -331,12 +453,19 @@ export function prepareSamplingObservation(input: {
 	// archive representation that can contain harmless renderer attributes. Neither
 	// changes metric identity; evidence ownership and HTML integrity are validated
 	// independently before persistence.
-	const { answerHtml, captureDiagnostics, evidenceArtifactIds, schemaVersion, ...fingerprintedObservation } =
-		input.observation;
+	const {
+		answerHtml,
+		captureDiagnostics,
+		evidenceArtifactIds,
+		schemaVersion,
+		visualEvidence,
+		...fingerprintedObservation
+	} = input.observation;
 	void answerHtml;
 	void captureDiagnostics;
 	void evidenceArtifactIds;
 	void schemaVersion;
+	void visualEvidence;
 	const sampleFingerprint = createHash("sha256")
 		.update(JSON.stringify({ taskId: input.task.id, observation: fingerprintedObservation }))
 		.digest("hex");
@@ -359,6 +488,9 @@ export function prepareSamplingObservation(input: {
 			citations,
 			deliveryBatchId: input.task.batchId,
 			deliveryTaskId: input.task.id,
+			...(input.observation.schemaVersion === "browser-runner-observation.v3"
+				? { visualEvidence: input.observation.visualEvidence }
+				: {}),
 		},
 	};
 }

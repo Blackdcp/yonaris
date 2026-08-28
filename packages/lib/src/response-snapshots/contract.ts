@@ -7,6 +7,9 @@ const MAX_HTML_BYTES = 4 * 1024 * 1024;
 const MAX_JSON_BYTES = 4 * 1024 * 1024;
 const MAX_COMPRESSED_BUNDLE_BYTES = 8 * 1024 * 1024;
 const MAX_SCREENSHOT_BYTES = 2 * 1024 * 1024;
+const MAX_PRIMARY_SCREENSHOT_BYTES = 4 * 1024 * 1024;
+const MAX_SEGMENT_SCREENSHOT_BYTES = 1024 * 1024;
+const MAX_VISUAL_EVIDENCE_BYTES = 6 * 1024 * 1024;
 const SHA256_PATTERN = /^[0-9a-f]{64}$/u;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 
@@ -83,6 +86,19 @@ export type ResponseSnapshotDraftV2 = Omit<
 	answerHtml?: never;
 };
 
+export type ResponseSnapshotVisualEvidenceV3 = {
+	status: "complete" | "partial" | "unavailable";
+	primary: ResponseSnapshotVisualEvidence | null;
+	segments: ResponseSnapshotVisualEvidence[];
+	expectedSegmentCount: number;
+	capturedSegmentCount: number;
+};
+
+export type ResponseSnapshotDraftV3 = Omit<ResponseSnapshotDraftV2, "schemaVersion" | "visualEvidence"> & {
+	schemaVersion: "response-snapshot.v3";
+	visualEvidence: ResponseSnapshotVisualEvidenceV3;
+};
+
 type PreparedResponseSnapshotBundleBase = {
 	runId: string;
 	brandId: string;
@@ -113,6 +129,10 @@ export type PreparedResponseSnapshotBundle = PreparedResponseSnapshotBundleBase 
 				schemaVersion: "response-snapshot.v2";
 				templateVersion: "response-snapshot-html.v2";
 		  }
+		| {
+				schemaVersion: "response-snapshot.v3";
+				templateVersion: "response-snapshot-html.v2";
+		  }
 	);
 
 export class ResponseSnapshotValidationError extends Error {
@@ -129,10 +149,12 @@ export function isResponseSnapshotBundleSizeError(error: unknown): error is Resp
 }
 
 export function prepareResponseSnapshotBundle(
-	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2,
+	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3,
 ): PreparedResponseSnapshotBundle {
 	const normalized = normalizeDraft(draft);
 	const v2 = isV2Draft(normalized);
+	const v3 = isV3Draft(normalized);
+	const structured = v2 || v3;
 	const commonSnapshotJson = {
 		runId: normalized.runId,
 		brandId: normalized.brandId,
@@ -161,9 +183,9 @@ export function prepareResponseSnapshotBundle(
 		contentSource: normalized.contentSource,
 		sourcePayloadSha256: normalized.sourcePayloadSha256 ?? null,
 	} as const;
-	const snapshotJson = v2
+	const snapshotJson = structured
 		? {
-				schemaVersion: "response-snapshot.v2" as const,
+				schemaVersion: normalized.schemaVersion,
 				...commonSnapshotJson,
 				visualEvidence: normalized.visualEvidence,
 				adapterVersion: normalized.adapterVersion,
@@ -210,7 +232,7 @@ export function prepareResponseSnapshotBundle(
 		citations: normalized.citations,
 	};
 	const htmlBytes = utf8(
-		v2
+		structured
 			? renderStructuredResponseSnapshotHtml(htmlInput)
 			: renderResponseSnapshotHtml({ ...htmlInput, answerHtml: normalized.answerHtml }),
 	);
@@ -244,9 +266,9 @@ export function prepareResponseSnapshotBundle(
 			},
 		},
 	} as const;
-	const manifest = v2
+	const manifest = structured
 		? {
-				schemaVersion: "response-snapshot-manifest.v2" as const,
+				schemaVersion: v3 ? ("response-snapshot-manifest.v3" as const) : ("response-snapshot-manifest.v2" as const),
 				...commonManifest,
 				visualEvidence: normalized.visualEvidence,
 			}
@@ -281,16 +303,22 @@ export function prepareResponseSnapshotBundle(
 				schemaVersion: "response-snapshot.v2",
 				templateVersion: "response-snapshot-html.v2",
 			}
-		: {
-				...prepared,
-				schemaVersion: "response-snapshot.v1",
-				templateVersion: "response-snapshot-html.v1",
-			};
+		: v3
+			? {
+					...prepared,
+					schemaVersion: "response-snapshot.v3",
+					templateVersion: "response-snapshot-html.v2",
+				}
+			: {
+					...prepared,
+					schemaVersion: "response-snapshot.v1",
+					templateVersion: "response-snapshot-html.v1",
+				};
 }
 
 function normalizeDraft(
-	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2,
-): ResponseSnapshotDraft | ResponseSnapshotDraftV2 {
+	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3,
+): ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3 {
 	const runId = requiredText(draft.runId, "runId", 100);
 	const brandId = requiredText(draft.brandId, "brandId", 300);
 	const promptId = requiredText(draft.promptId, "promptId", 100);
@@ -302,15 +330,17 @@ function normalizeDraft(
 		throw new ResponseSnapshotValidationError(`answerText exceeds ${MAX_ANSWER_CHARACTERS} characters`);
 	}
 	const v2 = isV2Draft(draft);
-	if (v2 && "answerHtml" in draft) {
-		throw new ResponseSnapshotValidationError("response-snapshot.v2 must not contain answerHtml");
+	const v3 = isV3Draft(draft);
+	const structured = v2 || v3;
+	if (structured && "answerHtml" in draft) {
+		throw new ResponseSnapshotValidationError("Structured response snapshots must not contain answerHtml");
 	}
-	if (v2 && draft.contentSource !== "rendered_from_structured_response") {
+	if (structured && draft.contentSource !== "rendered_from_structured_response") {
 		throw new ResponseSnapshotValidationError(
-			"response-snapshot.v2 contentSource must be rendered_from_structured_response",
+			"Structured response snapshot contentSource must be rendered_from_structured_response",
 		);
 	}
-	const answerHtml = v2 || draft.answerHtml === undefined ? undefined : String(draft.answerHtml);
+	const answerHtml = structured || draft.answerHtml === undefined ? undefined : String(draft.answerHtml);
 	if (
 		(draft.contentSource === "native_answer_html" || draft.contentSource === "browser_answer_html") &&
 		!answerHtml?.trim()
@@ -323,9 +353,13 @@ function normalizeDraft(
 	if (draft.sourcePayloadSha256 !== undefined && !SHA256_PATTERN.test(draft.sourcePayloadSha256)) {
 		throw new ResponseSnapshotValidationError("sourcePayloadSha256 must be a lowercase SHA-256 digest");
 	}
-	const visualEvidence = v2 ? normalizeVisualEvidence(draft.visualEvidence) : undefined;
-	const adapterVersion = v2 ? requiredText(draft.adapterVersion, "adapterVersion", 100) : undefined;
-	const captureDiagnostics = v2 ? normalizeCaptureDiagnostics(draft.captureDiagnostics, draft) : undefined;
+	const visualEvidence = v2
+		? normalizeVisualEvidence(draft.visualEvidence)
+		: v3
+			? normalizeVisualEvidenceV3(draft.visualEvidence)
+			: undefined;
+	const adapterVersion = structured ? requiredText(draft.adapterVersion, "adapterVersion", 100) : undefined;
+	const captureDiagnostics = structured ? normalizeCaptureDiagnostics(draft.captureDiagnostics, draft) : undefined;
 	if (draft.queryAvailability !== "available" && draft.webQueries.length > 0) {
 		throw new ResponseSnapshotValidationError("Unavailable query fan-out cannot contain query strings");
 	}
@@ -388,6 +422,17 @@ function normalizeDraft(
 			captureDiagnostics: captureDiagnostics as ResponseSnapshotCaptureDiagnostics,
 		};
 	}
+	if (v3) {
+		return {
+			...common,
+			schemaVersion: "response-snapshot.v3" as const,
+			contentSource: "rendered_from_structured_response" as const,
+			queryAvailability: draft.queryAvailability,
+			visualEvidence: visualEvidence as ResponseSnapshotVisualEvidenceV3,
+			adapterVersion: adapterVersion as string,
+			captureDiagnostics: captureDiagnostics as ResponseSnapshotCaptureDiagnostics,
+		};
+	}
 	return {
 		...common,
 		answerHtml,
@@ -396,8 +441,16 @@ function normalizeDraft(
 	};
 }
 
-function isV2Draft(draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2): draft is ResponseSnapshotDraftV2 {
+function isV2Draft(
+	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3,
+): draft is ResponseSnapshotDraftV2 {
 	return "schemaVersion" in draft && draft.schemaVersion === "response-snapshot.v2";
+}
+
+function isV3Draft(
+	draft: ResponseSnapshotDraft | ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3,
+): draft is ResponseSnapshotDraftV3 {
+	return "schemaVersion" in draft && draft.schemaVersion === "response-snapshot.v3";
 }
 
 function normalizeVisualEvidence(value: ResponseSnapshotVisualEvidence | undefined): ResponseSnapshotVisualEvidence {
@@ -419,9 +472,69 @@ function normalizeVisualEvidence(value: ResponseSnapshotVisualEvidence | undefin
 	return { ...value };
 }
 
+function normalizeVisualEvidenceV3(value: ResponseSnapshotVisualEvidenceV3): ResponseSnapshotVisualEvidenceV3 {
+	if (!value || typeof value !== "object" || !Array.isArray(value.segments)) {
+		throw new ResponseSnapshotValidationError("visualEvidence is required for response-snapshot.v3");
+	}
+	const primary = value.primary
+		? normalizeVisualEvidenceReference(value.primary, MAX_PRIMARY_SCREENSHOT_BYTES, "visualEvidence.primary")
+		: null;
+	const segments = value.segments.map((segment, index) =>
+		normalizeVisualEvidenceReference(segment, MAX_SEGMENT_SCREENSHOT_BYTES, `visualEvidence.segments[${index}]`),
+	);
+	const ids = [...(primary ? [primary.artifactId] : []), ...segments.map(({ artifactId }) => artifactId)];
+	const totalBytes = [...(primary ? [primary.bytes] : []), ...segments.map(({ bytes }) => bytes)].reduce(
+		(total, bytes) => total + bytes,
+		0,
+	);
+	const countsValid =
+		Number.isSafeInteger(value.expectedSegmentCount) &&
+		Number.isSafeInteger(value.capturedSegmentCount) &&
+		value.expectedSegmentCount >= 0 &&
+		value.expectedSegmentCount <= 10_000 &&
+		value.capturedSegmentCount >= 0 &&
+		value.capturedSegmentCount <= 18 &&
+		segments.length === value.capturedSegmentCount;
+	const stateValid =
+		value.status === "unavailable"
+			? primary === null &&
+				segments.length === 0 &&
+				value.expectedSegmentCount === 0 &&
+				value.capturedSegmentCount === 0
+			: value.status === "partial"
+				? primary === null && value.capturedSegmentCount > 0 && value.capturedSegmentCount < value.expectedSegmentCount
+				: value.status === "complete"
+					? primary !== null &&
+						value.expectedSegmentCount > 0 &&
+						value.capturedSegmentCount === value.expectedSegmentCount
+					: false;
+	if (new Set(ids).size !== ids.length || totalBytes > MAX_VISUAL_EVIDENCE_BYTES || !countsValid || !stateValid) {
+		throw new ResponseSnapshotValidationError("response-snapshot.v3 visual evidence is inconsistent");
+	}
+	return { ...value, primary, segments };
+}
+
+function normalizeVisualEvidenceReference(
+	value: ResponseSnapshotVisualEvidence,
+	maximumBytes: number,
+	label: string,
+): ResponseSnapshotVisualEvidence {
+	if (
+		!UUID_PATTERN.test(value.artifactId) ||
+		value.mediaType !== "image/jpeg" ||
+		!SHA256_PATTERN.test(value.sha256) ||
+		!Number.isInteger(value.bytes) ||
+		value.bytes < 1 ||
+		value.bytes > maximumBytes
+	) {
+		throw new ResponseSnapshotValidationError(`${label} metadata is invalid`);
+	}
+	return { ...value };
+}
+
 function normalizeCaptureDiagnostics(
 	value: ResponseSnapshotCaptureDiagnostics,
-	draft: ResponseSnapshotDraftV2,
+	draft: ResponseSnapshotDraftV2 | ResponseSnapshotDraftV3,
 ): ResponseSnapshotCaptureDiagnostics {
 	if (
 		value.answerCount !== 1 ||
