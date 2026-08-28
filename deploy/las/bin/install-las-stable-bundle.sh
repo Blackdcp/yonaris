@@ -26,10 +26,11 @@ readonly SOURCE_GIT_DIR='/var/lib/yonaris/las-objects.git'
 readonly LOCK_DIRECTORY='/run/lock/yonaris'
 readonly RELEASE_TRANSITION_JOURNAL='/etc/yonaris/las-transition-pending-v1'
 readonly CADDY_BOOTSTRAP_JOURNAL='/etc/yonaris/las-caddy-bootstrap-pending-v1'
-readonly RECEIPT_TOKEN='artifact-output-language-receipt-v2'
-readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
+readonly RECEIPT_TOKEN='artifact-output-language-receipt-v3'
+readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v3'
+readonly LEGACY_RECEIPT_TOKEN='artifact-output-language-receipt-v2'
+readonly LEGACY_RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
 readonly PORTAL_RELEASE='/etc/yonaris/las-active-portal-release-v1'
-readonly MARKETING_RELEASE='/etc/yonaris/las-active-marketing-release-v1'
 readonly ENTRYPOINT_SHA256='b820e6c2777075904377561e176f6781fc5b2f447f9d45bb0381cd18582532e7'
 
 readonly -a PROGRAMS=(
@@ -102,7 +103,7 @@ digest_is_valid() {
 
 operation_is_valid() {
 	case "$1" in
-		deploy | rollback | marketing-preflight | marketing-deploy | marketing-verify) return 0 ;;
+		deploy | rollback) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -192,7 +193,7 @@ validate_policy_and_programs() {
 	local directory="$1" policy_mode="$2"
 	local policy="$directory/las-trust-v1" index line label program expected_hash actual_hash
 	local verb release_tag operation web_label web_digest worker_label worker_digest
-	local migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra digests
+	local migrate_label migrate_digest postgres_label postgres_digest extra digests
 	local -a lines=()
 	local -A seen=() release_digests=()
 
@@ -216,20 +217,17 @@ validate_policy_and_programs() {
 	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation \
 			web_label web_digest worker_label worker_digest \
-			migrate_label migrate_digest postgres_label postgres_digest \
-			www_label www_digest extra <<<"$line" || return 1
+			migrate_label migrate_digest postgres_label postgres_digest extra <<<"$line" || return 1
 		[[ "$verb" == allow && -z "${extra:-}" ]] || return 1
 		[[ "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]] || return 1
 		operation_is_valid "$operation" || return 1
 		[[ "$web_label" == web-sha256 && "$worker_label" == worker-sha256 && \
-			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 && \
-			"$www_label" == www-sha256 ]] || return 1
+			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 ]] || return 1
 		digest_is_valid "$web_digest" && digest_is_valid "$worker_digest" && \
-			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" && \
-			digest_is_valid "$www_digest" || return 1
+			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" || return 1
 		[[ -z "${seen[$release_tag $operation]:-}" ]] || return 1
 		seen["$release_tag $operation"]=1
-		digests="$web_digest $worker_digest $migrate_digest $postgres_digest $www_digest"
+		digests="$web_digest $worker_digest $migrate_digest $postgres_digest"
 		[[ -z "${release_digests[$release_tag]:-}" || \
 			"${release_digests[$release_tag]}" == "$digests" ]] || return 1
 		release_digests["$release_tag"]="$digests"
@@ -305,33 +303,52 @@ read_active_release() {
 	/usr/bin/printf '%s\n' "$release"
 }
 
-read_receipt_digests() {
-	local release="$1" path="$RECEIPT_ROOT/$1"
-	local web worker migrate postgres www
+read_receipt_digests_from() {
+	local release="$1" root="$2" token="$3" format="$4" path="$2/$1"
+	local web worker migrate postgres
 	local -a lines=()
+	metadata_matches "$root" directory '0:0:755' || return 1
 	metadata_matches "$path" file '0:0:644' || return 1
 	mapfile -t lines <"$path"
-	[[ "${#lines[@]}" -eq 7 && "${lines[0]}" == "$RECEIPT_TOKEN" && \
+	[[ "${lines[0]:-}" == "$token" && \
 		"${lines[1]}" == "release $release" ]] || return 1
 	[[ "${lines[2]}" =~ ^web-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1; web="${BASH_REMATCH[1]}"
 	[[ "${lines[3]}" =~ ^worker-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1; worker="${BASH_REMATCH[1]}"
 	[[ "${lines[4]}" =~ ^migrate-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1; migrate="${BASH_REMATCH[1]}"
 	[[ "${lines[5]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1; postgres="${BASH_REMATCH[1]}"
-	[[ "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1; www="${BASH_REMATCH[1]}"
-	/usr/bin/printf '%s %s %s %s %s\n' "$web" "$worker" "$migrate" "$postgres" "$www"
+	case "$format" in
+		v3) [[ "${#lines[@]}" -eq 6 ]] || return 1 ;;
+		v2) [[ "${#lines[@]}" -eq 7 && "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1 ;;
+		*) return 1 ;;
+	esac
+	/usr/bin/printf '%s %s %s %s\n' "$web" "$worker" "$migrate" "$postgres"
+}
+
+read_receipt_digests() {
+	local release="$1" modern="$RECEIPT_ROOT/$1" legacy="$LEGACY_RECEIPT_ROOT/$1"
+	local tuple='' legacy_tuple='' found=0
+	if [[ -e "$modern" || -L "$modern" ]]; then
+		tuple="$(read_receipt_digests_from "$release" "$RECEIPT_ROOT" "$RECEIPT_TOKEN" v3)" || return 1
+		found=1
+	fi
+	if [[ -e "$legacy" || -L "$legacy" ]]; then
+		legacy_tuple="$(read_receipt_digests_from "$release" "$LEGACY_RECEIPT_ROOT" "$LEGACY_RECEIPT_TOKEN" v2)" || return 1
+		[[ "$found" -eq 0 || "$legacy_tuple" == "$tuple" ]] || return 1
+		[[ "$found" -eq 1 ]] || tuple="$legacy_tuple"
+		found=1
+	fi
+	[[ "$found" -eq 1 ]] || return 1
+	/usr/bin/printf '%s\n' "$tuple"
 }
 
 validate_active_rollback_coverage() {
-	local directory="$1" marker release tuple web worker migrate postgres www expected
-	metadata_matches "$RECEIPT_ROOT" directory '0:0:755' || return 1
-	for marker in "$PORTAL_RELEASE" "$MARKETING_RELEASE"; do
-		release="$(read_active_release "$marker")" || return 1
-		[[ "$release" != none ]] || continue
-		tuple="$(read_receipt_digests "$release")" || return 1
-		read -r web worker migrate postgres www <<<"$tuple"
-		expected="allow $release rollback web-sha256 $web worker-sha256 $worker migrate-sha256 $migrate postgres-sha256 $postgres www-sha256 $www"
-		[[ "$(/usr/bin/grep -Fxc -- "$expected" "$directory/las-trust-v1")" == 1 ]] || return 1
-	done
+	local directory="$1" release tuple web worker migrate postgres expected
+	release="$(read_active_release "$PORTAL_RELEASE")" || return 1
+	[[ "$release" != none ]] || return 0
+	tuple="$(read_receipt_digests "$release")" || return 1
+	read -r web worker migrate postgres <<<"$tuple"
+	expected="allow $release rollback web-sha256 $web worker-sha256 $worker migrate-sha256 $migrate postgres-sha256 $postgres"
+	[[ "$(/usr/bin/grep -Fxc -- "$expected" "$directory/las-trust-v1")" == 1 ]]
 }
 
 read_active_id() {

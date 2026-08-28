@@ -16,7 +16,10 @@ readonly SOURCE_GIT_DIR='/var/lib/yonaris/las-objects.git'
 readonly RELEASE_TREE_ROOT='/var/lib/yonaris/las-release-trees'
 readonly ACTIVATION_ATTESTATION='/etc/yonaris/artifact-output-language-active-v1'
 readonly PORTAL_RELEASE='/etc/yonaris/las-active-portal-release-v1'
-readonly MARKETING_RELEASE='/etc/yonaris/las-active-marketing-release-v1'
+readonly RECEIPT_TOKEN='artifact-output-language-receipt-v3'
+readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v3'
+readonly LEGACY_RECEIPT_TOKEN='artifact-output-language-receipt-v2'
+readonly LEGACY_RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
 readonly FIXED_STABLE_DIRECTORY='/usr/local/libexec/yonaris-las'
 readonly BUNDLES_DIRECTORY='/usr/local/libexec/yonaris-las/bundles'
 readonly ACTIVE_BUNDLE_POINTER='/etc/yonaris/las-stable-bundle-active-v1'
@@ -196,28 +199,40 @@ release_tree() {
 	/usr/bin/printf '%s' "$tree"
 }
 
-authorize_candidate() {
+authorize_release() {
 	local release_tag="$1" operation="$2" output
-	output="$(/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
-		LAS_STABLE_BUNDLE_DIR="$INHERITED_BUNDLE_DIRECTORY" \
-		/bin/bash --noprofile --norc -p "$STABLE_GUARD" \
-		candidate "$release_tag" "$operation")" || return 1
+	case "$operation" in
+		deploy)
+			output="$(/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
+				LAS_STABLE_BUNDLE_DIR="$INHERITED_BUNDLE_DIRECTORY" \
+				/bin/bash --noprofile --norc -p "$STABLE_GUARD" \
+				candidate "$release_tag" deploy)" || return 1
+			;;
+		rollback)
+			output="$(/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
+				LAS_STABLE_BUNDLE_DIR="$INHERITED_BUNDLE_DIRECTORY" \
+				/bin/bash --noprofile --norc -p "$STABLE_GUARD" \
+				rollback "$release_tag")" || return 1
+			;;
+		*) return 1 ;;
+	esac
 	read -r record authorized_release authorized_operation \
-		WEB_IMAGE_DIGEST WORKER_IMAGE_DIGEST MIGRATE_IMAGE_DIGEST POSTGRES_IMAGE_DIGEST WWW_IMAGE_DIGEST extra <<<"$output"
-	[[ "$record" == release-digests-v1 && "$authorized_release" == "$release_tag" && \
+		WEB_IMAGE_DIGEST WORKER_IMAGE_DIGEST MIGRATE_IMAGE_DIGEST POSTGRES_IMAGE_DIGEST extra <<<"$output"
+	[[ "$record" == release-digests-v2 && "$authorized_release" == "$release_tag" && \
 		"$authorized_operation" == "$operation" && -z "${extra:-}" ]] || return 1
-	for digest in "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" "$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST"; do
+	for digest in "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" "$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST"; do
 		[[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || return 1
 	done
-	export WEB_IMAGE_DIGEST WORKER_IMAGE_DIGEST MIGRATE_IMAGE_DIGEST POSTGRES_IMAGE_DIGEST WWW_IMAGE_DIGEST
+	export WEB_IMAGE_DIGEST WORKER_IMAGE_DIGEST MIGRATE_IMAGE_DIGEST POSTGRES_IMAGE_DIGEST
 }
 
-read_receipt_digests() {
-	local release_tag="$1" receipt="/etc/yonaris/las-compatible-releases-v2/$1"
+read_receipt_digests_from() {
+	local release_tag="$1" root="$2" token="$3" format="$4" receipt="$2/$1"
 	local -a lines=()
+	metadata_matches "$root" directory '0:0:755' || return 1
 	metadata_matches "$receipt" file '0:0:644' || return 1
 	mapfile -t lines <"$receipt"
-	[[ "${#lines[@]}" -eq 7 && "${lines[0]}" == artifact-output-language-receipt-v2 && \
+	[[ "${lines[0]:-}" == "$token" && \
 		"${lines[1]}" == "release $release_tag" ]] || return 1
 	[[ "${lines[2]}" =~ ^web-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	PREVIOUS_WEB_IMAGE_DIGEST="${BASH_REMATCH[1]}"
@@ -227,10 +242,35 @@ read_receipt_digests() {
 	PREVIOUS_MIGRATE_IMAGE_DIGEST="${BASH_REMATCH[1]}"
 	[[ "${lines[5]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	PREVIOUS_POSTGRES_IMAGE_DIGEST="${BASH_REMATCH[1]}"
-	[[ "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
-	PREVIOUS_WWW_IMAGE_DIGEST="${BASH_REMATCH[1]}"
+	case "$format" in
+		v3) [[ "${#lines[@]}" -eq 6 ]] || return 1 ;;
+		v2) [[ "${#lines[@]}" -eq 7 && "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1 ;;
+		*) return 1 ;;
+	esac
 	export PREVIOUS_WEB_IMAGE_DIGEST PREVIOUS_WORKER_IMAGE_DIGEST \
-		PREVIOUS_MIGRATE_IMAGE_DIGEST PREVIOUS_POSTGRES_IMAGE_DIGEST PREVIOUS_WWW_IMAGE_DIGEST
+		PREVIOUS_MIGRATE_IMAGE_DIGEST PREVIOUS_POSTGRES_IMAGE_DIGEST
+	/usr/bin/printf '%s %s %s %s' "$PREVIOUS_WEB_IMAGE_DIGEST" \
+		"$PREVIOUS_WORKER_IMAGE_DIGEST" "$PREVIOUS_MIGRATE_IMAGE_DIGEST" "$PREVIOUS_POSTGRES_IMAGE_DIGEST"
+}
+
+read_receipt_digests() {
+	local release_tag="$1" modern="$RECEIPT_ROOT/$1" legacy="$LEGACY_RECEIPT_ROOT/$1"
+	local tuple='' legacy_tuple='' found=0
+	if [[ -e "$modern" || -L "$modern" ]]; then
+		tuple="$(read_receipt_digests_from "$release_tag" "$RECEIPT_ROOT" "$RECEIPT_TOKEN" v3)" || return 1
+		found=1
+	fi
+	if [[ -e "$legacy" || -L "$legacy" ]]; then
+		legacy_tuple="$(read_receipt_digests_from "$release_tag" "$LEGACY_RECEIPT_ROOT" "$LEGACY_RECEIPT_TOKEN" v2)" || return 1
+		[[ "$found" -eq 0 || "$legacy_tuple" == "$tuple" ]] || return 1
+		[[ "$found" -eq 1 ]] || tuple="$legacy_tuple"
+		found=1
+	fi
+	[[ "$found" -eq 1 ]] || return 1
+	read -r PREVIOUS_WEB_IMAGE_DIGEST PREVIOUS_WORKER_IMAGE_DIGEST \
+		PREVIOUS_MIGRATE_IMAGE_DIGEST PREVIOUS_POSTGRES_IMAGE_DIGEST <<<"$tuple"
+	export PREVIOUS_WEB_IMAGE_DIGEST PREVIOUS_WORKER_IMAGE_DIGEST \
+		PREVIOUS_MIGRATE_IMAGE_DIGEST PREVIOUS_POSTGRES_IMAGE_DIGEST
 }
 
 runtime_manager() {
@@ -240,19 +280,12 @@ runtime_manager() {
 			/bin/bash --noprofile --norc -p "$STABLE_RUNTIME_MANAGER" "$@"
 }
 
-caddy_manager() {
-	metadata_matches "$STABLE_CADDY_MANAGER" file '0:0:755' && \
-		/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
-			LAS_STABLE_BUNDLE_DIR="$INHERITED_BUNDLE_DIRECTORY" \
-			/bin/bash --noprofile --norc -p "$STABLE_CADDY_MANAGER" "$@"
-}
-
 rollback_portal_runtime() {
 	local predecessor="$1"
 	read_receipt_digests "$predecessor" || return 1
 	runtime_manager portal-rollback "$predecessor" "$PREVIOUS_WEB_IMAGE_DIGEST" \
 		"$PREVIOUS_WORKER_IMAGE_DIGEST" "$PREVIOUS_MIGRATE_IMAGE_DIGEST" \
-		"$PREVIOUS_POSTGRES_IMAGE_DIGEST" "$PREVIOUS_WWW_IMAGE_DIGEST" portal-runtime-v1
+		"$PREVIOUS_POSTGRES_IMAGE_DIGEST" portal-runtime-v2
 }
 
 reconcile_pending_transition() {
@@ -317,16 +350,11 @@ read -r protocol operation release_tag arg1 arg2 arg3 arg4 extra <<<"$original_c
 if [[ "$protocol" != "$PROTOCOL" || -n "${extra:-}" ]]; then fail 'Refusing non-protocol LAS SSH command.' 2; fi
 [[ "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]] || fail 'Refusing invalid immutable LAS release tag.' 2
 case "$operation" in
-	deploy)
+	deploy | rollback)
 		[[ "$arg1" =~ ^sha256:[0-9a-f]{64}$ && "$arg2" =~ ^sha256:[0-9a-f]{64}$ && \
 			"$arg3" =~ ^sha256:[0-9a-f]{64}$ && "$arg4" =~ ^sha256:[0-9a-f]{64}$ ]] || \
-			fail 'Deploy requires exact web, worker, migrate, and postgres image digests.' 2
+			fail 'Deploy and rollback require exact web, worker, migrate, and postgres image digests.' 2
 		expected_command="$PROTOCOL $operation $release_tag $arg1 $arg2 $arg3 $arg4"
-		;;
-	marketing-preflight | marketing-deploy | marketing-verify)
-		[[ "$arg1" =~ ^sha256:[0-9a-f]{64}$ && -z "${arg2:-}" && -z "${arg3:-}" && -z "${arg4:-}" ]] || \
-			fail 'Marketing operation requires the exact www build digest.' 2
-		expected_command="$PROTOCOL $operation $release_tag $arg1"
 		;;
 	*) fail 'Refusing non-protocol LAS SSH command.' 2 ;;
 esac
@@ -336,41 +364,32 @@ acquire_shared_control_lock
 validate_locked_dispatch_boundary
 upgrade_to_exclusive_control_lock
 fetch_release_object "$release_tag" || fail 'Could not fetch the exact release commit object.'
-authorize_candidate "$release_tag" "$operation" || fail 'Release is not digest-bound and root-authorized for this operation.'
-case "$operation" in
-	deploy)
-		[[ "$WEB_IMAGE_DIGEST" == "$arg1" && "$WORKER_IMAGE_DIGEST" == "$arg2" && \
-			"$MIGRATE_IMAGE_DIGEST" == "$arg3" && "$POSTGRES_IMAGE_DIGEST" == "$arg4" ]] || \
-			fail 'Root policy digests do not match this workflow build.'
-		;;
-	marketing-preflight | marketing-deploy | marketing-verify)
-		[[ "$WWW_IMAGE_DIGEST" == "$arg1" ]] || \
-			fail 'Root policy www digest does not match this workflow build.'
-		;;
-esac
+authorize_release "$release_tag" "$operation" || fail 'Release is not digest-bound and root-authorized for this operation.'
+[[ "$WEB_IMAGE_DIGEST" == "$arg1" && "$WORKER_IMAGE_DIGEST" == "$arg2" && \
+	"$MIGRATE_IMAGE_DIGEST" == "$arg3" && "$POSTGRES_IMAGE_DIGEST" == "$arg4" ]] || \
+	fail 'Root policy digests do not match this workflow build.'
 materialize_release_tree "$release_tag" || fail 'Could not materialize the authorized immutable release tree.'
 candidate_tree="$(release_tree "$release_tag")" || fail 'The candidate immutable release tree is invalid.'
 
-active_portal_release="$(read_exact_release "$PORTAL_RELEASE")" || fail 'A root-owned active portal release is required.'
-state_manager rollback-evidence portal "$active_portal_release" || fail 'The active portal release lacks durable rollback evidence.'
-materialize_release_tree "$active_portal_release" || fail 'Could not materialize the active rollback release.'
-predecessor_tree="$(release_tree "$active_portal_release")" || fail 'The active rollback tree is invalid.'
-read_receipt_digests "$active_portal_release" || fail 'The active rollback digest receipt is invalid.'
-
 if [[ "$operation" == deploy ]]; then
+	active_portal_release="$(read_exact_release "$PORTAL_RELEASE")" || fail 'A root-owned active portal release is required.'
+	state_manager rollback-evidence portal "$active_portal_release" || fail 'The active portal release lacks durable rollback evidence.'
+	materialize_release_tree "$active_portal_release" || fail 'Could not materialize the active rollback release.'
+	predecessor_tree="$(release_tree "$active_portal_release")" || fail 'The active rollback tree is invalid.'
+	read_receipt_digests "$active_portal_release" || fail 'The active rollback digest receipt is invalid.'
 	runtime_manager portal-preflight "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" portal-runtime-v1 || \
+		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2 || \
 		fail 'Stable portal runtime preflight rejected the candidate.'
 	state_attestation 'las-migration-readiness-v1 ok' migration-readiness "$release_tag" \
 		"$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" "$MIGRATE_IMAGE_DIGEST" \
-		"$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" || \
+		"$POSTGRES_IMAGE_DIGEST" || \
 		fail 'Root-owned migration readiness rejected the exact candidate tuple.'
 	state_manager begin portal "$release_tag" deploy "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" >/dev/null || \
+		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" >/dev/null || \
 		fail 'Could not durably begin the portal runtime transition.' 75
 	set +e
 	runtime_manager portal-deploy "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" portal-runtime-v1
+		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2
 	deploy_status=$?
 	set -e
 	if ((deploy_status != 0)); then
@@ -381,96 +400,22 @@ if [[ "$operation" == deploy ]]; then
 		fail 'Candidate failed and predecessor reconciliation did not complete.' 75
 	fi
 	runtime_manager portal-verify "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" portal-runtime-v1 || \
+		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2 || \
 		fail 'Candidate runtime digest verification failed; transition remains pending.' 75
 	state_manager complete portal "$release_tag" || fail 'Candidate is healthy but durable completion is pending.' 75
 	exit 0
 fi
 
-if [[ "$operation" == marketing-preflight ]]; then
-	active_marketing_release="$(read_exact_release "$MARKETING_RELEASE")" || fail 'A root-owned active marketing release is required.'
-	materialize_release_tree "$active_marketing_release" || fail 'Could not materialize the active marketing release.'
-	runtime_manager marketing-preflight "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
-		caddy_manager preflight "$release_tag" "$active_marketing_release"
-	exit $?
-fi
-if [[ "$operation" == marketing-deploy ]]; then
-	active_marketing_release="$(read_exact_release "$MARKETING_RELEASE")" || \
-		fail 'A root-owned active marketing release is required.'
-	state_manager rollback-evidence marketing "$active_marketing_release" || \
-		fail 'The active marketing release lacks current policy-authorized rollback evidence.'
-	materialize_release_tree "$active_marketing_release" || \
-		fail 'Could not materialize the marketing rollback release.'
-	read_receipt_digests "$active_marketing_release" || \
-		fail 'The marketing rollback digest receipt is invalid.'
-	predecessor_marketing_tree="$(release_tree "$active_marketing_release")" || \
-		fail 'The marketing rollback tree is invalid.'
-	state_manager begin marketing "$release_tag" marketing-deploy "$WEB_IMAGE_DIGEST" \
-		"$WORKER_IMAGE_DIGEST" "$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" >/dev/null || \
-		fail 'Could not durably begin the marketing runtime transition.' 75
-	set +e
-	caddy_manager prepare "$release_tag" "$active_marketing_release"
-	prepare_status=$?
-	set -e
-	if ((prepare_status != 0)); then
-		if state_manager reconcile marketing "$release_tag" rollback; then exit "$prepare_status"; fi
-		fail 'Caddy preparation failed and durable reconciliation did not complete.' 75
-	fi
-	set +e
-	runtime_manager marketing-deploy "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" marketing-runtime-v1
-	marketing_status=$?
-	set -e
-	if ((marketing_status != 0)); then
-		if ((marketing_status == 1)) && \
-			runtime_manager marketing-rollback "$active_marketing_release" "$PREVIOUS_WEB_IMAGE_DIGEST" \
-				"$PREVIOUS_WORKER_IMAGE_DIGEST" "$PREVIOUS_MIGRATE_IMAGE_DIGEST" \
-				"$PREVIOUS_POSTGRES_IMAGE_DIGEST" "$PREVIOUS_WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
-			caddy_manager rollback "$release_tag" "$active_marketing_release" && \
-			state_manager reconcile marketing "$release_tag" rollback; then
-			exit "$marketing_status"
-		fi
-		fail 'Marketing transition did not converge; durable root recovery is required.' 75
-	fi
-	set +e
-	caddy_manager activate "$release_tag" "$active_marketing_release"
-	caddy_status=$?
-	set -e
-	if ((caddy_status != 0)); then
-		if ((caddy_status == 1)) && \
-			runtime_manager marketing-rollback "$active_marketing_release" "$PREVIOUS_WEB_IMAGE_DIGEST" \
-				"$PREVIOUS_WORKER_IMAGE_DIGEST" "$PREVIOUS_MIGRATE_IMAGE_DIGEST" \
-				"$PREVIOUS_POSTGRES_IMAGE_DIGEST" "$PREVIOUS_WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
-			caddy_manager rollback "$release_tag" "$active_marketing_release" && \
-			state_manager reconcile marketing "$release_tag" rollback; then
-			exit "$caddy_status"
-		fi
-		fail 'Caddy transition did not converge; durable root recovery is required.' 75
-	fi
-	runtime_manager marketing-verify "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
-		caddy_manager verify-active "$release_tag" "$active_marketing_release" || \
-		fail 'Marketing candidate digest verification failed; transition remains pending.' 75
-	state_manager complete marketing "$release_tag" || \
-		fail 'Marketing candidate is live but durable completion is pending.' 75
-	exit 0
-fi
-if [[ "$operation" == marketing-verify ]]; then
-	[[ "$(read_exact_release "$MARKETING_RELEASE")" == "$release_tag" ]] || \
-		fail 'Marketing release marker is not the requested immutable release.'
-	runtime_manager marketing-verify "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
-		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
-		caddy_manager verify-active "$release_tag" "$release_tag" || \
-		fail 'Marketing runtime digest is not authorized.'
-	/usr/bin/curl --fail --silent --show-error --max-time 15 https://yonaris.com/ |
-		/usr/bin/grep -Fq 'data-generation="site-06"' ||
-		fail 'Live marketing apex is not the authorized Site 06 generation.'
-	/usr/bin/curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
-	/usr/bin/curl --fail --silent --show-error --max-time 15 https://yonaris.com/company >/dev/null
-	[[ "$(/usr/bin/curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-		--max-time 15 https://yonaris.com/resources)" == 404 ]] || fail 'Retired resources route is unexpectedly live.'
-	[[ "$(/usr/bin/curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-		--max-time 15 https://yonaris.com/status)" == 404 ]] || fail 'Retired status route is unexpectedly live.'
-	exit 0
-fi
+state_manager rollback-evidence portal "$release_tag" || \
+	fail 'The requested rollback release lacks durable rollback evidence.'
+state_manager begin portal "$release_tag" rollback "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
+	"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" >/dev/null || \
+	fail 'Could not durably begin the requested portal rollback.' 75
+runtime_manager portal-rollback "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
+	"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2 || \
+	fail 'Requested portal rollback failed; transition remains pending.' 75
+runtime_manager portal-verify "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
+	"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2 || \
+	fail 'Requested rollback runtime digest verification failed; transition remains pending.' 75
+state_manager complete portal "$release_tag" || \
+	fail 'Requested rollback is healthy but durable completion is pending.' 75

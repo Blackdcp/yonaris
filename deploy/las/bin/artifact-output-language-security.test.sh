@@ -15,13 +15,10 @@ PRODUCER="$SCRIPT_DIR/produce-las-migration-readiness.sh"
 BUNDLE_INSTALLER="$SCRIPT_DIR/install-las-stable-bundle.sh"
 ACTIVE_BUNDLE_LAUNCHER="$SCRIPT_DIR/run-las-active-bundle.sh"
 DEPLOY="$SCRIPT_DIR/deploy.sh"
-MARKETING_DEPLOY="$SCRIPT_DIR/deploy-marketing.sh"
 DOTENV_LOADER="$SCRIPT_DIR/load-strict-dotenv.sh"
 PORTAL_COMPOSE="$SCRIPT_DIR/../compose.yaml"
-MARKETING_COMPOSE="$SCRIPT_DIR/../compose.marketing.yaml"
 RUNBOOK="$SCRIPT_DIR/../ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md"
 PORTAL_WORKFLOW="$REPO_ROOT/.github/workflows/deploy-las.yaml"
-MARKETING_WORKFLOW="$REPO_ROOT/.github/workflows/deploy-marketing.yaml"
 E2E_WORKFLOW="$REPO_ROOT/.github/workflows/e2e.yaml"
 
 EXPECTED_FINGERPRINT='SHA256:gM/QEgkfN99cP/Cf9awUOwSb7FMesQTgRCTI9kPh84A'
@@ -153,7 +150,7 @@ done
 
 # Production dotenv is data, never shell. The strict loader accepts only the
 # reviewed key allowlist and must not evaluate substitutions or startup hooks.
-for script in "$DEPLOY" "$MARKETING_DEPLOY"; do
+for script in "$DEPLOY"; do
 	assert_not_contains "$script" 'source "$ENV_FILE"' '.env may not execute shell'
 	assert_not_contains "$script" '. "$ENV_FILE"' '.env may not execute shell'
 	assert_contains "$script" 'load_strict_dotenv' 'strict dotenv parser'
@@ -247,17 +244,36 @@ for exact_contract in \
 	assert_contains "$VERIFIER" "$exact_contract" 'exact ssh/rootless Docker boundary'
 done
 
-# Every authorized release binds immutable registry digests, Compose consumes
-# image@sha256 references, and runtime verification checks RepoDigests rather
-# than trusting a mutable tag.
-for policy_consumer in "$GUARD" "$VERIFIER" "$TRUST_INSTALLER" "$BUNDLE_INSTALLER"; do
-	for image in web worker migrate postgres www; do
+# Every active authorization binds exactly the four immutable Portal image
+# digests. The stable bundle may parse a fifth legacy v2 receipt field only to
+# preserve existing Portal rollback evidence; it never emits or authorizes it.
+for policy_consumer in "$GUARD" "$VERIFIER" "$TRUST_INSTALLER"; do
+	for image in web worker migrate postgres; do
 		assert_contains "$policy_consumer" "$image-sha256" 'per-release image digest policy'
 	done
+	assert_not_contains "$policy_consumer" 'marketing-deploy' 'active policy has no marketing operation'
 done
-for compose in "$PORTAL_COMPOSE" "$MARKETING_COMPOSE"; do
-	assert_contains "$compose" '@${' 'Compose immutable image digest'
+for policy_consumer in "$VERIFIER" "$TRUST_INSTALLER"; do
+	assert_not_contains "$policy_consumer" 'www-sha256' 'active policy has no retired fifth digest'
 done
+for legacy_reader in "$GUARD" "$DISPATCHER" "$BUNDLE_INSTALLER"; do
+	assert_contains "$legacy_reader" 'artifact-output-language-receipt-v2' \
+		'legacy v2 receipt remains readable'
+	assert_contains "$legacy_reader" 'www-sha256' \
+		'legacy v2 fifth field is schema-validated but never authorized'
+done
+for image in web worker migrate postgres; do
+	assert_contains "$BUNDLE_INSTALLER" "$image-sha256" 'stable bundle Portal rollback digest'
+done
+assert_contains "$BUNDLE_INSTALLER" 'artifact-output-language-receipt-v3' \
+	'new stable bundle receipts are Portal-only v3'
+assert_contains "$BUNDLE_INSTALLER" 'artifact-output-language-receipt-v2' \
+	'existing Portal v2 receipts remain readable'
+assert_contains "$BUNDLE_INSTALLER" 'www-sha256' \
+	'legacy v2 fifth digest is parsed only for compatibility'
+assert_not_contains "$BUNDLE_INSTALLER" 'marketing-deploy' \
+	'legacy receipt compatibility cannot authorize marketing'
+assert_contains "$PORTAL_COMPOSE" '@${' 'Compose immutable image digest'
 assert_contains "$RUNTIME_MANAGER" 'RepoDigests' 'runtime image digest verification'
 assert_contains "$RUNTIME_MANAGER" 'config --format json' 'rendered Compose security boundary'
 assert_contains "$RUNTIME_MANAGER" 'set(services) != set(expected)' 'exact rendered service set'
@@ -268,17 +284,29 @@ assert_contains "$PORTAL_WORKFLOW" 'web_digest:' 'portal build digest workflow o
 assert_contains "$PORTAL_WORKFLOW" 'worker_digest:' 'worker build digest workflow output'
 assert_contains "$PORTAL_WORKFLOW" 'migrate_digest:' 'migration build digest workflow output'
 assert_contains "$PORTAL_WORKFLOW" 'postgres_digest:' 'Postgres digest workflow output'
-assert_contains "$MARKETING_WORKFLOW" 'www_digest:' 'marketing build digest workflow output'
 assert_contains "$GUARD" 'authorized_line' 'protected per-release operation allowlist'
 assert_contains "$GUARD" 'candidate)' 'candidate capability evidence'
 assert_contains "$GUARD" 'rollback)' 'rollback authorization and receipt'
 assert_contains "$DISPATCHER" "PROBE_RESPONSE='$PROBE_RESPONSE'" 'stable probe response'
 assert_contains "$DISPATCHER" '"$original_command" == "$PROTOCOL probe"' \
 	'canonical side-effect-free probe operation'
-assert_contains "$DISPATCHER" 'candidate "$release_tag" "$operation")' \
-	'operation-specific stable guard request'
-assert_contains "$DISPATCHER" 'authorize_candidate "$release_tag" "$operation" ||' \
+assert_contains "$DISPATCHER" 'candidate "$release_tag" deploy)' \
+	'deploy uses candidate capability authorization'
+assert_contains "$DISPATCHER" 'rollback "$release_tag")' \
+	'rollback uses receipt-bound authorization'
+assert_contains "$DISPATCHER" 'authorize_release "$release_tag" "$operation" ||' \
 	'operation-specific stable authorization before runtime mutation'
+assert_contains "$DISPATCHER" 'deploy | rollback)' \
+	'only deploy and rollback accept an immutable release plus four digests'
+assert_not_contains "$DISPATCHER" 'marketing-preflight' 'dispatcher rejects marketing preflight'
+assert_not_contains "$DISPATCHER" 'marketing-deploy' 'dispatcher rejects marketing deploy'
+assert_not_contains "$DISPATCHER" 'marketing-verify' 'dispatcher rejects marketing verify'
+assert_not_contains "$DISPATCHER" 'WWW_IMAGE_DIGEST' 'dispatcher has no fifth active digest'
+assert_contains "$PORTAL_WORKFLOW" \
+	'"yonaris-las-v1 deploy sha-$RELEASE_SHA $WEB_DIGEST $WORKER_DIGEST $MIGRATE_DIGEST $POSTGRES_DIGEST"' \
+	'Portal deploy transmits exactly four immutable digests'
+assert_not_contains "$PORTAL_WORKFLOW" 'WWW_DIGEST' \
+	'Portal workflow cannot transmit the retired fifth digest'
 
 # Candidate deploy code cannot install or replace any trust root. It must ask the
 # already-installed stable guard for deploy authorization before runtime effects.
@@ -300,9 +328,9 @@ assert_contains "$DEPLOY" 'Activated artifact output languages require ARTIFACT_
 assert_contains "$DEPLOY" 'rollback_healthy_release_transaction' \
 	'failed transaction compensation'
 
-# Both workflows authenticate the forced boundary with the same exact probe and
-# distinguish a protocol rejection from an SSH authentication failure.
-for workflow in "$PORTAL_WORKFLOW" "$MARKETING_WORKFLOW"; do
+# The Portal workflow authenticates the forced boundary with the exact no-arg
+# probe and distinguishes protocol rejection from SSH authentication failure.
+for workflow in "$PORTAL_WORKFLOW"; do
 	assert_contains "$workflow" '"yonaris-las-v1 probe"' 'canonical forced-command probe'
 	assert_contains "$workflow" "$PROBE_RESPONSE" 'exact probe response comparison'
 	assert_contains "$workflow" '"true"' 'arbitrary command rejection probe'
@@ -315,12 +343,8 @@ assert_contains "$RUNTIME_MANAGER" "ENV_FILE='/etc/yonaris/las-runtime.env'" \
 	'root-owned immutable runtime environment input belongs to the stable runtime manager'
 assert_contains "$DISPATCHER" 'Root policy digests do not match this workflow build.' \
 	'portal build-to-policy digest equality'
-assert_contains "$DISPATCHER" 'Root policy www digest does not match this workflow build.' \
-	'marketing build-to-policy digest equality'
 assert_contains "$PORTAL_WORKFLOW" 'needs.build-images.outputs.web_digest' \
 	'portal workflow transmits exact build digest'
-assert_contains "$MARKETING_WORKFLOW" 'needs.build.outputs.www_digest' \
-	'marketing workflow transmits exact build digest'
 assert_not_contains "$PORTAL_WORKFLOW" 'bash -s' \
 	'workflow never regains an unrestricted pre-cutover bootstrap shell'
 

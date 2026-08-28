@@ -25,7 +25,13 @@ done
 grep -Fq "LOCK_DIRECTORY='/run/lock/yonaris'" "$DISPATCHER"
 grep -Fq 'exec 9<"$LOCK_DIRECTORY"' "$DISPATCHER"
 grep -Fq "PORTAL_RELEASE='/etc/yonaris/las-active-portal-release-v1'" "$DISPATCHER"
-grep -Fq "MARKETING_RELEASE='/etc/yonaris/las-active-marketing-release-v1'" "$DISPATCHER"
+if grep -Eq 'MARKETING_RELEASE|las-active-marketing-release|WWW_IMAGE_DIGEST|marketing-(preflight|deploy|verify)' "$DISPATCHER"; then
+	echo 'Root dispatcher still exposes the retired marketing deployment surface.' >&2
+	exit 1
+fi
+grep -Fq '"$original_command" == "$PROTOCOL probe"' "$DISPATCHER"
+grep -Fq 'deploy | rollback' "$DISPATCHER"
+grep -Fq 'arg1 arg2 arg3 arg4 extra' "$DISPATCHER"
 grep -Fq '[[ "$(/usr/bin/id -u)" == 0 ]]' "$DISPATCHER"
 grep -Fq '/usr/sbin/runuser -u "$RUNTIME_USER" -- /usr/bin/env -i' "$RUNTIME_MANAGER"
 if grep -Fq '/usr/sbin/runuser' "$DISPATCHER"; then

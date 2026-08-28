@@ -387,7 +387,7 @@ write_policy() {
 	"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
 	"verifier-sha256 $(sha256sum "$VERIFIER" | awk '{print $1}')" \
 	"migration-readiness-producer-sha256 $(sha256sum "$STABLE_PRODUCER" | awk '{print $1}')" \
-		"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW" \
+		"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES" \
 		>"$TRUST_POLICY"
 }
 write_policy
@@ -414,7 +414,7 @@ printf '%s\n' \
 	"caddy-manager-sha256 $(sha256sum "$BUNDLE_CADDY_MANAGER" | awk '{print $1}')" \
 	"verifier-sha256 $(sha256sum "$BUNDLE_VERIFIER" | awk '{print $1}')" \
 	"migration-readiness-producer-sha256 $(sha256sum "$BUNDLE_PRODUCER" | awk '{print $1}')" \
-	"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW" \
+	"allow sha-1111111111111111111111111111111111111111 deploy web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES" \
 	>"$BUNDLE_POLICY"
 chmod 0644 "$BUNDLE_POLICY"
 chmod 0555 "$BUNDLE_DIRECTORY"
@@ -697,10 +697,13 @@ tail -n 1 "$TRUST_POLICY" >>"$TRUST_POLICY"
 assert_rejected duplicate-policy run_verifier
 write_policy
 
-printf 'allow sha-1111111111111111111111111111111111111111 marketing-deploy web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s www-sha256 %s\n' \
-	"$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" \
-	'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' >>"$TRUST_POLICY"
-assert_rejected same-sha-digest-conflict run_verifier
+printf 'allow sha-1111111111111111111111111111111111111111 deploy web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s www-sha256 %s\n' \
+	"$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW" >>"$TRUST_POLICY"
+assert_rejected five-digest-policy run_verifier
+write_policy
+
+sed -i 's/ deploy / marketing-deploy /' "$TRUST_POLICY"
+assert_rejected marketing-operation run_verifier
 write_policy
 
 touch "$TEST_ROOT/runtime-boundary-failure"

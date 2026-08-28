@@ -99,7 +99,7 @@ metadata_matches() {
 
 operation_is_valid() {
 	case "$1" in
-		deploy | rollback | marketing-preflight | marketing-deploy | marketing-verify) return 0 ;;
+		deploy | rollback) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -111,7 +111,7 @@ validate_policy() {
 	local -A seen=()
 	local -A release_digests=()
 	local line verb release_tag operation web_label web_digest worker_label worker_digest
-	local migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra
+	local migrate_label migrate_digest postgres_label postgres_digest extra
 	local index label expected_path expected_hash digests
 	mapfile -t lines <"$TRUST_POLICY"
 	[[ "${#lines[@]}" -ge 11 && "${lines[0]}" == "$POLICY_TOKEN" && \
@@ -135,18 +135,16 @@ validate_policy() {
 	done
 	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation web_label web_digest worker_label worker_digest \
-			migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra <<<"$line" || return 1
+			migrate_label migrate_digest postgres_label postgres_digest extra <<<"$line" || return 1
 		[[ "$verb" == allow && -z "${extra:-}" && "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]] || return 1
 		operation_is_valid "$operation" || return 1
 		[[ "$web_label" == web-sha256 && "$worker_label" == worker-sha256 && \
-			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 && \
-			"$www_label" == www-sha256 ]] || return 1
+			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 ]] || return 1
 		digest_is_valid "$web_digest" && digest_is_valid "$worker_digest" && \
-			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" && \
-			digest_is_valid "$www_digest" || return 1
+			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" || return 1
 		[[ -z "${seen[$release_tag $operation]:-}" ]] || return 1
 		seen["$release_tag $operation"]=1
-		digests="$web_digest $worker_digest $migrate_digest $postgres_digest $www_digest"
+		digests="$web_digest $worker_digest $migrate_digest $postgres_digest"
 		[[ -z "${release_digests[$release_tag]:-}" || \
 			"${release_digests[$release_tag]}" == "$digests" ]] || return 1
 		release_digests["$release_tag"]="$digests"

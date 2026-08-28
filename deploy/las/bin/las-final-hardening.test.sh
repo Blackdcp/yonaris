@@ -47,24 +47,45 @@ contains "$RUNTIME_MANAGER" '/usr/sbin/runuser -u "$RUNTIME_USER" -- /usr/bin/en
 contains "$RUNTIME_MANAGER" "DOCKER_HOST='unix:///run/user/"
 not_contains "$RUNTIME_MANAGER" '/opt/yonaris/source'
 
-# Host Caddy mutation is fixed-grammar root code consuming only immutable trees.
-contains "$DISPATCHER" 'readonly STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"'
-contains "$CADDY_MANAGER" "RELEASE_TREE_ROOT='/var/lib/yonaris/las-release-trees'"
-contains "$CADDY_MANAGER" "TRANSITION_JOURNAL='/etc/yonaris/las-transition-pending-v1'"
+# Host Caddy is a read-only Portal boundary verifier. Release deployment cannot
+# mutate configuration, reload Caddy, or restore the retired marketing surface.
+contains "$CADDY_MANAGER" 'verify-boundary'
 contains "$CADDY_MANAGER" 'caddy validate'
-contains "$CADDY_MANAGER" 'caddy reload'
-contains "$STATE_MANAGER" 'caddy-before-sha256'
-contains "$STATE_MANAGER" 'caddy-after-sha256'
+contains "$CADDY_MANAGER" 'portal.yonaris.com'
+not_contains "$CADDY_MANAGER" 'caddy reload'
+not_contains "$CADDY_MANAGER" 'bootstrap-activate'
+not_contains "$CADDY_MANAGER" 'MARKETING_RELEASE'
+not_contains "$CADDY_MANAGER" 'RELEASE_TREE_ROOT'
+not_contains "$STATE_MANAGER" 'caddy-before-sha256'
+not_contains "$STATE_MANAGER" 'caddy-after-sha256'
 not_contains "$CADDY_MANAGER" '--volume /:/host'
 not_contains "$CADDY_MANAGER" '/opt/yonaris/source'
 not_contains "$DISPATCHER" 'deploy/las/bin/deploy-marketing.sh "$release_tag"'
-not_contains "$SCRIPT_DIR/install-marketing-caddy.sh" '--volume /:/host'
-not_contains "$SCRIPT_DIR/install-marketing-caddy.sh" 'chroot /host'
 
 # Postgres is part of the same immutable digest tuple as every release image.
 for consumer in "$DISPATCHER" "$STATE_MANAGER" "$GUARD" "$POLICY_INSTALLER" "$VERIFIER"; do
 	contains "$consumer" 'postgres-sha256'
 done
+
+# Every active external/policy grammar is Portal-only: probe has no payload and
+# deploy/rollback bind exactly web, worker, migrate, and Postgres digests.
+contains "$DISPATCHER" '"$original_command" == "$PROTOCOL probe"'
+for consumer in "$DISPATCHER" "$STATE_MANAGER" "$GUARD" "$POLICY_INSTALLER" "$VERIFIER"; do
+	not_contains "$consumer" 'marketing-preflight'
+	not_contains "$consumer" 'marketing-deploy'
+	not_contains "$consumer" 'marketing-verify'
+done
+for consumer in "$DISPATCHER" "$GUARD" "$POLICY_INSTALLER" "$VERIFIER"; do
+	not_contains "$consumer" 'WWW_IMAGE_DIGEST'
+done
+for consumer in "$GUARD" "$POLICY_INSTALLER" "$VERIFIER"; do
+	not_contains "$consumer" 'www_label'
+	not_contains "$consumer" 'www_digest'
+done
+contains "$BUNDLE_INSTALLER" 'artifact-output-language-receipt-v3'
+contains "$BUNDLE_INSTALLER" 'artifact-output-language-receipt-v2'
+contains "$BUNDLE_INSTALLER" 'www-sha256'
+not_contains "$BUNDLE_INSTALLER" 'marketing-deploy'
 
 # Removed candidate-side operations are rejected by every policy parser, not
 # merely hidden from the SSH dispatcher grammar.

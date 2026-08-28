@@ -141,7 +141,7 @@ policy() {
 		"caddy-manager-sha256 $(sha256sum "$STABLE_CADDY_MANAGER" | awk '{print $1}')" \
 		"verifier-sha256 $(sha256sum "$ROOT_VERIFIER" | awk '{print $1}')" \
 		"migration-readiness-producer-sha256 $(sha256sum "$STABLE_PRODUCER" | awk '{print $1}')" \
-		"allow sha-$RELEASE_SHA $operation web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES www-sha256 $DIGEST_WWW"
+		"allow sha-$RELEASE_SHA $operation web-sha256 $DIGEST_WEB worker-sha256 $DIGEST_WORKER migrate-sha256 $DIGEST_MIGRATE postgres-sha256 $DIGEST_POSTGRES"
 }
 
 reset_policies() {
@@ -249,14 +249,18 @@ sed -i 's/ deploy / unknown-operation /' "$STAGING_POLICY"
 assert_rejected_unchanged unknown-operation run_installer
 
 reset_policies
-sed -i 's/sha256:5555555555555555555555555555555555555555555555555555555555555555/tag-latest/' "$STAGING_POLICY"
+sed -i 's/sha256:4444444444444444444444444444444444444444444444444444444444444444/tag-latest/' "$STAGING_POLICY"
 assert_rejected_unchanged invalid-digest run_installer
 
 reset_policies
-policy marketing-deploy | tail -n 1 | \
-	sed "s#$DIGEST_WWW#sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#" \
+printf 'allow sha-%s deploy web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s www-sha256 %s\n' \
+	"$RELEASE_SHA" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW" \
 	>>"$STAGING_POLICY"
-assert_rejected_unchanged same-sha-digest-conflict run_installer
+assert_rejected_unchanged five-digest-policy run_installer
+
+reset_policies
+sed -i 's/ deploy / marketing-deploy /' "$STAGING_POLICY"
+assert_rejected_unchanged marketing-operation run_installer
 
 reset_policies
 INSTALLER_TEST_POSTVERIFY=failure
