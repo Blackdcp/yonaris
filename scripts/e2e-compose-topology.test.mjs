@@ -25,7 +25,7 @@ test("the E2E workflow preserves diagnostics and supplies the base Compose diges
     `WEB_IMAGE_DIGEST: sha256:${"1".repeat(64)}`,
     `WORKER_IMAGE_DIGEST: sha256:${"2".repeat(64)}`,
     `MIGRATE_IMAGE_DIGEST: sha256:${"3".repeat(64)}`,
-    "POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST }}",
+    "POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST || 'sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3' }}",
     "uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be",
     "uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
     "uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",

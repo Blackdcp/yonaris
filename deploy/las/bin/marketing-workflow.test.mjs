@@ -193,4 +193,9 @@ test("workflow exports registry digests for root policy authorization", () => {
 	assert.match(portalWorkflow, /steps\.build_worker\.outputs\.digest/u);
 	assert.match(portalWorkflow, /steps\.build_migrate\.outputs\.digest/u);
 	assert.match(workflow, /sha256:[0-9a-f]{64}|steps\.[a-z_]+\.outputs\.digest/u);
+	assert.match(
+		portalWorkflow,
+		/vars\.LAS_POSTGRES_IMAGE_DIGEST \|\| 'sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3'/u,
+		"production must retain an audited immutable Postgres fallback digest",
+	);
 });

@@ -577,7 +577,7 @@ jobs:
       - name: Bind the reviewed Postgres registry digest
         id: postgres_digest
         env:
-          POSTGRES_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST }}
+          POSTGRES_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST || 'sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3' }}
         run: |
           if [[ ! "$POSTGRES_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
             echo 'LAS_POSTGRES_IMAGE_DIGEST must be an exact reviewed sha256 registry digest.' >&2

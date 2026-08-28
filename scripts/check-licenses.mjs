@@ -44,6 +44,8 @@ const ALLOWED_LICENSES = new Set([
   "(AFL-2.1 OR BSD-3-Clause)",
   "(BSD-3-Clause OR GPL-2.0)", // dual-licensed – we use BSD-3-Clause
   "(MPL-2.0 OR Apache-2.0)", // dual-licensed – we use Apache-2.0
+  "(MIT OR WTFPL)", // dual-licensed expand-template – we use MIT
+  "(BSD-2-Clause OR MIT OR Apache-2.0)", // rc – every offered license is permissive
   // Transitive deps of @usebruno/cli (e2e API tests); every component permissive.
   "(BSD-3-Clause AND Apache-2.0)", // google-protobuf
   "(Public Domain OR MIT)", // tv4 – we use MIT
