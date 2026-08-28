@@ -313,6 +313,6 @@ test("scheduled language smoke keeps Chinese writes off and provider work stubbe
 test("Opportunity and report selection ship as the exact web patch changeset", () => {
 	assert.equal(
 		read(".changeset/select-opportunity-output-language.md"),
-		'---\n"@workspace/web": patch\n---\n\nLet Portal users select English or Simplified Chinese for Opportunities and reports independently of the interface language, while the report API preserves the chosen language and raw evidence.\n',
+		'---\n"@workspace/web": patch\n---\n\nLet Portal users select English or Simplified Chinese for Opportunities, reports, and chart exports independently of the interface language, while generated artifacts preserve the chosen language and raw evidence.\n',
 	);
 });
