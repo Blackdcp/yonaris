@@ -8,10 +8,10 @@ export PATH
 readonly PATH
 
 readonly TRUST_DIRECTORY='/etc/yonaris'
-readonly MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v1'
-readonly MIGRATION_EVIDENCE_ROOT='/etc/yonaris/las-migration-evidence-v1'
+readonly MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v2'
+readonly MIGRATION_EVIDENCE_ROOT='/etc/yonaris/las-migration-evidence-v2'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
-readonly MIGRATION_WORK_ROOT='/var/lib/yonaris/migration-readiness-work-v1'
+readonly MIGRATION_WORK_ROOT='/var/lib/yonaris/migration-readiness-work-v2'
 readonly LOCK_DIRECTORY='/run/lock/yonaris'
 readonly BACKUP_ADAPTER='/usr/local/libexec/yonaris-las/store-las-migration-backup'
 if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" ]]; then
@@ -171,27 +171,27 @@ renameat2_no_replace_is_supported() {
 }
 
 durably_verify_readiness() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
 	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
 	local backup_evidence="$MIGRATION_EVIDENCE_ROOT/$release_tag.backup"
 	local rehearsal_evidence="$MIGRATION_EVIDENCE_ROOT/$release_tag.rehearsal"
-	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok' || return 1
+	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
+		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v2 ok' || return 1
 	/usr/bin/sync -f "$backup_evidence" && \
 		/usr/bin/sync -f "$rehearsal_evidence" && \
 		/usr/bin/sync -f "$attestation" && \
 		/usr/bin/sync -f "$MIGRATION_EVIDENCE_ROOT" && \
 		/usr/bin/sync -f "$MIGRATION_READINESS_ROOT" || return 1
-	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v1 ok'
+	state_manager migration-readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
+		2>/dev/null | /usr/bin/grep -Fxq 'las-migration-readiness-v2 ok'
 }
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The migration-readiness producer must run as root.' 2
 [[ -z "${SUDO_USER:-}" ]] || fail 'The migration-readiness producer is direct-root only.' 2
-[[ $# -eq 6 ]] || fail 'Usage: produce-las-migration-readiness <release> <five digests>' 2
-release_tag="$1"; web="$2"; worker="$3"; migrate="$4"; postgres="$5"; www="$6"
+[[ $# -eq 5 ]] || fail 'Usage: produce-las-migration-readiness <release> <four digests>' 2
+release_tag="$1"; web="$2"; worker="$3"; migrate="$4"; postgres="$5"
 release_is_valid "$release_tag" && digest_is_valid "$web" && digest_is_valid "$worker" && \
-	digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || \
+	digest_is_valid "$migrate" && digest_is_valid "$postgres" || \
 	fail 'Refusing an invalid migration-readiness release tuple.' 2
 if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" ]]; then
 	[[ "$LAS_STABLE_BUNDLE_DIR" =~ ^/usr/local/libexec/yonaris-las/bundles/sha256-[0-9a-f]{64}$ ]] || \
@@ -219,12 +219,12 @@ metadata_matches "$STATE_MANAGER" file '0:0:755' && \
 	fail 'A fixed migration-readiness peer is missing or has unsafe metadata.'
 
 state_manager migration-readiness-runtime-authorization \
-	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-	| /usr/bin/grep -Fxq 'las-migration-readiness-runtime-authorization-v1 ok' || \
+	"$release_tag" "$web" "$worker" "$migrate" "$postgres" \
+	| /usr/bin/grep -Fxq 'las-migration-readiness-runtime-authorization-v2 ok' || \
 	fail 'The exact migration-readiness runtime tuple is not authorized.'
 
-if durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"; then
-	/usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'
+if durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres"; then
+	/usr/bin/printf '%s\n' 'las-migration-readiness-v2 ok'
 	exit 0
 fi
 
@@ -285,8 +285,8 @@ trap cleanup_on_exit EXIT
 backup="$work_directory/database.dump"
 returned_copy="$work_directory/returned.dump"
 rehearsal_result="$work_directory/rehearsal.result"
-runtime_manager migration-backup "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-	"$backup" migration-readiness-runtime-v1 || fail 'The fixed runtime backup operation failed.'
+runtime_manager migration-backup "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
+	"$backup" migration-readiness-runtime-v2 || fail 'The fixed runtime backup operation failed.'
 metadata_matches "$backup" file '0:0:600' && [[ -s "$backup" ]] || \
 	fail 'The runtime backup staging file is invalid.'
 backup_hash="$(/usr/bin/sha256sum -- "$backup" | /usr/bin/awk '{print $1}')" || \
@@ -304,24 +304,24 @@ returned_hash="$(/usr/bin/sha256sum -- "$returned_copy" | /usr/bin/awk '{print $
 [[ "$source_hash_after" == "$backup_hash" && "$returned_hash" == "$backup_hash" ]] || \
 	fail 'The off-host backup round trip changed the authorized backup bytes.'
 
-runtime_manager migration-rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
-	"$returned_copy" "$rehearsal_result" migration-readiness-runtime-v1 || \
+runtime_manager migration-rehearse "$release_tag" "$web" "$worker" "$migrate" "$postgres" \
+	"$returned_copy" "$rehearsal_result" migration-readiness-runtime-v2 || \
 	fail 'The fixed migration rehearsal operation failed.'
 metadata_matches "$rehearsal_result" file '0:0:600' || fail 'The migration rehearsal result is invalid.'
 mapfile -t rehearsal_result_lines <"$rehearsal_result"
 [[ "${#rehearsal_result_lines[@]}" -eq 3 && \
-	"${rehearsal_result_lines[0]}" == 'las-migration-rehearsal-runtime-v1 ok' && \
+	"${rehearsal_result_lines[0]}" == 'las-migration-rehearsal-runtime-v2 ok' && \
 	"${rehearsal_result_lines[1]}" == 'migration-exit-status 0' && \
 	"${rehearsal_result_lines[2]}" =~ ^completed-at-utc\ [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || \
 	fail 'The migration rehearsal result is invalid.'
 completion_timestamp="${rehearsal_result_lines[2]#completed-at-utc }"
 
 printf -v backup_contents \
-	'las-migration-backup-evidence-v1\nrelease %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\noff-host-round-trip exact-bytes\n' \
+	'las-migration-backup-evidence-v2\nrelease %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\noff-host-round-trip exact-bytes\n' \
 	"$release_tag" "$backup_hash" "$returned_hash"
 printf -v rehearsal_contents \
-	'las-migration-rehearsal-evidence-v1\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\nruntime-result las-migration-rehearsal-runtime-v1-ok\nmigration-exit-status 0\ncompleted-at-utc %s\n' \
-	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" "$backup_hash" "$returned_hash" \
+	'las-migration-rehearsal-evidence-v2\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nbackup-sha256 %s\nreturned-copy-sha256 %s\nruntime-result las-migration-rehearsal-runtime-v2-ok\nmigration-exit-status 0\ncompleted-at-utc %s\n' \
+	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$backup_hash" "$returned_hash" \
 	"$completion_timestamp"
 
 cleanup_sensitive_work || fail 'Could not remove and verify the sensitive migration work directory.'
@@ -340,8 +340,8 @@ backup_evidence_hash="$(/usr/bin/sha256sum -- "$backup_temporary" | /usr/bin/awk
 rehearsal_evidence_hash="$(/usr/bin/sha256sum -- "$rehearsal_temporary" | /usr/bin/awk '{print $1}')" || \
 	fail 'Could not hash rehearsal evidence.'
 printf -v attestation_contents \
-	'las-migration-readiness-v1\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\nbackup-evidence-sha256 %s\nrehearsal-evidence-sha256 %s\n' \
-	"$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" \
+	'las-migration-readiness-v2\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nbackup-evidence-sha256 %s\nrehearsal-evidence-sha256 %s\n' \
+	"$release_tag" "$web" "$worker" "$migrate" "$postgres" \
 	"$backup_evidence_hash" "$rehearsal_evidence_hash"
 prepare_publication_file "$attestation_temporary" "$attestation_contents" || \
 	fail 'Could not durably stage migration readiness.'
@@ -361,9 +361,9 @@ publish_no_replace "$attestation_temporary" "$attestation" || \
 attestation_temporary=''
 /usr/bin/sync -f "$MIGRATION_READINESS_ROOT" || fail 'Could not durably publish migration readiness.'
 
-durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www" || \
+durably_verify_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" || \
 	fail 'Published migration-readiness evidence failed exact verification.'
 cleanup_publication_temporaries && cleanup_sensitive_work || \
 	fail 'Migration-readiness cleanup did not complete.'
 trap - EXIT
-/usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'
+/usr/bin/printf '%s\n' 'las-migration-readiness-v2 ok'

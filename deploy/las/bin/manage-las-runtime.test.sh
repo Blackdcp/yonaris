@@ -9,7 +9,7 @@ TEST_ROOT="$(mktemp -d)"
 trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
 STATE="$TEST_ROOT/var/lib/yonaris"
-WORK_ROOT="$STATE/migration-readiness-work-v1"
+WORK_ROOT="$STATE/migration-readiness-work-v2"
 TREES="$STATE/las-release-trees"
 RUNTIME_HOME="$TEST_ROOT/var/lib/yonaris-runtime"
 RUNTIME_DIR="$TEST_ROOT/run/user/2002"
@@ -272,11 +272,11 @@ mode="$(cat '__STATE_MODE__')"
 case "$1" in
 	migration-readiness)
 		[[ "$mode" != deny-readiness ]] || exit 1
-		printf '%s\n' 'las-migration-readiness-v1 ok'
+		printf '%s\n' 'las-migration-readiness-v2 ok'
 		;;
 	migration-readiness-runtime-authorization)
 		[[ "$mode" != deny-migration-runtime ]] || exit 1
-		printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
+		printf '%s\n' 'las-migration-readiness-runtime-authorization-v2 ok'
 		;;
 	pending-runtime-tuple)
 		[[ "$mode" != deny-pending && "$mode" != failed-deploy-rollback && "$mode" != deny-all-rollback ]] || exit 1
@@ -314,8 +314,8 @@ if [[ "$format" == '%d:%i' ]]; then
 fi
 case "$path" in
   */var/lib/yonaris) metadata='0:0:711' ;;
-  */migration-readiness-work-v1/sha-*/*) metadata='0:0:600' ;;
-  */migration-readiness-work-v1 | */migration-readiness-work-v1/sha-*) metadata='0:0:700' ;;
+  */migration-readiness-work-v2/sha-*/*) metadata='0:0:600' ;;
+  */migration-readiness-work-v2 | */migration-readiness-work-v2/sha-*) metadata='0:0:700' ;;
   */las-release-trees | */las-release-trees/sha-*) metadata='0:0:555' ;;
   */compose.yaml) metadata='0:0:444' ;;
   */manage-las-release-state) metadata='0:0:755' ;;
@@ -566,7 +566,7 @@ grep -Fq 'pg_isready --username yonaris_rehearsal --dbname yonaris_rehearsal' "$
 grep -Fq "wait $REHEARSAL_MIGRATION_CONTAINER" "$DOCKER_LOG"
 mapfile -t rehearsal_result_lines <"$REHEARSAL_RESULT"
 [[ "${#rehearsal_result_lines[@]}" -eq 3 && \
-	"${rehearsal_result_lines[0]%$'\r'}" == 'las-migration-rehearsal-runtime-v1 ok' && \
+	"${rehearsal_result_lines[0]%$'\r'}" == 'las-migration-rehearsal-runtime-v2 ok' && \
 	"${rehearsal_result_lines[1]%$'\r'}" == 'migration-exit-status 0' && \
 	"${rehearsal_result_lines[2]%$'\r'}" =~ ^completed-at-utc\ [0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || {
 	echo 'Migration rehearsal result lacks the exact success status and UTC completion timestamp.' >&2

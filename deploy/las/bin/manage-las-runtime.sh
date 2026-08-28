@@ -11,7 +11,7 @@ readonly RUNTIME_USER='yonaris-runtime'
 readonly RUNTIME_HOME='/var/lib/yonaris-runtime'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
 readonly RELEASE_TREE_ROOT='/var/lib/yonaris/las-release-trees'
-readonly MIGRATION_WORK_ROOT="$STATE_DIRECTORY/migration-readiness-work-v1"
+readonly MIGRATION_WORK_ROOT="$STATE_DIRECTORY/migration-readiness-work-v2"
 readonly ENV_FILE='/etc/yonaris/las-runtime.env'
 readonly ACTIVATION_ATTESTATION='/etc/yonaris/artifact-output-language-active-v1'
 readonly ACTIVATION_TOKEN='artifact-output-language-active-v1'
@@ -596,7 +596,7 @@ authorize_failed_deploy_portal_rollback() {
 authorize_portal_mutation() {
 	local gate="$1" release_tag="$2" web="$3" worker="$4" migrate="$5" postgres="$6"
 	verify_runtime_boundary || return 1
-	state_attestation 'las-migration-readiness-v1 ok' migration-readiness \
+	state_attestation 'las-migration-readiness-v2 ok' migration-readiness \
 		"$release_tag" "$web" "$worker" "$migrate" "$postgres" || return 1
 	case "$gate" in
 		pending)
@@ -678,7 +678,7 @@ prepare_migration_work_directory() {
 
 authorize_migration_readiness_runtime() {
 	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
-	state_attestation 'las-migration-readiness-runtime-authorization-v1 ok' \
+	state_attestation 'las-migration-readiness-runtime-authorization-v2 ok' \
 		migration-readiness-runtime-authorization "$release_tag" "$web" "$worker" "$migrate" "$postgres"
 }
 
@@ -856,7 +856,7 @@ migration_rehearse() {
 	migration_rehearsal_cleanup || return 1
 	completion_timestamp="$(/usr/bin/date -u +'%Y-%m-%dT%H:%M:%SZ')" || return 1
 	[[ "$completion_timestamp" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || return 1
-	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' 'migration-exit-status 0' \
+	/usr/bin/printf '%s\n' 'las-migration-rehearsal-runtime-v2 ok' 'migration-exit-status 0' \
 		"completed-at-utc $completion_timestamp" >"$result" || return 1
 	metadata_matches "$result" file '0:0:600'
 }

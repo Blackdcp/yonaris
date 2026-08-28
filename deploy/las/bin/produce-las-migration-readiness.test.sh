@@ -4,6 +4,14 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PRODUCER_SOURCE="$SCRIPT_DIR/produce-las-migration-readiness.sh"
+
+grep -Fq "MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v2'" "$PRODUCER_SOURCE"
+grep -Fq 'las-migration-readiness-v2' "$PRODUCER_SOURCE"
+grep -Fq 'migration-readiness-runtime-v2' "$PRODUCER_SOURCE"
+if grep -Eq 'WWW|www-sha256|five digests|las-migration-readiness-v1' "$PRODUCER_SOURCE"; then
+	echo 'Migration-readiness producer still exposes the retired fifth digest or v1 evidence.' >&2
+	exit 1
+fi
 TEST_ROOT="$(mktemp -d)"
 trap 'chmod -R u+w "$TEST_ROOT" 2>/dev/null || true; rm -rf -- "$TEST_ROOT"' EXIT
 
@@ -13,10 +21,10 @@ trap 'chmod -R u+w "$TEST_ROOT" 2>/dev/null || true; rm -rf -- "$TEST_ROOT"' EXI
 }
 
 TRUST_DIRECTORY="$TEST_ROOT/etc/yonaris"
-READINESS_ROOT="$TRUST_DIRECTORY/las-migration-readiness-v1"
-EVIDENCE_ROOT="$TRUST_DIRECTORY/las-migration-evidence-v1"
+READINESS_ROOT="$TRUST_DIRECTORY/las-migration-readiness-v2"
+EVIDENCE_ROOT="$TRUST_DIRECTORY/las-migration-evidence-v2"
 STATE_DIRECTORY="$TEST_ROOT/var/lib/yonaris"
-WORK_ROOT="$STATE_DIRECTORY/migration-readiness-work-v1"
+WORK_ROOT="$STATE_DIRECTORY/migration-readiness-work-v2"
 LOCK_DIRECTORY="$TEST_ROOT/run/lock/yonaris"
 STABLE_DIRECTORY="$TEST_ROOT/usr/local/libexec/yonaris-las"
 STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
@@ -45,30 +53,30 @@ cat >"$STATE_MANAGER" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'state %s\n' "\$*" >>'$EVENT_LOG'
-release='$RELEASE'; web='$WEB'; worker='$WORKER'; migrate='$MIGRATE'; postgres='$POSTGRES'; www='$WWW'
+release='$RELEASE'; web='$WEB'; worker='$WORKER'; migrate='$MIGRATE'; postgres='$POSTGRES'
 [[ "\${2:-}" == "\$release" && "\${3:-}" == "\$web" && "\${4:-}" == "\$worker" && \
-	"\${5:-}" == "\$migrate" && "\${6:-}" == "\$postgres" && "\${7:-}" == "\$www" ]] || exit 2
+	"\${5:-}" == "\$migrate" && "\${6:-}" == "\$postgres" ]] || exit 2
 case "\${1:-}" in
 	migration-readiness-runtime-authorization)
-		[[ \$# -eq 7 && ! -e '$TEST_ROOT/state-fail' ]] || exit 1
-		printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
+		[[ \$# -eq 6 && ! -e '$TEST_ROOT/state-fail' ]] || exit 1
+		printf '%s\n' 'las-migration-readiness-runtime-authorization-v2 ok'
 		;;
 	migration-readiness)
-		[[ \$# -eq 7 ]] || exit 2
+		[[ \$# -eq 6 ]] || exit 2
 		attestation='$READINESS_ROOT/'"\$release"
 		backup='$EVIDENCE_ROOT/'"\$release"'.backup'
 		rehearsal='$EVIDENCE_ROOT/'"\$release"'.rehearsal'
 		[[ -f "\$attestation" && -f "\$backup" && -f "\$rehearsal" ]] || exit 1
 		mapfile -t lines <"\$attestation"
-		[[ "\${#lines[@]}" -eq 9 && "\${lines[0]}" == las-migration-readiness-v1 && \
+		[[ "\${#lines[@]}" -eq 8 && "\${lines[0]}" == las-migration-readiness-v2 && \
 			"\${lines[1]}" == "release \$release" && "\${lines[2]}" == "web-sha256 \$web" && \
 			"\${lines[3]}" == "worker-sha256 \$worker" && "\${lines[4]}" == "migrate-sha256 \$migrate" && \
-			"\${lines[5]}" == "postgres-sha256 \$postgres" && "\${lines[6]}" == "www-sha256 \$www" ]] || exit 1
+			"\${lines[5]}" == "postgres-sha256 \$postgres" ]] || exit 1
 		backup_hash="\$(sha256sum -- "\$backup" | awk '{print \$1}')"
 		rehearsal_hash="\$(sha256sum -- "\$rehearsal" | awk '{print \$1}')"
-		[[ "\${lines[7]}" == "backup-evidence-sha256 \$backup_hash" && \
-			"\${lines[8]}" == "rehearsal-evidence-sha256 \$rehearsal_hash" ]] || exit 1
-		printf '%s\n' 'las-migration-readiness-v1 ok'
+		[[ "\${lines[6]}" == "backup-evidence-sha256 \$backup_hash" && \
+			"\${lines[7]}" == "rehearsal-evidence-sha256 \$rehearsal_hash" ]] || exit 1
+		printf '%s\n' 'las-migration-readiness-v2 ok'
 		;;
 	*) exit 2 ;;
 esac
@@ -78,23 +86,23 @@ cat >"$RUNTIME_MANAGER" <<STUB
 #!/usr/bin/env bash
 set -Eeuo pipefail
 printf 'runtime %s\n' "\$*" >>'$EVENT_LOG'
-release='$RELEASE'; web='$WEB'; worker='$WORKER'; migrate='$MIGRATE'; postgres='$POSTGRES'; www='$WWW'
+release='$RELEASE'; web='$WEB'; worker='$WORKER'; migrate='$MIGRATE'; postgres='$POSTGRES'
 case "\${1:-}" in
 	migration-backup)
-		[[ \$# -eq 9 && "\$2" == "\$release" && "\$3" == "\$web" && "\$4" == "\$worker" && \
-			"\$5" == "\$migrate" && "\$6" == "\$postgres" && "\$7" == "\$www" && \
-			"\$9" == migration-readiness-runtime-v1 && ! -e '$TEST_ROOT/runtime-backup-fail' ]] || exit 1
-		printf '%s\n' 'PGDMP-database-secret-bytes' >"\$8"
-		chmod 0600 "\$8"
+		[[ \$# -eq 8 && "\$2" == "\$release" && "\$3" == "\$web" && "\$4" == "\$worker" && \
+			"\$5" == "\$migrate" && "\$6" == "\$postgres" && \
+			"\$8" == migration-readiness-runtime-v2 && ! -e '$TEST_ROOT/runtime-backup-fail' ]] || exit 1
+		printf '%s\n' 'PGDMP-database-secret-bytes' >"\$7"
+		chmod 0600 "\$7"
 		;;
 	migration-rehearse)
-		[[ \$# -eq 10 && "\$2" == "\$release" && "\$3" == "\$web" && "\$4" == "\$worker" && \
-			"\$5" == "\$migrate" && "\$6" == "\$postgres" && "\$7" == "\$www" && \
-			"\${10}" == migration-readiness-runtime-v1 && ! -e '$TEST_ROOT/runtime-rehearsal-fail' ]] || exit 1
-		[[ "\$(cat -- "\$8")" == 'PGDMP-database-secret-bytes' ]] || exit 1
-		printf '%s\n' 'las-migration-rehearsal-runtime-v1 ok' 'migration-exit-status 0' \
-			'completed-at-utc $COMPLETION_TIMESTAMP' >"\$9"
-		chmod 0600 "\$9"
+		[[ \$# -eq 9 && "\$2" == "\$release" && "\$3" == "\$web" && "\$4" == "\$worker" && \
+			"\$5" == "\$migrate" && "\$6" == "\$postgres" && \
+			"\$9" == migration-readiness-runtime-v2 && ! -e '$TEST_ROOT/runtime-rehearsal-fail' ]] || exit 1
+		[[ "\$(cat -- "\$7")" == 'PGDMP-database-secret-bytes' ]] || exit 1
+		printf '%s\n' 'las-migration-rehearsal-runtime-v2 ok' 'migration-exit-status 0' \
+			'completed-at-utc $COMPLETION_TIMESTAMP' >"\$8"
+		chmod 0600 "\$8"
 		;;
 	*) exit 2 ;;
 esac
@@ -213,16 +221,26 @@ sed \
 chmod 0755 "$PRODUCER"
 
 run_producer() {
+	local -a args=("$@")
+	local i
+	for i in "${!args[@]}"; do
+		if [[ "${args[$i]}" == "$WWW" ]]; then unset 'args[i]'; fi
+	done
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		PRODUCER_TEST_UID="${PRODUCER_TEST_UID:-0}" SUDO_USER="${PRODUCER_TEST_SUDO_USER:-}" \
 		PRODUCER_TEST_RENAME_MODE="${PRODUCER_TEST_RENAME_MODE:-success}" \
 		PRODUCER_TEST_RM_MODE="${PRODUCER_TEST_RM_MODE:-}" \
-		/bin/bash --noprofile --norc -p "$PRODUCER" "$@"
+		/bin/bash --noprofile --norc -p "$PRODUCER" "${args[@]}"
 }
 
 run_manager() {
+	local -a args=("$@")
+	local i
+	for i in "${!args[@]}"; do
+		if [[ "${args[$i]}" == "$WWW" ]]; then unset 'args[i]'; fi
+	done
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
-		/bin/bash --noprofile --norc -p "$STATE_MANAGER" "$@"
+		/bin/bash --noprofile --norc -p "$STATE_MANAGER" "${args[@]}"
 }
 
 assert_no_runtime_or_adapter() {
@@ -241,7 +259,7 @@ assert_work_clean() {
 
 : >"$EVENT_LOG"
 set +e
-run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" >/dev/null 2>&1
+run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" >/dev/null 2>&1
 short_arity_status=$?
 run_producer "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" extra >/dev/null 2>&1
 long_arity_status=$?
@@ -287,7 +305,7 @@ unset PRODUCER_TEST_RM_MODE
 [[ "$probe_cleanup_status" -ne 0 ]]
 assert_no_runtime_or_adapter
 assert_no_evidence
-! grep -Fxq 'las-migration-readiness-v1 ok' "$TEST_ROOT/probe-cleanup.out"
+! grep -Fxq 'las-migration-readiness-v2 ok' "$TEST_ROOT/probe-cleanup.out"
 
 : >"$EVENT_LOG"
 PRODUCER_TEST_SUDO_USER=operator
@@ -337,7 +355,7 @@ round_trip_status=$?
 set -e
 rm -f "$TEST_ROOT/adapter-byte-change"
 [[ "$round_trip_status" -ne 0 ]]
-grep -Fq "runtime migration-backup $RELEASE $WEB $WORKER $MIGRATE $POSTGRES $WWW" "$EVENT_LOG" || {
+grep -Fq "runtime migration-backup $RELEASE $WEB $WORKER $MIGRATE $POSTGRES" "$EVENT_LOG" || {
 	cat "$TEST_ROOT/round-trip.err" >&2
 	cat "$EVENT_LOG" >&2
 	exit 1
@@ -371,7 +389,7 @@ work_cleanup_status=$?
 set -e
 unset PRODUCER_TEST_RM_MODE
 [[ "$work_cleanup_status" -ne 0 ]] && grep -Fq 'runtime migration-rehearse' "$EVENT_LOG" && \
-	assert_no_evidence && ! grep -Fxq 'las-migration-readiness-v1 ok' "$TEST_ROOT/work-cleanup.out" || {
+	assert_no_evidence && ! grep -Fxq 'las-migration-readiness-v2 ok' "$TEST_ROOT/work-cleanup.out" || {
 	echo 'Producer published readiness before sensitive work cleanup succeeded.' >&2
 	exit 1
 }
@@ -486,8 +504,8 @@ set -e
 rm -f "$TEST_ROOT/sync-failure"
 [[ "$post_attestation_sync_status" -ne 0 ]]
 [[ "$(run_manager migration-readiness "$RELEASE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
-	'las-migration-readiness-v1 ok' ]]
-work_cleanup_line="$(grep -nE '^rm -rf -- .*/migration-readiness-work-v1/.*/\.producer\.' "$EVENT_LOG" | tail -n 1 | cut -d: -f1)"
+	'las-migration-readiness-v2 ok' ]]
+work_cleanup_line="$(grep -nE '^rm -rf -- .*/migration-readiness-work-v2/.*/\.producer\.' "$EVENT_LOG" | tail -n 1 | cut -d: -f1)"
 backup_publish_line="$(grep -nF " $EVIDENCE_ROOT/$RELEASE.backup" "$EVENT_LOG" | grep 'rename ' | head -n 1 | cut -d: -f1)"
 [[ "$work_cleanup_line" =~ ^[1-9][0-9]*$ && "$backup_publish_line" =~ ^[1-9][0-9]*$ && \
 	"$work_cleanup_line" -lt "$backup_publish_line" ]] || {
@@ -509,11 +527,11 @@ grep -Fqx "sync -f $READINESS_ROOT" "$EVENT_LOG"
 [[ "$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$EVIDENCE_ROOT/$RELEASE.backup")" == 0:0:400 && \
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$EVIDENCE_ROOT/$RELEASE.rehearsal")" == 0:0:400 && \
 	"$("$MOCK_BIN/stat" -c '%u:%g:%a' -- "$READINESS_ROOT/$RELEASE")" == 0:0:400 ]]
-[[ "$(wc -l <"$READINESS_ROOT/$RELEASE")" -eq 9 ]]
+[[ "$(wc -l <"$READINESS_ROOT/$RELEASE")" -eq 8 ]]
 mapfile -t rehearsal_evidence_lines <"$EVIDENCE_ROOT/$RELEASE.rehearsal"
-[[ "${#rehearsal_evidence_lines[@]}" -eq 12 && \
-	"${rehearsal_evidence_lines[10]}" == 'migration-exit-status 0' && \
-	"${rehearsal_evidence_lines[11]}" == "completed-at-utc $COMPLETION_TIMESTAMP" ]] || {
+[[ "${#rehearsal_evidence_lines[@]}" -eq 11 && \
+	"${rehearsal_evidence_lines[9]}" == 'migration-exit-status 0' && \
+	"${rehearsal_evidence_lines[10]}" == "completed-at-utc $COMPLETION_TIMESTAMP" ]] || {
 	echo 'Published rehearsal evidence lacks the exact migration status and UTC completion timestamp.' >&2
 	exit 1
 }

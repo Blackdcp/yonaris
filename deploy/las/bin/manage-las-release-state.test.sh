@@ -7,6 +7,16 @@ MANAGER_SOURCE="$SCRIPT_DIR/manage-las-release-state.sh"
 TEST_ROOT="$(mktemp -d)"
 trap 'chmod -R u+w "$TEST_ROOT" 2>/dev/null || true; rm -rf -- "$TEST_ROOT"' EXIT
 
+grep -Fq "RECEIPT_TOKEN='artifact-output-language-receipt-v3'" "$MANAGER_SOURCE"
+grep -Fq "LEGACY_RECEIPT_TOKEN='artifact-output-language-receipt-v2'" "$MANAGER_SOURCE"
+grep -Fq "MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v2'" "$MANAGER_SOURCE"
+grep -Fq 'las-transition-v3' "$MANAGER_SOURCE"
+if grep -Eq 'MARKETING_RELEASE|marketing-(preflight|deploy|verify)|record-caddy|caddy-(before|after|backup)-sha256' "$MANAGER_SOURCE"; then
+	echo 'Release state still exposes retired marketing, Caddy mutation, or active fifth-digest state.' >&2
+	exit 1
+fi
+[[ "$(grep -Fc 'www-sha256' "$MANAGER_SOURCE")" -eq 1 ]]
+
 # Exact-tree extraction must reject dot path components before any root write;
 # a raw Git tree is not a trusted filesystem path namespace.
 grep -Fq 'safe_object_path "$object_path"' "$MANAGER_SOURCE"
@@ -37,14 +47,11 @@ TRUST_DIRECTORY="$TEST_ROOT/etc/yonaris"
 ACTIVATION="$TRUST_DIRECTORY/artifact-output-language-active-v1"
 JOURNAL="$TRUST_DIRECTORY/las-transition-pending-v1"
 STABLE_BUNDLE_JOURNAL="$TRUST_DIRECTORY/las-stable-bundle-pending-v1"
-RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v2"
-CADDY_BACKUP_ROOT="$TRUST_DIRECTORY/las-caddy-transition-backups-v1"
-MIGRATION_READINESS_ROOT="$TRUST_DIRECTORY/las-migration-readiness-v1"
-MIGRATION_EVIDENCE_ROOT="$TRUST_DIRECTORY/las-migration-evidence-v1"
-CADDY_DIRECTORY="$TEST_ROOT/etc/caddy"
-CADDY_TARGET="$CADDY_DIRECTORY/Caddyfile"
+RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v3"
+LEGACY_RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v2"
+MIGRATION_READINESS_ROOT="$TRUST_DIRECTORY/las-migration-readiness-v2"
+MIGRATION_EVIDENCE_ROOT="$TRUST_DIRECTORY/las-migration-evidence-v2"
 PORTAL_RELEASE="$TRUST_DIRECTORY/las-active-portal-release-v1"
-MARKETING_RELEASE="$TRUST_DIRECTORY/las-active-marketing-release-v1"
 DEPLOY_ROOT="$TEST_ROOT/opt/yonaris"
 GIT_ROOT="$TEST_ROOT/var/lib/yonaris/las-objects.git"
 TREE_ROOT="$TEST_ROOT/var/lib/yonaris/las-release-trees"
@@ -53,7 +60,6 @@ STABLE_DIRECTORY="$TEST_ROOT/usr/local/libexec/yonaris-las"
 MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
-STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
 ROOT_VERIFIER="$TEST_ROOT/usr/local/sbin/verify-yonaris-las-forced-command"
 MOCK_BIN="$TEST_ROOT/mock-bin"
 REAL_STAT="$(command -v stat)"
@@ -66,8 +72,8 @@ MIGRATE='sha256:3333333333333333333333333333333333333333333333333333333333333333
 POSTGRES='sha256:4444444444444444444444444444444444444444444444444444444444444444'
 WWW='sha256:5555555555555555555555555555555555555555555555555555555555555555'
 
-mkdir -p "$TRUST_DIRECTORY" "$RECEIPT_ROOT" "$CADDY_BACKUP_ROOT" "$MIGRATION_READINESS_ROOT" \
-	"$MIGRATION_EVIDENCE_ROOT" "$CADDY_DIRECTORY" "$DEPLOY_ROOT" "$TREE_ROOT" \
+mkdir -p "$TRUST_DIRECTORY" "$RECEIPT_ROOT" "$LEGACY_RECEIPT_ROOT" "$MIGRATION_READINESS_ROOT" \
+	"$MIGRATION_EVIDENCE_ROOT" "$DEPLOY_ROOT" "$TREE_ROOT" \
 	"$BINDING_ROOT" "$STABLE_DIRECTORY" "$(dirname -- "$ROOT_VERIFIER")" \
 	"$(dirname -- "$GIT_ROOT")" "$MOCK_BIN"
 git init --bare --quiet "$GIT_ROOT"
@@ -78,7 +84,6 @@ git -C "$WORK_REPO" config user.name 'Yonaris state test'
 git -C "$WORK_REPO" config core.autocrlf false
 mkdir -p "$WORK_REPO/deploy/las/bin"
 printf '#!/bin/bash\nprintf predecessor\n' >"$WORK_REPO/deploy/las/bin/deploy.sh"
-printf '#!/bin/bash\nprintf predecessor-marketing\n' >"$WORK_REPO/deploy/las/bin/deploy-marketing.sh"
 mkdir -p "$WORK_REPO/customer data/[CN]"
 printf '%s\n' 'literal-dollar-path' >"$WORK_REPO/customer data/[CN]/price \$5.txt"
 chmod +x "$WORK_REPO/deploy/las/bin"/*.sh
@@ -107,7 +112,6 @@ git -C "$WORK_REPO" push --quiet "$GIT_ROOT" \
 	"$CORRUPT_ORPHAN_SHA:refs/heads/corrupt-orphan"
 git --git-dir="$GIT_ROOT" replace "$CANDIDATE_SHA" "$REPLACEMENT_SHA"
 printf '#!/bin/bash\nprintf dirty-checkout-attack\n' >"$WORK_REPO/deploy/las/bin/deploy.sh"
-printf 'initial caddy\n' >"$CADDY_TARGET"
 
 cat >"$ROOT_VERIFIER" <<'STUB'
 #!/usr/bin/env bash
@@ -124,9 +128,9 @@ cat >"$STABLE_GUARD" <<STUB
 #!/usr/bin/env bash
 printf 'guard %s\n' "\$*" >>'$TEST_ROOT/bootstrap-events.log'
 if [[ "\$1" == rollback && "\$2" == sha-* ]]; then [[ ! -e '$TEST_ROOT/rollback-guard-bad' ]]; exit; fi
-[[ "\$1" == candidate && "\$2" == sha-* && ( "\$3" == deploy || "\$3" == marketing-deploy ) ]] || exit 2
+[[ "\$1" == candidate && "\$2" == sha-* && "\$3" == deploy ]] || exit 2
 if [[ -e '$TEST_ROOT/guard-bad' ]]; then bad='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'; else bad='$WEB'; fi
-printf 'release-digests-v1 %s %s %s %s %s %s %s\n' "\$2" "\$3" "\$bad" '$WORKER' '$MIGRATE' '$POSTGRES' '$WWW'
+printf 'release-digests-v2 %s %s %s %s %s %s\n' "\$2" "\$3" "\$bad" '$WORKER' '$MIGRATE' '$POSTGRES'
 STUB
 cat >"$STABLE_RUNTIME_MANAGER" <<STUB
 #!/usr/bin/env bash
@@ -134,13 +138,7 @@ set -Eeuo pipefail
 printf 'runtime %s\n' "\$*" >>'$TEST_ROOT/bootstrap-events.log'
 [[ ! -e '$TEST_ROOT/runtime-fail' ]]
 STUB
-cat >"$STABLE_CADDY_MANAGER" <<STUB
-#!/usr/bin/env bash
-set -Eeuo pipefail
-printf 'caddy %s\n' "\$*" >>'$TEST_ROOT/bootstrap-events.log'
-[[ ! -e '$TEST_ROOT/caddy-fail' ]]
-STUB
-chmod +x "$ROOT_VERIFIER" "$STABLE_GUARD" "$STABLE_RUNTIME_MANAGER" "$STABLE_CADDY_MANAGER"
+chmod +x "$ROOT_VERIFIER" "$STABLE_GUARD" "$STABLE_RUNTIME_MANAGER"
 
 cat >"$MOCK_BIN/id" <<'STUB'
 #!/usr/bin/env bash
@@ -185,8 +183,7 @@ case "${STATE_TEST_MV_KILL:-}:$destination" in
 		;;
 esac
 case "${STATE_TEST_MV_FAIL:-}:$destination" in
-	journal:*/las-transition-pending-v1 | release:*/las-active-portal-release-v1 | \
-	release:*/las-active-marketing-release-v1) exit 91 ;;
+	journal:*/las-transition-pending-v1 | release:*/las-active-portal-release-v1) exit 91 ;;
 esac
 root_semantic_mv "$@"
 STUB
@@ -216,9 +213,8 @@ fi
 metadata=''
 if [[ -d "$path" ]]; then
 	case "$path" in
-		*/etc/yonaris | */las-compatible-releases-v2 | */etc/caddy) metadata='0:0:755' ;;
-		*/las-caddy-transition-backups-v1 | */las-migration-readiness-v1 | \
-		*/las-migration-evidence-v1) metadata='0:0:700' ;;
+		*/etc/yonaris | */las-compatible-releases-v3 | */las-compatible-releases-v2) metadata='0:0:755' ;;
+		*/las-migration-readiness-v2 | */las-migration-evidence-v2) metadata='0:0:700' ;;
 		*/var/lib/yonaris) metadata='0:0:711' ;;
 		*/las-objects.git) metadata='0:0:700' ;;
 		*/las-release-trees | */las-release-trees/.bindings | */las-release-trees/sha-* | \
@@ -229,15 +225,15 @@ elif [[ -f "$path" ]]; then
 	case "$path" in
 		*/las-transition-pending-v1 | */las-caddy-bootstrap-pending-v1) metadata='0:0:600' ;;
 		*/artifact-output-language-active-v1) metadata='0:0:400' ;;
-		*/las-migration-readiness-v1/sha-* | */las-migration-evidence-v1/sha-*.backup | \
-		*/las-migration-evidence-v1/sha-*.rehearsal) metadata='0:0:400' ;;
-		*/las-compatible-releases-v2/sha-* | */las-active-portal-release-v1 | \
-		*/las-active-marketing-release-v1 | */etc/caddy/Caddyfile) metadata='0:0:644' ;;
+		*/las-migration-readiness-v2/sha-* | */las-migration-evidence-v2/sha-*.backup | \
+		*/las-migration-evidence-v2/sha-*.rehearsal) metadata='0:0:400' ;;
+		*/las-compatible-releases-v3/sha-* | */las-compatible-releases-v2/sha-* | \
+		*/las-active-portal-release-v1) metadata='0:0:644' ;;
 		*/las-release-trees/.bindings/sha-*) metadata='0:0:444' ;;
 		*/las-release-trees/sha-*/* | */.las-tree-sha-*/*)
 			if [[ -x "$path" ]]; then metadata='0:0:555'; else metadata='0:0:444'; fi ;;
 		*/guard-artifact-output-release | */verify-yonaris-las-forced-command | \
-		*/manage-las-runtime | */manage-las-caddy) metadata='0:0:755' ;;
+		*/manage-las-runtime) metadata='0:0:755' ;;
 		*) exec "$REAL_STAT" "$@" ;;
 	esac
 else
@@ -272,6 +268,11 @@ sed \
 chmod 0755 "$MANAGER"
 
 run_manager() {
+	local -a args=("$@")
+	local i
+	for i in "${!args[@]}"; do
+		if [[ "${args[$i]}" == "$WWW" ]]; then unset 'args[i]'; fi
+	done
 	env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
 		REAL_STAT="$REAL_STAT" REAL_READLINK="$REAL_READLINK" REAL_MV="$REAL_MV" \
 		STATE_TEST_UID="${STATE_TEST_UID:-0}" STATE_TEST_MV_FAIL="${STATE_TEST_MV_FAIL:-}" \
@@ -280,15 +281,20 @@ run_manager() {
 		STATE_TEST_SYNC_KILL="${STATE_TEST_SYNC_KILL:-}" \
 		STATE_TEST_GUARD_BAD="${STATE_TEST_GUARD_BAD:-no}" \
 		STATE_TEST_RUNTIME_FAIL="${STATE_TEST_RUNTIME_FAIL:-no}" \
-		STATE_TEST_CADDY_FAIL="${STATE_TEST_CADDY_FAIL:-no}" \
 		STATE_TEST_EVENT_LOG="$TEST_ROOT/bootstrap-events.log" \
 		STATE_TEST_IO_LOG="$TEST_ROOT/state-io.log" \
 		STATE_TEST_CHILD_OWNER_BAD="${STATE_TEST_CHILD_OWNER_BAD:-no}" \
 		SUDO_USER="${STATE_TEST_SUDO_USER:-}" \
-		/bin/bash --noprofile --norc -p "$MANAGER" "$@"
+		/bin/bash --noprofile --norc -p "$MANAGER" "${args[@]}"
 }
 
 receipt() {
+	local release="$1"
+	printf 'artifact-output-language-receipt-v3\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
+		"$release" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES"
+}
+
+legacy_receipt() {
 	local release="$1"
 	printf 'artifact-output-language-receipt-v2\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\n' \
 		"$release" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
@@ -302,13 +308,12 @@ write_migration_readiness() {
 	printf 'rehearsal evidence for %s\n' "$release" >"$rehearsal"
 	chmod 0400 "$backup" "$rehearsal"
 	printf '%s\n' \
-		'las-migration-readiness-v1' \
+		'las-migration-readiness-v2' \
 		"release $release" \
 		"web-sha256 $WEB" \
 		"worker-sha256 $WORKER" \
 		"migrate-sha256 $MIGRATE" \
 		"postgres-sha256 $POSTGRES" \
-		"www-sha256 $WWW" \
 		"backup-evidence-sha256 $(sha256sum "$backup" | awk '{print $1}')" \
 		"rehearsal-evidence-sha256 $(sha256sum "$rehearsal" | awk '{print $1}')" \
 		>"$MIGRATION_READINESS_ROOT/$release"
@@ -475,12 +480,12 @@ set -e
 # candidate tree and its deploy policy tuple, while every recovery journal is
 # empty. No partial or conflicting readiness namespace may be crossed.
 [[ "$(run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
-	'las-migration-readiness-runtime-authorization-v1 ok' ]]
+	'las-migration-readiness-runtime-authorization-v2 ok' ]]
 grep -Fq "verifier " "$TEST_ROOT/bootstrap-events.log"
 grep -Fq "guard candidate $CANDIDATE deploy" "$TEST_ROOT/bootstrap-events.log"
 
 set +e
-run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" >/dev/null 2>&1
+run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" >/dev/null 2>&1
 authorization_arity_status=$?
 set -e
 [[ "$authorization_arity_status" -eq 2 ]]
@@ -531,9 +536,9 @@ rm -f "$MIGRATION_EVIDENCE_ROOT/$CANDIDATE.backup"
 write_migration_readiness "$PREDECESSOR"
 write_migration_readiness "$CANDIDATE"
 [[ "$(run_manager migration-readiness "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
-	'las-migration-readiness-v1 ok' ]]
+	'las-migration-readiness-v2 ok' ]]
 [[ "$(run_manager migration-readiness-runtime-authorization "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
-	'las-migration-readiness-runtime-authorization-v1 ok' ]]
+	'las-migration-readiness-runtime-authorization-v2 ok' ]]
 set +e
 run_manager migration-readiness "$CANDIDATE" \
 	'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
@@ -551,15 +556,8 @@ rm -f "$ACTIVATION"
 [[ "$(run_manager bootstrap-runtime-authorization portal "$PREDECESSOR" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
 	'las-bootstrap-runtime-authorization-v1 ok' ]]
 
-# Marketing runtime bootstrap is not pristine merely because its own marker is
-# absent. It must be anchored in a live, exact portal predecessor receipt/tree
-# and the candidate's marketing-deploy policy tuple.
-set +e
-run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-marketing_without_portal_status=$?
-set -e
-[[ "$marketing_without_portal_status" -ne 0 ]]
-
+# A leftover Caddy-era recovery sentinel is never interpreted by the Portal-only
+# state manager. It blocks status and bootstrap until an explicit root recovery.
 printf 'las-caddy-bootstrap-v1\n' >"$TRUST_DIRECTORY/las-caddy-bootstrap-pending-v1"
 set +e
 run_manager status >/dev/null 2>&1
@@ -570,7 +568,7 @@ rm -f "$TRUST_DIRECTORY/las-caddy-bootstrap-pending-v1"
 
 # Initial canonical state is a root-local live attestation, not a parameter-only
 # seed. It binds the active bundle policy/capability, exact immutable tree, and
-# actual rootless runtime (plus Caddy for marketing) before writing evidence.
+# actual rootless Portal runtime before writing v3 evidence.
 STATE_TEST_SUDO_USER=yonaris-deploy
 set +e
 run_manager bootstrap-surface portal "$PREDECESSOR" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
@@ -601,52 +599,29 @@ cmp -s "$RECEIPT_ROOT/$PREDECESSOR" <(receipt "$PREDECESSOR")
 run_manager bootstrap-surface portal "$PREDECESSOR" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
 grep -Fq "runtime portal-verify $PREDECESSOR" "$TEST_ROOT/bootstrap-events.log"
 
-mv "$RECEIPT_ROOT/$PREDECESSOR" "$RECEIPT_ROOT/$PREDECESSOR.saved"
+# A legacy-only receipt remains readable, and matching v2/v3 receipts may
+# coexist. A mismatch in the first four digests fails closed.
+legacy_receipt "$PREDECESSOR" >"$LEGACY_RECEIPT_ROOT/$PREDECESSOR"
+cmp -s "$RECEIPT_ROOT/$PREDECESSOR" <(receipt "$PREDECESSOR")
+run_manager rollback-evidence portal "$PREDECESSOR" >/dev/null
+conflicting_web='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+sed "s/$WEB/$conflicting_web/" "$LEGACY_RECEIPT_ROOT/$PREDECESSOR" >"$LEGACY_RECEIPT_ROOT/$PREDECESSOR.bad"
+mv "$LEGACY_RECEIPT_ROOT/$PREDECESSOR.bad" "$LEGACY_RECEIPT_ROOT/$PREDECESSOR"
 set +e
-run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-marketing_without_portal_receipt_status=$?
+run_manager rollback-evidence portal "$PREDECESSOR" >/dev/null 2>&1
+legacy_mismatch_status=$?
 set -e
-mv "$RECEIPT_ROOT/$PREDECESSOR.saved" "$RECEIPT_ROOT/$PREDECESSOR"
-[[ "$marketing_without_portal_receipt_status" -ne 0 ]]
+[[ "$legacy_mismatch_status" -ne 0 ]]
+legacy_receipt "$PREDECESSOR" >"$LEGACY_RECEIPT_ROOT/$PREDECESSOR"
 
-printf '%s\n' 'artifact-output-language-active-v1' >"$ACTIVATION"
+# Retired surfaces and the old fifth-digest grammar are rejected.
 set +e
-run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-marketing_activation_status=$?
+run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" >/dev/null 2>&1
+retired_surface_status=$?
+/bin/bash --noprofile --norc -p "$MANAGER" migration-readiness "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
+fifth_digest_status=$?
 set -e
-rm -f "$ACTIVATION"
-[[ "$marketing_activation_status" -ne 0 ]]
-
-printf '%s\n' 'las-caddy-bootstrap-v1' >"$TRUST_DIRECTORY/las-caddy-bootstrap-pending-v1"
-set +e
-run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-marketing_caddy_pending_status=$?
-set -e
-rm -f "$TRUST_DIRECTORY/las-caddy-bootstrap-pending-v1"
-[[ "$marketing_caddy_pending_status" -ne 0 ]]
-
-set +e
-run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" \
-	'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' \
-	"$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-marketing_wrong_tuple_status=$?
-set -e
-[[ "$marketing_wrong_tuple_status" -ne 0 ]]
-[[ "$(run_manager bootstrap-runtime-authorization marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW")" == \
-	'las-bootstrap-runtime-authorization-v1 ok' ]]
-grep -Fq "guard candidate $CANDIDATE marketing-deploy" "$TEST_ROOT/bootstrap-events.log"
-
-touch "$TEST_ROOT/caddy-fail"
-set +e
-run_manager bootstrap-surface marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
-caddy_bootstrap_status=$?
-set -e
-rm -f "$TEST_ROOT/caddy-fail"
-[[ "$caddy_bootstrap_status" -ne 0 && ! -e "$MARKETING_RELEASE" && ! -e "$RECEIPT_ROOT/$CANDIDATE" ]]
-run_manager bootstrap-surface marketing "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW"
-cmp -s "$MARKETING_RELEASE" <(printf '%s\n' "$CANDIDATE")
-cmp -s "$RECEIPT_ROOT/$CANDIDATE" <(receipt "$CANDIDATE")
-grep -Fq "caddy verify-active $CANDIDATE $CANDIDATE" "$TEST_ROOT/bootstrap-events.log"
+[[ "$retired_surface_status" -ne 0 && "$fifth_digest_status" -eq 2 ]]
 
 set +e
 run_manager bootstrap-surface portal "$CANDIDATE" "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null 2>&1
@@ -656,7 +631,6 @@ set -e
 
 receipt "$PREDECESSOR" >"$RECEIPT_ROOT/$PREDECESSOR"
 printf '%s\n' "$PREDECESSOR" >"$PORTAL_RELEASE"
-printf '%s\n' "$PREDECESSOR" >"$MARKETING_RELEASE"
 
 # Non-root candidate code cannot invoke any state command directly.
 STATE_TEST_UID=1001
@@ -707,23 +681,13 @@ run_manager reconcile portal "$CANDIDATE" rollback
 [[ "$(tr -d '[:space:]' <"$PORTAL_RELEASE")" == "$PREDECESSOR" && ! -e "$JOURNAL" ]]
 cmp -s "$RECEIPT_ROOT/$CANDIDATE" <(receipt "$CANDIDATE")
 
-# A receipt is shared by SHA across surfaces. A failed marketing transition for
-# a SHA that remains active on portal must not delete that portal evidence.
-printf '%s\n' "$CANDIDATE" >"$PORTAL_RELEASE"
-printf '%s\n' "$PREDECESSOR" >"$MARKETING_RELEASE"
-run_manager begin marketing "$CANDIDATE" marketing-deploy "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null
-run_manager reconcile marketing "$CANDIDATE" rollback
-[[ "$(tr -d '[:space:]' <"$PORTAL_RELEASE")" == "$CANDIDATE" ]]
-[[ "$(tr -d '[:space:]' <"$MARKETING_RELEASE")" == "$PREDECESSOR" ]]
-cmp -s "$RECEIPT_ROOT/$CANDIDATE" <(receipt "$CANDIDATE")
-
 # Completion is idempotent only for the same digest tuple. It must never
 # overwrite pre-existing evidence for the same SHA with different bytes.
 printf '%s\n' "$PREDECESSOR" >"$PORTAL_RELEASE"
 run_manager begin portal "$CANDIDATE" deploy "$WEB" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >/dev/null
 conflicting_web='sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-printf 'artifact-output-language-receipt-v2\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\n' \
-	"$CANDIDATE" "$conflicting_web" "$WORKER" "$MIGRATE" "$POSTGRES" "$WWW" >"$RECEIPT_ROOT/$CANDIDATE"
+printf 'artifact-output-language-receipt-v3\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
+	"$CANDIDATE" "$conflicting_web" "$WORKER" "$MIGRATE" "$POSTGRES" >"$RECEIPT_ROOT/$CANDIDATE"
 set +e
 run_manager complete portal "$CANDIDATE" >/dev/null 2>&1
 conflict_status=$?

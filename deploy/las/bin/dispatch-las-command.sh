@@ -380,7 +380,7 @@ if [[ "$operation" == deploy ]]; then
 	runtime_manager portal-preflight "$release_tag" "$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" \
 		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" portal-runtime-v2 || \
 		fail 'Stable portal runtime preflight rejected the candidate.'
-	state_attestation 'las-migration-readiness-v1 ok' migration-readiness "$release_tag" \
+	state_attestation 'las-migration-readiness-v2 ok' migration-readiness "$release_tag" \
 		"$WEB_IMAGE_DIGEST" "$WORKER_IMAGE_DIGEST" "$MIGRATE_IMAGE_DIGEST" \
 		"$POSTGRES_IMAGE_DIGEST" || \
 		fail 'Root-owned migration readiness rejected the exact candidate tuple.'

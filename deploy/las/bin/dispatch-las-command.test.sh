@@ -81,7 +81,7 @@ assert_protocol_rejected noncanonical-space \
 # uses the guard's receipt-bound rollback mode and never enters migration.
 grep -Fq '"$record" == release-digests-v2' "$SOURCE"
 grep -Fq 'rollback "$release_tag")' "$SOURCE"
-[[ "$(grep -Fc "state_attestation 'las-migration-readiness-v1 ok'" "$SOURCE")" -eq 1 ]]
+[[ "$(grep -Fc "state_attestation 'las-migration-readiness-v2 ok'" "$SOURCE")" -eq 1 ]]
 [[ "$(grep -Fc 'state_manager complete portal' "$SOURCE")" -eq 2 ]]
 
 # Only the legacy v2 receipt reader may mention the retired fifth digest.

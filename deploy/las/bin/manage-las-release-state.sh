@@ -7,20 +7,19 @@ PATH='/usr/bin:/bin'
 export PATH
 readonly PATH
 
-readonly RECEIPT_TOKEN='artifact-output-language-receipt-v2'
+readonly RECEIPT_TOKEN='artifact-output-language-receipt-v3'
+readonly LEGACY_RECEIPT_TOKEN='artifact-output-language-receipt-v2'
 readonly ACTIVATION_TOKEN='artifact-output-language-active-v1'
 readonly TRUST_DIRECTORY='/etc/yonaris'
 readonly ACTIVATION_ATTESTATION='/etc/yonaris/artifact-output-language-active-v1'
 readonly TRANSITION_JOURNAL='/etc/yonaris/las-transition-pending-v1'
-readonly CADDY_BOOTSTRAP_JOURNAL='/etc/yonaris/las-caddy-bootstrap-pending-v1'
+readonly LEGACY_CADDY_BOOTSTRAP_JOURNAL='/etc/yonaris/las-caddy-bootstrap-pending-v1'
 readonly STABLE_BUNDLE_JOURNAL='/etc/yonaris/las-stable-bundle-pending-v1'
-readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
-readonly CADDY_TARGET='/etc/caddy/Caddyfile'
-readonly CADDY_BACKUP_ROOT='/etc/yonaris/las-caddy-transition-backups-v1'
-readonly MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v1'
-readonly MIGRATION_EVIDENCE_ROOT='/etc/yonaris/las-migration-evidence-v1'
+readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v3'
+readonly LEGACY_RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
+readonly MIGRATION_READINESS_ROOT='/etc/yonaris/las-migration-readiness-v2'
+readonly MIGRATION_EVIDENCE_ROOT='/etc/yonaris/las-migration-evidence-v2'
 readonly PORTAL_RELEASE='/etc/yonaris/las-active-portal-release-v1'
-readonly MARKETING_RELEASE='/etc/yonaris/las-active-marketing-release-v1'
 readonly DEPLOY_ROOT='/opt/yonaris'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
 readonly SOURCE_GIT_DIR='/var/lib/yonaris/las-objects.git'
@@ -30,16 +29,14 @@ if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" ]]; then
 	STABLE_DIRECTORY="$LAS_STABLE_BUNDLE_DIR"
 	STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 	STABLE_RUNTIME_MANAGER="$STABLE_DIRECTORY/manage-las-runtime"
-	STABLE_CADDY_MANAGER="$STABLE_DIRECTORY/manage-las-caddy"
 	ROOT_VERIFIER="$STABLE_DIRECTORY/verify-yonaris-las-forced-command"
 else
 	STABLE_DIRECTORY='/usr/local/libexec/yonaris-las'
 	STABLE_GUARD='/usr/local/libexec/yonaris-las/guard-artifact-output-release'
 	STABLE_RUNTIME_MANAGER='/usr/local/libexec/yonaris-las/manage-las-runtime'
-	STABLE_CADDY_MANAGER='/usr/local/libexec/yonaris-las/manage-las-caddy'
 	ROOT_VERIFIER='/usr/local/sbin/verify-yonaris-las-forced-command'
 fi
-readonly STABLE_DIRECTORY STABLE_GUARD STABLE_RUNTIME_MANAGER STABLE_CADDY_MANAGER ROOT_VERIFIER
+readonly STABLE_DIRECTORY STABLE_GUARD STABLE_RUNTIME_MANAGER ROOT_VERIFIER
 
 fail() {
 	/usr/bin/printf '%s\n' "$1" >&2
@@ -71,7 +68,7 @@ digest_is_valid() {
 
 operation_is_valid() {
 	case "$1" in
-		deploy | rollback | marketing-preflight | marketing-deploy | marketing-verify) return 0 ;;
+		deploy | rollback) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -188,54 +185,83 @@ receipt_path() {
 	/usr/bin/printf '%s/%s' "$RECEIPT_ROOT" "$1"
 }
 
-read_receipt() {
-	local release_tag="$1"
-	local path
+legacy_receipt_path() {
+	/usr/bin/printf '%s/%s' "$LEGACY_RECEIPT_ROOT" "$1"
+}
+
+read_receipt_file() {
+	local release_tag="$1" format="$2" path="$3"
 	local -a lines=()
-	path="$(receipt_path "$release_tag")"
 	metadata_matches "$path" file '0:0:644' || return 1
+	[[ "$(/usr/bin/stat -c '%h' -- "$path")" == 1 ]] || return 1
 	mapfile -t lines <"$path"
-	[[ "${#lines[@]}" -eq 7 ]] || return 1
-	[[ "${lines[0]}" == "$RECEIPT_TOKEN" && "${lines[1]}" == "release $release_tag" ]] || return 1
+	[[ "${lines[1]:-}" == "release $release_tag" ]] || return 1
 	[[ "${lines[2]}" =~ ^web-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	[[ "${lines[3]}" =~ ^worker-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	[[ "${lines[4]}" =~ ^migrate-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	[[ "${lines[5]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
-	[[ "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
-	/usr/bin/printf '%s\n' "${lines[@]:2}"
+	case "$format" in
+		v3)
+			[[ "${#lines[@]}" -eq 6 && "${lines[0]}" == "$RECEIPT_TOKEN" ]] || return 1
+			;;
+		v2)
+			[[ "${#lines[@]}" -eq 7 && "${lines[0]}" == "$LEGACY_RECEIPT_TOKEN" && \
+				"${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
+			;;
+		*) return 1 ;;
+	esac
+	/usr/bin/printf '%s\n' "${lines[@]:2:4}"
+}
+
+read_receipt() {
+	local release_tag="$1" current_path legacy_path current_digests='' legacy_digests=''
+	local current_present=false legacy_present=false
+	current_path="$(receipt_path "$release_tag")"
+	legacy_path="$(legacy_receipt_path "$release_tag")"
+	if [[ -e "$current_path" || -L "$current_path" ]]; then
+		current_present=true
+		current_digests="$(read_receipt_file "$release_tag" v3 "$current_path")" || return 1
+	fi
+	if [[ -e "$legacy_path" || -L "$legacy_path" ]]; then
+		legacy_present=true
+		legacy_digests="$(read_receipt_file "$release_tag" v2 "$legacy_path")" || return 1
+	fi
+	[[ "$current_present" == true || "$legacy_present" == true ]] || return 1
+	if [[ "$current_present" == true && "$legacy_present" == true ]]; then
+		[[ "$current_digests" == "$legacy_digests" ]] || return 1
+	fi
+	if [[ "$current_present" == true ]]; then
+		/usr/bin/printf '%s\n' "$current_digests"
+	else
+		/usr/bin/printf '%s\n' "$legacy_digests"
+	fi
 }
 
 receipt_contents() {
-	local release_tag="$1"
-	local web_digest="$2"
-	local worker_digest="$3"
-	local migrate_digest="$4"
-	local postgres_digest="$5"
-	local www_digest="$6"
-	/usr/bin/printf '%s\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\n' \
+	local release_tag="$1" web_digest="$2" worker_digest="$3" migrate_digest="$4" postgres_digest="$5"
+	/usr/bin/printf '%s\nrelease %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
 		"$RECEIPT_TOKEN" "$release_tag" "$web_digest" "$worker_digest" \
-		"$migrate_digest" "$postgres_digest" "$www_digest"
+		"$migrate_digest" "$postgres_digest"
 }
 
 receipt_matches_tuple() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
-	local path expected
-	path="$(receipt_path "$release_tag")"
-	expected="$(receipt_contents "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www")"$'\n'
-	metadata_matches "$path" file '0:0:644' && \
-		[[ "$(/usr/bin/stat -c '%h' -- "$path")" == 1 ]] && \
-		/usr/bin/cmp -s "$path" <(/usr/bin/printf '%s' "$expected")
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
+	local actual expected
+	actual="$(read_receipt "$release_tag")" || return 1
+	expected="$(/usr/bin/printf 'web-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
+		"$web" "$worker" "$migrate" "$postgres")"
+	[[ "$actual" == "$expected" ]]
 }
 
 verify_migration_readiness() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
 	local attestation="$MIGRATION_READINESS_ROOT/$1"
 	local backup="$MIGRATION_EVIDENCE_ROOT/$1.backup"
 	local rehearsal="$MIGRATION_EVIDENCE_ROOT/$1.rehearsal"
 	local backup_hash rehearsal_hash
 	local -a lines=()
 	release_is_valid "$release_tag" && digest_is_valid "$web" && digest_is_valid "$worker" && \
-		digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || return 1
+		digest_is_valid "$migrate" && digest_is_valid "$postgres" || return 1
 	metadata_matches "$MIGRATION_READINESS_ROOT" directory '0:0:700' && \
 		metadata_matches "$MIGRATION_EVIDENCE_ROOT" directory '0:0:700' && \
 		metadata_matches "$attestation" file '0:0:400' && \
@@ -245,23 +271,22 @@ verify_migration_readiness() {
 		[[ "$(/usr/bin/stat -c '%h' -- "$evidence")" == 1 ]] || return 1
 	done
 	mapfile -t lines <"$attestation"
-	[[ "${#lines[@]}" -eq 9 && "${lines[0]}" == las-migration-readiness-v1 && \
+	[[ "${#lines[@]}" -eq 8 && "${lines[0]}" == las-migration-readiness-v2 && \
 		"${lines[1]}" == "release $release_tag" && \
 		"${lines[2]}" == "web-sha256 $web" && \
 		"${lines[3]}" == "worker-sha256 $worker" && \
 		"${lines[4]}" == "migrate-sha256 $migrate" && \
-		"${lines[5]}" == "postgres-sha256 $postgres" && \
-		"${lines[6]}" == "www-sha256 $www" ]] || return 1
-	[[ "${lines[7]}" =~ ^backup-evidence-sha256\ ([0-9a-f]{64})$ ]] || return 1
+		"${lines[5]}" == "postgres-sha256 $postgres" ]] || return 1
+	[[ "${lines[6]}" =~ ^backup-evidence-sha256\ ([0-9a-f]{64})$ ]] || return 1
 	backup_hash="${BASH_REMATCH[1]}"
-	[[ "${lines[8]}" =~ ^rehearsal-evidence-sha256\ ([0-9a-f]{64})$ ]] || return 1
+	[[ "${lines[7]}" =~ ^rehearsal-evidence-sha256\ ([0-9a-f]{64})$ ]] || return 1
 	rehearsal_hash="${BASH_REMATCH[1]}"
 	[[ "$(/usr/bin/sha256sum -- "$backup" | /usr/bin/awk '{print $1}')" == "$backup_hash" && \
 		"$(/usr/bin/sha256sum -- "$rehearsal" | /usr/bin/awk '{print $1}')" == "$rehearsal_hash" ]]
 }
 
 migration_readiness_absent_or_matches() {
-	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5" www="$6"
+	local release_tag="$1" web="$2" worker="$3" migrate="$4" postgres="$5"
 	local attestation="$MIGRATION_READINESS_ROOT/$release_tag"
 	local backup="$MIGRATION_EVIDENCE_ROOT/$release_tag.backup"
 	local rehearsal="$MIGRATION_EVIDENCE_ROOT/$release_tag.rehearsal"
@@ -271,7 +296,7 @@ migration_readiness_absent_or_matches() {
 		! -e "$backup" && ! -L "$backup" && ! -e "$rehearsal" && ! -L "$rehearsal" ]]; then
 		return 0
 	fi
-	verify_migration_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres" "$www"
+	verify_migration_readiness "$release_tag" "$web" "$worker" "$migrate" "$postgres"
 }
 
 tree_manifest() {
@@ -406,9 +431,7 @@ materialize_release_tree() {
 	/usr/bin/rm -f -- "$listing"
 	TREE_LISTING_CLEANUP_PATH=''
 	[[ -f "$staging/deploy/las/bin/deploy.sh" && \
-		-f "$staging/deploy/las/bin/deploy-marketing.sh" && \
-		! -L "$staging/deploy/las/bin/deploy.sh" && \
-		! -L "$staging/deploy/las/bin/deploy-marketing.sh" ]] || return 1
+		! -L "$staging/deploy/las/bin/deploy.sh" ]] || return 1
 	if /usr/bin/find "$staging" -type l -print -quit | /usr/bin/grep -q .; then
 		return 1
 	fi
@@ -467,20 +490,18 @@ materialize_release_tree() {
 }
 
 journal_contents() {
-	local surface="$1" candidate="$2" predecessor="$3" operation="$4"
-	local web="$5" worker="$6" migrate="$7" postgres="$8" www="$9"
-	local caddy_before="${10:-none}" caddy_after="${11:-none}" caddy_backup="${12:-none}"
-	/usr/bin/printf 'las-transition-v2\nsurface %s\ncandidate %s\npredecessor %s\noperation %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\ncaddy-before-sha256 %s\ncaddy-after-sha256 %s\ncaddy-backup-sha256 %s\n' \
-		"$surface" "$candidate" "$predecessor" "$operation" "$web" "$worker" "$migrate" "$postgres" "$www" \
-		"$caddy_before" "$caddy_after" "$caddy_backup"
+	local candidate="$1" predecessor="$2" operation="$3"
+	local web="$4" worker="$5" migrate="$6" postgres="$7"
+	/usr/bin/printf 'las-transition-v3\nsurface portal\ncandidate %s\npredecessor %s\noperation %s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
+		"$candidate" "$predecessor" "$operation" "$web" "$worker" "$migrate" "$postgres"
 }
 
 read_journal() {
 	local -a lines=()
 	metadata_matches "$TRANSITION_JOURNAL" file '0:0:600' || return 1
 	mapfile -t lines <"$TRANSITION_JOURNAL"
-	[[ "${#lines[@]}" -eq 13 && "${lines[0]}" == las-transition-v2 && \
-		"${lines[1]}" =~ ^surface\ (portal|marketing)$ ]] || return 1
+	[[ "${#lines[@]}" -eq 9 && "${lines[0]}" == las-transition-v3 && \
+		"${lines[1]}" == 'surface portal' ]] || return 1
 	[[ "${lines[2]}" =~ ^candidate\ (sha-[0-9a-f]{40})$ ]] || return 1
 	[[ "${lines[3]}" =~ ^predecessor\ (sha-[0-9a-f]{40})$ ]] || return 1
 	[[ "${lines[4]}" =~ ^operation\ ([a-z-]+)$ ]] || return 1
@@ -488,11 +509,7 @@ read_journal() {
 	[[ "${lines[5]}" =~ ^web-sha256\ (sha256:[0-9a-f]{64})$ && \
 		"${lines[6]}" =~ ^worker-sha256\ (sha256:[0-9a-f]{64})$ && \
 		"${lines[7]}" =~ ^migrate-sha256\ (sha256:[0-9a-f]{64})$ && \
-		"${lines[8]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ && \
-		"${lines[9]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
-	[[ "${lines[10]}" =~ ^caddy-before-sha256\ (none|[0-9a-f]{64})$ && \
-		"${lines[11]}" =~ ^caddy-after-sha256\ (none|[0-9a-f]{64})$ && \
-		"${lines[12]}" =~ ^caddy-backup-sha256\ (none|[0-9a-f]{64})$ ]] || return 1
+		"${lines[8]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
 	/usr/bin/printf '%s\n' "${lines[@]}"
 }
 
@@ -504,7 +521,7 @@ journal_field() {
 ensure_root_state() {
 	metadata_matches "$TRUST_DIRECTORY" directory '0:0:755' || return 1
 	metadata_matches "$RECEIPT_ROOT" directory '0:0:755' || return 1
-	metadata_matches "$CADDY_BACKUP_ROOT" directory '0:0:700' || return 1
+	metadata_matches "$LEGACY_RECEIPT_ROOT" directory '0:0:755' || return 1
 	metadata_matches "$STATE_DIRECTORY" directory '0:0:711' || return 1
 }
 
@@ -525,24 +542,16 @@ runtime_manager() {
 			/bin/bash --noprofile --norc -p "$STABLE_RUNTIME_MANAGER" "$@"
 }
 
-caddy_manager() {
-	metadata_matches "$STABLE_CADDY_MANAGER" file '0:0:755' && \
-		/usr/bin/env -i PATH='/usr/bin:/bin' HOME='/nonexistent' \
-			LAS_STABLE_BUNDLE_DIR="${LAS_STABLE_BUNDLE_DIR:-}" \
-			/bin/bash --noprofile --norc -p "$STABLE_CADDY_MANAGER" "$@"
-}
-
 authorize_bootstrap_tuple() {
 	local release_tag="$1" operation="$2" expected_web="$3" expected_worker="$4"
-	local expected_migrate="$5" expected_postgres="$6" expected_www="$7" output
-	local token authorized_release authorized_operation web worker migrate postgres www extra
+	local expected_migrate="$5" expected_postgres="$6" output
+	local token authorized_release authorized_operation web worker migrate postgres extra
 	output="$(run_stable_guard candidate "$release_tag" "$operation")" || return 1
-	read -r token authorized_release authorized_operation web worker migrate postgres www extra <<<"$output"
-	[[ "$token" == release-digests-v1 && "$authorized_release" == "$release_tag" && \
+	read -r token authorized_release authorized_operation web worker migrate postgres extra <<<"$output"
+	[[ "$token" == release-digests-v2 && "$authorized_release" == "$release_tag" && \
 		"$authorized_operation" == "$operation" && -z "${extra:-}" && \
 		"$web" == "$expected_web" && "$worker" == "$expected_worker" && \
-		"$migrate" == "$expected_migrate" && "$postgres" == "$expected_postgres" && \
-		"$www" == "$expected_www" ]]
+		"$migrate" == "$expected_migrate" && "$postgres" == "$expected_postgres" ]]
 }
 
 [[ "$(/usr/bin/id -u)" == 0 ]] || fail 'The LAS release-state manager must run as root.'
@@ -554,118 +563,97 @@ fi
 command_name="${1:-}"
 case "$command_name" in
 	migration-readiness)
-		[[ $# -eq 7 ]] || exit 2
-		verify_migration_readiness "$2" "$3" "$4" "$5" "$6" "$7" || \
+		[[ $# -eq 6 ]] || exit 2
+		verify_migration_readiness "$2" "$3" "$4" "$5" "$6" || \
 			fail 'The root-owned migration backup and rehearsal attestation is absent or does not match this release.'
-		/usr/bin/printf '%s\n' 'las-migration-readiness-v1 ok'
+		/usr/bin/printf '%s\n' 'las-migration-readiness-v2 ok'
 		;;
 	migration-readiness-runtime-authorization)
-		[[ $# -eq 7 ]] || exit 2
-		candidate="$2"; web="$3"; worker="$4"; migrate="$5"; postgres="$6"; www="$7"
+		[[ $# -eq 6 ]] || exit 2
+		candidate="$2"; web="$3"; worker="$4"; migrate="$5"; postgres="$6"
 		release_is_valid "$candidate" && digest_is_valid "$web" && digest_is_valid "$worker" && \
-			digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || exit 2
+			digest_is_valid "$migrate" && digest_is_valid "$postgres" || exit 2
 		verify_forced_root_boundary && ensure_root_state || \
 			fail 'Migration readiness requires the exact forced root boundary.'
 		[[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" && \
-			! -e "$CADDY_BOOTSTRAP_JOURNAL" && ! -L "$CADDY_BOOTSTRAP_JOURNAL" && \
+			! -e "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" && ! -L "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" && \
 			! -e "$STABLE_BUNDLE_JOURNAL" && ! -L "$STABLE_BUNDLE_JOURNAL" ]] || \
 			fail 'Migration readiness is forbidden while LAS recovery state is pending.'
 		validate_release_tree "$candidate" || \
 			fail 'Migration readiness lacks the exact immutable candidate tree.'
-		authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" "$www" || \
+		authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" || \
 			fail 'Migration readiness digests do not match the exact deploy policy tuple.'
-		migration_readiness_absent_or_matches "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" || \
+		migration_readiness_absent_or_matches "$candidate" "$web" "$worker" "$migrate" "$postgres" || \
 			fail 'Existing migration readiness evidence conflicts with this release tuple.'
-		/usr/bin/printf '%s\n' 'las-migration-readiness-runtime-authorization-v1 ok'
+		/usr/bin/printf '%s\n' 'las-migration-readiness-runtime-authorization-v2 ok'
 		;;
 	pending-runtime-tuple)
-		[[ $# -eq 8 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
+		[[ $# -eq 7 && "$2" == portal ]] || exit 2
 		[[ "$(journal_field surface)" == "$2" && "$(journal_field candidate)" == "$3" && \
 			"$(journal_field web-sha256)" == "$4" && "$(journal_field worker-sha256)" == "$5" && \
-			"$(journal_field migrate-sha256)" == "$6" && "$(journal_field postgres-sha256)" == "$7" && \
-			"$(journal_field www-sha256)" == "$8" ]] || \
+			"$(journal_field migrate-sha256)" == "$6" && "$(journal_field postgres-sha256)" == "$7" ]] || \
 			fail 'The requested runtime mutation does not match the pending release tuple.'
 		/usr/bin/printf '%s\n' 'las-pending-runtime-tuple-v1 ok'
 		;;
 	pending-rollback-runtime-tuple)
-		[[ $# -eq 8 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
+		[[ $# -eq 7 && "$2" == portal ]] || exit 2
 		[[ "$(journal_field surface)" == "$2" && "$(journal_field predecessor)" == "$3" ]] && \
-			receipt_matches_tuple "$3" "$4" "$5" "$6" "$7" "$8" || \
+			receipt_matches_tuple "$3" "$4" "$5" "$6" "$7" || \
 			fail 'The requested rollback runtime does not match the pending predecessor receipt.'
 		/usr/bin/printf '%s\n' 'las-pending-rollback-runtime-tuple-v1 ok'
 		;;
 	bootstrap-runtime-authorization)
-		[[ $# -eq 8 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
+		[[ $# -eq 7 && "$2" == portal ]] || exit 2
 		[[ -z "${SUDO_USER:-}" ]] || fail 'Canonical runtime bootstrap authorization is root-local.'
-		surface="$2"; candidate="$3"; web="$4"; worker="$5"; migrate="$6"; postgres="$7"; www="$8"
+		candidate="$3"; web="$4"; worker="$5"; migrate="$6"; postgres="$7"
 		release_is_valid "$candidate" && digest_is_valid "$web" && digest_is_valid "$worker" && \
-			digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || exit 2
+			digest_is_valid "$migrate" && digest_is_valid "$postgres" || exit 2
 		verify_forced_root_boundary && ensure_root_state || fail 'The forced root boundary is invalid.'
-		release_path="$PORTAL_RELEASE"
-		[[ "$surface" == marketing ]] && release_path="$MARKETING_RELEASE"
-		[[ ! -e "$release_path" && ! -L "$release_path" && \
+		[[ ! -e "$PORTAL_RELEASE" && ! -L "$PORTAL_RELEASE" && \
 			! -e "$ACTIVATION_ATTESTATION" && ! -L "$ACTIVATION_ATTESTATION" && \
 			! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" && \
-			! -e "$CADDY_BOOTSTRAP_JOURNAL" && ! -L "$CADDY_BOOTSTRAP_JOURNAL" ]] || \
+			! -e "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" && ! -L "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" ]] || \
 			fail 'Canonical runtime bootstrap requires an absent surface marker and empty recovery state.'
 		materialize_release_tree "$candidate" && validate_release_tree "$candidate" || \
 			fail 'Canonical runtime bootstrap lacks the exact immutable candidate tree.'
-		if [[ "$surface" == portal ]]; then
-			authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" "$www" && \
-				verify_migration_readiness "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" || \
-				fail 'Canonical portal runtime bootstrap lacks exact policy or migration readiness evidence.'
-		else
-			portal_predecessor="$(read_exact_release "$PORTAL_RELEASE")" && \
-				validate_release_tree "$portal_predecessor" && \
-				receipt_matches_tuple "$portal_predecessor" "$web" "$worker" "$migrate" "$postgres" "$www" && \
-				authorize_bootstrap_tuple "$candidate" marketing-deploy \
-					"$web" "$worker" "$migrate" "$postgres" "$www" || \
-				fail 'Canonical marketing runtime bootstrap lacks an exact portal anchor or marketing policy tuple.'
-		fi
+		authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" && \
+			verify_migration_readiness "$candidate" "$web" "$worker" "$migrate" "$postgres" || \
+			fail 'Canonical portal runtime bootstrap lacks exact policy or migration readiness evidence.'
 		/usr/bin/printf '%s\n' 'las-bootstrap-runtime-authorization-v1 ok'
 		;;
 	bootstrap-surface)
-		# bootstrap-surface <portal|marketing> <release> <web> <worker> <migrate> <postgres> <www>
-		[[ $# -eq 8 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
+		# bootstrap-surface portal <release> <web> <worker> <migrate> <postgres>
+		[[ $# -eq 7 && "$2" == portal ]] || exit 2
 		[[ -z "${SUDO_USER:-}" ]] || fail 'Only a root-local operator may bootstrap canonical LAS release evidence.'
-		surface="$2"; candidate="$3"; web="$4"; worker="$5"; migrate="$6"; postgres="$7"; www="$8"
+		candidate="$3"; web="$4"; worker="$5"; migrate="$6"; postgres="$7"
 		release_is_valid "$candidate" && digest_is_valid "$web" && digest_is_valid "$worker" && \
-			digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || exit 2
+			digest_is_valid "$migrate" && digest_is_valid "$postgres" || exit 2
 		verify_forced_root_boundary || fail 'The forced root boundary is invalid.'
 		ensure_root_state || fail 'Root-owned LAS release state is invalid.'
 		[[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" ]] || \
 			fail 'Canonical bootstrap is forbidden while a release transition is pending.'
-		[[ ! -e "$CADDY_BOOTSTRAP_JOURNAL" && ! -L "$CADDY_BOOTSTRAP_JOURNAL" ]] || \
-			fail 'Canonical bootstrap is forbidden while Caddy recovery is pending.'
+		[[ ! -e "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" && ! -L "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" ]] || \
+			fail 'Canonical bootstrap is forbidden while legacy recovery is pending.'
 		materialize_release_tree "$candidate" && validate_release_tree "$candidate" || \
 			fail 'Canonical bootstrap requires the exact immutable release tree.'
-		operation=deploy
 		release_path="$PORTAL_RELEASE"
-		if [[ "$surface" == marketing ]]; then
-			operation=marketing-deploy
-			release_path="$MARKETING_RELEASE"
-		fi
 		if [[ -e "$release_path" || -L "$release_path" ]]; then
 			[[ "$(read_exact_release "$release_path")" == "$candidate" ]] || \
 				fail 'Canonical release state already names a different release.'
 		fi
-		authorize_bootstrap_tuple "$candidate" "$operation" "$web" "$worker" "$migrate" "$postgres" "$www" || \
+		authorize_bootstrap_tuple "$candidate" deploy "$web" "$worker" "$migrate" "$postgres" || \
 			fail 'Canonical bootstrap digests do not match the active-bundle policy and exact commit capability.'
-		if [[ "$surface" == portal ]]; then
-			runtime_manager portal-verify "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" portal-runtime-v1 || \
-				fail 'Canonical portal bootstrap requires a live verified rootless runtime.'
-		else
-			runtime_manager marketing-verify "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" marketing-runtime-v1 && \
-				caddy_manager verify-active "$candidate" "$candidate" || \
-				fail 'Canonical marketing bootstrap requires live verified runtime and Caddy state.'
-		fi
-		expected_receipt="$(receipt_contents "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www")"$'\n'
+		runtime_manager portal-verify "$candidate" "$web" "$worker" "$migrate" "$postgres" portal-runtime-v2 || \
+			fail 'Canonical portal bootstrap requires a live verified rootless runtime.'
+		expected_receipt="$(receipt_contents "$candidate" "$web" "$worker" "$migrate" "$postgres")"$'\n'
 		candidate_receipt="$(receipt_path "$candidate")"
-		if [[ -e "$candidate_receipt" || -L "$candidate_receipt" ]]; then
-			metadata_matches "$candidate_receipt" file '0:0:644' && \
-				/usr/bin/cmp -s "$candidate_receipt" <(/usr/bin/printf '%s' "$expected_receipt") || \
+		candidate_legacy_receipt="$(legacy_receipt_path "$candidate")"
+		if [[ -e "$candidate_receipt" || -L "$candidate_receipt" || \
+			-e "$candidate_legacy_receipt" || -L "$candidate_legacy_receipt" ]]; then
+			receipt_matches_tuple "$candidate" "$web" "$worker" "$migrate" "$postgres" || \
 				fail 'Existing bootstrap receipt conflicts with the verified digest tuple.'
-		else
+		fi
+		if [[ ! -e "$candidate_receipt" && ! -L "$candidate_receipt" ]]; then
 			atomic_write "$candidate_receipt" 0644 "$expected_receipt" || \
 				fail 'Could not persist the verified canonical bootstrap receipt.'
 		fi
@@ -683,8 +671,8 @@ case "$command_name" in
 		;;
 	status)
 		[[ $# -eq 1 ]] || exit 2
-		if [[ -e "$CADDY_BOOTSTRAP_JOURNAL" || -L "$CADDY_BOOTSTRAP_JOURNAL" ]]; then
-			fail 'A canonical Caddy bootstrap transition is pending root recovery.'
+		if [[ -e "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" || -L "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" ]]; then
+			fail 'A legacy bootstrap transition is pending root recovery.'
 		elif [[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" ]]; then
 			/usr/bin/printf '%s\n' clear
 		else
@@ -692,129 +680,71 @@ case "$command_name" in
 		fi
 		;;
 	begin)
-		# begin <portal|marketing> <candidate> <operation> <web> <worker> <migrate> <postgres> <www>
-		[[ $# -eq 9 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
-		surface="$2"; candidate="$3"; operation="$4"; web="$5"; worker="$6"; migrate="$7"; postgres="$8"; www="$9"
+		# begin portal <candidate> <operation> <web> <worker> <migrate> <postgres>
+		[[ $# -eq 8 && "$2" == portal ]] || exit 2
+		candidate="$3"; operation="$4"; web="$5"; worker="$6"; migrate="$7"; postgres="$8"
 		release_is_valid "$candidate" && operation_is_valid "$operation" && \
 			digest_is_valid "$web" && digest_is_valid "$worker" && \
-			digest_is_valid "$migrate" && digest_is_valid "$postgres" && digest_is_valid "$www" || exit 2
+			digest_is_valid "$migrate" && digest_is_valid "$postgres" || exit 2
 		ensure_root_state || fail 'Root-owned LAS release state is invalid.'
 		[[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" ]] || \
 			fail 'A durable LAS transition is already pending reconciliation.'
-		release_path="$PORTAL_RELEASE"
-		[[ "$surface" == marketing ]] && release_path="$MARKETING_RELEASE"
-		predecessor="$(read_exact_release "$release_path")" || \
+		predecessor="$(read_exact_release "$PORTAL_RELEASE")" || \
 			fail 'A root-owned compatible predecessor release is required.'
 		read_receipt "$predecessor" >/dev/null || fail 'The predecessor receipt is invalid.'
 		validate_release_tree "$candidate" && validate_release_tree "$predecessor" || \
 			fail 'Candidate and predecessor immutable trees must be materialized first.'
-		if [[ "$surface" == portal ]]; then
-			verify_migration_readiness "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www" || \
-				fail 'Portal deployment lacks exact root-owned backup and migration rehearsal readiness.'
-		fi
+		verify_migration_readiness "$candidate" "$web" "$worker" "$migrate" "$postgres" || \
+			fail 'Portal deployment lacks exact root-owned backup and migration rehearsal readiness.'
 		atomic_write "$TRANSITION_JOURNAL" 0600 \
-			"$(journal_contents "$surface" "$candidate" "$predecessor" "$operation" "$web" "$worker" "$migrate" "$postgres" "$www")"$'\n' || \
+			"$(journal_contents "$candidate" "$predecessor" "$operation" "$web" "$worker" "$migrate" "$postgres")"$'\n' || \
 			fail 'Could not durably persist the pending LAS transition.'
 		read_journal >/dev/null || fail 'Pending LAS transition post-verification failed.'
 		/usr/bin/printf 'predecessor %s\n' "$predecessor"
 		read_receipt "$predecessor"
 		;;
-	record-caddy)
-		# record-caddy <candidate> <before-sha256> <after-sha256> <backup-sha256>
-		[[ $# -eq 5 ]] || exit 2
-		candidate="$2"; caddy_before="$3"; caddy_after="$4"; caddy_backup="$5"
-		[[ "$(journal_field surface)" == marketing && "$(journal_field candidate)" == "$candidate" ]] || \
-			fail 'Caddy evidence does not match the pending marketing transition.'
-		for digest in "$caddy_before" "$caddy_after" "$caddy_backup"; do
-			[[ "$digest" =~ ^[0-9a-f]{64}$ ]] || exit 2
-		done
-		[[ "$caddy_before" == "$caddy_backup" ]] || fail 'Caddy backup digest does not bind the live predecessor.'
-		existing_before="$(journal_field caddy-before-sha256)"
-		existing_after="$(journal_field caddy-after-sha256)"
-		existing_backup="$(journal_field caddy-backup-sha256)"
-		if [[ "$existing_before" != none || "$existing_after" != none || "$existing_backup" != none ]]; then
-			[[ "$existing_before" == "$caddy_before" && "$existing_after" == "$caddy_after" && \
-				"$existing_backup" == "$caddy_backup" ]] || \
-				fail 'Existing Caddy transition evidence conflicts with this retry.'
-			exit 0
-		fi
-		surface="$(journal_field surface)"; predecessor="$(journal_field predecessor)"; operation="$(journal_field operation)"
-		web="$(journal_field web-sha256)"; worker="$(journal_field worker-sha256)"
-		migrate="$(journal_field migrate-sha256)"; postgres="$(journal_field postgres-sha256)"; www="$(journal_field www-sha256)"
-		atomic_write "$TRANSITION_JOURNAL" 0600 \
-			"$(journal_contents "$surface" "$candidate" "$predecessor" "$operation" "$web" "$worker" "$migrate" "$postgres" "$www" \
-				"$caddy_before" "$caddy_after" "$caddy_backup")"$'\n' || \
-			fail 'Could not durably bind the Caddy transition evidence.'
-		read_journal >/dev/null || fail 'Caddy transition journal post-verification failed.'
-		;;
 	complete)
-		# complete <portal|marketing> <candidate>
-		[[ $# -eq 3 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
-		surface="$2"; candidate="$3"
-		[[ "$(journal_field surface)" == "$surface" ]] || fail 'Completion surface does not match the pending transition.'
+		# complete portal <candidate>
+		[[ $# -eq 3 && "$2" == portal ]] || exit 2
+		candidate="$3"
+		[[ "$(journal_field surface)" == portal ]] || fail 'Completion surface does not match the pending transition.'
 		[[ "$(journal_field candidate)" == "$candidate" ]] || fail 'Completion does not match the pending candidate.'
 		web="$(journal_field web-sha256)"; worker="$(journal_field worker-sha256)"
-		migrate="$(journal_field migrate-sha256)"; postgres="$(journal_field postgres-sha256)"; www="$(journal_field www-sha256)"
-		if [[ "$surface" == marketing ]]; then
-			caddy_after="$(journal_field caddy-after-sha256)"
-			[[ "$caddy_after" =~ ^[0-9a-f]{64}$ ]] || fail 'Marketing completion lacks root Caddy evidence.'
-			metadata_matches "$CADDY_TARGET" file '0:0:644' && \
-				[[ "$(/usr/bin/sha256sum -- "$CADDY_TARGET" | /usr/bin/awk '{print $1}')" == "$caddy_after" ]] || \
-				fail 'Live Caddy state does not match the pending candidate evidence.'
-		else
-			[[ "$(journal_field caddy-after-sha256)" == none ]] || fail 'Portal transition unexpectedly carries Caddy evidence.'
-		fi
+		migrate="$(journal_field migrate-sha256)"; postgres="$(journal_field postgres-sha256)"
 		candidate_receipt="$(receipt_path "$candidate")"
-		expected_receipt="$(receipt_contents "$candidate" "$web" "$worker" "$migrate" "$postgres" "$www")"$'\n'
-		if [[ -e "$candidate_receipt" || -L "$candidate_receipt" ]]; then
-			metadata_matches "$candidate_receipt" file '0:0:644' && \
-				/usr/bin/cmp -s "$candidate_receipt" <(/usr/bin/printf '%s' "$expected_receipt") || \
+		candidate_legacy_receipt="$(legacy_receipt_path "$candidate")"
+		expected_receipt="$(receipt_contents "$candidate" "$web" "$worker" "$migrate" "$postgres")"$'\n'
+		if [[ -e "$candidate_receipt" || -L "$candidate_receipt" || \
+			-e "$candidate_legacy_receipt" || -L "$candidate_legacy_receipt" ]]; then
+			receipt_matches_tuple "$candidate" "$web" "$worker" "$migrate" "$postgres" || \
 				fail 'Existing compatible release receipt conflicts with the pending digest tuple.'
-		else
+		fi
+		if [[ ! -e "$candidate_receipt" && ! -L "$candidate_receipt" ]]; then
 			atomic_write "$candidate_receipt" 0644 "$expected_receipt" || \
 				fail 'Could not persist the root-owned compatible release receipt.'
 		fi
-		release_path="$PORTAL_RELEASE"
-		[[ "$surface" == marketing ]] && release_path="$MARKETING_RELEASE"
-		atomic_write "$release_path" 0644 "$candidate"$'\n' || \
+		atomic_write "$PORTAL_RELEASE" 0644 "$candidate"$'\n' || \
 			fail 'Could not persist the root-owned active release; transition remains pending.'
-		read_receipt "$candidate" >/dev/null && [[ "$(read_exact_release "$release_path")" == "$candidate" ]] || \
+		read_receipt "$candidate" >/dev/null && [[ "$(read_exact_release "$PORTAL_RELEASE")" == "$candidate" ]] || \
 			fail 'Completed LAS transition failed durable post-verification.'
 		/usr/bin/rm -f -- "$TRANSITION_JOURNAL" || fail 'Could not clear the completed LAS transition journal.'
 		sync_directory "$TRUST_DIRECTORY"
 		;;
 	reconcile)
-		# reconcile <portal|marketing> <candidate> <rollback|complete>
-		[[ $# -eq 4 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
-		surface="$2"; candidate="$3"; resolution="$4"
-		[[ "$(journal_field surface)" == "$surface" ]] || fail 'Reconciliation surface does not match the pending transition.'
+		# reconcile portal <candidate> <rollback|complete>
+		[[ $# -eq 4 && "$2" == portal ]] || exit 2
+		candidate="$3"; resolution="$4"
+		[[ "$(journal_field surface)" == portal ]] || fail 'Reconciliation surface does not match the pending transition.'
 		[[ "$(journal_field candidate)" == "$candidate" ]] || fail 'Reconciliation does not match the pending candidate.'
 		case "$resolution" in
-			complete) "$0" complete "$surface" "$candidate" ;;
+			complete) "$0" complete portal "$candidate" ;;
 			rollback)
 				predecessor="$(journal_field predecessor)"
 				read_receipt "$predecessor" >/dev/null || fail 'Rollback predecessor evidence is invalid.'
 				validate_release_tree "$predecessor" || fail 'Rollback predecessor tree is invalid.'
-				if [[ "$surface" == marketing ]]; then
-					caddy_before="$(journal_field caddy-before-sha256)"
-					if [[ "$caddy_before" == none ]]; then
-						[[ "$(journal_field caddy-after-sha256)" == none && \
-							"$(journal_field caddy-backup-sha256)" == none ]] || \
-							fail 'Partial Caddy evidence cannot be reconciled.'
-					else
-						[[ "$caddy_before" =~ ^[0-9a-f]{64}$ ]] || fail 'Marketing rollback lacks Caddy predecessor evidence.'
-						metadata_matches "$CADDY_TARGET" file '0:0:644' && \
-							[[ "$(/usr/bin/sha256sum -- "$CADDY_TARGET" | /usr/bin/awk '{print $1}')" == "$caddy_before" ]] || \
-							fail 'Caddy rollback has not restored the bound predecessor.'
-					fi
-				fi
-				release_path="$PORTAL_RELEASE"
-				[[ "$surface" == marketing ]] && release_path="$MARKETING_RELEASE"
-				atomic_write "$release_path" 0644 "$predecessor"$'\n' || \
+				atomic_write "$PORTAL_RELEASE" 0644 "$predecessor"$'\n' || \
 					fail 'Could not restore predecessor release state.'
-				# Receipts are immutable per-SHA historical evidence shared by portal
-				# and marketing. A failed transition must not delete evidence that may
-				# still authorize the other surface's active rollback release.
+				# Receipts are immutable per-SHA historical rollback evidence.
 				/usr/bin/rm -f -- "$TRANSITION_JOURNAL" || \
 					fail 'Could not clear the reconciled transition journal.'
 				sync_directory "$TRUST_DIRECTORY"
@@ -823,7 +753,7 @@ case "$command_name" in
 		esac
 		;;
 	rollback-evidence)
-		[[ $# -eq 3 && ( "$2" == portal || "$2" == marketing ) ]] || exit 2
+		[[ $# -eq 3 && "$2" == portal ]] || exit 2
 		release_is_valid "$3" || exit 2
 		if [[ -e "$ACTIVATION_ATTESTATION" || -L "$ACTIVATION_ATTESTATION" ]]; then
 			metadata_matches "$ACTIVATION_ATTESTATION" file '0:0:400' && \
@@ -853,8 +783,8 @@ case "$command_name" in
 			fail 'The forced root boundary or canonical LAS state is invalid.'
 		[[ ! -e "$TRANSITION_JOURNAL" && ! -L "$TRANSITION_JOURNAL" ]] || \
 			fail 'Output-language activation is forbidden while a release transition is pending.'
-		[[ ! -e "$CADDY_BOOTSTRAP_JOURNAL" && ! -L "$CADDY_BOOTSTRAP_JOURNAL" ]] || \
-			fail 'Output-language activation is forbidden while Caddy recovery is pending.'
+		[[ ! -e "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" && ! -L "$LEGACY_CADDY_BOOTSTRAP_JOURNAL" ]] || \
+			fail 'Output-language activation is forbidden while legacy recovery is pending.'
 		[[ ! -e "$STABLE_BUNDLE_JOURNAL" && ! -L "$STABLE_BUNDLE_JOURNAL" ]] || \
 			fail 'Output-language activation is forbidden while a stable-bundle transition is pending.'
 		current="$(read_exact_release "$PORTAL_RELEASE")" || fail 'A compatible active release is required.'
@@ -870,16 +800,15 @@ case "$command_name" in
 		;;
 	*)
 		/usr/bin/printf '%s\n' \
-			'Usage: manage-las-release-state migration-readiness <release> <five digests>' \
-			'       manage-las-release-state migration-readiness-runtime-authorization <release> <five digests>' \
-			'       manage-las-release-state pending-runtime-tuple <portal|marketing> <release> <five digests>' \
-			'       manage-las-release-state pending-rollback-runtime-tuple <portal|marketing> <release> <five digests>' \
-			'       manage-las-release-state bootstrap-runtime-authorization <portal|marketing> <release> <five digests>' \
-			'       manage-las-release-state bootstrap-surface <portal|marketing> <release> <five digests>' \
+			'Usage: manage-las-release-state migration-readiness <release> <four digests>' \
+			'       manage-las-release-state migration-readiness-runtime-authorization <release> <four digests>' \
+			'       manage-las-release-state pending-runtime-tuple portal <release> <four digests>' \
+			'       manage-las-release-state pending-rollback-runtime-tuple portal <release> <four digests>' \
+			'       manage-las-release-state bootstrap-runtime-authorization portal <release> <four digests>' \
+			'       manage-las-release-state bootstrap-surface portal <release> <four digests>' \
 			'       manage-las-release-state materialize <release>' \
 			'       manage-las-release-state status' \
-			'       manage-las-release-state begin portal <release> <operation> <five digests>' \
-			'       manage-las-release-state record-caddy <release> <before> <after> <backup>' \
+			'       manage-las-release-state begin portal <release> <operation> <four digests>' \
 			'       manage-las-release-state complete portal <release>' \
 			'       manage-las-release-state reconcile portal <release> <rollback|complete>' \
 			'       manage-las-release-state rollback-evidence portal <release>' \

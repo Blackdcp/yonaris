@@ -1,10 +1,11 @@
 # Database upgrade rehearsal
 
-This standalone script is an off-host or developer-workstation rehearsal only;
-it is not a production LAS entrypoint and must not receive either LAS Docker
-socket or the runtime dotenv. Run it from a clean checkout of the exact reviewed
-commit, using an authenticated copy of a recent backup and the exact migration
-registry digest:
+`rehearse-db-upgrade.sh` is an off-host or developer-workstation check. It is
+not a production LAS entrypoint and must never receive the LAS Docker socket,
+the production runtime dotenv, or write access to LAS evidence roots.
+
+Run it from a clean checkout of the exact reviewed commit with an authenticated
+recent backup and the exact migration registry digest:
 
 ```bash
 bash deploy/las/bin/rehearse-db-upgrade.sh \
@@ -12,36 +13,36 @@ bash deploy/las/bin/rehearse-db-upgrade.sh \
   --image ghcr.io/blackdcp/yonaris-db-migrate@sha256:<64-hex-digest>
 ```
 
-The adjacent reviewed `.dump.sha256` file is required by default. The rehearsal
-does not read the production runtime dotenv, use the production Compose project,
-or accept a caller-supplied database URL. It creates a unique,
-labelled PostgreSQL 16 container, volume, network, and random localhost port;
-restores the custom-format archive; runs the candidate migration image; and
-checks the Drizzle migration count, timestamp, and SQL hash against the current
-checkout.
+The adjacent reviewed `.dump.sha256` file is required by default. The helper
+does not read `/etc/yonaris/las-runtime.env`, join the production Compose
+project, or accept a caller-supplied database URL. It creates uniquely named,
+labelled PostgreSQL 16 resources and a random localhost port; restores the
+custom-format archive; runs the candidate migration image; and checks the
+Drizzle migration count, timestamp, and SQL hash against the checkout.
 
-All temporary Docker resources are removed on success or failure. Logs remain
-in `/tmp/yonaris-db-upgrade-rehearsals` by default. Use `--keep` (or
-`KEEP_REHEARSAL=true`) only when an operator intentionally needs to inspect the
-isolated database; the log prints the exact resource names and safety label
-needed for later cleanup.
+Temporary Docker resources are removed on success or failure. Logs remain in
+`/tmp/yonaris-db-upgrade-rehearsals` by default. Use `--keep` (or
+`KEEP_REHEARSAL=true`) only for deliberate inspection of the isolated database;
+the log records the exact resource names and safety label for reviewed cleanup.
+For a checkout-only test, use `--local-pnpm` instead of `--image`. Mutable tags
+and checksum-free backups require explicit override flags and are not release
+evidence.
 
-For a local checkout-only test, replace `--image ...` with `--local-pnpm`.
-Mutable image tags and backups without checksums require separate explicit
-override flags and should not be used for a release decision.
+Production readiness is a separate root-only protocol. The reviewed stable
+producer binds the immutable release to exactly four digests—Web, Worker,
+migration, and PostgreSQL—performs the production backup, verifies its
+separately administered off-host put/get round trip, runs the isolated
+rehearsal through the stable runtime manager, and publishes immutable evidence.
+The state manager accepts only the exact eight-line
+`las-migration-readiness-v2` attestation under
+`/etc/yonaris/las-migration-readiness-v2`, plus its matching root-owned backup
+and rehearsal files under `/etc/yonaris/las-migration-evidence-v2`.
 
-The forced production dispatcher does not call this checkout-owned helper.
-Production backup/rehearsal remains blocked until an audited fixed-argument
-stable runtime operation binds the active immutable tree, its five-digest
-receipt, a root-owned backup, and the exact migration digest. Do not work around
-that gap by running this script on LAS or exposing a runtime socket to
-`yonaris-deploy`.
-
-The root state manager verifies a nine-line migration-readiness attestation and
-the hashes of separate backup/rehearsal evidence, but this repository has no
-trustworthy producer for those files. This developer helper is not that
-producer and its log or exit status must not be copied, reformatted, or hashed
-into `/etc/yonaris/las-migration-readiness-v1` or
-`/etc/yonaris/las-migration-evidence-v1`. Until a reviewed stable producer
-performs the real backup, off-host durability check, and rehearsal and emits
-the evidence, do not apply the migration or run a production deployment.
+This developer helper is not that producer. Its log, checksum, or exit status
+must not be copied, reformatted, renamed, or hashed into the production roots.
+Do not apply a production migration unless the stable producer and state
+manager both return exactly `las-migration-readiness-v2 ok` for the same
+release and four-digest tuple. Follow
+`ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md` for the live producer, Portal bootstrap,
+deploy, rollback, and fail-closed recovery ordering; never bypass that ordering
+with raw Docker or Compose commands on the LAS host.
