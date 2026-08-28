@@ -5,3 +5,4 @@ Dockerfile* text eol=lf
 *.yml text eol=lf
 deploy/las/artifact-output-language-compatible text eol=lf
 deploy/las/caddy/cloudflare-origin-ca.pem text eol=lf
+docs/design/site-06-reference/site-system-multipage-agent-06.html -text

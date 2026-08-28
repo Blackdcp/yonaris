@@ -257,6 +257,22 @@ test("repository topology excludes retired distribution surfaces and preserves l
   assert.deepEqual(blockers.sort(), []);
 });
 
+test("allows the approved Yonaris category in public output", async () => {
+  const policy = JSON.parse(
+    await readFile(path.join(repositoryRoot, "security", "public-output-policy.v1.json"), "utf8"),
+  );
+
+  assert.deepEqual(
+    scanPublicText({
+      policy,
+      surface: "marketing-source",
+      source: "approved-category.txt",
+      text: "AI-native MarTech infrastructure built for decisions made by people and shaped by agents",
+    }),
+    [],
+  );
+});
+
 test("normalizes named entities and slash, underscore, and hyphen separators", () => {
   for (const value of [
     "fixture&Tab;signal&NewLine;zx9",

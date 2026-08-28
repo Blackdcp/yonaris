@@ -116,6 +116,11 @@ test("post-deploy verification binds marker, image, live routes, and retired rou
 	assert.match(dispatcher, /authorize_candidate "\$release_tag" "\$operation"/u);
 	assert.match(dispatcher, /STABLE_GUARD[\s\S]*?candidate "\$release_tag" "\$operation"/u);
 	assert.match(dispatcher, /state_manager rollback-evidence portal "\$active_portal_release"/u);
+	assert.match(
+		dispatcher,
+		/curl[\s\S]*?https:\/\/yonaris\.com\/[\s\S]*?data-generation="site-06"/u,
+		"stable post-deploy verification must bind the live apex to Site 06",
+	);
 });
 
 test("every workflow sharing the LAS deploy key has an enumerated remote-command shape", async () => {

@@ -1,307 +1,321 @@
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { AiAnswerFlow, BrandGapConsole, GlobalMarketBridge, ServiceRoute } from "./china-scenes";
 
 type Page = () => React.ReactNode;
-type ChinaPages = Record<"home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy", Page>;
+type PageKey = "home" | "product" | "approach" | "geo" | "company" | "diagnostic" | "privacy";
+type ChinaPages = Record<PageKey, Page>;
+type ChinaModule = {
+	CHINA_PAGES?: ChinaPages;
+	ChinaDiagnosticPage?: (props: { requestType?: "consultation" | "privacy" }) => React.ReactNode;
+};
 
-const subject = (await import("./china-pages").catch(() => undefined)) as { CHINA_PAGES?: ChinaPages } | undefined;
-const chinaCss = readFileSync(new URL("../../../styles/experience/china.css", import.meta.url), "utf8").replace(
-	/\r\n/g,
-	"\n",
-);
+const compositions = {
+	home: "cinematic-anxiety",
+	product: "system-field",
+	approach: "breakdown-replay",
+	company: "canonical-record-field-zh",
+	geo: "market-editorial-zh",
+	diagnostic: "contact-cinematic-zh",
+	privacy: "privacy-editorial-zh",
+} as const satisfies Record<PageKey, string>;
 
-function render(page: keyof ChinaPages): string {
+const subject = (await import("./china-pages").catch(() => undefined)) as ChinaModule | undefined;
+const siteCss = readFileSync(new URL("../../../styles/experience/site-06.css", import.meta.url), "utf8");
+
+function cssRule(source: string, selector: string): string {
+	for (const match of source.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+		const selectors = (match[1] ?? "").split(",").map((item) => item.trim());
+		if (selectors.includes(selector)) return match[2] ?? "";
+	}
+	return "";
+}
+
+function render(page: PageKey): string {
 	expect(subject?.CHINA_PAGES, "中国站页面必须完成实现").toBeDefined();
 	return subject?.CHINA_PAGES ? renderToStaticMarkup(subject.CHINA_PAGES[page]()) : "";
 }
 
-function attribute(markup: string, name: string): string | undefined {
-	return markup.match(new RegExp(`${name}="([^"]+)"`))?.[1];
+function scene(markup: string, object: string): string {
+	return markup.match(new RegExp(`data-scene-object="${object}"[\\s\\S]*?<\\/section>`))?.[0] ?? "";
 }
 
-function expectDiagnosticTabSet(Scene: () => React.ReactNode, expectedCount: number) {
-	const markup = renderToStaticMarkup(<Scene />);
+function orbit(markup: string, label: string): string {
+	return markup.match(new RegExp(`<figure[^>]*aria-label="${label}"[\\s\\S]*?<\\/figure>`))?.[0] ?? "";
+}
+
+function duplicateIds(markup: string): string[] {
+	const counts = new Map<string, number>();
+	for (const [, id] of markup.matchAll(/\sid="([^"]+)"/g)) {
+		if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
+	}
+	return [...counts].filter(([, count]) => count > 1).map(([id]) => id);
+}
+
+function expectAccessibleTabs(markup: string, count: number): void {
 	const tabs = [...markup.matchAll(/<button[^>]*role="tab"[^>]*>/g)].map(([tab]) => tab);
-	const panels = [...markup.matchAll(/<(?:article|div|section)[^>]*role="tabpanel"[^>]*>/g)].map(([panel]) => panel);
-
-	expect(tabs).toHaveLength(expectedCount);
-	expect(panels).toHaveLength(expectedCount);
-	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "0")).toHaveLength(1);
-	expect(tabs.filter((tab) => attribute(tab, "tabindex") === "-1")).toHaveLength(expectedCount - 1);
-
-	const tabIds = tabs.map((tab) => attribute(tab, "id"));
-	for (const panel of panels) {
-		const panelId = attribute(panel, "id");
-		const labelledBy = attribute(panel, "aria-labelledby");
+	expect(tabs).toHaveLength(count);
+	expect(tabs.filter((tab) => tab.includes('tabindex="0"'))).toHaveLength(1);
+	expect(tabs.filter((tab) => tab.includes('tabindex="-1"'))).toHaveLength(count - 1);
+	for (const tab of tabs) {
+		const panelId = tab.match(/aria-controls="([^"]+)"/)?.[1];
 		expect(panelId).toBeDefined();
-		expect(tabIds).toContain(labelledBy);
-		expect(tabs.some((tab) => attribute(tab, "aria-controls") === panelId)).toBe(true);
+		expect(markup).toContain(`id="${panelId}"`);
 	}
-
-	for (const field of ["scope", "answer", "gap", "priority"] as const) {
-		expect(markup.match(new RegExp(`data-output-field="${field}"`, "g")) ?? []).toHaveLength(expectedCount);
-	}
-
-	const observedResults = [...markup.matchAll(/data-output-field="answer">([^<]+)/g)].map((match) => match[1]);
-	const priorities = [...markup.matchAll(/data-output-field="priority">([^<]+)/g)].map((match) => match[1]);
-	expect(new Set(observedResults).size).toBe(expectedCount);
-	expect(new Set(priorities).size).toBe(expectedCount);
 }
 
-describe("中国站客户体验", () => {
-	it("在每个页面提供可跳过导航、移动主导航与人机双入口", () => {
+describe("Site 06 中国站", () => {
+	for (const [page, composition] of Object.entries(compositions) as [PageKey, string][]) {
+		it(`${page} preserves its approved Chinese composition`, () => {
+			expect(render(page)).toContain(`data-page-composition="${composition}"`);
+		});
+	}
+
+	it("does not route the Chinese pages through the old generic hero", () => {
+		const pages = (Object.keys(compositions) as PageKey[]).map(render);
+		expect(pages.filter((markup) => markup.includes("site-06-hero__media"))).toHaveLength(0);
+		expect(pages.filter((markup) => markup.includes("site-06-hero__copy"))).toHaveLength(0);
+	});
+
+	it("starts from Chinese business anxiety instead of roles", () => {
+		const home = render("home");
+		expect(home).toContain("面向人类决策、由 Agent 共同塑造的 AI 原生营销科技基础设施。");
+		expect(home).toContain("AI 正在替客户认识你、比较你，也可能误解你。");
+		for (const phrase of ["没进备选", "核心优势被说偏", "竞品先被推荐", "预算不知道该投哪里", "结论失效"])
+			expect(home).toContain(phrase);
+		expect(home).not.toMatch(/市场总监|品牌负责人|创始人|销售团队/);
+		expect(home).toContain('data-scene-object="cinematic-field"');
+		expect(home).toContain("--site-06-focal-position:center center");
+		expect(home).not.toContain("--site-06-focal-position:center 72%");
+		expect(home).toContain('data-scene-object="anxiety-selector"');
+		expect(home.indexOf('data-scene-object="cinematic-field"')).toBeLessThan(
+			home.indexOf('data-scene-object="anxiety-selector"'),
+		);
+		expect(home.indexOf('data-scene-object="decision-trace"')).toBeLessThan(
+			home.indexOf('data-scene-object="anxiety-selector"'),
+		);
+		expectAccessibleTabs(home.match(/data-anxiety-selector[\s\S]*?<\/section>/)?.[0] ?? "", 5);
+		expect(home).toContain('data-scene-object="product-proof"');
+		expect(home).toContain('data-scene-object="canonical-record-transform"');
+		expect(home).not.toContain('data-scene-object="fact-disclosure"');
+	});
+
+	it("keeps orbit geometry without a second center label behind each overlaid record", () => {
+		const home = render("home");
+		const product = render("product");
+		for (const [markup, label] of [
+			[home, "当前问题怎样影响客户选择"],
+			[product, "围绕同一道业务问题连接的六个节点"],
+		] as const) {
+			const field = orbit(markup, label);
+			expect(field).toContain('class="site-06-orbit__rings"');
+			expect(field).not.toContain("site-06-orbit__content");
+		}
+	});
+
+	it("exposes every Home DOM id exactly once", () => {
+		expect(duplicateIds(render("home"))).toEqual([]);
+	});
+
+	it("keeps the relationship preview before the six-node system field", () => {
+		const system = render("product");
+		expect(system).toContain('data-page-composition="system-field"');
+		expect(system).toContain('data-scene-object="relationship-preview"');
+		expect(system).toContain('<section class="site-06-zh-relationship-preview"');
+		expect(system).toContain('aria-label="五项业务关系预览"');
+		expect(system).toContain('data-scene-object="system-field"');
+		expect(system).toContain("data-system-map");
+		expect(system).toContain("市场问题");
+		expect(system).toContain("行动与复核");
+		expect(system.indexOf('data-scene-object="relationship-preview"')).toBeLessThan(
+			system.indexOf('data-scene-object="system-field"'),
+		);
+		expect(system.match(/data-preview-relation=/g) ?? []).toHaveLength(5);
+		expect(system.match(/data-system-node=/g) ?? []).toHaveLength(6);
+		expectAccessibleTabs(system.match(/data-scene-object="system-field"[\s\S]*?<\/section>/)?.[0] ?? "", 6);
+		expect(system).toContain('data-system-output="product-proof"');
+		expect(system).toContain('data-scene-object="product-proof"');
+		expect(system.indexOf('data-scene-object="system-field"')).toBeLessThan(
+			system.indexOf('data-system-output="product-proof"'),
+		);
+	});
+
+	it("keeps one example through 基线、断点、行动、复核", () => {
+		const breakdown = render("approach");
+		expect(breakdown).toContain('data-page-composition="breakdown-replay"');
+		expect(breakdown).toContain('data-scene-object="replay-stage"');
+		expect(breakdown).toContain('class="site-06-zh-replay site-06-review"');
+		for (const label of ["基线", "断点", "行动", "复核"]) expect(breakdown).toContain(label);
+		expect(breakdown).toContain("无法归因");
+		expect(breakdown.match(/data-replay-state=/g) ?? []).toHaveLength(4);
+		expectAccessibleTabs(breakdown.match(/data-scene-object="replay-stage"[\s\S]*?<\/section>/)?.[0] ?? "", 4);
+	});
+
+	it("adds one short entry response to each Anxiety, System, and Replay panel", () => {
+		for (const [markup, object, count] of [
+			[render("home"), "anxiety-selector", 5],
+			[render("product"), "system-field", 6],
+			[render("approach"), "replay-stage", 4],
+		] as const) {
+			expect(scene(markup, object).match(/<article[^>]*site-06-motion-swap/g) ?? []).toHaveLength(count);
+		}
+
+		const normal = cssRule(siteCss, ".site-06-motion-swap");
+		expect(normal).toContain("animation: site-06-panel-enter 180ms ease both");
+		expect(siteCss).toMatch(/@keyframes site-06-panel-enter\s*\{[\s\S]*?opacity:\s*0\.72;[\s\S]*?translateY\(3px\)/);
+
+		const reduced = siteCss.slice(siteCss.indexOf("@media (prefers-reduced-motion: reduce)"));
+		expect(cssRule(reduced, ".site-06-motion-swap")).toContain("animation: none");
+		expect(cssRule(reduced, ".site-06-motion-swap")).toContain("transform: none");
+	});
+
+	it("gives the Chinese anxiety, system, and replay distinct responsive geometry", () => {
+		expect(cssRule(siteCss, ".site-06-zh-anxiety")).toContain("display: grid");
+		expect(cssRule(siteCss, ".site-06-zh-route-lead")).toContain("min-width: 0");
+		expect(cssRule(siteCss, ".site-06-zh-route-lead h1")).toContain("overflow-wrap: anywhere");
+		expect(cssRule(siteCss, ".site-06-zh-route-lead h1")).toContain("width: 100%");
+		expect(cssRule(siteCss, ".site-06-zh-system-field")).toContain("position: relative");
+		expect(cssRule(siteCss, ".site-06-zh-system-field")).toContain("min-height: 690px");
+		expect(cssRule(siteCss, ".site-06-zh-system-field__nodes button")).toContain("position: absolute");
+		expect(cssRule(siteCss, ".site-06-zh-replay")).toContain("display: grid");
+		const mobile = siteCss.slice(siteCss.indexOf("@media (max-width: 720px)"));
+		expect(cssRule(mobile, ".site-06-zh-system-field__nodes button")).toContain("position: static");
+	});
+
+	it("preserves exact Chinese category casing and route-appropriate original imagery", () => {
+		expect(cssRule(siteCss, ".site-06-zh-home__lead > .site-06-kicker")).toContain("text-transform: none");
+		expect(render("approach")).toContain('src="/brand/site-06/working-session-original.jpg"');
+		expect(render("home")).toContain('src="/brand/site-06/glass-passage-original.jpg"');
+		expect(render("home")).toContain('src="/brand/site-06/working-session-original.jpg"');
+		expect([render("approach"), render("home")].join("\n")).not.toMatch(/Unsplash|Pexels|Photo:/i);
+	});
+
+	it("用中文说明联系信息处理者、用途、保存期和删除路径", () => {
+		const privacy = render("privacy");
+		expect(privacy).toContain("Resend");
+		expect(privacy).toContain("邮件处理者");
+		expect(privacy).toContain("理解并回复这次咨询");
+		expect(privacy).toContain("人工核对并处理");
+		expect(privacy).toContain("相同的联系信息和公司信息");
+		expect(privacy).toContain("不会自动删除");
+		expect(privacy).toContain("美国处理和存储");
+		expect(privacy).toContain('href="https://resend.com/docs/dashboard/domains/regions"');
+		expect(privacy).toContain('href="https://resend.com/legal/dpa"');
+		expect(privacy).toContain('href="/zh/diagnostic?intent=privacy"');
+		expect(privacy).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+	});
+
+	it("在服务端首帧呈现经过校验的隐私请求目的", () => {
+		expect(subject?.ChinaDiagnosticPage).toBeDefined();
+		if (!subject?.ChinaDiagnosticPage) return;
+		const markup = renderToStaticMarkup(subject.ChinaDiagnosticPage({ requestType: "privacy" }));
+		const main = markup.match(/<main[\s\S]*?<\/main>/)?.[0] ?? "";
+		const form = markup.match(/<form[\s\S]*?<\/form>/)?.[0] ?? "";
+		expect(main).toContain("请 Yonaris 核对此前的联系申请。");
+		expect(main).toContain("人工识别对应记录");
+		expect(main).not.toContain("最不想让 AI 答错");
+		expect(main).not.toContain("申请围绕所填问题与公司的后续沟通");
+		expect(form).toContain("请 Yonaris 核对你的联系记录。");
+		expect(form).toContain("启动人工隐私核对");
+		expect(form).toContain('name="requestType" value="privacy"');
+		expect(form.match(/data-lead-field=/g) ?? []).toHaveLength(3);
+		expect(form).not.toContain("预约沟通");
+	});
+
+	it("retains the system labels and public breakdown boundaries", () => {
+		const system = render("product");
+		for (const node of ["市场问题", "品牌事实", "内容与渠道", "AI 与市场观测", "客户行为", "行动与复核"])
+			expect(system).toContain(node);
+		const breakdown = render("approach");
+		expect(breakdown).toContain("公开方法演示 · 示例场景，不代表客户结果。");
+		for (const state of ["基线", "断点", "行动", "复核", "已变化", "未变化", "无法归因"])
+			expect(breakdown).toContain(state);
+	});
+
+	it("shows one canonical fact through a progressive Human and Agent record", () => {
+		const home = render("home");
+		const company = render("company");
+		for (const markup of [home, company]) {
+			expect(markup).toContain("人类阅读");
+			expect(markup).toContain("Agent 阅读");
+			expect(markup).toContain("公开依据");
+			expect(markup).toContain("边界");
+			expect(markup).toContain("稳定标识");
+			expect(markup).toContain('data-scene-object="canonical-record-transform"');
+		}
+		expect(company).toContain('data-page-composition="canonical-record-field-zh"');
+		expect(company.indexOf('data-scene-object="canonical-record-transform"')).toBeLessThan(
+			company.indexOf("机器可读，不等于机器写作"),
+		);
+		expect(company).toContain('data-scene-object="canonical-fact-record"');
+		expect(company).toContain('data-scene-object="company-close"');
+		expect(company.indexOf('data-scene-object="canonical-fact-record"')).toBeLessThan(
+			company.indexOf('data-scene-object="company-close"'),
+		);
+		expect(company).not.toContain('data-scene-object="dual-reading-stage"');
+		expect(company).not.toContain('class="site-06-zh-company-record"');
+	});
+
+	it("changes market conditions without defining an origin or destination service", () => {
+		const geo = render("geo");
+		for (const condition of ["市场", "语言", "当地品类表述", "替代选择", "证据条件"]) expect(geo).toContain(condition);
+		expect(geo).not.toMatch(/中国市场基线|目标市场|目标国家|海外目标|出海|进入海外|服务中国市场/);
+		for (const scene of ["market-condition-ledger", "market-evidence-lines", "geo-close"])
+			expect(geo).toContain(`data-scene-object="${scene}"`);
+		expect(geo.indexOf('data-scene-object="market-condition-ledger"')).toBeLessThan(
+			geo.indexOf('data-scene-object="market-evidence-lines"'),
+		);
+	});
+
+	it("keeps canonical navigation, locale and machine-readable topic links", () => {
+		const expectedNav = [
+			["为什么现在", "/zh"],
+			["系统怎么运转", "/zh/product"],
+			["看一次拆解", "/zh/approach"],
+			["预约沟通", "/zh/diagnostic"],
+		] as const;
 		for (const page of ["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const) {
 			const markup = render(page);
-			const mobileMenu = markup.match(/<details class="china-menu">([\s\S]*?)<\/details>/)?.[1] ?? "";
+			for (const [label, href] of expectedNav) {
+				expect(markup).toContain(label);
+				expect(markup).toContain(`href="${href}"`);
+			}
 			const humanPath = page === "home" ? "/zh" : `/zh/${page}`;
 			const agentPath = page === "home" ? "/zh/agent" : `/zh/agent/${page}`;
-
-			expect(markup).toContain('class="china-skip-link" href="#main-content"');
-			expect(markup).toContain('<main id="main-content" tabindex="-1"');
-			expect(mobileMenu).toContain('aria-label="中国站移动导航"');
-			expect(mobileMenu).toContain(`href="${humanPath}"`);
-			expect(mobileMenu).toContain(`href="${agentPath}"`);
-			expect(mobileMenu).toContain(page === "diagnostic" ? 'href="#china-contact-form"' : 'href="/zh/diagnostic"');
+			expect(markup).toContain(`href="${agentPath}"`);
+			expect(markup).toContain(`href="${humanPath}"`);
 		}
 	});
 
-	it("区域切换始终进入英文站的同主题页面", () => {
-		const englishPaths: Record<keyof ChinaPages, string> = {
-			home: "/",
-			product: "/product",
-			approach: "/approach",
-			geo: "/geo",
-			company: "/company",
-			diagnostic: "/diagnostic",
-			privacy: "/privacy",
-		};
-
-		for (const [page, path] of Object.entries(englishPaths) as [keyof ChinaPages, string][]) {
-			expect(render(page)).toContain(`href="${path}" data-locale-switch="en"`);
-		}
-	});
-
-	it("让客户从四种真实处境进入，而不是按职位选择", () => {
-		const markup = render("home");
-		expect(markup.match(/data-situation-control=/g) ?? []).toHaveLength(4);
-		expect(markup).toContain("没进候选池");
-		expect(markup).toContain("核心卖点被说偏");
-		expect(markup).toContain("竞品占了答案位");
-		expect(markup).toContain("出海后定位漂移");
-		expect(markup).not.toMatch(/市场总监|品牌负责人|创始人|销售团队/);
-	});
-
-	it("把中国市场与中国企业出海呈现为两条可选择的服务路径", () => {
-		const markup = render("geo");
-		expect(markup).toContain('data-market-track="china"');
-		expect(markup).toContain('data-market-track="global"');
-		expect(markup.match(/data-market-control=/g) ?? []).toHaveLength(2);
-		expect(markup).toContain("服务中国市场");
-		expect(markup).toContain("支持企业进入海外目标市场");
-	});
-
-	it("每个页面都有自己的视觉主角和清晰的下一步", () => {
-		const expectedScenes: Record<keyof ChinaPages, string> = {
-			home: "ai-answer-flow",
-			product: "brand-gap-console",
-			approach: "service-route",
-			geo: "global-market-bridge",
-			company: "company-network",
-			diagnostic: "consultation-brief",
-			privacy: "privacy-path",
-		};
-
-		for (const [page, scene] of Object.entries(expectedScenes) as [keyof ChinaPages, string][]) {
-			const markup = render(page);
-			expect(markup).toContain(`data-scene="${scene}"`);
-			expect(markup).toContain("/brand/logos/yonaris-wordmark-");
-			expect(markup).toContain(page === "diagnostic" ? "data-lead-state" : 'href="/zh/diagnostic"');
-		}
-	});
-
-	it("按中国 ToB 决策顺序呈现首页风险、证据与摸底输出", () => {
-		const home = render("home");
-		const heading = home.match(/<h1[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? "";
-		expect(heading.replace(/<[^>]+>/g, "")).toBe("客户开始问 AI，品牌的第一解释权还在你手里吗？");
-		for (const risk of ["没进候选池", "核心卖点被说偏", "竞品占了答案位", "出海后定位漂移"]) {
-			expect(home).toContain(risk);
-		}
-		for (const output of ["问题范围", "答案快照", "竞品差距", "优先级清单"]) {
-			expect(home).toContain(output);
-		}
-		expect(home).toContain("出海不是翻译官网，而是重做一遍当地品类心智。");
-		expect(home).toContain("预约一次 AI 品牌摸底");
-		expect(home.indexOf("没进候选池")).toBeLessThan(home.indexOf("问题范围"));
-		expect(home.indexOf("问题范围")).toBeLessThan(home.indexOf("出海不是翻译官网"));
-		expect(home.lastIndexOf("预约一次 AI 品牌摸底")).toBeGreaterThan(home.indexOf("出海不是翻译官网"));
-	});
-
-	it("把产品、服务、市场与公司写成可执行的本土业务判断", () => {
-		const home = render("home");
-		const product = render("product");
-		const approach = render("approach");
-		const geo = render("geo");
-		const company = render("company");
+	it("uses the local contact invitation and exactly three visible fields", () => {
 		const diagnostic = render("diagnostic");
-		const privacy = render("privacy");
-		const rendered = [home, product, approach, geo, company, diagnostic, privacy].join("\n");
-
-		for (const stage of ["圈定问题", "拆答案", "找掉点", "做复盘"]) expect(product).toContain(stage);
-		expect(product).toContain("一份能带进会议的品牌摸底记录");
-		expect(approach).toContain("先做品牌体检，再定 GEO 打法");
-		expect(approach).toContain("生成式搜索和 AI 答案中的品牌表现");
-		expect(approach.indexOf("GEO")).toBeLessThan(approach.indexOf("生成式搜索和 AI 答案中的品牌表现"));
-		expect(geo).toContain("中国市场基线");
-		expect(geo).toContain("目标国家");
-		expect(geo).toContain("目标语言");
-		expect(geo).toContain("当地购买角色");
-		expect(geo).toContain("出海不是翻译官网，而是重做一遍当地品类心智。");
-		expect(company).toContain("不卖玄学排名，先把 AI 怎么说你查清楚");
-		expect(company.indexOf("不卖玄学排名，先把 AI 怎么说你查清楚")).toBeLessThan(
-			company.indexOf("已确认的市场、语言、购买问题和对标品牌"),
-		);
-		expect(diagnostic).toContain("第一次沟通只确认摸底范围");
-		expect(privacy).not.toMatch(/增长黑客|私域|裂变|转化漏斗/);
-		expect(rendered).not.toMatch(/保证排名|保证推荐|自动改变|全网覆盖|流量承诺/);
-	});
-
-	it("四个中国诊断场景都使用完整键盘标签关系并同步结果与优先级", () => {
-		expectDiagnosticTabSet(AiAnswerFlow, 4);
-		expectDiagnosticTabSet(BrandGapConsole, 4);
-		expectDiagnosticTabSet(ServiceRoute, 4);
-		expectDiagnosticTabSet(GlobalMarketBridge, 2);
-	});
-
-	it("把所有通用诊断画面明确标成示意内容，而不是客户证据", () => {
-		for (const [name, Scene] of [
-			["AI 答案画面", AiAnswerFlow],
-			["品牌差距记录", BrandGapConsole],
-			["服务路径", ServiceRoute],
-			["市场对照", GlobalMarketBridge],
-		] as const) {
-			const markup = renderToStaticMarkup(<Scene />);
-			expect(markup, `${name} 需要机器可读的示意标记`).toContain('data-evidence-kind="illustrative"');
-			expect(markup, `${name} 需要可见的非客户数据说明`).toContain("不含客户数据");
-			expect(markup, `${name} 不应把通用示意写成一次真实观察`).not.toMatch(
-				/当次观察|范围已确认|复查记录显示|当次(?:中文|当地语言|当地)?答案/,
-			);
-		}
-	});
-
-	it("移动端让每个诊断输出值使用正文排版", () => {
-		const mobileStart = chinaCss.indexOf("@media (max-width: 800px)");
-		const narrowStart = chinaCss.indexOf("@media (max-width: 520px)", mobileStart);
-		expect(mobileStart).toBeGreaterThan(-1);
-		expect(narrowStart).toBeGreaterThan(mobileStart);
-		const mobileCss = chinaCss.slice(mobileStart, narrowStart);
-
-		expect(mobileCss).toMatch(
-			/\.china-command \[data-diagnostic-state\] \[data-output-field\]\s*\{\s*font-size:\s*var\(--text-body-mobile\);\s*line-height:\s*1\.5;\s*\}/,
-		);
-	});
-
-	it("首页标题保留完整可读文案并防止第一被拆行", () => {
-		const markup = render("home");
-		const headingMatch = markup.match(/<h1([^>]*)>([\s\S]*?)<\/h1>/);
-		const headingAttributes = headingMatch?.[1] ?? "";
-		const heading = headingMatch?.[2] ?? "";
-		const readableHeading = heading.replace(/<[^>]+>/g, "");
-
-		expect(readableHeading).toBe("客户开始问 AI，品牌的第一解释权还在你手里吗？");
-		expect(headingAttributes).toContain('aria-label="客户开始问 AI，品牌的第一解释权还在你手里吗？"');
-		expect(heading).toContain('<span class="china-home-title__lexeme">第一解释权</span>');
-		expect(chinaCss).toMatch(/\.china-home-title__lexeme\s*\{[^}]*white-space:\s*nowrap;[^}]*\}/s);
-	});
-
-	it("首页决策路径把两组标签和判断放在完整可读的行内", () => {
-		const markup = render("home");
-
-		expect(markup.match(/class="china-home-hero__shift-row"/g) ?? []).toHaveLength(2);
-		expect(chinaCss).toMatch(
-			/\.china-home-hero__shift-row\s*\{[^}]*grid-template-columns:\s*minmax\(6rem, auto\) minmax\(0, 1fr\);[^}]*\}/s,
-		);
-	});
-
-	it("移动端访问方式和语言切换使用可触达的字号与四十四像素目标", () => {
-		const mobileStart = chinaCss.indexOf("@media (max-width: 800px)");
-		const narrowStart = chinaCss.indexOf("@media (max-width: 520px)", mobileStart);
-		expect(mobileStart).toBeGreaterThan(-1);
-		expect(narrowStart).toBeGreaterThan(mobileStart);
-		const mobileCss = chinaCss.slice(mobileStart, narrowStart);
-
-		expect(mobileCss).toMatch(
-			/\.china-command \.mode-link a,\s*\.china-command \.locale-switch\s*\{[^}]*min-width:\s*var\(--target-mobile\);[^}]*min-height:\s*var\(--target-mobile\);[^}]*font-size:\s*var\(--text-functional-mobile\);[^}]*\}/s,
-		);
-		expect(mobileCss).toMatch(
-			/\.china-footer__brand a\s*\{[^}]*min-width:\s*var\(--target-mobile\);[^}]*min-height:\s*var\(--target-mobile\);[^}]*\}/s,
-		);
-	});
-
-	it("服务优先级在橙色底上强制使用高对比深色文字", () => {
-		expect(chinaCss).toMatch(
-			/\.china-service-route__detail > \.china-service-route__priority\s*\{[^}]*background:\s*var\(--y-orange\);[^}]*color:\s*var\(--y-ink\);[^}]*\}/s,
-		);
-	});
-
-	it("服务首屏在解释 GEO 后用普通业务语言说明下一步", () => {
-		const markup = render("approach");
-		const hero = markup.match(/<section class="china-approach-intro">([\s\S]*?)<\/section>/)?.[1] ?? "";
-
-		expect(hero).toContain("先做品牌体检，再定 GEO 打法。");
-		expect(hero).toContain("这里的 GEO，指生成式搜索和 AI 答案中的品牌表现。");
-		expect(hero).toContain("出现偏差");
-		expect(hero).toContain("不同市场的定位");
-		expect(hero).not.toMatch(/掉点|出海本地化/);
-	});
-
-	it("预约表单只呈现姓名、电话、公司三个字段，不要求邮箱", () => {
-		const markup = render("diagnostic");
-		const form = markup.match(/<form[\s\S]*?<\/form>/)?.[0] ?? "";
-
+		expect(diagnostic).toContain("带一道你最不想让 AI 答错的问题来。");
+		const form = diagnostic.match(/<form[\s\S]*?<\/form>/)?.[0] ?? "";
 		expect(form.match(/data-lead-field=/g) ?? []).toHaveLength(3);
-		expect(form).toContain("姓名");
-		expect(form).toContain("电话");
-		expect(form).toContain("公司");
-		expect(form).toContain('name="phone"');
-		expect(form).toContain('type="tel"');
-		expect(form).not.toMatch(/name="email"|type="email"|工作邮箱/);
+		for (const field of ["姓名", "电话", "公司"]) expect(form).toContain(field);
+		expect(form).toContain('name="companyUrl"');
+		expect(form).not.toMatch(/工作邮箱|name="email"|type="email"/);
+		expect(diagnostic).toContain('data-contact-fact="true"');
+		expect(diagnostic).not.toContain("site-06-contact-scene__record");
 	});
 
-	it("预约页导航按钮直达明确表单锚点且不再使用遮挡内容的固定按钮", () => {
-		const markup = render("diagnostic");
-		const header = markup.match(/<header class="china-nav">([\s\S]*?)<\/header>/)?.[1] ?? "";
+	it("keeps anti-abuse implementation details out of public Chinese copy", () => {
+		const rendered = (["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const)
+			.map(render)
+			.join("\n");
 
-		expect(markup).toContain('<section class="china-diagnostic-form" id="china-contact-form"');
-		expect(header.match(/href="#china-contact-form"/g) ?? []).toHaveLength(2);
-		expect(markup).not.toContain('class="china-mobile-action"');
+		expect(rendered).not.toMatch(/隐藏字段|蜜罐|honeypot|反滥用字段/i);
 	});
 
-	it("公开托管式复核的真实边界、记录入口与人工兜底", () => {
-		const product = render("product");
-		const company = render("company");
-		const privacy = render("privacy");
-
-		expect(product).toContain('data-public-trust="managed-review"');
-		expect(product).toContain("Yonaris 团队负责采集与核对，客户在同一工作空间查看问题范围、完整答案和下一步优先级");
-		expect(product).toContain("不是只给一个分数");
-		expect(product).toContain("完整答案快照");
-		expect(product).toContain("仅记录答案明确展示的引用");
-		expect(product).toContain("指定对标对象的比较");
-		expect(product).toContain("下一次优先复核项");
-		expect(product).toContain("复查记录");
-		expect(product).toContain("按项目节奏围绕约定问题复盘，不包装成实时监控");
-		expect(company).toContain('data-public-trust="first-party-records"');
-		expect(company).toContain('href="/zh/agent/product.md"');
-		expect(company).toContain('href="/zh/agent/company.md"');
-		expect(company).toContain('href="/zh/agent/catalog.json"');
-		expect(company).toContain("最近核对：2026-08-25");
-		expect(company).toContain("不证明客户结果、排名、范围外覆盖或实时 AI 观察");
-		expect(company).toContain('href="mailto:black.dcp@outlook.com"');
-		expect(company).toContain("对公开记录或隐私有疑问？");
-		expect(company).not.toContain("如果表单无法确认投递");
-		expect(privacy).toContain("只有投递服务接受申请后，页面才显示已送出");
-		expect(privacy).toContain('href="mailto:black.dcp@outlook.com"');
+	it("rejects the retired visual and narrative grammar", () => {
+		const rendered = (["home", "product", "approach", "geo", "company", "diagnostic", "privacy"] as const)
+			.map(render)
+			.join("\n");
+		expect(rendered).not.toMatch(/[→↗↓]/);
+		expect(rendered).not.toMatch(/>0[1-9]</);
+		expect(rendered).not.toMatch(/(?<!不)保证(?:排名|推荐)|自动改变|实时监控|客户结果提升|排名提升|流量增长/);
+		expect(rendered).not.toMatch(/中国市场基线|海外目标|出海|进入海外|服务中国市场/);
+		expect(rendered).not.toContain('data-generation="zero-one"');
+		expect(rendered).toContain('data-generation="site-06"');
 	});
 });

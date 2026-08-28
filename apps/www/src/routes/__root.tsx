@@ -3,7 +3,7 @@
 import geistMonoFont from "@fontsource/geist-mono/files/geist-mono-latin-400-normal.woff2?url";
 // Preload the 400-weight files used everywhere above the fold so they download
 // in parallel with the CSS instead of after it (the H1 LCP element was being
-// held back by the HTML→CSS→font waterfall).
+// held back by the sequential HTML, CSS, and font waterfall).
 import geistSansFont from "@fontsource/geist-sans/files/geist-sans-latin-400-normal.woff2?url";
 import geistSansMediumFont from "@fontsource/geist-sans/files/geist-sans-latin-500-normal.woff2?url";
 import { createRootRoute, HeadContent, Outlet, Scripts, useRouterState } from "@tanstack/react-router";
@@ -25,7 +25,7 @@ export const Route = createRootRoute({
 					name: "viewport",
 					content: "width=device-width, initial-scale=1",
 				},
-				{ name: "theme-color", content: "#f6f4f1" },
+				{ name: "theme-color", content: "#f2ede3" },
 				{ name: "apple-mobile-web-app-title", content: "Yonaris" },
 			],
 			links: [

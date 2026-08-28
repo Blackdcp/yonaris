@@ -3,38 +3,90 @@
 import { pathToFileURL } from "node:url";
 
 export const CORE_ROUTES = [
-	{ path: "/", copy: ["Your next customer may never search. They’ll ask."] },
-	{ path: "/zh", copy: ["客户开始问 AI，品牌的第一解释权还在你手里吗？"] },
-	{ path: "/product", copy: ["See how AI answers your market’s buying questions."] },
-	{ path: "/zh/product", copy: ["品牌为什么没进客户的候选池？"] },
-	{ path: "/approach", copy: ["Start with the buying question that matters."] },
-	{ path: "/zh/approach", copy: ["先做品牌体检，再定 GEO 打法。"] },
-	{ path: "/company", copy: ["Built for the shift from search results to AI answers."] },
-	{ path: "/zh/company", copy: ["不卖玄学排名，先把 AI 怎么说你查清楚"] },
-	{ path: "/geo", copy: ["See how the same brand appears across markets."] },
-	{ path: "/zh/geo", copy: ["先有中国市场基线，再谈出海本地化"] },
-	{ path: "/diagnostic", copy: ["Start with the question that matters."] },
-	{ path: "/zh/diagnostic", copy: ["第一次沟通只确认摸底范围"] },
+	{
+		path: "/",
+		h1: "See what buyers are being told before the first conversation.",
+		copy: ["See what buyers are being told before the first conversation."],
+	},
+	{
+		path: "/zh",
+		h1: "AI 正在替客户认识你、比较你，也可能误解你。",
+		copy: ["AI 正在替客户认识你、比较你，也可能误解你。"],
+	},
+	{ path: "/product", h1: "See what shaped the shortlist.", copy: ["See what shaped the shortlist."] },
+	{
+		path: "/zh/product",
+		h1: "不是再做一层内容，而是重建品牌被理解的基础设施。",
+		copy: ["不是再做一层内容，而是重建品牌被理解的基础设施。"],
+	},
+	{
+		path: "/approach",
+		h1: "Proof should be something your team can review.",
+		copy: ["Proof should be something your team can review."],
+	},
+	{
+		path: "/zh/approach",
+		h1: "从一句 AI 答案，追到真正影响选择的那个断点。",
+		copy: ["从一句 AI 答案，追到真正影响选择的那个断点。"],
+	},
+	{
+		path: "/company",
+		h1: "The same company should remain clear to people and agents.",
+		copy: ["The same company should remain clear to people and agents."],
+	},
+	{
+		path: "/zh/company",
+		h1: "同一家公司，应该让人和 Agent 都读得清楚。",
+		copy: ["同一家公司，应该让人和 Agent 都读得清楚。"],
+	},
+	{
+		path: "/geo",
+		h1: "Markets change the conditions around the decision.",
+		copy: ["Markets change the conditions around the decision."],
+	},
+	{
+		path: "/zh/geo",
+		h1: "换一个市场，先换判断条件，不是只换语言。",
+		copy: ["换一个市场，先换判断条件，不是只换语言。"],
+	},
+	{
+		path: "/diagnostic",
+		h1: "Tell us who to contact. We’ll begin with the buying decision.",
+		copy: ["Tell us who to contact. We’ll begin with the buying decision."],
+	},
+	{
+		path: "/zh/diagnostic",
+		h1: "带一道你最不想让 AI 答错的问题来。",
+		copy: ["带一道你最不想让 AI 答错的问题来。"],
+	},
 ];
 
 export const GOVERNED_HTML_ROUTES = [
-	{ path: "/privacy", copy: ["Your details take one short route."] },
-	{ path: "/zh/privacy", copy: ["姓名、电话、公司，只用于回复这次咨询"] },
+	{
+		path: "/privacy",
+		h1: "Your contact request takes one short route.",
+		copy: ["Your contact request takes one short route."],
+	},
+	{
+		path: "/zh/privacy",
+		h1: "姓名、电话、公司，只用于回复这次咨询。",
+		copy: ["姓名、电话、公司，只用于回复这次咨询。"],
+	},
 ];
 
 export const HUMAN_HTML_ROUTES = [...CORE_ROUTES, ...GOVERNED_HTML_ROUTES];
 
 export const AGENT_HTML_ROUTES = [
-	{ path: "/agent", copy: ["Agent fact interface"], noindex: true },
+	{ path: "/agent", copy: ["Public facts"], noindex: true },
 	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
 		path: `/agent/${topic}`,
-		copy: ["Agent fact interface"],
+		copy: ["Public facts"],
 		noindex: true,
 	})),
-	{ path: "/zh/agent", copy: ["Agent 事实入口"], noindex: true },
+	{ path: "/zh/agent", copy: ["公开事实"], noindex: true },
 	...["product", "approach", "company", "geo", "diagnostic", "privacy"].map((topic) => ({
 		path: `/zh/agent/${topic}`,
-		copy: ["Agent 事实入口"],
+		copy: ["公开事实"],
 		noindex: true,
 	})),
 ];
@@ -243,22 +295,35 @@ function parsedHtmlLinks(html) {
 	return parsedHtmlTags(html, "link");
 }
 
-function linkPath(href) {
+function normalizeExpectedOrigin(input) {
+	let url;
 	try {
-		return new URL(href, "https://yonaris.invalid").pathname;
+		url = new URL(input);
 	} catch {
-		return "";
+		throw new Error(`Invalid expected production origin: ${JSON.stringify(input)}`);
 	}
+	if (
+		(url.protocol !== "https:" && url.protocol !== "http:") ||
+		url.username ||
+		url.password ||
+		url.pathname !== "/" ||
+		url.search ||
+		url.hash
+	) {
+		throw new Error(
+			`Expected production origin must contain only scheme, host, and optional port: ${JSON.stringify(input)}`,
+		);
+	}
+	return url.origin;
 }
 
-function hasHtmlLink(links, { rel, path, type, hrefLang }) {
-	return links.some(
-		(link) =>
-			link.rel === rel &&
-			linkPath(link.href) === path &&
-			(type === undefined || link.type === type) &&
-			(hrefLang === undefined || link.hreflang === hrefLang),
-	);
+function matchingLinks(links, { rel, type, hrefLang }) {
+	return links.filter((link) => link.rel === rel && link.type === type && link.hreflang === hrefLang);
+}
+
+function hasExactHtmlLink(links, { rel, path, type, hrefLang }, expectedOrigin) {
+	const candidates = matchingLinks(links, { rel, type, hrefLang });
+	return candidates.length === 1 && candidates[0].href === new URL(path, `${expectedOrigin}/`).href;
 }
 
 function parsedHttpLinks(header) {
@@ -270,14 +335,9 @@ function parsedHttpLinks(header) {
 	});
 }
 
-function hasHttpLink(links, { rel, path, type, hrefLang }) {
-	return links.some(
-		(link) =>
-			link.rel === rel &&
-			linkPath(link.href) === path &&
-			(type === undefined || link.type === type) &&
-			(hrefLang === undefined || link.hreflang === hrefLang),
-	);
+function hasExactHttpLink(links, { rel, path, type, hrefLang }, expectedOrigin) {
+	const candidates = matchingLinks(links, { rel, type, hrefLang });
+	return candidates.length === 1 && candidates[0].href === new URL(path, `${expectedOrigin}/`).href;
 }
 
 const decodedPublicTerm = (...codePoints) => String.fromCodePoint(...codePoints);
@@ -304,36 +364,85 @@ function checkPublicOutput(path, body, failures) {
 	}
 }
 
-function checkHumanDocument(route, body, failures) {
+function checkHumanDocument(route, body, failures, expectedOrigin) {
 	const discovery = humanMachinePaths(route.path);
 	const links = parsedHtmlLinks(body);
+	const html = parsedHtmlTags(body, "html")[0];
+	if (html?.lang !== discovery.locale)
+		failures.push(`HUMAN LANG ${route.path}: expected ${discovery.locale}, received ${html?.lang || "none"}`);
+	const headings = [...body.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/giu)].map((match) =>
+		match[1]
+			.replace(/<[^>]+>/gu, " ")
+			.replace(/&(?:#39|apos);/giu, "'")
+			.replace(/&quot;/giu, '"')
+			.replace(/&amp;/giu, "&")
+			.replace(/&lt;/giu, "<")
+			.replace(/&gt;/giu, ">")
+			.replace(/\s+/gu, " ")
+			.trim(),
+	);
+	if (headings.length !== 1 || headings[0] !== route.h1)
+		failures.push(
+			`HUMAN H1 ${route.path}: expected exactly ${JSON.stringify(route.h1)}, received ${JSON.stringify(headings)}`,
+		);
+	const structuredData = [
+		...body.matchAll(/<script\b(?=[^>]*\btype=["']application\/ld\+json["'])[^>]*>([\s\S]*?)<\/script>/giu),
+	];
+	if (structuredData.length === 0) failures.push(`HUMAN JSON-LD ${route.path}: missing application/ld+json script`);
+	for (const script of structuredData) {
+		try {
+			JSON.parse(script[1]);
+		} catch {
+			failures.push(`HUMAN JSON-LD ${route.path}: malformed application/ld+json script`);
+		}
+	}
+	if (/[↗→↳]/u.test(body) || />\s*0[1-9]\s*</u.test(body))
+		failures.push(`HUMAN TEMPLATE ${route.path}: rejected arrow or numbered-template glyph`);
 	const robots = parsedHtmlTags(body, "meta").find((meta) => meta.name?.toLowerCase() === "robots")?.content ?? "";
 	if (/noindex/iu.test(robots)) failures.push(`HUMAN ROBOTS ${route.path}: must remain indexable`);
-	if (!hasHtmlLink(links, { rel: "canonical", path: discovery.canonicalPath }))
+	if (!hasExactHtmlLink(links, { rel: "canonical", path: discovery.canonicalPath }, expectedOrigin))
 		failures.push(`HUMAN CANONICAL ${route.path}: expected ${discovery.canonicalPath}`);
 	if (
-		!hasHtmlLink(links, {
-			rel: "alternate",
-			path: discovery.canonicalPath,
-			hrefLang: discovery.locale,
-		})
+		!hasExactHtmlLink(
+			links,
+			{
+				rel: "alternate",
+				path: discovery.canonicalPath,
+				hrefLang: discovery.locale,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.locale} self alternate`);
 	if (
-		!hasHtmlLink(links, {
-			rel: "alternate",
-			path: discovery.peerHumanPath,
-			hrefLang: discovery.peerLanguage,
-		})
+		!hasExactHtmlLink(
+			links,
+			{
+				rel: "alternate",
+				path: discovery.peerHumanPath,
+				hrefLang: discovery.peerLanguage,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing ${discovery.peerLanguage} peer`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.defaultPath, hrefLang: "x-default" }))
+	if (
+		!hasExactHtmlLink(links, { rel: "alternate", path: discovery.defaultPath, hrefLang: "x-default" }, expectedOrigin)
+	)
 		failures.push(`HUMAN HREFLANG ${route.path}: missing x-default`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+	if (
+		!hasExactHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }, expectedOrigin)
+	)
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing Markdown alternate`);
-	if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+	if (
+		!hasExactHtmlLink(
+			links,
+			{ rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" },
+			expectedOrigin,
+		)
+	)
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing JSON-LD alternate`);
-	if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+	if (!hasExactHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 		failures.push(`HUMAN DISCOVERY ${route.path}: missing llms.txt relation`);
 }
 
@@ -342,10 +451,25 @@ function checkAgentDocument(route, body, failures) {
 	const hasArticle = /<article\b/iu.test(body);
 	const hasGroup = /data-fact-group=["'][a-z0-9.-]+["']/u.test(body);
 	const hasClaim = /data-claim-id=["'][a-z0-9.-]+["']/u.test(body);
-	const hasScope = /agent-experience__metadata-wide/u.test(body);
+	const hasDirectory = /agent-experience__fact-index/u.test(body);
+	const hasMetadata = /agent-experience__record-meta/u.test(body);
+	const hasHumanCanonical = /data-human-canonical=["']true["']/u.test(body);
 	const hasLimitations = /agent-experience__limitations/u.test(body);
-	if (!(hasSurface && hasArticle && hasGroup && hasClaim && hasScope && hasLimitations))
-		failures.push(`AGENT CONTRACT ${route.path}: expected article, stable facts, scope, and limitations`);
+	if (
+		!(
+			hasSurface &&
+			hasArticle &&
+			hasGroup &&
+			hasClaim &&
+			hasDirectory &&
+			hasMetadata &&
+			hasHumanCanonical &&
+			hasLimitations
+		)
+	)
+		failures.push(
+			`AGENT CONTRACT ${route.path}: expected Human return, fact directory, stable facts, metadata, and limitations`,
+		);
 }
 
 function checkLeadForm(path, body, failures) {
@@ -440,7 +564,7 @@ function checkCatalogueGraph(route, graph, failures) {
 	}
 }
 
-async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
+async function checkReadableRoute(route, baseUrl, failures, assetUrls, expectedOrigin) {
 	const routeUrl = new URL(route.path, baseUrl);
 	try {
 		const response = await fetchWithTimeout(routeUrl, {}, route.path === "/" ? 30 : 1);
@@ -459,17 +583,29 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 		if (route.noindex) {
 			const discovery = agentMachinePaths(route.path);
 			const links = parsedHtmlLinks(body);
-			if (!hasHtmlLink(links, { rel: "canonical", path: discovery.humanPath }))
+			if (!hasExactHtmlLink(links, { rel: "canonical", path: discovery.humanPath }, expectedOrigin))
 				failures.push(`CANONICAL ${route.path}: expected ${discovery.humanPath}`);
-			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.markdownPath, type: "text/markdown" }))
+			if (
+				!hasExactHtmlLink(
+					links,
+					{ rel: "alternate", path: discovery.markdownPath, type: "text/markdown" },
+					expectedOrigin,
+				)
+			)
 				failures.push(`DISCOVERY ${route.path}: missing Markdown alternate`);
-			if (!hasHtmlLink(links, { rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" }))
+			if (
+				!hasExactHtmlLink(
+					links,
+					{ rel: "alternate", path: discovery.catalogPath, type: "application/ld+json" },
+					expectedOrigin,
+				)
+			)
 				failures.push(`DISCOVERY ${route.path}: missing JSON-LD alternate`);
-			if (!hasHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+			if (!hasExactHtmlLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 				failures.push(`DISCOVERY ${route.path}: missing llms.txt relation`);
 			checkAgentDocument(route, body, failures);
 		} else {
-			checkHumanDocument(route, body, failures);
+			checkHumanDocument(route, body, failures, expectedOrigin);
 		}
 		if (route.path === "/diagnostic" || route.path === "/zh/diagnostic") checkLeadForm(route.path, body, failures);
 		collectHtmlAssets(body, routeUrl, baseUrl, assetUrls);
@@ -479,7 +615,7 @@ async function checkReadableRoute(route, baseUrl, failures, assetUrls) {
 	}
 }
 
-function checkMachineHeaders(route, response, failures, contentType) {
+function checkMachineHeaders(route, response, failures, contentType, expectedOrigin) {
 	const actualType = response.headers.get("content-type") ?? "";
 	if (!typeMatches(actualType, contentType))
 		failures.push(`TYPE ${route.path}: expected ${contentType}, received ${actualType || "none"}`);
@@ -495,24 +631,44 @@ function checkMachineHeaders(route, response, failures, contentType) {
 		failures.push(`ROBOTS ${route.path}: expected noindex, follow`);
 
 	const links = parsedHttpLinks(response.headers.get("link") ?? "");
-	if (!hasHttpLink(links, { rel: "canonical", path: route.path, type: contentType }))
+	if (!hasExactHttpLink(links, { rel: "canonical", path: route.path, type: contentType }, expectedOrigin))
 		failures.push(`LINK ${route.path}: missing canonical`);
-	if (route.humanPath && !hasHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }))
+	if (
+		route.humanPath &&
+		!hasExactHttpLink(links, { rel: "alternate", path: route.humanPath, type: "text/html" }, expectedOrigin)
+	)
 		failures.push(`LINK ${route.path}: missing Human alternate`);
 	if (
-		!hasHttpLink(links, {
-			rel: "alternate",
-			path: route.peerPath,
-			type: contentType,
-			hrefLang: route.peerLanguage,
-		})
+		route.catalogPath &&
+		!hasExactHttpLink(
+			links,
+			{
+				rel: "alternate",
+				path: route.catalogPath,
+				type: "application/ld+json",
+			},
+			expectedOrigin,
+		)
+	)
+		failures.push(`LINK ${route.path}: invalid catalog alternate`);
+	if (
+		!hasExactHttpLink(
+			links,
+			{
+				rel: "alternate",
+				path: route.peerPath,
+				type: contentType,
+				hrefLang: route.peerLanguage,
+			},
+			expectedOrigin,
+		)
 	)
 		failures.push(`LINK ${route.path}: missing locale peer`);
-	if (!hasHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }))
+	if (!hasExactHttpLink(links, { rel: "describedby", path: "/llms.txt", type: "text/plain" }, expectedOrigin))
 		failures.push(`LINK ${route.path}: missing llms.txt relation`);
 }
 
-async function checkAgentMarkdownRoute(route, baseUrl, failures) {
+async function checkAgentMarkdownRoute(route, baseUrl, failures, expectedOrigin) {
 	try {
 		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
 		if (response.status >= 500) {
@@ -523,17 +679,18 @@ async function checkAgentMarkdownRoute(route, baseUrl, failures) {
 			failures.push(`${response.status} ${route.path}`);
 			return;
 		}
-		checkMachineHeaders(route, response, failures, "text/markdown");
+		checkMachineHeaders(route, response, failures, "text/markdown", expectedOrigin);
 		const body = await response.text();
 		checkPublicOutput(route.path, body, failures);
-		if (!/- \[[a-z0-9.-]+\] /u.test(body)) failures.push(`CLAIM ${route.path}: missing stable claim ID`);
+		if (!/^Stable ID: [a-z0-9.-]+$/mu.test(body) && !/^稳定 ID：[a-z0-9.-]+$/mu.test(body))
+			failures.push(`CLAIM ${route.path}: missing stable claim ID`);
 		console.log(`${response.status} ${route.path}`);
 	} catch (error) {
 		failures.push(`ERR ${route.path}: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 
-async function checkAgentCatalogRoute(route, baseUrl, failures) {
+async function checkAgentCatalogRoute(route, baseUrl, failures, expectedOrigin) {
 	try {
 		const response = await fetchWithTimeout(new URL(route.path, baseUrl));
 		if (response.status >= 500) {
@@ -544,7 +701,7 @@ async function checkAgentCatalogRoute(route, baseUrl, failures) {
 			failures.push(`${response.status} ${route.path}`);
 			return;
 		}
-		checkMachineHeaders(route, response, failures, "application/ld+json");
+		checkMachineHeaders(route, response, failures, "application/ld+json", expectedOrigin);
 		const body = await response.text();
 		checkPublicOutput(route.path, body, failures);
 		try {
@@ -721,13 +878,16 @@ async function checkNegotiationMatrix(baseUrl, failures) {
 
 export async function runMarketingSmoke(inputUrl = "http://127.0.0.1:3000/", options = {}) {
 	const baseUrl = new URL(inputUrl);
+	const expectedOrigin = normalizeExpectedOrigin(
+		options.expectedOrigin ?? process.env.VITE_SITE_URL ?? "https://yonaris.com",
+	);
 	const failures = [];
 	const assetUrls = new Map();
 
 	for (const route of [...HUMAN_HTML_ROUTES, ...AGENT_HTML_ROUTES])
-		await checkReadableRoute(route, baseUrl, failures, assetUrls);
-	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures);
-	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures);
+		await checkReadableRoute(route, baseUrl, failures, assetUrls, expectedOrigin);
+	for (const route of AGENT_MARKDOWN_ROUTES) await checkAgentMarkdownRoute(route, baseUrl, failures, expectedOrigin);
+	for (const route of AGENT_CATALOG_ROUTES) await checkAgentCatalogRoute(route, baseUrl, failures, expectedOrigin);
 	for (const route of MACHINE_ROUTES) await checkMachineRoute(route, baseUrl, failures);
 	const negotiationCases = await checkNegotiationMatrix(baseUrl, failures);
 

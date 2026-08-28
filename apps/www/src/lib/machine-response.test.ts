@@ -56,6 +56,7 @@ describe("machine responses", () => {
 			{ accept: "text/markdown;q=0.4,text/html;q=0.8", status: 200 },
 			{ accept: "text/html;q=0.4,text/markdown;q=0.8", status: 200 },
 			{ accept: "application/json", status: 406 },
+			{ accept: "application/ld+json", status: 406 },
 			{ accept: "text/html;q=0,text/markdown;q=0", status: 406 },
 		] as const;
 		const fetchHandler = async (routedRequest: Request) =>
@@ -126,7 +127,7 @@ describe("machine responses", () => {
 		expect(response.status).toBe(203);
 		expect(response.headers.get("content-location")).toBe("/agent/product.md");
 		expect(response.headers.get("link")).toBe(
-			'</product>; rel="alternate"; type="text/html", </agent/product.md>; rel="canonical"; type="text/markdown", </agent/catalog.json>; rel="alternate"; type="application/ld+json", </zh/agent/product.md>; rel="alternate"; type="text/markdown"; hreflang="zh-CN", </llms.txt>; rel="describedby"; type="text/plain"',
+			'<https://yonaris.com/product>; rel="alternate"; type="text/html", <https://yonaris.com/agent/product.md>; rel="canonical"; type="text/markdown", <https://yonaris.com/agent/catalog.json>; rel="alternate"; type="application/ld+json", <https://yonaris.com/zh/agent/product.md>; rel="alternate"; type="text/markdown"; hreflang="zh-CN", <https://yonaris.com/llms.txt>; rel="describedby"; type="text/plain"',
 		);
 	});
 

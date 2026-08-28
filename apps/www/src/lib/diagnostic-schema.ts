@@ -5,6 +5,7 @@ const contactShape = {
 	name: z.string().trim().min(1).max(120),
 	company: z.string().trim().min(1).max(160),
 	companyUrl: z.string().trim().max(0).default(""),
+	requestType: z.enum(["consultation", "privacy"]).default("consultation"),
 } as const;
 
 export const diagnosticLeadSchema = z.discriminatedUnion("locale", [
@@ -25,6 +26,7 @@ export const diagnosticLeadSchema = z.discriminatedUnion("locale", [
 	}),
 ]);
 export type DiagnosticLead = z.output<typeof diagnosticLeadSchema>;
+export type DiagnosticRequestType = DiagnosticLead["requestType"];
 
 export function parseDiagnosticLead(input: unknown): z.ZodSafeParseResult<DiagnosticLead> {
 	return diagnosticLeadSchema.safeParse(input);

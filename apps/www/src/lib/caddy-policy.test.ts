@@ -142,6 +142,7 @@ describe("the production apex Caddy policy", () => {
 			"/assets/*",
 			"/brand/logos/yonaris-wordmark-navy.png",
 			"/brand/logos/yonaris-wordmark-white.png",
+			"/brand/site-06/*",
 			"/icons/*",
 			"/apple-touch-icon.png",
 			"/favicon.ico",
@@ -155,6 +156,7 @@ describe("the production apex Caddy policy", () => {
 		expect(activeFragment).not.toMatch(/(?:^|\s)\/api\/\*(?:\s|$)/u);
 		expect(activeFragment).not.toMatch(/(?:^|\s)\/zh\/\*(?:\s|$)/u);
 		expect(activeFragment).not.toMatch(/(?:^|\s)\/diagnostic\/\*(?:\s|$)/u);
+		expect(activeFragment).not.toMatch(/(?:^|\s)\/brand\/\*(?:\s|$)/u);
 		expect(activeFragment).not.toContain("trusted_proxies");
 	});
 

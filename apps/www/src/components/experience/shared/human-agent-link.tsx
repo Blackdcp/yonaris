@@ -14,20 +14,34 @@ export function HumanAgentLink({
 	locale,
 	pageKey,
 	mode = "human",
+	className,
+	compact = false,
 }: {
 	locale: "en" | "zh";
 	pageKey: HumanPageKey;
 	mode?: "human" | "agent";
+	className?: string;
+	compact?: boolean;
 }) {
-	const labels =
-		locale === "en" ? { human: "For people", agent: "For AI agents" } : { human: "官网", agent: "AI Agent" };
+	const labels = compact
+		? locale === "en"
+			? { human: "People", agent: "Agents" }
+			: { human: "人类", agent: "Agent" }
+		: locale === "en"
+			? { human: "For people", agent: "For agents" }
+			: { human: "人类阅读", agent: "Agent 阅读" };
 	return (
-		<nav className="mode-link" aria-label={locale === "en" ? "Choose site experience" : "选择访问方式"}>
+		<nav
+			className={["mode-link", className].filter(Boolean).join(" ")}
+			aria-label={locale === "en" ? "Choose reading mode" : "选择阅读方式"}
+			data-mode-switch="true"
+			data-compact={compact ? "true" : undefined}
+		>
 			<a href={humanPath(locale, pageKey)} aria-current={mode === "human" ? "page" : undefined}>
 				{labels.human}
 			</a>
 			<a href={agentPath(locale, pageKey)} aria-current={mode === "agent" ? "page" : undefined}>
-				<span aria-hidden="true">✦</span> {labels.agent}
+				{labels.agent}
 			</a>
 		</nav>
 	);

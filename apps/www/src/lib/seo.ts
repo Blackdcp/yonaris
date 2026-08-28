@@ -1,31 +1,13 @@
+import { EN_CATEGORY } from "@/content/experience/canonical-public-facts";
 import type { ExperienceLocale, HumanPageKey } from "@/content/experience/types";
-import {
-	agentCatalogPath,
-	agentMarkdownPath,
-	buildAgentEntityGraph,
-	getAgentTopic,
-} from "./machine-documents";
+import { agentCatalogPath, agentMarkdownPath, buildAgentEntityGraph, getAgentTopic } from "./machine-documents";
 import { getMarketingOgImage } from "./og";
+import { canonicalUrl, SITE_URL, siteHref } from "./site-origin";
 
-const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
-
-export const SITE_URL = configuredSiteUrl ? configuredSiteUrl.replace(/\/$/, "") : "";
+export { canonicalUrl, SITE_URL, siteHref } from "./site-origin";
 export const SITE_NAME = "Yonaris";
-export const SITE_DESCRIPTION =
-	"Yonaris helps brands review how they appear when customers use AI to discover, compare, and choose.";
+export const SITE_DESCRIPTION = EN_CATEGORY;
 export const SITE_LOGO_URL = SITE_URL ? `${SITE_URL}/brand/logos/yonaris-wordmark-navy.png` : undefined;
-
-export function canonicalUrl(path: string): string | undefined {
-	if (path.startsWith("http")) return path;
-	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-	return SITE_URL ? `${SITE_URL}${normalizedPath}` : undefined;
-}
-
-export function siteHref(path: string): string {
-	if (path.startsWith("http")) return path;
-	const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-	return canonicalUrl(normalizedPath) ?? normalizedPath;
-}
 
 export function pageSocialMeta(options: {
 	title: string;
@@ -78,10 +60,10 @@ export function organizationJsonLd() {
 	});
 }
 
-export function publicEntityGraph(options: {
-	locale: ExperienceLocale;
-	pageKey: HumanPageKey;
-}): { type: "application/ld+json"; children: string } {
+export function publicEntityGraph(options: { locale: ExperienceLocale; pageKey: HumanPageKey }): {
+	type: "application/ld+json";
+	children: string;
+} {
 	return {
 		type: "application/ld+json",
 		children: JSON.stringify({

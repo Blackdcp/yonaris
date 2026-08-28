@@ -15,7 +15,6 @@
     {"id":"positioning_04","sha256":"a73a5201e6244acfcd69f6d5ceb56d2e82ee9b31c28cc7b4881cad49a89e7adc","compactSha256":"335714c5e1d73fec03648fcbabf569e521215788c3408ebb2e1d4ff77620fb53","characters":13,"tokens":2,"severity":"block"},
     {"id":"positioning_05","sha256":"e34aed7a3c93d7b6fc0ac9039b0e4612bb7aba9a78a1c14d0d02be7b4cfd45cd","compactSha256":"30ad10358f0fe0acdbedd7d2f83678c3f4bc482b4018f9d6d2323c1a19b82b0b","characters":18,"tokens":2,"severity":"block"},
     {"id":"positioning_06","sha256":"76ebb28a3fa59d97af5848250f953958279939c3de95022cca45698ab3129693","compactSha256":"75d79d6f2e1516930b923908c622316b9ee6a30053203745bbb285664a498c72","characters":19,"tokens":2,"severity":"block"},
-    {"id":"positioning_07","sha256":"391b1fcbfe1f411b63fb97d41d691f45b77cb66cfa4a91cecc9d9a6525a44884","compactSha256":"8f1b54f186e1031189fbde83bb3362dc228a747b761f34839f2a5f2f438a2ce1","characters":17,"tokens":3,"severity":"block"},
     {"id":"positioning_08","sha256":"60772f3f951985315cd9e129db23a4384a01bff47f6871c6d16d68c336c5ba42","compactSha256":"4f5d97d62f388d20d51a71e7fb3b4051462d82d73c5d9e8292f8a05c1e0bd2ca","characters":21,"tokens":4,"severity":"block"},
     {"id":"positioning_09","sha256":"13fef948be33bd55157a607e8b1d5ae76d32d695e6b608ada49e937b4983275f","compactSha256":"d5f43cf9d595893d47d9bcd3fec1a97951d2be0a08c4271d9ec10c9ca9244e15","characters":16,"tokens":2,"severity":"block"}
   ]

@@ -5,7 +5,7 @@ import {
 	resolveDiagnosticRequestIdentity,
 	submitDiagnosticRequest,
 } from "@/lib/diagnostic-client";
-import { type DiagnosticLead, parseDiagnosticLead } from "@/lib/diagnostic-schema";
+import { type DiagnosticLead, type DiagnosticRequestType, parseDiagnosticLead } from "@/lib/diagnostic-schema";
 
 export type LeadLocale = "en" | "zh";
 export type LeadField = "name" | "contact" | "company";
@@ -26,8 +26,9 @@ type FieldRefs = { current: Record<LeadField, HTMLInputElement | null> };
 const copy = {
 	en: {
 		label: "Start a conversation",
-		title: "Where should we reach you?",
-		summary: "Share three details to request a scope-setting conversation about your brand and market.",
+		title: "Tell us where we should reach you.",
+		summary:
+			"The first conversation will frame one market question, determine whether it can be observed and evidenced, and identify one useful next action.",
 		name: "Name",
 		contact: "Work email",
 		company: "Company",
@@ -44,17 +45,16 @@ const copy = {
 		submitting: "Sending…",
 		retry: "Try again",
 		validation: "Please check the highlighted field.",
-		failure: "Delivery is not confirmed. Your details are still here—please try again.",
-		fallback: "The email link opens a draft; nothing is sent until you send it.",
-		successTitle: "Request accepted for delivery.",
-		successBody: "The delivery service accepted the request. This does not confirm inbox delivery.",
+		failure: "We couldn’t send that yet. Your details are still here—please try again.",
+		successTitle: "Thanks. We received your request and will be in touch.",
+		successBody: "We’ll follow up using the details you provided.",
 		disclosure: "We’ll use these details only to respond to your request.",
 		privacy: "Privacy",
 	},
 	zh: {
 		label: "预约沟通",
-		title: "留下联系方式，先确认摸底范围",
-		summary: "只填三项，用于申请一次围绕业务和目标市场的范围沟通。",
+		title: "怎么联系你？",
+		summary: "第一次沟通会从团队最怕 AI 答错的客户问题开始，判断它能否被观测、能否找到证据，并确定一个有用的下一步。",
 		name: "姓名",
 		contact: "电话",
 		company: "公司",
@@ -71,19 +71,45 @@ const copy = {
 		submitting: "正在发送…",
 		retry: "重新发送",
 		validation: "请检查标出的字段。",
-		failure: "投递尚未确认。你填写的内容还在，请重试。",
-		fallback: "邮件链接只会打开草稿；在你主动发送前，不会发出任何内容。",
-		successTitle: "投递服务已接受这次申请",
-		successBody: "这表示服务方已接受请求，不代表邮件已经进入收件箱。",
+		failure: "暂时没能发送。你填写的内容还在，请重试。",
+		successTitle: "已收到，我们会尽快联系你。",
+		successBody: "我们会使用你填写的联系方式跟进。",
 		disclosure: "这些信息只用于本次需求沟通。",
 		privacy: "隐私说明",
 	},
 } as const;
 
+const privacyCopy = {
+	en: {
+		...copy.en,
+		label: "Privacy request",
+		title: "Ask Yonaris to review your contact records.",
+		summary:
+			"Use the same name, work email and company as your earlier request so we can identify it for manual review.",
+		submit: "Submit privacy request",
+		submitting: "Sending privacy request…",
+		successTitle: "Your privacy request is ready for manual review.",
+		successBody:
+			"We’ll use the details you provided to identify the earlier request and follow up through that contact channel.",
+		disclosure: "This form starts a manual privacy review. It does not automatically delete records.",
+	},
+	zh: {
+		...copy.zh,
+		label: "隐私请求",
+		title: "请 Yonaris 核对你的联系记录。",
+		summary: "请填写与此前申请相同的姓名、电话和公司，方便人工识别并核对对应记录。",
+		submit: "提交隐私请求",
+		submitting: "正在提交隐私请求…",
+		successTitle: "隐私请求已收到，将由 Yonaris 人工核对。",
+		successBody: "我们会用你填写的联系方式识别此前申请，并通过该渠道跟进。",
+		disclosure: "此表单会启动人工隐私核对，不会自动删除记录。",
+	},
+} as const;
+
 const visibleFieldOrder = ["name", "contact", "company"] as const;
 
-function toLead(values: LeadValues, locale: LeadLocale): unknown {
-	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl };
+function toLead(values: LeadValues, locale: LeadLocale, requestType: DiagnosticRequestType = "consultation"): unknown {
+	const base = { locale, name: values.name, company: values.company, companyUrl: values.companyUrl, requestType };
 	return locale === "en" ? { ...base, email: values.contact } : { ...base, phone: values.contact };
 }
 
@@ -121,6 +147,7 @@ export function submissionStateFromResult(result: DiagnosticRequestResult): Subm
 export interface LeadFormViewProps {
 	locale: LeadLocale;
 	compact?: boolean;
+	requestType: DiagnosticRequestType;
 	values: LeadValues;
 	submission: SubmissionState;
 	errors: FieldErrors;
@@ -133,6 +160,7 @@ export interface LeadFormViewProps {
 export function LeadFormView({
 	locale,
 	compact = false,
+	requestType,
 	values,
 	submission,
 	errors,
@@ -141,17 +169,29 @@ export function LeadFormView({
 	onUpdate,
 	onSubmit,
 }: LeadFormViewProps) {
-	const labels = copy[locale];
+	const labels = requestType === "privacy" ? privacyCopy[locale] : copy[locale];
 	if (submission === "success") {
+		const successTitleId = `lead-${locale}-success-title`;
+		const successBodyId = `lead-${locale}-success-body`;
 		return (
-			<section className="lead-confirmation" role="status" aria-live="polite" data-lead-state="success">
+			<section
+				className="lead-confirmation"
+				role="status"
+				aria-live="polite"
+				aria-labelledby={successTitleId}
+				aria-describedby={successBodyId}
+				data-lead-state="success"
+			>
 				<span>{labels.label}</span>
-				<h2>{labels.successTitle}</h2>
-				<p>{labels.successBody}</p>
+				<h2 id={successTitleId}>{labels.successTitle}</h2>
+				<p id={successBodyId}>{labels.successBody}</p>
 			</section>
 		);
 	}
 
+	const purposeTitleId = `lead-${locale}-purpose-title`;
+	const purposeSummaryId = `lead-${locale}-purpose-summary`;
+	const purposeDisclosureId = `lead-${locale}-purpose-disclosure`;
 	const nameErrorId = `lead-${locale}-name-error`;
 	const contactErrorId = `lead-${locale}-contact-error`;
 	const companyErrorId = `lead-${locale}-company-error`;
@@ -162,11 +202,13 @@ export function LeadFormView({
 			onSubmit={onSubmit}
 			noValidate
 			data-lead-state={submission}
+			aria-labelledby={purposeTitleId}
+			aria-describedby={`${purposeSummaryId} ${purposeDisclosureId}`}
 		>
 			<header>
 				<span>{labels.label}</span>
-				<h2>{labels.title}</h2>
-				<p>{labels.summary}</p>
+				<h2 id={purposeTitleId}>{labels.title}</h2>
+				<p id={purposeSummaryId}>{labels.summary}</p>
 			</header>
 			<fieldset>
 				<legend className="sr-only">{labels.label}</legend>
@@ -247,6 +289,7 @@ export function LeadFormView({
 					) : null}
 				</div>
 			</fieldset>
+			<input type="hidden" name="requestType" value={requestType} />
 			<div className="lead-trap" aria-hidden="true">
 				<label htmlFor={`lead-${locale}-url`}>Website</label>
 				<input
@@ -265,21 +308,28 @@ export function LeadFormView({
 			) : null}
 			{submission === "unconfirmed" ? (
 				<p className="lead-message" role="alert">
-					{labels.failure} <a href="mailto:black.dcp@outlook.com">black.dcp@outlook.com</a>. {labels.fallback}
+					{labels.failure}
 				</p>
 			) : null}
 			<button type="submit" disabled={submission === "submitting"}>
 				{submission === "submitting" ? labels.submitting : submission === "unconfirmed" ? labels.retry : labels.submit}
-				<span aria-hidden="true">↗</span>
 			</button>
-			<p className="lead-disclosure">
+			<p className="lead-disclosure" id={purposeDisclosureId}>
 				{labels.disclosure} <a href={locale === "zh" ? "/zh/privacy" : "/privacy"}>{labels.privacy}</a>
 			</p>
 		</form>
 	);
 }
 
-export function LeadForm({ locale, compact = false }: { locale: LeadLocale; compact?: boolean }) {
+export function LeadForm({
+	locale,
+	compact = false,
+	requestType = "consultation",
+}: {
+	locale: LeadLocale;
+	compact?: boolean;
+	requestType?: DiagnosticRequestType;
+}) {
 	const [values, setValues] = useState<LeadValues>({ name: "", contact: "", company: "", companyUrl: "" });
 	const [submission, setSubmission] = useState<SubmissionState>("idle");
 	const [errors, setErrors] = useState<FieldErrors>({});
@@ -319,7 +369,7 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 			return;
 		}
 
-		const parsed = parseDiagnosticLead(toLead(valuesRef.current, locale));
+		const parsed = parseDiagnosticLead(toLead(valuesRef.current, locale, requestType));
 		if (!parsed.success) {
 			setValidationFailed(true);
 			return;
@@ -347,6 +397,7 @@ export function LeadForm({ locale, compact = false }: { locale: LeadLocale; comp
 		<LeadFormView
 			locale={locale}
 			compact={compact}
+			requestType={requestType}
 			values={values}
 			submission={submission}
 			errors={errors}

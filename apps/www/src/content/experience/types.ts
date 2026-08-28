@@ -16,12 +16,20 @@ export interface AgentFact {
 	readonly id: string;
 	readonly value: string;
 	readonly evidenceUrl: string;
+	readonly source: string;
+	readonly boundary: string;
 }
 
 export interface AgentFactGroup {
 	readonly id: string;
 	readonly title: string;
 	readonly facts: readonly AgentFact[];
+}
+
+export interface AgentQuestion {
+	readonly id: string;
+	readonly title: string;
+	readonly factIds: readonly string[];
 }
 
 export interface AgentTopic {
@@ -37,5 +45,6 @@ export interface AgentTopic {
 	readonly reviewedBy: "Yonaris";
 	readonly scope: string;
 	readonly limitations: readonly string[];
+	readonly questions: readonly AgentQuestion[];
 	readonly groups: readonly AgentFactGroup[];
 }

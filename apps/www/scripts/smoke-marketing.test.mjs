@@ -37,12 +37,28 @@ const CORE_PATHS = [
 const GOVERNED_HTML_PATHS = ["/privacy", "/zh/privacy"];
 const HUMAN_HTML_PATHS = [...CORE_PATHS, ...GOVERNED_HTML_PATHS];
 
-const HUMAN_MARKDOWN_PATHS = HUMAN_HTML_PATHS.map((path) => {
-	const zh = path === "/zh" || path.startsWith("/zh/");
-	const localePrefix = zh ? "/zh" : "";
-	const topic = path === "/" || path === "/zh" ? "index" : path.split("/").at(-1);
-	return `${localePrefix}/agent/${topic}.md`;
-});
+const HUMAN_HEADINGS = new Map([
+	["/", "See what buyers are being told before the first conversation."],
+	["/product", "See what shaped the shortlist."],
+	["/approach", "Proof should be something your team can review."],
+	["/geo", "Markets change the conditions around the decision."],
+	["/company", "The same company should remain clear to people and agents."],
+	["/diagnostic", "Tell us who to contact. We’ll begin with the buying decision."],
+	["/privacy", "Your contact request takes one short route."],
+	["/zh", "AI 正在替客户认识你、比较你，也可能误解你。"],
+	["/zh/product", "不是再做一层内容，而是重建品牌被理解的基础设施。"],
+	["/zh/approach", "从一句 AI 答案，追到真正影响选择的那个断点。"],
+	["/zh/geo", "换一个市场，先换判断条件，不是只换语言。"],
+	["/zh/company", "同一家公司，应该让人和 Agent 都读得清楚。"],
+	["/zh/diagnostic", "带一道你最不想让 AI 答错的问题来。"],
+	["/zh/privacy", "姓名、电话、公司，只用于回复这次咨询。"],
+]);
+
+const PUBLIC_ORIGIN = "https://yonaris.com";
+
+function publicHref(path) {
+	return new URL(path, `${PUBLIC_ORIGIN}/`).href;
+}
 
 const ACCEPT_CASES = [
 	{ accept: undefined, expectedStatus: 200, expectedType: "text/html" },
@@ -143,8 +159,9 @@ const ALL_COPY = [
 	"先有中国市场基线，再谈出海本地化",
 	"第一次沟通只确认摸底范围",
 	"姓名、电话、公司，只用于回复这次咨询",
-	"Agent fact interface",
-	"Agent 事实入口",
+	...HUMAN_HEADINGS.values(),
+	"Public facts",
+	"公开事实",
 	"Yonaris",
 	"public facts",
 	"User-agent:",
@@ -256,6 +273,18 @@ async function startFixture({
 	formContract = true,
 	extraVisibleControl = "",
 	publicLeak = "",
+	humanLang = true,
+	humanH1 = true,
+	humanJsonLd = true,
+	malformedHumanJsonLd = false,
+	wrongCanonicalHost = false,
+	canonicalQuery = false,
+	canonicalFragment = false,
+	wrongHreflangDestination = false,
+	wrongMachineAlternate = false,
+	wrongStableMachineAlternate = false,
+	relativeMachineLinks = false,
+	rejectedTemplateGlyph = "",
 } = {}) {
 	const requests = [];
 	const server = createServer(async (request, response) => {
@@ -365,10 +394,16 @@ async function startFixture({
 		if (AGENT_MARKDOWN_PATHS.includes(url.pathname)) {
 			const locale = url.pathname.startsWith("/zh/") ? "zh-CN" : "en";
 			const peerPath = locale === "en" ? `/zh${url.pathname}` : url.pathname.replace(/^\/zh/u, "");
+			const catalogPath = locale === "en" ? "/agent/catalog.json" : "/zh/agent/catalog.json";
+			const wrongCatalogLink =
+				wrongStableMachineAlternate && url.pathname === "/agent/index.md"
+					? ', </agent/company.json>; rel="alternate"; type="application/ld+json"'
+					: "";
 			const humanPath = url.pathname
 				.replace(/^\/zh\/agent\/index\.md$/u, "/zh")
 				.replace(/^\/agent\/index\.md$/u, "/")
 				.replace(/\/agent\/(.+)\.md$/u, "/$1");
+			const machineHref = relativeMachineLinks ? (path) => path : publicHref;
 			response
 				.writeHead(200, {
 					"Content-Type": "text/markdown; charset=utf-8",
@@ -377,9 +412,9 @@ async function startFixture({
 					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 					Vary: "Accept",
 					"X-Robots-Tag": "noindex, follow",
-					Link: `<${url.pathname}>; rel="canonical"; type="text/markdown", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+					Link: `<${machineHref(url.pathname)}>; rel="canonical"; type="text/markdown", <${machineHref(humanPath)}>; rel="alternate"; type="text/html", <${machineHref(catalogPath)}>; rel="alternate"; type="application/ld+json"${wrongCatalogLink}, <${machineHref(peerPath)}>; rel="alternate"; type="text/markdown"; hreflang="${locale === "en" ? "zh-CN" : "en"}", <${machineHref("/llms.txt")}>; rel="describedby"; type="text/plain"`,
 				})
-				.end(`# Facts\n\n- [fixture.claim] ${ALL_COPY}`);
+				.end(`# Facts\n\nStable ID: fixture.claim\n\n${ALL_COPY}`);
 			return;
 		}
 
@@ -388,6 +423,7 @@ async function startFixture({
 			const peerPath = locale === "en" ? "/zh/agent/catalog.json" : "/agent/catalog.json";
 			const humanPath = locale === "en" ? "/" : "/zh";
 			const catalogue = fixtureCatalog(locale);
+			const machineHref = relativeMachineLinks ? (path) => path : publicHref;
 			if (catalogFanIn) {
 				const sharedItemList = catalogue["@graph"].find((node) => node["@type"] === "ItemList")?.["@id"];
 				for (const node of catalogue["@graph"]) {
@@ -402,7 +438,7 @@ async function startFixture({
 					"Cache-Control": "public, max-age=300, stale-while-revalidate=3600",
 					Vary: "Accept",
 					"X-Robots-Tag": "noindex, follow",
-					Link: `<${url.pathname}>; rel="canonical"; type="application/ld+json", <${humanPath}>; rel="alternate"; type="text/html", <${peerPath}>; rel="alternate"; type="application/ld+json"; hreflang="${locale === "en" ? "zh-CN" : "en"}", </llms.txt>; rel="describedby"; type="text/plain"`,
+					Link: `<${machineHref(url.pathname)}>; rel="canonical"; type="application/ld+json", <${machineHref(humanPath)}>; rel="alternate"; type="text/html", <${machineHref(peerPath)}>; rel="alternate"; type="application/ld+json"; hreflang="${locale === "en" ? "zh-CN" : "en"}", <${machineHref("/llms.txt")}>; rel="describedby"; type="text/plain"`,
 				})
 				.end(
 					JSON.stringify(
@@ -440,18 +476,39 @@ async function startFixture({
 		const isAgent = AGENT_HTML_PATHS.includes(url.pathname);
 		const robots = isAgent ? '<meta name="robots" content="noindex,follow">' : "";
 		const agentDiscovery = AGENT_HTML_PATHS.includes(url.pathname)
-			? `<link rel="canonical" href="${url.pathname.replace(/\/agent(?=\/|$)/u, "") || "/"}"><link rel="alternate" type="text/markdown" href="${url.pathname.replace(/\/$/u, "")}${url.pathname.endsWith("/agent") ? "/index.md" : ".md"}"><link rel="alternate" type="application/ld+json" href="${url.pathname.startsWith("/zh/") ? "/zh" : ""}/agent/catalog.json"><link rel="describedby" type="text/plain" href="/llms.txt">`
+			? `<link rel="canonical" href="${publicHref(url.pathname.replace(/\/agent(?=\/|$)/u, "") || "/")}"><link rel="alternate" type="text/markdown" href="${publicHref(`${url.pathname.replace(/\/$/u, "")}${url.pathname.endsWith("/agent") ? "/index.md" : ".md"}`)}"><link rel="alternate" type="application/ld+json" href="${publicHref(`${url.pathname.startsWith("/zh/") ? "/zh" : ""}/agent/catalog.json`)}"><link rel="describedby" type="text/plain" href="${publicHref("/llms.txt")}">`
 			: "";
 		const human = HUMAN_HTML_PATHS.includes(url.pathname) ? humanPaths(url.pathname) : undefined;
+		const mutateRootMetadata = url.pathname === "/";
+		const canonicalHref = human
+			? mutateRootMetadata && wrongCanonicalHost
+				? "https://wrong.example/"
+				: `${publicHref(human.canonicalPath)}${mutateRootMetadata && canonicalQuery ? "?preview=1" : ""}${mutateRootMetadata && canonicalFragment ? "#draft" : ""}`
+			: "";
+		const wrongPeerAlternate =
+			human && mutateRootMetadata && wrongHreflangDestination
+				? `<link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${publicHref("/zh/company")}">`
+				: "";
+		const wrongMarkdownAlternate =
+			human && mutateRootMetadata && wrongMachineAlternate
+				? `<link rel="alternate" type="text/markdown" href="${publicHref("/agent/company.md")}">`
+				: "";
 		const humanDiscovery =
 			human && humanMetadata
-				? `<link rel="canonical" href="${human.canonicalPath}"><link rel="alternate" hreflang="${human.locale}" href="${human.canonicalPath}"><link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${human.peerPath}"><link rel="alternate" hreflang="x-default" href="${human.locale === "en" ? human.canonicalPath : human.peerPath}"><link rel="alternate" type="text/markdown" href="${human.markdownPath}"><link rel="alternate" type="application/ld+json" href="${human.catalogPath}"><link rel="describedby" type="text/plain" href="/llms.txt">`
+				? `<link rel="canonical" href="${canonicalHref}"><link rel="alternate" hreflang="${human.locale}" href="${publicHref(human.canonicalPath)}"><link rel="alternate" hreflang="${human.locale === "en" ? "zh-CN" : "en"}" href="${publicHref(human.peerPath)}">${wrongPeerAlternate}<link rel="alternate" hreflang="x-default" href="${publicHref(human.locale === "en" ? human.canonicalPath : human.peerPath)}"><link rel="alternate" type="text/markdown" href="${publicHref(human.markdownPath)}">${wrongMarkdownAlternate}<link rel="alternate" type="application/ld+json" href="${publicHref(human.catalogPath)}"><link rel="describedby" type="text/plain" href="${publicHref("/llms.txt")}">`
 				: "";
+		const humanLanguage = human?.locale ?? "en";
+		const humanHeading = human ? HUMAN_HEADINGS.get(url.pathname) : undefined;
+		const humanStructuredData =
+			human && humanJsonLd
+				? `<script type="application/ld+json">${malformedHumanJsonLd ? "{" : JSON.stringify({ "@context": "https://schema.org", "@type": "WebPage", url: `https://yonaris.com${url.pathname}` })}</script>`
+				: "";
+		const humanHeadingMarkup = human && humanH1 ? `<h1>${humanHeading}</h1>` : "";
 		const agentBody =
 			isAgent && agentContract
 				? (() => {
 						const paths = agentPaths(url.pathname);
-						return `<div data-agent-surface="true"><article><dl><div class="agent-experience__metadata-wide"><dt>${paths.locale === "en" ? "Scope" : "范围"}</dt><dd>Selected market, language, buyer question, and comparison frame.</dd></div></dl><section data-fact-group="fixture.group"><ul><li data-claim-id="${paths.claimId}">Observable public fact</li></ul></section><section class="agent-experience__limitations"><h2>${paths.locale === "en" ? "Limitations" : "限制"}</h2><ul><li>Bounded to the selected scope and review time.</li></ul></section></article></div>`;
+						return `<div class="agent-experience" data-agent-surface="true"><article><a data-human-canonical="true" href="${paths.humanPath}">${paths.locale === "en" ? "Read this topic for people" : "以人类视角阅读本主题"}</a><section class="agent-experience__record-meta"><dl><div><dt>${paths.locale === "en" ? "Scope" : "范围"}</dt><dd>Selected market, language, buyer question, and comparison frame.</dd></div></dl></section><aside class="agent-experience__fact-index">${paths.locale === "en" ? "Fact directory" : "事实目录"}</aside><section data-fact-group="fixture.group"><article data-claim-id="${paths.claimId}">Observable public fact</article></section><section class="agent-experience__limitations"><h2>${paths.locale === "en" ? "Limitations" : "限制"}</h2><ul><li>Bounded to the selected scope and review time.</li></ul></section></article></div>`;
 					})()
 				: "";
 		const extraControl =
@@ -473,7 +530,7 @@ async function startFixture({
 		response
 			.writeHead(200, { "Content-Type": contentType })
 			.end(
-				`<html><head>${robots}${agentDiscovery}${humanDiscovery}<link rel="stylesheet" href="/assets/site.css"></head><body>${ALL_COPY}${agentBody}${formBody}${publicLeak}</body></html>`,
+				`<html lang="${human && !humanLang ? (humanLanguage === "en" ? "zh-CN" : "en") : humanLanguage}"><head>${robots}${agentDiscovery}${humanDiscovery}${humanStructuredData}<link rel="stylesheet" href="/assets/site.css"></head><body>${humanHeadingMarkup}${ALL_COPY}${agentBody}${formBody}${publicLeak}${rejectedTemplateGlyph}</body></html>`,
 			);
 	});
 
@@ -601,6 +658,123 @@ test("release smoke rejects a Human page without self-canonical, hreflang, and m
 	const fixture = await startFixture({ humanMetadata: false });
 	try {
 		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human canonical on the wrong production host", async () => {
+	const fixture = await startFixture({ wrongCanonicalHost: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human canonical with an unexpected query", async () => {
+	const fixture = await startFixture({ canonicalQuery: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human canonical with an unexpected fragment", async () => {
+	const fixture = await startFixture({ canonicalFragment: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN CANONICAL \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects an hreflang alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongHreflangDestination: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN HREFLANG \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a machine alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongMachineAlternate: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN DISCOVERY \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a stable machine catalog alternate with the wrong destination", async () => {
+	const fixture = await startFixture({ wrongStableMachineAlternate: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /LINK \/agent\/index\.md: invalid catalog alternate/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects relative machine Link targets", async () => {
+	const fixture = await startFixture({ relativeMachineLinks: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /LINK \/agent\/index\.md: missing canonical/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human page with the wrong document language", async () => {
+	const fixture = await startFixture({ humanLang: false });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN LANG \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human page without its exact single H1", async () => {
+	const fixture = await startFixture({ humanH1: false });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN H1 \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a Human page without JSON-LD", async () => {
+	const fixture = await startFixture({ humanJsonLd: false });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN JSON-LD \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects malformed Human JSON-LD", async () => {
+	const fixture = await startFixture({ malformedHumanJsonLd: true });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN JSON-LD \/: malformed/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects decorative arrow and numbered-template glyphs", async () => {
+	const fixture = await startFixture({ rejectedTemplateGlyph: "→ 01" });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN TEMPLATE \/:/u);
+	} finally {
+		await fixture.close();
+	}
+});
+
+test("release smoke rejects a numbered-template glyph without an arrow", async () => {
+	const fixture = await startFixture({ rejectedTemplateGlyph: "<span>01</span>" });
+	try {
+		await assert.rejects(() => runMarketingSmoke(fixture.url), /HUMAN TEMPLATE \/:/u);
 	} finally {
 		await fixture.close();
 	}

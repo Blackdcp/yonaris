@@ -8,6 +8,7 @@ const lead: DiagnosticLead = {
 	email: "ava@acme.example",
 	company: "Acme",
 	companyUrl: "",
+	requestType: "consultation",
 };
 
 describe("submitDiagnosticRequest", () => {
@@ -31,8 +32,11 @@ describe("submitDiagnosticRequest", () => {
 describe("diagnostic request identity", () => {
 	it("fingerprints normalized regional fields and reuses an idempotency key", () => {
 		const fingerprint = diagnosticLeadFingerprint(lead);
-		expect(fingerprint).toBe('{"locale":"en","name":"Ava Chen","email":"ava@acme.example","company":"Acme","companyUrl":""}');
+		expect(fingerprint).toBe(
+			'{"locale":"en","name":"Ava Chen","email":"ava@acme.example","company":"Acme","companyUrl":"","requestType":"consultation"}',
+		);
 		expect(diagnosticLeadFingerprint({ ...lead, name: " Ava Chen " })).toBe(fingerprint);
+		expect(diagnosticLeadFingerprint({ ...lead, requestType: "privacy" })).not.toBe(fingerprint);
 		const first = resolveDiagnosticRequestIdentity(null, lead, () => "0198ef3d-34e1-7f14-a74d-e09b66d14b11");
 		const retry = resolveDiagnosticRequestIdentity(first, { ...lead, company: " Acme " }, () => "unexpected");
 		expect(retry).toEqual(first);

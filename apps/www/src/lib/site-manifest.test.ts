@@ -18,7 +18,7 @@ describe("site manifest", () => {
 		for (const key of HUMAN_PAGE_KEYS) {
 			expect(subject.getCorePath(key, "en")).toBe(paths[key].en);
 			expect(subject.getCorePath(key, "zh")).toBe(paths[key].zh);
-			expect(subject.getCoreLastVerified(key)).toBe("2026-08-25");
+			expect(subject.getCoreLastVerified(key)).toBe("2026-08-27");
 		}
 		expect(subject.findSiteRoute("/research")).toBeUndefined();
 		expect(subject.findSiteRoute("/zh/research")).toBeUndefined();
@@ -31,12 +31,12 @@ describe("site manifest", () => {
 		expect(subject.SITE_MANIFEST.map((route) => route.key).sort()).toEqual([...subject.SITE_ROUTE_KEYS].sort());
 	});
 
-	test("orders the four customer navigation destinations", () => {
+	test("orders the approved Site 06 primary destinations", () => {
 		expect(
 			subject.SITE_MANIFEST.filter((route) => (route.navigation as readonly string[]).includes("primary")).map(
 				(route) => route.key,
 			),
-		).toEqual(["product", "approach", "geo", "company"]);
+		).toEqual(["product", "approach", "company", "diagnostic"]);
 	});
 
 	test("maps every Human topic to an Agent page", () => {

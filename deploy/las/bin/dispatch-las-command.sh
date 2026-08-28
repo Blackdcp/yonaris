@@ -463,7 +463,9 @@ if [[ "$operation" == marketing-verify ]]; then
 		"$MIGRATE_IMAGE_DIGEST" "$POSTGRES_IMAGE_DIGEST" "$WWW_IMAGE_DIGEST" marketing-runtime-v1 && \
 		caddy_manager verify-active "$release_tag" "$release_tag" || \
 		fail 'Marketing runtime digest is not authorized.'
-	/usr/bin/curl --fail --silent --show-error --max-time 15 https://yonaris.com/ >/dev/null
+	/usr/bin/curl --fail --silent --show-error --max-time 15 https://yonaris.com/ |
+		/usr/bin/grep -Fq 'data-generation="site-06"' ||
+		fail 'Live marketing apex is not the authorized Site 06 generation.'
 	/usr/bin/curl --fail --silent --show-error --max-time 15 https://portal.yonaris.com/ >/dev/null
 	/usr/bin/curl --fail --silent --show-error --max-time 15 https://yonaris.com/company >/dev/null
 	[[ "$(/usr/bin/curl --silent --show-error --output /dev/null --write-out '%{http_code}' \

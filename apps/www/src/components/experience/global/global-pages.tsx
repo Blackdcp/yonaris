@@ -1,411 +1,498 @@
+import type { ReactNode } from "react";
+import { PAGE_FACTS } from "@/content/experience/canonical-public-facts";
 import { GLOBAL_COPY } from "@/content/experience/global-copy";
 import type { HumanPageKey } from "@/content/experience/types";
+import type { DiagnosticRequestType } from "@/lib/diagnostic-schema";
+import { CanonicalRecordTransform } from "../shared/canonical-record-transform";
+import { CinematicField, Site06ResponsiveImage } from "../shared/cinematic-field";
+import { DecisionTraceScene } from "../shared/decision-trace-scene";
+import { EvidenceSheet } from "../shared/evidence-sheet";
 import { LeadForm } from "../shared/lead-form";
-import { DeliveryTruth, ManagedReviewTrust, PublicRecordTrust } from "../shared/public-trust";
-import { GlobalHomeReview } from "./global-home-review";
-import {
-	ChangePathScene,
-	CompanyConstellationScene,
-	ContactSignalScene,
-	DataRouteScene,
-	MarketAtlasScene,
-	ProductLensScene,
-} from "./global-scenes";
+import { ProductProofScene } from "../shared/product-proof-scene";
+import { BuyingQuestionDossier, EN_READING_RECORDS, EvidenceReviewScene } from "./global-scenes";
 import { GlobalShell } from "./global-shell";
-import "../../../styles/experience/global.css";
 
-const homeSituations = [
-	{
-		number: "01",
-		title: "Missing from the shortlist",
-		body: "The buyer asks. Your category appears. Your brand does not.",
-	},
-	{
-		number: "02",
-		title: "Described on someone else’s terms",
-		body: "The answer mentions you, but the distinction your market should remember is gone.",
-	},
-	{
-		number: "03",
-		title: "Outflanked in the comparison",
-		body: "Competitors become the default reference before a buyer sees your own story.",
-	},
-	{
-		number: "04",
-		title: "Fragmented across markets",
-		body: "The same brand is framed differently when language, context, and alternatives change.",
-	},
-	{
-		number: "05",
-		title: "Unsure what to review",
-		body: "There is plenty to inspect, but no clear view of which brand issue deserves attention first.",
-	},
-] as const;
+function ActionLink({ href, children }: { href: string; children: ReactNode }) {
+	return (
+		<a className="site-06-action" href={href}>
+			{children}
+		</a>
+	);
+}
 
-export function GlobalHomePage() {
+const pageFacts = {
+	product: PAGE_FACTS.en.product,
+	approach: PAGE_FACTS.en.approach,
+	geo: PAGE_FACTS.en.geo,
+	diagnostic: PAGE_FACTS.en.diagnostic,
+	privacy: PAGE_FACTS.en.privacy,
+} as const;
+
+function HomePageLead() {
 	const copy = GLOBAL_COPY.home;
 	return (
-		<GlobalShell pageKey="home" scene="answer-field">
-			<GlobalHomeReview />
+		<header className="site-06-page-lead">
+			<p className="site-06-kicker">{copy.eyebrow}</p>
+			<h1>{copy.title}</h1>
+			<p className="site-06-hero__lead">{copy.lead}</p>
+			<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
+		</header>
+	);
+}
 
-			<section className="sf-situation-chapter">
-				<header>
-					<p className="sf-kicker">Questions worth checking</p>
-					<h2>Is your brand present, accurate, competitive, and consistent?</h2>
-					<p>Five situations that can change how a customer understands your brand.</p>
-				</header>
-				<div className="sf-situation-rail">
-					{homeSituations.map((situation) => (
-						<article key={situation.number} data-situation={situation.number}>
-							<span>{situation.number}</span>
-							<h3>{situation.title}</h3>
-							<p>{situation.body}</p>
+function RouteLead({ pageKey }: { pageKey: Exclude<HumanPageKey, "home" | "company" | "privacy"> }) {
+	const copy = GLOBAL_COPY[pageKey];
+	return (
+		<header className="site-06-page-lead">
+			<p className="site-06-kicker">{copy.eyebrow}</p>
+			<h1>{copy.title}</h1>
+			<p className="site-06-hero__lead">{copy.lead}</p>
+		</header>
+	);
+}
+
+function DarkClose({ pageKey }: { pageKey: HumanPageKey }) {
+	const copy = GLOBAL_COPY[pageKey];
+	return (
+		<section className="site-06-dark-close">
+			<div>
+				<h2>{copy.closingTitle}</h2>
+				<p>{copy.closingBody}</p>
+			</div>
+			<ActionLink href={copy.primaryAction.href}>{copy.primaryAction.label}</ActionLink>
+		</section>
+	);
+}
+
+export function GlobalHomePage() {
+	return (
+		<GlobalShell pageKey="home">
+			<div
+				className="site-06-page-composition site-06-page-composition--cinematic site-06-home-composition"
+				data-page-composition="cinematic-orbit"
+			>
+				<CinematicField
+					image={{
+						src: "/brand/site-06/decision-room-original.jpg",
+						alt: "A team reviewing a decision in a warm meeting room",
+						focalPosition: "center center",
+						width: 1535,
+						height: 1024,
+					}}
+					priority
+					className="site-06-home-cinematic"
+				>
+					<HomePageLead />
+					<DecisionTraceScene locale="en" />
+				</CinematicField>
+
+				<section className="site-06-section site-06-home-dossier">
+					<header className="site-06-split-intro">
+						<h2>The shortlist now forms before the click.</h2>
+						<p>
+							Traditional MarTech begins with exposure, visits and leads. Yonaris starts earlier: with the question, the
+							evidence an agent can find and the comparison a buyer may inherit.
+						</p>
+					</header>
+					<BuyingQuestionDossier />
+				</section>
+
+				<section className="site-06-home-workbench">
+					<div className="site-06-section">
+						<article
+							className="site-06-product-proof-context"
+							id={EN_READING_RECORDS[1]?.stableId}
+							data-stable-id={EN_READING_RECORDS[1]?.stableId}
+							tabIndex={-1}
+						>
+							<p className="site-06-kicker">Product evidence attached to the decision system</p>
+							<h2>Inspect the working state behind the next review.</h2>
+							<p>{EN_READING_RECORDS[1]?.fact}</p>
+							<small>
+								{EN_READING_RECORDS[1]?.evidence} · {EN_READING_RECORDS[1]?.boundary}
+							</small>
 						</article>
-					))}
-				</div>
-			</section>
+						<ProductProofScene locale="en" compact />
+					</div>
+				</section>
 
-			<section className="sf-home-world">
-				<div className="sf-home-world__graphic" aria-hidden="true">
-					<span className="sf-home-world__node sf-home-world__node--1">EN</span>
-					<span className="sf-home-world__node sf-home-world__node--2">ZH</span>
-					<span className="sf-home-world__node sf-home-world__node--3">LOCAL</span>
-					<i />
-					<i />
-					<i />
-				</div>
-				<div>
-					<p className="sf-kicker">Global brand, local answer</p>
-					<h2>Your story travels. The buyer’s question changes.</h2>
-					<p>
-						Yonaris helps rebuild the question for each target market, so the brand stays coherent without sounding
-						copied from somewhere else.
-					</p>
-					<a className="sf-button sf-button--ghost" href="/geo">
-						Explore global markets <span aria-hidden="true">↗</span>
-					</a>
-				</div>
-			</section>
+				<CinematicField
+					image={{
+						src: "/brand/site-06/glass-passage-original.jpg",
+						alt: "People moving through a glass business passage",
+						focalPosition: "center center",
+						width: 1717,
+						height: 916,
+					}}
+					className="site-06-home-comparison-photo"
+				>
+					<header className="site-06-page-lead">
+						<h2>Keep the question, evidence and retest together.</h2>
+						<p className="site-06-hero__lead">
+							A review preserves the original buying question, the answer and sources observed at the time, the change
+							made, and the retest under comparable conditions.
+						</p>
+					</header>
+					<EvidenceReviewScene />
+				</CinematicField>
 
-			<section className="sf-home-contact">
-				<div className="sf-home-contact__statement">
-					<span>Start here</span>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<LeadForm locale="en" compact />
-			</section>
+				<section className="site-06-section site-06-home-bridge">
+					<header className="site-06-split-intro">
+						<h2>One public truth. Two ways to read it.</h2>
+						<p>
+							People need context and judgment. Agents need explicit facts, evidence and boundaries. The public material
+							should serve both without creating two competing versions of the company.
+						</p>
+					</header>
+					<article
+						className="site-06-home-bridge__scope"
+						id={EN_READING_RECORDS[2]?.stableId}
+						data-stable-id={EN_READING_RECORDS[2]?.stableId}
+						tabIndex={-1}
+					>
+						<p>{EN_READING_RECORDS[2]?.fact}</p>
+						<small>
+							{EN_READING_RECORDS[2]?.evidence} · {EN_READING_RECORDS[2]?.boundary}
+						</small>
+					</article>
+					<CanonicalRecordTransform locale="en" compact />
+					<aside className="site-06-home-bridge__note">
+						The category fact stays fixed while its public basis, boundary, stable identity and representations become
+						explicit.
+					</aside>
+					<ActionLink href="/company">Read the corresponding public record</ActionLink>
+				</section>
+
+				<DarkClose pageKey="home" />
+			</div>
 		</GlobalShell>
 	);
 }
 
 export function GlobalProductPage() {
-	const copy = GLOBAL_COPY.product;
 	return (
-		<GlobalShell pageKey="product" scene="product-lens">
-			<section className="sf-product-opening">
-				<header>
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<div className="sf-actions">
-						<a className="sf-button" href={copy.primaryAction.href}>
-							{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-						</a>
-						<a className="sf-text-link" href={copy.secondaryAction.href}>
-							{copy.secondaryAction.label} <span aria-hidden="true">→</span>
-						</a>
-					</div>
-				</header>
-				<ProductLensScene />
-			</section>
+		<GlobalShell pageKey="product">
+			<div
+				className="site-06-page-composition site-06-page-composition--cinematic site-06-product-composition"
+				data-page-composition="evidence-workbench"
+			>
+				<CinematicField
+					image={{
+						src: "/brand/site-06/decision-room-original.jpg",
+						alt: "A team reviewing a decision in a warm meeting room",
+						focalPosition: "center center",
+						width: 1535,
+						height: 1024,
+					}}
+					priority
+					className="site-06-product-cinematic"
+				>
+					<RouteLead pageKey="product" />
+					<EvidenceSheet
+						label="Answer dossier · Illustrative structure"
+						annotation={
+							<span>
+								Source type · company capability record
+								<br />
+								Owner · public company material
+								<br />
+								Scope · named market condition
+								<br />
+								Review date · 27 Aug 2026
+							</span>
+						}
+					>
+						<p>Which company can support this decision without adding risk?</p>
+						<p className="site-06-evidence-sheet__support">
+							The answer gives weight to fit with the operating conditions, evidence a buying team can review, and a
+							delivery boundary that remains explicit.
+						</p>
+					</EvidenceSheet>
+				</CinematicField>
 
-			<section className="sf-product-record-boundary">
-				<span>One record, one controlled scope</span>
-				<p>
-					This illustrative walkthrough keeps the input, evidence, decision, and next action together at every stage. It
-					does not substitute an unexplained score for the complete answer.
-				</p>
-			</section>
+				<section className="site-06-section site-06-product-trace">
+					<article className="site-06-product-fact" id={pageFacts.product.id} tabIndex={-1}>
+						<p>{pageFacts.product.value}</p>
+						<small>
+							{pageFacts.product.source} · {pageFacts.product.boundary}
+						</small>
+					</article>
+					<ProductProofScene locale="en" />
+				</section>
 
-			<ManagedReviewTrust locale="en" />
-
-			<section className="sf-page-close sf-page-close--product">
-				<div>
-					<p className="sf-kicker">Next question</p>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<a className="sf-button" href="/diagnostic">
-					Start the conversation <span aria-hidden="true">↗</span>
-				</a>
-			</section>
+				<DarkClose pageKey="product" />
+			</div>
 		</GlobalShell>
 	);
 }
 
 export function GlobalApproachPage() {
-	const copy = GLOBAL_COPY.approach;
 	return (
-		<GlobalShell pageKey="approach" scene="change-path">
-			<section className="sf-approach-opening">
-				<div className="sf-approach-opening__copy">
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<a className="sf-button" href={copy.primaryAction.href}>
-						{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-					</a>
-				</div>
-				<ChangePathScene />
-			</section>
+		<GlobalShell pageKey="approach">
+			<div
+				className="site-06-page-composition site-06-page-composition--cinematic site-06-approach-composition"
+				data-page-composition="comparison-field"
+			>
+				<CinematicField
+					image={{
+						src: "/brand/site-06/glass-passage-original.jpg",
+						alt: "People moving through a glass business passage",
+						focalPosition: "center 72%",
+						width: 1717,
+						height: 916,
+					}}
+					priority
+					className="site-06-approach-cinematic"
+				>
+					<RouteLead pageKey="approach" />
+					<aside className="site-06-same-question-preview" aria-label="Baseline and retest evidence preview">
+						<p className="site-06-kicker">Same buying question</p>
+						<blockquote>What changed in the answer—and what evidence caused the change?</blockquote>
+						<p data-review-state="baseline">
+							<strong>Baseline</strong> Capability is visible; the buying condition is unsupported.
+						</p>
+						<p data-review-state="retest">
+							<strong>Retest</strong> The new source states the condition, scope and review date.
+						</p>
+					</aside>
+				</CinematicField>
 
-			<section className="sf-approach-handoff" aria-labelledby="approach-handoff-title">
-				<header>
-					<p className="sf-kicker">Review handoff</p>
-					<h2 id="approach-handoff-title">A record another team member can inspect.</h2>
-				</header>
-				<dl>
-					<div>
-						<dt>Scope held constant</dt>
-						<dd>The same brand, market, language, question, and alternative set stays visible.</dd>
+				<section className="site-06-approach-stage">
+					<div className="site-06-section">
+						<article className="site-06-approach-record" id={pageFacts.approach.id} tabIndex={-1}>
+							<header className="site-06-route-record-note">
+								<p>{pageFacts.approach.value}</p>
+								<p>
+									<strong>Public basis:</strong> {pageFacts.approach.source}
+								</p>
+								<p>
+									<strong>Review boundary:</strong> {pageFacts.approach.boundary}
+								</p>
+							</header>
+							<EvidenceReviewScene preview />
+						</article>
 					</div>
-					<div>
-						<dt>Evidence kept in context</dt>
-						<dd>The complete answer and visible citation labels stay beside the selected review item.</dd>
-					</div>
-					<div>
-						<dt>Next action named</dt>
-						<dd>The record distinguishes a specific review item from the team action that follows it.</dd>
-					</div>
-				</dl>
-			</section>
+				</section>
 
-			<section className="sf-page-close sf-page-close--approach">
-				<div>
-					<p className="sf-kicker">A focused next move</p>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<a className="sf-button" href="/diagnostic">
-					Discuss your priority question <span aria-hidden="true">↗</span>
-				</a>
-			</section>
-		</GlobalShell>
-	);
-}
-
-export function GlobalGeoPage() {
-	const copy = GLOBAL_COPY.geo;
-	return (
-		<GlobalShell pageKey="geo" scene="market-atlas">
-			<section className="sf-geo-opening">
-				<header>
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<div className="sf-actions">
-						<a className="sf-button" href={copy.primaryAction.href}>
-							{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-						</a>
-						<a className="sf-text-link" href={copy.secondaryAction.href}>
-							{copy.secondaryAction.label} <span aria-hidden="true">→</span>
-						</a>
-					</div>
-				</header>
-				<MarketAtlasScene />
-			</section>
-
-			<section className="sf-geo-bridge">
-				<div className="sf-geo-bridge__origin">
-					<span>One brand core</span>
-					<strong>What must remain recognisable</strong>
-				</div>
-				<div className="sf-geo-bridge__lines" aria-hidden="true">
-					<i />
-					<i />
-					<i />
-				</div>
-				<div className="sf-geo-bridge__markets">
-					<div>
-						<span>Language</span>
-						<strong>Buyer wording</strong>
-					</div>
-					<div>
-						<span>Category</span>
-						<strong>Local terms</strong>
-					</div>
-					<div>
-						<span>Alternatives</span>
-						<strong>Relevant competitors</strong>
-					</div>
-				</div>
-			</section>
-
-			<section className="sf-page-close sf-page-close--geo">
-				<div>
-					<p className="sf-kicker">Global capability</p>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<a className="sf-button" href="/diagnostic">
-					Discuss a target market <span aria-hidden="true">↗</span>
-				</a>
-			</section>
+				<section className="site-06-section site-06-editorial-close">
+					<h2>{GLOBAL_COPY.approach.closingTitle}</h2>
+					<p>{GLOBAL_COPY.approach.closingBody}</p>
+				</section>
+			</div>
 		</GlobalShell>
 	);
 }
 
 export function GlobalCompanyPage() {
 	const copy = GLOBAL_COPY.company;
+	const supportingRecords = EN_READING_RECORDS.filter((record) => record.id !== "category");
 	return (
-		<GlobalShell pageKey="company" scene="company-constellation">
-			<section className="sf-company-opening">
-				<div className="sf-company-opening__copy">
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<div className="sf-actions">
-						<a className="sf-button" href={copy.primaryAction.href}>
-							{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-						</a>
-						<a className="sf-text-link" href={copy.secondaryAction.href}>
-							{copy.secondaryAction.label} <span aria-hidden="true">→</span>
-						</a>
+		<GlobalShell pageKey="company">
+			<div
+				className="site-06-page-composition site-06-company-composition"
+				data-page-composition="canonical-record-field"
+			>
+				<section className="site-06-company-field">
+					<div className="site-06-company-lead">
+						<header className="site-06-page-lead">
+							<p className="site-06-kicker">{copy.eyebrow}</p>
+							<h1>{copy.title}</h1>
+							<p className="site-06-hero__lead">{copy.lead}</p>
+						</header>
+						<CanonicalRecordTransform locale="en" />
 					</div>
-				</div>
-				<CompanyConstellationScene />
-			</section>
+				</section>
 
-			<section className="sf-company-belief">
-				<p className="sf-kicker">Why Yonaris exists</p>
-				<blockquote>Customers are asking AI before many brands know what the answer says.</blockquote>
-				<div>
-					<p>
-						Yonaris helps teams see how their brand is presented at the moment a customer is discovering, comparing, or
-						choosing.
+				<section className="site-06-section site-06-company-document" data-scene-object="canonical-fact-record">
+					<header className="site-06-split-intro">
+						<h2>Machine-readable does not mean machine-written.</h2>
+						<p>
+							Clear headings, stable addresses, visible sources, scoped facts and consistent public records help
+							retrieval. They do not guarantee ranking, inclusion, retrieval or citation.
+						</p>
+					</header>
+					<section className="site-06-company-anchor-ledger" aria-label="Yonaris purpose and scope records">
+						{supportingRecords.map((record) => (
+							<article key={record.id} id={record.stableId} data-stable-id={record.stableId} tabIndex={-1}>
+								<span>{record.prompt}</span>
+								<p>{record.fact}</p>
+								<small>
+									{record.evidence} · {record.boundary}
+								</small>
+							</article>
+						))}
+					</section>
+					<p className="site-06-company-document__statement">
+						People receive context for a decision. Agents receive the same facts with evidence, scope and a stable
+						relationship to the rest of the company record.
 					</p>
-					<p>
-						We work from buyer questions and complete answers, keeping the market context visible so the next decision
-						is grounded in what customers can actually encounter.
-					</p>
-				</div>
-			</section>
-
-			<PublicRecordTrust locale="en" />
-
-			<section className="sf-page-close sf-page-close--company">
-				<div>
-					<p className="sf-kicker">What comes together</p>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<a className="sf-button" href="/diagnostic">
-					Talk to Yonaris <span aria-hidden="true">↗</span>
-				</a>
-			</section>
+					<ActionLink href="/agent/company">Read the corresponding Agent record</ActionLink>
+				</section>
+			</div>
 		</GlobalShell>
 	);
 }
 
-export function GlobalDiagnosticPage() {
-	const copy = GLOBAL_COPY.diagnostic;
+export function GlobalGeoPage() {
 	return (
-		<GlobalShell pageKey="diagnostic" scene="contact-signal">
-			<section className="sf-contact-opening">
-				<header>
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<a className="sf-text-link" href={copy.secondaryAction.href}>
-						{copy.secondaryAction.label} <span aria-hidden="true">→</span>
-					</a>
-				</header>
-				<ContactSignalScene />
-			</section>
+		<GlobalShell pageKey="geo" tone="paper">
+			<div className="site-06-page-composition site-06-market-composition" data-page-composition="market-editorial">
+				<section className="site-06-market-editorial">
+					<RouteLead pageKey="geo" />
+					<figure className="site-06-editorial-photo">
+						<Site06ResponsiveImage
+							image={{
+								src: "/brand/site-06/glass-passage-original.jpg",
+								alt: "A business conversation in a glass meeting space",
+								width: 1717,
+								height: 916,
+							}}
+							sizes="(max-width: 880px) 100vw, 50vw"
+						/>
+					</figure>
+				</section>
 
-			<section className="sf-contact-form-section" id="contact-form">
-				<div className="sf-contact-form-section__aside">
-					<span>The first conversation determines</span>
-					<h2>The smallest useful scope for a focused AI-answer review.</h2>
-					<p>
-						No prepared report is required. Bring the business decision; together we can define the brand, market,
-						language, buyer question, and supplied alternatives worth reviewing.
-					</p>
-					<ul>
-						<li>
-							<i /> Brand and target market
-						</li>
-						<li>
-							<i /> Language and buying context
-						</li>
-						<li>
-							<i /> Buyer question and supplied alternatives
-						</li>
-					</ul>
-				</div>
-				<LeadForm locale="en" />
-			</section>
-			<section className="sf-contact-shortcut">
-				<span>A simple start</span>
-				<strong>One question is enough.</strong>
-				<p>{copy.closingBody}</p>
-			</section>
+				<article
+					className="site-06-section site-06-market-ledger"
+					aria-label="Market conditions record"
+					id={pageFacts.geo.id}
+					tabIndex={-1}
+				>
+					<header>
+						<p className="site-06-kicker">One decision, read in its actual context</p>
+						<h2>Context is part of the evidence record.</h2>
+						<p>{pageFacts.geo.value}</p>
+					</header>
+					<dl>
+						<div>
+							<dt>Market</dt>
+							<dd>The commercial context surrounding the choice.</dd>
+						</div>
+						<div>
+							<dt>Language</dt>
+							<dd>The words a buyer uses to describe the need.</dd>
+						</div>
+						<div>
+							<dt>Buying context</dt>
+							<dd>The condition that determines what a suitable answer must support.</dd>
+						</div>
+						<div>
+							<dt>Alternatives</dt>
+							<dd>The options considered under the same question.</dd>
+						</div>
+						<div>
+							<dt>Evidence</dt>
+							<dd>The sources, scope, review date and boundaries available for inspection.</dd>
+						</div>
+					</dl>
+					<aside className="site-06-route-record-note">
+						<p>{pageFacts.geo.source}</p>
+						<p>{pageFacts.geo.boundary}</p>
+					</aside>
+				</article>
+
+				<DarkClose pageKey="geo" />
+			</div>
+		</GlobalShell>
+	);
+}
+
+export function GlobalDiagnosticPage({ requestType = "consultation" }: { requestType?: DiagnosticRequestType } = {}) {
+	const isPrivacyRequest = requestType === "privacy";
+	return (
+		<GlobalShell pageKey="diagnostic">
+			<div
+				className="site-06-page-composition site-06-page-composition--cinematic site-06-diagnostic-composition"
+				data-page-composition="contact-cinematic"
+			>
+				<CinematicField
+					image={{
+						src: "/brand/site-06/working-session-original.jpg",
+						alt: "A working session reviewing evidence together",
+						focalPosition: "center center",
+						width: 1693,
+						height: 929,
+					}}
+					priority
+					className="site-06-contact-cinematic"
+				>
+					<article id={pageFacts.diagnostic.id} className="site-06-contact-scene" tabIndex={-1}>
+						{isPrivacyRequest ? (
+							<header className="site-06-page-lead">
+								<p className="site-06-kicker">Privacy request</p>
+								<h1>Ask Yonaris to review a previous contact request.</h1>
+								<p className="site-06-hero__lead">
+									Use the same contact and company details so we can identify the record for manual review and follow up
+									through the channel you provide.
+								</p>
+							</header>
+						) : (
+							<RouteLead pageKey="diagnostic" />
+						)}
+						<div id="contact-form" className="site-06-contact-form">
+							<LeadForm locale="en" compact requestType={requestType} />
+						</div>
+						<aside className="site-06-contact-scene__record">
+							{isPrivacyRequest ? (
+								<>
+									<p>The same three visible details identify an earlier contact request.</p>
+									<p>Yonaris privacy-request process · reviewed 27 Aug 2026</p>
+									<p>Submitting starts manual review; it does not automatically delete records.</p>
+								</>
+							) : (
+								<>
+									<p>{pageFacts.diagnostic.value}</p>
+									<p>{pageFacts.diagnostic.source}</p>
+									<p>{pageFacts.diagnostic.boundary}</p>
+								</>
+							)}
+						</aside>
+					</article>
+				</CinematicField>
+			</div>
 		</GlobalShell>
 	);
 }
 
 export function GlobalPrivacyPage() {
-	const copy = GLOBAL_COPY.privacy;
 	return (
-		<GlobalShell pageKey="privacy" scene="data-route">
-			<section className="sf-privacy-opening">
-				<div>
-					<p className="sf-kicker">{copy.eyebrow}</p>
-					<h1>{copy.title}</h1>
-					<p className="sf-lead">{copy.lead}</p>
-					<a className="sf-button" href={copy.primaryAction.href}>
-						{copy.primaryAction.label} <span aria-hidden="true">↗</span>
-					</a>
-				</div>
-				<DataRouteScene />
-			</section>
-
-			<section className="sf-privacy-details">
-				<article>
-					<span>01 / What you send</span>
-					<h2>Three visible contact fields.</h2>
-					<p>The global form asks for the name, work email, and company you choose to enter.</p>
+		<GlobalShell pageKey="privacy" tone="paper">
+			<div className="site-06-page-composition site-06-privacy-composition" data-page-composition="privacy-editorial">
+				<article className="site-06-privacy-document" id={pageFacts.privacy.id} tabIndex={-1}>
+					<header className="site-06-privacy-document__header">
+						<p className="site-06-kicker">{GLOBAL_COPY.privacy.eyebrow}</p>
+						<h1>{GLOBAL_COPY.privacy.title}</h1>
+						<p className="site-06-hero__lead">{GLOBAL_COPY.privacy.lead}</p>
+						<p className="site-06-privacy-document__purpose">{pageFacts.privacy.value}</p>
+						<p className="site-06-privacy-document__basis">{pageFacts.privacy.source}</p>
+						<p className="site-06-privacy-document__boundary">{pageFacts.privacy.boundary}</p>
+					</header>
+					<section>
+						<h2>Three visible details</h2>
+						<p>Name, work email and company are the only visible fields required for an English contact request.</p>
+					</section>
+					<section>
+						<h2>How the request is delivered</h2>
+						<p>
+							Yonaris uses Resend as an email processor to send the form contents to Yonaris. The details are used to
+							understand and respond to your request; browser analytics do not receive the form values. According to{" "}
+							<a href="https://resend.com/docs/dashboard/domains/regions">Resend region documentation</a> and its{" "}
+							<a href="https://resend.com/legal/dpa">Data Processing Addendum</a>, form contents sent through Resend are
+							processed and stored in the United States.
+						</p>
+					</section>
+					<section>
+						<h2>Retention and deletion</h2>
+						<p>
+							Retention depends on what is reasonably needed to respond, arrange follow-up and meet applicable
+							record-keeping duties. A privacy or deletion request is reviewed manually; the form does not automatically
+							delete a record. Use the same contact and company details as the earlier request so the team can identify
+							it. No personal email address is published here.
+						</p>
+						<ActionLink href="/diagnostic?intent=privacy">Request a privacy review</ActionLink>
+					</section>
 				</article>
-				<article>
-					<span>02 / Why we use it</span>
-					<h2>To understand the enquiry if delivery is confirmed.</h2>
-					<p>These details provide a name, return address, and basic company context for that enquiry.</p>
-				</article>
-				<article>
-					<span>03 / Browser analytics</span>
-					<h2>Your form values stay out of browser analytics.</h2>
-					<p>The values you enter are not used for website analytics or placed in the page URL.</p>
-				</article>
-				<article>
-					<span>04 / Abuse protection</span>
-					<h2>Automated protection helps limit repeated requests.</h2>
-					<p>Connection information may be processed briefly to reduce automated abuse.</p>
-				</article>
-			</section>
-
-			<DeliveryTruth locale="en" />
-
-			<section className="sf-privacy-contact">
-				<div>
-					<span>Questions</span>
-					<h2>{copy.closingTitle}</h2>
-					<p>{copy.closingBody}</p>
-				</div>
-				<a className="sf-button sf-button--ghost" href="/diagnostic">
-					Contact Yonaris <span aria-hidden="true">↗</span>
-				</a>
-			</section>
+			</div>
 		</GlobalShell>
 	);
 }
@@ -418,4 +505,4 @@ export const GLOBAL_PAGES = {
 	company: GlobalCompanyPage,
 	diagnostic: GlobalDiagnosticPage,
 	privacy: GlobalPrivacyPage,
-} satisfies Record<HumanPageKey, () => React.ReactNode>;
+} as const satisfies Record<HumanPageKey, () => ReactNode>;
