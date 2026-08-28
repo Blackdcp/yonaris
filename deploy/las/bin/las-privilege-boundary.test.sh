@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 DISPATCHER="$SCRIPT_DIR/dispatch-las-command.sh"
 VERIFIER="$SCRIPT_DIR/verify-las-forced-command.sh"
 RUNTIME_MANAGER="$SCRIPT_DIR/manage-las-runtime.sh"
+CADDY_MANAGER="$SCRIPT_DIR/manage-las-caddy.sh"
 DEPLOY="$SCRIPT_DIR/deploy.sh"
 RUNBOOK="$SCRIPT_DIR/../ARTIFACT-OUTPUT-LANGUAGE-RUNBOOK.md"
 
@@ -36,6 +37,14 @@ grep -Fq '[[ "$(/usr/bin/id -u)" == 0 ]]' "$DISPATCHER"
 grep -Fq '/usr/sbin/runuser -u "$RUNTIME_USER" -- /usr/bin/env -i' "$RUNTIME_MANAGER"
 if grep -Fq '/usr/sbin/runuser' "$DISPATCHER"; then
 	echo 'Root dispatcher must not execute candidate code under another identity.' >&2
+	exit 1
+fi
+grep -Fq '[[ $# -eq 1 && "$1" == verify-boundary ]]' "$CADDY_MANAGER"
+grep -Fq "CADDY_ADMIN_SOCKET='/run/caddy/admin.sock'" "$CADDY_MANAGER"
+grep -Fq '/usr/bin/caddy validate' "$CADDY_MANAGER"
+grep -Fq -- '--resolve portal.yonaris.com:443:127.0.0.1' "$CADDY_MANAGER"
+if grep -Eq 'caddy reload|systemctl|MARKETING_RELEASE|RELEASE_TREE_ROOT|STABLE_STATE_MANAGER|bootstrap-activate' "$CADDY_MANAGER"; then
+	echo 'Stable Caddy boundary still exposes a configuration or release-state mutation.' >&2
 	exit 1
 fi
 if grep -Eq 'SSH_ORIGINAL_COMMAND=|YONARIS_OUTPUT_LANGUAGE_ACTIVATED=' "$DISPATCHER"; then

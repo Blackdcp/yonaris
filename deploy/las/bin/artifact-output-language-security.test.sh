@@ -120,6 +120,22 @@ done
 assert_not_contains "$DISPATCHER" 'produce-las-migration-readiness' \
 	'forced SSH dispatcher never exposes the root-only producer'
 
+# Caddy is outside the release mutation protocol. Its stable helper has one
+# read-only command that verifies the root-owned config, Unix admin socket,
+# pinned origin CA, and the Portal direct-origin endpoint.
+for exact_contract in \
+	'[[ $# -eq 1 && "$1" == verify-boundary ]]' \
+	"CADDY_ADMIN_SOCKET='/run/caddy/admin.sock'" \
+	"ORIGIN_HEALTH_CA='/etc/yonaris/las-origin-health-ca.pem'" \
+	'/usr/bin/caddy validate' \
+	'--resolve portal.yonaris.com:443:127.0.0.1'; do
+	assert_contains "$CADDY_MANAGER" "$exact_contract" 'read-only Portal Caddy boundary'
+done
+for forbidden in '/usr/bin/caddy reload' '/usr/bin/systemctl' 'MARKETING_RELEASE' \
+	'RELEASE_TREE_ROOT' 'STABLE_STATE_MANAGER' 'bootstrap-activate'; do
+	assert_not_contains "$CADDY_MANAGER" "$forbidden" 'Caddy helper cannot mutate release state'
+done
+
 # Candidate trees are materialized from exact Git objects.  The dispatcher may
 # authorize and materialize them, but production runtime execution belongs only
 # to the stable runtime manager under the isolated runtime identity.
