@@ -49,7 +49,7 @@ export async function provisionCustomerTestIdentity(input: {
   });
   await credentialDialog.waitFor({ state: "visible", timeout: 30_000 });
   await credentialDialog
-    .getByText(CUSTOMER_TEST_USER.role, { exact: true })
+    .getByText("Analyst", { exact: true })
     .waitFor({ state: "visible" });
   const credentialValues = await credentialDialog.locator("code").allTextContents();
   const [email, temporaryPassword] = credentialValues.map((value) => value.trim());

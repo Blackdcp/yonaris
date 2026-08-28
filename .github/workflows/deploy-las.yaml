@@ -521,6 +521,14 @@ jobs:
       - name: Verify response snapshot host assets
         shell: bash
         run: |
+          run_contract_test() {
+            local script="$1"
+            if ! bash "$script"; then
+              echo "::error file=$script::Production contract test failed: $script"
+              return 1
+            fi
+          }
+
           bash deploy/las/bin/prepare-response-snapshot-storage.test.sh
           bash deploy/las/bin/check-response-snapshot-storage.test.sh
           bash deploy/las/bin/export-response-snapshots.test.sh
@@ -533,10 +541,10 @@ jobs:
           bash deploy/las/bin/verify-las-forced-command.test.sh
           bash deploy/las/bin/install-las-trust-policy.test.sh
           bash deploy/las/bin/manage-las-release-state.test.sh
-          bash deploy/las/bin/manage-las-runtime.test.sh
-          bash deploy/las/bin/manage-las-caddy.test.sh
-          bash deploy/las/bin/install-las-stable-bundle.test.sh
-          bash deploy/las/bin/las-final-hardening.test.sh
+          run_contract_test deploy/las/bin/manage-las-runtime.test.sh
+          run_contract_test deploy/las/bin/manage-las-caddy.test.sh
+          run_contract_test deploy/las/bin/install-las-stable-bundle.test.sh
+          run_contract_test deploy/las/bin/las-final-hardening.test.sh
           bash deploy/las/bin/las-privilege-boundary.test.sh
           bash deploy/las/bin/artifact-output-language-security.test.sh
           bash -n \
