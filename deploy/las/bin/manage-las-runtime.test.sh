@@ -35,7 +35,7 @@ REAL_STAT="$(command -v stat)"
 REAL_READLINK="$(command -v readlink)"
 REAL_TR="$(command -v tr)"
 REAL_AWK="$(command -v awk)"
-REAL_PYTHON='/c/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe'
+REAL_PYTHON="$(command -v python3)"
 STABLE_DIRECTORY="$TEST_ROOT/usr/local/libexec/yonaris-las"
 STATE_MANAGER="$STABLE_DIRECTORY/manage-las-release-state"
 

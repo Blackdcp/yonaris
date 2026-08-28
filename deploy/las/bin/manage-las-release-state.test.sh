@@ -165,11 +165,21 @@ STUB
 cat >"$MOCK_BIN/mv" <<'STUB'
 #!/usr/bin/env bash
 set -Eeuo pipefail
+source_path="${@: -2:1}"
 destination="${@: -1}"
 printf 'mv %s\n' "$*" >>"$STATE_TEST_IO_LOG"
+root_semantic_mv() {
+	if [[ -d "$source_path" && "$destination" == */las-release-trees/sha-* ]]; then
+		/usr/bin/chmod u+w -- "$source_path"
+		"$REAL_MV" "$@"
+		/usr/bin/chmod 0555 -- "$destination"
+	else
+		"$REAL_MV" "$@"
+	fi
+}
 case "${STATE_TEST_MV_KILL:-}:$destination" in
 	tree:*/las-release-trees/sha-* | binding:*/las-release-trees/.bindings/sha-*)
-		"$REAL_MV" "$@"
+		root_semantic_mv "$@"
 		kill -KILL "$PPID"
 		exit 137
 		;;
@@ -178,7 +188,7 @@ case "${STATE_TEST_MV_FAIL:-}:$destination" in
 	journal:*/las-transition-pending-v1 | release:*/las-active-portal-release-v1 | \
 	release:*/las-active-marketing-release-v1) exit 91 ;;
 esac
-exec "$REAL_MV" "$@"
+root_semantic_mv "$@"
 STUB
 cat >"$MOCK_BIN/readlink" <<'STUB'
 #!/usr/bin/env bash

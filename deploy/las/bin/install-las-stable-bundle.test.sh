@@ -7,7 +7,7 @@ INSTALLER_SOURCE="$SCRIPT_DIR/install-las-stable-bundle.sh"
 ENTRYPOINT_SOURCE="$SCRIPT_DIR/run-las-active-bundle.sh"
 DISPATCHER_SOURCE="$SCRIPT_DIR/dispatch-las-command.sh"
 TEST_ROOT="$(mktemp -d)"
-trap 'rm -rf -- "$TEST_ROOT"' EXIT
+trap 'chmod -R u+w "$TEST_ROOT" 2>/dev/null || true; rm -rf -- "$TEST_ROOT"' EXIT
 
 STABLE_ROOT="$TEST_ROOT/usr/local/libexec/yonaris-las"
 STAGING_DIRECTORY="$STABLE_ROOT/.bundle-v1.new"
@@ -143,13 +143,22 @@ cat >"$MOCK_BIN/mv" <<'STUB'
 set -Eeuo pipefail
 source_path="${@: -2:1}"
 target_path="${@: -1}"
+root_semantic_mv() {
+	if [[ -d "$source_path" && "$source_path" == */.bundle-v1.new && "$target_path" == */bundles/sha256-* ]]; then
+		/usr/bin/chmod u+w -- "$source_path"
+		"$REAL_MV" "$@"
+		/usr/bin/chmod 0555 -- "$target_path"
+	else
+		"$REAL_MV" "$@"
+	fi
+}
 case "${BUNDLE_TEST_MV_MODE:-}" in
 	fail-pointer)
 		[[ "$source_path" == *.active.new && "$target_path" == */las-stable-bundle-active-v1 ]] && exit 91
 		;;
 	kill-after-bundle)
 		if [[ "$source_path" == */.bundle-v1.new && "$target_path" == */bundles/sha256-* ]]; then
-			"$REAL_MV" "$@"
+			root_semantic_mv "$@"
 			kill -KILL "$PPID"
 			exit 137
 		fi
@@ -162,13 +171,13 @@ case "${BUNDLE_TEST_MV_MODE:-}" in
 		;;
 	kill-after-pointer)
 		if [[ "$source_path" == *.active.new && "$target_path" == */las-stable-bundle-active-v1 ]]; then
-			"$REAL_MV" "$@"
+			root_semantic_mv "$@"
 			kill -KILL "$PPID"
 			exit 137
 		fi
 		;;
 esac
-exec "$REAL_MV" "$@"
+root_semantic_mv "$@"
 STUB
 cat >"$MOCK_BIN/sync" <<'STUB'
 #!/usr/bin/env bash
