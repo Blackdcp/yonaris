@@ -10,11 +10,13 @@ readonly PATH
 readonly CAPABILITY_TOKEN='artifact-output-language-v1'
 readonly CAPABILITY_PATH='deploy/las/artifact-output-language-compatible'
 readonly POLICY_TOKEN='yonaris-las-trust-v1'
-readonly RECEIPT_TOKEN='artifact-output-language-receipt-v2'
+readonly RECEIPT_TOKEN='artifact-output-language-receipt-v3'
+readonly LEGACY_RECEIPT_TOKEN='artifact-output-language-receipt-v2'
 readonly ACTIONS_KEY_FINGERPRINT='SHA256:gM/QEgkfN99cP/Cf9awUOwSb7FMesQTgRCTI9kPh84A'
 readonly STATE_DIRECTORY='/var/lib/yonaris'
 readonly SOURCE_GIT_DIR='/var/lib/yonaris/las-objects.git'
-readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
+readonly RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v3'
+readonly LEGACY_RECEIPT_ROOT='/etc/yonaris/las-compatible-releases-v2'
 if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" ]]; then
 	STABLE_DIRECTORY="$LAS_STABLE_BUNDLE_DIR"
 	STABLE_DIRECTORY_MODE='555'
@@ -58,7 +60,7 @@ metadata_matches() {
 
 operation_is_valid() {
 	case "$1" in
-		deploy | rollback | marketing-preflight | marketing-deploy | marketing-verify) return 0 ;;
+		deploy | rollback) return 0 ;;
 		*) return 1 ;;
 	esac
 }
@@ -131,7 +133,7 @@ validate_policy_and_stable_programs() {
 	local -A seen=()
 	local -A release_digests=()
 	local line verb release_tag operation web_label web_digest worker_label worker_digest
-	local migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra
+	local migrate_label migrate_digest postgres_label postgres_digest extra
 	local index label expected_path expected_hash digests
 	metadata_matches '/etc/yonaris' directory '0:0:755' || return 1
 	metadata_matches "$TRUST_POLICY" file '0:0:644' || return 1
@@ -162,19 +164,17 @@ validate_policy_and_stable_programs() {
 	done
 	for line in "${lines[@]:10}"; do
 		read -r verb release_tag operation web_label web_digest worker_label worker_digest \
-			migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra <<<"$line" || return 1
+			migrate_label migrate_digest postgres_label postgres_digest extra <<<"$line" || return 1
 		[[ "$verb" == allow && -z "${extra:-}" ]] || return 1
 		[[ "$release_tag" =~ ^sha-[0-9a-f]{40}$ ]] || return 1
 		operation_is_valid "$operation" || return 1
 		[[ "$web_label" == web-sha256 && "$worker_label" == worker-sha256 && \
-			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 && \
-			"$www_label" == www-sha256 ]] || return 1
+			"$migrate_label" == migrate-sha256 && "$postgres_label" == postgres-sha256 ]] || return 1
 		digest_is_valid "$web_digest" && digest_is_valid "$worker_digest" && \
-			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" && \
-			digest_is_valid "$www_digest" || return 1
+			digest_is_valid "$migrate_digest" && digest_is_valid "$postgres_digest" || return 1
 		[[ -z "${seen[$release_tag $operation]:-}" ]] || return 1
 		seen["$release_tag $operation"]=1
-		digests="$web_digest $worker_digest $migrate_digest $postgres_digest $www_digest"
+		digests="$web_digest $worker_digest $migrate_digest $postgres_digest"
 		[[ -z "${release_digests[$release_tag]:-}" || \
 			"${release_digests[$release_tag]}" == "$digests" ]] || return 1
 		release_digests["$release_tag"]="$digests"
@@ -192,11 +192,11 @@ authorized_line() {
 parse_authorized_digests() {
 	local line="$1"
 	local verb release_tag operation web_label web_digest worker_label worker_digest
-	local migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra
+	local migrate_label migrate_digest postgres_label postgres_digest extra
 	read -r verb release_tag operation web_label web_digest worker_label worker_digest \
-		migrate_label migrate_digest postgres_label postgres_digest www_label www_digest extra <<<"$line" || return 1
+		migrate_label migrate_digest postgres_label postgres_digest extra <<<"$line" || return 1
 	[[ "$verb" == allow && -z "${extra:-}" ]] || return 1
-	/usr/bin/printf '%s %s %s %s %s' "$web_digest" "$worker_digest" "$migrate_digest" "$postgres_digest" "$www_digest"
+	/usr/bin/printf '%s %s %s %s' "$web_digest" "$worker_digest" "$migrate_digest" "$postgres_digest"
 }
 
 candidate_capability_is_valid() {
@@ -214,23 +214,45 @@ candidate_capability_is_valid() {
 	return "$status"
 }
 
-receipt_matches_policy() {
-	local release_tag="$1" policy_line="$2" receipt="$RECEIPT_ROOT/$1"
+read_receipt_digests() {
+	local release_tag="$1" root="$2" token="$3" format="$4" receipt="$2/$1"
 	local -a lines=()
-	local policy_digests receipt_digests
-	metadata_matches "$RECEIPT_ROOT" directory '0:0:755' || return 1
+	local receipt_digests
+	metadata_matches "$root" directory '0:0:755' || return 1
 	metadata_matches "$receipt" file '0:0:644' || return 1
 	mapfile -t lines <"$receipt"
-	[[ "${#lines[@]}" -eq 7 && "${lines[0]}" == "$RECEIPT_TOKEN" && \
+	[[ "${lines[0]:-}" == "$token" && \
 		"${lines[1]}" == "release $release_tag" ]] || return 1
 	[[ "${lines[2]}" =~ ^web-sha256\ (sha256:[0-9a-f]{64})$ && \
 		"${lines[3]}" =~ ^worker-sha256\ (sha256:[0-9a-f]{64})$ && \
 		"${lines[4]}" =~ ^migrate-sha256\ (sha256:[0-9a-f]{64})$ && \
-		"${lines[5]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ && \
-		"${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
+		"${lines[5]}" =~ ^postgres-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1
+	case "$format" in
+		v3) [[ "${#lines[@]}" -eq 6 ]] || return 1 ;;
+		v2) [[ "${#lines[@]}" -eq 7 && "${lines[6]}" =~ ^www-sha256\ (sha256:[0-9a-f]{64})$ ]] || return 1 ;;
+		*) return 1 ;;
+	esac
+	receipt_digests="${lines[2]#web-sha256 } ${lines[3]#worker-sha256 } ${lines[4]#migrate-sha256 } ${lines[5]#postgres-sha256 }"
+	/usr/bin/printf '%s' "$receipt_digests"
+}
+
+receipt_matches_policy() {
+	local release_tag="$1" policy_line="$2"
+	local receipt="$RECEIPT_ROOT/$1" legacy_receipt="$LEGACY_RECEIPT_ROOT/$1"
+	local policy_digests='' receipt_digests='' legacy_digests=''
+	local found=0
 	policy_digests="$(parse_authorized_digests "$policy_line")" || return 1
-	receipt_digests="${lines[2]#web-sha256 } ${lines[3]#worker-sha256 } ${lines[4]#migrate-sha256 } ${lines[5]#postgres-sha256 } ${lines[6]#www-sha256 }"
-	[[ "$receipt_digests" == "$policy_digests" ]]
+	if [[ -e "$receipt" || -L "$receipt" ]]; then
+		receipt_digests="$(read_receipt_digests "$release_tag" "$RECEIPT_ROOT" "$RECEIPT_TOKEN" v3)" || return 1
+		found=1
+	fi
+	if [[ -e "$legacy_receipt" || -L "$legacy_receipt" ]]; then
+		legacy_digests="$(read_receipt_digests "$release_tag" "$LEGACY_RECEIPT_ROOT" "$LEGACY_RECEIPT_TOKEN" v2)" || return 1
+		[[ "$found" -eq 0 || "$legacy_digests" == "$receipt_digests" ]] || return 1
+		[[ "$found" -eq 1 ]] || receipt_digests="$legacy_digests"
+		found=1
+	fi
+	[[ "$found" -eq 1 && "$receipt_digests" == "$policy_digests" ]]
 }
 
 operation="${1:-}"; release_tag="${2:-}"; requested_operation="${3:-}"
@@ -240,7 +262,7 @@ if [[ -n "${LAS_STABLE_BUNDLE_DIR:-}" && \
 	exit 1
 fi
 case "$operation" in
-	candidate) [[ $# -eq 3 ]] || usage; operation_is_valid "$requested_operation" || usage ;;
+	candidate) [[ $# -eq 3 && "$requested_operation" == deploy ]] || usage ;;
 	rollback) [[ $# -eq 2 ]] || usage; requested_operation='rollback' ;;
 	*) usage ;;
 esac
@@ -258,14 +280,17 @@ case "$operation" in
 			/usr/bin/printf 'Candidate %s does not carry the exact artifact output language capability.\n' "$release_tag" >&2
 			exit 1
 		}
-		read -r web_digest worker_digest migrate_digest postgres_digest www_digest <<<"$(parse_authorized_digests "$policy_line")"
-		/usr/bin/printf 'release-digests-v1 %s %s %s %s %s %s %s\n' \
-			"$release_tag" "$requested_operation" "$web_digest" "$worker_digest" "$migrate_digest" "$postgres_digest" "$www_digest"
+		read -r web_digest worker_digest migrate_digest postgres_digest <<<"$(parse_authorized_digests "$policy_line")"
+		/usr/bin/printf 'release-digests-v2 %s %s %s %s %s %s\n' \
+			"$release_tag" "$requested_operation" "$web_digest" "$worker_digest" "$migrate_digest" "$postgres_digest"
 		;;
 	rollback)
 		receipt_matches_policy "$release_tag" "$policy_line" || {
 			/usr/bin/printf 'Release %s lacks a root-owned digest-bound healthy receipt.\n' "$release_tag" >&2
 			exit 1
 		}
+		read -r web_digest worker_digest migrate_digest postgres_digest <<<"$(parse_authorized_digests "$policy_line")"
+		/usr/bin/printf 'release-digests-v2 %s rollback %s %s %s %s\n' \
+			"$release_tag" "$web_digest" "$worker_digest" "$migrate_digest" "$postgres_digest"
 		;;
 esac

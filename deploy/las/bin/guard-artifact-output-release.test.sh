@@ -17,7 +17,8 @@ STATE_ROOT="$TEST_ROOT/var/lib/yonaris"
 GIT_ROOT="$STATE_ROOT/repo"
 TRUST_DIRECTORY="$TEST_ROOT/etc/yonaris"
 TRUST_POLICY="$TRUST_DIRECTORY/las-trust-v1"
-RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v2"
+RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v3"
+LEGACY_RECEIPT_ROOT="$TRUST_DIRECTORY/las-compatible-releases-v2"
 STABLE_DIRECTORY="$TEST_ROOT/usr/local/libexec/yonaris-las"
 STABLE_GUARD="$STABLE_DIRECTORY/guard-artifact-output-release"
 STABLE_DISPATCHER="$STABLE_DIRECTORY/dispatch-las-command"
@@ -32,7 +33,7 @@ REAL_STAT="$(command -v stat)"
 REAL_READLINK="$(command -v readlink)"
 REAL_GIT="$(command -v git)"
 
-mkdir -p "$GIT_ROOT/deploy/las" "$TRUST_DIRECTORY" "$RECEIPT_ROOT" \
+mkdir -p "$GIT_ROOT/deploy/las" "$TRUST_DIRECTORY" "$RECEIPT_ROOT" "$LEGACY_RECEIPT_ROOT" \
 	"$STABLE_DIRECTORY" "$(dirname -- "$STABLE_INSTALLER")" "$MOCK_BIN"
 git -C "$GIT_ROOT" init --quiet
 git -C "$GIT_ROOT" config user.email test@yonaris.invalid
@@ -60,14 +61,14 @@ set -Eeuo pipefail
 path="${@: -1}"
 case "${GUARD_TEST_METADATA_FAILURE:-}:$path" in
 	policy-mode:*/las-trust-v1) printf '0:0:600\n'; exit 0 ;;
-	receipt-mode:*/las-compatible-releases-v2/sha-*) printf '0:0:600\n'; exit 0 ;;
+	receipt-mode:*/las-compatible-releases-v3/sha-* | receipt-mode:*/las-compatible-releases-v2/sha-*) printf '0:0:600\n'; exit 0 ;;
 esac
 case "$path" in
-	*/etc/yonaris | */las-compatible-releases-v2 | */libexec/yonaris-las)
+	*/etc/yonaris | */las-compatible-releases-v3 | */las-compatible-releases-v2 | */libexec/yonaris-las)
 		printf '0:0:755\n' ;;
 	*/.git) printf '0:0:700\n' ;;
 	*/var/lib/yonaris) printf '0:0:711\n' ;;
-	*/las-trust-v1 | */las-compatible-releases-v2/sha-*) printf '0:0:644\n' ;;
+	*/las-trust-v1 | */las-compatible-releases-v3/sha-* | */las-compatible-releases-v2/sha-*) printf '0:0:644\n' ;;
 	*/dispatch-las-command | */guard-artifact-output-release | */manage-las-release-state | \
 	*/manage-las-runtime | */manage-las-caddy | \
 	*/install-yonaris-las-trust-policy | */verify-yonaris-las-forced-command | \
@@ -91,7 +92,8 @@ chmod +x "$MOCK_BIN/stat" "$MOCK_BIN/readlink"
 sed \
 	-e "s#readonly STATE_DIRECTORY='/var/lib/yonaris'#readonly STATE_DIRECTORY='$STATE_ROOT'#g" \
 	-e "s#/var/lib/yonaris/las-objects.git#$GIT_ROOT/.git#g" \
-	-e "s#/etc/yonaris/las-compatible-releases-v2#$RECEIPT_ROOT#g" \
+	-e "s#/etc/yonaris/las-compatible-releases-v3#$RECEIPT_ROOT#g" \
+	-e "s#/etc/yonaris/las-compatible-releases-v2#$LEGACY_RECEIPT_ROOT#g" \
 	-e "s#/etc/yonaris/las-trust-v1#$TRUST_POLICY#g" \
 	-e "s#'/etc/yonaris'#'$TRUST_DIRECTORY'#g" \
 	-e "s#/usr/local/libexec/yonaris-las#$STABLE_DIRECTORY#g" \
@@ -105,8 +107,8 @@ chmod 0755 "$STABLE_GUARD"
 
 policy_line() {
 	local release="$1" operation="$2"
-	printf 'allow sha-%s %s web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s www-sha256 %s\n' \
-		"$release" "$operation" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW"
+	printf 'allow sha-%s %s web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s\n' \
+		"$release" "$operation" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES"
 }
 
 write_policy() {
@@ -137,7 +139,7 @@ run_guard() {
 		/bin/bash --noprofile --norc -p "$STABLE_GUARD" "$@"
 }
 
-expected="release-digests-v1 sha-$COMPATIBLE_SHA deploy $DIGEST_WEB $DIGEST_WORKER $DIGEST_MIGRATE $DIGEST_POSTGRES $DIGEST_WWW"
+expected="release-digests-v2 sha-$COMPATIBLE_SHA deploy $DIGEST_WEB $DIGEST_WORKER $DIGEST_MIGRATE $DIGEST_POSTGRES"
 [[ "$(run_guard candidate "sha-$COMPATIBLE_SHA" deploy)" == "$expected" ]]
 
 # Dirty checkout bytes, filters, hooks, replace refs, and shell startup payloads
@@ -214,12 +216,21 @@ set -e
 [[ "$malformed_status" -ne 0 && "$wrong_operation_status" -ne 0 ]]
 
 receipt="$RECEIPT_ROOT/sha-$COMPATIBLE_SHA"
-printf 'artifact-output-language-receipt-v2\nrelease sha-%s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\n' \
-	"$COMPATIBLE_SHA" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW" >"$receipt"
+printf 'artifact-output-language-receipt-v3\nrelease sha-%s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\n' \
+	"$COMPATIBLE_SHA" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" >"$receipt"
 chmod 0644 "$receipt"
-run_guard rollback "sha-$COMPATIBLE_SHA"
+[[ "$(run_guard rollback "sha-$COMPATIBLE_SHA")" == \
+	"release-digests-v2 sha-$COMPATIBLE_SHA rollback $DIGEST_WEB $DIGEST_WORKER $DIGEST_MIGRATE $DIGEST_POSTGRES" ]]
 
-printf '%s\n' 'tampered' >>"$receipt"
+rm -f -- "$receipt"
+legacy_receipt="$LEGACY_RECEIPT_ROOT/sha-$COMPATIBLE_SHA"
+printf 'artifact-output-language-receipt-v2\nrelease sha-%s\nweb-sha256 %s\nworker-sha256 %s\nmigrate-sha256 %s\npostgres-sha256 %s\nwww-sha256 %s\n' \
+	"$COMPATIBLE_SHA" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW" >"$legacy_receipt"
+chmod 0644 "$legacy_receipt"
+[[ "$(run_guard rollback "sha-$COMPATIBLE_SHA")" == \
+	"release-digests-v2 sha-$COMPATIBLE_SHA rollback $DIGEST_WEB $DIGEST_WORKER $DIGEST_MIGRATE $DIGEST_POSTGRES" ]]
+
+printf '%s\n' 'tampered' >>"$legacy_receipt"
 set +e
 run_guard rollback "sha-$COMPATIBLE_SHA" >/dev/null 2>&1
 tampered_receipt_status=$?
@@ -235,14 +246,22 @@ set -e
 [[ "$duplicate_status" -ne 0 ]]
 
 write_policy
-policy_line "$COMPATIBLE_SHA" marketing-deploy | \
-	sed "s#$DIGEST_WWW#sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#" \
+printf 'allow sha-%s deploy web-sha256 %s worker-sha256 %s migrate-sha256 %s postgres-sha256 %s www-sha256 %s\n' \
+	"$COMPATIBLE_SHA" "$DIGEST_WEB" "$DIGEST_WORKER" "$DIGEST_MIGRATE" "$DIGEST_POSTGRES" "$DIGEST_WWW" \
 	>>"$TRUST_POLICY"
 set +e
 run_guard candidate "sha-$COMPATIBLE_SHA" deploy >/dev/null 2>&1
 same_sha_digest_status=$?
 set -e
 [[ "$same_sha_digest_status" -ne 0 ]]
+
+write_policy
+policy_line "$COMPATIBLE_SHA" marketing-deploy >>"$TRUST_POLICY"
+set +e
+run_guard candidate "sha-$COMPATIBLE_SHA" deploy >/dev/null 2>&1
+marketing_policy_status=$?
+set -e
+[[ "$marketing_policy_status" -ne 0 ]]
 
 write_policy
 GUARD_TEST_METADATA_FAILURE=policy-symlink
