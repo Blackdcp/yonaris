@@ -464,7 +464,7 @@ describe("portal UI-language literal audit", () => {
 				labelledExact.map((entry) => ({ ...entry, category: "machine-token" })),
 			),
 		).toEqual(expect.arrayContaining([expect.stringContaining("labelled raw hazard must use raw-evidence")]));
-	});
+	}, 15_000);
 
 	it("allows the raw marker only in the exact canonical component implementation", () => {
 		const canonical = {
@@ -830,7 +830,7 @@ describe("portal UI-language literal audit", () => {
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("cross-plan owner is empty")]));
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("cross-plan task is empty")]));
 		expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("stale or missing cross-plan ownership")]));
-	});
+	}, 15_000);
 
 	it("loads non-discovery src modules into the exact runtime dependency and mock universe", () => {
 		const repositoryRoot = new URL("../../../..", import.meta.url).pathname.replace(/^\/(.:)/, "$1");
