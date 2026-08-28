@@ -28,6 +28,7 @@ export type AdapterFixture = {
 	captcha: boolean;
 	captchaDurationAfterSubmitMs: number;
 	rateLimited: boolean;
+	pageText: string;
 	accountRestricted: boolean;
 	blankConversationDelayMs: number;
 	priorAnswers: FixtureAnswer[];
@@ -66,6 +67,7 @@ export function createAdapterFixture(
 		captcha: false,
 		captchaDurationAfterSubmitMs: 0,
 		rateLimited: false,
+		pageText: "",
 		accountRestricted: false,
 		blankConversationDelayMs: 0,
 		priorAnswers: [],
@@ -141,6 +143,7 @@ export class FixtureDomPort implements ConsumerDomPort {
 					? elements(1, "")
 					: [];
 			case "rate_limit":
+				if (this.#fixture.pageText) return elements(1, this.#fixture.pageText);
 				return this.#fixture.rateLimited ? elements(1, "") : [];
 			case "account_restricted":
 				return this.#fixture.accountRestricted

@@ -591,8 +591,23 @@ describe.sequential("Browser Runner background scheduling", () => {
 
 	test("rate-limit guidance describes only the stopped task", () => {
 		expect(notificationMessage?.("rate_limited")).toBe(
-			"This task stopped after a rate limit and needs administrator review.",
+			"Keep the preserved tab open. Wait until the limit clears, then recover this exact task; do not resend the prompt.",
 		);
+	});
+
+	test.each([
+		["response_timeout", "Keep the completed answer open, then recover this exact task without resending the prompt."],
+		["recovery_tab_unavailable", "Open the exact stopped conversation tab, then press Recover response again."],
+		[
+			"resume_authorization_failed",
+			"Refresh the Portal connection, then retry this same recovery; no prompt was resent.",
+		],
+		[
+			"resume_claim_mismatch",
+			"Stop and ask an administrator to inspect this task; its frozen task identity did not match.",
+		],
+	] as const)("gives an operator a concrete recovery action for %s", (code, expected) => {
+		expect(notificationMessage?.(code)).toBe(expected);
 	});
 });
 

@@ -6,7 +6,7 @@ import { createAdapterFixture, FixtureDomPort } from "./test-fixture";
 describe("Kimi browser-extension adapter", () => {
 	test("declares the registered Kimi surface and adapter version", () => {
 		expect(kimiSelectorContract).toMatchObject({
-			version: "kimi-web-20260823-localpc-v15",
+			version: "kimi-web-20260823-localpc-v16",
 			surface: "kimi.consumer_web",
 			launchUrl: "https://www.kimi.com/",
 		});
@@ -65,7 +65,7 @@ describe("Kimi browser-extension adapter", () => {
 			webQueries: [],
 			citations: [{ url: "https://source.example/kimi", title: "Kimi 来源" }],
 			evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
-			adapterVersion: "kimi-web-20260823-localpc-v15",
+			adapterVersion: "kimi-web-20260823-localpc-v16",
 		});
 	});
 
@@ -198,6 +198,48 @@ describe("Kimi browser-extension adapter", () => {
 
 		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
 		expect(port.submitCount).toBe(1);
+	});
+
+	test("accepts Kimi's shortcut entry parameter on the durable conversation", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/?chat_enter_method=shortcut",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session?chat_enter_method=shortcut",
+				newConversationLabels: [],
+			}),
+		);
+
+		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+		expect(port.submitCount).toBe(1);
+	});
+
+	test("classifies Kimi's high-load membership modal as a rate limit", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				newConversationLabels: [],
+				pageText: "提示 和Kimi聊天的人太多啦，订阅会员可进入独立的优先队列 我知道了 去升级",
+			}),
+		);
+
+		await expect(createKimiAdapter(port).preflight()).rejects.toMatchObject({
+			code: "rate_limited",
+			stage: "pre_submit",
+		});
+	});
+
+	test("does not treat Kimi's ordinary membership entry as a rate limit", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://www.kimi.com/",
+				conversationUrl: "https://www.kimi.com/chat/kimi-session",
+				newConversationLabels: [],
+				pageText: "升级套餐 新建会话",
+			}),
+		);
+
+		await expect(createKimiAdapter(port).preflight()).resolves.toBeUndefined();
 	});
 
 	test("keeps the confirmed conversation when Kimi removes its transient new-chat query", async () => {

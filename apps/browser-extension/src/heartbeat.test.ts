@@ -37,12 +37,12 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260822-localpc-v10",
+				adapterVersion: "qwen-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260823-localpc-v15",
+				adapterVersion: "kimi-web-20260823-localpc-v16",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {
@@ -90,12 +90,12 @@ describe("buildHeartbeat", () => {
 			},
 			"qwen.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "qwen-web-20260822-localpc-v10",
+				adapterVersion: "qwen-web-20260822-localpc-v11",
 				activeConcurrency: 0,
 			},
 			"kimi.consumer_web": {
 				status: "unavailable",
-				adapterVersion: "kimi-web-20260823-localpc-v15",
+				adapterVersion: "kimi-web-20260823-localpc-v16",
 				activeConcurrency: 0,
 			},
 			"wenxin.consumer_web": {

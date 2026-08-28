@@ -18,14 +18,14 @@ export const BROWSER_EXTENSION_SURFACE_DEFINITIONS = [
 		label: "Qwen",
 		captureRoute: "browser_extension.qwen",
 		launchUrl: "https://www.qianwen.com/",
-		adapterVersion: "qwen-web-20260822-localpc-v10",
+		adapterVersion: "qwen-web-20260822-localpc-v11",
 	},
 	{
 		key: "kimi.consumer_web",
 		label: "Kimi",
 		captureRoute: "browser_extension.kimi",
 		launchUrl: "https://www.kimi.com/",
-		adapterVersion: "kimi-web-20260823-localpc-v15",
+		adapterVersion: "kimi-web-20260823-localpc-v16",
 	},
 	{
 		key: "wenxin.consumer_web",

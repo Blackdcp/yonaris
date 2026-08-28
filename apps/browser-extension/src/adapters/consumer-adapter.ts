@@ -31,6 +31,7 @@ const EVIDENCE_STABLE_MS = 2_000;
 const EVIDENCE_POLL_INTERVAL_MS = 500;
 const POLL_INTERVAL_MS = 250;
 const CONFIRMED_CONVERSATION_STABILITY_MS = 1_000;
+const QWEN_POST_SUBMIT_CHALLENGE_TIMEOUT_MS = 20_000;
 const PAGE_READY_TIMEOUT_MS = 15_000;
 const NEW_CONVERSATION_TIMEOUT_MS = 15_000;
 const SEND_APPEARS_AFTER_FILL_SURFACES = new Set(["qwen.consumer_web", "kimi.consumer_web", "yuanbao.consumer_web"]);
@@ -55,6 +56,7 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 	#submitted = false;
 	#confirmedConversationUrl: string | null = null;
 	#manualPostSubmitRecovery = false;
+	#qwenPostSubmitChallengeSeenAt: number | null = null;
 
 	constructor(port: ConsumerDomPort, contract: SelectorContract, evidenceAdapter?: SearchEvidenceAdapter) {
 		this.#port = port;
@@ -430,10 +432,24 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 			["rate_limit", this.#contract.rateLimit, "rate_limited"],
 			["login_wall", this.#contract.loginWall, "signed_out"],
 		] as const) {
-			if (visibleElements(await this.#port.query(role, selector)).length > 0) {
-				if (code === "captcha" && this.surface === "qwen.consumer_web" && this.#submitted) return false;
+			const visible = visibleElements(await this.#port.query(role, selector));
+			const isBlocked =
+				code !== "rate_limited" || !this.#contract.rateLimitTextPattern
+					? visible.length > 0
+					: visible.some(({ element }) =>
+							new RegExp(this.#contract.rateLimitTextPattern ?? "", "iu").test(element.text),
+						);
+			if (isBlocked) {
+				if (code === "captcha" && this.surface === "qwen.consumer_web" && this.#submitted) {
+					this.#qwenPostSubmitChallengeSeenAt ??= this.#port.now();
+					if (this.#port.now() - this.#qwenPostSubmitChallengeSeenAt < QWEN_POST_SUBMIT_CHALLENGE_TIMEOUT_MS) {
+						return false;
+					}
+					throw this.#error("captcha", "Qwen verification remained visible after prompt submission");
+				}
 				throw this.#error(code, `Consumer page reported ${code}`);
 			}
+			if (code === "captcha") this.#qwenPostSubmitChallengeSeenAt = null;
 		}
 		return true;
 	}
@@ -607,6 +623,7 @@ function validateSelectorContract(contract: SelectorContract): SelectorContract 
 	}
 	try {
 		new RegExp(contract.accountRestrictedTextPattern, "iu");
+		if (contract.rateLimitTextPattern) new RegExp(contract.rateLimitTextPattern, "iu");
 		if (contract.allowedSearchPattern) new RegExp(contract.allowedSearchPattern, "u");
 		if (contract.conversationSearchPattern) new RegExp(contract.conversationSearchPattern, "u");
 	} catch {

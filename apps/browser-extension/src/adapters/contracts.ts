@@ -47,6 +47,7 @@ export type SelectorContract = {
 	loginWall: string;
 	captcha: string;
 	rateLimit: string;
+	rateLimitTextPattern?: string | null;
 	accountRestricted: string;
 	accountRestrictedTextPattern: string;
 	searchUsed: string | null;

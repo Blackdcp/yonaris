@@ -62,10 +62,13 @@ export class ExtensionCoordinator {
 		if (!device) return null;
 		const api = this.#dependencies.apiFactory(device);
 		const journal = new DurableTaskJournal(this.#dependencies.storage);
-		if ((await this.#reconcileJournalBeforePoll(api, journal)) === "stop") {
+		const blockedSurfaces = await this.#reconcileJournalBeforePoll(api, journal);
+		if (!blockedSurfaces) {
 			return { bySurface: emptySurfaceSummaries(), recovered: 0, recoveryIncomplete: 0 };
 		}
-		const surfaces = readySurfaces(await this.#dependencies.storage.loadSurfaceReadiness());
+		const surfaces = readySurfaces(await this.#dependencies.storage.loadSurfaceReadiness()).filter(
+			(surface) => !blockedSurfaces.has(surface),
+		);
 		const polled = await pollStartedWork({
 			brandIds: device.allowedBrandIds,
 			surfaces,
@@ -92,16 +95,42 @@ export class ExtensionCoordinator {
 		const requestedStage = manualRecoveryStage(entry);
 		let recoveryStage = requestedStage;
 
-		let claim: BrowserExtensionClaim | undefined;
+		let claim: BrowserExtensionClaim;
 		try {
 			claim = await api.resume(entry.taskId, entry.brandId, requestedStage, entry.surfaceTargetKey);
-			recoveryStage = claim.postSubmitAssist ? "post_submit" : "pre_submit";
+		} catch {
+			return { taskId, status: "needs_human", code: "resume_authorization_failed" };
+		}
+
+		recoveryStage = claim.postSubmitAssist ? "post_submit" : "pre_submit";
+		try {
 			await assertManualResumeClaim(entry, claim, recoveryStage);
-			const recoveryTabId = this.#dependencies.tabs.resolveManualRecoveryTab
+		} catch {
+			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "resume_claim_mismatch");
+		}
+
+		let recoveryTabId: number;
+		try {
+			recoveryTabId = this.#dependencies.tabs.resolveManualRecoveryTab
 				? await this.#dependencies.tabs.resolveManualRecoveryTab(entry.tabId, entry.surfaceTargetKey)
 				: entry.tabId;
+		} catch {
+			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "recovery_tab_unavailable");
+		}
+
+		try {
 			if (recoveryTabId !== entry.tabId) await journal.rebindNeedsHumanTab(taskId, recoveryTabId);
+		} catch {
+			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "local_journal_persistence_failed");
+		}
+
+		try {
 			await this.#dependencies.tabs.activate(recoveryTabId);
+		} catch {
+			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "recovery_tab_unavailable");
+		}
+
+		try {
 			if (recoveryStage === "pre_submit") {
 				if (requestedStage === "pre_submit") await journal.resumePreSubmit(taskId);
 				else await journal.resumeServerAuthorizedPreSubmit(taskId);
@@ -109,16 +138,7 @@ export class ExtensionCoordinator {
 				await journal.markPostSubmitBoundary(taskId, claim.submitConfirmed ? "submitted" : "submit_intent");
 			}
 		} catch {
-			if (claim) {
-				await api
-					.failTask(claim, {
-						stage: recoveryStage,
-						code: "manual_resume_failed",
-						reason: "The exact local browser task could not be resumed after a new lease was issued",
-					})
-					.catch(() => undefined);
-			}
-			return { taskId, status: "needs_human", code: "manual_resume_failed" };
+			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "local_journal_persistence_failed");
 		}
 
 		const result = await runClaimedTask(claim, this.#taskDependencies(api, journal));
@@ -140,15 +160,18 @@ export class ExtensionCoordinator {
 			}));
 	}
 
-	async #reconcileJournalBeforePoll(api: RunnerControlApi, journal: DurableTaskJournal): Promise<"continue" | "stop"> {
-		let shouldStop = false;
+	async #reconcileJournalBeforePoll(
+		api: RunnerControlApi,
+		journal: DurableTaskJournal,
+	): Promise<Set<BrowserExtensionSurface> | null> {
+		const blockedSurfaces = new Set<BrowserExtensionSurface>();
 		for (const entry of Object.values(await journal.entries())) {
 			let reconciliation: BrowserTaskReconciliation;
 			try {
 				reconciliation = await api.reconcileTask(entry.taskId, entry.brandId);
 				await assertTaskReconciliation(entry, reconciliation);
 			} catch {
-				return "stop";
+				return null;
 			}
 			switch (reconciliation.state) {
 				case "terminal":
@@ -159,21 +182,38 @@ export class ExtensionCoordinator {
 					continue;
 				case "active":
 				case "blocked":
-					shouldStop = true;
+					blockedSurfaces.add(entry.surfaceTargetKey);
 					continue;
 				case "resumable_pre":
 					await journal.alignNeedsHuman(entry.taskId, "pre_submit");
 					continue;
 				case "resumable_post":
 					if (reconciliation.runnerSessionId !== entry.runnerSessionId) {
-						shouldStop = true;
+						blockedSurfaces.add(entry.surfaceTargetKey);
 						continue;
 					}
 					await journal.alignNeedsHuman(entry.taskId, "post_submit");
 					continue;
 			}
 		}
-		return shouldStop ? "stop" : "continue";
+		return blockedSurfaces;
+	}
+
+	async #manualRecoveryFailure(
+		api: RunnerControlApi,
+		claim: BrowserExtensionClaim,
+		taskId: string,
+		stage: RecoveryStage,
+		code: string,
+	): Promise<ManualRecoveryResult> {
+		await api
+			.failTask(claim, {
+				stage,
+				code,
+				reason: "The exact local browser task could not be resumed after a new lease was issued",
+			})
+			.catch(() => undefined);
+		return { taskId, status: "needs_human", code };
 	}
 
 	#taskDependencies(api: RunnerControlApi, journal: DurableTaskJournal) {

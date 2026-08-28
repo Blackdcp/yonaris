@@ -5,6 +5,7 @@ import { ChromeTabDriver } from "./coordinator/chrome-tabs";
 import { ExtensionCoordinator, type ExtensionRunSummary } from "./coordinator/extension-coordinator";
 import type { TaskRunResult } from "./coordinator/task-runner";
 import { buildHeartbeat } from "./heartbeat";
+import { operatorGuidance } from "./operator-guidance";
 import { chromeDeviceStorage } from "./storage";
 import { type QualificationReadinessPublisher, qualifyAndRecordActiveSurfaceTab } from "./surface-qualification-client";
 import {
@@ -324,12 +325,7 @@ async function notifyNeedsAttention(result: TaskRunResult, surface: BrowserExten
 }
 
 export function notificationMessage(code: string): string {
-	if (code === "signed_out") return "Please sign in in the preserved browser tab, then resume that exact task.";
-	if (code === "captcha") return "Complete the verification in the preserved browser tab.";
-	if (code === "rate_limited") return "This task stopped after a rate limit and needs administrator review.";
-	if (code === "account_restricted") return "This account is restricted. No further tasks will be submitted.";
-	if (code === "page_drift") return "The consumer page changed and was stopped safely.";
-	return "A browser task stopped safely and needs administrator review.";
+	return operatorGuidance(code);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

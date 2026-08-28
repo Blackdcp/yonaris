@@ -340,7 +340,7 @@ describe("ExtensionCoordinator", () => {
 		},
 	);
 
-	test("does not poll while an exact local task still has an active server lease", async () => {
+	test("keeps an active task isolated to its surface while polling other ready surfaces", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());
 		await storage.saveDevice({
@@ -348,6 +348,18 @@ describe("ExtensionCoordinator", () => {
 			deviceId: "device-1",
 			deviceToken: `yrd_${"a".repeat(43)}`,
 			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
+				activeConcurrency: 0,
+			},
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
+				activeConcurrency: 0,
+			},
 		});
 		const journal = new DurableTaskJournal(storage);
 		await journal.start(claimedTask(), {
@@ -359,8 +371,8 @@ describe("ExtensionCoordinator", () => {
 			storage,
 			apiFactory: () => ({
 				...fakeRunnerApi(events),
-				claimNext: async () => {
-					events.push("api:claim");
+				claimNext: async (_brandId, surface) => {
+					events.push(`api:claim:${surface}`);
 					return null;
 				},
 				resume: async () => claimedTask(),
@@ -376,7 +388,8 @@ describe("ExtensionCoordinator", () => {
 
 		await coordinator.runOnce();
 
-		expect(events).not.toContain("api:claim");
+		expect(events).not.toContain("api:claim:deepseek.consumer_web");
+		expect(events).toContain("api:claim:doubao.consumer_web");
 		await expect(journal.entries()).resolves.toMatchObject({ "task-1": { phase: "claimed" } });
 	});
 
@@ -633,7 +646,7 @@ describe("ExtensionCoordinator", () => {
 		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toEqual({
 			taskId: "task-1",
 			status: "needs_human",
-			code: "manual_resume_failed",
+			code: "recovery_tab_unavailable",
 		});
 		await expect(journal.entries()).resolves.toMatchObject({
 			"task-1": { phase: "needs_human", interruptedPhase: "prepared", tabId: 42 },
@@ -678,11 +691,48 @@ describe("ExtensionCoordinator", () => {
 		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toEqual({
 			taskId: "task-1",
 			status: "needs_human",
-			code: "manual_resume_failed",
+			code: "resume_claim_mismatch",
 		});
 		expect(events).not.toContain("tab:activate:42");
 		expect(events).not.toContain("adapter:submit");
 		expect(events).toContain("api:needs_human");
+		await expect(journal.entries()).resolves.toMatchObject({ "task-1": { phase: "needs_human" } });
+	});
+
+	test("reports a Portal resume authorization failure without disguising it as a tab problem", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		const journal = new DurableTaskJournal(storage);
+		await journal.start(claimedTask(), {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+		});
+		await journal.advance("task-1", "submit_intent");
+		await journal.advance("task-1", "needs_human");
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi([]),
+				claimNext: async () => null,
+				resume: async () => {
+					throw new Error("Portal lease is temporarily unavailable");
+				},
+			}),
+			tabs: fakeTabDriver([], fakeAdapter([])),
+			browserVersion: "Chrome/140",
+		});
+
+		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toEqual({
+			taskId: "task-1",
+			status: "needs_human",
+			code: "resume_authorization_failed",
+		});
 		await expect(journal.entries()).resolves.toMatchObject({ "task-1": { phase: "needs_human" } });
 	});
 
@@ -821,7 +871,7 @@ describe("ExtensionCoordinator", () => {
 		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toEqual({
 			taskId: "task-1",
 			status: "needs_human",
-			code: "manual_resume_failed",
+			code: "resume_claim_mismatch",
 		});
 		expect(events).not.toContain("tab:activate:42");
 		expect(events).not.toContain("adapter:resume");

@@ -2,6 +2,7 @@ import type { SearchEvidenceProbeReport } from "./adapters/evidence-probe";
 import { BrowserRunnerApiClient } from "./api-client";
 import { BROWSER_EXTENSION_SURFACES, type BrowserExtensionSurface, PORTAL_ORIGIN } from "./contracts";
 import { buildHeartbeat } from "./heartbeat";
+import { operatorGuidance } from "./operator-guidance";
 import { chromeDeviceStorage } from "./storage";
 import type { SurfaceQualification } from "./surface-qualification-client";
 import { extensionSurfaceDefinition } from "./surface-registry";
@@ -239,7 +240,7 @@ async function resumeNeedsHuman(entry: ManualRecoveryCandidate): Promise<void> {
 		setMessage(
 			response.result.status === "succeeded"
 				? `Recovered session …${taskId.slice(-8)}.`
-				: `Session …${taskId.slice(-8)} still needs attention (${response.result.code ?? response.result.status}).`,
+				: `Session …${taskId.slice(-8)} still needs attention (${response.result.code ?? response.result.status}). ${operatorGuidance(response.result.code ?? response.result.status ?? "unknown")}`,
 		);
 		await renderManualRecoveries();
 	} catch (error) {
