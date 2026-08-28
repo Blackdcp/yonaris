@@ -2,7 +2,7 @@
   "policyVersion": 1,
   "normalizationVersion": 1,
   "ownerRole": "release-owner",
-  "surfaceClasses": ["marketing", "portal"],
+  "surfaceClasses": ["portal"],
   "fingerprints": [
     {"id":"provenance_01","sha256":"c34e8bafe33b7f1cb1335ff6a07a0b7efca46412ba91bb379a322099a285c442","compactSha256":"c34e8bafe33b7f1cb1335ff6a07a0b7efca46412ba91bb379a322099a285c442","characters":4,"tokens":1,"severity":"block"},
     {"id":"provenance_02","sha256":"f0b7e42351bc34d2453e0465c175c291b5be3f88fe1b1f0a4fecfaa806d3659a","compactSha256":"f0b7e42351bc34d2453e0465c175c291b5be3f88fe1b1f0a4fecfaa806d3659a","characters":6,"tokens":1,"severity":"block"},

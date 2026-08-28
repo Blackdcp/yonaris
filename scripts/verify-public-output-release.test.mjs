@@ -23,7 +23,7 @@ function fixturePolicy() {
     policyVersion: 1,
     normalizationVersion: 1,
     ownerRole: "release-owner",
-    surfaceClasses: ["marketing", "portal"],
+    surfaceClasses: ["portal"],
     fingerprints: [
       {
         id: "fixture_01",
@@ -103,7 +103,6 @@ async function releaseFixture(t) {
 
   const publicValues = {
     "security/public-output-policy.v1.json": fixturePolicy(),
-    "security/public-output-surfaces.marketing.v1.json": fixtureInventory("marketing"),
     "security/public-output-surfaces.portal.v1.json": fixtureInventory("portal"),
   };
   for (const [relative, value] of Object.entries(publicValues)) {
@@ -180,7 +179,7 @@ async function scannerFixture(t, phase, files) {
   const policyPath = path.join(config, "public-output-policy.v1.json");
   const inventoryPath = path.join(config, "public-output-surfaces.fixture.v1.json");
   await writeJson(policyPath, fixturePolicy());
-  await writeJson(inventoryPath, fixtureInventory("marketing"));
+  await writeJson(inventoryPath, fixtureInventory("portal"));
   await cp(
     path.join(repositoryRoot, "security", "public-output-policy.schema.json"),
     path.join(config, "public-output-policy.schema.json"),
@@ -304,8 +303,8 @@ test("executes every tracked schema in Ajv strict mode before digest checks", as
     {
       expected: "PUBLIC_OUTPUT_INVENTORY_INVALID",
       mutate: async (fixture) => {
-        await writeJson(path.join(fixture.security, "public-output-surfaces.marketing.v1.json"), {
-          ...fixtureInventory("marketing"),
+        await writeJson(path.join(fixture.security, "public-output-surfaces.portal.v1.json"), {
+          ...fixtureInventory("portal"),
           unexpected: true,
         });
       },
@@ -618,8 +617,6 @@ test("writes only verified digests, role, and UTC time to a safe external attest
   const attestation = JSON.parse(raw);
   assert.deepEqual(attestation, {
     policyDigest: publicFiles["security/public-output-policy.v1.json"],
-    marketingInventoryDigest:
-      publicFiles["security/public-output-surfaces.marketing.v1.json"],
     portalInventoryDigest: publicFiles["security/public-output-surfaces.portal.v1.json"],
     retiredRouteProbeDigest: routes.digest,
     legalExceptionDigest: exceptions.digest,

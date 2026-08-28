@@ -11,12 +11,10 @@
       "additionalProperties": false,
       "required": [
         "security/public-output-policy.v1.json",
-        "security/public-output-surfaces.marketing.v1.json",
         "security/public-output-surfaces.portal.v1.json"
       ],
       "properties": {
         "security/public-output-policy.v1.json": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
-        "security/public-output-surfaces.marketing.v1.json": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
         "security/public-output-surfaces.portal.v1.json": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     }

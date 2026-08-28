@@ -24,7 +24,7 @@ function fixturePolicy() {
     policyVersion: 1,
     normalizationVersion: 1,
     ownerRole: "release-owner",
-    surfaceClasses: ["marketing", "portal"],
+    surfaceClasses: ["portal"],
     fingerprints: [
       {
         id: "fixture_01",
@@ -40,7 +40,7 @@ function fixturePolicy() {
 
 function inventory(phase, overrides = {}) {
   const phaseConfig = (name) => ({
-    surface: `marketing-${name}`,
+    surface: `portal-${name}`,
     allowedRoots: ["."],
     include: ["."],
     exclude: [],
@@ -48,7 +48,7 @@ function inventory(phase, overrides = {}) {
     ...(name === phase ? overrides : {}),
   });
   return {
-    surfaceClass: "marketing",
+    surfaceClass: "portal",
     phases: {
       source: phaseConfig("source"),
       artifact: phaseConfig("artifact"),
@@ -95,7 +95,6 @@ async function fixtureAuditRepository(t) {
     "security/public-output-policy.v1.json",
     "security/public-output-policy.schema.json",
     "security/public-output-surfaces.schema.json",
-    "security/public-output-surfaces.marketing.v1.json",
     "security/public-output-surfaces.portal.v1.json",
   ]) {
     await cp(path.join(repositoryRoot, relative), path.join(root, relative));
@@ -144,6 +143,7 @@ test("repository topology excludes retired distribution surfaces and preserves l
   const forbiddenPrefixes = [
     ".github/blog-agent/",
     "apps/cli/",
+    "apps/www/",
     "apps/www/.source/",
     "packages/docs/",
   ];
@@ -157,6 +157,7 @@ test("repository topology excludes retired distribution surfaces and preserves l
     "CONTRIBUTING.md",
     "CONTRIBUTORS.md",
     "SECURITY.md",
+    "security/public-output-surfaces.marketing.v1.json",
     "apps/www/source.config.ts",
     "apps/www/source.generated.ts",
     "apps/www/src/components/answer-presence-software-hub.tsx",
@@ -187,25 +188,6 @@ test("repository topology excludes retired distribution surfaces and preserves l
     }
   }
 
-  const wwwPackage = JSON.parse(
-    await readFile(path.join(repositoryRoot, "apps", "www", "package.json"), "utf8"),
-  );
-  const retiredDependency =
-    /^(?:@mdx-js\/|@tailwindcss\/typography$|@types\/mdx$|@workspace\/(?:api-spec|docs)$|fumadocs|react-markdown$|remark-gfm$|shiki$)/u;
-  for (const section of ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"]) {
-    for (const name of Object.keys(wwwPackage[section] ?? {})) {
-      if (retiredDependency.test(name)) blockers.push(`www-${section}:${name}`);
-    }
-  }
-  const wwwTsconfig = JSON.parse(
-    await readFile(path.join(repositoryRoot, "apps", "www", "tsconfig.json"), "utf8"),
-  );
-  for (const include of wwwTsconfig.include ?? []) {
-    if (typeof include === "string" && include.startsWith("content/")) {
-      blockers.push(`www-tsconfig-orphan:${include}`);
-    }
-  }
-
   const workspacePackageNames = new Set();
   for (const file of trackedFiles.filter(
     (file) => file === "package.json" || file.endsWith("/package.json"),
@@ -214,7 +196,7 @@ test("repository topology excludes retired distribution surfaces and preserves l
     if (typeof packageJson.name === "string") workspacePackageNames.add(packageJson.name);
   }
   for (const file of trackedFiles.filter(
-    (file) => file.startsWith(".changeset/") || file === ".claude/skills/add-changeset/SKILL.md",
+    (file) => file.startsWith(".changeset/"),
   )) {
     const content = await readFile(path.join(repositoryRoot, file), "utf8");
     const referencedPackages = [...content.matchAll(/^"([^"]+)":\s*(?:patch|minor|major)$/gmu)].map(
@@ -238,9 +220,6 @@ test("repository topology excludes retired distribution surfaces and preserves l
       file.startsWith("docker/") ||
       file.startsWith("e2e/"),
   );
-  for (const file of ["apps/www/package.json", "apps/www/tsconfig.json", "apps/www/vite.config.ts"]) {
-    if (!operationalFiles.includes(file)) blockers.push(`unscanned-operational-config:${file}`);
-  }
   const retiredOperationalReference =
     /(?:packages[\\/]docs|apps[\\/]cli|@workspace\/docs|source\.generated|fumadocs|@mdx-js\/rollup)/u;
   for (const file of operationalFiles) {
@@ -265,11 +244,20 @@ test("allows the approved Yonaris category in public output", async () => {
   assert.deepEqual(
     scanPublicText({
       policy,
-      surface: "marketing-source",
+      surface: "portal-source",
       source: "approved-category.txt",
       text: "AI-native MarTech infrastructure built for decisions made by people and shaped by agents",
     }),
     [],
+  );
+});
+
+test("rejects a policy that enables a non-Portal public surface", () => {
+  const policy = fixturePolicy();
+  policy.surfaceClasses = ["marketing", "portal"];
+  assert.throws(
+    () => scanPublicText({ policy, surface: "portal-source", source: "safe.txt", text: "safe" }),
+    { message: "PUBLIC_OUTPUT_POLICY_INVALID" },
   );
 });
 
@@ -421,7 +409,7 @@ test("scans a large neutral source file within the release time budget", () => {
 test("reports deterministic redacted findings", () => {
   const findings = scanPublicText({
     policy: fixturePolicy(),
-    surface: "marketing-source",
+    surface: "portal-source",
     source: "fixture.html",
     text: "prefix fixture&#32;signal%20zx9 suffix",
   });
@@ -429,7 +417,7 @@ test("reports deterministic redacted findings", () => {
     {
       id: "fixture_01",
       severity: "block",
-      surface: "marketing-source",
+      surface: "portal-source",
       source: "fixture.html",
       offset: 7,
     },
@@ -487,20 +475,19 @@ test("requires a lowercase compact digest in every policy fingerprint", async ()
   }
 });
 
-test("loads and compiles the strict surface inventory schema for both inventories", async () => {
+test("loads and compiles the strict Portal surface inventory schema", async () => {
   const schema = JSON.parse(
     await readFile(path.join(repositoryRoot, "security", "public-output-surfaces.schema.json"), "utf8"),
   );
   const validate = new Ajv({ allErrors: true, strict: true }).compile(schema);
-  for (const name of ["marketing", "portal"]) {
-    const value = JSON.parse(
-      await readFile(
-        path.join(repositoryRoot, "security", `public-output-surfaces.${name}.v1.json`),
-        "utf8",
-      ),
-    );
-    assert.equal(validate(value), true, JSON.stringify(validate.errors));
-  }
+  const value = JSON.parse(
+    await readFile(
+      path.join(repositoryRoot, "security", "public-output-surfaces.portal.v1.json"),
+      "utf8",
+    ),
+  );
+  assert.equal(validate(value), true, JSON.stringify(validate.errors));
+  assert.equal(validate({ ...value, surfaceClass: "marketing" }), false);
 });
 
 test("rejects missing, extra, and wrong-type inventory fields", async () => {
@@ -685,7 +672,7 @@ test("reject binary strategy fails with a deterministic redacted code", async (t
   );
 });
 
-test("CLI accepts valid phase, root, and portal combinations", async (t) => {
+test("CLI audits the Portal inventory for every valid phase", async (t) => {
   const fixture = await fixtureWorkspace(t);
   const sourceRoot = path.join(fixture.base, "repo");
   const artifactRoot = path.join(fixture.base, "artifact");
@@ -695,7 +682,7 @@ test("CLI accepts valid phase, root, and portal combinations", async (t) => {
   for (const [args, options] of [
     [["--phase", "source", "--root", sourceRoot], {}],
     [["--phase", "artifact", "--root", artifactRoot], {}],
-    [["--portal", "--phase", "image-root", "--root", artifactRoot], {}],
+    [["--phase", "image-root", "--root", artifactRoot], {}],
   ]) {
     const result = await runAudit(args, options);
     assert.match(result.stdout, /^\[[\s\S]*\]\r?\n$/);
@@ -728,6 +715,7 @@ test("CLI rejects missing values, unknown flags, and unsupported phases without 
     ["--root"],
     ["--phase"],
     ["--unknown", secret],
+    ["--portal"],
     ["--phase", "deployment", "--root", secret],
   ]) {
     const result = await runAudit(args);

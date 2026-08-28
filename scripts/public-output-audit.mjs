@@ -4,7 +4,7 @@ import { scanPaths } from "./lib/public-output-policy.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const usage =
-  "Usage: public-output-audit [--phase source|artifact|image-root] [--root path] [--portal]";
+  "Usage: public-output-audit [--phase source|artifact|image-root] [--root path]";
 
 function usageError() {
   throw new Error("PUBLIC_OUTPUT_USAGE");
@@ -13,13 +13,8 @@ function usageError() {
 function parseArguments(args) {
   let phase = "source";
   let target = repositoryRoot;
-  let portal = false;
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
-    if (argument === "--portal") {
-      portal = true;
-      continue;
-    }
     if (argument === "--phase" || argument === "--root") {
       const value = args[index + 1];
       if (!value || value.startsWith("--")) usageError();
@@ -31,17 +26,14 @@ function parseArguments(args) {
     usageError();
   }
   if (!["source", "artifact", "image-root"].includes(phase)) usageError();
-  return { phase, portal, target };
+  return { phase, target };
 }
 
 async function main() {
-  const { phase, portal, target } = parseArguments(process.argv.slice(2));
-  const inventory = portal
-    ? "public-output-surfaces.portal.v1.json"
-    : "public-output-surfaces.marketing.v1.json";
+  const { phase, target } = parseArguments(process.argv.slice(2));
   const findings = await scanPaths({
     policyPath: path.join(repositoryRoot, "security", "public-output-policy.v1.json"),
-    inventoryPath: path.join(repositoryRoot, "security", inventory),
+    inventoryPath: path.join(repositoryRoot, "security", "public-output-surfaces.portal.v1.json"),
     phase,
     root: target,
   });

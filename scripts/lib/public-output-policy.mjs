@@ -126,6 +126,8 @@ export function validatePolicy(policy) {
     policy.normalizationVersion !== 1 ||
     policy.ownerRole !== "release-owner" ||
     !Array.isArray(policy.surfaceClasses) ||
+    policy.surfaceClasses.length !== 1 ||
+    policy.surfaceClasses[0] !== "portal" ||
     !Array.isArray(policy.fingerprints) ||
     policy.fingerprints.length > MAX_FINGERPRINTS
   ) {

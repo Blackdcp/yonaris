@@ -4,7 +4,7 @@
   "additionalProperties": false,
   "required": ["surfaceClass", "phases", "runtimeRouteClasses"],
   "properties": {
-    "surfaceClass": { "enum": ["marketing", "portal"] },
+    "surfaceClass": { "const": "portal" },
     "phases": {
       "type": "object",
       "additionalProperties": false,

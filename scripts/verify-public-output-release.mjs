@@ -11,7 +11,6 @@ const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".
 const SHA256 = /^[a-f0-9]{64}$/;
 const PUBLIC_FILES = [
   "security/public-output-policy.v1.json",
-  "security/public-output-surfaces.marketing.v1.json",
   "security/public-output-surfaces.portal.v1.json",
 ];
 const SCHEMA_FILES = {
@@ -52,10 +51,14 @@ function isWithin(root, candidate) {
   );
 }
 
-async function readJsonInput(file, code) {
+async function readJsonInput(file, code, { canonicalLineEndings = false } = {}) {
   try {
     const bytes = await readFile(file);
-    return { bytes, value: JSON.parse(bytes.toString("utf8")) };
+    const text = bytes.toString("utf8");
+    return {
+      bytes: canonicalLineEndings ? Buffer.from(text.replaceAll("\r\n", "\n"), "utf8") : bytes,
+      value: JSON.parse(text),
+    };
   } catch {
     fail(code);
   }
@@ -94,14 +97,12 @@ async function loadAndValidatePublicInputs(repositoryRoot, validators) {
   const policyInput = await readJsonInput(
     path.join(securityRoot, "public-output-policy.v1.json"),
     "PUBLIC_OUTPUT_POLICY_INVALID",
-  );
-  const marketingInput = await readJsonInput(
-    path.join(securityRoot, "public-output-surfaces.marketing.v1.json"),
-    "PUBLIC_OUTPUT_INVENTORY_INVALID",
+    { canonicalLineEndings: true },
   );
   const portalInput = await readJsonInput(
     path.join(securityRoot, "public-output-surfaces.portal.v1.json"),
     "PUBLIC_OUTPUT_INVENTORY_INVALID",
+    { canonicalLineEndings: true },
   );
 
   requireValid(validators.manifest, manifestInput.value, "PUBLIC_OUTPUT_MANIFEST_INVALID");
@@ -111,12 +112,8 @@ async function loadAndValidatePublicInputs(repositoryRoot, validators) {
   } catch {
     fail("PUBLIC_OUTPUT_POLICY_INVALID");
   }
-  requireValid(validators.inventory, marketingInput.value, "PUBLIC_OUTPUT_INVENTORY_INVALID");
   requireValid(validators.inventory, portalInput.value, "PUBLIC_OUTPUT_INVENTORY_INVALID");
-  if (
-    marketingInput.value.surfaceClass !== "marketing" ||
-    portalInput.value.surfaceClass !== "portal"
-  ) {
+  if (portalInput.value.surfaceClass !== "portal") {
     fail("PUBLIC_OUTPUT_INVENTORY_INVALID");
   }
 
@@ -125,8 +122,7 @@ async function loadAndValidatePublicInputs(repositoryRoot, validators) {
     policy: policyInput.value,
     publicBytes: new Map([
       [PUBLIC_FILES[0], policyInput.bytes],
-      [PUBLIC_FILES[1], marketingInput.bytes],
-      [PUBLIC_FILES[2], portalInput.bytes],
+      [PUBLIC_FILES[1], portalInput.bytes],
     ]),
   };
 }
@@ -347,8 +343,7 @@ export async function verifyPublicOutputRelease({
 
     const attestation = {
       policyDigest: publicDigests[PUBLIC_FILES[0]],
-      marketingInventoryDigest: publicDigests[PUBLIC_FILES[1]],
-      portalInventoryDigest: publicDigests[PUBLIC_FILES[2]],
+      portalInventoryDigest: publicDigests[PUBLIC_FILES[1]],
       retiredRouteProbeDigest: protectedInputs.routes?.digest ?? null,
       legalExceptionDigest: protectedInputs.exceptions?.digest ?? null,
       ownerRole: manifest.ownerRole,
