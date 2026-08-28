@@ -162,6 +162,14 @@ export class BrowserRunnerApiClient {
 
 	async completeTask(claim: BrowserExtensionClaim, input: RunnerCompletionInput): Promise<void> {
 		assertCollectedAnswer(input.answer);
+		const evidenceArtifactIds = input.visualEvidence
+			? [
+					...(input.visualEvidence.primaryArtifactId ? [input.visualEvidence.primaryArtifactId] : []),
+					...input.visualEvidence.segmentArtifactIds,
+				]
+			: input.evidenceArtifactId
+				? [input.evidenceArtifactId]
+				: [];
 		await this.request(taskPath(claim.taskId, "complete"), {
 			authenticated: true,
 			body: {
@@ -170,7 +178,9 @@ export class BrowserRunnerApiClient {
 				adapterVersion: input.adapterVersion,
 				browserVersion: input.browserVersion,
 				observation: {
-					schemaVersion: "browser-runner-observation.v2",
+					schemaVersion: input.visualEvidence
+						? "browser-runner-observation.v3"
+						: "browser-runner-observation.v2",
 					answerText: input.answer.answerText,
 					observedAt: input.answer.observedAt,
 					pageUrl: input.answer.pageUrl,
@@ -178,7 +188,8 @@ export class BrowserRunnerApiClient {
 					searchMode: "native_auto",
 					webSearchObserved: input.answer.webSearchObserved,
 					queryAvailability: input.answer.queryAvailability,
-					evidenceArtifactIds: [input.evidenceArtifactId],
+					evidenceArtifactIds,
+					...(input.visualEvidence ? { visualEvidence: input.visualEvidence } : {}),
 					citations: input.answer.citations,
 					webQueries: input.answer.webQueries,
 					captureDiagnostics: {

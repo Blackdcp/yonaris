@@ -5,6 +5,7 @@ import {
 	type EvidenceViewportRect,
 } from "../adapters/contracts";
 import type { BrowserExtensionClaim } from "../contracts";
+import type { BrowserRunnerVisualEvidence } from "@workspace/lib/browser-extension-contract";
 import type { DurableTaskJournal } from "./journal";
 
 export type RunnerFailureInput = {
@@ -18,7 +19,8 @@ export type RunnerCompletionInput = {
 	adapterVersion: string;
 	browserVersion: string;
 	answer: CollectedAnswer;
-	evidenceArtifactId: string;
+	evidenceArtifactId?: string;
+	visualEvidence?: BrowserRunnerVisualEvidence;
 };
 
 export interface RunnerApi {
@@ -142,16 +144,39 @@ export async function runClaimedTask(
 		const answer = await tab.adapter.collectCurrentAnswer();
 		await dependencies.journal.advance(claim.taskId, "collected");
 		phase = "collected";
-		const screenshot = await tab.captureEvidence(answer.evidenceViewportRect);
-		const artifactId = await dependencies.api.uploadEvidence(claim, runnerSessionId, answer.adapterVersion, screenshot);
-		await dependencies.journal.advance(claim.taskId, "uploaded");
-		phase = "uploaded";
+		let visualEvidence: BrowserRunnerVisualEvidence = {
+			status: "unavailable",
+			primaryArtifactId: null,
+			segmentArtifactIds: [],
+			expectedSegmentCount: 0,
+			capturedSegmentCount: 0,
+		};
+		try {
+			const screenshot = await tab.captureEvidence(answer.evidenceViewportRect);
+			const artifactId = await dependencies.api.uploadEvidence(
+				claim,
+				runnerSessionId,
+				answer.adapterVersion,
+				screenshot,
+			);
+			await dependencies.journal.advance(claim.taskId, "uploaded");
+			phase = "uploaded";
+			visualEvidence = {
+				status: "complete",
+				primaryArtifactId: artifactId,
+				segmentArtifactIds: [],
+				expectedSegmentCount: 1,
+				capturedSegmentCount: 1,
+			};
+		} catch {
+			// A verified answer remains valid even when optional visual evidence is unavailable.
+		}
 		await dependencies.api.completeTask(claim, {
 			runnerSessionId,
 			adapterVersion: answer.adapterVersion,
 			browserVersion: dependencies.browserVersion,
 			answer,
-			evidenceArtifactId: artifactId,
+			visualEvidence,
 		});
 		await Promise.allSettled([dependencies.journal.remove(claim.taskId), tab.close()]);
 		return { status: "succeeded" };

@@ -24,6 +24,14 @@ export interface BrowserExtensionSurfaceReadiness {
 
 export type BrowserExtensionReadiness = Partial<Record<BrowserExtensionSurface, BrowserExtensionSurfaceReadiness>>;
 
+export type BrowserRunnerVisualEvidence = {
+	status: "complete" | "partial" | "unavailable";
+	primaryArtifactId: string | null;
+	segmentArtifactIds: string[];
+	expectedSegmentCount: number;
+	capturedSegmentCount: number;
+};
+
 export interface BrowserExtensionClaim {
 	taskId: string;
 	batchId: string;
@@ -52,6 +60,10 @@ export const STRUCTURED_BROWSER_EXTENSION_ADAPTER_VERSIONS: Readonly<Record<Brow
 	);
 
 const MAX_STRUCTURED_SCREENSHOT_BYTES = 2 * 1024 * 1024;
+const MAX_VISUAL_EVIDENCE_SEGMENT_BYTES = 1024 * 1024;
+const MAX_VISUAL_EVIDENCE_PRIMARY_BYTES = 4 * 1024 * 1024;
+const MAX_VISUAL_EVIDENCE_TOTAL_BYTES = 6 * 1024 * 1024;
+const MAX_VISUAL_EVIDENCE_SEGMENTS = 18;
 
 export function isBrowserExtensionSurface(value: string): value is BrowserExtensionSurface {
 	return BROWSER_EXTENSION_SURFACES.some((surface) => surface === value);
@@ -133,4 +145,87 @@ export function assertExtensionEvidenceProtocol(input: {
 	if (input.minimumArtifacts !== 1 || input.kinds.length !== 1 || input.kinds[0] !== "page_snapshot") {
 		throw new Error("Browser extension completion requires exactly one page snapshot");
 	}
+}
+
+export function assertBrowserRunnerVisualEvidenceProtocol(input: {
+	visualEvidence: BrowserRunnerVisualEvidence;
+	artifactIds: readonly string[];
+	mediaTypes: readonly string[];
+	byteSizes: readonly number[];
+}): void {
+	const { visualEvidence } = input;
+	const orderedIds = [
+		...(visualEvidence.primaryArtifactId ? [visualEvidence.primaryArtifactId] : []),
+		...visualEvidence.segmentArtifactIds,
+	];
+	if (
+		input.artifactIds.length !== orderedIds.length ||
+		input.mediaTypes.length !== orderedIds.length ||
+		input.byteSizes.length !== orderedIds.length ||
+		orderedIds.some((id, index) => id !== input.artifactIds[index]) ||
+		new Set(orderedIds).size !== orderedIds.length ||
+		visualEvidence.segmentArtifactIds.length > MAX_VISUAL_EVIDENCE_SEGMENTS ||
+		input.mediaTypes.some((mediaType) => mediaType !== "image/jpeg") ||
+		input.byteSizes.some((bytes) => !Number.isSafeInteger(bytes) || bytes < 1) ||
+		input.byteSizes.reduce((total, bytes) => total + bytes, 0) > MAX_VISUAL_EVIDENCE_TOTAL_BYTES
+	) {
+		throw invalidVisualEvidence();
+	}
+
+	const primaryOffset = visualEvidence.primaryArtifactId ? 1 : 0;
+	if (
+		(primaryOffset === 1 && (input.byteSizes[0] ?? 0) > MAX_VISUAL_EVIDENCE_PRIMARY_BYTES) ||
+		input.byteSizes.slice(primaryOffset).some((bytes) => bytes > MAX_VISUAL_EVIDENCE_SEGMENT_BYTES)
+	) {
+		throw invalidVisualEvidence();
+	}
+
+	if (visualEvidence.status === "unavailable") {
+		if (
+			visualEvidence.primaryArtifactId !== null ||
+			visualEvidence.segmentArtifactIds.length !== 0 ||
+			visualEvidence.expectedSegmentCount !== 0 ||
+			visualEvidence.capturedSegmentCount !== 0
+		) {
+			throw invalidVisualEvidence();
+		}
+		return;
+	}
+
+	if (
+		!Number.isSafeInteger(visualEvidence.expectedSegmentCount) ||
+		!Number.isSafeInteger(visualEvidence.capturedSegmentCount) ||
+		visualEvidence.expectedSegmentCount < 1 ||
+		visualEvidence.expectedSegmentCount > MAX_VISUAL_EVIDENCE_SEGMENTS ||
+		visualEvidence.capturedSegmentCount < 1 ||
+		visualEvidence.capturedSegmentCount > visualEvidence.expectedSegmentCount ||
+		(visualEvidence.segmentArtifactIds.length !== visualEvidence.capturedSegmentCount &&
+			!(
+				visualEvidence.status === "complete" &&
+				visualEvidence.primaryArtifactId !== null &&
+				visualEvidence.capturedSegmentCount === 1 &&
+				visualEvidence.segmentArtifactIds.length === 0
+			))
+	) {
+		throw invalidVisualEvidence();
+	}
+
+	if (
+		visualEvidence.status === "complete" &&
+		(visualEvidence.primaryArtifactId === null ||
+			visualEvidence.capturedSegmentCount !== visualEvidence.expectedSegmentCount)
+	) {
+		throw invalidVisualEvidence();
+	}
+	if (
+		visualEvidence.status === "partial" &&
+		(visualEvidence.primaryArtifactId !== null ||
+			visualEvidence.capturedSegmentCount >= visualEvidence.expectedSegmentCount)
+	) {
+		throw invalidVisualEvidence();
+	}
+}
+
+function invalidVisualEvidence(): Error {
+	return new Error("Browser Runner visual evidence is invalid");
 }

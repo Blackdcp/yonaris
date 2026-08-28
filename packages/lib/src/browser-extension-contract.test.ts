@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	assertBrowserRunnerVisualEvidenceProtocol,
 	assertExtensionEvidenceProtocol,
 	browserExtensionCaptureRoute,
 	isApprovedBrowserExtensionAdapterVersion,
@@ -232,5 +233,122 @@ describe("browser extension contract", () => {
 				kinds: ["screenshot", "page_snapshot"],
 			}),
 		).not.toThrow();
+	});
+
+	it.each([
+		{
+			visualEvidence: {
+				status: "complete" as const,
+				primaryArtifactId: "primary",
+				segmentArtifactIds: ["segment-1", "segment-2"],
+				expectedSegmentCount: 2,
+				capturedSegmentCount: 2,
+			},
+			artifactIds: ["primary", "segment-1", "segment-2"],
+			byteSizes: [3_000_000, 500_000, 600_000],
+		},
+		{
+			visualEvidence: {
+				status: "partial" as const,
+				primaryArtifactId: null,
+				segmentArtifactIds: ["segment-1", "segment-2"],
+				expectedSegmentCount: 3,
+				capturedSegmentCount: 2,
+			},
+			artifactIds: ["segment-1", "segment-2"],
+			byteSizes: [500_000, 600_000],
+		},
+		{
+			visualEvidence: {
+				status: "unavailable" as const,
+				primaryArtifactId: null,
+				segmentArtifactIds: [],
+				expectedSegmentCount: 0,
+				capturedSegmentCount: 0,
+			},
+			artifactIds: [],
+			byteSizes: [],
+		},
+	])("accepts bounded $visualEvidence.status v3 evidence", ({ visualEvidence, artifactIds, byteSizes }) => {
+		expect(() =>
+			assertBrowserRunnerVisualEvidenceProtocol({
+				visualEvidence,
+				artifactIds,
+				mediaTypes: artifactIds.map(() => "image/jpeg"),
+				byteSizes,
+			}),
+		).not.toThrow();
+	});
+
+	it.each([
+		{
+			label: "duplicate ids",
+			visualEvidence: {
+				status: "complete" as const,
+				primaryArtifactId: "same",
+				segmentArtifactIds: ["same"],
+				expectedSegmentCount: 1,
+				capturedSegmentCount: 1,
+			},
+			artifactIds: ["same", "same"],
+			byteSizes: [10, 10],
+		},
+		{
+			label: "partial count mismatch",
+			visualEvidence: {
+				status: "partial" as const,
+				primaryArtifactId: null,
+				segmentArtifactIds: ["segment-1"],
+				expectedSegmentCount: 3,
+				capturedSegmentCount: 2,
+			},
+			artifactIds: ["segment-1"],
+			byteSizes: [10],
+		},
+		{
+			label: "unavailable with primary",
+			visualEvidence: {
+				status: "unavailable" as const,
+				primaryArtifactId: "primary",
+				segmentArtifactIds: [],
+				expectedSegmentCount: 0,
+				capturedSegmentCount: 0,
+			},
+			artifactIds: ["primary"],
+			byteSizes: [10],
+		},
+		{
+			label: "oversized segment",
+			visualEvidence: {
+				status: "partial" as const,
+				primaryArtifactId: null,
+				segmentArtifactIds: ["segment-1"],
+				expectedSegmentCount: 2,
+				capturedSegmentCount: 1,
+			},
+			artifactIds: ["segment-1"],
+			byteSizes: [1024 * 1024 + 1],
+		},
+		{
+			label: "oversized aggregate",
+			visualEvidence: {
+				status: "complete" as const,
+				primaryArtifactId: "primary",
+				segmentArtifactIds: ["segment-1", "segment-2", "segment-3"],
+				expectedSegmentCount: 3,
+				capturedSegmentCount: 3,
+			},
+			artifactIds: ["primary", "segment-1", "segment-2", "segment-3"],
+			byteSizes: [4 * 1024 * 1024, 1024 * 1024, 1024 * 1024, 1],
+		},
+	])("rejects $label in v3 evidence", ({ visualEvidence, artifactIds, byteSizes }) => {
+		expect(() =>
+			assertBrowserRunnerVisualEvidenceProtocol({
+				visualEvidence,
+				artifactIds,
+				mediaTypes: artifactIds.map(() => "image/jpeg"),
+				byteSizes,
+			}),
+		).toThrow(/visual evidence/i);
 	});
 });

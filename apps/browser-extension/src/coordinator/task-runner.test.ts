@@ -81,6 +81,45 @@ describe("runClaimedTask", () => {
 		expect(events.at(-1)).toBe("tab:close");
 	});
 
+	test("completes the accepted answer when visual evidence capture fails", async () => {
+		const events: string[] = [];
+		const dependencies = fixtureDependencies(events);
+		const adapter = fakeAdapter(events);
+		dependencies.tabs.open = async () => ({
+			tabId: 42,
+			adapter,
+			captureEvidence: async () => {
+				events.push("tab:capture");
+				throw new Error("screen capture unavailable");
+			},
+			close: async () => {
+				events.push("tab:close");
+			},
+		});
+		const completions: Array<Record<string, unknown>> = [];
+		dependencies.api.completeTask = async (_claim, input) => {
+			events.push("api:complete");
+			completions.push(input as unknown as Record<string, unknown>);
+		};
+
+		await expect(runClaimedTask(claimedTask(), dependencies)).resolves.toEqual({ status: "succeeded" });
+		expect(events).not.toContain("api:needs_human");
+		expect(events).not.toContain("api:upload_screenshot");
+		expect(completions).toEqual([
+			expect.objectContaining({
+				visualEvidence: {
+					status: "unavailable",
+					primaryArtifactId: null,
+					segmentArtifactIds: [],
+					expectedSegmentCount: 0,
+					capturedSegmentCount: 0,
+				},
+			}),
+		]);
+		expect(events.at(-1)).toBe("tab:close");
+		await expect(dependencies.journal.entries()).resolves.toEqual({});
+	});
+
 	test("pre-submit navigation failure is offered once to the server retry policy", async () => {
 		const events: string[] = [];
 		const dependencies = fixtureDependencies(events, { openFailure: new Error("navigation timeout") });

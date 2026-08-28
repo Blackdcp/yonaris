@@ -328,6 +328,57 @@ describe("BrowserRunnerApiClient", () => {
 		expect(JSON.stringify(completion)).not.toContain("answerHtml");
 	});
 
+	it("completes v3 with unavailable visual evidence and no artifact ids", async () => {
+		const calls: Request[] = [];
+		const client = authenticatedClient(calls, async () =>
+			Response.json({ duplicate: false, attemptId: "attempt-1", promptRunId: "run-1" }),
+		);
+		await client.completeTask(claimedTask(), {
+			runnerSessionId: "session-1",
+			adapterVersion: "adapter-v1",
+			browserVersion: "Chrome/140",
+			answer: {
+				answerText: "answer",
+				evidenceViewportRect: { x: 200, y: 100, width: 800, height: 500, devicePixelRatio: 1 },
+				pageUrl: "https://chat.deepseek.com/a/chat/s/1",
+				observedAt: "2026-08-17T00:00:00.000Z",
+				webSearchObserved: null,
+				queryAvailability: "unknown",
+				webQueries: [],
+				citations: [],
+				searchEvidenceDiagnostics: {
+					extractorVersion: "provider-search-v1",
+					evidenceSource: "none",
+					searchBlockCount: 0,
+					queryCandidateCount: 0,
+					citationCandidateCount: 0,
+				},
+				adapterVersion: "adapter-v1",
+			},
+			visualEvidence: {
+				status: "unavailable",
+				primaryArtifactId: null,
+				segmentArtifactIds: [],
+				expectedSegmentCount: 0,
+				capturedSegmentCount: 0,
+			},
+		});
+
+		expect(await calls[0]?.json()).toMatchObject({
+			observation: {
+				schemaVersion: "browser-runner-observation.v3",
+				evidenceArtifactIds: [],
+				visualEvidence: {
+					status: "unavailable",
+					primaryArtifactId: null,
+					segmentArtifactIds: [],
+					expectedSegmentCount: 0,
+					capturedSegmentCount: 0,
+				},
+			},
+		});
+	});
+
 	it("rejects inconsistent search evidence before contacting the Portal", async () => {
 		const calls: Request[] = [];
 		const client = authenticatedClient(calls, async () => Response.json({ duplicate: false }));
