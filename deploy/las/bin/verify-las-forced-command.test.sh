@@ -5,7 +5,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 VERIFIER_SOURCE="$SCRIPT_DIR/verify-las-forced-command.sh"
 TEST_ROOT="$(mktemp -d)"
-trap 'rm -rf -- "$TEST_ROOT"' EXIT
+trap 'chmod -R u+w "$TEST_ROOT" 2>/dev/null || true; rm -rf -- "$TEST_ROOT"' EXIT
 
 HOME_DIRECTORY="$TEST_ROOT/home/yonaris-gate"
 SSH_DIRECTORY="$HOME_DIRECTORY/.ssh"
