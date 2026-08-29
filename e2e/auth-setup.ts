@@ -106,7 +106,7 @@ export default async function globalSetup(config: FullConfig) {
 		await provisionCustomerTestIdentity({ adminPage: page, browser, baseURL });
 		console.log("[auth-setup] Provisioned and authenticated the StepFun customer analyst");
 
-		await provisionLanguageSmokeIdentity({ browser, baseURL });
+		await provisionLanguageSmokeIdentity({ adminPage: page, browser, baseURL });
 		console.log("[auth-setup] Provisioned the dedicated portal-language identity");
 	} finally {
 		await browser.close();

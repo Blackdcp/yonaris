@@ -22,6 +22,9 @@ test("normal local and CI fixture phases schedule the isolated language smoke pr
 
 test("language auth setup resets and verifies the persisted validated preference", () => {
 	const source = read("e2e/language-auth-setup.ts");
+	assert.doesNotMatch(source, /\/api\/auth\/sign-up\/email/u);
+	assert.match(source, /Create customer account/u);
+	assert.match(source, /One-time customer credentials/u);
 	assert.match(source, /SET role = 'admin', ui_language = 'en'/u);
 	assert.match(source, /session\.user\?\.uiLanguage !== "en"/u);
 });

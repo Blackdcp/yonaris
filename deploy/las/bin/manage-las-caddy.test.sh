@@ -19,7 +19,14 @@ MANAGER="$TEST_ROOT/manage-las-caddy"
 CADDY_LOG="$TEST_ROOT/caddy.log"
 CURL_LOG="$TEST_ROOT/curl.log"
 RUNUSER_LOG="$TEST_ROOT/runuser.log"
-PY_LAUNCHER="$(command -v py)"
+if PY_LAUNCHER="$(command -v python3 2>/dev/null)" && "$PY_LAUNCHER" --version >/dev/null 2>&1; then
+	PYTHON_COMMAND="$PY_LAUNCHER"
+elif PY_LAUNCHER="$(command -v py 2>/dev/null)" && "$PY_LAUNCHER" -3 --version >/dev/null 2>&1; then
+	PYTHON_COMMAND="$PY_LAUNCHER -3"
+else
+	printf '%s\n' 'Python 3 is required for the Caddy boundary test.' >&2
+	exit 1
+fi
 
 mkdir -p "$TRUST_DIRECTORY" "$CADDY_DIRECTORY" "$ADMIN_DIRECTORY" "$MOCK_BIN"
 cp -- "$CA_SOURCE" "$ORIGIN_CA"
@@ -135,7 +142,7 @@ sed \
 	-e "s#/usr/bin/caddy#$MOCK_BIN/caddy#g" \
 	-e "s#/usr/bin/curl#$MOCK_BIN/curl#g" \
 	-e "s#/usr/sbin/runuser#$MOCK_BIN/runuser#g" \
-	-e "s#/usr/bin/python3#$PY_LAUNCHER -3#g" \
+	-e "s#/usr/bin/python3#$PYTHON_COMMAND#g" \
 	"$SOURCE" >"$MANAGER"
 chmod 0755 "$MANAGER"
 

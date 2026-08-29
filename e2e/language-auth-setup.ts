@@ -1,30 +1,73 @@
 import path from "node:path";
-import type { Browser } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import pg from "pg";
-import { DATABASE_URL, LANGUAGE_SMOKE_ORG_ID, LANGUAGE_SMOKE_USER } from "./fixtures";
+import {
+  DATABASE_URL,
+  LANGUAGE_SMOKE_BRAND_NAME,
+  LANGUAGE_SMOKE_ORG_ID,
+  LANGUAGE_SMOKE_USER,
+} from "./fixtures";
 
 export const LANGUAGE_SMOKE_AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "portal-language.json");
 
 /** Provision a dedicated platform identity without changing parallel fixtures. */
-export async function provisionLanguageSmokeIdentity(input: { browser: Browser; baseURL: string }): Promise<void> {
+export async function provisionLanguageSmokeIdentity(input: {
+  adminPage: Page;
+  browser: Browser;
+  baseURL: string;
+}): Promise<void> {
+  const { adminPage, browser, baseURL } = input;
+
+  // Local mode intentionally permits only the bootstrap user's public signup.
+  // Provision this second identity through the same administrator-owned access
+  // flow used in production instead of calling the disabled signup endpoint.
+  await adminPage.goto("/admin/access");
+  await adminPage
+    .getByRole("heading", { name: "Customer access" })
+    .waitFor({ state: "visible", timeout: 30_000 });
+
+  const workspaceSelect = adminPage.getByRole("combobox").first();
+  await workspaceSelect.click();
+  await adminPage
+    .getByRole("option", { name: LANGUAGE_SMOKE_BRAND_NAME, exact: true })
+    .click();
+
+  await adminPage
+    .getByRole("button", { name: "Create customer account", exact: true })
+    .click();
+  const createDialog = adminPage.getByRole("dialog", {
+    name: "Create customer account",
+  });
+  await createDialog.getByLabel("Name").fill(LANGUAGE_SMOKE_USER.name);
+  await createDialog.getByLabel("Email").fill(LANGUAGE_SMOKE_USER.email);
+  await createDialog.getByRole("combobox").click();
+  await adminPage.getByRole("option", { name: "Admin", exact: true }).click();
+  await createDialog
+    .getByRole("button", { name: "Create account", exact: true })
+    .click();
+
+  const credentialDialog = adminPage.getByRole("dialog", {
+    name: "One-time customer credentials",
+  });
+  await credentialDialog.waitFor({ state: "visible", timeout: 30_000 });
+  await credentialDialog
+    .getByText("Admin", { exact: true })
+    .waitFor({ state: "visible" });
+  const credentialValues = await credentialDialog.locator("code").allTextContents();
+  const [email, temporaryPassword] = credentialValues.map((value) => value.trim());
+  if (email !== LANGUAGE_SMOKE_USER.email || !temporaryPassword) {
+    throw new Error("Language smoke setup did not return the expected one-time credentials");
+  }
+
   const context = await input.browser.newContext({ baseURL: input.baseURL });
   const page = await context.newPage();
   try {
-    const signUp = await page.request.post("/api/auth/sign-up/email", {
-      headers: { Origin: input.baseURL },
-      data: LANGUAGE_SMOKE_USER,
+    const signIn = await page.request.post("/api/auth/sign-in/email", {
+      headers: { Origin: baseURL },
+      data: { email, password: temporaryPassword },
     });
-    if (!signUp.ok()) {
-      const signIn = await page.request.post("/api/auth/sign-in/email", {
-        headers: { Origin: input.baseURL },
-        data: {
-          email: LANGUAGE_SMOKE_USER.email,
-          password: LANGUAGE_SMOKE_USER.password,
-        },
-      });
-      if (!signIn.ok()) {
-        throw new Error(`Language smoke auth failed: ${signIn.status()} ${await signIn.text()}`);
-      }
+    if (!signIn.ok()) {
+      throw new Error(`Language smoke auth failed: ${signIn.status()} ${await signIn.text()}`);
     }
 
     const client = new pg.Client({ connectionString: DATABASE_URL });
@@ -34,7 +77,7 @@ export async function provisionLanguageSmokeIdentity(input: { browser: Browser; 
         LANGUAGE_SMOKE_USER.email,
       ]);
       const userId = userResult.rows[0]?.id as string | undefined;
-      if (!userId) throw new Error("Language smoke identity was not persisted after sign-up");
+      if (!userId) throw new Error("Language smoke identity was not persisted after provisioning");
 
       const membership = await client.query(
         `SELECT id FROM member WHERE organization_id = $1 AND user_id = $2 LIMIT 1`,
