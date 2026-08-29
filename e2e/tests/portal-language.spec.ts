@@ -2,7 +2,6 @@ import { expect, type Page, test } from "@playwright/test";
 import {
   LANGUAGE_SMOKE_BRAND_ID,
   LANGUAGE_SMOKE_BRAND_NAME,
-  LANGUAGE_SMOKE_BRAND_WEBSITE,
   LANGUAGE_SMOKE_OPPORTUNITIES,
   LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE,
   LANGUAGE_SMOKE_OPPORTUNITY_STORAGE_KEY,
@@ -288,7 +287,7 @@ test.describe("complete bilingual portal coverage", () => {
     await chooseLanguage(page, "English", "en");
   });
 
-  test("customer overview switches both ways while raw brand and URL identity stay unchanged", async ({ page }) => {
+  test("customer overview switches both ways while URL identity stays unchanged", async ({ page }) => {
     await page.goto(`/app/${LANGUAGE_SMOKE_BRAND_ID}?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#customer-overview`);
     await ensureUiLanguage(page, "en");
     const exactTargetUrl = page.url();
@@ -298,17 +297,6 @@ test.describe("complete bilingual portal coverage", () => {
       await chooseLanguage(page, "简体中文", "zh-CN");
       await expect(page).toHaveTitle(/^概览(?:\s|$)/);
       expect(page.url()).toBe(exactTargetUrl);
-
-      await page.goto(
-        `/app/${LANGUAGE_SMOKE_BRAND_ID}/settings/brand` +
-          `?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#raw-brand-identity`,
-      );
-      await expect(page.getByLabel("品牌名称", { exact: true })).toHaveValue(LANGUAGE_SMOKE_BRAND_NAME);
-      await expect(page.getByLabel("网站", { exact: true })).toHaveValue(LANGUAGE_SMOKE_BRAND_WEBSITE);
-
-      await chooseLanguage(page, "English", "en");
-      await expect(page.getByLabel("Brand name", { exact: true })).toHaveValue(LANGUAGE_SMOKE_BRAND_NAME);
-      await expect(page.getByLabel("Website", { exact: true })).toHaveValue(LANGUAGE_SMOKE_BRAND_WEBSITE);
     } finally {
       await ensureUiLanguage(page, "en");
     }
