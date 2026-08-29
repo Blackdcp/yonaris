@@ -48,14 +48,12 @@ test.describe("Prompt Details Page", () => {
     );
     await responsesTab.first().click();
 
-    // The LLM Answers tab should show prompt run data from the database
-    // Our seed data includes runs with model names
-    const pageContent = await page.textContent("body");
-    const hasRunContent =
-      pageContent?.includes("deepseek") ||
-      pageContent?.includes("Response") ||
-      pageContent?.includes("response");
-    expect(hasRunContent).toBeTruthy();
+    // Wait for the tab's asynchronous run query instead of sampling the page
+    // while its loading skeleton is still rendered.
+    await expect(page.getByRole("heading", { name: "Individual Prompt Run History" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("LLM Response", { exact: true }).first()).toBeVisible();
   });
 
   test("page shows prompt metadata", async ({ page }) => {

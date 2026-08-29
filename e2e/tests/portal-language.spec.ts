@@ -56,7 +56,7 @@ const OPPORTUNITY_STATIC_COPY = {
 async function chooseLanguage(page: Page, accessibleName: "English" | "简体中文", expectedLang: "en" | "zh-CN") {
   const exactUrl = page.url();
   const radio = page.getByRole("radio", { name: accessibleName, exact: true });
-  if (!(await radio.isVisible())) {
+  if ((await radio.count()) === 0) {
     await page
       .getByRole("button", {
         name:
@@ -251,7 +251,7 @@ test.describe("complete bilingual portal coverage", () => {
       expect(new URL(page.url()).hash).toBe("#language-login");
       await expect(page.getByRole("heading", { name: "登录" })).toBeVisible();
     } finally {
-      await context.close();
+      await context.close().catch(() => undefined);
     }
   });
 
