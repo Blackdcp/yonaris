@@ -274,7 +274,10 @@ test.describe("complete bilingual portal coverage", () => {
       const freshPage = await freshContext.newPage();
       await freshPage.goto(target);
       await expect(freshPage.locator("html")).toHaveAttribute("lang", "zh-CN");
-      await expect(freshPage.getByRole("heading", { name: "项目" })).toBeVisible();
+      const sessionResponse = await freshPage.request.get("/api/auth/get-session");
+      expect(sessionResponse.ok()).toBeTruthy();
+      const session = (await sessionResponse.json()) as { user?: { uiLanguage?: string } };
+      expect(session.user?.uiLanguage).toBe("zh-CN");
       expect(freshPage.url()).toContain(`scope=${LANGUAGE_SMOKE_SCOPES.cn.id}`);
       expect(new URL(freshPage.url()).hash).toBe("#persisted-language");
     } finally {
