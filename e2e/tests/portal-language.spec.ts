@@ -196,7 +196,7 @@ async function expectOpportunityLanguageCombination(
   await expect(promptLink).toBeVisible();
   await expect(promptLink).toHaveAttribute(
     "href",
-    `/app/${LANGUAGE_SMOKE_BRAND_ID}/prompts/${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.id}`,
+    `/app/${LANGUAGE_SMOKE_BRAND_ID}/prompts/${LANGUAGE_SMOKE_OPPORTUNITY_EVIDENCE.prompt.id}?scope=${selectedVariant.scopeId}`,
   );
 
   await report
