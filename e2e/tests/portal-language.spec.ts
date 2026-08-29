@@ -306,11 +306,12 @@ test.describe("complete bilingual portal coverage", () => {
     await page.goto(
       `/app/${LANGUAGE_SMOKE_BRAND_ID}/programs` + `?scope=${LANGUAGE_SMOKE_SCOPES.en.id}#program-independence`,
     );
-    await expect(page.getByRole("heading", { name: "Programs" })).toBeVisible();
+    await ensureUiLanguage(page, "en");
+    await expect(page).toHaveTitle(/^Programs\b/);
     await expectRawProgramValues(page);
 
     await chooseLanguage(page, "简体中文", "zh-CN");
-    await expect(page.getByRole("heading", { name: "项目" })).toBeVisible();
+    await expect(page).toHaveTitle(/^项目(?:\s|$)/);
     await expectRawProgramValues(page);
     await chooseLanguage(page, "English", "en");
   });
