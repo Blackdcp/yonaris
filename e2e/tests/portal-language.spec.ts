@@ -113,6 +113,12 @@ async function ensurePromptExpanded(page: Page, prompt: string) {
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
 }
 
+async function expectDerivedQueryVisible(page: Page, query: string) {
+  // Query text is intentionally split across styled token spans. Match the
+  // rendered line's combined text rather than requiring one exact text node.
+  await expect(page.getByText(query).first()).toBeVisible();
+}
+
 async function expectFanoutHelper(page: Page, helper: string) {
   await page.getByRole("heading", { level: 1 }).locator("[aria-label]").hover();
   await expect(page.getByText(helper, { exact: true }).first()).toBeVisible();
@@ -431,7 +437,7 @@ test.describe("complete bilingual portal coverage", () => {
     const exactTargetUrl = page.url();
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.value, { exact: true })).toBeVisible();
     await ensurePromptExpanded(page, LANGUAGE_SMOKE_PROMPTS.cn.value);
-    await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery, { exact: true })).toBeVisible();
+    await expectDerivedQueryVisible(page, LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery);
 
     await chooseLanguage(page, "简体中文", "zh-CN");
     await expect(page.getByText("AI 检索脉络", { exact: true }).first()).toBeVisible();
@@ -439,7 +445,7 @@ test.describe("complete bilingual portal coverage", () => {
     await expect(page.getByText("衍生检索词", { exact: true }).first()).toBeVisible();
     await expectFanoutHelper(page, "查看 AI 为回答当前问题而展开的实际联网搜索词。");
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.value, { exact: true })).toBeVisible();
-    await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery, { exact: true })).toBeVisible();
+    await expectDerivedQueryVisible(page, LANGUAGE_SMOKE_PROMPTS.cn.derivedQuery);
     expect(page.url()).toBe(exactTargetUrl);
 
     await chooseLanguage(page, "English", "en");
@@ -457,10 +463,10 @@ test.describe("complete bilingual portal coverage", () => {
     );
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.value, { exact: true })).toBeVisible();
     await ensurePromptExpanded(page, LANGUAGE_SMOKE_PROMPTS.en.value);
-    await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.derivedQuery, { exact: true })).toBeVisible();
+    await expectDerivedQueryVisible(page, LANGUAGE_SMOKE_PROMPTS.en.derivedQuery);
     await chooseLanguage(page, "简体中文", "zh-CN");
     await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.value, { exact: true })).toBeVisible();
-    await expect(page.getByText(LANGUAGE_SMOKE_PROMPTS.en.derivedQuery, { exact: true })).toBeVisible();
+    await expectDerivedQueryVisible(page, LANGUAGE_SMOKE_PROMPTS.en.derivedQuery);
     await chooseLanguage(page, "English", "en");
   });
 
