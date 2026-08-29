@@ -10,7 +10,10 @@ import {
 
 export const LANGUAGE_SMOKE_AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "portal-language.json");
 
-/** Provision a dedicated customer-workspace identity without changing parallel fixtures. */
+/**
+ * Provision a dedicated customer-workspace administrator without granting
+ * platform-administrator privileges or changing parallel fixtures.
+ */
 export async function provisionLanguageSmokeIdentity(input: {
   adminPage: Page;
   browser: Browser;
