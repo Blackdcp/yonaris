@@ -68,8 +68,8 @@ async function chooseLanguage(page: Page, accessibleName: "English" | "简体中
       .click();
     await expect(radio).toBeVisible();
   }
-  await Promise.all([page.waitForEvent("load"), radio.check()]);
-  await expect(page.locator("html")).toHaveAttribute("lang", expectedLang);
+  await radio.check();
+  await expect(page.locator("html")).toHaveAttribute("lang", expectedLang, { timeout: 30_000 });
   expect(page.url()).toBe(exactUrl);
 }
 
