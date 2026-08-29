@@ -15,7 +15,7 @@ readonly CADDY_DIRECTORY='/etc/caddy'
 readonly CADDY_TARGET='/etc/caddy/Caddyfile'
 readonly CADDY_ADMIN_DIRECTORY='/run/caddy'
 readonly CADDY_ADMIN_SOCKET='/run/caddy/admin.sock'
-readonly CADDY_ADMIN_CONFIG='admin unix//run/caddy/admin.sock|0600'
+readonly CADDY_ADMIN_CONFIG='admin unix//run/caddy/admin.sock'
 readonly ORIGIN_HEALTH_CA='/etc/yonaris/las-origin-health-ca.pem'
 readonly ORIGIN_HEALTH_CA_SHA256='4fd8df5f5818d3979635f7ff7aeb3925cc2a28d17630d6038f190403601dc057'
 

@@ -33,7 +33,7 @@ cp -- "$CA_SOURCE" "$ORIGIN_CA"
 : >"$ADMIN_SOCKET"
 
 write_config() {
-	printf '{\n\tadmin unix/%s|0600\n}\nportal.yonaris.com {\n\treverse_proxy 127.0.0.1:1515\n}\n' \
+	printf '{\n\tadmin unix/%s\n}\nportal.yonaris.com {\n\treverse_proxy 127.0.0.1:1515\n}\n' \
 		"$ADMIN_SOCKET" >"$CADDY_TARGET"
 }
 write_config
@@ -222,8 +222,8 @@ cp -- "$CA_SOURCE" "$ORIGIN_CA"
 
 for config_case in tcp-admin duplicate-admin no-global; do
 	case "$config_case" in
-		tcp-admin) sed -i "s#admin unix/$ADMIN_SOCKET|0600#admin localhost:2019#" "$CADDY_TARGET" ;;
-		duplicate-admin) sed -i "/admin unix/a\\\tadmin unix/$ADMIN_SOCKET|0600" "$CADDY_TARGET" ;;
+		tcp-admin) sed -i "s#admin unix/$ADMIN_SOCKET#admin localhost:2019#" "$CADDY_TARGET" ;;
+		duplicate-admin) sed -i "/admin unix/a\\\tadmin unix/$ADMIN_SOCKET" "$CADDY_TARGET" ;;
 		no-global) sed -i '1,3d' "$CADDY_TARGET" ;;
 	esac
 	assert_rejected "config-$config_case" 1 verify-boundary
