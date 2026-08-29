@@ -57,6 +57,13 @@ DATABASE_URL=postgresql://postgres:test-secret@postgres:5432/yonaris
 DEPLOYMENT_ID=11111111-1111-4111-8111-111111111111
 APP_URL=https://portal.yonaris.com
 BETTER_AUTH_SECRET=e2e-session-secret-with-at-least-thirty-two-characters
+BROWSER_RUNNER_ENABLED=true
+BROWSER_RUNNER_API_TOKEN=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+BROWSER_RUNNER_ID=yonaris-cn-doubao-01
+BROWSER_RUNNER_MARKET=CN
+BROWSER_RUNNER_LOCALE=zh-CN
+BROWSER_RUNNER_TIMEZONE=Asia/Shanghai
+BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT=2026-08-13T05:15:00.000Z
 CREDENTIAL_ENCRYPTION_KEY=BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=
 SCRAPE_TARGETS=chatgpt:olostep:online
 OLOSTEP_API_KEY=test-olostep-secret
@@ -71,7 +78,7 @@ EOF
 }
 write_valid_env
 printf '%s\n' allow >"$STATE_MODE"
-PORTAL_ENV_JSON='{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"test-secret","POSTGRES_DB":"yonaris","DATABASE_URL":"postgresql://postgres:test-secret@postgres:5432/yonaris","DEPLOYMENT_ID":"11111111-1111-4111-8111-111111111111","APP_URL":"https://portal.yonaris.com","BETTER_AUTH_SECRET":"e2e-session-secret-with-at-least-thirty-two-characters","CREDENTIAL_ENCRYPTION_KEY":"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=","SCRAPE_TARGETS":"chatgpt:olostep:online","OLOSTEP_API_KEY":"test-olostep-secret","ARTIFACT_ZH_CN_ENABLED":"false","WORKER_ENABLED":"true","WORKER_QUEUE_SCOPE":"full","RUNS_PER_PROMPT":"5","DISABLE_TELEMETRY":"1","RESEND_API_KEY":"test-resend-secret","RESEND_FROM_EMAIL":"Yonaris_Portal_noreply_at_example.com"}'
+PORTAL_ENV_JSON='{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"test-secret","POSTGRES_DB":"yonaris","DATABASE_URL":"postgresql://postgres:test-secret@postgres:5432/yonaris","DEPLOYMENT_ID":"11111111-1111-4111-8111-111111111111","APP_URL":"https://portal.yonaris.com","BETTER_AUTH_SECRET":"e2e-session-secret-with-at-least-thirty-two-characters","BROWSER_RUNNER_ENABLED":"true","BROWSER_RUNNER_API_TOKEN":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","BROWSER_RUNNER_ID":"yonaris-cn-doubao-01","BROWSER_RUNNER_MARKET":"CN","BROWSER_RUNNER_LOCALE":"zh-CN","BROWSER_RUNNER_TIMEZONE":"Asia/Shanghai","BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT":"2026-08-13T05:15:00.000Z","CREDENTIAL_ENCRYPTION_KEY":"BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc=","SCRAPE_TARGETS":"chatgpt:olostep:online","OLOSTEP_API_KEY":"test-olostep-secret","ARTIFACT_ZH_CN_ENABLED":"false","WORKER_ENABLED":"true","WORKER_QUEUE_SCOPE":"full","RUNS_PER_PROMPT":"5","DISABLE_TELEMETRY":"1","RESEND_API_KEY":"test-resend-secret","RESEND_FROM_EMAIL":"Yonaris_Portal_noreply_at_example.com"}'
 printf '432\n' >"$RUNTIME_DIR/docker.pid"
 printf 'socket-placeholder\n' >"$RUNTIME_DIR/docker.sock"
 printf 'socket-placeholder\n' >"$PROC/432/fd/7"
@@ -801,7 +808,9 @@ rm -rf -- "$RUNTIME_HOME/.config"
 cp "$ENV_FILE" "$TEST_ROOT/runtime.env.valid"
 for invalid_env in missing-required placeholder uuid credential-key artifact-bool worker-bool \
 	queue-scope runs database-user database-password database-name database-host \
-	database-port database-scheme provider-missing provider-placeholder provider-unknown target-empty marketing-key; do
+	database-port database-scheme provider-missing provider-placeholder provider-unknown target-empty \
+	browser-token-missing browser-token browser-id browser-market browser-locale browser-timezone \
+	browser-expiry marketing-key; do
 	cp "$TEST_ROOT/runtime.env.valid" "$ENV_FILE"
 	case "$invalid_env" in
 		missing-required) sed -i '/^APP_URL=/d' "$ENV_FILE" ;;
@@ -822,6 +831,13 @@ for invalid_env in missing-required placeholder uuid credential-key artifact-boo
 		provider-placeholder) sed -i 's/^OLOSTEP_API_KEY=.*/OLOSTEP_API_KEY=replace_with_key/' "$ENV_FILE" ;;
 		provider-unknown) sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:unknown:online/' "$ENV_FILE" ;;
 		target-empty) sed -i 's/^SCRAPE_TARGETS=.*/SCRAPE_TARGETS=chatgpt:olostep:online,/' "$ENV_FILE" ;;
+		browser-token-missing) sed -i '/^BROWSER_RUNNER_API_TOKEN=/d' "$ENV_FILE" ;;
+		browser-token) sed -i 's/^BROWSER_RUNNER_API_TOKEN=.*/BROWSER_RUNNER_API_TOKEN=not-a-token/' "$ENV_FILE" ;;
+		browser-id) sed -i 's/^BROWSER_RUNNER_ID=.*/BROWSER_RUNNER_ID=invalid\/runner/' "$ENV_FILE" ;;
+		browser-market) sed -i 's/^BROWSER_RUNNER_MARKET=.*/BROWSER_RUNNER_MARKET=US/' "$ENV_FILE" ;;
+		browser-locale) sed -i 's/^BROWSER_RUNNER_LOCALE=.*/BROWSER_RUNNER_LOCALE=en-US/' "$ENV_FILE" ;;
+		browser-timezone) sed -i 's#^BROWSER_RUNNER_TIMEZONE=.*#BROWSER_RUNNER_TIMEZONE=UTC#' "$ENV_FILE" ;;
+		browser-expiry) sed -i 's/^BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT=.*/BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT=soon/' "$ENV_FILE" ;;
 		marketing-key) printf '%s\n' 'MARKETING_LEAD_RECIPIENT=retired@example.com' >>"$ENV_FILE" ;;
 	esac
 	rm -f -- "$DOCKER_LOG"

@@ -172,6 +172,12 @@ for script in "$DEPLOY"; do
 	assert_contains "$script" 'load_strict_dotenv' 'strict dotenv parser'
 done
 assert_contains "$DOTENV_LOADER" 'Refusing unsupported production environment key' 'dotenv key allowlist'
+for browser_runner_key in \
+	BROWSER_RUNNER_API_TOKEN BROWSER_RUNNER_ID BROWSER_RUNNER_MARKET \
+	BROWSER_RUNNER_LOCALE BROWSER_RUNNER_TIMEZONE BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT; do
+	assert_contains "$DOTENV_LOADER" "$browser_runner_key" 'browser runner production dotenv key'
+	assert_contains "$RUNTIME_MANAGER" "$browser_runner_key" 'browser runner stable runtime key'
+done
 assert_contains "$DOTENV_LOADER" 'Refusing executable syntax in production environment value' 'dotenv no-eval contract'
 assert_not_contains "$DOTENV_LOADER" 'eval ' 'dotenv parser never evaluates input'
 

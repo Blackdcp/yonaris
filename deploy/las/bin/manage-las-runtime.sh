@@ -93,7 +93,9 @@ allowed = {
     "AGNES_API_KEY", "ANTHROPIC_API_KEY", "APP_ENV_FILE", "APP_ICON", "APP_NAME",
     "APP_URL", "APP_WORDMARK", "APP_WORDMARK_ON_DARK", "ARTIFACT_ZH_CN_ENABLED",
     "BETTER_AUTH_SECRET", "BRAND_ID_ALIASES", "BRIGHTDATA_API_TOKEN",
-    "BRIGHTDATA_SERP_ZONE", "BROWSER_RUNNER_ENABLED", "CREDENTIAL_ENCRYPTION_KEY",
+    "BRIGHTDATA_SERP_ZONE", "BROWSER_RUNNER_ENABLED", "BROWSER_RUNNER_API_TOKEN",
+    "BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT", "BROWSER_RUNNER_ID", "BROWSER_RUNNER_LOCALE",
+    "BROWSER_RUNNER_MARKET", "BROWSER_RUNNER_TIMEZONE", "CREDENTIAL_ENCRYPTION_KEY",
     "DATABASE_URL", "DATAFORSEO_LOGIN", "DATAFORSEO_PASSWORD", "DEEPSEEK_API_KEY",
     "DEFAULT_DELAY_HOURS", "DEPLOYMENT_ID", "DEPLOYMENT_MODE", "DISABLE_TELEMETRY",
     "ENVIRONMENT", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "IMAGE_NAMESPACE",
@@ -172,6 +174,22 @@ for key in ("ARTIFACT_ZH_CN_ENABLED", "WORKER_ENABLED"):
 for key in ("BROWSER_RUNNER_ENABLED", "RESPONSE_SNAPSHOT_ENABLED"):
     if key in values and values[key] not in {"true", "false"}:
         raise SystemExit(f"invalid optional production boolean: {key}")
+if values.get("BROWSER_RUNNER_ENABLED") == "true":
+    browser_token = require_value("BROWSER_RUNNER_API_TOKEN")
+    browser_id = require_value("BROWSER_RUNNER_ID")
+    if not re.fullmatch(r"[0-9a-f]{64}", browser_token):
+        raise SystemExit("invalid browser runner API token")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}", browser_id):
+        raise SystemExit("invalid browser runner ID")
+    if values.get("BROWSER_RUNNER_MARKET") != "CN":
+        raise SystemExit("invalid browser runner market")
+    if values.get("BROWSER_RUNNER_LOCALE") != "zh-CN":
+        raise SystemExit("invalid browser runner locale")
+    if values.get("BROWSER_RUNNER_TIMEZONE") != "Asia/Shanghai":
+        raise SystemExit("invalid browser runner timezone")
+    bootstrap_expiry = require_value("BROWSER_RUNNER_BOOTSTRAP_EXPIRES_AT")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,6})?Z", bootstrap_expiry):
+        raise SystemExit("invalid browser runner bootstrap expiry")
 if "DISABLE_TELEMETRY" in values and values["DISABLE_TELEMETRY"] not in {"0", "1"}:
     raise SystemExit("invalid telemetry boolean")
 if values["WORKER_QUEUE_SCOPE"] not in {"full", "analysis-only"}:
