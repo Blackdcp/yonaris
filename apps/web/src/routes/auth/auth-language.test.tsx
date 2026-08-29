@@ -35,6 +35,8 @@ describe("localized authentication helpers", () => {
 		);
 
 		expect(markup).toContain(title);
+		expect(markup).toContain('<h1 data-slot="card-title"');
+		expect(markup).toContain(`>${title}</h1>`);
 		expect(markup).toContain(email);
 		expect(markup).toContain(password);
 	});

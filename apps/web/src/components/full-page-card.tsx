@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Button } from "@workspace/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@workspace/ui/components/card";
+import { Card, CardContent, CardHeader } from "@workspace/ui/components/card";
 import { Separator } from "@workspace/ui/components/separator";
 import type { ReactNode } from "react";
 import { BrandPaths } from "@/brand/brand-paths";
@@ -68,7 +68,11 @@ export default function FullPageCard({
 					<Card data-yonaris-slot="full-page-card">
 						{(title || subtitle) && (
 							<CardHeader className="grid-rows-1 gap-1 px-0">
-								{title && <CardTitle className="text-xl">{title}</CardTitle>}
+								{title && (
+									<h1 data-slot="card-title" className="text-xl leading-none font-semibold">
+										{title}
+									</h1>
+								)}
 								{subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
 							</CardHeader>
 						)}
