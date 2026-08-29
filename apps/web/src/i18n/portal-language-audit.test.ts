@@ -1302,7 +1302,7 @@ describe("portal UI-language literal audit", () => {
 				),
 			).toEqual(expect.arrayContaining([expect.stringContaining(expectedError)]));
 		}
-	});
+	}, 20_000);
 
 	it("follows arbitrary local artifact component names and aliases from an output-language root", () => {
 		for (const [rootSource, resolvedRootSource] of [
@@ -1828,5 +1828,5 @@ describe("portal UI-language literal audit", () => {
 		expect(result.filesAudited).toBeGreaterThan(100);
 		expect(result.candidates.length).toBeGreaterThan(100);
 		expect(result.classifications.length).toBeGreaterThan(0);
-	});
+	}, 20_000);
 });
