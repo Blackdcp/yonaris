@@ -56,6 +56,7 @@ const OPPORTUNITY_STATIC_COPY = {
 async function chooseLanguage(page: Page, accessibleName: "English" | "简体中文", expectedLang: "en" | "zh-CN") {
   const exactUrl = page.url();
   const radio = page.getByRole("radio", { name: accessibleName, exact: true });
+  const option = page.locator(`label[data-language="${expectedLang}"]`);
   if ((await radio.count()) === 0) {
     await page
       .getByRole("button", {
@@ -66,9 +67,9 @@ async function chooseLanguage(page: Page, accessibleName: "English" | "简体中
         exact: true,
       })
       .click();
-    await expect(radio).toBeVisible();
+    await expect(option).toBeVisible();
   }
-  await radio.check();
+  await option.click();
   await expect(page.locator("html")).toHaveAttribute("lang", expectedLang, { timeout: 30_000 });
   expect(page.url()).toBe(exactUrl);
 }
