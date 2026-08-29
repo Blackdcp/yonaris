@@ -24,7 +24,7 @@ test.describe("customer response snapshot archive", () => {
     });
 
     await page.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${STEPFUN_PROMPT_ID}`);
-    await page.getByText("LLM Responses", { exact: true }).first().click();
+    await page.getByText("LLM Answers", { exact: true }).first().click();
 
     await expect(page.getByText("Provider answer HTML", { exact: false })).toBeVisible();
     await expect(page.getByText("Rendered structured response", { exact: false }).first()).toBeVisible();

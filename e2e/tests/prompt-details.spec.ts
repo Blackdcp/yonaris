@@ -2,7 +2,7 @@
  * Prompt Details Page E2E Tests
  *
  * Tests the prompt detail page which shows individual prompt data
- * with tabs for Mentions, Web Queries, Citations, and LLM Responses.
+ * with tabs for Mentions, Query Fan-Out, Citations, and LLM Answers.
  */
 import { test, expect } from "@playwright/test";
 import { STEPFUN_BRAND_ID, STEPFUN_PROMPT_ID } from "../fixtures";
@@ -24,8 +24,8 @@ test.describe("Prompt Details Page", () => {
 
   test("page shows tab navigation", async ({ page }) => {
 
-    // The page should have tabs: Mentions, Web Queries, Citations, LLM Responses
-    const tabs = ["Mentions", "Web Queries", "Citations", "LLM Responses"];
+    // The page should expose the current customer-facing tab terminology.
+    const tabs = ["Mentions", "Query Fan-Out", "Citations", "LLM Answers"];
 
     for (const tabName of tabs) {
       const tab = page.getByRole("tab", { name: tabName }).or(
@@ -40,15 +40,15 @@ test.describe("Prompt Details Page", () => {
   test("can switch between tabs", async ({ page }) => {
     await expect(page.getByText(PROMPT_TEXT)).toBeVisible();
 
-    // Click on "LLM Responses" tab
-    const responsesTab = page.getByRole("tab", { name: /LLM Responses/i }).or(
-      page.getByRole("button", { name: /LLM Responses/i })
+    // Click on the current "LLM Answers" tab.
+    const responsesTab = page.getByRole("tab", { name: /LLM Answers/i }).or(
+      page.getByRole("button", { name: /LLM Answers/i })
     ).or(
-      page.getByText("LLM Responses", { exact: true })
+      page.getByText("LLM Answers", { exact: true })
     );
     await responsesTab.first().click();
 
-    // The LLM Responses tab should show prompt run data from the database
+    // The LLM Answers tab should show prompt run data from the database
     // Our seed data includes runs with model names
     const pageContent = await page.textContent("body");
     const hasRunContent =

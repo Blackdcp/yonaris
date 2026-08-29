@@ -108,7 +108,7 @@ test("one administrator action completes one Prompt across all seven local brows
     await expect(customerPage.getByText(prompt.value)).toBeVisible({ timeout: 20_000 });
 
     await customerPage.goto(`/app/${STEPFUN_BRAND_ID}/prompts/${prompt.id}`);
-    await customerPage.getByText("LLM Responses", { exact: true }).first().click();
+    await customerPage.getByText("LLM Answers", { exact: true }).first().click();
     await expect(customerPage.getByText("Captured browser evidence", { exact: true }).first()).toBeVisible({
       timeout: 20_000,
     });

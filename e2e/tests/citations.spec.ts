@@ -9,7 +9,7 @@ import { STEPFUN_BRAND_ID } from "../fixtures";
 
 const BRAND_ID = STEPFUN_BRAND_ID;
 const CITATIONS_TERMINAL_STATE =
-  /no citations found|failed to load|citations are only|total citations|cited|did not expose any extractable source links/i;
+  /no matching prompt runs|no citation data matches|unable to load citation data|total citations|brand citation share|top cited domains|prompt runs completed.*(?:no links|no source links)/i;
 
 test.describe("Citations Page", () => {
   test.beforeEach(async ({ page }) => {

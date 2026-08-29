@@ -230,7 +230,11 @@ test.describe("complete bilingual portal coverage", () => {
     browser,
   }, testInfo) => {
     const baseURL = String(testInfo.project.use.baseURL);
-    const context = await browser.newContext({ baseURL });
+    const context = await browser.newContext({
+      baseURL,
+      locale: "en-US",
+      storageState: { cookies: [], origins: [] },
+    });
     try {
       const page = await context.newPage();
       const returnTo =
