@@ -296,7 +296,7 @@ test.describe("complete bilingual portal coverage", () => {
 
     try {
       await chooseLanguage(page, "简体中文", "zh-CN");
-      await expect(page).toHaveTitle(/^概览\b/);
+      await expect(page).toHaveTitle(/^概览(?:\s|$)/);
       expect(page.url()).toBe(exactTargetUrl);
 
       await page.goto(
