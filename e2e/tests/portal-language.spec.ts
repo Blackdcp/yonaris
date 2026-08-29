@@ -263,7 +263,7 @@ test.describe("complete bilingual portal coverage", () => {
     const target =
       `/app/${LANGUAGE_SMOKE_BRAND_ID}/programs` + `?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#persisted-language`;
     await page.goto(target);
-    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await ensureUiLanguage(page, "en");
     await chooseLanguage(page, "简体中文", "zh-CN");
 
     const freshContext = await browser.newContext({
