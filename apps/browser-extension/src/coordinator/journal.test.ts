@@ -93,6 +93,42 @@ describe("DurableTaskJournal", () => {
 		});
 	});
 
+	test("atomically records the interrupted phase, failure code, and transition time", async () => {
+		const writes: unknown[] = [];
+		const area = memoryStorage();
+		const storage = new DeviceStorage({
+			...area,
+			set: async (items) => {
+				writes.push(structuredClone(items));
+				await area.set(items);
+			},
+		});
+		const journal = new DurableTaskJournal(
+			storage,
+			undefined,
+			() => new Date("2026-08-30T00:02:00.000Z"),
+		);
+		await journal.start(claimedTask(), {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
+		});
+		await journal.advance("task-1", "submit_intent");
+		writes.length = 0;
+
+		await journal.markNeedsHuman("task-1", "captcha");
+
+		expect(writes).toHaveLength(1);
+		await expect(journal.entries()).resolves.toMatchObject({
+			"task-1": {
+				phase: "needs_human",
+				interruptedPhase: "submit_intent",
+				needsHumanFailureCode: "captcha",
+				updatedAt: "2026-08-30T00:02:00.000Z",
+			},
+		});
+	});
+
 	test("refuses to resume a pre-submit needs-human entry", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 		const journal = new DurableTaskJournal(storage);

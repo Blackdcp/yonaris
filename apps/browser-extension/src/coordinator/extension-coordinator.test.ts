@@ -431,6 +431,155 @@ describe("ExtensionCoordinator", () => {
 		await expect(journal.entries()).resolves.toMatchObject({ "task-1": { phase: "claimed" } });
 	});
 
+	test("isolates one failed reconciliation while another due recovery and normal polling continue", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
+				activeConcurrency: 0,
+			},
+			"doubao.consumer_web": {
+				status: "ready",
+				adapterVersion: "doubao-web-20260821-localpc-v13",
+				activeConcurrency: 0,
+			},
+		});
+		for (const entry of [
+			{
+				taskId: "task-failed",
+				surfaceTargetKey: "deepseek.consumer_web" as const,
+				tabId: 42,
+			},
+			{
+				taskId: "task-recover",
+				surfaceTargetKey: "doubao.consumer_web" as const,
+				tabId: 43,
+			},
+		]) {
+			await storage.saveJournal({
+				taskId: entry.taskId,
+				batchId: "batch-1",
+				brandId: "stepfun",
+				phase: "needs_human",
+				interruptedPhase: "submitted",
+				surfaceTargetKey: entry.surfaceTargetKey,
+				tabId: entry.tabId,
+				runnerSessionId: `session-${entry.taskId}`,
+				promptSha256: await sha256(`Prompt ${entry.taskId}`),
+				updatedAt: "2026-08-30T00:00:00.000Z",
+			});
+		}
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async (_brandId, surface) => {
+					events.push(`api:claim:${surface}`);
+					return null;
+				},
+				reconcileTask: async (taskId) => {
+					events.push(`api:reconcile:${taskId}`);
+					if (taskId === "task-failed") throw new Error("one reconciliation failed");
+					return {
+						state: "resumable_post" as const,
+						task: {
+							...reconciliationTask(),
+							taskId,
+							promptText: `Prompt ${taskId}`,
+							surfaceTargetKey: "doubao.consumer_web" as const,
+						},
+						runnerSessionId: `session-${taskId}`,
+					};
+				},
+				resume: async (taskId) => {
+					events.push(`api:resume:${taskId}`);
+					return claimedTask({
+						taskId,
+						promptText: `Prompt ${taskId}`,
+						surfaceTargetKey: "doubao.consumer_web",
+						postSubmitAssist: true,
+						submitConfirmed: true,
+						runnerSessionId: `session-${taskId}`,
+					});
+				},
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(summary).toMatchObject({ recovered: 1, recoveryIncomplete: 0 });
+		expect(events).toContain("api:reconcile:task-failed");
+		expect(events).toContain("api:reconcile:task-recover");
+		expect(events).not.toContain("api:resume:task-failed");
+		expect(events).toContain("api:resume:task-recover");
+		expect(events).not.toContain("api:claim:deepseek.consumer_web");
+		expect(events).toContain("api:claim:doubao.consumer_web");
+		const remaining = (await new DurableTaskJournal(storage).entries())["task-failed"];
+		expect(remaining).toMatchObject({ phase: "needs_human" });
+		expect(remaining).not.toHaveProperty("autoRecoveryAttemptCount");
+	});
+
+	test("reconciliation preserves an aligned retry schedule and its original transition time", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:02:00.000Z",
+			autoRecoveryAttemptCount: 1,
+			autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi([]),
+				claimNext: async () => null,
+				resume: async () => claimedTask(),
+				reconcileTask: async () => ({
+					state: "resumable_post" as const,
+					task: reconciliationTask(),
+					runnerSessionId: "session-1",
+				}),
+			}),
+			tabs: fakeTabDriver([], fakeAdapter([])),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:05:00.000Z"),
+		});
+
+		await coordinator.runOnce();
+
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toMatchObject({
+			"task-1": {
+				updatedAt: "2026-08-30T00:02:00.000Z",
+				autoRecoveryAttemptCount: 1,
+				autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+			},
+		});
+	});
+
 	test("automatically recovers a due exact post-submit session before polling without submitting", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());
@@ -614,6 +763,60 @@ describe("ExtensionCoordinator", () => {
 		});
 	});
 
+	test("persists automatic attempt two before requesting its Portal resume", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:02:00.000Z",
+			autoRecoveryAttemptCount: 1,
+			autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => null,
+				reconcileTask: async () => ({
+					state: "resumable_post" as const,
+					task: reconciliationTask(),
+					runnerSessionId: "session-1",
+				}),
+				resume: async () => {
+					const persisted = (await storage.loadJournal())["task-1"];
+					expect(persisted).toMatchObject({ autoRecoveryAttemptCount: 2 });
+					expect(persisted).not.toHaveProperty("autoRecoveryNextAt");
+					events.push("api:resume:task-1");
+					throw new Error("stop after observing persisted attempt");
+				},
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:12:00.000Z"),
+		});
+
+		await coordinator.runOnce();
+
+		expect(events).toContain("api:resume:task-1");
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toMatchObject({
+			"task-1": { phase: "needs_human", autoRecoveryAttemptCount: 2 },
+		});
+	});
+
 	test("ignores a due-looking pre-submit journal and continues normal polling", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());
@@ -715,6 +918,48 @@ describe("ExtensionCoordinator", () => {
 		expect(events).toContain("adapter:resume");
 		expect(events).not.toContain("adapter:submit");
 		expect(await journal.entries()).toEqual({});
+	});
+
+	test("manual recovery remains available after both automatic attempts are exhausted", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:12:00.000Z",
+			autoRecoveryAttemptCount: 2,
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => null,
+				resume: async () =>
+					claimedTask({ postSubmitAssist: true, submitConfirmed: true, runnerSessionId: "session-1" }),
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+		});
+
+		await expect(coordinator.recoverNeedsHuman("task-1")).resolves.toMatchObject({
+			taskId: "task-1",
+			status: "succeeded",
+		});
+		expect(events).toContain("adapter:resume");
+		expect(events).not.toContain("adapter:submit");
 	});
 
 	test("rebinds manual recovery to the administrator's active approved tab", async () => {

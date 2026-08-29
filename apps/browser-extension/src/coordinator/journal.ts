@@ -83,6 +83,25 @@ export class DurableTaskJournal {
 		return this.#storage.loadJournal();
 	}
 
+	async markNeedsHuman(taskId: string, failureCode: string): Promise<TaskJournalEntry> {
+		return this.#mutate(taskId, async () => {
+			const current = (await this.entries())[taskId];
+			if (!current) throw new Error("Task journal entry does not exist");
+			const interruptedPhase = current.phase === "needs_human" ? current.interruptedPhase : current.phase;
+			if (!interruptedPhase) throw new Error("Task journal interrupted phase is unavailable");
+			const next: TaskJournalEntry = {
+				...current,
+				phase: "needs_human",
+				interruptedPhase,
+				needsHumanFailureCode: failureCode,
+				updatedAt: this.#now().toISOString(),
+			};
+			await this.#storage.saveJournal(next);
+			this.#onWrite?.(next.phase);
+			return next;
+		});
+	}
+
 	async recordNeedsHumanFailure(taskId: string, failureCode: string): Promise<TaskJournalEntry> {
 		return this.#mutate(taskId, async () => {
 			const current = (await this.entries())[taskId];
