@@ -8,8 +8,8 @@ import {
   LANGUAGE_SMOKE_PROMPTS,
   LANGUAGE_SMOKE_REPORT_STORAGE_KEY,
   LANGUAGE_SMOKE_SCOPES,
-  LANGUAGE_SMOKE_USER,
 } from "../fixtures";
+import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
 import { LANGUAGE_SMOKE_AUTH_STATE_PATH } from "../language-auth-setup";
 
 test.describe.configure({ mode: "serial" });
@@ -60,11 +60,7 @@ async function chooseLanguage(page: Page, accessibleName: "English" | "简体中
   if ((await radio.count()) === 0) {
     await page
       .getByRole("button", {
-        name:
-          expectedLang === "zh-CN"
-            ? `Account menu for ${LANGUAGE_SMOKE_USER.name}`
-            : `${LANGUAGE_SMOKE_USER.name} 的账户菜单`,
-        exact: true,
+        name: expectedLang === "zh-CN" ? /^Account menu for / : / 的账户菜单$/,
       })
       .click();
     await expect(option).toBeVisible();
@@ -342,11 +338,16 @@ test.describe("complete bilingual portal coverage", () => {
     }
   });
 
-  test("Report creation UI and output languages stay independent across full reloads", async ({ page }) => {
-    await page.goto("/reports#report-language-matrix");
-    await ensureUiLanguage(page, "en");
+  test("Report creation UI and output languages stay independent across full reloads", async ({ browser }, testInfo) => {
+    const context = await browser.newContext({
+      baseURL: String(testInfo.project.use.baseURL),
+      storageState: ADMIN_AUTH_STATE_PATH,
+    });
+    const page = await context.newPage();
 
     try {
+      await page.goto("/reports#report-language-matrix");
+      await ensureUiLanguage(page, "en");
       await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[0]);
 
       await page.getByLabel("Output language", { exact: true }).selectOption("zh-CN");
@@ -364,7 +365,8 @@ test.describe("complete bilingual portal coverage", () => {
       await chooseLanguage(page, "English", "en");
       await expectReportLanguageCombination(page, REPORT_LANGUAGE_COMBINATIONS[0]);
     } finally {
-      await ensureUiLanguage(page, "en");
+      await ensureUiLanguage(page, "en").catch(() => undefined);
+      await context.close();
     }
   });
 
@@ -462,31 +464,41 @@ test.describe("complete bilingual portal coverage", () => {
     await chooseLanguage(page, "English", "en");
   });
 
-  test("platform administration preserves raw IDs, Prompt, and provider surface keys", async ({ page }) => {
-    const target =
-      `/admin/sampling?brand=${LANGUAGE_SMOKE_BRAND_ID}` +
-      `&scope=${LANGUAGE_SMOKE_SCOPES.en.id}#platform-language-smoke`;
-    await page.goto(target);
-    const exactTargetUrl = page.url();
-    await expect(page.getByRole("heading", { name: "Sampling tasks", exact: true })).toBeVisible();
-    expect(new URL(page.url()).searchParams.get("brand")).toBe(LANGUAGE_SMOKE_BRAND_ID);
-    expect(new URL(page.url()).searchParams.get("scope")).toBe(LANGUAGE_SMOKE_SCOPES.en.id);
-    await expectRawSamplingSurface(page, {
-      create: "Create batch",
-      dialogTitle: "Create sampling batch",
-      batchName: "Batch name",
-      cancel: "Cancel",
+  test("platform administration preserves raw IDs, Prompt, and provider surface keys", async ({ browser }, testInfo) => {
+    const context = await browser.newContext({
+      baseURL: String(testInfo.project.use.baseURL),
+      storageState: ADMIN_AUTH_STATE_PATH,
     });
+    const page = await context.newPage();
+    try {
+      const target =
+        `/admin/sampling?brand=${LANGUAGE_SMOKE_BRAND_ID}` +
+        `&scope=${LANGUAGE_SMOKE_SCOPES.en.id}#platform-language-smoke`;
+      await page.goto(target);
+      await ensureUiLanguage(page, "en");
+      const exactTargetUrl = page.url();
+      await expect(page.getByRole("heading", { name: "Sampling tasks", exact: true })).toBeVisible();
+      expect(new URL(page.url()).searchParams.get("brand")).toBe(LANGUAGE_SMOKE_BRAND_ID);
+      expect(new URL(page.url()).searchParams.get("scope")).toBe(LANGUAGE_SMOKE_SCOPES.en.id);
+      await expectRawSamplingSurface(page, {
+        create: "Create batch",
+        dialogTitle: "Create sampling batch",
+        batchName: "Batch name",
+        cancel: "Cancel",
+      });
 
-    await chooseLanguage(page, "简体中文", "zh-CN");
-    await expect(page.getByRole("heading", { name: "抽样任务", exact: true })).toBeVisible();
-    expect(page.url()).toBe(exactTargetUrl);
-    await expectRawSamplingSurface(page, {
-      create: "创建批次",
-      dialogTitle: "创建抽样批次",
-      batchName: "批次名称",
-      cancel: "取消",
-    });
-    await chooseLanguage(page, "English", "en");
+      await chooseLanguage(page, "简体中文", "zh-CN");
+      await expect(page.getByRole("heading", { name: "抽样任务", exact: true })).toBeVisible();
+      expect(page.url()).toBe(exactTargetUrl);
+      await expectRawSamplingSurface(page, {
+        create: "创建批次",
+        dialogTitle: "创建抽样批次",
+        batchName: "批次名称",
+        cancel: "取消",
+      });
+    } finally {
+      await ensureUiLanguage(page, "en").catch(() => undefined);
+      await context.close();
+    }
   });
 });

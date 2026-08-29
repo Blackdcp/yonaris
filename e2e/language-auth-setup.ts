@@ -10,7 +10,7 @@ import {
 
 export const LANGUAGE_SMOKE_AUTH_STATE_PATH = path.join(import.meta.dirname, ".auth", "portal-language.json");
 
-/** Provision a dedicated platform identity without changing parallel fixtures. */
+/** Provision a dedicated customer-workspace identity without changing parallel fixtures. */
 export async function provisionLanguageSmokeIdentity(input: {
   adminPage: Page;
   browser: Browser;
@@ -90,22 +90,28 @@ export async function provisionLanguageSmokeIdentity(input: {
           [LANGUAGE_SMOKE_ORG_ID, userId],
         );
       }
-      await client.query(`UPDATE "user" SET role = 'admin', ui_language = 'en' WHERE id = $1`, [userId]);
+      await client.query(
+        `UPDATE "user"
+         SET role = 'user', ui_language = 'en', has_report_generator_access = false
+         WHERE id = $1`,
+        [userId],
+      );
     } finally {
       await client.end();
     }
 
     const sessionResponse = await page.request.get("/api/auth/get-session");
     const session = (await sessionResponse.json()) as {
-      user?: { email?: string; role?: string; uiLanguage?: string };
+      user?: { email?: string; role?: string; uiLanguage?: string; hasReportGeneratorAccess?: boolean };
     };
     if (
       !sessionResponse.ok() ||
       session.user?.email !== LANGUAGE_SMOKE_USER.email ||
-      session.user?.role !== "admin" ||
-      session.user?.uiLanguage !== "en"
+      session.user?.role !== "user" ||
+      session.user?.uiLanguage !== "en" ||
+      session.user?.hasReportGeneratorAccess === true
     ) {
-      throw new Error("Language smoke identity did not resolve as the dedicated platform user");
+      throw new Error("Language smoke identity did not resolve as the dedicated customer-workspace user");
     }
 
     await context.storageState({ path: LANGUAGE_SMOKE_AUTH_STATE_PATH });
