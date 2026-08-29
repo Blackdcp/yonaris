@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (file) => readFileSync(path.join(repositoryRoot, file), "utf8");
+const readNormalized = (file) => read(file).replace(/\r\n/gu, "\n");
 const fixtures = await import(pathToFileURL(path.join(repositoryRoot, "e2e/fixtures.ts")).href);
 
 test("normal local and CI fixture phases schedule the isolated language smoke project", () => {
@@ -25,8 +26,19 @@ test("language auth setup resets and verifies the persisted validated preference
 	assert.doesNotMatch(source, /\/api\/auth\/sign-up\/email/u);
 	assert.match(source, /Create customer account/u);
 	assert.match(source, /One-time customer credentials/u);
-	assert.match(source, /SET role = 'admin', ui_language = 'en'/u);
+	assert.match(source, /VALUES \(gen_random_uuid\(\), \$1, \$2, 'admin', NOW\(\)\)/u);
+	assert.match(source, /SET role = 'user', ui_language = 'en', has_report_generator_access = false/u);
+	assert.match(source, /session\.user\?\.role !== "user"/u);
 	assert.match(source, /session\.user\?\.uiLanguage !== "en"/u);
+	assert.match(source, /session\.user\?\.hasReportGeneratorAccess === true/u);
+});
+
+test("customer language smoke and privileged administration use separate auth states", () => {
+	const source = read("e2e/tests/portal-language.spec.ts");
+	assert.match(source, /storageState:\s*LANGUAGE_SMOKE_AUTH_STATE_PATH/u);
+	assert.equal(source.match(/storageState:\s*ADMIN_AUTH_STATE_PATH/gu)?.length, 2);
+	assert.match(source, /Report creation UI and output languages[\s\S]*?ADMIN_AUTH_STATE_PATH/u);
+	assert.match(source, /platform administration[\s\S]*?ADMIN_AUTH_STATE_PATH/u);
 });
 
 test("query smoke preserves auto-expansion and asserts exact bilingual terminology", () => {
@@ -315,7 +327,7 @@ test("scheduled language smoke keeps Chinese writes off and provider work stubbe
 
 test("Opportunity and report selection ship as the exact web patch changeset", () => {
 	assert.equal(
-		read(".changeset/select-opportunity-output-language.md"),
+		readNormalized(".changeset/select-opportunity-output-language.md"),
 		'---\n"@workspace/web": patch\n---\n\nLet Portal users select English or Simplified Chinese for Opportunities, reports, and chart exports independently of the interface language, while generated artifacts preserve the chosen language and raw evidence.\n',
 	);
 });
