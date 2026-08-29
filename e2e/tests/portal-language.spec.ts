@@ -292,11 +292,11 @@ test.describe("complete bilingual portal coverage", () => {
     await page.goto(`/app/${LANGUAGE_SMOKE_BRAND_ID}?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#customer-overview`);
     await ensureUiLanguage(page, "en");
     const exactTargetUrl = page.url();
-    await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "AI answer presence", exact: true })).toBeVisible();
 
     try {
       await chooseLanguage(page, "简体中文", "zh-CN");
-      await expect(page.getByRole("link", { name: "概览", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "AI 回答呈现", exact: true })).toBeVisible();
       expect(page.url()).toBe(exactTargetUrl);
 
       await page.goto(
