@@ -60,6 +60,9 @@ export interface TaskJournalEntry {
 	runnerSessionId: string;
 	promptSha256: string;
 	updatedAt: string;
+	needsHumanFailureCode?: string;
+	autoRecoveryAttemptCount?: number;
+	autoRecoveryNextAt?: string;
 }
 
 export interface BrowserExtensionClaim {

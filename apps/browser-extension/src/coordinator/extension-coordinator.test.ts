@@ -431,6 +431,249 @@ describe("ExtensionCoordinator", () => {
 		await expect(journal.entries()).resolves.toMatchObject({ "task-1": { phase: "claimed" } });
 	});
 
+	test("automatically recovers a due exact post-submit session before polling without submitting", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
+				activeConcurrency: 0,
+			},
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submit_intent",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:00:00.000Z",
+			needsHumanFailureCode: "post_submit_unknown",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => {
+					events.push("api:claim");
+					return null;
+				},
+				resume: async (_taskId, _brandId, stage) => {
+					events.push(`api:resume:${stage}`);
+					return claimedTask({ postSubmitAssist: true, submitConfirmed: true, runnerSessionId: "session-1" });
+				},
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(summary).toMatchObject({ recovered: 1, recoveryIncomplete: 0 });
+		expect(events).toContain("api:resume:post_submit");
+		expect(events).toContain("adapter:resume");
+		expect(events).not.toContain("adapter:submit");
+		expect(events).not.toContain("adapter:new_conversation");
+		expect(events.indexOf("adapter:resume")).toBeLessThan(events.indexOf("api:claim"));
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toEqual({});
+	});
+
+	test("never downgrades an automatic post-submit recovery into a new submission", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submit_intent",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:00:00.000Z",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => null,
+				resume: async () =>
+					claimedTask({ postSubmitAssist: false, submitConfirmed: false, runnerSessionId: null }),
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(summary).toMatchObject({ recovered: 0, recoveryIncomplete: 1 });
+		expect(events).toContain("api:needs_human");
+		expect(events).not.toContain("tab:activate:42");
+		expect(events).not.toContain("adapter:new_conversation");
+		expect(events).not.toContain("adapter:submit");
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toMatchObject({
+			"task-1": { phase: "needs_human", autoRecoveryAttemptCount: 1 },
+		});
+	});
+
+	test("persists a failed first recovery, continues other due recovery, and still polls", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
+				activeConcurrency: 0,
+			},
+		});
+		for (const [taskId, tabId] of [
+			["task-1", 42],
+			["task-2", 43],
+		] as const) {
+			await storage.saveJournal({
+				taskId,
+				batchId: "batch-1",
+				brandId: "stepfun",
+				phase: "needs_human",
+				interruptedPhase: "submitted",
+				surfaceTargetKey: "deepseek.consumer_web",
+				tabId,
+				runnerSessionId: `session-${taskId}`,
+				promptSha256: await sha256(`Prompt ${taskId}`),
+				updatedAt: "2026-08-30T00:00:00.000Z",
+			});
+		}
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => {
+					events.push("api:claim");
+					return null;
+				},
+				reconcileTask: async (taskId) => ({
+					state: "resumable_post" as const,
+					task: { ...reconciliationTask(), taskId, promptText: `Prompt ${taskId}` },
+					runnerSessionId: `session-${taskId}`,
+				}),
+				resume: async (taskId) => {
+					events.push(`api:resume:${taskId}`);
+					if (taskId === "task-1") throw new Error("temporary Portal failure");
+					return claimedTask({
+						taskId,
+						promptText: `Prompt ${taskId}`,
+						postSubmitAssist: true,
+						submitConfirmed: true,
+						runnerSessionId: `session-${taskId}`,
+					});
+				},
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(summary).toMatchObject({ recovered: 1, recoveryIncomplete: 1 });
+		expect(events).toContain("api:resume:task-1");
+		expect(events).toContain("api:resume:task-2");
+		expect(events).not.toContain("adapter:submit");
+		expect(events.indexOf("api:resume:task-2")).toBeLessThan(events.indexOf("api:claim"));
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toMatchObject({
+			"task-1": {
+				phase: "needs_human",
+				autoRecoveryAttemptCount: 1,
+				autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+			},
+		});
+	});
+
+	test("ignores a due-looking pre-submit journal and continues normal polling", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveSurfaceReadiness({
+			"deepseek.consumer_web": {
+				status: "ready",
+				adapterVersion: "deepseek-web-20260822-localpc-v9",
+				activeConcurrency: 0,
+			},
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "prepared",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:00:00.000Z",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => {
+					events.push("api:claim");
+					return null;
+				},
+				resume: async () => {
+					events.push("api:resume");
+					return claimedTask();
+				},
+				reconcileTask: async () => ({
+					state: "resumable_pre" as const,
+					task: reconciliationTask(),
+					runnerSessionId: null,
+				}),
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		await coordinator.runOnce();
+
+		expect(events).not.toContain("api:resume");
+		expect(events).toContain("api:claim");
+		await expect(new DurableTaskJournal(storage).entries()).resolves.toMatchObject({
+			"task-1": { phase: "needs_human", interruptedPhase: "prepared" },
+		});
+	});
+
 	test("recovers only the exact post-submit needs-human task requested by an administrator", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());

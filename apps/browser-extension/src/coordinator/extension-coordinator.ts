@@ -47,6 +47,7 @@ type ExtensionCoordinatorDependencies = {
 	tabs: RunnerTabDriver;
 	browserVersion: string;
 	notify?(result: TaskRunResult, surface: BrowserExtensionSurface): Promise<void> | void;
+	now?: () => Date;
 };
 
 export class ExtensionCoordinator {
@@ -61,11 +62,12 @@ export class ExtensionCoordinator {
 		const device = await this.#dependencies.storage.loadDevice();
 		if (!device) return null;
 		const api = this.#dependencies.apiFactory(device);
-		const journal = new DurableTaskJournal(this.#dependencies.storage);
+		const journal = new DurableTaskJournal(this.#dependencies.storage, undefined, this.#dependencies.now);
 		const blockedSurfaces = await this.#reconcileJournalBeforePoll(api, journal);
 		if (!blockedSurfaces) {
 			return { bySurface: emptySurfaceSummaries(), recovered: 0, recoveryIncomplete: 0 };
 		}
+		const recovery = await this.#recoverDuePostSubmit(api, journal);
 		const surfaces = readySurfaces(await this.#dependencies.storage.loadSurfaceReadiness()).filter(
 			(surface) => !blockedSurfaces.has(surface),
 		);
@@ -76,23 +78,36 @@ export class ExtensionCoordinator {
 			claim: (brandId, surface) => api.claimNext(brandId, surface),
 			run: async (claim) => {
 				const result = await runClaimedTask(claim, this.#taskDependencies(api, journal));
+				await this.#rememberNeedsHumanFailure(journal, claim.taskId, result);
 				await this.#dependencies.notify?.(result, claim.surfaceTargetKey);
 				return result;
 			},
 		});
-		return { ...polled, recovered: 0, recoveryIncomplete: 0 };
+		return { ...polled, ...recovery };
 	}
 
 	async recoverNeedsHuman(taskId: string): Promise<ManualRecoveryResult> {
 		const device = await this.#dependencies.storage.loadDevice();
 		if (!device) return { taskId, status: "not_recoverable", code: "device_not_paired" };
 		const api = this.#dependencies.apiFactory(device);
-		const journal = new DurableTaskJournal(this.#dependencies.storage);
+		const journal = new DurableTaskJournal(this.#dependencies.storage, undefined, this.#dependencies.now);
 		const entry = (await journal.entries())[taskId];
 		if (entry?.phase !== "needs_human") {
 			return { taskId, status: "not_recoverable", code: "local_task_not_waiting" };
 		}
-		const requestedStage = manualRecoveryStage(entry);
+		const result = await this.#recoverEntry(api, journal, entry, false);
+		await this.#rememberNeedsHumanFailure(journal, taskId, result);
+		return result;
+	}
+
+	async #recoverEntry(
+		api: RunnerControlApi,
+		journal: DurableTaskJournal,
+		entry: TaskJournalEntry,
+		automaticPostSubmit: boolean,
+	): Promise<ManualRecoveryResult> {
+		const taskId = entry.taskId;
+		const requestedStage = automaticPostSubmit ? "post_submit" : manualRecoveryStage(entry);
 		let recoveryStage = requestedStage;
 
 		let claim: BrowserExtensionClaim;
@@ -104,6 +119,9 @@ export class ExtensionCoordinator {
 
 		recoveryStage = claim.postSubmitAssist ? "post_submit" : "pre_submit";
 		try {
+			if (automaticPostSubmit && recoveryStage !== "post_submit") {
+				throw new Error("Automatic recovery is restricted to post-submit sessions");
+			}
 			await assertManualResumeClaim(entry, claim, recoveryStage);
 		} catch {
 			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "resume_claim_mismatch");
@@ -111,7 +129,7 @@ export class ExtensionCoordinator {
 
 		let recoveryTabId: number;
 		try {
-			recoveryTabId = this.#dependencies.tabs.resolveManualRecoveryTab
+			recoveryTabId = !automaticPostSubmit && this.#dependencies.tabs.resolveManualRecoveryTab
 				? await this.#dependencies.tabs.resolveManualRecoveryTab(entry.tabId, entry.surfaceTargetKey)
 				: entry.tabId;
 		} catch {
@@ -119,7 +137,9 @@ export class ExtensionCoordinator {
 		}
 
 		try {
-			if (recoveryTabId !== entry.tabId) await journal.rebindNeedsHumanTab(taskId, recoveryTabId);
+			if (!automaticPostSubmit && recoveryTabId !== entry.tabId) {
+				await journal.rebindNeedsHumanTab(taskId, recoveryTabId);
+			}
 		} catch {
 			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "local_journal_persistence_failed");
 		}
@@ -147,7 +167,7 @@ export class ExtensionCoordinator {
 	}
 
 	async listNeedsHuman(): Promise<ManualRecoveryCandidate[]> {
-		const journal = new DurableTaskJournal(this.#dependencies.storage);
+		const journal = new DurableTaskJournal(this.#dependencies.storage, undefined, this.#dependencies.now);
 		return Object.values(await journal.entries())
 			.filter((entry) => entry.phase === "needs_human")
 			.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
@@ -158,6 +178,35 @@ export class ExtensionCoordinator {
 				canAttemptRecovery: true,
 				recoveryStage: manualRecoveryStage(entry),
 			}));
+	}
+
+	async #recoverDuePostSubmit(
+		api: RunnerControlApi,
+		journal: DurableTaskJournal,
+	): Promise<Pick<ExtensionRunSummary, "recovered" | "recoveryIncomplete">> {
+		let recovered = 0;
+		let recoveryIncomplete = 0;
+		for (const due of await journal.duePostSubmitRecoveries()) {
+			try {
+				const entry = await journal.recordPostSubmitRecoveryAttempt(due.taskId);
+				const result = await this.#recoverEntry(api, journal, entry, true);
+				await this.#rememberNeedsHumanFailure(journal, entry.taskId, result);
+				if (result.status === "succeeded") recovered += 1;
+				else recoveryIncomplete += 1;
+			} catch {
+				recoveryIncomplete += 1;
+			}
+		}
+		return { recovered, recoveryIncomplete };
+	}
+
+	async #rememberNeedsHumanFailure(
+		journal: DurableTaskJournal,
+		taskId: string,
+		result: TaskRunResult | ManualRecoveryResult,
+	): Promise<void> {
+		if (result.status !== "needs_human") return;
+		await journal.recordNeedsHumanFailure(taskId, result.code).catch(() => undefined);
 	}
 
 	async #reconcileJournalBeforePoll(

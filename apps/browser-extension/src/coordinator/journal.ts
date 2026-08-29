@@ -9,6 +9,16 @@ const PHASE_ORDER: Record<Exclude<TaskJournalPhase, "needs_human">, number> = {
 	collected: 4,
 	uploaded: 5,
 };
+const POST_SUBMIT_PHASES = new Set<TaskJournalPhase>(["submit_intent", "submitted", "collected", "uploaded"]);
+const AUTOMATIC_RECOVERY_BLOCKING_FAILURE_CODES = new Set([
+	"signed_out",
+	"captcha",
+	"account_restricted",
+	"rate_limited",
+	"page_drift",
+]);
+const FIRST_AUTOMATIC_RECOVERY_DELAY_MS = 2 * 60 * 1_000;
+const SECOND_AUTOMATIC_RECOVERY_DELAY_MS = 10 * 60 * 1_000;
 
 export class DurableTaskJournal {
 	readonly #storage: DeviceStorage;
@@ -71,6 +81,53 @@ export class DurableTaskJournal {
 
 	async entries(): Promise<Record<string, TaskJournalEntry>> {
 		return this.#storage.loadJournal();
+	}
+
+	async recordNeedsHumanFailure(taskId: string, failureCode: string): Promise<TaskJournalEntry> {
+		return this.#mutate(taskId, async () => {
+			const current = (await this.entries())[taskId];
+			if (current?.phase !== "needs_human") {
+				throw new Error("Only a needs-human task can record its failure code");
+			}
+			const next = { ...current, needsHumanFailureCode: failureCode };
+			await this.#storage.saveJournal(next);
+			return next;
+		});
+	}
+
+	async duePostSubmitRecoveries(): Promise<TaskJournalEntry[]> {
+		const now = this.#now().getTime();
+		return Object.values(await this.entries())
+			.filter((entry) => {
+				const dueAt = automaticRecoveryDueAt(entry);
+				return dueAt !== null && dueAt <= now;
+			})
+			.sort((left, right) => left.updatedAt.localeCompare(right.updatedAt) || left.taskId.localeCompare(right.taskId));
+	}
+
+	async recordPostSubmitRecoveryAttempt(taskId: string): Promise<TaskJournalEntry> {
+		return this.#mutate(taskId, async () => {
+			const current = (await this.entries())[taskId];
+			if (!current) throw new Error("Task journal entry does not exist");
+			const attemptCount = current.autoRecoveryAttemptCount ?? 0;
+			if (attemptCount >= 2) throw new Error("Automatic recovery attempts exhausted");
+			const now = this.#now();
+			const dueAt = automaticRecoveryDueAt(current);
+			if (dueAt === null || dueAt > now.getTime()) {
+				throw new Error("Task is not eligible for automatic post-submit recovery");
+			}
+			const { autoRecoveryNextAt: _discarded, ...entry } = current;
+			const nextAttemptCount = attemptCount + 1;
+			const next: TaskJournalEntry = {
+				...entry,
+				autoRecoveryAttemptCount: nextAttemptCount,
+				...(nextAttemptCount === 1
+					? { autoRecoveryNextAt: new Date(now.getTime() + SECOND_AUTOMATIC_RECOVERY_DELAY_MS).toISOString() }
+					: {}),
+			};
+			await this.#storage.saveJournal(next);
+			return next;
+		});
 	}
 
 	async resumePostSubmit(taskId: string): Promise<TaskJournalEntry> {
@@ -143,6 +200,7 @@ export class DurableTaskJournal {
 					: currentBoundary && isPostSubmitPhase(currentBoundary)
 						? currentBoundary
 						: "submit_intent";
+			if (current.phase === "needs_human" && current.interruptedPhase === interruptedPhase) return current;
 			const next: TaskJournalEntry = {
 				...current,
 				phase: "needs_human",
@@ -190,5 +248,20 @@ export class DurableTaskJournal {
 }
 
 function isPostSubmitPhase(phase: TaskJournalPhase): boolean {
-	return ["submit_intent", "submitted", "collected", "uploaded"].includes(phase);
+	return POST_SUBMIT_PHASES.has(phase);
+}
+
+function automaticRecoveryDueAt(entry: TaskJournalEntry): number | null {
+	if (
+		entry.phase !== "needs_human" ||
+		!entry.interruptedPhase ||
+		!isPostSubmitPhase(entry.interruptedPhase) ||
+		(entry.needsHumanFailureCode && AUTOMATIC_RECOVERY_BLOCKING_FAILURE_CODES.has(entry.needsHumanFailureCode))
+	) {
+		return null;
+	}
+	const attemptCount = entry.autoRecoveryAttemptCount ?? 0;
+	if (attemptCount === 0) return new Date(entry.updatedAt).getTime() + FIRST_AUTOMATIC_RECOVERY_DELAY_MS;
+	if (attemptCount === 1 && entry.autoRecoveryNextAt) return new Date(entry.autoRecoveryNextAt).getTime();
+	return null;
 }

@@ -187,6 +187,29 @@ function validateJournalEntry(value: unknown): TaskJournalEntry {
 	const runnerSessionId = requiredText(value.runnerSessionId, "runnerSessionId", 300);
 	const promptSha256 = requiredText(value.promptSha256, "promptSha256", 64);
 	if (!/^[0-9a-f]{64}$/.test(promptSha256)) throw new Error("Browser Runner task journal prompt digest is invalid");
+	let needsHumanFailureCode: string | undefined;
+	if (value.needsHumanFailureCode !== undefined) {
+		needsHumanFailureCode = requiredText(value.needsHumanFailureCode, "needs-human failure code", 100);
+	}
+	let autoRecoveryAttemptCount: number | undefined;
+	if (value.autoRecoveryAttemptCount !== undefined) {
+		if (
+			!Number.isSafeInteger(value.autoRecoveryAttemptCount) ||
+			(value.autoRecoveryAttemptCount as number) < 0 ||
+			(value.autoRecoveryAttemptCount as number) > 2
+		) {
+			throw new Error("Browser Runner automatic recovery attempt count is invalid");
+		}
+		autoRecoveryAttemptCount = value.autoRecoveryAttemptCount as number;
+	}
+	let autoRecoveryNextAt: string | undefined;
+	if (value.autoRecoveryNextAt !== undefined) {
+		autoRecoveryNextAt = requiredText(value.autoRecoveryNextAt, "automatic recovery next-at", 50);
+		const nextAt = new Date(autoRecoveryNextAt);
+		if (!Number.isFinite(nextAt.getTime()) || nextAt.toISOString() !== autoRecoveryNextAt) {
+			throw new Error("Browser Runner automatic recovery next-at is invalid");
+		}
+	}
 	return {
 		taskId,
 		batchId,
@@ -198,6 +221,9 @@ function validateJournalEntry(value: unknown): TaskJournalEntry {
 		runnerSessionId,
 		promptSha256,
 		updatedAt,
+		...(needsHumanFailureCode ? { needsHumanFailureCode } : {}),
+		...(autoRecoveryAttemptCount !== undefined ? { autoRecoveryAttemptCount } : {}),
+		...(autoRecoveryNextAt ? { autoRecoveryNextAt } : {}),
 	};
 }
 

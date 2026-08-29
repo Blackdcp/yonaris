@@ -183,6 +183,81 @@ describe("DurableTaskJournal", () => {
 			});
 		},
 	);
+
+	test("makes the first post-submit recovery due two minutes after needs-human", async () => {
+		let now = new Date("2026-08-30T00:00:00.000Z");
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage, undefined, () => now);
+		await journal.start(claimedTask(), {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
+		});
+		await journal.advance("task-1", "submit_intent");
+		await journal.advance("task-1", "needs_human");
+		await journal.recordNeedsHumanFailure("task-1", "post_submit_unknown");
+
+		now = new Date("2026-08-30T00:01:59.999Z");
+		await expect(journal.duePostSubmitRecoveries()).resolves.toEqual([]);
+		now = new Date("2026-08-30T00:02:00.000Z");
+		await expect(journal.duePostSubmitRecoveries()).resolves.toMatchObject([{ taskId: "task-1" }]);
+	});
+
+	test("persists each automatic recovery attempt before work and never allows a third", async () => {
+		let now = new Date("2026-08-30T00:00:00.000Z");
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage, undefined, () => now);
+		await journal.start(claimedTask(), {
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
+		});
+		await journal.advance("task-1", "submit_intent");
+		await journal.advance("task-1", "needs_human");
+
+		now = new Date("2026-08-30T00:02:00.000Z");
+		await expect(journal.recordPostSubmitRecoveryAttempt("task-1")).resolves.toMatchObject({
+			autoRecoveryAttemptCount: 1,
+			autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+		});
+		await expect(journal.entries()).resolves.toMatchObject({
+			"task-1": {
+				autoRecoveryAttemptCount: 1,
+				autoRecoveryNextAt: "2026-08-30T00:12:00.000Z",
+			},
+		});
+
+		now = new Date("2026-08-30T00:11:59.999Z");
+		await expect(journal.duePostSubmitRecoveries()).resolves.toEqual([]);
+		now = new Date("2026-08-30T00:12:00.000Z");
+		await expect(journal.duePostSubmitRecoveries()).resolves.toMatchObject([{ taskId: "task-1" }]);
+		await expect(journal.recordPostSubmitRecoveryAttempt("task-1")).resolves.toMatchObject({
+			autoRecoveryAttemptCount: 2,
+		});
+		expect((await journal.entries())["task-1"]).not.toHaveProperty("autoRecoveryNextAt");
+		await expect(journal.duePostSubmitRecoveries()).resolves.toEqual([]);
+		await expect(journal.recordPostSubmitRecoveryAttempt("task-1")).rejects.toThrow(/attempts exhausted/i);
+	});
+
+	test.each(["signed_out", "captcha", "account_restricted", "rate_limited", "page_drift"])(
+		"does not automatically recover the operator-blocking failure %s",
+		async (failureCode) => {
+			let now = new Date("2026-08-30T00:00:00.000Z");
+			const storage = new DeviceStorage(memoryStorage());
+			const journal = new DurableTaskJournal(storage, undefined, () => now);
+			await journal.start(claimedTask(), {
+				tabId: 42,
+				runnerSessionId: "session-1",
+				promptSha256: "a".repeat(64),
+			});
+			await journal.advance("task-1", "submit_intent");
+			await journal.advance("task-1", "needs_human");
+			await journal.recordNeedsHumanFailure("task-1", failureCode);
+
+			now = new Date("2026-08-30T00:02:00.000Z");
+			await expect(journal.duePostSubmitRecoveries()).resolves.toEqual([]);
+		},
+	);
 });
 
 function memoryStorage(): ExtensionStorageArea {
