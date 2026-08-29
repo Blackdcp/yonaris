@@ -289,13 +289,19 @@ test.describe("complete bilingual portal coverage", () => {
 
   test("customer overview switches both ways while raw brand and URL identity stay unchanged", async ({ page }) => {
     await page.goto(`/app/${LANGUAGE_SMOKE_BRAND_ID}?scope=${LANGUAGE_SMOKE_SCOPES.cn.id}#customer-overview`);
-    await expect(page.getByText(LANGUAGE_SMOKE_BRAND_NAME, { exact: true }).first()).toBeVisible();
+    await ensureUiLanguage(page, "en");
+    const exactTargetUrl = page.url();
+    await expect(page).toHaveTitle(new RegExp(LANGUAGE_SMOKE_BRAND_NAME));
     await expect(page.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
 
-    await chooseLanguage(page, "简体中文", "zh-CN");
-    await expect(page.getByText(LANGUAGE_SMOKE_BRAND_NAME, { exact: true }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "概览", exact: true })).toBeVisible();
-    await chooseLanguage(page, "English", "en");
+    try {
+      await chooseLanguage(page, "简体中文", "zh-CN");
+      await expect(page).toHaveTitle(new RegExp(LANGUAGE_SMOKE_BRAND_NAME));
+      await expect(page.getByRole("link", { name: "概览", exact: true })).toBeVisible();
+      expect(page.url()).toBe(exactTargetUrl);
+    } finally {
+      await ensureUiLanguage(page, "en");
+    }
   });
 
   test("both Programs and their domain values remain independent of UI language", async ({ page }) => {
