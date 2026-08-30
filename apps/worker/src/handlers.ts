@@ -3,6 +3,7 @@ import { getDeployment } from "@workspace/deployment";
 import type { OnboardingSuggestion } from "@workspace/lib/onboarding";
 import type { Job, PgBoss } from "pg-boss";
 import { type AnalyzeBrandData, analyzeBrandJob } from "./jobs/analyze-brand";
+import { type BrowserRunnerMaintenanceData, browserRunnerMaintenanceJob } from "./jobs/browser-runner-maintenance";
 import { type GenerateReportData, generateReportJob } from "./jobs/generate-report";
 import { type ProcessOverseasRunCallData, processOverseasRunCallJob } from "./jobs/process-overseas-run-call";
 import { type ProcessPromptData, processPromptJob } from "./jobs/process-prompt";
@@ -84,6 +85,13 @@ export async function registerHandlers(boss: PgBoss, scope: WorkerQueueScope = "
 			withSentry("response-snapshot-maintenance", responseSnapshotMaintenanceJob),
 		);
 		console.log("Registered handler: response-snapshot-maintenance");
+
+		await boss.work<BrowserRunnerMaintenanceData>(
+			"browser-runner-maintenance",
+			{ localConcurrency: 1 },
+			withSentry("browser-runner-maintenance", browserRunnerMaintenanceJob),
+		);
+		console.log("Registered handler: browser-runner-maintenance");
 
 		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
 			await boss.work<SyncAuth0MembershipsData>(

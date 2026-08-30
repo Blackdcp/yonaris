@@ -285,3 +285,77 @@ export function browserRunnerHumanFinalization(input: {
 	}
 	return { canFinalize: true, count: unresolved.length };
 }
+
+const SHANGHAI_UTC_OFFSET_MS = 8 * 60 * 60 * 1_000;
+
+/**
+ * Domestic browser batches become final at noon on the next Shanghai
+ * calendar day. A frozen measurement window may close the batch earlier,
+ * but never later. Calendar arithmetic is deliberate: this is not a rolling
+ * 24-hour timeout.
+ */
+export function browserRunnerDailySettlementCutoff(input: {
+	automationStartedAt: Date;
+	measurementWindowEndsAt: Date;
+}): Date {
+	const startedAtMs = input.automationStartedAt.getTime();
+	const windowEndsAtMs = input.measurementWindowEndsAt.getTime();
+	if (!Number.isFinite(startedAtMs) || !Number.isFinite(windowEndsAtMs)) {
+		throw new Error("Browser Runner daily settlement requires valid dates");
+	}
+	const shanghaiStartedAt = new Date(startedAtMs + SHANGHAI_UTC_OFFSET_MS);
+	const nextShanghaiNoonMs = Date.UTC(
+		shanghaiStartedAt.getUTCFullYear(),
+		shanghaiStartedAt.getUTCMonth(),
+		shanghaiStartedAt.getUTCDate() + 1,
+		4,
+		0,
+		0,
+		0,
+	);
+	return new Date(Math.min(nextShanghaiNoonMs, windowEndsAtMs));
+}
+
+export type BrowserRunnerDailySettlementDisposition =
+	| { kind: "defer_live_lease" }
+	| { kind: "terminal_failure"; code: string; reason: string };
+
+export function browserRunnerDailySettlementDisposition(input: {
+	status: string;
+	leaseExpiresAt: Date | null;
+	submitIntentAt: Date | null;
+	needsHumanCode: string | null;
+	needsHumanReason: string | null;
+	now: Date;
+}): BrowserRunnerDailySettlementDisposition {
+	if (input.status !== "available" && input.status !== "claimed") {
+		throw new Error(`Delivery task status ${input.status} cannot be settled`);
+	}
+	if (input.status === "claimed" && input.leaseExpiresAt !== null && input.leaseExpiresAt > input.now) {
+		return { kind: "defer_live_lease" };
+	}
+	const existingCode = input.needsHumanCode?.trim();
+	const existingReason = input.needsHumanReason?.trim();
+	if (existingCode && existingReason) {
+		return { kind: "terminal_failure", code: existingCode, reason: existingReason };
+	}
+	if (input.submitIntentAt !== null) {
+		return {
+			kind: "terminal_failure",
+			code: "submit_outcome_unknown",
+			reason: "Daily truth cutoff passed after durable submit intent; the outcome could not be verified and automatic replay is forbidden",
+		};
+	}
+	if (input.status === "claimed") {
+		return {
+			kind: "terminal_failure",
+			code: "runner_lease_expired",
+			reason: "Daily truth cutoff passed after the Browser Runner lease expired without a verified result",
+		};
+	}
+	return {
+		kind: "terminal_failure",
+		code: "daily_cutoff_unresolved",
+		reason: "Daily truth cutoff passed before this frozen Browser Runner slot produced a verified result",
+	};
+}

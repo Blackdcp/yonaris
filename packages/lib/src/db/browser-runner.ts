@@ -9,6 +9,8 @@ import {
 import {
 	BROWSER_RUNNER_MAX_PRE_SUBMIT_ATTEMPTS,
 	type BrowserRunnerExactTaskReconciliation,
+	browserRunnerDailySettlementCutoff,
+	browserRunnerDailySettlementDisposition,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
 	decideBrowserRunnerFailure,
@@ -173,7 +175,8 @@ export async function claimBrowserRunnerTask(input: {
 			.select({ id: deliveryBatches.id, protocol: deliveryBatches.protocol, status: deliveryBatches.status })
 			.from(deliveryBatches)
 			.where(and(...conditions))
-			.orderBy(asc(deliveryBatches.createdAt));
+			.orderBy(asc(deliveryBatches.createdAt))
+			.for("update", { skipLocked: true });
 		const now = new Date();
 		for (const batch of batches) {
 			const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
@@ -436,6 +439,19 @@ export async function recordBrowserRunnerFailure(input: {
 }) {
 	return db.transaction(async (tx) => {
 		const now = new Date();
+		const [identity] = await tx
+			.select({ batchId: deliveryTasks.batchId })
+			.from(deliveryTasks)
+			.where(and(eq(deliveryTasks.id, input.taskId), eq(deliveryTasks.brandId, input.brandId)))
+			.limit(1);
+		if (!identity) throw new BrowserRunnerStateError("Runner task lease is invalid");
+		const [batch] = await tx
+			.select({ id: deliveryBatches.id })
+			.from(deliveryBatches)
+			.where(and(eq(deliveryBatches.id, identity.batchId), eq(deliveryBatches.brandId, input.brandId)))
+			.limit(1)
+			.for("update");
+		if (!batch) throw new BrowserRunnerStateError("Runner task lease is invalid");
 		const [task] = await tx.select().from(deliveryTasks).where(activeRunnerLease(input, now)).limit(1).for("update");
 		if (!task || task.brandId !== input.brandId) throw new BrowserRunnerStateError("Runner task lease is invalid");
 		const shouldRetry =
@@ -555,10 +571,23 @@ export async function markBrowserRunnerSubmitIntent(input: {
 
 export async function markBrowserRunnerTaskCompleted(input: { taskId: string; batchId: string }): Promise<void> {
 	await db.transaction(async (tx) => {
+		const [batch] = await tx
+			.select({ id: deliveryBatches.id })
+			.from(deliveryBatches)
+			.where(eq(deliveryBatches.id, input.batchId))
+			.limit(1)
+			.for("update");
+		if (!batch) throw new BrowserRunnerStateError("Browser Runner batch was not found");
 		await tx
 			.update(deliveryTasks)
 			.set({ automationStatus: "completed", needsHumanCode: null, needsHumanReason: null })
-			.where(and(eq(deliveryTasks.id, input.taskId), eq(deliveryTasks.status, "succeeded")));
+			.where(
+				and(
+					eq(deliveryTasks.id, input.taskId),
+					eq(deliveryTasks.batchId, input.batchId),
+					eq(deliveryTasks.status, "succeeded"),
+				),
+			);
 		await refreshBrowserRunnerBatchState(tx, input.batchId);
 	});
 }
@@ -961,6 +990,273 @@ export async function finalizeBrowserRunnerNeedsHuman(input: {
 		}
 		await settleDeliveryBatch(tx, batch.id, now);
 		return { finalizedCount: finalized.length, resultStatus: "incomplete" as const };
+	});
+}
+
+export interface BrowserRunnerDailySettlementReceipt {
+	scannedBatches: number;
+	dueBatches: number;
+	settledBatches: number;
+	deferredLiveLeaseBatches: number;
+	failedBatches: number;
+	failedTasks: number;
+}
+
+export type BrowserRunnerBatchSettlementResult =
+	| { kind: "not_due" }
+	| { kind: "deferred_live_lease" }
+	| { kind: "settled"; failedTasks: number };
+
+export interface BrowserRunnerDailySettlementBatchSnapshot {
+	id: string;
+	brandId: string;
+	scopeId: string;
+	status: string;
+	executionMode: string;
+	automationStartedAt: Date | null;
+	startedAt: Date | null;
+	protocol: unknown;
+}
+
+export interface BrowserRunnerDailySettlementTaskSnapshot {
+	id: string;
+	status: "available" | "claimed";
+	leaseGeneration: number;
+	leaseExpiresAt: Date | null;
+	submitIntentAt: Date | null;
+	needsHumanCode: string | null;
+	needsHumanReason: string | null;
+	observationAttemptId: string | null;
+}
+
+export interface BrowserRunnerDailySettlementTaskPatch {
+	status: "failed";
+	automationStatus: "completed";
+	leaseTokenHash: null;
+	leaseExpiresAt: null;
+	failedAt: Date;
+	lastErrorClass: "BrowserRunnerTerminalFailure";
+	lastErrorCode: string;
+	lastErrorMessage: string;
+	needsHumanCode: null;
+	needsHumanReason: null;
+}
+
+export interface BrowserRunnerDailySettlementTransaction {
+	lockBatch(batchId: string): Promise<BrowserRunnerDailySettlementBatchSnapshot | null>;
+	lockUnresolvedTasks(batchId: string): Promise<BrowserRunnerDailySettlementTaskSnapshot[]>;
+	readScope(batch: BrowserRunnerDailySettlementBatchSnapshot): Promise<{
+		market: string;
+		locale: string;
+		timezone: string;
+	} | null>;
+	failTask(input: {
+		task: BrowserRunnerDailySettlementTaskSnapshot;
+		patch: BrowserRunnerDailySettlementTaskPatch;
+	}): Promise<boolean>;
+	markBatchInProgress(batch: BrowserRunnerDailySettlementBatchSnapshot): Promise<boolean>;
+	settleBatch(batchId: string, now: Date): Promise<void>;
+}
+
+export async function executeBrowserRunnerDailySettlement(
+	input: { batchId: string; now: Date },
+	transaction: BrowserRunnerDailySettlementTransaction,
+): Promise<BrowserRunnerBatchSettlementResult> {
+	const batch = await transaction.lockBatch(input.batchId);
+	if (
+		batch?.executionMode !== "browser_runner" ||
+		batch.automationStartedAt === null ||
+		!inProgressDeliveryBatch(batch.status)
+	) {
+		return { kind: "not_due" };
+	}
+	const unresolved = await transaction.lockUnresolvedTasks(batch.id);
+	const scope = await transaction.readScope(batch);
+	if (!scope || !isBrowserRunnerCnScope(scope)) return { kind: "not_due" };
+	const protocol = normalizeDeliveryProtocol(batch.protocol as DeliveryProtocol);
+	const cutoff = browserRunnerDailySettlementCutoff({
+		automationStartedAt: batch.automationStartedAt,
+		measurementWindowEndsAt: new Date(protocol.measurementWindow.endsAt),
+	});
+	if (input.now < cutoff) return { kind: "not_due" };
+
+	const dispositions = unresolved.map((task) => ({
+		task,
+		disposition: browserRunnerDailySettlementDisposition({
+			status: task.status,
+			leaseExpiresAt: task.leaseExpiresAt,
+			submitIntentAt: task.submitIntentAt,
+			needsHumanCode: task.needsHumanCode,
+			needsHumanReason: task.needsHumanReason,
+			now: input.now,
+		}),
+	}));
+	if (dispositions.some(({ disposition }) => disposition.kind === "defer_live_lease")) {
+		return { kind: "deferred_live_lease" };
+	}
+
+	let failedTasks = 0;
+	for (const { task, disposition } of dispositions) {
+		if (disposition.kind !== "terminal_failure") continue;
+		if (task.observationAttemptId !== null) {
+			throw new BrowserRunnerStateError("Daily settlement refuses to replace an existing observation");
+		}
+		const patch: BrowserRunnerDailySettlementTaskPatch = {
+			status: "failed",
+			automationStatus: "completed",
+			leaseTokenHash: null,
+			leaseExpiresAt: null,
+			failedAt: input.now,
+			lastErrorClass: "BrowserRunnerTerminalFailure",
+			lastErrorCode: disposition.code,
+			lastErrorMessage: disposition.reason.slice(0, 2_000),
+			needsHumanCode: null,
+			needsHumanReason: null,
+		};
+		if (!(await transaction.failTask({ task, patch }))) {
+			throw new BrowserRunnerStateError("Daily settlement task changed concurrently");
+		}
+		failedTasks += 1;
+	}
+	if (batch.status === "frozen" && !(await transaction.markBatchInProgress(batch))) {
+		throw new BrowserRunnerStateError("Daily settlement batch changed concurrently");
+	}
+	await transaction.settleBatch(batch.id, input.now);
+	return { kind: "settled", failedTasks };
+}
+
+/**
+ * Makes the daily domestic result truthful without fabricating observations:
+ * unresolved frozen slots become terminal delivery failures at the earlier of
+ * the frozen window end or noon on the next Asia/Shanghai calendar day.
+ */
+export async function settleDueDomesticBrowserRunnerBatches(
+	input: { now?: Date; limit?: number } = {},
+): Promise<BrowserRunnerDailySettlementReceipt> {
+	const now = input.now ?? new Date();
+	if (!Number.isFinite(now.getTime())) throw new Error("Browser Runner settlement requires a valid now date");
+	const limit = input.limit ?? 100;
+	if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+		throw new Error("Browser Runner settlement limit must be between 1 and 500");
+	}
+	const candidates = await db
+		.select({ id: deliveryBatches.id })
+		.from(deliveryBatches)
+		.innerJoin(
+			measurementScopes,
+			and(eq(measurementScopes.id, deliveryBatches.scopeId), eq(measurementScopes.brandId, deliveryBatches.brandId)),
+		)
+		.where(
+			and(
+				eq(deliveryBatches.executionMode, "browser_runner"),
+				isNotNull(deliveryBatches.automationStartedAt),
+				inArray(deliveryBatches.status, ["frozen", "in_progress"]),
+				eq(measurementScopes.market, "CN"),
+				eq(measurementScopes.locale, "zh-CN"),
+				eq(measurementScopes.timezone, "Asia/Shanghai"),
+			),
+		)
+		.orderBy(asc(deliveryBatches.automationStartedAt))
+		.limit(limit);
+
+	const receipt: BrowserRunnerDailySettlementReceipt = {
+		scannedBatches: candidates.length,
+		dueBatches: 0,
+		settledBatches: 0,
+		deferredLiveLeaseBatches: 0,
+		failedBatches: 0,
+		failedTasks: 0,
+	};
+	for (const candidate of candidates) {
+		try {
+			const result = await settleOneDueDomesticBrowserRunnerBatch(candidate.id, now);
+			if (result.kind === "not_due") continue;
+			receipt.dueBatches += 1;
+			if (result.kind === "deferred_live_lease") {
+				receipt.deferredLiveLeaseBatches += 1;
+				continue;
+			}
+			receipt.settledBatches += 1;
+			receipt.failedTasks += result.failedTasks;
+		} catch (error) {
+			receipt.failedBatches += 1;
+			console.error("[browser-runner] daily settlement failed for one batch", {
+				batchId: candidate.id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
+	}
+	return receipt;
+}
+
+async function settleOneDueDomesticBrowserRunnerBatch(
+	batchId: string,
+	now: Date,
+): Promise<BrowserRunnerBatchSettlementResult> {
+	return db.transaction(async (tx) => {
+		return executeBrowserRunnerDailySettlement(
+			{ batchId, now },
+			{
+				async lockBatch(id) {
+					// All completion, cancellation, recovery, and human-finalization
+					// paths serialize on the parent before touching its tasks.
+					const [batch] = await tx
+						.select()
+						.from(deliveryBatches)
+						.where(eq(deliveryBatches.id, id))
+						.limit(1)
+						.for("update");
+					return batch ?? null;
+				},
+				async lockUnresolvedTasks(id) {
+					const rows = await tx
+						.select()
+						.from(deliveryTasks)
+						.where(and(eq(deliveryTasks.batchId, id), inArray(deliveryTasks.status, ["available", "claimed"])))
+						.for("update");
+					return rows as BrowserRunnerDailySettlementTaskSnapshot[];
+				},
+				async readScope(batch) {
+					const [scope] = await tx
+						.select({
+							market: measurementScopes.market,
+							locale: measurementScopes.locale,
+							timezone: measurementScopes.timezone,
+						})
+						.from(measurementScopes)
+						.where(
+							and(eq(measurementScopes.id, batch.scopeId), eq(measurementScopes.brandId, batch.brandId)),
+						)
+						.limit(1);
+					return scope ?? null;
+				},
+				async failTask({ task, patch }) {
+					const [failed] = await tx
+						.update(deliveryTasks)
+						.set(patch)
+						.where(
+							and(
+								eq(deliveryTasks.id, task.id),
+								eq(deliveryTasks.status, task.status),
+								eq(deliveryTasks.leaseGeneration, task.leaseGeneration),
+							),
+						)
+						.returning({ id: deliveryTasks.id });
+					return failed !== undefined;
+				},
+				async markBatchInProgress(batch) {
+					const [updated] = await tx
+						.update(deliveryBatches)
+						.set({ status: "in_progress", startedAt: batch.startedAt ?? batch.automationStartedAt })
+						.where(and(eq(deliveryBatches.id, batch.id), eq(deliveryBatches.status, "frozen")))
+						.returning({ id: deliveryBatches.id });
+					return updated !== undefined;
+				},
+				async settleBatch(id, completedAt) {
+					await settleDeliveryBatch(tx, id, completedAt);
+				},
+			},
+		);
 	});
 }
 
