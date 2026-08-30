@@ -12,12 +12,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.61.1",
-    "@types/pg": "^8.20.0",
+    "@playwright/test": "^1.62.1",
+    "@types/pg": "^8.23.1",
     "@usebruno/cli": "3.5.2",
     "@workspace/lib": "workspace:*",
-    "fflate": "^0.7.4",
-    "pg": "^8.22.0",
-    "tsx": "^4.23.1"
+    "fflate": "^0.8.3",
+    "pg": "^8.23.0",
+    "tsx": "^4.23.12"
   }
 }
