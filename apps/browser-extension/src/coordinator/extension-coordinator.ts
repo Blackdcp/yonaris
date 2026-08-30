@@ -126,9 +126,10 @@ export class ExtensionCoordinator {
 
 		let recoveryTabId: number;
 		try {
-			recoveryTabId = !automaticPostSubmit && this.#dependencies.tabs.resolveManualRecoveryTab
-				? await this.#dependencies.tabs.resolveManualRecoveryTab(entry.tabId, entry.surfaceTargetKey)
-				: entry.tabId;
+			recoveryTabId =
+				!automaticPostSubmit && this.#dependencies.tabs.resolveManualRecoveryTab
+					? await this.#dependencies.tabs.resolveManualRecoveryTab(entry.tabId, entry.surfaceTargetKey)
+					: entry.tabId;
 		} catch {
 			return this.#manualRecoveryFailure(api, claim, taskId, recoveryStage, "recovery_tab_unavailable");
 		}
@@ -231,6 +232,7 @@ export class ExtensionCoordinator {
 					case "active":
 					case "blocked":
 						blockedSurfaces.add(entry.surfaceTargetKey);
+						suppressedRecoveryTaskIds.add(entry.taskId);
 						continue;
 					case "resumable_pre":
 						await journal.alignNeedsHuman(entry.taskId, "pre_submit");
@@ -276,10 +278,6 @@ export class ExtensionCoordinator {
 			browserVersion: this.#dependencies.browserVersion,
 		};
 	}
-}
-
-function emptySurfaceSummaries(): Record<BrowserExtensionSurface, SurfacePollSummary> {
-	return mapBrowserExtensionSurfaces(() => ({ succeeded: 0, retryScheduled: 0, needsHuman: 0, incomplete: 0 }));
 }
 
 function isPostSubmitPhase(phase: string): boolean {

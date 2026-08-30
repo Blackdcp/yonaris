@@ -7,11 +7,14 @@ The Yonaris Browser Runner extension executes administrator-started Doubao and D
 - Only a global platform administrator can pair/revoke devices and use **Run now**.
 - **Run now** freezes every enabled Prompt in one CN / zh-CN / Asia/Shanghai scored Program.
 - Each selected channel receives exactly five samples per Prompt; every sample starts a new conversation.
-- A popup **Check for work now** click executes at most one task across all channels. The extension never claims work from a timer and never opens concurrent task tabs.
+- While paired Chrome is open, one overlap-safe work alarm checks the queue every minute. Work remains globally serial: the extension never opens concurrent task tabs. **Check for work now** invokes the same guarded path for diagnostics.
 - Only a surface whose installed adapter reports `ready` can receive a claim. A signed-out, restricted, changed or unverified surface stays unavailable.
 - A server submit intent is durable before the page click. After that point the task is never automatically re-asked.
 - Successful tasks upload answer text, citations/query observations and one sanitized current-answer HTML snapshot. Standard v1 does not capture a pixel screenshot or whole provider page.
 - Login, CAPTCHA, risk control, timeout or page drift creates no `prompt_run`; it lowers delivery coverage and never becomes `brandMentioned=false`.
+- A task-local technical failure does not strand later tasks on the same surface. Login, CAPTCHA, account restriction, rate limit or page drift pauses only the affected surface; other ready surfaces continue serially.
+- Post-submit recovery is limited to the original task, tab and user-message identity, runs after 2 minutes and then 10 minutes, and stops after two persisted attempts. It never re-submits a Prompt.
+- At noon on the next Asia/Shanghai calendar day, or at an earlier frozen measurement-window end, unresolved slots become canonical technical failures and the batch settles as incomplete. Successful observations and evidence remain unchanged.
 - Customer accounts are read-only.
 - No daily schedule is created. Every batch requires a fresh platform-admin **Run now** action.
 
@@ -56,16 +59,16 @@ Run only channels whose current adapter version passed the one-task UAT:
 1. Open **Sampling operations**, select the customer and intended CN scored Program.
 2. Select only verified, ready channels and check the displayed task equation before creating the batch.
 3. Choose **Run tasks now** once. Do not create an overlapping batch for the same Program and channels.
-4. Keep Chrome and the extension running. Each popup **Check for work now** click executes at most one queued task; there is no background queue consumption.
-5. Review Portal progress after every task. Stop clicking at the first login, CAPTCHA, account restriction, page drift, timeout or needs-human result.
+4. Keep Chrome and the extension running. The one-minute alarm drains queued work serially; **Check for work now** is only a manual diagnostic trigger for the same path.
+5. Review Portal progress. A task-local failure is retained and later tasks continue. A platform-wide login, CAPTCHA, account restriction, rate-limit or page-drift result pauses that surface for operator action.
 6. Verify customer channel filters, Visibility denominator, answers, citations, query fan-out and snapshot readiness before presenting results.
 
 ## Pause, resume and recovery
 
 - To pause the local device, disable the unpacked extension or close its dedicated Chrome profile. Unclaimed tasks stay queued in Portal.
-- Re-enable/reopen Chrome and use **Check for work now** for one further claimable task.
+- Re-enable/reopen Chrome and leave it paired; the recurring alarm resumes queue checks. Use **Check for work now** only when an immediate diagnostic check is useful.
 - A clearly pre-submit transient failure may receive the one server-approved retry. Login/CAPTCHA/page drift waits for an administrator.
-- After submit intent, recovery is restricted to the original local tab and exact user message. If that tab/session cannot be proven, finalize it as a technical failure; never ask the Prompt again for the same task.
+- After submit intent, automatic recovery is restricted to the original local tab and exact user message. The durable journal survives service-worker restarts, uses the bounded 2-minute/10-minute schedule, and never asks the Prompt again. If identity cannot be proven after the retry budget, retain a technical failure.
 - A surface marked unavailable cannot receive a task. Do not continue on another account or channel merely to work around a provider restriction.
 
 ## Safe rollout order
@@ -83,4 +86,4 @@ Run only channels whose current adapter version passed the one-task UAT:
 3. Keep the batch ledger. Do not delete failed tasks or insert replacement `prompt_runs` manually.
 4. To roll back an adapter, install the previously reviewed ZIP paired as a new device, then revoke the incompatible device. Do not reuse its secret.
 
-Daily/recurring domestic scheduling remains disabled. Enabling it requires a separate product decision, capacity plan and release review.
+Automatic daily batch creation remains disabled. The recurring extension alarm only consumes an administrator-created frozen batch; enabling scheduled batch creation still requires a separate product decision, capacity plan and release review.
