@@ -263,6 +263,114 @@ describe("runClaimedTask", () => {
 		expect(events).not.toContain("tab:close");
 	});
 
+	test.each(["signed_out", "captcha", "account_restricted", "rate_limited", "page_drift"] as const)(
+		"persists the blocking post-submit failure %s across a service-worker restart",
+		async (code) => {
+			const events: string[] = [];
+			const area = memoryStorage();
+			const storage = new DeviceStorage(area);
+			const journal = new DurableTaskJournal(
+				storage,
+				undefined,
+				() => new Date("2026-08-30T00:00:00.000Z"),
+			);
+			const adapter = fakeAdapter(events);
+			adapter.collectCurrentAnswer = async () => {
+				throw new AdapterError(code, "post_submit", `${code} requires an administrator`);
+			};
+
+			await expect(
+				runClaimedTask(claimedTask(), {
+					api: fakeRunnerApi(events),
+					journal,
+					tabs: fakeTabDriver(events, adapter),
+					browserVersion: "Chrome/140",
+					randomSessionId: () => "session-1",
+				}),
+			).resolves.toEqual({ status: "needs_human", code });
+			await expect(journal.entries()).resolves.toMatchObject({
+				"task-1": {
+					phase: "needs_human",
+					interruptedPhase: "submitted",
+					needsHumanFailureCode: code,
+					updatedAt: "2026-08-30T00:00:00.000Z",
+				},
+			});
+
+			const restarted = new DurableTaskJournal(
+				new DeviceStorage(area),
+				undefined,
+				() => new Date("2026-08-30T01:00:00.000Z"),
+			);
+			await expect(restarted.duePostSubmitRecoveries()).resolves.toEqual([]);
+		},
+	);
+
+	test("persists the needs-human code before reporting the failure to the Portal", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		const journal = new DurableTaskJournal(storage);
+		const adapter = fakeAdapter(events);
+		adapter.collectCurrentAnswer = async () => {
+			throw new AdapterError("captcha", "post_submit", "captcha requires an administrator");
+		};
+		const api = {
+			...fakeRunnerApi(events),
+			failTask: async () => {
+				await expect(journal.entries()).resolves.toMatchObject({
+					"task-1": {
+						phase: "needs_human",
+						interruptedPhase: "submitted",
+						needsHumanFailureCode: "captcha",
+					},
+				});
+				events.push("api:needs_human");
+				return { retryScheduled: false };
+			},
+		};
+
+		await expect(
+			runClaimedTask(claimedTask(), {
+				api,
+				journal,
+				tabs: fakeTabDriver(events, adapter),
+				browserVersion: "Chrome/140",
+				randomSessionId: () => "session-1",
+			}),
+		).resolves.toEqual({ status: "needs_human", code: "captcha" });
+	});
+
+	test("reports incomplete when the atomic needs-human journal transition cannot persist", async () => {
+		const events: string[] = [];
+		const values: Record<string, unknown> = {};
+		const storage = new DeviceStorage({
+			get: async () => ({ ...values }),
+			set: async (items) => {
+				if (JSON.stringify(items).includes('"phase":"needs_human"')) {
+					throw new Error("local journal write blocked");
+				}
+				Object.assign(values, items);
+			},
+			remove: async (keys) => {
+				for (const key of Array.isArray(keys) ? keys : [keys]) delete values[key];
+			},
+		});
+		const adapter = fakeAdapter(events);
+		adapter.collectCurrentAnswer = async () => {
+			throw new AdapterError("captcha", "post_submit", "captcha requires an administrator");
+		};
+
+		await expect(
+			runClaimedTask(claimedTask(), {
+				api: fakeRunnerApi(events),
+				journal: new DurableTaskJournal(storage),
+				tabs: fakeTabDriver(events, adapter),
+				browserVersion: "Chrome/140",
+				randomSessionId: () => "session-1",
+			}),
+		).resolves.toEqual({ status: "incomplete", code: "failure_persistence_failed" });
+	});
+
 	test.each(["signed_out", "captcha", "page_drift", "account_restricted"] as const)(
 		"preserves the exact tab when %s stops before submit",
 		async (code) => {

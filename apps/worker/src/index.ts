@@ -84,6 +84,12 @@ async function main() {
 			retryBackoff: true,
 			expireInSeconds: 60 * 30,
 		});
+		await boss.createQueue("browser-runner-maintenance", {
+			retryLimit: 3,
+			retryDelay: 300,
+			retryBackoff: true,
+			expireInSeconds: 60 * 30,
+		});
 		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
 			await boss.createQueue("sync-auth0-memberships", {
 				retryLimit: 3,
@@ -100,6 +106,8 @@ async function main() {
 		console.log("Scheduled maintenance job (every 5 minutes)");
 		await boss.schedule("response-snapshot-maintenance", "*/5 * * * *", { source: "scheduled" }, { tz: "UTC" });
 		console.log("Scheduled response snapshot maintenance (every 5 minutes)");
+		await boss.schedule("browser-runner-maintenance", "*/5 * * * *", { source: "scheduled" }, { tz: "UTC" });
+		console.log("Scheduled Browser Runner truth settlement (every 5 minutes)");
 
 		if (process.env.DEPLOYMENT_MODE === "whitelabel") {
 			await boss.schedule("sync-auth0-memberships", "*/15 * * * *", { source: "scheduled" }, { tz: "UTC" });

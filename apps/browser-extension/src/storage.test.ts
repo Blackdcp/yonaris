@@ -201,6 +201,93 @@ describe("DeviceStorage", () => {
 		expect(serialized).not.toContain("answerText");
 	});
 
+	it("round-trips bounded automatic recovery metadata while legacy journals remain valid", async () => {
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveJournal({
+			taskId: "task-recovery",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-1",
+			promptSha256: "a".repeat(64),
+			updatedAt: "2026-08-16T00:00:00.000Z",
+			needsHumanFailureCode: "post_submit_unknown",
+			autoRecoveryAttemptCount: 1,
+			autoRecoveryNextAt: "2026-08-16T00:10:00.000Z",
+		});
+		await storage.saveJournal({
+			taskId: "task-legacy",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 43,
+			runnerSessionId: "session-legacy",
+			promptSha256: "b".repeat(64),
+			updatedAt: "2026-08-16T00:00:00.000Z",
+		});
+
+		await expect(storage.loadJournal()).resolves.toMatchObject({
+			"task-recovery": {
+				needsHumanFailureCode: "post_submit_unknown",
+				autoRecoveryAttemptCount: 1,
+				autoRecoveryNextAt: "2026-08-16T00:10:00.000Z",
+			},
+			"task-legacy": { phase: "submitted" },
+		});
+	});
+
+	it.each([-1, 3, 1.5, Number.NaN])("rejects an invalid automatic recovery attempt count %s", async (count) => {
+		const storage = new DeviceStorage(
+			memoryStorage({
+				"browserRunnerJournal:task-1": {
+					taskId: "task-1",
+					batchId: "batch-1",
+					brandId: "stepfun",
+					phase: "needs_human",
+					interruptedPhase: "submitted",
+					surfaceTargetKey: "deepseek.consumer_web",
+					tabId: 42,
+					runnerSessionId: "session-1",
+					promptSha256: "a".repeat(64),
+					updatedAt: "2026-08-16T00:00:00.000Z",
+					autoRecoveryAttemptCount: count,
+				},
+			}),
+		);
+
+		await expect(storage.loadJournal()).rejects.toThrow(/attempt count/i);
+	});
+
+	it.each(["not-a-date", "2026-08-16", "2026-13-16T00:10:00.000Z"])(
+		"rejects an invalid automatic recovery next-at timestamp %s",
+		async (nextAt) => {
+			const storage = new DeviceStorage(
+				memoryStorage({
+					"browserRunnerJournal:task-1": {
+						taskId: "task-1",
+						batchId: "batch-1",
+						brandId: "stepfun",
+						phase: "needs_human",
+						interruptedPhase: "submitted",
+						surfaceTargetKey: "deepseek.consumer_web",
+						tabId: 42,
+						runnerSessionId: "session-1",
+						promptSha256: "a".repeat(64),
+						updatedAt: "2026-08-16T00:00:00.000Z",
+						autoRecoveryAttemptCount: 1,
+						autoRecoveryNextAt: nextAt,
+					},
+				}),
+			);
+
+			await expect(storage.loadJournal()).rejects.toThrow(/next-at/i);
+		},
+	);
+
 	it("keeps every task when journal entries are saved concurrently", async () => {
 		const storage = new DeviceStorage(memoryStorage());
 

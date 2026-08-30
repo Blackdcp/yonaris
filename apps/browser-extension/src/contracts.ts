@@ -6,7 +6,7 @@ import type {
 export { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-surfaces";
 
 export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
-export const EXTENSION_VERSION = "0.3.27" as const;
+export const EXTENSION_VERSION = "0.3.28" as const;
 
 export type BrowserExtensionSurface = SharedBrowserExtensionSurface;
 export type BrowserExtensionReadinessStatus =
@@ -60,6 +60,9 @@ export interface TaskJournalEntry {
 	runnerSessionId: string;
 	promptSha256: string;
 	updatedAt: string;
+	needsHumanFailureCode?: string;
+	autoRecoveryAttemptCount?: number;
+	autoRecoveryNextAt?: string;
 }
 
 export interface BrowserExtensionClaim {

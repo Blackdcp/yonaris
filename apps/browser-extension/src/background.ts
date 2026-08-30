@@ -16,7 +16,7 @@ import {
 } from "./surface-registry";
 
 const HEARTBEAT_ALARM = "browser-runner-heartbeat";
-const LEGACY_WORK_ALARM = "browser-runner-work";
+const WORK_ALARM = "browser-runner-work";
 const storage = chromeDeviceStorage();
 const browserMetadata = buildHeartbeat(navigator.userAgent);
 const coordinator = new ExtensionCoordinator({
@@ -37,6 +37,7 @@ chrome.runtime.onStartup.addListener(ensureAlarms);
 
 chrome.alarms.onAlarm.addListener((alarm) => {
 	if (alarm.name === HEARTBEAT_ALARM) void sendHeartbeat();
+	if (alarm.name === WORK_ALARM) void runNow();
 });
 
 chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
@@ -308,8 +309,8 @@ async function recoverNeedsHuman(taskId: string) {
 }
 
 function ensureAlarms(): void {
-	void chrome.alarms.clear(LEGACY_WORK_ALARM);
 	chrome.alarms.create(HEARTBEAT_ALARM, { delayInMinutes: 0.1, periodInMinutes: 1 });
+	chrome.alarms.create(WORK_ALARM, { delayInMinutes: 0.2, periodInMinutes: 1 });
 }
 
 async function notifyNeedsAttention(result: TaskRunResult, surface: BrowserExtensionSurface): Promise<void> {

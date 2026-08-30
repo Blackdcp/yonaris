@@ -67,6 +67,93 @@ describe("pollStartedWork", () => {
 	});
 
 	test.each([
+		{ status: "retry_scheduled" as const, code: "page_load_timeout", summaryKey: "retryScheduled" as const },
+		{ status: "needs_human" as const, code: "manual_review_required", summaryKey: "needsHuman" as const },
+	])("continues to a later task on the same surface after task-local $status", async ({ status, code, summaryKey }) => {
+		const runTaskIds: string[] = [];
+		const queue = [
+			claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" }),
+			claimedTask({ taskId: "doubao-2", surfaceTargetKey: "doubao.consumer_web" }),
+		];
+
+		const result = await pollStartedWork({
+			brandIds: ["ppio"],
+			surfaces: ["doubao.consumer_web"],
+			claim: async () => queue.shift() ?? null,
+			run: async (claim) => {
+				runTaskIds.push(claim.taskId);
+				return claim.taskId === "doubao-1" ? { status, code } : { status: "succeeded" as const };
+			},
+		});
+
+		expect(runTaskIds).toEqual(["doubao-1", "doubao-2"]);
+		expect(result.bySurface["doubao.consumer_web"][summaryKey]).toBe(1);
+		expect(result.bySurface["doubao.consumer_web"].succeeded).toBe(1);
+	});
+
+	test.each(["signed_out", "captcha", "account_restricted", "rate_limited", "page_drift"] as const)(
+		"stops only the current surface for platform-wide %s while the next surface drains",
+		async (code) => {
+			const runTaskIds: string[] = [];
+			const queues: Partial<Record<BrowserExtensionSurface, BrowserExtensionClaim[]>> = {
+				"doubao.consumer_web": [
+					claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" }),
+					claimedTask({ taskId: "doubao-2", surfaceTargetKey: "doubao.consumer_web" }),
+				],
+				"deepseek.consumer_web": [
+					claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" }),
+					claimedTask({ taskId: "deepseek-2", surfaceTargetKey: "deepseek.consumer_web" }),
+				],
+			};
+
+			const result = await pollStartedWork({
+				brandIds: ["stepfun"],
+				surfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+				claim: async (_brandId, surface) => queues[surface]?.shift() ?? null,
+				run: async (claim) => {
+					runTaskIds.push(claim.taskId);
+					return claim.taskId === "doubao-1"
+						? { status: "needs_human" as const, code }
+						: { status: "succeeded" as const };
+				},
+				now: () => 1_000,
+			});
+
+			expect(runTaskIds).toEqual(["doubao-1", "deepseek-1", "deepseek-2"]);
+			expect(result.bySurface["doubao.consumer_web"].needsHuman).toBe(1);
+			expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(2);
+			expect(queues["doubao.consumer_web"]).toHaveLength(1);
+		});
+
+	test("stops the current surface on incomplete while the next surface continues", async () => {
+		const runTaskIds: string[] = [];
+		const queues: Partial<Record<BrowserExtensionSurface, BrowserExtensionClaim[]>> = {
+			"doubao.consumer_web": [
+				claimedTask({ taskId: "doubao-1", surfaceTargetKey: "doubao.consumer_web" }),
+				claimedTask({ taskId: "doubao-2", surfaceTargetKey: "doubao.consumer_web" }),
+			],
+			"deepseek.consumer_web": [claimedTask({ taskId: "deepseek-1", surfaceTargetKey: "deepseek.consumer_web" })],
+		};
+
+		const result = await pollStartedWork({
+			brandIds: ["stepfun"],
+			surfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
+			claim: async (_brandId, surface) => queues[surface]?.shift() ?? null,
+			run: async (claim) => {
+				runTaskIds.push(claim.taskId);
+				return claim.taskId === "doubao-1"
+					? { status: "incomplete" as const, code: "coordinator_unhandled" }
+					: { status: "succeeded" as const };
+			},
+		});
+
+		expect(runTaskIds).toEqual(["doubao-1", "deepseek-1"]);
+		expect(result.bySurface["doubao.consumer_web"].incomplete).toBe(1);
+		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
+		expect(queues["doubao.consumer_web"]).toHaveLength(1);
+	});
+
+	test.each([
 		{ status: "needs_human" as const, code: "rate_limited", summaryKey: "needsHuman" as const },
 		{ status: "retry_scheduled" as const, code: "page_load_timeout", summaryKey: "retryScheduled" as const },
 		{ status: "incomplete" as const, code: "coordinator_unhandled", summaryKey: "incomplete" as const },
@@ -89,7 +176,11 @@ describe("pollStartedWork", () => {
 			now: () => 1_000,
 		});
 
-		expect(claimSurfaces).toEqual(["doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"]);
+		expect(claimSurfaces).toEqual(
+			status === "retry_scheduled"
+				? ["doubao.consumer_web", "doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"]
+				: ["doubao.consumer_web", "deepseek.consumer_web", "deepseek.consumer_web"],
+		);
 		expect(result.bySurface["doubao.consumer_web"][summaryKey]).toBe(1);
 		expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(1);
 		expect(queues["deepseek.consumer_web"]).toHaveLength(0);

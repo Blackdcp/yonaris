@@ -14,6 +14,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 	let tabsQueryCalls = 0;
 	let tabsQueryImplementation: () => Promise<Array<{ id?: number; url?: string }>> = async () => [];
 	let tabsSendMessageImplementation: (tabId: number, message: unknown) => Promise<unknown> = async () => undefined;
+	let notificationCreateCalls = 0;
 	let fetchImplementation: (request: Request) => Promise<Response> = async () =>
 		new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
 			status: 200,
@@ -67,7 +68,12 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 				sendMessage: (tabId: number, message: unknown) => tabsSendMessageImplementation(tabId, message),
 			},
-			notifications: { create: async () => "notification-id" },
+			notifications: {
+				create: async () => {
+					notificationCreateCalls += 1;
+					return "notification-id";
+				},
+			},
 		} as unknown as typeof chrome);
 		vi.stubGlobal("fetch", (request: Request) => fetchImplementation(request));
 
@@ -82,6 +88,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 		tabsQueryCalls = 0;
 		tabsQueryImplementation = async () => [];
 		tabsSendMessageImplementation = async () => undefined;
+		notificationCreateCalls = 0;
 		fetchImplementation = async () =>
 			new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
 				status: 200,
@@ -89,29 +96,51 @@ describe.sequential("Browser Runner background scheduling", () => {
 			});
 	});
 
-	test("clears the legacy work alarm during setup", () => {
-		expect(clearedAlarms).toEqual(["browser-runner-work"]);
+	test("does not clear the recurring work alarm during setup", () => {
+		expect(clearedAlarms).toEqual([]);
 	});
 
 	afterAll(() => {
 		vi.unstubAllGlobals();
 	});
 
-	test("creates only the heartbeat alarm", () => {
+	test("creates heartbeat and recurring work alarms", () => {
 		expect(createdAlarms).toEqual([
 			{
 				name: "browser-runner-heartbeat",
 				info: { delayInMinutes: 0.1, periodInMinutes: 1 },
 			},
+			{
+				name: "browser-runner-work",
+				info: { delayInMinutes: 0.2, periodInMinutes: 1 },
+			},
 		]);
 	});
 
-	test("ignores a legacy work alarm", async () => {
+	test("checks for work on the recurring alarm and keeps an empty queue silent", async () => {
 		storageGetCalls = 0;
 		expect(alarmListener).not.toBeNull();
 		alarmListener?.({ name: "browser-runner-work" });
+		await vi.waitFor(() => expect(storageGetCalls).toBeGreaterThan(0));
+		expect(notificationCreateCalls).toBe(0);
+	});
+
+	test("coalesces overlapping recurring work alarms into one runner owner", async () => {
+		const runGate = deferred<Record<string, unknown>>();
+		storageGetImplementation = () => runGate.promise;
+		alarmListener?.({ name: "browser-runner-work" });
+		await vi.waitFor(() => expect(storageGetCalls).toBe(1));
+
+		alarmListener?.({ name: "browser-runner-work" });
 		await Promise.resolve();
-		expect(storageGetCalls).toBe(0);
+		expect(storageGetCalls).toBe(1);
+
+		runGate.resolve({});
+		await vi.waitFor(() => {
+			const responses: unknown[] = [];
+			runtimeMessageListener?.({ type: "browser-runner:status" }, {}, (value) => responses.push(value));
+			expect(responses[0]).toMatchObject({ running: false });
+		});
 	});
 
 	test("checks for work only after an explicit runtime message", async () => {

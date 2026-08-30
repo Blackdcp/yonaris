@@ -254,14 +254,14 @@ export async function runClaimedTask(
 		}
 		const failure = classifyFailure(failureSource, phase, Boolean(existing));
 		try {
+			if ((await dependencies.journal.entries())[claim.taskId]) {
+				await dependencies.journal.markNeedsHuman(claim.taskId, failure.code);
+			}
 			const persisted = await dependencies.api.failTask(claim, failure);
 			if (persisted.retryScheduled) {
 				await dependencies.journal.remove(claim.taskId);
 				await tab?.close().catch(() => undefined);
 				return { status: "retry_scheduled", code: failure.code };
-			}
-			if ((await dependencies.journal.entries())[claim.taskId]) {
-				await dependencies.journal.advance(claim.taskId, "needs_human").catch(() => undefined);
 			}
 			return { status: "needs_human", code: failure.code };
 		} catch {
@@ -280,8 +280,8 @@ async function persistNeedsHuman(
 ): Promise<TaskRunResult> {
 	void phase;
 	try {
+		await dependencies.journal.markNeedsHuman(claim.taskId, failure.code);
 		await dependencies.api.failTask(claim, failure);
-		await dependencies.journal.advance(claim.taskId, "needs_human").catch(() => undefined);
 		return { status: "needs_human", code: failure.code };
 	} catch {
 		return { status: "incomplete", code: "failure_persistence_failed" };

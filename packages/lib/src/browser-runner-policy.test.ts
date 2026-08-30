@@ -7,6 +7,8 @@ import {
 	assertPortalBrowserRunnerMutationAllowed,
 	BROWSER_RUNNER_SAFE_TRANSPORT_RECOVERY_CODE,
 	browserExtensionTaskOperationDenial,
+	browserRunnerDailySettlementCutoff,
+	browserRunnerDailySettlementDisposition,
 	browserRunnerHumanFinalization,
 	browserRunnerResumeDenial,
 	canCancelBrowserRunnerAfterStart,
@@ -502,5 +504,88 @@ describe("Browser Runner exact-task reconciliation policy", () => {
 		{ ...base, deliveryStatus: "succeeded", automationStatus: "running" as const },
 	])("blocks an illegal delivery/automation/lease combination", (input) => {
 		expect(reconcileExactTask(input)).toBe("blocked");
+	});
+});
+
+describe("Browser Runner daily truth settlement policy", () => {
+	it("settles at noon on the next Shanghai calendar day, including month and year boundaries", () => {
+		expect(
+			browserRunnerDailySettlementCutoff({
+				automationStartedAt: new Date("2026-08-29T09:49:00.000Z"),
+				measurementWindowEndsAt: new Date("2026-08-31T08:00:00.000Z"),
+			}),
+		).toEqual(new Date("2026-08-30T04:00:00.000Z"));
+		expect(
+			browserRunnerDailySettlementCutoff({
+				automationStartedAt: new Date("2026-12-31T15:59:00.000Z"),
+				measurementWindowEndsAt: new Date("2027-01-03T00:00:00.000Z"),
+			}),
+		).toEqual(new Date("2027-01-01T04:00:00.000Z"));
+	});
+
+	it("uses an earlier frozen measurement-window end as the truth cutoff", () => {
+		expect(
+			browserRunnerDailySettlementCutoff({
+				automationStartedAt: new Date("2026-08-29T09:49:00.000Z"),
+				measurementWindowEndsAt: new Date("2026-08-29T16:00:00.000Z"),
+			}),
+		).toEqual(new Date("2026-08-29T16:00:00.000Z"));
+	});
+
+	it("defers the whole batch while any claimed task still has a live lease", () => {
+		expect(
+			browserRunnerDailySettlementDisposition({
+				status: "claimed",
+				leaseExpiresAt: new Date("2026-08-30T04:01:00.000Z"),
+				submitIntentAt: null,
+				needsHumanCode: null,
+				needsHumanReason: null,
+				now: new Date("2026-08-30T04:00:00.000Z"),
+			}),
+		).toEqual({ kind: "defer_live_lease" });
+	});
+
+	it("preserves an existing needs-human diagnosis and otherwise assigns truthful terminal codes", () => {
+		const now = new Date("2026-08-30T04:00:00.000Z");
+		expect(
+			browserRunnerDailySettlementDisposition({
+				status: "available",
+				leaseExpiresAt: null,
+				submitIntentAt: null,
+				needsHumanCode: "captcha",
+				needsHumanReason: "Captcha blocked the surface",
+				now,
+			}),
+		).toEqual({ kind: "terminal_failure", code: "captcha", reason: "Captcha blocked the surface" });
+		expect(
+			browserRunnerDailySettlementDisposition({
+				status: "claimed",
+				leaseExpiresAt: new Date("2026-08-30T03:59:59.000Z"),
+				submitIntentAt: new Date("2026-08-29T10:00:00.000Z"),
+				needsHumanCode: null,
+				needsHumanReason: null,
+				now,
+			}),
+		).toMatchObject({ kind: "terminal_failure", code: "submit_outcome_unknown" });
+		expect(
+			browserRunnerDailySettlementDisposition({
+				status: "claimed",
+				leaseExpiresAt: new Date("2026-08-30T03:59:59.000Z"),
+				submitIntentAt: null,
+				needsHumanCode: null,
+				needsHumanReason: null,
+				now,
+			}),
+		).toMatchObject({ kind: "terminal_failure", code: "runner_lease_expired" });
+		expect(
+			browserRunnerDailySettlementDisposition({
+				status: "available",
+				leaseExpiresAt: null,
+				submitIntentAt: null,
+				needsHumanCode: null,
+				needsHumanReason: null,
+				now,
+			}),
+		).toMatchObject({ kind: "terminal_failure", code: "daily_cutoff_unresolved" });
 	});
 });

@@ -3,6 +3,8 @@ import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contract
 import { AdaptiveSurfacePool } from "./concurrency";
 import type { TaskRunResult } from "./task-runner";
 
+const PLATFORM_WIDE_FAILURE_CODES = ["signed_out", "captcha", "account_restricted", "rate_limited", "page_drift"] as const;
+
 export type SurfacePollSummary = {
 	succeeded: number;
 	retryScheduled: number;
@@ -42,7 +44,7 @@ export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 					case "succeeded":
 						bySurface[surface].succeeded += 1;
 						pool.recordStableSuccess();
-						continue;
+						break;
 					case "retry_scheduled":
 						bySurface[surface].retryScheduled += 1;
 						break;
@@ -54,13 +56,19 @@ export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 						bySurface[surface].incomplete += 1;
 						break;
 				}
-				break;
+				if (resultDisposition(result) === "stop_surface") break;
 			}
 		} catch {
 			bySurface[surface].incomplete += 1;
 		}
 	}
 	return { bySurface };
+}
+
+function resultDisposition(result: TaskRunResult): "continue_surface" | "stop_surface" {
+	if (result.status === "incomplete") return "stop_surface";
+	if (result.status !== "needs_human") return "continue_surface";
+	return PLATFORM_WIDE_FAILURE_CODES.some((code) => code === result.code) ? "stop_surface" : "continue_surface";
 }
 
 async function claimRound(
