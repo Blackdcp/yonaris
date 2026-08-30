@@ -1,0 +1,38 @@
+name: LAS Root Login Probe
+
+on:
+  push:
+    branches:
+      - fix/domestic-runner-resilience-20260828
+    paths:
+      - .github/workflows/las-root-login-probe.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Configure the existing LAS SSH identity
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.LAS_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.LAS_SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/yonaris_las
+          chmod 600 ~/.ssh/yonaris_las
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Probe direct root access without mutation
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+        run: |
+          ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o ConnectTimeout=10 \
+            "root@$LAS_HOST" \
+            'test "$(id -u)" = 0 && printf "las-root-probe-v1 ok\n"'
