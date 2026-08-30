@@ -29,47 +29,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  e2e:
-    name: E2E Integration Tests
+  contracts:
+    name: E2E contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
-    env:
-      # One file set for every `docker compose` invocation below, so no step
-      # can silently run against a different effective config. The override
-      # scopes the worker to the no-network stub provider.
-      COMPOSE_FILE: deploy/las/compose.yaml:e2e/worker-override.yaml
-      APP_ENV_FILE: ${{ github.workspace }}/e2e/.runtime.env
-      E2E_SNAPSHOT_ROOT: ${{ github.workspace }}/e2e/.snapshot-fixtures
-      IMAGE_TAG: e2e
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: yonaris
-      # The override replaces the locally-built application images after base
-      # Compose interpolation, so syntactically-valid dummy digests are enough
-      # for these three. Postgres is pulled and must stay repository-authorized.
-      WEB_IMAGE_DIGEST: sha256:1111111111111111111111111111111111111111111111111111111111111111
-      WORKER_IMAGE_DIGEST: sha256:2222222222222222222222222222222222222222222222222222222222222222
-      MIGRATE_IMAGE_DIGEST: sha256:3333333333333333333333333333333333333333333333333333333333333333
-      POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST || 'sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3' }}
-
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # Docker builds and the Playwright browser need more disk than the
-      # standard hosted runner exposes after its preinstalled toolchains.
-      - name: Free Disk Space
-        if: ${{ !env.ACT }}
-        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
+          node-version: 24
+
+      - name: Verify E2E contracts
+        run: node --test scripts/e2e-compose-topology.test.mjs scripts/e2e-language-smoke-contract.test.mjs
+
+  quality:
+    name: Code and browser quality
+    needs: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Setup pnpm
         uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
@@ -88,9 +71,6 @@ jobs:
 
       - name: Unit tests
         run: pnpm turbo test
-
-      - name: Verify E2E contracts
-        run: node --test scripts/e2e-compose-topology.test.mjs scripts/e2e-language-smoke-contract.test.mjs
 
       - name: Build and verify Browser Runner extension
         run: |
@@ -145,9 +125,6 @@ jobs:
           path: artifacts/yonaris-browser-extension-${{ github.sha }}.zip
           retention-days: 30
 
-      # This is a local fixture only. It proves the Browser Runner executes a
-      # complete batch and produces evidence without contacting Doubao or any
-      # other consumer surface.
       - name: Run Browser Runner fixture smoke
         run: |
           state_dir="$(mktemp -d)"
@@ -167,6 +144,94 @@ jobs:
 
       - name: Storybook tests
         run: pnpm -C apps/web test:storybook
+
+  integration:
+    name: E2E Integration Tests
+    needs: contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    env:
+      # One file set for every `docker compose` invocation below, so no step
+      # can silently run against a different effective config. The override
+      # scopes the worker to the no-network stub provider.
+      COMPOSE_FILE: deploy/las/compose.yaml:e2e/worker-override.yaml
+      APP_ENV_FILE: ${{ github.workspace }}/e2e/.runtime.env
+      E2E_SNAPSHOT_ROOT: ${{ github.workspace }}/e2e/.snapshot-fixtures
+      E2E_MIN_AVAILABLE_KIB: "20971520"
+      IMAGE_TAG: e2e
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yonaris
+      # The override replaces the locally-built application images after base
+      # Compose interpolation, so syntactically-valid dummy digests are enough
+      # for these three. Postgres is pulled and must stay repository-authorized.
+      WEB_IMAGE_DIGEST: sha256:1111111111111111111111111111111111111111111111111111111111111111
+      WORKER_IMAGE_DIGEST: sha256:2222222222222222222222222222222222222222222222222222222222222222
+      MIGRATE_IMAGE_DIGEST: sha256:3333333333333333333333333333333333333333333333333333333333333333
+      POSTGRES_IMAGE_DIGEST: ${{ vars.LAS_POSTGRES_IMAGE_DIGEST || 'sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Docker builds and the Playwright browser need more disk than the
+      # standard hosted runner exposes after its preinstalled toolchains.
+      - name: Inspect E2E disk headroom
+        id: disk
+        if: ${{ !env.ACT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
+          [[ "$available_kib" =~ ^[0-9]+$ ]]
+          cleanup_required=false
+          if (( available_kib < E2E_MIN_AVAILABLE_KIB )); then
+            cleanup_required=true
+          fi
+          echo "cleanup_required=$cleanup_required" >> "$GITHUB_OUTPUT"
+
+      - name: Free Disk Space
+        if: ${{ !env.ACT && steps.disk.outputs.cleanup_required == 'true' }}
+        uses: jlumbroso/free-disk-space@54081f138730dfa15788a46383842cd2f914a1be
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      - name: Verify E2E disk headroom
+        if: ${{ !env.ACT }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          available_kib="$(df -Pk "$GITHUB_WORKSPACE" | awk 'NR == 2 { print $4 }')"
+          [[ "$available_kib" =~ ^[0-9]+$ ]]
+          (( available_kib >= E2E_MIN_AVAILABLE_KIB ))
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        run: pnpm -C e2e exec playwright install chromium --with-deps
 
       - name: Prepare internal E2E runtime configuration
         run: |

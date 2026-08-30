@@ -8,6 +8,8 @@ on:
       - .github/workflows/deploy-las.yaml
       - .github/workflows/e2e.yaml
       - .github/workflows/mode-compat.yaml
+      - apps/browser-extension/**
+      - apps/browser-runner/**
       - apps/web/**
       - apps/worker/**
       - e2e/**
@@ -25,11 +27,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: yonaris-production
-  queue: max
-  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -509,9 +506,23 @@ jobs:
       contents: read
     uses: ./.github/workflows/mode-compat.yaml
 
+  production-candidate-slot:
+    name: Select latest pending production candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: yonaris-production
+      cancel-in-progress: false
+    steps:
+      - name: Register latest candidate
+        run: echo "Production candidate selected."
+
   response-snapshot-storage-contract:
     name: Response snapshot storage contract
     runs-on: ubuntu-latest
+    concurrency:
+      group: yonaris-response-contract-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
     steps:
@@ -570,6 +581,9 @@ jobs:
   build-images:
     name: Build immutable images
     runs-on: ubuntu-latest
+    concurrency:
+      group: yonaris-image-build-${{ github.ref }}
+      cancel-in-progress: true
     outputs:
       web_digest: ${{ steps.build_web.outputs.digest }}
       worker_digest: ${{ steps.build_worker.outputs.digest }}
@@ -645,6 +659,7 @@ jobs:
   deploy:
     name: Deploy production
     needs:
+      - production-candidate-slot
       - build-images
       - e2e-gate
       - mode-compat-gate
@@ -653,6 +668,9 @@ jobs:
       vars.LAS_DEPLOY_ENABLED == 'true' &&
       vars.LAS_FORCED_COMMAND_ENABLED == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: yonaris-production
+      cancel-in-progress: false
     environment:
       name: production
       url: https://portal.yonaris.com

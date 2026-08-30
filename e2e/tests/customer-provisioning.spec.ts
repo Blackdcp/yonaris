@@ -40,10 +40,19 @@ test("a platform operator can provision a ready customer workspace and ordinary 
 	const customerContext = await browser.newContext({ baseURL });
 	try {
 		const customerPage = await customerContext.newPage();
-		const signInResponse = await customerPage.request.post("/api/auth/sign-in/email", {
-			headers: { Origin: baseURL },
-			data: { email, password: temporaryPassword },
-		});
+		const signIn = () =>
+			customerPage.request.post("/api/auth/sign-in/email", {
+				headers: { Origin: baseURL },
+				data: { email, password: temporaryPassword },
+			});
+		let signInResponse = await signIn();
+		if (signInResponse.status() === 429) {
+			const retryAfterSeconds = Number.parseInt(signInResponse.headers()["x-retry-after"] ?? "", 10);
+			expect(retryAfterSeconds).toBeGreaterThanOrEqual(1);
+			expect(retryAfterSeconds).toBeLessThanOrEqual(10);
+			await new Promise((resolve) => setTimeout(resolve, (retryAfterSeconds + 1) * 1_000));
+			signInResponse = await signIn();
+		}
 		expect(signInResponse.status()).toBe(200);
 
 		const response = await customerPage.goto(`/app/${brandId}/programs`);
