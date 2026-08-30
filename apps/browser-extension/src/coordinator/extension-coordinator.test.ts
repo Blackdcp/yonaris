@@ -447,6 +447,65 @@ describe("ExtensionCoordinator", () => {
 		expect(remaining).not.toHaveProperty("autoRecoveryAttemptCount");
 	});
 
+	test("does not recover or consume attempts when the resumable server session does not match", async () => {
+		const events: string[] = [];
+		const storage = new DeviceStorage(memoryStorage());
+		await storage.saveDevice({
+			portalBaseUrl: "https://portal.yonaris.com",
+			deviceId: "device-1",
+			deviceToken: `yrd_${"a".repeat(43)}`,
+			allowedBrandIds: ["stepfun"],
+		});
+		await storage.saveJournal({
+			taskId: "task-1",
+			batchId: "batch-1",
+			brandId: "stepfun",
+			phase: "needs_human",
+			interruptedPhase: "submitted",
+			surfaceTargetKey: "deepseek.consumer_web",
+			tabId: 42,
+			runnerSessionId: "session-local",
+			promptSha256: await sha256("Prompt A"),
+			updatedAt: "2026-08-30T00:00:00.000Z",
+			needsHumanFailureCode: "post_submit_unknown",
+		});
+		const coordinator = new ExtensionCoordinator({
+			storage,
+			apiFactory: () => ({
+				...fakeRunnerApi(events),
+				claimNext: async () => null,
+				resume: async () => {
+					events.push("api:resume");
+					return claimedTask({
+						postSubmitAssist: true,
+						submitConfirmed: true,
+						runnerSessionId: "session-server",
+					});
+				},
+				reconcileTask: async () => ({
+					state: "resumable_post" as const,
+					task: reconciliationTask(),
+					runnerSessionId: "session-server",
+				}),
+			}),
+			tabs: fakeTabDriver(events, fakeAdapter(events)),
+			browserVersion: "Chrome/140",
+			now: () => new Date("2026-08-30T00:02:00.000Z"),
+		});
+
+		const summary = await coordinator.runOnce();
+
+		expect(summary).toMatchObject({ recovered: 0, recoveryIncomplete: 0 });
+		expect(events).not.toContain("api:resume");
+		expect(events).not.toContain("api:needs_human");
+		const remaining = (await new DurableTaskJournal(storage).entries())["task-1"];
+		expect(remaining).toMatchObject({
+			phase: "needs_human",
+			updatedAt: "2026-08-30T00:00:00.000Z",
+		});
+		expect(remaining).not.toHaveProperty("autoRecoveryAttemptCount");
+	});
+
 	test("does not poll or discard the exact local journal when reconciliation is unavailable", async () => {
 		const events: string[] = [];
 		const storage = new DeviceStorage(memoryStorage());

@@ -240,6 +240,7 @@ export class ExtensionCoordinator {
 					case "resumable_post":
 						if (reconciliation.runnerSessionId !== entry.runnerSessionId) {
 							blockedSurfaces.add(entry.surfaceTargetKey);
+							suppressedRecoveryTaskIds.add(entry.taskId);
 							continue;
 						}
 						await journal.alignNeedsHuman(entry.taskId, "post_submit");
