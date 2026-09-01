@@ -546,6 +546,8 @@ class ConsumerAdapter implements ConsumerWebAdapter {
 				? current.hostname === "doubao.com" || current.hostname.endsWith(".doubao.com")
 				: this.surface === "qwen.consumer_web"
 					? current.hostname === "qianwen.com" || current.hostname === "www.qianwen.com"
+					: this.surface === "kimi.consumer_web"
+						? current.hostname === "kimi.com" || current.hostname === "www.kimi.com"
 					: current.hostname === launch.hostname;
 		if (
 			current.protocol !== "https:" ||

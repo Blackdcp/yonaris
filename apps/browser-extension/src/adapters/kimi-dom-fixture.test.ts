@@ -30,6 +30,22 @@ describe("Kimi semantic DOM contract", () => {
 		]);
 	});
 
+	test("matches Kimi's AddConversation action when the header wrapper changes", async () => {
+		const port = cssFixturePort(
+			`
+			<nav class="kimi-topbar"><a href="/"><span><svg name="AddConversation"></svg></span></a></nav>
+			<div class="chat-input-editor" role="textbox" contenteditable="true"></div>
+			<div class="send-button-container"></div>
+			`,
+			"https://kimi.com/",
+		);
+
+		expect(await visibleCount(port, "composer", kimiSelectorContract.composer)).toBe(1);
+		expect(await visibleCount(port, "send", kimiSelectorContract.send)).toBe(1);
+		const actions = await port.query("new_conversation", kimiSelectorContract.newConversation);
+		expect(actions.filter((item) => item.visible)).toHaveLength(1);
+	});
+
 	test("keeps provider search terms unavailable until a recorded source block proves them", () => {
 		expect(kimiSelectorContract.searchUsed).toBeNull();
 		expect(kimiSelectorContract.searchNotUsed).toBeNull();

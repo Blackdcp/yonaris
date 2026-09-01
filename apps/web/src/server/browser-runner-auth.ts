@@ -4,6 +4,7 @@ import {
 	isApprovedBrowserExtensionAdapterVersion,
 	isBrowserExtensionSurface,
 } from "@workspace/lib/browser-extension-contract";
+import { REQUIRED_BROWSER_EXTENSION_VERSION } from "@workspace/lib/browser-extension-surfaces";
 import {
 	type AuthenticatedBrowserRunnerDevice,
 	authenticateBrowserRunnerDevice,
@@ -31,7 +32,7 @@ export type BrowserRunnerPrincipal =
 
 type DeviceAuthenticationRecord = Pick<
 	AuthenticatedBrowserRunnerDevice,
-	"id" | "allowedBrandIds" | "supportedSurfaces" | "readiness" | "revokedAt"
+	"id" | "allowedBrandIds" | "supportedSurfaces" | "readiness" | "revokedAt" | "extensionVersion"
 >;
 
 export class BrowserRunnerHttpError extends Error {
@@ -99,12 +100,15 @@ export async function authenticateRunnerRequest(
 		if (supportedSurfaces.length < 1) {
 			throw new BrowserRunnerHttpError(401, "Browser Runner device capabilities are invalid");
 		}
-		const readySurfaces = supportedSurfaces.filter((surface) => {
-			const readiness = device.readiness[surface];
-			return (
-				readiness?.status === "ready" && isApprovedBrowserExtensionAdapterVersion(surface, readiness.adapterVersion)
-			);
-		});
+		const packageVersionIsCurrent = device.extensionVersion === REQUIRED_BROWSER_EXTENSION_VERSION;
+		const readySurfaces = packageVersionIsCurrent
+			? supportedSurfaces.filter((surface) => {
+					const readiness = device.readiness[surface];
+					return (
+						readiness?.status === "ready" && isApprovedBrowserExtensionAdapterVersion(surface, readiness.adapterVersion)
+					);
+				})
+			: [];
 		return {
 			kind: "browser_extension",
 			id: device.id,

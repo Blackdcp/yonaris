@@ -13,7 +13,7 @@ describe("Manifest V3 permissions", () => {
 			version: string;
 		};
 
-		expect(manifest.version).toBe("0.3.28");
+		expect(manifest.version).toBe("0.3.29");
 		expect(packageJson.version).toBe(manifest.version);
 		expect(EXTENSION_VERSION).toBe(manifest.version);
 	});
@@ -36,6 +36,7 @@ describe("Manifest V3 permissions", () => {
 			"https://chat.deepseek.com/*",
 			"https://qianwen.com/*",
 			"https://www.qianwen.com/*",
+			"https://kimi.com/*",
 			"https://www.kimi.com/*",
 			"https://wenxin.baidu.com/*",
 			"https://yuanbao.tencent.com/*",
@@ -51,6 +52,7 @@ describe("Manifest V3 permissions", () => {
 					"https://chat.deepseek.com/*",
 					"https://qianwen.com/*",
 					"https://www.qianwen.com/*",
+					"https://kimi.com/*",
 					"https://www.kimi.com/*",
 					"https://wenxin.baidu.com/*",
 					"https://yuanbao.tencent.com/*",

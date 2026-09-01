@@ -5,6 +5,7 @@ import type {
 import {
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
 	BROWSER_EXTENSION_SURFACES,
+	REQUIRED_BROWSER_EXTENSION_VERSION,
 } from "@workspace/lib/browser-extension-surfaces";
 import { Alert, AlertDescription, AlertTitle } from "@workspace/ui/components/alert";
 import { Badge } from "@workspace/ui/components/badge";
@@ -15,7 +16,7 @@ import { Label } from "@workspace/ui/components/label";
 import { AlertTriangle, CirclePlay, Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { LocalizedRawDetail } from "@/components/localized-raw-detail";
-import type { LocalizedMessage, MessageId } from "@/i18n/catalog";
+import type { LocalizedMessage, MessageId, MessageValues } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import type { BrowserRunnerDeviceView, SamplingRunNowInput, SamplingRunNowProgram } from "./types";
 
@@ -43,20 +44,32 @@ export function browserRunnerDeviceIsOnline(device: BrowserRunnerDeviceView, now
 	return Number.isFinite(lastSeenAt) && now.getTime() - lastSeenAt <= DEVICE_ONLINE_WINDOW_MS;
 }
 
+export function browserRunnerDeviceHasCurrentExtension(device: BrowserRunnerDeviceView): boolean {
+	return device.extensionVersion === REQUIRED_BROWSER_EXTENSION_VERSION;
+}
+
 function channelAvailability(
 	devices: readonly BrowserRunnerDeviceView[],
 	brandId: string,
 	surface: BrowserExtensionSurface,
 	now: Date,
-): { ready: boolean; label: MessageId; status?: BrowserExtensionReadinessStatus } {
+): { ready: boolean; label: MessageId; labelValues?: MessageValues; status?: BrowserExtensionReadinessStatus } {
 	const eligible = devices.filter(
 		(device) => device.allowedBrandIds.includes(brandId) && device.supportedSurfaces.includes(surface),
 	);
 	const online = eligible.filter((device) => browserRunnerDeviceIsOnline(device, now));
-	if (online.some((device) => device.readiness[surface]?.status === "ready")) {
+	const currentOnline = online.filter(browserRunnerDeviceHasCurrentExtension);
+	if (currentOnline.some((device) => device.readiness[surface]?.status === "ready")) {
 		return { ready: true, label: "sampling.readiness.ready" };
 	}
-	const status = online.map((device) => device.readiness[surface]?.status).find((value) => value !== undefined);
+	if (online.length > 0 && currentOnline.length === 0) {
+		return {
+			ready: false,
+			label: "sampling.readiness.updateExtension",
+			labelValues: { version: REQUIRED_BROWSER_EXTENSION_VERSION },
+		};
+	}
+	const status = currentOnline.map((device) => device.readiness[surface]?.status).find((value) => value !== undefined);
 	if (!status) return { ready: false, label: "sampling.readiness.offlineQueue" };
 	return { ready: false, label: readinessLabel(status), status };
 }
@@ -101,6 +114,10 @@ export function SamplingRunNowDialog({
 	);
 	const surfaces = surfaceSelectionOverride ?? [...BROWSER_EXTENSION_SURFACES];
 	const taskCount = calculateSamplingRunNowTaskCount(selectedProgram?.promptCount ?? 0, surfaces.length);
+	const unavailableLabels = CHANNELS.filter(
+		({ surface }) => surfaces.includes(surface) && !availability.get(surface)?.ready,
+	).map(({ label }) => label);
+	const blockedFromStarting = unavailableLabels.length > 0;
 
 	const toggleSurface = (surface: BrowserExtensionSurface, checked: boolean) => {
 		setSurfaceSelectionOverride(
@@ -114,13 +131,11 @@ export function SamplingRunNowDialog({
 
 	const submit = async () => {
 		if (!selectedProgram || surfaces.length === 0) return;
-		const unavailableLabels = CHANNELS.filter(
-			({ surface }) => surfaces.includes(surface) && !availability.get(surface)?.ready,
-		).map(({ label }) => label);
-		if (
-			unavailableLabels.length > 0 &&
-			!window.confirm(t("sampling.run.confirmUnavailable", { channels: formatList(unavailableLabels) }))
-		) {
+		if (blockedFromStarting) {
+			setError({
+				id: "sampling.run.blockedNotReady",
+				values: { channels: formatList(unavailableLabels), version: REQUIRED_BROWSER_EXTENSION_VERSION },
+			});
 			return;
 		}
 		setSubmitting(true);
@@ -201,7 +216,7 @@ export function SamplingRunNowDialog({
 												<span className="flex items-center gap-2 font-medium">
 													{label}
 													<Badge variant={channel?.ready ? "default" : "outline"}>
-														{channel ? t(channel.label) : null}
+														{channel ? t(channel.label, channel.labelValues) : null}
 													</Badge>
 												</span>
 												<span className="block text-xs text-muted-foreground">{t("sampling.run.newConversation")}</span>
@@ -223,8 +238,19 @@ export function SamplingRunNowDialog({
 									})}
 								</p>
 								<p className="text-xs text-muted-foreground">{t("sampling.run.offlineNote")}</p>
+								{blockedFromStarting && (
+									<p className="mt-1 text-xs font-medium text-destructive">
+										{t("sampling.run.blockedNotReady", {
+											channels: formatList(unavailableLabels),
+											version: REQUIRED_BROWSER_EXTENSION_VERSION,
+										})}
+									</p>
+								)}
 							</div>
-							<Button disabled={submitting || surfaces.length === 0 || taskCount === 0} onClick={submit}>
+							<Button
+								disabled={submitting || surfaces.length === 0 || taskCount === 0 || blockedFromStarting}
+								onClick={submit}
+							>
 								{submitting && <Loader2 className="animate-spin" />}
 								{t("sampling.run.submit", { count: formatNumber(taskCount) })}
 							</Button>

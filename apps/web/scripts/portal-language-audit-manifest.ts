@@ -1234,12 +1234,7 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 			["apps/web/src/components/prompt-chart-print.tsx", "rendered-identifier", "promptName", 2],
 			["apps/web/src/components/prompt-chart-print.tsx", "rendered-identifier", "promptName", 3],
 			["apps/web/src/components/response-snapshot-panel.tsx", "rendered-identifier", "channel", 1],
-			[
-				"apps/web/src/components/response-snapshot-panel.tsx",
-				"rendered-identifier",
-				"evidence.primary.sha256",
-				1,
-			],
+			["apps/web/src/components/response-snapshot-panel.tsx", "rendered-identifier", "evidence.primary.sha256", 1],
 			["apps/web/src/components/response-snapshot-panel.tsx", "rendered-identifier", "snapshot.htmlSha256", 1],
 			["apps/web/src/components/response-snapshot-panel.tsx", "rendered-identifier", "snapshot.jsonSha256", 1],
 			["apps/web/src/components/sampling/browser-runner-device-list.tsx", "rendered-identifier", "brand.name", 1],
@@ -1452,6 +1447,12 @@ export const PORTAL_LITERAL_CLASSIFICATIONS: LiteralClassification[] = [
 				"apps/web/src/components/sampling/sampling-run-now-dialog.tsx",
 				"metadata-copy",
 				"sampling.readiness.offlineQueue",
+				1,
+			],
+			[
+				"apps/web/src/components/sampling/sampling-run-now-dialog.tsx",
+				"metadata-copy",
+				"sampling.readiness.updateExtension",
 				1,
 			],
 		] as const

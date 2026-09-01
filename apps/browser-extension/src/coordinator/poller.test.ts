@@ -27,6 +27,32 @@ describe("pollStartedWork", () => {
 		expect(result.bySurface["doubao.consumer_web"].succeeded).toBe(3);
 	});
 
+	test("limits Kimi to one task per poll while later surfaces continue", async () => {
+		const runTaskIds: string[] = [];
+		const queues: Partial<Record<BrowserExtensionSurface, BrowserExtensionClaim[]>> = {
+			"kimi.consumer_web": [
+				claimedTask({ taskId: "kimi-1", surfaceTargetKey: "kimi.consumer_web" }),
+				claimedTask({ taskId: "kimi-2", surfaceTargetKey: "kimi.consumer_web" }),
+			],
+			"wenxin.consumer_web": [claimedTask({ taskId: "wenxin-1", surfaceTargetKey: "wenxin.consumer_web" })],
+		};
+
+		const result = await pollStartedWork({
+			brandIds: ["stepfun"],
+			surfaces: ["kimi.consumer_web", "wenxin.consumer_web"],
+			claim: async (_brandId, surface) => queues[surface]?.shift() ?? null,
+			run: async (claim) => {
+				runTaskIds.push(claim.taskId);
+				return { status: "succeeded" as const };
+			},
+		});
+
+		expect(runTaskIds).toEqual(["kimi-1", "wenxin-1"]);
+		expect(result.bySurface["kimi.consumer_web"].succeeded).toBe(1);
+		expect(result.bySurface["wenxin.consumer_web"].succeeded).toBe(1);
+		expect(queues["kimi.consumer_web"]).toHaveLength(1);
+	});
+
 	test("runs claimed tasks sequentially across every ready surface", async () => {
 		const runTaskIds: string[] = [];
 		const claimSurfaces: string[] = [];
@@ -123,7 +149,8 @@ describe("pollStartedWork", () => {
 			expect(result.bySurface["doubao.consumer_web"].needsHuman).toBe(1);
 			expect(result.bySurface["deepseek.consumer_web"].succeeded).toBe(2);
 			expect(queues["doubao.consumer_web"]).toHaveLength(1);
-		});
+		},
+	);
 
 	test("stops the current surface on incomplete while the next surface continues", async () => {
 		const runTaskIds: string[] = [];
