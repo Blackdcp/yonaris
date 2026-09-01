@@ -324,6 +324,7 @@ export const adminCatalog = defineCatalog(
 		"sampling.readiness.riskPausedQueue": "Paused by risk control · will wait in queue",
 		"sampling.readiness.pageChangedQueue": "Page changed · will wait in queue",
 		"sampling.readiness.unavailableQueue": "Unavailable · will wait in queue",
+		"sampling.readiness.updateExtension": "Update extension to {version}",
 		"sampling.device.confirmRevoke": "Revoke {deviceName}? It will stop receiving new tasks immediately.",
 		"sampling.device.pair.title": "Pair a local Chrome device",
 		"sampling.device.pair.description":
@@ -424,6 +425,8 @@ export const adminCatalog = defineCatalog(
 		"sampling.batch.error.create": "Could not create the sampling batch.",
 		"sampling.run.confirmUnavailable":
 			"{channels} is not ready. Its tasks will wait in the queue for an administrator. Create this batch anyway?",
+		"sampling.run.blockedNotReady":
+			"Run blocked: {channels} must be Ready on Browser Runner extension {version} before starting.",
 		"sampling.run.title": "Run now",
 		"sampling.run.description":
 			"Run every enabled Prompt in a scored China Program. One run per Prompt and channel; no schedule is created.",
@@ -436,7 +439,7 @@ export const adminCatalog = defineCatalog(
 		"sampling.run.newConversation": "New conversation for every task",
 		"sampling.run.taskCount": "{prompts} × {channels} × {samples} = {tasks} tasks",
 		"sampling.run.offlineNote":
-			"An offline or signed-out device waits for an administrator; it does not count as a failed observation.",
+			"Run now starts only when every selected channel is Ready on the current Browser Runner extension.",
 		"sampling.run.submit": "Run {count} tasks now",
 		"sampling.run.error": "Could not start this domestic run.",
 		"sampling.overseas.title": "Overseas Bright Data run",
@@ -971,6 +974,7 @@ export const adminCatalog = defineCatalog(
 		"sampling.readiness.riskPausedQueue": "因风控暂停 · 将在队列中等待",
 		"sampling.readiness.pageChangedQueue": "页面已变化 · 将在队列中等待",
 		"sampling.readiness.unavailableQueue": "不可用 · 将在队列中等待",
+		"sampling.readiness.updateExtension": "请先更新扩展到 {version}",
 		"sampling.device.confirmRevoke": "撤销 {deviceName}？该设备将立即停止接收新任务。",
 		"sampling.device.pair.title": "配对本地 Chrome 设备",
 		"sampling.device.pair.description":
@@ -1069,6 +1073,7 @@ export const adminCatalog = defineCatalog(
 		"sampling.batch.validation.windowOrder": "测量窗口结束时间必须晚于开始时间。",
 		"sampling.batch.error.create": "无法创建抽样批次。",
 		"sampling.run.confirmUnavailable": "{channels} 尚未就绪，其任务将留在队列中等待管理员。仍要创建此批次吗？",
+		"sampling.run.blockedNotReady": "运行已拦截：{channels} 需要先在 Browser Runner 扩展 {version} 上变为 Ready。",
 		"sampling.run.title": "立即运行",
 		"sampling.run.description": "在中国评分项目中运行每条已启用提示词。每条提示词和每个渠道运行一次；不会创建计划。",
 		"sampling.run.noProgram": "没有符合条件的项目",
@@ -1078,7 +1083,7 @@ export const adminCatalog = defineCatalog(
 		"sampling.run.channels": "渠道",
 		"sampling.run.newConversation": "每个任务使用新对话",
 		"sampling.run.taskCount": "{prompts} × {channels} × {samples} = {tasks} 个任务",
-		"sampling.run.offlineNote": "离线或退出登录的设备会等待管理员，不会计为失败观察。",
+		"sampling.run.offlineNote": "只有所有已选渠道都在最新 Browser Runner 扩展上变为 Ready 后，才能立即运行。",
 		"sampling.run.submit": "立即运行 {count} 个任务",
 		"sampling.run.error": "无法开始本次国内运行。",
 		"sampling.overseas.title": "海外 Bright Data 运行",

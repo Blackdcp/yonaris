@@ -3,10 +3,12 @@ import type {
 	BrowserExtensionSurface as SharedBrowserExtensionSurface,
 } from "@workspace/lib/browser-extension-surfaces";
 
-export { BROWSER_EXTENSION_SURFACES } from "@workspace/lib/browser-extension-surfaces";
+export {
+	BROWSER_EXTENSION_SURFACES,
+	REQUIRED_BROWSER_EXTENSION_VERSION as EXTENSION_VERSION,
+} from "@workspace/lib/browser-extension-surfaces";
 
 export const PORTAL_ORIGIN = "https://portal.yonaris.com" as const;
-export const EXTENSION_VERSION = "0.3.28" as const;
 
 export type BrowserExtensionSurface = SharedBrowserExtensionSurface;
 export type BrowserExtensionReadinessStatus =

@@ -5,6 +5,7 @@ import {
   BROWSER_EXTENSION_SURFACE_DEFINITIONS,
   BROWSER_EXTENSION_SURFACES,
   browserExtensionSurfaceDefinition,
+  REQUIRED_BROWSER_EXTENSION_VERSION,
 } from "@workspace/lib/browser-extension-surfaces";
 import pg from "pg";
 import { ADMIN_AUTH_STATE_PATH } from "../auth-setup";
@@ -220,7 +221,7 @@ async function pairFakeExtension(
   const response = await request.post("/api/internal/browser-runner/v1/pair", {
     data: {
       code,
-      extensionVersion: "0.3.0",
+      extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
       browserFamily: "chrome",
       browserVersion: "140.0.0",
       platform: "windows",

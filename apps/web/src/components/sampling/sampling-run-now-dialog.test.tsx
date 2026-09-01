@@ -1,6 +1,7 @@
 import {
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
 	BROWSER_EXTENSION_SURFACES,
+	REQUIRED_BROWSER_EXTENSION_VERSION,
 } from "@workspace/lib/browser-extension-surfaces";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -25,7 +26,7 @@ function readyDevice(): BrowserRunnerDeviceView {
 	return {
 		id: "22222222-2222-4222-8222-222222222222",
 		displayName: "Marketing MacBook",
-		extensionVersion: "1.0.0",
+		extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 		browserFamily: "chrome",
 		browserVersion: "140.0.0",
 		platform: "macos",
@@ -65,7 +66,7 @@ describe("SamplingRunNowDialog", () => {
 		expect(markup).not.toMatch(/samples per prompt[^<]*input/i);
 	});
 
-	it("keeps all seven channels selected while devices are offline so tasks can queue", () => {
+	it("keeps all seven channels selected while devices are offline but blocks one-click start", () => {
 		const offline = readyDevice();
 		offline.lastSeenAt = "2026-08-16T09:00:00.000Z";
 		const markup = renderToStaticMarkup(
@@ -83,9 +84,10 @@ describe("SamplingRunNowDialog", () => {
 		expect(markup).toContain("Offline · will wait in queue");
 		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
 		expect(markup).toContain("Run 420 tasks now");
+		expect(markup).toContain("disabled");
 	});
 
-	it("keeps an unavailable channel selected so its task waits rather than disappearing", () => {
+	it("keeps an unavailable channel selected but blocks one-click start until every selected channel is ready", () => {
 		const device = readyDevice();
 		device.readiness["deepseek.consumer_web"] = {
 			status: "unavailable",
@@ -107,6 +109,27 @@ describe("SamplingRunNowDialog", () => {
 		expect(markup).toContain("Unavailable · will wait in queue");
 		expect(markup).toContain("60 × 7 × 1 = 420 tasks");
 		expect(markup).toContain("Run 420 tasks now");
+		expect(markup).toContain("disabled");
+	});
+
+	it("blocks one-click start when the only ready device is running an outdated extension package", () => {
+		const device = readyDevice();
+		device.extensionVersion = "0.3.28";
+		const markup = renderToStaticMarkup(
+			<I18nProvider locale="en">
+				<SamplingRunNowDialog
+					brandId="stepfun"
+					programs={programs}
+					devices={[device]}
+					now={new Date("2026-08-16T10:00:30.000Z")}
+					onRun={vi.fn()}
+				/>
+			</I18nProvider>,
+		);
+
+		expect(markup).toContain(`Update extension to ${REQUIRED_BROWSER_EXTENSION_VERSION}`);
+		expect(markup).toContain("Run 420 tasks now");
+		expect(markup).toContain("disabled");
 	});
 
 	it("renders the Chinese one-click operation while preserving Program, timezone, device, and surface identities", () => {

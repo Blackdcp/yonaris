@@ -1,6 +1,7 @@
 import {
 	BROWSER_EXTENSION_SURFACE_DEFINITIONS,
 	BROWSER_EXTENSION_SURFACES,
+	REQUIRED_BROWSER_EXTENSION_VERSION,
 } from "@workspace/lib/browser-extension-surfaces";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -54,6 +55,7 @@ describe("Browser Runner machine authentication", () => {
 					expect(receivedToken).toBe(deviceToken);
 					return {
 						id: "11111111-1111-4111-8111-111111111111",
+						extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 						allowedBrandIds: ["stepfun"],
 						supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 						readiness: {
@@ -100,6 +102,7 @@ describe("Browser Runner machine authentication", () => {
 			{
 				authenticateDevice: async () => ({
 					id: "11111111-1111-4111-8111-111111111111",
+					extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 					allowedBrandIds: ["stepfun"],
 					supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
 					readiness,
@@ -123,6 +126,7 @@ describe("Browser Runner machine authentication", () => {
 			{
 				authenticateDevice: async () => ({
 					id: "11111111-1111-4111-8111-111111111111",
+					extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 					allowedBrandIds: ["stepfun"],
 					supportedSurfaces: ["deepseek.consumer_web"],
 					readiness: {
@@ -140,6 +144,35 @@ describe("Browser Runner machine authentication", () => {
 		expect(principal).toMatchObject({ readySurfaces: [] });
 	});
 
+	it("keeps an outdated extension out of ready surfaces even when every adapter reports ready", async () => {
+		const readiness = Object.fromEntries(
+			BROWSER_EXTENSION_SURFACE_DEFINITIONS.map(({ key, adapterVersion }) => [
+				key,
+				{ status: "ready" as const, adapterVersion, activeConcurrency: 0 },
+			]),
+		);
+		const principal = await authenticateRunnerRequest(
+			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
+				headers: { Authorization: `Bearer yrd_${"f".repeat(43)}` },
+			}),
+			{
+				authenticateDevice: async () => ({
+					id: "11111111-1111-4111-8111-111111111111",
+					extensionVersion: "0.3.28",
+					allowedBrandIds: ["stepfun"],
+					supportedSurfaces: [...BROWSER_EXTENSION_SURFACES],
+					readiness,
+					revokedAt: null,
+				}),
+			},
+		);
+
+		expect(principal).toMatchObject({
+			supportedSurfaces: BROWSER_EXTENSION_SURFACES,
+			readySurfaces: [],
+		});
+	});
+
 	it("keeps the production-approved Doubao v8 adapter in ready surfaces", async () => {
 		const principal = await authenticateRunnerRequest(
 			new Request("https://portal.example/api/internal/browser-runner/v1/tasks/claim", {
@@ -148,6 +181,7 @@ describe("Browser Runner machine authentication", () => {
 			{
 				authenticateDevice: async () => ({
 					id: "11111111-1111-4111-8111-111111111111",
+					extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 					allowedBrandIds: ["stepfun"],
 					supportedSurfaces: ["doubao.consumer_web"],
 					readiness: {
@@ -174,6 +208,7 @@ describe("Browser Runner machine authentication", () => {
 				{
 					authenticateDevice: async () => ({
 						id: "11111111-1111-4111-8111-111111111111",
+						extensionVersion: REQUIRED_BROWSER_EXTENSION_VERSION,
 						allowedBrandIds: ["stepfun"],
 						supportedSurfaces: ["deepseek.consumer_web"],
 						readiness: {},

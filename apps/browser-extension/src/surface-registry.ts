@@ -57,8 +57,8 @@ const LOCAL_SURFACE_CONFIG: Record<
 		createAdapter: createQwenAdapter,
 	},
 	"kimi.consumer_web": {
-		contentScriptMatches: ["https://www.kimi.com/*"],
-		approvedHostname: (hostname) => hostname === "www.kimi.com",
+		contentScriptMatches: ["https://kimi.com/*", "https://www.kimi.com/*"],
+		approvedHostname: (hostname) => hostname === "kimi.com" || hostname === "www.kimi.com",
 		contract: kimiSelectorContract,
 		createAdapter: createKimiAdapter,
 	},

@@ -31,6 +31,15 @@ describe("extension surface registry", () => {
 		expect(definition.contentScriptMatches).toContain("https://qianwen.com/*");
 	});
 
+	it("uses Kimi on both the apex and www origins", () => {
+		const definition = extensionSurfaceDefinition("kimi.consumer_web");
+		expect(definition.launchUrl).toBe("https://www.kimi.com/");
+		expect(definition.approvedUrl(new URL("https://kimi.com/"))).toBe(true);
+		expect(definition.approvedUrl(new URL("https://www.kimi.com/"))).toBe(true);
+		expect(definition.contentScriptMatches).toContain("https://kimi.com/*");
+		expect(definition.contentScriptMatches).toContain("https://www.kimi.com/*");
+	});
+
 	it("fails closed for credentials, insecure URLs, sibling domains, and unknown surfaces", () => {
 		for (const surface of BROWSER_EXTENSION_SURFACES) {
 			const definition = extensionSurfaceDefinition(surface);

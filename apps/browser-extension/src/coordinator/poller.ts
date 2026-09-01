@@ -3,7 +3,17 @@ import type { BrowserExtensionClaim, BrowserExtensionSurface } from "../contract
 import { AdaptiveSurfacePool } from "./concurrency";
 import type { TaskRunResult } from "./task-runner";
 
-const PLATFORM_WIDE_FAILURE_CODES = ["signed_out", "captcha", "account_restricted", "rate_limited", "page_drift"] as const;
+const PLATFORM_WIDE_FAILURE_CODES = [
+	"signed_out",
+	"captcha",
+	"account_restricted",
+	"rate_limited",
+	"page_drift",
+] as const;
+const DEFAULT_MAX_TASKS_PER_SURFACE_PER_POLL = 100;
+const MAX_TASKS_PER_SURFACE_PER_POLL: Partial<Record<BrowserExtensionSurface, number>> = {
+	"kimi.consumer_web": 1,
+};
 
 export type SurfacePollSummary = {
 	succeeded: number;
@@ -29,7 +39,8 @@ export async function pollStartedWork(input: PollStartedWorkInput): Promise<{
 		try {
 			const pool = input.pools?.[surface] ?? new AdaptiveSurfacePool();
 			if (!pool.canStart(input.now?.() ?? Date.now())) continue;
-			for (let taskOrdinal = 0; taskOrdinal < 100; taskOrdinal += 1) {
+			const maximumTasksThisPoll = MAX_TASKS_PER_SURFACE_PER_POLL[surface] ?? DEFAULT_MAX_TASKS_PER_SURFACE_PER_POLL;
+			for (let taskOrdinal = 0; taskOrdinal < maximumTasksThisPoll; taskOrdinal += 1) {
 				const [claim] = await claimRound(input.brandIds, surface, 1, input.claim);
 				if (!claim) break;
 
