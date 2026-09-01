@@ -86,6 +86,7 @@ jobs:
             "https://chat.deepseek.com/*",
             "https://qianwen.com/*",
             "https://www.qianwen.com/*",
+            "https://kimi.com/*",
             "https://www.kimi.com/*",
             "https://wenxin.baidu.com/*",
             "https://yuanbao.tencent.com/*",

@@ -187,6 +187,18 @@ describe("Kimi browser-extension adapter", () => {
 		await expect(createKimiAdapter(port).preflight()).resolves.toBeUndefined();
 	});
 
+	test("accepts Kimi's apex origin used by Chrome on macOS", async () => {
+		const port = new FixtureDomPort(
+			createAdapterFixture({
+				pageUrl: "https://kimi.com/",
+				conversationUrl: "https://kimi.com/chat/kimi-session",
+				newConversationLabels: ["鏂板缓浼氳瘽"],
+			}),
+		);
+
+		await expect(port.completeOneTask(createKimiAdapter(port), "Prompt A")).resolves.toBeUndefined();
+	});
+
 	test("accepts Kimi's exact home entry parameter on the durable conversation", async () => {
 		const port = new FixtureDomPort(
 			createAdapterFixture({
