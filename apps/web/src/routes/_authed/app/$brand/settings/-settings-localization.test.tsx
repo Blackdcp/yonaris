@@ -6,6 +6,7 @@ import { I18nProvider } from "@/i18n/provider";
 
 const mocks = vi.hoisted(() => ({
 	params: { brand: "brand-raw-id" },
+	search: {} as { scope?: string },
 	loaderData: {} as Record<string, unknown>,
 	brand: {
 		id: "brand-raw-id",
@@ -14,6 +15,8 @@ const mocks = vi.hoisted(() => ({
 		additionalDomains: ["docs.example.cn"],
 		aliases: ["Step 原始别名"],
 		updatedAt: "2026-08-27T00:00:00.000Z",
+		prompts: [] as Array<Record<string, unknown>>,
+		measurementScopes: [] as Array<Record<string, unknown>>,
 	},
 	competitors: [] as Array<{ id: string; name: string; domains: string[]; aliases: string[] }>,
 	checkBrandWriteAccess: vi.fn(),
@@ -45,6 +48,7 @@ vi.mock("@tanstack/react-router", () => ({
 		options,
 		useLoaderData: () => mocks.loaderData,
 		useParams: () => mocks.params,
+		useSearch: () => mocks.search,
 	}),
 	notFound: mocks.notFound,
 	redirect: mocks.redirect,
@@ -248,6 +252,7 @@ describe("brand settings route localization", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mocks.params = { brand: "brand-raw-id" };
+		mocks.search = {};
 		mocks.loaderData = {};
 		mocks.brand = {
 			id: "brand-raw-id",
@@ -256,6 +261,8 @@ describe("brand settings route localization", () => {
 			additionalDomains: ["docs.example.cn"],
 			aliases: ["Step 原始别名"],
 			updatedAt: "2026-08-27T00:00:00.000Z",
+			prompts: [],
+			measurementScopes: [],
 		};
 		mocks.competitors = [];
 		mocks.checkBrandWriteAccess.mockResolvedValue(true);
@@ -462,20 +469,28 @@ describe("brand settings route localization", () => {
 	});
 
 	it("renders the full Chinese prompts settings surface while retaining the Program and Prompt values", () => {
-		mocks.loaderData = {
+		mocks.search = { scope: "scope-raw-id" };
+		mocks.brand = {
+			...mocks.brand,
 			prompts: [
 				{
 					id: "prompt-raw-id",
-					brandId: "brand-raw-id",
+					scopeId: "scope-raw-id",
 					value: "Which AI IDE works in 中国?",
 					enabled: true,
 					tags: ["Buyer-Journey"],
 					systemTags: ["unbranded"],
-					createdAt: new Date("2026-08-27T00:00:00.000Z"),
 				},
 			],
-			scopeId: "scope-raw-id",
-			scopeName: "中国市场 / zh-CN",
+			measurementScopes: [
+				{
+					id: "scope-raw-id",
+					key: "cn-zh",
+					name: "中国市场 / zh-CN",
+					enabled: true,
+					isDefault: true,
+				},
+			],
 		};
 		const markup = renderRoute(PromptsSettingsRoute, "zh-CN");
 		const metadata = JSON.stringify(localizedHead(PromptsSettingsRoute, "zh-CN")?.meta);
@@ -490,17 +505,52 @@ describe("brand settings route localization", () => {
 	});
 
 	it("identifies the legacy Program by its canonical key rather than its mutable display name", () => {
-		mocks.loaderData = {
+		mocks.search = { scope: "scope-legacy-raw-id" };
+		mocks.brand = {
+			...mocks.brand,
 			prompts: [],
-			scopeId: "scope-legacy-raw-id",
-			scopeKey: "legacy-unspecified",
-			scopeName: "Renamed legacy scope from storage",
+			measurementScopes: [
+				{
+					id: "scope-legacy-raw-id",
+					key: "legacy-unspecified",
+					name: "Renamed legacy scope from storage",
+					enabled: true,
+					isDefault: true,
+				},
+			],
 		};
 
 		const markup = renderRoute(PromptsSettingsRoute, "zh-CN");
 
 		expect(markup).toContain("提示词 - 旧版 / 未指定");
 		expect(markup).not.toContain("Renamed legacy scope from storage");
+	});
+
+	it("renders an empty selected Program so its first prompt can be added", () => {
+		mocks.search = { scope: "22222222-2222-4222-8222-222222222222" };
+		mocks.brand = {
+			...mocks.brand,
+			measurementScopes: [
+				{
+					id: "22222222-2222-4222-8222-222222222222",
+					key: "cn-zh",
+					name: "固生堂国内监测",
+					market: "CN",
+					locale: "zh-CN",
+					timezone: "Asia/Shanghai",
+					enabled: true,
+					isDefault: false,
+					deliveryMode: "assisted",
+					lane: "scored",
+				},
+			],
+			prompts: [],
+		};
+
+		const markup = renderRoute(PromptsSettingsRoute, "zh-CN");
+
+		expect(markup).toContain("提示词 - 固生堂国内监测");
+		expect(markup).toContain("添加提示词");
 	});
 
 	it("renders Chinese team labels, localized role display, pending state, dates, actions, and metadata", () => {

@@ -12,12 +12,10 @@ import { updatePromptsFn } from "@/server/prompts";
 
 interface Prompt {
 	id: string;
-	brandId: string;
 	value: string;
 	enabled: boolean;
 	tags?: string[];
 	systemTags?: string[];
-	createdAt: Date;
 }
 
 interface PromptsEditorProps {
