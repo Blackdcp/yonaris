@@ -3,10 +3,11 @@ import type { BrowserExtensionReadiness, BrowserExtensionSurface } from "./contr
 import { CURRENT_ADAPTER_VERSIONS } from "./surface-readiness";
 import { type ExtensionSurfaceDefinition, extensionSurfaceForUrl } from "./surface-registry";
 
-type QualificationTab = { id?: number; url?: string };
+export type QualificationTab = { id?: number; url?: string };
 
 export interface QualificationTabsGateway {
 	queryActive(): Promise<QualificationTab[]>;
+	get?(tabId: number): Promise<QualificationTab>;
 	sendMessage(
 		tabId: number,
 		command: { kind: "yonaris_adapter"; action: "inspect_search_evidence" | "preflight" },
@@ -35,7 +36,27 @@ export function qualifyAndRecordActiveSurfaceTab(
 	gateway: QualificationTabsGateway | undefined,
 	publisher: QualificationReadinessPublisher,
 ): Promise<SurfaceQualification> {
-	const attempt = qualificationTail.then(() => performSurfaceQualification(store, gateway, publisher));
+	const tabsGateway = gateway ?? chromeQualificationTabsGateway();
+	const attempt = qualificationTail.then(async () => {
+		const active = await detectActiveSurface(tabsGateway);
+		return performSurfaceQualification(store, active, tabsGateway, publisher);
+	});
+	qualificationTail = attempt.then(
+		() => undefined,
+		() => undefined,
+	);
+	return attempt;
+}
+
+export function qualifyAndRecordSurfaceTab(
+	store: QualificationReadinessStore,
+	tab: QualificationTab,
+	gateway: QualificationTabsGateway,
+	publisher: QualificationReadinessPublisher,
+): Promise<SurfaceQualification> {
+	const attempt = qualificationTail.then(() =>
+		performSurfaceQualification(store, detectSurface(tab), gateway, publisher),
+	);
 	qualificationTail = attempt.then(
 		() => undefined,
 		() => undefined,
@@ -45,11 +66,11 @@ export function qualifyAndRecordActiveSurfaceTab(
 
 async function performSurfaceQualification(
 	store: QualificationReadinessStore,
-	gateway: QualificationTabsGateway | undefined,
+	active: { tabId: number; url: string; definition: ExtensionSurfaceDefinition },
+	gateway: QualificationTabsGateway,
 	publisher: QualificationReadinessPublisher,
 ): Promise<SurfaceQualification> {
-	const tabsGateway = gateway ?? chromeQualificationTabsGateway();
-	const active = await detectActiveSurface(tabsGateway);
+	await assertQualificationTargetUnchanged(active, gateway);
 	const readiness = await store.loadSurfaceReadiness();
 	const revokedReadiness: BrowserExtensionReadiness = {
 		...readiness,
@@ -61,8 +82,9 @@ async function performSurfaceQualification(
 	};
 	await store.saveSurfaceReadiness(revokedReadiness);
 	await publisher.confirmReadiness(revokedReadiness);
-	const result = await inspectActiveSurface(active, tabsGateway);
+	const result = await inspectActiveSurface(active, gateway);
 	if (result.status !== "ready" && result.status !== "qualified") return result;
+	await assertQualificationTargetUnchanged(active, gateway);
 	const readyReadiness: BrowserExtensionReadiness = {
 		...revokedReadiness,
 		[active.definition.surface]: {
@@ -82,6 +104,21 @@ async function performSurfaceQualification(
 	return result;
 }
 
+async function assertQualificationTargetUnchanged(
+	active: { tabId: number; url: string; definition: ExtensionSurfaceDefinition },
+	gateway: QualificationTabsGateway,
+): Promise<void> {
+	if (!gateway.get) return;
+	const current = detectSurface(await gateway.get(active.tabId));
+	if (
+		current.tabId !== active.tabId ||
+		current.url !== active.url ||
+		current.definition.surface !== active.definition.surface
+	) {
+		throw new Error("The supported AI page changed during qualification.");
+	}
+}
+
 async function detectActiveSurface(gateway: QualificationTabsGateway): Promise<{
 	tabId: number;
 	url: string;
@@ -89,6 +126,14 @@ async function detectActiveSurface(gateway: QualificationTabsGateway): Promise<{
 }> {
 	const tabs = await gateway.queryActive();
 	const tab = tabs.length === 1 ? tabs[0] : undefined;
+	return detectSurface(tab);
+}
+
+function detectSurface(tab: QualificationTab | undefined): {
+	tabId: number;
+	url: string;
+	definition: ExtensionSurfaceDefinition;
+} {
 	if (!tab || !Number.isSafeInteger(tab.id) || typeof tab.url !== "string") {
 		throw new Error("Open one active supported domestic AI page before checking it.");
 	}
@@ -220,6 +265,7 @@ function adapterFailureMessage(value: unknown): string | null {
 function chromeQualificationTabsGateway(): QualificationTabsGateway {
 	return {
 		queryActive: () => chrome.tabs.query({ active: true, currentWindow: true }),
+		get: (tabId) => chrome.tabs.get(tabId),
 		sendMessage: (tabId, command) => chrome.tabs.sendMessage(tabId, command),
 	};
 }

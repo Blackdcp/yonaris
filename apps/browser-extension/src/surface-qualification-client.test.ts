@@ -8,6 +8,7 @@ import {
 	qualifyActiveDoubaoTab,
 	qualifyAndRecordActiveDoubaoTab,
 	qualifyAndRecordActiveSurfaceTab,
+	qualifyAndRecordSurfaceTab,
 } from "./surface-qualification-client";
 
 afterEach(() => {
@@ -335,6 +336,99 @@ describe("Doubao read-only qualification client", () => {
 });
 
 describe("registry-driven surface qualification", () => {
+	test("qualifies an explicit supported tab without querying the active tab", async () => {
+		const writes: BrowserExtensionReadiness[] = [];
+		const commands: Array<{ tabId: number; command: unknown }> = [];
+		const store: QualificationReadinessStore = {
+			loadSurfaceReadiness: async () => ({
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			}),
+			saveSurfaceReadiness: async (readiness) => {
+				writes.push(readiness);
+			},
+		};
+		const gateway: QualificationTabsGateway = {
+			queryActive: async () => {
+				throw new Error("must not query the active tab");
+			},
+			sendMessage: async (tabId, command) => {
+				commands.push({ tabId, command });
+				return { ok: true };
+			},
+		};
+
+		await expect(
+			qualifyAndRecordSurfaceTab(
+				store,
+				{ id: 42, url: "https://www.qianwen.com/chat/thread_123" },
+				gateway,
+				confirmedPublisher(),
+			),
+		).resolves.toMatchObject({ surface: "qwen.consumer_web", status: "ready" });
+		expect(commands).toEqual([{ tabId: 42, command: { kind: "yonaris_adapter", action: "preflight" } }]);
+		expect(writes.map((value) => value["qwen.consumer_web"]?.status)).toEqual(["unavailable", "ready"]);
+	});
+
+	test("rejects an explicit qualification when the queued tab already navigated to another surface", async () => {
+		const writes: BrowserExtensionReadiness[] = [];
+		const store: QualificationReadinessStore = {
+			loadSurfaceReadiness: async () => ({}),
+			saveSurfaceReadiness: async (readiness) => {
+				writes.push(readiness);
+			},
+		};
+		const gateway = {
+			queryActive: async () => [],
+			get: async () => ({ id: 42, url: "https://www.qianwen.com/chat/thread_456" }),
+			sendMessage: async () => ({ ok: true }),
+		} as QualificationTabsGateway & { get(tabId: number): Promise<{ id?: number; url?: string }> };
+
+		await expect(
+			qualifyAndRecordSurfaceTab(
+				store,
+				{ id: 42, url: "https://www.kimi.com/chat/thread_123" },
+				gateway,
+				confirmedPublisher(),
+			),
+		).rejects.toThrow(/page changed/i);
+		expect(writes).toHaveLength(0);
+	});
+
+	test("does not record ready when the tab navigates to another surface during preflight", async () => {
+		const writes: BrowserExtensionReadiness[] = [];
+		let tabRead = 0;
+		const store: QualificationReadinessStore = {
+			loadSurfaceReadiness: async () => ({}),
+			saveSurfaceReadiness: async (readiness) => {
+				writes.push(readiness);
+			},
+		};
+		const gateway = {
+			queryActive: async () => [],
+			get: async () => {
+				tabRead += 1;
+				return tabRead === 1
+					? { id: 42, url: "https://www.kimi.com/chat/thread_123" }
+					: { id: 42, url: "https://www.qianwen.com/chat/thread_456" };
+			},
+			sendMessage: async () => ({ ok: true }),
+		} as QualificationTabsGateway & { get(tabId: number): Promise<{ id?: number; url?: string }> };
+
+		await expect(
+			qualifyAndRecordSurfaceTab(
+				store,
+				{ id: 42, url: "https://www.kimi.com/chat/thread_123" },
+				gateway,
+				confirmedPublisher(),
+			),
+		).rejects.toThrow(/page changed/i);
+		expect(writes.map((value) => value["kimi.consumer_web"]?.status)).toEqual(["unavailable"]);
+	});
+
 	test("uses read-only preflight and records the detected non-Doubao surface as ready", async () => {
 		const writes: BrowserExtensionReadiness[] = [];
 		const commands: unknown[] = [];
