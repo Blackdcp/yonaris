@@ -4,7 +4,6 @@
  * Editor to add/edit/remove prompts.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { LEGACY_SCOPE } from "@workspace/lib/db/measurement-scopes";
 import { Skeleton } from "@workspace/ui/components/skeleton";
 import { z } from "zod";
 import { PromptsEditor } from "@/components/prompts-editor";
@@ -12,6 +11,8 @@ import { translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
 import { getBrand } from "@/server/brands";
+
+const LEGACY_SCOPE_KEY = "legacy-unspecified";
 
 function PromptsSettingsSkeleton() {
 	return (
@@ -85,7 +86,7 @@ function PromptsSettingsPage() {
 	const brandPrompts = (brand.prompts ?? [])
 		.filter((prompt) => prompt.scopeId === scope.id)
 		.sort((left, right) => left.value.localeCompare(right.value) || left.id.localeCompare(right.id));
-	const displayScopeName = scope.key === LEGACY_SCOPE.key ? t("settings.prompts.legacyScope") : scope.name;
+	const displayScopeName = scope.key === LEGACY_SCOPE_KEY ? t("settings.prompts.legacyScope") : scope.name;
 
 	return (
 		<PromptsEditor
