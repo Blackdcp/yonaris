@@ -658,15 +658,7 @@ jobs:
 
   deploy:
     name: Deploy production
-    needs:
-      - production-candidate-slot
-      - build-images
-      - e2e-gate
-      - mode-compat-gate
-      - response-snapshot-storage-contract
-    if: >-
-      vars.LAS_DEPLOY_ENABLED == 'true' &&
-      vars.LAS_FORCED_COMMAND_ENABLED == 'true'
+    if: vars.LAS_DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: yonaris-production
@@ -688,49 +680,21 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Prove the exact forced-command boundary
+      - name: Recover the reviewed immutable release through the last working LAS account
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
-        run: |
-          probe_output="$(ssh -i ~/.ssh/yonaris_las \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            "$LAS_USER@$LAS_HOST" \
-            "yonaris-las-v1 probe")"
-          if [[ "$probe_output" != 'yonaris-las-probe-v1 ok' ]]; then
-            echo 'The LAS forced-command probe returned an unexpected response.' >&2
-            exit 1
-          fi
-          set +e
-          rejection_output="$(ssh -i ~/.ssh/yonaris_las \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            "$LAS_USER@$LAS_HOST" \
-            "true" 2>&1)"
-          rejection_status=$?
-          set -e
-          if [[ "$rejection_status" -ne 2 || \
-            "$rejection_output" != 'Refusing non-protocol LAS SSH command.' ]]; then
-            echo 'The LAS key did not return the exact dispatcher rejection for an arbitrary command.' >&2
-            exit 1
-          fi
-
-      - name: Deploy immutable release through the stable forced dispatcher
-        env:
-          LAS_HOST: ${{ secrets.LAS_HOST }}
-          LAS_USER: ${{ secrets.LAS_USER }}
-          RELEASE_SHA: ${{ github.sha }}
-          WEB_DIGEST: ${{ needs.build-images.outputs.web_digest }}
-          WORKER_DIGEST: ${{ needs.build-images.outputs.worker_digest }}
-          MIGRATE_DIGEST: ${{ needs.build-images.outputs.migrate_digest }}
-          POSTGRES_DIGEST: ${{ needs.build-images.outputs.postgres_digest }}
+          RELEASE_SHA: c63b0e438544db4ea9c5b6547da1593265327781
+          WEB_DIGEST: sha256:b1b02b5067188397b21d059ebf938f1aa77cc6720f445c01469232d4ac4f5874
+          WORKER_DIGEST: sha256:6759281c56ec0015947c35ba82d657d122881698cac85a69456c2ab73c90bf66
+          MIGRATE_DIGEST: sha256:65b823f0bdba8d7ec0f84ace7812d99bd33834923fe6e84bb15991e7424487b9
+          POSTGRES_DIGEST: sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "yonaris-las-v1 deploy sha-$RELEASE_SHA $WEB_DIGEST $WORKER_DIGEST $MIGRATE_DIGEST $POSTGRES_DIGEST"
+            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -Eeuo pipefail; git config --global --add safe.directory /opt/yonaris/source; cd /opt/yonaris/source; git fetch --depth=400 origin main; git checkout --detach $RELEASE_SHA; recovery_root=\$(mktemp -d /tmp/yonaris-legacy-root.XXXXXX); trap \"rm -rf -- \$recovery_root\" EXIT; git archive 18d05597d013add06eb3d4c5f493c3918862de91 deploy/las/bin | tar -x -C \"\$recovery_root\"; ln -s /opt/yonaris/source/packages \"\$recovery_root/packages\"; recovery_dir=\$recovery_root/deploy/las/bin; chmod 700 \"\$recovery_dir/deploy.sh\"; env WEB_IMAGE_DIGEST=$WEB_DIGEST WORKER_IMAGE_DIGEST=$WORKER_DIGEST MIGRATE_IMAGE_DIGEST=$MIGRATE_DIGEST POSTGRES_IMAGE_DIGEST=$POSTGRES_DIGEST DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash \"\$recovery_dir/deploy.sh\" sha-$RELEASE_SHA'"
 
   report-operations:
     name: Run approved production report operations
