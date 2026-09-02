@@ -46,7 +46,7 @@ vi.mock("@tanstack/react-router", () => ({
 	createFileRoute: () => (options: Record<string, unknown>) => ({
 		...options,
 		options,
-		useLoaderData: () => mocks.loaderData,
+		useLoaderData: () => (Object.keys(mocks.loaderData).length > 0 ? mocks.loaderData : mocks.brand),
 		useParams: () => mocks.params,
 		useSearch: () => mocks.search,
 	}),
@@ -189,6 +189,7 @@ type TestRoute = {
 	component?: React.ComponentType;
 	head?: (input: unknown) => { meta: Array<{ title?: string; name?: string; content?: string }> };
 	loader?: (input: { params: { brand: string } }) => Promise<unknown>;
+	validateSearch?: (search: Record<string, unknown>) => Record<string, unknown>;
 	beforeLoad?: (input: { params: { brand: string } }) => unknown;
 };
 
