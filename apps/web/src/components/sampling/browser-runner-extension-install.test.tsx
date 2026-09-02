@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { I18nProvider } from "@/i18n/provider";
 import {
 	BrowserRunnerExtensionInstall,
+	fetchBrowserExtensionPackageMetadata,
 	parseBrowserExtensionPackageMetadata,
 } from "./browser-runner-extension-install";
 
@@ -75,5 +76,22 @@ describe("BrowserRunnerExtensionInstall", () => {
 		expect(() => parseBrowserExtensionPackageMetadata({ ...metadata, fileName: "other.zip" })).toThrow(
 			/extension package metadata/i,
 		);
+	});
+
+	it("bypasses the browser cache when loading current package metadata", async () => {
+		let requestedUrl: string | undefined;
+		let requestedInit: RequestInit | undefined;
+
+		const result = await fetchBrowserExtensionPackageMetadata({
+			fetcher: async (url, init) => {
+				requestedUrl = url;
+				requestedInit = init;
+				return { ok: true, json: async () => metadata };
+			},
+		});
+
+		expect(requestedUrl).toBe("/downloads/yonaris-browser-extension.json");
+		expect(requestedInit).toMatchObject({ cache: "no-store", credentials: "same-origin" });
+		expect(result).toEqual(metadata);
 	});
 });
