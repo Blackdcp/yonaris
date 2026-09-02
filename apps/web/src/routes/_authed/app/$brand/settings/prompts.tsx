@@ -4,54 +4,13 @@
  * Editor to add/edit/remove prompts.
  */
 import { createFileRoute } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
-import { db } from "@workspace/lib/db/db";
-import { ensureLegacyMeasurementScope, LEGACY_SCOPE } from "@workspace/lib/db/measurement-scopes";
-import { measurementScopes, prompts } from "@workspace/lib/db/schema";
+import { LEGACY_SCOPE } from "@workspace/lib/db/measurement-scopes";
 import { Skeleton } from "@workspace/ui/components/skeleton";
-import { and, desc, eq } from "drizzle-orm";
-import { z } from "zod";
 import { PromptsEditor } from "@/components/prompts-editor";
+import { useBrand } from "@/hooks/use-brands";
 import { translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
-import { requireAuthSession, requireBrandAccess } from "@/lib/auth/helpers";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
-
-const getPromptsForEditing = createServerFn({ method: "GET" })
-	.validator(z.object({ brandId: z.string(), scopeId: z.string().uuid().optional() }))
-	.handler(async ({ data }) => {
-		const session = await requireAuthSession();
-		await requireBrandAccess(session.user.id, data.brandId);
-
-		const scopes = await db.query.measurementScopes.findMany({
-			where: and(eq(measurementScopes.brandId, data.brandId), eq(measurementScopes.enabled, true)),
-			orderBy: (scope, { asc, desc }) => [desc(scope.isDefault), asc(scope.createdAt)],
-		});
-		const requestedScope = data.scopeId ? scopes.find((scope) => scope.id === data.scopeId) : undefined;
-		if (data.scopeId && !requestedScope) {
-			throw new Error("Not Found: Measurement program is not accessible");
-		}
-		// Customer configuration starts in a manual Program. Legacy/automatic
-		// scopes remain visible in analytics, but execution configuration belongs
-		// to the platform console and must never be the accidental edit target.
-		const scope =
-			requestedScope ?? scopes.find((candidate) => candidate.automaticTargetKeys?.length === 0) ?? scopes[0];
-		const scopeId = scope?.id ?? (await ensureLegacyMeasurementScope(data.brandId));
-
-		// Fetch all prompts (including disabled) for this measurement scope.
-		const brandPrompts = await db
-			.select()
-			.from(prompts)
-			.where(and(eq(prompts.brandId, data.brandId), eq(prompts.scopeId, scopeId)))
-			.orderBy(prompts.value, desc(prompts.enabled), prompts.id);
-
-		return {
-			prompts: brandPrompts,
-			scopeId,
-			scopeKey: scope?.key ?? LEGACY_SCOPE.key,
-			scopeName: scope?.name ?? LEGACY_SCOPE.name,
-		};
-	});
 
 function PromptsSettingsSkeleton() {
 	return (
@@ -74,12 +33,6 @@ function PromptsSettingsSkeleton() {
 }
 
 export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
-	loaderDeps: ({ search }) => ({
-		scopeId: z.string().uuid().safeParse(search.scope).success ? search.scope : undefined,
-	}),
-	loader: async ({ params, deps }) => {
-		return getPromptsForEditing({ data: { brandId: params.brand, scopeId: deps.scopeId } });
-	},
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
 		const brandName = getBrandName(matches);
@@ -97,16 +50,43 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 
 function PromptsSettingsPage() {
 	const { t } = useI18n();
-	const { prompts: brandPrompts, scopeId, scopeKey, scopeName } = Route.useLoaderData();
 	const { brand: brandId } = Route.useParams();
-	const displayScopeName = scopeKey === LEGACY_SCOPE.key ? t("settings.prompts.legacyScope") : scopeName;
+	const { scope: requestedScopeId } = Route.useSearch();
+	const { brand, isLoading, isError } = useBrand(brandId);
+
+	if (isLoading) return <PromptsSettingsSkeleton />;
+	if (isError || !brand) {
+		return (
+			<p className="text-sm text-destructive" role="alert">
+				{t("common.error.unexpected")}
+			</p>
+		);
+	}
+
+	const enabledScopes = brand.measurementScopes.filter((scope) => scope.enabled);
+	const scope =
+		enabledScopes.find((candidate) => candidate.id === requestedScopeId) ??
+		enabledScopes.find((candidate) => candidate.isDefault) ??
+		enabledScopes[0];
+	if (!scope) {
+		return (
+			<p className="text-sm text-destructive" role="alert">
+				{t("common.error.unexpected")}
+			</p>
+		);
+	}
+
+	const brandPrompts = brand.prompts
+		.filter((prompt) => prompt.scopeId === scope.id)
+		.sort((left, right) => left.value.localeCompare(right.value) || left.id.localeCompare(right.id));
+	const displayScopeName = scope.key === LEGACY_SCOPE.key ? t("settings.prompts.legacyScope") : scope.name;
 
 	return (
 		<PromptsEditor
-			key={scopeId}
+			key={scope.id}
 			initialPrompts={brandPrompts}
 			brandId={brandId}
-			scopeId={scopeId}
+			scopeId={scope.id}
 			pageTitle={t("settings.prompts.title", { scope: displayScopeName })}
 			pageDescription={t("settings.prompts.description")}
 		/>
