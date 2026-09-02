@@ -6,11 +6,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LEGACY_SCOPE } from "@workspace/lib/db/measurement-scopes";
 import { Skeleton } from "@workspace/ui/components/skeleton";
+import { z } from "zod";
 import { PromptsEditor } from "@/components/prompts-editor";
-import { useBrand } from "@/hooks/use-brands";
 import { translate } from "@/i18n/catalog";
 import { useI18n } from "@/i18n/provider";
 import { buildTitle, getAppName, getBrandName } from "@/lib/route-head";
+import { getBrand } from "@/server/brands";
 
 function PromptsSettingsSkeleton() {
 	return (
@@ -33,9 +34,14 @@ function PromptsSettingsSkeleton() {
 }
 
 export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
+	validateSearch: (search: Record<string, unknown>): { scope?: string } => ({
+		scope: z.string().uuid().safeParse(search.scope).success ? (search.scope as string) : undefined,
+	}),
+	loaderDeps: ({ search }) => ({ scopeId: search.scope }),
+	loader: async ({ params }) => getBrand({ data: { brandId: params.brand } }),
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
-		const brandName = getBrandName(matches);
+		const brandName = getBrandName(matches as unknown as Array<{ loaderData?: Record<string, unknown> }>);
 		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
@@ -52,10 +58,9 @@ function PromptsSettingsPage() {
 	const { t } = useI18n();
 	const { brand: brandId } = Route.useParams();
 	const { scope: requestedScopeId } = Route.useSearch();
-	const { brand, isLoading, isError } = useBrand(brandId);
+	const brand = Route.useLoaderData();
 
-	if (isLoading) return <PromptsSettingsSkeleton />;
-	if (isError || !brand) {
+	if (!brand) {
 		return (
 			<p className="text-sm text-destructive" role="alert">
 				{t("common.error.unexpected")}
@@ -63,9 +68,10 @@ function PromptsSettingsPage() {
 		);
 	}
 
-	const enabledScopes = brand.measurementScopes.filter((scope) => scope.enabled);
+	const enabledScopes = (brand.measurementScopes ?? []).filter((scope) => scope.enabled);
 	const scope =
 		enabledScopes.find((candidate) => candidate.id === requestedScopeId) ??
+		enabledScopes.find((candidate) => candidate.deliveryMode === "assisted") ??
 		enabledScopes.find((candidate) => candidate.isDefault) ??
 		enabledScopes[0];
 	if (!scope) {
@@ -76,7 +82,7 @@ function PromptsSettingsPage() {
 		);
 	}
 
-	const brandPrompts = brand.prompts
+	const brandPrompts = (brand.prompts ?? [])
 		.filter((prompt) => prompt.scopeId === scope.id)
 		.sort((left, right) => left.value.localeCompare(right.value) || left.id.localeCompare(right.id));
 	const displayScopeName = scope.key === LEGACY_SCOPE.key ? t("settings.prompts.legacyScope") : scope.name;
