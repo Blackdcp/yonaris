@@ -680,21 +680,16 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Recover deployment through the last working LAS account
+      - name: Inspect production Browser Runner readiness
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
-          RELEASE_SHA: 5c35132a5d63412dc299eb6fdda4c1b13e412aa0
-          WEB_DIGEST: sha256:337b06c16d8576448cd40feb67ab39c3cec8ccca46eff8117d579fa5fa2757db
-          WORKER_DIGEST: sha256:83447c29b2b90ace4001f7d57962efc2a86c4b476386117dca59cc6518fdce04
-          MIGRATE_DIGEST: sha256:ff2861e389170b2a16f59c67344f1f00784d122b21bf0713362665ebe72c451e
-          POSTGRES_DIGEST: sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "flock --wait 1800 /opt/yonaris/.source-deploy.lock bash -c 'set -Eeuo pipefail; git config --global --add safe.directory /opt/yonaris/source; cd /opt/yonaris/source; git fetch --depth=400 origin main; git checkout --detach $RELEASE_SHA; recovery_root=\$(mktemp -d /tmp/yonaris-legacy-root.XXXXXX); trap \"rm -rf -- \$recovery_root\" EXIT; git archive 18d05597d013add06eb3d4c5f493c3918862de91 deploy/las/bin | tar -x -C \"\$recovery_root\"; ln -s /opt/yonaris/source/packages \"\$recovery_root/packages\"; recovery_dir=\$recovery_root/deploy/las/bin; chmod 700 \"\$recovery_dir/deploy.sh\"; env WEB_IMAGE_DIGEST=$WEB_DIGEST WORKER_IMAGE_DIGEST=$WORKER_DIGEST MIGRATE_IMAGE_DIGEST=$MIGRATE_DIGEST POSTGRES_IMAGE_DIGEST=$POSTGRES_DIGEST DEPLOY_ROOT=/opt/yonaris COMPOSE_FILE=/opt/yonaris/source/deploy/las/compose.yaml ENV_FILE=/opt/yonaris/.env bash \"\$recovery_dir/deploy.sh\" sha-$RELEASE_SHA'"
+            "docker exec yonaris-postgres-1 sh -lc 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" --csv -c \"SELECT now() AS server_time, left(d.id::text, 8) AS device, d.display_name, d.extension_version, d.browser_version, d.platform, d.last_seen_at, round(extract(epoch from (now() - d.last_seen_at)))::bigint AS age_seconds, d.revoked_at, b.name AS brand, b.website, d.supported_surfaces, d.readiness FROM browser_runner_devices d LEFT JOIN browser_runner_device_brands a ON a.device_id = d.id LEFT JOIN brands b ON b.id = a.brand_id ORDER BY d.last_seen_at DESC NULLS LAST;\"'"
 
   report-operations:
     name: Run approved production report operations
