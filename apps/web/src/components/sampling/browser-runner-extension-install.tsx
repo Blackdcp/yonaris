@@ -16,6 +16,32 @@ export interface BrowserExtensionPackageMetadata {
 	version: string;
 }
 
+type BrowserExtensionPackageMetadataResponse = {
+	ok: boolean;
+	json: () => Promise<unknown>;
+};
+
+type BrowserExtensionPackageMetadataFetcher = (
+	url: string,
+	init: RequestInit,
+) => Promise<BrowserExtensionPackageMetadataResponse>;
+
+export async function fetchBrowserExtensionPackageMetadata({
+	signal,
+	fetcher = fetch,
+}: {
+	signal?: AbortSignal;
+	fetcher?: BrowserExtensionPackageMetadataFetcher;
+} = {}): Promise<BrowserExtensionPackageMetadata> {
+	const response = await fetcher(EXTENSION_METADATA_URL, {
+		cache: "no-store",
+		credentials: "same-origin",
+		...(signal ? { signal } : {}),
+	});
+	if (!response.ok) throw new Error("Browser extension package metadata is unavailable");
+	return parseBrowserExtensionPackageMetadata(await response.json());
+}
+
 export function BrowserRunnerExtensionInstall({
 	metadata: providedMetadata,
 }: {
@@ -28,11 +54,8 @@ export function BrowserRunnerExtensionInstall({
 	useEffect(() => {
 		if (providedMetadata) return;
 		const controller = new AbortController();
-		fetch(EXTENSION_METADATA_URL, { credentials: "same-origin", signal: controller.signal })
-			.then(async (response) => {
-				if (!response.ok) throw new Error("Browser extension package metadata is unavailable");
-				setMetadata(parseBrowserExtensionPackageMetadata(await response.json()));
-			})
+		fetchBrowserExtensionPackageMetadata({ signal: controller.signal })
+			.then(setMetadata)
 			.catch((error: unknown) => {
 				if (error instanceof DOMException && error.name === "AbortError") return;
 				setMetadataError({ detail: error instanceof Error ? error.message : undefined });
