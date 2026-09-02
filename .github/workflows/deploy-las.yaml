@@ -684,10 +684,10 @@ jobs:
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
-          RELEASE_SHA: e1f13cde072750da9bbdb54f3bc8b560ed20a363
-          WEB_DIGEST: sha256:c54f9a2956c3cf09d811cffc448db39a324280d48bc316a5708e2a366c69acb3
-          WORKER_DIGEST: sha256:8d91df07c8fdca361a7e871a17225a0fe12cd9bee702b22527e3f1d4026189c3
-          MIGRATE_DIGEST: sha256:22b9005376779736febc253e828114808c1d235bfcf928ff0b8ea228e1ec8f6b
+          RELEASE_SHA: 9302baaa1e729d3d8b80bfdfb501e5ee4e5ec248
+          WEB_DIGEST: sha256:c2c2acc1ec3c5149f6ca808629b9c00d774add47616fefd1a321b2257c98992f
+          WORKER_DIGEST: sha256:3ca0f291a169f81863f1d83cff8fdb0f8c7abdae79b70e9f22f155a8f90a277a
+          MIGRATE_DIGEST: sha256:230c461525ce49da29b4282d51721f1ca5169ba99e3c0b8e704a356c492d03eb
           POSTGRES_DIGEST: sha256:97ff59a4e30e08d1c11bdcd9455e7832368c0572b576c9092cde2df4ae5552a3
         run: |
           ssh -i ~/.ssh/yonaris_las \
