@@ -41,7 +41,7 @@ export const Route = createFileRoute("/_authed/app/$brand/settings/prompts")({
 	loader: async ({ params }) => getBrand({ data: { brandId: params.brand } }),
 	head: ({ matches, match }) => {
 		const appName = getAppName(match);
-		const brandName = getBrandName(matches);
+		const brandName = getBrandName(matches as unknown as Array<{ loaderData?: Record<string, unknown> }>);
 		const uiLanguage = match.context?.uiLanguage ?? "en";
 		return {
 			meta: [
