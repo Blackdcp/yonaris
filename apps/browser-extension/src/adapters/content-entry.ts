@@ -27,34 +27,51 @@ type AdapterCommand =
 	  }
 	| { kind: "yonaris_adapter"; action: "inspect_search_evidence" | "inspect_search_candidates" };
 
-const port = createDocumentDomPort(document, location);
-const surfaceDefinition = extensionSurfaceForUrl(new URL(location.href));
-const adapter = surfaceDefinition.createAdapter(port);
-const evidenceCapture = createDocumentEvidenceCaptureSessionManager(document);
+type ContentEntryDocument = Document & {
+	__yonarisBrowserRunnerContentEntryInstalledV1__?: boolean;
+};
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-	if (!isAdapterCommand(message)) return false;
-	void execute(adapter, surfaceDefinition, message, () => location.href)
-		.then((value) => sendResponse({ ok: true, value }))
-		.catch((error: unknown) => {
-			const adapterError = error as Partial<AdapterError>;
-			sendResponse({
-				ok: false,
-				error: {
-					code: adapterError.code ?? "page_drift",
-					stage: adapterError.stage ?? "pre_submit",
-					message: error instanceof Error ? error.message : "Adapter failed",
-				},
+const contentEntryDocument = document as ContentEntryDocument;
+if (!contentEntryDocument.__yonarisBrowserRunnerContentEntryInstalledV1__) {
+	installContentEntry();
+	contentEntryDocument.__yonarisBrowserRunnerContentEntryInstalledV1__ = true;
+}
+
+function installContentEntry(): void {
+	const port = createDocumentDomPort(document, location);
+	const surfaceDefinition = extensionSurfaceForUrl(new URL(location.href));
+	const adapter = surfaceDefinition.createAdapter(port);
+	const evidenceCapture = createDocumentEvidenceCaptureSessionManager(document);
+
+	chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+		if (!isAdapterCommand(message)) return false;
+		void execute(adapter, surfaceDefinition, message, () => location.href, evidenceCapture)
+			.then((value) => sendResponse({ ok: true, value }))
+			.catch((error: unknown) => {
+				const adapterError = error as Partial<AdapterError>;
+				sendResponse({
+					ok: false,
+					error: {
+						code: adapterError.code ?? "page_drift",
+						stage: adapterError.stage ?? "pre_submit",
+						message: error instanceof Error ? error.message : "Adapter failed",
+					},
+				});
 			});
-		});
-	return true;
-});
+		return true;
+	});
+
+	if (typeof chrome.runtime.sendMessage === "function") {
+		void chrome.runtime.sendMessage({ type: "browser-runner:surface-document-ready" }).catch(() => undefined);
+	}
+}
 
 async function execute(
 	adapter: ConsumerWebAdapter,
 	surfaceDefinition: ExtensionSurfaceDefinition,
 	command: AdapterCommand,
 	readPageUrl: () => string,
+	evidenceCapture: ReturnType<typeof createDocumentEvidenceCaptureSessionManager>,
 ): Promise<unknown> {
 	switch (command.action) {
 		case "preflight":

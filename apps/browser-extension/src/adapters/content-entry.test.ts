@@ -26,6 +26,22 @@ afterEach(() => {
 });
 
 describe("Doubao content entry search-evidence inspection", () => {
+	test("announces that the supported page content script is ready", async () => {
+		const harness = await installContentEntryHarness(null);
+
+		expect(harness.runtimeSendMessage).toHaveBeenCalledWith({ type: "browser-runner:surface-document-ready" });
+	});
+
+	test("installs only one command listener when Chrome injects the same content script twice", async () => {
+		const harness = await installContentEntryHarness(null);
+
+		vi.resetModules();
+		await import("./content-entry");
+
+		expect(harness.runtimeAddListener).toHaveBeenCalledTimes(1);
+		expect(harness.runtimeSendMessage).toHaveBeenCalledTimes(1);
+	});
+
 	test.each([
 		["another conversation", "https://www.doubao.com/chat/456"],
 		["a non-conversation page", "https://www.doubao.com/"],
@@ -235,6 +251,8 @@ async function installContentEntryHarness(navigatedUrl: string | null): Promise<
 	document: Document;
 	originalBodyHtml: string;
 	click: ReturnType<typeof vi.fn>;
+	runtimeAddListener: ReturnType<typeof vi.fn>;
+	runtimeSendMessage: ReturnType<typeof vi.fn>;
 	inspectSearchEvidence: () => Promise<AdapterResponse>;
 }> {
 	const { document, window } = parseHTML(`<!doctype html><html><body>
@@ -257,6 +275,10 @@ async function installContentEntryHarness(navigatedUrl: string | null): Promise<
 	let listener: MessageListener | undefined;
 	let navigationQueued = false;
 	const click = vi.fn();
+	const runtimeAddListener = vi.fn((value: MessageListener) => {
+		listener = value;
+	});
+	const runtimeSendMessage = vi.fn(async () => undefined);
 
 	vi.stubGlobal("document", document);
 	vi.stubGlobal("location", pageLocation);
@@ -266,10 +288,9 @@ async function installContentEntryHarness(navigatedUrl: string | null): Promise<
 	vi.stubGlobal("SVGElement", window.SVGElement);
 	vi.stubGlobal("chrome", {
 		runtime: {
+			sendMessage: runtimeSendMessage,
 			onMessage: {
-				addListener(value: MessageListener) {
-					listener = value;
-				},
+				addListener: runtimeAddListener,
 			},
 		},
 	});
@@ -330,6 +351,8 @@ async function installContentEntryHarness(navigatedUrl: string | null): Promise<
 		document: document as unknown as Document,
 		originalBodyHtml,
 		click,
+		runtimeAddListener,
+		runtimeSendMessage,
 		inspectSearchEvidence: () =>
 			new Promise<AdapterResponse>((resolve, reject) => {
 				const keepAlive = listener?.({ kind: "yonaris_adapter", action: "inspect_search_evidence" }, {}, resolve);

@@ -658,7 +658,15 @@ jobs:
 
   deploy:
     name: Deploy production
-    if: vars.LAS_DEPLOY_ENABLED == 'true'
+    needs:
+      - production-candidate-slot
+      - build-images
+      - e2e-gate
+      - mode-compat-gate
+      - response-snapshot-storage-contract
+    if: >-
+      vars.LAS_DEPLOY_ENABLED == 'true' &&
+      vars.LAS_FORCED_COMMAND_ENABLED == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: yonaris-production
@@ -680,16 +688,49 @@ jobs:
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Inspect production Browser Runner readiness
+      - name: Prove the exact forced-command boundary
         env:
           LAS_HOST: ${{ secrets.LAS_HOST }}
           LAS_USER: ${{ secrets.LAS_USER }}
+        run: |
+          probe_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "yonaris-las-v1 probe")"
+          if [[ "$probe_output" != 'yonaris-las-probe-v1 ok' ]]; then
+            echo 'The LAS forced-command probe returned an unexpected response.' >&2
+            exit 1
+          fi
+          set +e
+          rejection_output="$(ssh -i ~/.ssh/yonaris_las \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            "$LAS_USER@$LAS_HOST" \
+            "true" 2>&1)"
+          rejection_status=$?
+          set -e
+          if [[ "$rejection_status" -ne 2 || \
+            "$rejection_output" != 'Refusing non-protocol LAS SSH command.' ]]; then
+            echo 'The LAS key did not return the exact dispatcher rejection for an arbitrary command.' >&2
+            exit 1
+          fi
+
+      - name: Deploy immutable release through the stable forced dispatcher
+        env:
+          LAS_HOST: ${{ secrets.LAS_HOST }}
+          LAS_USER: ${{ secrets.LAS_USER }}
+          RELEASE_SHA: ${{ github.sha }}
+          WEB_DIGEST: ${{ needs.build-images.outputs.web_digest }}
+          WORKER_DIGEST: ${{ needs.build-images.outputs.worker_digest }}
+          MIGRATE_DIGEST: ${{ needs.build-images.outputs.migrate_digest }}
+          POSTGRES_DIGEST: ${{ needs.build-images.outputs.postgres_digest }}
         run: |
           ssh -i ~/.ssh/yonaris_las \
             -o BatchMode=yes \
             -o IdentitiesOnly=yes \
             "$LAS_USER@$LAS_HOST" \
-            "docker exec yonaris-postgres-1 sh -lc 'psql -U \"\$POSTGRES_USER\" -d \"\$POSTGRES_DB\" --csv -c \"SELECT now() AS server_time, left(d.id::text, 8) AS device, d.display_name, d.extension_version, d.browser_version, d.platform, d.last_seen_at, round(extract(epoch from (now() - d.last_seen_at)))::bigint AS age_seconds, d.revoked_at, b.name AS brand, b.website, d.supported_surfaces, d.readiness FROM browser_runner_devices d LEFT JOIN browser_runner_device_brands a ON a.device_id = d.id LEFT JOIN brands b ON b.id = a.brand_id ORDER BY d.last_seen_at DESC NULLS LAST;\"'"
+            "yonaris-las-v1 deploy sha-$RELEASE_SHA $WEB_DIGEST $WORKER_DIGEST $MIGRATE_DIGEST $POSTGRES_DIGEST"
 
   report-operations:
     name: Run approved production report operations

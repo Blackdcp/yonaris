@@ -1,19 +1,34 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 type AlarmListener = (alarm: { name: string }) => void;
+type LifecycleListener = () => void;
+type TabUpdatedListener = (
+	tabId: number,
+	changeInfo: { status?: string; url?: string },
+	tab: { id?: number; url?: string },
+) => void;
+type TabActivatedListener = (activeInfo: { tabId: number }) => void;
 type RuntimeMessageListener = (message: unknown, sender: unknown, sendResponse: (response: unknown) => void) => boolean;
 
 describe.sequential("Browser Runner background scheduling", () => {
 	const createdAlarms: Array<{ name: string; info: unknown }> = [];
 	const clearedAlarms: string[] = [];
 	let alarmListener: AlarmListener | null = null;
+	let installedListener: LifecycleListener | null = null;
+	let startupListener: LifecycleListener | null = null;
+	let tabUpdatedListener: TabUpdatedListener | null = null;
+	let tabActivatedListener: TabActivatedListener | null = null;
 	let runtimeMessageListener: RuntimeMessageListener | null = null;
 	let storageGetCalls = 0;
 	let storageGetImplementation: () => Promise<Record<string, unknown>> = async () => ({});
 	let storageSetImplementation: (items: Record<string, unknown>) => Promise<void> = async () => undefined;
 	let tabsQueryCalls = 0;
 	let tabsQueryImplementation: () => Promise<Array<{ id?: number; url?: string }>> = async () => [];
+	let tabsGetImplementation: (tabId: number) => Promise<{ id?: number; url?: string }> = async (tabId) => ({
+		id: tabId,
+	});
 	let tabsSendMessageImplementation: (tabId: number, message: unknown) => Promise<unknown> = async () => undefined;
+	let scriptingExecuteCalls: Array<{ target: { tabId: number }; files: string[] }> = [];
 	let notificationCreateCalls = 0;
 	let fetchImplementation: (request: Request) => Promise<Response> = async () =>
 		new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
@@ -38,8 +53,16 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 			},
 			runtime: {
-				onInstalled: { addListener: () => undefined },
-				onStartup: { addListener: () => undefined },
+				onInstalled: {
+					addListener: (listener: LifecycleListener) => {
+						installedListener = listener;
+					},
+				},
+				onStartup: {
+					addListener: (listener: LifecycleListener) => {
+						startupListener = listener;
+					},
+				},
 				onMessage: {
 					addListener: (listener: RuntimeMessageListener) => {
 						runtimeMessageListener = listener;
@@ -62,11 +85,28 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 			},
 			tabs: {
+				onUpdated: {
+					addListener: (listener: TabUpdatedListener) => {
+						tabUpdatedListener = listener;
+					},
+				},
+				onActivated: {
+					addListener: (listener: TabActivatedListener) => {
+						tabActivatedListener = listener;
+					},
+				},
 				query: async () => {
 					tabsQueryCalls += 1;
 					return tabsQueryImplementation();
 				},
+				get: (tabId: number) => tabsGetImplementation(tabId),
 				sendMessage: (tabId: number, message: unknown) => tabsSendMessageImplementation(tabId, message),
+			},
+			scripting: {
+				executeScript: async (details: { target: { tabId: number }; files: string[] }) => {
+					scriptingExecuteCalls.push(details);
+					return [];
+				},
 			},
 			notifications: {
 				create: async () => {
@@ -87,7 +127,9 @@ describe.sequential("Browser Runner background scheduling", () => {
 		storageSetImplementation = async () => undefined;
 		tabsQueryCalls = 0;
 		tabsQueryImplementation = async () => [];
+		tabsGetImplementation = async (tabId) => ({ id: tabId });
 		tabsSendMessageImplementation = async () => undefined;
+		scriptingExecuteCalls = [];
 		notificationCreateCalls = 0;
 		fetchImplementation = async () =>
 			new Response(JSON.stringify({ deviceId: "device-1", serverTime: "2026-08-18T00:00:00.000Z" }), {
@@ -271,6 +313,390 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 			},
 		]);
+	});
+
+	test.each([
+		["installation", () => installedListener?.()],
+		["browser startup", () => startupListener?.()],
+	] as const)("automatically scans open supported tabs after %s", async (_label, trigger) => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		tabsQueryImplementation = async () => [{ id: 101, url: "https://www.qianwen.com/chat/thread_123" }];
+		let messageCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			messageCalls += 1;
+			return { ok: true };
+		};
+
+		trigger();
+
+		await vi.waitFor(() => expect(messageCalls).toBe(1));
+		expect(values.browserRunnerSurfaceReadiness).toMatchObject({
+			"qwen.consumer_web": { status: "ready" },
+		});
+	});
+
+	test("contains a transient tab-query failure during the startup scan", async () => {
+		tabsQueryImplementation = async () => {
+			throw new Error("tabs unavailable during startup");
+		};
+
+		startupListener?.();
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		expect(tabsQueryCalls).toBe(1);
+	});
+
+	test("automatically qualifies a supported tab after its URL or document finishes loading", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"wenxin.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "wenxin-web-20260822-localpc-v12",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		let messageCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			messageCalls += 1;
+			return { ok: true };
+		};
+
+		expect(tabUpdatedListener).not.toBeNull();
+		tabUpdatedListener?.(
+			202,
+			{ status: "complete", url: "https://wenxin.baidu.com/search/123?enter_type=chat_url" },
+			{ id: 202, url: "https://wenxin.baidu.com/search/123?enter_type=chat_url" },
+		);
+
+		await vi.waitFor(() => expect(messageCalls).toBe(1));
+		expect(values.browserRunnerSurfaceReadiness).toMatchObject({
+			"wenxin.consumer_web": { status: "ready" },
+		});
+	});
+
+	test("automatically qualifies an unavailable supported tab when the operator switches to it", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"kimi.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "kimi-web-20260823-localpc-v16",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		tabsGetImplementation = async (tabId) => ({ id: tabId, url: "https://www.kimi.com/chat/thread_123" });
+		let messageCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			messageCalls += 1;
+			return { ok: true };
+		};
+
+		expect(tabActivatedListener).not.toBeNull();
+		tabActivatedListener?.({ tabId: 404 });
+
+		await vi.waitFor(() => expect(messageCalls).toBe(1));
+		expect(values.browserRunnerSurfaceReadiness).toMatchObject({
+			"kimi.consumer_web": { status: "ready" },
+		});
+	});
+
+	test("automatically qualifies a supported page when its content script reports ready", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		const commands: unknown[] = [];
+		tabsSendMessageImplementation = async (tabId, command) => {
+			expect(tabId).toBe(42);
+			commands.push(command);
+			return { ok: true };
+		};
+
+		const handled = runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 42, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+
+		expect(handled).toBe(false);
+		await vi.waitFor(() =>
+			expect(values.browserRunnerSurfaceReadiness).toMatchObject({
+				"qwen.consumer_web": { status: "ready", adapterVersion: "qwen-web-20260822-localpc-v11" },
+			}),
+		);
+		expect(commands).toEqual([{ kind: "yonaris_adapter", action: "preflight" }]);
+	});
+
+	test("preserves an exact ready surface during automatic page checks", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"qwen.consumer_web": {
+					status: "ready",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		let messageCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			messageCalls += 1;
+			throw new Error("must not recheck an exact ready surface");
+		};
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 303, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+
+		await vi.waitFor(() => expect(storageGetCalls).toBeGreaterThan(0));
+		await Promise.resolve();
+		expect(messageCalls).toBe(0);
+		expect(values.browserRunnerSurfaceReadiness).toMatchObject({
+			"qwen.consumer_web": { status: "ready", adapterVersion: "qwen-web-20260822-localpc-v11" },
+		});
+	});
+
+	test("skips automatic qualification while formal work owns the runner", async () => {
+		const runGate = deferred<Record<string, unknown>>();
+		storageGetImplementation = () => runGate.promise;
+		const runResponse = new Promise<unknown>((resolve) => {
+			runtimeMessageListener?.({ type: "browser-runner:run-now" }, {}, resolve);
+		});
+		await vi.waitFor(() => expect(storageGetCalls).toBe(1));
+
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		let messageCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			messageCalls += 1;
+			return { ok: true };
+		};
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 505, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+		let callsWhileBusy = -1;
+		try {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			callsWhileBusy = messageCalls;
+		} finally {
+			runGate.resolve({});
+			await expect(runResponse).resolves.toMatchObject({ ok: true });
+		}
+		expect(callsWhileBusy).toBe(0);
+	});
+
+	test("does not start formal work while automatic qualification owns the runner", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"qwen.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "qwen-web-20260822-localpc-v11",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		const inspectionGate = deferred<unknown>();
+		let inspectionCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			inspectionCalls += 1;
+			return inspectionGate.promise;
+		};
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 606, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+		await vi.waitFor(() => expect(inspectionCalls).toBe(1));
+
+		let workStorageReads = 0;
+		storageGetImplementation = async () => {
+			workStorageReads += 1;
+			return { ...values };
+		};
+		const runResponse = new Promise<unknown>((resolve) => {
+			runtimeMessageListener?.({ type: "browser-runner:run-now" }, {}, resolve);
+		});
+		let readsWhileAutomatic = -1;
+		try {
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			readsWhileAutomatic = workStorageReads;
+		} finally {
+			inspectionGate.resolve({ ok: true });
+			await expect(runResponse).resolves.toMatchObject({ ok: true, summary: null });
+		}
+		expect(readsWhileAutomatic).toBe(0);
+	});
+
+	test("claims the runner before automatic readiness storage finishes loading", async () => {
+		const readinessGate = deferred<Record<string, unknown>>();
+		storageGetImplementation = () => readinessGate.promise;
+		tabsSendMessageImplementation = async () => ({ ok: true });
+		const runResponses: unknown[] = [];
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 607, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+		await vi.waitFor(() => expect(storageGetCalls).toBe(1));
+		runtimeMessageListener?.({ type: "browser-runner:run-now" }, {}, (value) => runResponses.push(value));
+
+		try {
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			expect(storageGetCalls).toBe(1);
+			expect(runResponses).toEqual([expect.objectContaining({ ok: true, summary: null })]);
+		} finally {
+			readinessGate.resolve({
+				browserRunnerDevice: pairedDevice(),
+				browserRunnerSurfaceReadiness: {},
+			});
+			await vi.waitFor(() => {
+				const statusResponses: unknown[] = [];
+				runtimeMessageListener?.({ type: "browser-runner:status" }, {}, (value) => statusResponses.push(value));
+				expect(statusResponses).toEqual([expect.objectContaining({ running: false })]);
+			});
+		}
+	});
+
+	test("does not start manual recovery while automatic qualification owns the runner", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		const inspectionGate = deferred<unknown>();
+		let inspectionCalls = 0;
+		tabsSendMessageImplementation = async () => {
+			inspectionCalls += 1;
+			return inspectionGate.promise;
+		};
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 608, url: "https://www.qianwen.com/chat/thread_123" } },
+			() => undefined,
+		);
+		await vi.waitFor(() => expect(inspectionCalls).toBe(1));
+		const readsBeforeRecovery = storageGetCalls;
+
+		try {
+			const recoveryResponse = await new Promise<unknown>((resolve) => {
+				runtimeMessageListener?.({ type: "browser-runner:manual-recovery-run", taskId: "task-exact" }, {}, resolve);
+			});
+			expect(recoveryResponse).toMatchObject({
+				ok: true,
+				result: { taskId: "task-exact", status: "not_recoverable", code: "runner_busy" },
+			});
+			expect(storageGetCalls).toBe(readsBeforeRecovery);
+		} finally {
+			inspectionGate.resolve({ ok: true });
+		}
+	});
+
+	test("injects the content script once before retrying automatic qualification", async () => {
+		const values: Record<string, unknown> = {
+			browserRunnerDevice: pairedDevice(),
+			browserRunnerSurfaceReadiness: {
+				"deepseek.consumer_web": {
+					status: "unavailable",
+					adapterVersion: "deepseek-web-20260822-localpc-v9",
+					activeConcurrency: 0,
+				},
+			},
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
+		fetchImplementation = async () => heartbeatResponse();
+		let messageAttempts = 0;
+		tabsSendMessageImplementation = async () => {
+			messageAttempts += 1;
+			if (messageAttempts === 1) {
+				throw new Error("Could not establish connection. Receiving end does not exist.");
+			}
+			return { ok: true };
+		};
+
+		runtimeMessageListener?.(
+			{ type: "browser-runner:surface-document-ready" },
+			{ tab: { id: 84, url: "https://chat.deepseek.com/a/chat/s/thread_123" } },
+			() => undefined,
+		);
+
+		await vi.waitFor(() => expect(messageAttempts).toBe(2));
+		expect(scriptingExecuteCalls).toEqual([{ target: { tabId: 84 }, files: ["content-entry.js"] }]);
 	});
 
 	test("confirms paired-device unavailability before inspecting Doubao and publishes qualified v8 immediately", async () => {
