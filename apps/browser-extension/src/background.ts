@@ -7,7 +7,13 @@ import type { TaskRunResult } from "./coordinator/task-runner";
 import { buildHeartbeat } from "./heartbeat";
 import { operatorGuidance } from "./operator-guidance";
 import { chromeDeviceStorage } from "./storage";
-import { type QualificationReadinessPublisher, qualifyAndRecordActiveSurfaceTab } from "./surface-qualification-client";
+import {
+	type QualificationReadinessPublisher,
+	type QualificationTab,
+	type QualificationTabsGateway,
+	qualifyAndRecordActiveSurfaceTab,
+	qualifyAndRecordSurfaceTab,
+} from "./surface-qualification-client";
 import {
 	type ExtensionSurfaceDefinition,
 	extensionSurfaceDefinition,
@@ -29,19 +35,45 @@ const coordinator = new ExtensionCoordinator({
 let running: Promise<ExtensionRunSummary | null> | null = null;
 let manualRecoveryRunning = false;
 let qualificationRunning: ReturnType<typeof qualifyAndRecordActiveSurfaceTab> | null = null;
+let automaticQualificationTail: Promise<void> = Promise.resolve();
+let automaticQualificationActive = 0;
+const pendingAutomaticQualifications = new Set<string>();
 let heartbeatTail: Promise<void> = Promise.resolve();
 let lastRun: { finishedAt: string; summary: ExtensionRunSummary | null } | null = null;
 
-chrome.runtime.onInstalled.addListener(ensureAlarms);
-chrome.runtime.onStartup.addListener(ensureAlarms);
+chrome.runtime.onInstalled.addListener(() => {
+	ensureAlarms();
+	void qualifyOpenSurfaceTabs().catch(() => undefined);
+});
+chrome.runtime.onStartup.addListener(() => {
+	ensureAlarms();
+	void qualifyOpenSurfaceTabs().catch(() => undefined);
+});
+
+chrome.tabs.onUpdated?.addListener((tabId, changeInfo, tab) => {
+	if (changeInfo.status === "complete" || typeof changeInfo.url === "string") {
+		scheduleAutomaticQualification({ id: tabId, url: tab.url ?? changeInfo.url });
+	}
+});
+
+chrome.tabs.onActivated?.addListener(({ tabId }) => {
+	void chrome.tabs
+		.get(tabId)
+		.then((tab) => scheduleAutomaticQualification({ id: tab.id, url: tab.url }))
+		.catch(() => undefined);
+});
 
 chrome.alarms.onAlarm.addListener((alarm) => {
 	if (alarm.name === HEARTBEAT_ALARM) void sendHeartbeat();
 	if (alarm.name === WORK_ALARM) void runNow();
 });
 
-chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
 	if (!isRecord(message)) return false;
+	if (message.type === "browser-runner:surface-document-ready") {
+		scheduleAutomaticQualification({ id: sender.tab?.id, url: sender.tab?.url });
+		return false;
+	}
 	if (message.type === "browser-runner:heartbeat") {
 		void sendHeartbeat()
 			.then(() => sendResponse({ ok: true }))
@@ -69,7 +101,8 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
 	if (message.type === "browser-runner:status") {
 		sendResponse({
 			ok: true,
-			running: running !== null || manualRecoveryRunning || qualificationRunning !== null,
+			running:
+				running !== null || manualRecoveryRunning || qualificationRunning !== null || automaticQualificationActive > 0,
 			lastRun,
 		});
 		return false;
@@ -261,7 +294,7 @@ async function sendHeartbeatNow(readiness?: BrowserExtensionReadiness): Promise<
 }
 
 function runNow(): Promise<ExtensionRunSummary | null> {
-	if (manualRecoveryRunning || qualificationRunning) return Promise.resolve(null);
+	if (manualRecoveryRunning || qualificationRunning || automaticQualificationActive > 0) return Promise.resolve(null);
 	if (running) return running;
 	running = coordinator.runOnce();
 	void running
@@ -275,14 +308,14 @@ function runNow(): Promise<ExtensionRunSummary | null> {
 }
 
 function qualifySurface(): ReturnType<typeof qualifyAndRecordActiveSurfaceTab> {
-	if (running || manualRecoveryRunning) {
+	if (running || manualRecoveryRunning || automaticQualificationActive > 0) {
 		return Promise.reject(new Error("Browser Runner is busy; check the current page after the task finishes."));
 	}
 	if (qualificationRunning) return qualificationRunning;
 	const publisher: QualificationReadinessPublisher = {
 		confirmReadiness: (readiness) => sendHeartbeat(readiness),
 	};
-	const operation = qualifyAndRecordActiveSurfaceTab(storage, undefined, publisher);
+	const operation = qualifyAndRecordActiveSurfaceTab(storage, qualificationTabsGateway(), publisher);
 	qualificationRunning = operation;
 	void operation.then(
 		() => {
@@ -295,8 +328,82 @@ function qualifySurface(): ReturnType<typeof qualifyAndRecordActiveSurfaceTab> {
 	return operation;
 }
 
+async function qualifyOpenSurfaceTabs(): Promise<void> {
+	const tabs = await chrome.tabs.query({});
+	for (const tab of tabs) scheduleAutomaticQualification({ id: tab.id, url: tab.url });
+}
+
+function scheduleAutomaticQualification(tab: QualificationTab): void {
+	if (!Number.isSafeInteger(tab.id) || typeof tab.url !== "string") return;
+	try {
+		extensionSurfaceForUrl(new URL(tab.url));
+	} catch {
+		return;
+	}
+	const key = `${tab.id}:${tab.url}`;
+	if (pendingAutomaticQualifications.has(key)) return;
+	pendingAutomaticQualifications.add(key);
+	automaticQualificationActive += 1;
+	const operation = automaticQualificationTail.then(async () => {
+		try {
+			if (running || manualRecoveryRunning || qualificationRunning) return;
+			const definition = extensionSurfaceForUrl(new URL(tab.url as string));
+			const readiness = await storage.loadSurfaceReadiness();
+			const current = readiness[definition.surface];
+			if (current?.status === "ready" && current.adapterVersion === definition.adapterVersion) return;
+			await qualifyAndRecordSurfaceTab(storage, tab, qualificationTabsGateway(tab), {
+				confirmReadiness: (next) => sendHeartbeat(next),
+			});
+		} finally {
+			automaticQualificationActive -= 1;
+			pendingAutomaticQualifications.delete(key);
+		}
+	});
+	automaticQualificationTail = operation.catch(() => undefined);
+}
+
+function qualificationTabsGateway(expectedTab?: QualificationTab): QualificationTabsGateway {
+	const observedUrls = new Map<number, string>();
+	if (Number.isSafeInteger(expectedTab?.id) && typeof expectedTab?.url === "string") {
+		observedUrls.set(expectedTab.id as number, expectedTab.url);
+	}
+	return {
+		queryActive: async () => {
+			const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			for (const tab of tabs) {
+				if (Number.isSafeInteger(tab.id) && typeof tab.url === "string") {
+					observedUrls.set(tab.id as number, tab.url);
+				}
+			}
+			return tabs;
+		},
+		get: async (tabId) => {
+			const current = await chrome.tabs.get(tabId);
+			return {
+				id: current.id ?? tabId,
+				url: current.url ?? observedUrls.get(tabId),
+			};
+		},
+		sendMessage: async (tabId, command) => {
+			try {
+				return await chrome.tabs.sendMessage(tabId, command);
+			} catch (error) {
+				if (!isMissingContentScript(error)) throw error;
+				await chrome.scripting.executeScript({ target: { tabId }, files: ["content-entry.js"] });
+				return chrome.tabs.sendMessage(tabId, command);
+			}
+		},
+	};
+}
+
+function isMissingContentScript(error: unknown): boolean {
+	if (!(error instanceof Error)) return false;
+	const message = error.message.toLowerCase();
+	return message.includes("receiving end does not exist") || message.includes("could not establish connection");
+}
+
 async function recoverNeedsHuman(taskId: string) {
-	if (running || manualRecoveryRunning || qualificationRunning) {
+	if (running || manualRecoveryRunning || qualificationRunning || automaticQualificationActive > 0) {
 		return { taskId, status: "not_recoverable" as const, code: "runner_busy" };
 	}
 	manualRecoveryRunning = true;
