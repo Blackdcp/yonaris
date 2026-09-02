@@ -79,7 +79,7 @@ describe("browser extension device service", () => {
 		).rejects.toMatchObject({ status: 401, message: "Valid pairing code required" });
 	});
 
-	it("updates coarse readiness for a paired device without returning its token", async () => {
+	it("updates coarse readiness and returns current brand assignments without returning its token", async () => {
 		const result = await updateBrowserRunnerDeviceHeartbeat(
 			{
 				kind: "browser_extension",
@@ -87,7 +87,7 @@ describe("browser extension device service", () => {
 				market: "CN",
 				locale: "zh-CN",
 				timezone: "Asia/Shanghai",
-				allowedBrandIds: ["stepfun"],
+				allowedBrandIds: ["brand", "memtensor"],
 				supportedSurfaces: ["doubao.consumer_web", "deepseek.consumer_web"],
 				readySurfaces: ["doubao.consumer_web"],
 			},
@@ -105,6 +105,7 @@ describe("browser extension device service", () => {
 			deviceId: "11111111-1111-4111-8111-111111111111",
 			serverTime: "2026-08-16T10:00:00.000Z",
 			featureVersion: "browser-extension.v1",
+			allowedBrandIds: ["brand", "memtensor"],
 		});
 		expect(JSON.stringify(result)).not.toMatch(/token|phone|account/i);
 	});

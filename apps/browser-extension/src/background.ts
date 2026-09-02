@@ -290,7 +290,12 @@ async function sendHeartbeatNow(readiness?: BrowserExtensionReadiness): Promise<
 	const device = await storage.loadDevice();
 	if (!device) return;
 	const client = new BrowserRunnerApiClient({ baseUrl: device.portalBaseUrl, token: device.deviceToken });
-	await client.heartbeat(buildHeartbeat(navigator.userAgent, readiness ?? (await storage.loadSurfaceReadiness())));
+	const response = await client.heartbeat(
+		buildHeartbeat(navigator.userAgent, readiness ?? (await storage.loadSurfaceReadiness())),
+	);
+	if (Array.isArray(response.allowedBrandIds)) {
+		await storage.saveDevice({ ...device, allowedBrandIds: response.allowedBrandIds });
+	}
 }
 
 function runNow(): Promise<ExtensionRunSummary | null> {

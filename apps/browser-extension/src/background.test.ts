@@ -268,7 +268,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 
 	test("heartbeats the persisted per-surface qualification without promoting DeepSeek", async () => {
 		const requests: unknown[] = [];
-		storageGetImplementation = async () => ({
+		const values: Record<string, unknown> = {
 			browserRunnerDevice: {
 				portalBaseUrl: "https://portal.yonaris.com",
 				deviceId: "device-1",
@@ -287,7 +287,11 @@ describe.sequential("Browser Runner background scheduling", () => {
 					activeConcurrency: 0,
 				},
 			},
-		});
+		};
+		storageGetImplementation = async () => ({ ...values });
+		storageSetImplementation = async (items) => {
+			Object.assign(values, items);
+		};
 		fetchImplementation = async (request) => {
 			requests.push(await request.json());
 			return new Response(
@@ -295,6 +299,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 					deviceId: "device-1",
 					serverTime: "2026-08-18T00:00:00.000Z",
 					featureVersion: "browser-extension.v1",
+					allowedBrandIds: ["brand", "memtensor"],
 				}),
 				{ status: 200, headers: { "Content-Type": "application/json" } },
 			);
@@ -313,6 +318,7 @@ describe.sequential("Browser Runner background scheduling", () => {
 				},
 			},
 		]);
+		expect(values.browserRunnerDevice).toMatchObject({ allowedBrandIds: ["brand", "memtensor"] });
 	});
 
 	test.each([

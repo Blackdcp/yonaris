@@ -140,6 +140,7 @@ export async function updateBrowserRunnerDeviceHeartbeat(
 		deviceId: device.id,
 		serverTime: (dependencies.now ?? (() => new Date()))().toISOString(),
 		featureVersion: BROWSER_EXTENSION_FEATURE_VERSION,
+		allowedBrandIds: principal.allowedBrandIds,
 	};
 }
 

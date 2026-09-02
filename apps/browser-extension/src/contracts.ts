@@ -115,4 +115,5 @@ export interface HeartbeatResponse {
 	deviceId: string;
 	serverTime: string;
 	featureVersion: "browser-extension.v1";
+	allowedBrandIds?: string[];
 }
